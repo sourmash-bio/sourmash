@@ -6,21 +6,29 @@ import argparse
 K = 19
 
 class Estimators(object):
+    """
+    A simple bottom n-sketch MinHash implementation.
+    """
+
     def __init__(self, n=100, max_prime=1e10, ksize=K):
         _kh = khmer.Countgraph(ksize, 1, 1)
         self._kh = _kh
 
+        # get a prime to use for hashing
         p = khmer.get_n_primes_near_x(1, max_prime)[0]
         self.p = p
+
+        # initialize sketch to size n
         self._mins = [p]*n
         
     def add(self, hash):
+        "Add hash into _mins, keeping _mins in sorted order."
         _mins = self._mins
         h = hash % self.p
         
         if h >= _mins[-1]:
             return
-        
+
         for i, v in enumerate(_mins):
             if h < v:
                 _mins.insert(i, h)
@@ -28,6 +36,7 @@ class Estimators(object):
                 return
             elif h == v:
                 return
+            # else: h > v, keep on going.
 
 
     def add_sequence(self, seq):
