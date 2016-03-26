@@ -40,48 +40,75 @@ class Estimators(object):
 
 
     def add_sequence(self, seq):
-        hs = self._kh.get_kmer_hashes(seq.upper().replace('N', 'G'))
+        seq = seq.upper().replace('N', 'G')
+        hs = self._kh.get_kmer_hashes(seq)
         for h in hs:
             self.add(h)
-        
+
+    def jaccard(self, other):
+        # this is stupid and badly implemented but I'm pretty sure it works :)
+        jaccard = 0
+        d = {}
+        n = len(self._mins)
+
+        for i in range(n):
+            key = self._mins[i]
+            d[key] = 1
+            assert key != self.p
+
+        for i in range(n):
+            key = other._mins[i]
+            d[key] = 1 + d.get(key, 0)
+            assert key != other.p
+
+        for v in d.values():
+            if v == 2:
+                jaccard += 1
+
+        return float(jaccard) / float(n)
+
+
+class WeightedEstimators(Estimators):
+    def _init_kh(self):
+        self._kh = khmer.Countgraph(ksize, 1e8, 4)
+
+    def add_sequence(self, seq):
+        seq = seq.upper().replace('N', 'G')
+        hs = self._kh.get_kmer_hashes(seq)
+        self._kh.consume(seq)           # track k-mer abundances
+        for h in hs:
+            self.add(h * self._kh.get(h)) # weight by k-mer abundances
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sequences1')
     parser.add_argument('sequences2')
+    parser.add_argument('-w', '--weighted', action='store_true')
     args = parser.parse_args()
 
-    E = Estimators()
-    E2 = Estimators()
+    if args.weighted:
+        print 'using weighted estimator'
+        E = WeightedEstimators()
+        E2 = WeightedEstimators()
+    else:
+        print 'using unweighted estimator'
+        E = Estimators()
+        E2 = Estimators()
+        
 
-    print 'first'
+    print 'reading first'
     for record in screed.open(args.sequences1):
         E.add_sequence(record.sequence)
 
-    print 'second'
+    print 'reading second'
     for record in screed.open(args.sequences2):
         E2.add_sequence(record.sequence)
 
-    jaccard = 0
-    d = {}
-    n = len(E._mins)
+    jaccard = E.jaccard(E2)
 
-    for i in range(n):
-        key = E._mins[i]
-        d[key] = 1
-        assert key != E2.p
+    print 'similarity', args.sequences1, args.sequences2, jaccard
 
-    for i in range(n):
-        key = E2._mins[i]
-        d[key] = 1 + d.get(key, 0)
-        assert key != E2.p
-
-    for v in d.values():
-        if v == 2:
-            jaccard += 1
-
-    print 'similarity', args.sequences1, args.sequences2, \
-          float(jaccard) / float(n)
 
 if __name__ == '__main__':
     main()
