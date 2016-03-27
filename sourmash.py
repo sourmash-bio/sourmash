@@ -2,8 +2,9 @@
 import khmer
 import screed
 import argparse
+import itertools
 
-K = 19
+K = 31
 
 class Estimators(object):
     """
@@ -97,17 +98,19 @@ def main():
         E2 = Estimators()
         
 
-    print 'reading first'
-    for record in screed.open(args.sequences1):
-        E.add_sequence(record.sequence)
+    print 'reading both'
+    n = 0
+    for r1, r2 in itertools.izip(screed.open(args.sequences1),
+                                 screed.open(args.sequences2)):
+        E.add_sequence(r1.sequence)
+        E2.add_sequence(r2.sequence)
+        n += 1
 
-    print 'reading second'
-    for record in screed.open(args.sequences2):
-        E2.add_sequence(record.sequence)
-
-    jaccard = E.jaccard(E2)
-
-    print 'similarity', args.sequences1, args.sequences2, jaccard
+        if n % 10000 == 0:
+            jaccard = E.jaccard(E2)
+            print n, 'similarity', args.sequences1, args.sequences2, jaccard
+            if n >= 100000:
+                break
 
 
 if __name__ == '__main__':

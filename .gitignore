@@ -2,3 +2,4 @@
 *.fa
 *.fastq.gz
 *.abundtrim
+*.keep
