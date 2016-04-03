@@ -6,6 +6,22 @@ import itertools
 
 K = 31
 
+def yield_overlaps(x1, x2):
+    i = 0
+    j = 0
+    try:
+        while 1:
+            while x1[i] < x2[j]:
+                i += 1
+            while x1[i] > x2[j]:
+                j += 1
+            if x1[i] == x2[j]:
+                yield x1[i]
+                i += 1
+                j += 1
+    except IndexError:
+        return
+
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -47,28 +63,59 @@ class Estimators(object):
             self.add(h)
 
     def jaccard(self, other):
-        # this is stupid and badly implemented but I'm pretty sure it works :)
-        jaccard = 0
-        d = {}
-        n = len(self._mins)
+        common = 0
+        for _ in yield_overlaps(self._mins, other._mins):
+            common += 1
 
-        for i in range(n):
-            key = self._mins[i]
-            d[key] = 1
-            assert key != self.p
+        return float(common) / float(len(self._mins))
 
-        for i in range(n):
-            key = other._mins[i]
-            d[key] = 1 + d.get(key, 0)
-            assert key != other.p
+    def common(self, other):
+        common = 0
+        for _ in yield_overlaps(self._mins, other._mins):
+            common += 1
+        return common
+    
 
-        for v in d.values():
-            if v == 2:
-                jaccard += 1
+def test_jaccard_1():
+    E1 = Estimators(n=0)
+    E2 = Estimators(n=0)
 
-        return float(jaccard) / float(n)
+    E1._mins = [1, 2, 3, 4, 5]
+    E2._mins = [1, 2, 3, 4, 6]
+    assert E1.jaccard(E2) == 4/5.0
+    assert E2.jaccard(E1) == 4/5.0
 
 
+def test_jaccard_2_difflen():
+    E1 = Estimators(n=0)
+    E2 = Estimators(n=0)
+
+    E1._mins = [1, 2, 3, 4, 5]
+    E2._mins = [1, 2, 3, 4]
+    assert E1.jaccard(E2) == 4/5.0
+    assert E2.jaccard(E1) == 4/4.0
+
+
+def test_yield_overlaps():
+    x1 = [1, 3, 5]
+    x2 = [2, 4, 6]
+    assert len(list(yield_overlaps(x1, x2))) == 0
+               
+
+def test_yield_overlaps_2():
+    x1 = [1, 3, 5]
+    x2 = [1, 2, 4, 6]
+    assert len(list(yield_overlaps(x1, x2))) == 1
+    assert len(list(yield_overlaps(x2, x1))) == 1
+               
+
+def test_yield_overlaps_2():
+    x1 = [1, 3, 6]
+    x2 = [1, 2, 6]
+    assert len(list(yield_overlaps(x1, x2))) == 2
+    assert len(list(yield_overlaps(x2, x1))) == 2
+
+    
 class WeightedEstimators(Estimators):
     def _init_kh(self):
         self._kh = khmer.Countgraph(ksize, 1e8, 4)
