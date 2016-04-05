@@ -5,6 +5,7 @@ import argparse
 import itertools
 
 K = 31
+NUM_ESTIMATORS=100
 
 def yield_overlaps(x1, x2):
     i = 0
@@ -21,6 +22,10 @@ def yield_overlaps(x1, x2):
                 j += 1
     except IndexError:
         return
+
+def kmers(seq, ksize):
+    for i in range(len(seq) - ksize + 1):
+        yield seq[i:i+ksize]
 
 class Estimators(object):
     """
@@ -58,8 +63,11 @@ class Estimators(object):
 
     def add_sequence(self, seq):
         seq = seq.upper().replace('N', 'G')
-        hs = self._kh.get_kmer_hashes(seq)
-        for h in hs:
+        #hs = self._kh.get_kmer_hashes(seq)
+        #for h in hs:
+        #    self.add(h)
+        for kmer in kmers(seq, self._kh.ksize()):
+            h = khmer.hash_murmur3(kmer)
             self.add(h)
 
     def jaccard(self, other):
@@ -75,6 +83,11 @@ class Estimators(object):
             common += 1
         return common
     
+
+class CompositionSketchEstimator(object):
+    def __init__(self, n=100, max_prime=1e10, ksize=K):
+        pass
+
 
 def test_jaccard_1():
     E1 = Estimators(n=0)
@@ -132,17 +145,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sequences1')
     parser.add_argument('sequences2')
+    parser.add_argument('-k', '--ksize', type=int, default=K)
+    parser.add_argument('-n', '--num_estimators', type=int,
+                        default=NUM_ESTIMATORS)
     parser.add_argument('-w', '--weighted', action='store_true')
     args = parser.parse_args()
 
     if args.weighted:
         print 'using weighted estimator'
-        E = WeightedEstimators()
-        E2 = WeightedEstimators()
+        E = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
+        E2 = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
     else:
         print 'using unweighted estimator'
-        E = Estimators()
-        E2 = Estimators()
+        E = Estimators(n=args.num_estimators, ksize=args.ksize)
+        E2 = Estimators(n=args.num_estimators, ksize=args.ksize)
         
 
     print 'reading both'
@@ -156,8 +172,8 @@ def main():
         if n % 10000 == 0:
             jaccard = E.jaccard(E2)
             print n, 'similarity', args.sequences1, args.sequences2, jaccard
-            if n >= 100000:
-                break
+            #if n >= 100000:
+            #    break
 
 
 if __name__ == '__main__':
