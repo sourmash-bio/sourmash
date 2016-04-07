@@ -22,7 +22,7 @@ class SourmashSignature(object):
     def md5sum(self):
         m = hashlib.md5()
         for k in self.estimator._mins:
-            m.update(str(k))
+            m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
     def name(self):

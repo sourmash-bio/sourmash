@@ -18,8 +18,10 @@ def main():
         s = sig.load_signature(open(filename, 'r'), ignore_md5sum)
         print('loaded and saving', filename)
 
+        data = s.save()
+
         fp = open(filename, 'w')
-        fp.write(s.save())
+        fp.write(data)
         fp.close()
         
 main()
