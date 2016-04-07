@@ -6,12 +6,16 @@ from cStringIO import StringIO
 import sourmash
 
 class SourmashSignature(object):
-    def __init__(self, email, estimator):
+    def __init__(self, email, estimator, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
         self.d['type'] = 'mrnaseq'
         self.d['email'] = email
         self.d['version'] = '0.1'
+        if name:
+            self.d['name'] = name
+        if filename:
+            self.d['filename'] = filename
         
         self.sketch = {}
         self.sketch['ksize'] = int(estimator._kh.ksize())
@@ -20,8 +24,14 @@ class SourmashSignature(object):
         self.d['signature'] = self.sketch
         self.estimator = estimator
 
+    def name(self):
+        return self.d['name']
+
     def save(self):
         return yaml.dump(self.d)
+
+    def jaccard(self, other):
+        return self.estimator.jaccard(other.estimator)
 
 
 def load_signature(data):
@@ -37,7 +47,15 @@ def load_signature(data):
     e = sourmash.Estimators(ksize=ksize, max_prime=prime, n=len(mins))
     e._mins = mins
 
-    return SourmashSignature(email, e)
+    sig = SourmashSignature(email, e)
+
+    keys = d.keys()
+    keys.remove('email')
+    keys.remove('signature')
+    for k in keys:
+        sig.d[k] = d[k]
+
+    return sig
 
 def test_roundtrip():
     e = sourmash.Estimators()

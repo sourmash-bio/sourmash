@@ -2,7 +2,7 @@
 import sourmash
 import argparse
 import screed
-from pickle import load
+import sig
 import scipy
 import pylab
 import scipy.cluster.hierarchy as sch
@@ -10,31 +10,28 @@ from sklearn import metrics
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('dumpfile')
+    parser.add_argument('signatures', nargs='+')
     args = parser.parse_args()
 
-    labels = dict([ i.strip().split(' ', 2) for i in open('labels.txt') ])
+    siglist = []
+    for filename in args.signatures:
+        data = open(filename).read()
+        print('loading', filename)
+        signature = sig.load_signature(data)
+        siglist.append(signature)
 
-    emins = load(open(args.dumpfile, 'rb'))
-    estimators = []
-    for (filename, mins) in emins:
-        E = sourmash.Estimators()
-        E._mins = mins
-        estimators.append((filename, E))
-
-    D = scipy.zeros([len(estimators), len(estimators)])
+    D = scipy.zeros([len(siglist), len(siglist)])
     
     i = 0
     labeltext = []
-    for f, E in estimators:
+    for E in siglist:
         j = 0
-        for f2, E2 in estimators:
-            #print labels[f], labels[f2], E.jaccard(E2)
+        for E2 in siglist:
             D[i][j] = E.jaccard(E2)
             j += 1
             
-        print('%20s\t%s' % (labels.get(f, f), D[i , :,],))
-        labeltext.append(labels.get(f, f))
+        print('%20s\t%s' % (E.name(), D[i , :,],))
+        labeltext.append(E.name())
         i += 1
 
     fig = pylab.figure(figsize=(8,8))

@@ -4,3 +4,4 @@
 *.abundtrim
 *.keep
 *.pyc
+*.sig
