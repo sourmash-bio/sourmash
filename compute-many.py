@@ -2,7 +2,7 @@
 import sourmash
 import argparse
 import screed
-from cPickle import dump, load
+from pickle import dump, load
 
 LEN_CUTOFF=80
 
@@ -16,7 +16,7 @@ def main():
     estimators = []
 
     try:
-        emins = load(open(args.picklejar, 'r'))
+        emins = load(open(args.picklejar, 'rb'))
         for (filename, mins) in emins:
             already_done.add(filename)
     except IOError:
@@ -24,7 +24,7 @@ def main():
 
     for filename in args.filenames:
         if filename in already_done:
-            print 'skipping', filename
+            print('skipping', filename)
             continue
 
         #for n, record in enumerate(screed.open(filename)):
@@ -35,12 +35,12 @@ def main():
         E = sourmash.Estimators()
         for n, record in enumerate(screed.open(filename)):
             if n % 10000 == 0:
-                print '...', filename, n
+                print('...', filename, n)
             E.add_sequence(record.sequence)
 
         estimators.append((filename, E._mins))
 
-    fp = open(args.picklejar, 'w')
+    fp = open(args.picklejar, 'wb') #, encoding='utf-8')
     dump(estimators, fp)
     fp.close()
     

@@ -152,16 +152,16 @@ def main():
     args = parser.parse_args()
 
     if args.weighted:
-        print 'using weighted estimator'
+        print('using weighted estimator')
         E = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
         E2 = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
     else:
-        print 'using unweighted estimator'
+        print('using unweighted estimator')
         E = Estimators(n=args.num_estimators, ksize=args.ksize)
         E2 = Estimators(n=args.num_estimators, ksize=args.ksize)
         
 
-    print 'reading both'
+    print('reading both')
     n = 0
     for r1, r2 in itertools.izip(screed.open(args.sequences1),
                                  screed.open(args.sequences2)):
@@ -171,7 +171,7 @@ def main():
 
         if n % 10000 == 0:
             jaccard = E.jaccard(E2)
-            print n, 'similarity', args.sequences1, args.sequences2, jaccard
+            print(n, 'similarity', args.sequences1, args.sequences2, jaccard)
             #if n >= 100000:
             #    break
 

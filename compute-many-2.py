@@ -2,7 +2,7 @@
 import sourmash
 import argparse
 import screed
-from cPickle import load
+from pickle import load
 import scipy
 import pylab
 import scipy.cluster.hierarchy as sch
@@ -15,7 +15,7 @@ def main():
 
     labels = dict([ i.strip().split(' ', 2) for i in open('labels.txt') ])
 
-    emins = load(open(args.dumpfile))
+    emins = load(open(args.dumpfile, 'rb'))
     estimators = []
     for (filename, mins) in emins:
         E = sourmash.Estimators()
@@ -25,6 +25,7 @@ def main():
     D = scipy.zeros([len(estimators), len(estimators)])
     
     i = 0
+    labeltext = []
     for f, E in estimators:
         j = 0
         for f2, E2 in estimators:
@@ -32,9 +33,17 @@ def main():
             D[i][j] = E.jaccard(E2)
             j += 1
             
-        print '%20s\t%s' % (labels[f], D[i , :,],)
+        print('%20s\t%s' % (labels.get(f, f), D[i , :,],))
+        labeltext.append(labels.get(f, f))
         i += 1
 
+
+    fig = pylab.figure(figsize=(8,8))
+    #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])                                     
+    Y = sch.linkage(D, method='single') # centroid                              
+    Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
+    fig.show()
+    fig.savefig('xxx.png')
 
     fig = pylab.figure(figsize=(8,8))
     ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
