@@ -24,6 +24,7 @@ def main():
     
     i = 0
     labeltext = []
+    samples = []
     for E in siglist:
         j = 0
         for E2 in siglist:
@@ -32,6 +33,7 @@ def main():
             
         print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
         labeltext.append('%d-%s' % (i,E.name()))
+        samples.append((i, E.name(), E.d['filename']))
         i += 1
 
     fig = pylab.figure(figsize=(5,8))
@@ -83,7 +85,8 @@ def main():
     fig.show()
     fig.savefig('dendrogram.png')
 
-    
+    for i, name, filename in samples:
+        print i, '\t', name
 
 if __name__ == '__main__':
     main()
