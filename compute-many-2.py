@@ -37,6 +37,17 @@ def main():
         labeltext.append(labels.get(f, f))
         i += 1
 
+    fig = pylab.figure(figsize=(8,8))
+    #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
+    Y = sch.linkage(D, method='single') # centroid
+    Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
+    #ax1.set_xticks([])
+    #ax1.set_yticks([])
+
+    fig.show()
+    fig.savefig('xxx.png')
+
+    # XXX
 
     fig = pylab.figure(figsize=(8,8))
     #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])                                     
@@ -48,14 +59,14 @@ def main():
     fig = pylab.figure(figsize=(8,8))
     ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
     Y = sch.linkage(D, method='single') # centroid
-    Z1 = sch.dendrogram(Y, orientation='right')
+    Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
     ax1.set_xticks([])
     ax1.set_yticks([])
 
     # Compute and plot second dendrogram.
     ax2 = fig.add_axes([0.3,0.71,0.6,0.2])
     Y = sch.linkage(D, method='single')
-    Z2 = sch.dendrogram(Y)
+    Z2 = sch.dendrogram(Y, labels=labeltext)
     ax2.set_xticks([])
     ax2.set_yticks([])
 
