@@ -2,7 +2,6 @@
 import yaml
 import hashlib
 import sys
-from cStringIO import StringIO
 import sourmash
 
 class SourmashSignature(object):
@@ -25,7 +24,12 @@ class SourmashSignature(object):
         self.estimator = estimator
 
     def name(self):
-        return self.d['name']
+        if 'name' in self.d:
+           return self.d.get('name')
+        elif 'filename' in self.d:
+           return self.d.get('filename')
+        else:
+           return ""
 
     def save(self):
         return yaml.dump(self.d)
@@ -43,13 +47,13 @@ def load_signature(data):
     sketch = d['signature']
     ksize = sketch['ksize']
     prime = sketch['prime']
-    mins = map(long, sketch['mins'])
+    mins = list(map(int, sketch['mins']))
     e = sourmash.Estimators(ksize=ksize, max_prime=prime, n=len(mins))
     e._mins = mins
 
     sig = SourmashSignature(email, e)
 
-    keys = d.keys()
+    keys = list(d.keys())
     keys.remove('email')
     keys.remove('signature')
     for k in keys:
