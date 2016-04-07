@@ -27,6 +27,10 @@ def main():
         signature = sig.SourmashSignature('titus@idyll.org',
                                           E,
                                           filename=filename)
+        data = signature.save()
+        fp = open(sigfile, 'w')
+        fp.write(data)
+        fp.close()
     
 
 if __name__ == '__main__':
