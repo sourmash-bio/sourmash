@@ -18,6 +18,9 @@ def main():
         print('loading', filename)
         s = sig.load_signature(open(filename, 'r'), ignore_md5sum)
 
+        if not s.d.get('name'):
+            print('warning, no name for:', filename)
+
         data = s.save()
 
         if not args.no_save:

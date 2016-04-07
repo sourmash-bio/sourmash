@@ -30,14 +30,14 @@ def main():
             D[i][j] = E.jaccard(E2)
             j += 1
             
-        print('%20s\t%s' % (E.name(), D[i , :,],))
-        labeltext.append(E.name())
+        print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
+        labeltext.append('%d-%s' % (i,E.name()))
         i += 1
 
-    fig = pylab.figure(figsize=(8,8))
+    fig = pylab.figure(figsize=(5,8))
     #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
     Y = sch.linkage(D, method='single') # centroid
-    Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
+    Z1 = sch.dendrogram(Y, labels=labeltext)
     #ax1.set_xticks([])
     #ax1.set_yticks([])
 
