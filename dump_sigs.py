@@ -16,7 +16,7 @@ def main():
     estimators = []
     for (filename, mins) in emins:
         E = sourmash.Estimators()
-        E._mins = mins
+        E._mins = list(map(int, mins))
         estimators.append((filename, E))
 
     for (filename, E) in estimators:

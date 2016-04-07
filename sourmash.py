@@ -37,7 +37,7 @@ class Estimators(object):
         self._kh = _kh
 
         # get a prime to use for hashing
-        p = khmer.get_n_primes_near_x(1, max_prime)[0]
+        p = int(khmer.get_n_primes_near_x(1, max_prime)[0])
         self.p = p
 
         # initialize sketch to size n
