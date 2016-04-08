@@ -35,19 +35,22 @@ def retrieve_fastq(accession):
                 for f,m,b in zip(ftp_list, md5_list, bytes_list):
                     yield run_acc, f, m, b
             else:
-                yield run_acc, ftp_list, md5_list, bytes
+                yield run_acc, ftp_list, md5_list, bytes_list
 
 def main():
     fp = open('ftp_list.csv', 'w', encoding='utf-8')
-    w = csv.writer(fp)
+    w = csv.writer(fp, dialect=csv.excel)
     
     r = csv.reader(open('sra_result.csv', 'r', encoding='utf-8'))
     for row in r:
         if row[0] == 'Experiment Accession':
             continue
         for acc, url, md5, n_bytes in retrieve_fastq(row[0]):
-            print(row[0], acc, url)
-            w.writerow([row[0], acc, url, md5, n_bytes])
+            acc0 = bytes(row[0], 'utf-8')
+            x = [acc0, acc, url, md5, n_bytes]
+            x = [ i.decode('utf-8') for i in x ]
+            print(x[0], x[2])
+            w.writerow(x)
 
 if __name__ == '__main__':
     main()
