@@ -86,7 +86,7 @@ def main():
     fig.savefig('dendrogram.png')
 
     for i, name, filename in samples:
-        print i, '\t', name
+        print(i, '\t', name)
 
 if __name__ == '__main__':
     main()
