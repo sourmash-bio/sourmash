@@ -17,8 +17,8 @@ def main():
     for filename in args.signatures:
         data = open(filename).read()
         print('loading', filename)
-        signature = sig.load_signature(data)
-        siglist.append(signature)
+        loaded = sig.load_signatures(data)
+        siglist.extend(loaded)
 
     D = scipy.zeros([len(siglist), len(siglist)])
     
@@ -33,7 +33,7 @@ def main():
             
         print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
         labeltext.append('%d-%s' % (i,E.name()))
-        samples.append((i, E.name(), E.d['filename']))
+        samples.append((i, E.name(), E.d.get('filename', '')))
         i += 1
 
     fig = pylab.figure(figsize=(5,8))

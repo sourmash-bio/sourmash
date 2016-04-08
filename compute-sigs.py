@@ -27,7 +27,8 @@ def main():
         signature = sig.SourmashSignature('titus@idyll.org',
                                           E,
                                           filename=filename)
-        data = signature.save()
+        siglist = [signature]
+        data = sig.save_signatures(siglist)
         fp = open(sigfile, 'w')
         fp.write(data)
         fp.close()
