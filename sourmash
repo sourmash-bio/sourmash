@@ -26,8 +26,9 @@ Commands can be:
          print('Unrecognized command')
          parser.print_help()
          sys.exit(1)
-         
+
       cmd = getattr(self, args.command)
+      print('# running sourmash subcommand: %s' % args.command)
       cmd()
       
    def compute(self):
@@ -114,13 +115,12 @@ Commands can be:
 
       for filename in args.sigfiles:
          print('loading', filename)
-         assert ignore_md5sum
          siglist = sig.load_signatures(open(filename, 'r'),
                                        ignore_md5sum=ignore_md5sum)
 
-         for s in siglist:
-            if not s.d.get('name'):
-               print('warning, no name for:', filename)
+         #for s in siglist:
+            #if not s.d.get('name'):
+            #   print('warning, no name for:', filename)
 
          if args.name_from:              # hackity hack hack
             other = sig.load_signatures(open(args.name_from, 'r'))
@@ -143,7 +143,7 @@ Commands can be:
 
       parser = argparse.ArgumentParser()
       parser.add_argument('signatures', nargs='+')
-      parser.add_argument('-k', '--ksize', type=int, default=31)
+      parser.add_argument('-k', '--ksize', type=int, default=32)
       parser.add_argument('-o', '--output-filename')
       args = parser.parse_args(sys.argv[2:])
 
