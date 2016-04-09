@@ -27,10 +27,9 @@ def main():
                 print('warning, no name for:', filename)
 
         if args.name_from:              # hackity hack hack
-            assert len(siglist) == 1
             other = sig.load_signatures(open(args.name_from, 'r'))
-            s = siglist[0]
-            s.d['name'] = other[0].d['name']
+            for s in siglist:
+                s.d['name'] = other[0].d['name']
 
         data = sig.save_signatures(siglist)
 
