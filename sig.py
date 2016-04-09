@@ -50,7 +50,7 @@ class SourmashSignature(object):
         return self.estimator.jaccard(other.estimator)
 
 
-def load_signatures(data, ignore_md5sum=False):
+def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     ## record header
     
     d = yaml.safe_load(data)
@@ -80,7 +80,8 @@ def load_signatures(data, ignore_md5sum=False):
         for sketch in d['signatures']:
             sig = _load_one_signature(sketch, email, name, filename,
                                       ignore_md5sum)
-            siglist.append(sig)
+            if not select_ksize or select_ksize == sig.estimator.ksize:
+                siglist.append(sig)
         return siglist
 
 
