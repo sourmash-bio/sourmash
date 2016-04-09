@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import sys
 import sourmash
 import argparse
 import screed
@@ -11,14 +12,19 @@ from sklearn import metrics
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('signatures', nargs='+')
+    parser.add_argument('-k', '--ksize', type=int, default=31)
     args = parser.parse_args()
 
     siglist = []
     for filename in args.signatures:
         data = open(filename).read()
         print('loading', filename)
-        loaded = sig.load_signatures(data)
+        loaded = sig.load_signatures(data, select_ksize=args.ksize)
         siglist.extend(loaded)
+
+    if len(siglist) == 0:
+        print('no signatures!')
+        sys.exit(-1)
 
     D = scipy.zeros([len(siglist), len(siglist)])
     
