@@ -71,6 +71,9 @@ class Estimators(object):
             self.add(h)
 
     def jaccard(self, other):
+        if self.ksize != other.ksize:
+            raise Exception("different k-mer sizes - cannot compare")
+
         common = 0
         for _ in yield_overlaps(self._mins, other._mins):
             common += 1
@@ -78,6 +81,9 @@ class Estimators(object):
         return float(common) / float(len(self._mins))
 
     def common(self, other):
+        if self.ksize != other.ksize:
+            raise Exception("different k-mer sizes - cannot compare")
+
         common = 0
         for _ in yield_overlaps(self._mins, other._mins):
             common += 1
