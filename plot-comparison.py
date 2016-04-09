@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 import sys
-import sourmash
 import argparse
-import screed
-import sourmash_signature as sig
+import numpy
 import scipy
 import pylab
 import scipy.cluster.hierarchy as sch
@@ -11,36 +9,15 @@ from sklearn import metrics
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('signatures', nargs='+')
-    parser.add_argument('-k', '--ksize', type=int, default=31)
+    parser.add_argument('distances', help="output from 'sourmash compare'")
     args = parser.parse_args()
 
-    siglist = []
-    for filename in args.signatures:
-        data = open(filename).read()
-        print('loading', filename)
-        loaded = sig.load_signatures(data, select_ksize=args.ksize)
-        siglist.extend(loaded)
+    D_filename = args.distances
+    labelfilename = D_filename + '.labels.txt'
 
-    if len(siglist) == 0:
-        print('no signatures!')
-        sys.exit(-1)
-
-    D = scipy.zeros([len(siglist), len(siglist)])
-    
-    i = 0
-    labeltext = []
-    samples = []
-    for E in siglist:
-        j = 0
-        for E2 in siglist:
-            D[i][j] = E.jaccard(E2)
-            j += 1
-            
-        print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
-        labeltext.append('%d-%s' % (i,E.name()))
-        samples.append((i, E.name(), E.d.get('filename', '')))
-        i += 1
+    D = numpy.load(open(D_filename, 'rb'))
+    labeltext = [ x.strip() for x in open(labelfilename) ]
+    samples = [ (i, x) for i, x in enumerate(labeltext) ]
 
     fig = pylab.figure(figsize=(5,8))
     #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
@@ -59,7 +36,8 @@ def main():
     Y = sch.linkage(D, method='single') # centroid                              
     Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.show()
-    fig.savefig('xxx.png')
+    fig.savefig('dendrogram.png')
+    print('wrote dendrogram.png')
 
     fig = pylab.figure(figsize=(8,8))
     ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
@@ -89,11 +67,11 @@ def main():
     axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
     pylab.colorbar(im, cax=axcolor)
     fig.show()
-    fig.savefig('dendrogram.png')
+    fig.savefig('matrix.png')
+    print('wrote matrix.png')
 
-    for i, name, filename in samples:
+    for i, name in samples:
         print(i, '\t', name)
 
 if __name__ == '__main__':
     main()
-    

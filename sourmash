@@ -138,6 +138,54 @@ Commands can be:
                fp.write(data)
                fp.close()
 
+   def compare(self):
+      import numpy 
+
+      parser = argparse.ArgumentParser()
+      parser.add_argument('signatures', nargs='+')
+      parser.add_argument('-k', '--ksize', type=int, default=31)
+      parser.add_argument('-o', '--output-filename')
+      args = parser.parse_args(sys.argv[2:])
+
+      siglist = []
+      for filename in args.signatures:
+         data = open(filename).read()
+         print('loading', filename)
+         loaded = sig.load_signatures(data, select_ksize=args.ksize)
+         siglist.extend(loaded)
+
+      if len(siglist) == 0:
+         print('no signatures!')
+         sys.exit(-1)
+
+      D = numpy.zeros([len(siglist), len(siglist)])
+
+      i = 0
+      labeltext = []
+      samples = []
+      for E in siglist:
+         j = 0
+         for E2 in siglist:
+            D[i][j] = E.jaccard(E2)
+            j += 1
+
+         print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
+         labeltext.append('%d-%s' % (i,E.name()))
+         i += 1
+
+      if args.output_filename:
+         labeloutname = args.output_filename + '.labels.txt'
+         print('saving labels to:', labeloutname)
+         fp = open(labeloutname, 'w')
+         fp.write("\n".join(labeltext))
+         fp.close()
+
+         print('saving distance matrix to:', args.output_filename)
+         fp = open(args.output_filename, 'wb')
+         numpy.save(fp, D)
+         fp.close()
+         
+
 def main():
    SourmashCommands()
 
