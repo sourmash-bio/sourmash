@@ -51,8 +51,11 @@ def main():
                 fp.write(data)
                 fp.close()
 
+            s = record.sequence
+            for i in 'R', 'W', 'Y':
+                s = s.replace(i, 'N')
             for E in Elist:
-                E.add_sequence(record.sequence)
+                E.add_sequence(s)
 
         siglist = []
         for E in Elist:
