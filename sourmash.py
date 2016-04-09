@@ -35,6 +35,7 @@ class Estimators(object):
     def __init__(self, n=100, max_prime=1e10, ksize=K):
         _kh = khmer.Countgraph(ksize, 1, 1)
         self._kh = _kh
+        self.ksize = ksize
 
         # get a prime to use for hashing
         p = int(khmer.get_n_primes_near_x(1, max_prime)[0])
@@ -63,9 +64,6 @@ class Estimators(object):
 
     def add_sequence(self, seq):
         seq = seq.upper().replace('N', 'G')
-        #hs = self._kh.get_kmer_hashes(seq)
-        #for h in hs:
-        #    self.add(h)
         for kmer in kmers(seq, self._kh.ksize()):
             h = khmer.hash_murmur3(kmer)
             self.add(h)
@@ -82,6 +80,9 @@ class Estimators(object):
         for _ in yield_overlaps(self._mins, other._mins):
             common += 1
         return common
+
+    def _truncate(self, n):
+        self._mins = self._mins[:n]
     
 
 class CompositionSketchEstimator(object):
