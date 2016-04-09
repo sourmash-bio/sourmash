@@ -25,20 +25,20 @@ def main():
     print('Computing signature for ksizes: %s' % str(ksizes))
 
     for filename in args.filenames:
-        sigfile = filename + '.sig'
+        sigfile = os.path.basename(filename) + '.sig'
         if os.path.exists(sigfile) and not args.force:
             print('skipping', filename, '- already done')
             continue
 
         Elist = []
         for k in ksizes:
-            E = sourmash.Estimators(ksize=k, n=1000)
+            E = sourmash.Estimators(ksize=k, n=500)
             Elist.append(E)
             
         for n, record in enumerate(screed.open(filename)):
             if n % 10000 == 0:
                 print('...', filename, n)
-            if n % 100000 == 0 and n:
+            if 0 and n % 100000 == 0 and n:
                 siglist = []
                 for E in Elist:
                     signature = sig.SourmashSignature('titus@idyll.org',
