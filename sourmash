@@ -17,7 +17,8 @@ class SourmashCommands(object):
 Commands can be:
 
    compute <filenames>      Compute signatures for sequences in these files
-
+   compare <filenames.sig>  Compute distance matrix for given signatures
+   clean <filenames.sig>    Clean & manipulate signature files
 .
 ''')
       parser.add_argument('command')
