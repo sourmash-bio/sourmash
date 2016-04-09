@@ -11,7 +11,7 @@ def main():
             continue
 
         organism = row[2]
-        if not organism.startswith('Strongyl'):
+        if organism.startswith('Strongyl'):
             continue
         acc_list.append(row[0])
 
@@ -19,7 +19,7 @@ def main():
     for row in r:
         if row[0] in acc_list:
             url = row[2]
-            if not url.endswith('_2.fastq.gz'):
+            if url.endswith('_1.fastq.gz'):
                 print("ftp://" + url)
 
 if __name__ == '__main__':

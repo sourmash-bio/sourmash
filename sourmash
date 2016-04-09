@@ -107,6 +107,7 @@ Commands can be:
       parser.add_argument('-s', '--show', action='store_true',
                           help='print to stdout instead of overwriting')
       parser.add_argument('--name-from', help='transfer name from here')
+      parser.add_argument('--set-name', help='set the name')
       args = parser.parse_args(sys.argv[2:])
 
       ignore_md5sum = False
@@ -114,19 +115,20 @@ Commands can be:
          print('ignoring md5sum because of --force')
          ignore_md5sum = True
 
+      assert not (args.name_from and args.set_name)
+
       for filename in args.sigfiles:
          print('loading', filename)
          siglist = sig.load_signatures(open(filename, 'r'),
                                        ignore_md5sum=ignore_md5sum)
 
-         #for s in siglist:
-            #if not s.d.get('name'):
-            #   print('warning, no name for:', filename)
-
          if args.name_from:              # hackity hack hack
             other = sig.load_signatures(open(args.name_from, 'r'))
             for s in siglist:
                s.d['name'] = other[0].d['name']
+         elif args.set_name:
+            for s in siglist:
+               s.d['name'] = args.set_name
 
          data = sig.save_signatures(siglist)
 
