@@ -4,9 +4,6 @@ import screed
 import argparse
 import itertools
 
-K = 31
-NUM_ESTIMATORS=100
-
 def yield_overlaps(x1, x2):
     i = 0
     j = 0
@@ -32,7 +29,12 @@ class Estimators(object):
     A simple bottom n-sketch MinHash implementation.
     """
 
-    def __init__(self, n=100, max_prime=1e10, ksize=K):
+    def __init__(self, n=None, max_prime=1e10, ksize=None):
+        if n is None:
+            raise Exception
+        if ksize is None:
+            raise Exception
+        
         _kh = khmer.Countgraph(ksize, 1, 1)
         self._kh = _kh
         self.ksize = ksize
@@ -86,7 +88,7 @@ class Estimators(object):
     
 
 class CompositionSketchEstimator(object):
-    def __init__(self, n=100, max_prime=1e10, ksize=K):
+    def __init__(self, n=None, max_prime=1e10, ksize=None):
         pass
 
 
@@ -140,42 +142,3 @@ class WeightedEstimators(Estimators):
         self._kh.consume(seq)           # track k-mer abundances
         for h in hs:
             self.add(h * self._kh.get(h)) # weight by k-mer abundances
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('sequences1')
-    parser.add_argument('sequences2')
-    parser.add_argument('-k', '--ksize', type=int, default=K)
-    parser.add_argument('-n', '--num_estimators', type=int,
-                        default=NUM_ESTIMATORS)
-    parser.add_argument('-w', '--weighted', action='store_true')
-    args = parser.parse_args()
-
-    if args.weighted:
-        print('using weighted estimator')
-        E = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
-        E2 = WeightedEstimators(n=args.num_estimators, ksize=args.ksize)
-    else:
-        print('using unweighted estimator')
-        E = Estimators(n=args.num_estimators, ksize=args.ksize)
-        E2 = Estimators(n=args.num_estimators, ksize=args.ksize)
-        
-
-    print('reading both')
-    n = 0
-    for r1, r2 in itertools.izip(screed.open(args.sequences1),
-                                 screed.open(args.sequences2)):
-        E.add_sequence(r1.sequence)
-        E2.add_sequence(r2.sequence)
-        n += 1
-
-        if n % 10000 == 0:
-            jaccard = E.jaccard(E2)
-            print(n, 'similarity', args.sequences1, args.sequences2, jaccard)
-            #if n >= 100000:
-            #    break
-
-
-if __name__ == '__main__':
-    main()

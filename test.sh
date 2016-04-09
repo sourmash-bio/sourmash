@@ -1,4 +1,5 @@
-./sourmash compute out.fq -f
-./sourmash compare out.fq.sig out.fq.sig
-./sourmash clean -n -s out.fq.sig
+#! /bin/bash
+./sourmash compute test.fq -f
+./sourmash compare test.fq.sig test.fq.sig
+./sourmash clean -n -s test.fq.sig
 
