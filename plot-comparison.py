@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-import sys
 import argparse
 import numpy
 import scipy
@@ -18,18 +17,6 @@ def main():
     D = numpy.load(open(D_filename, 'rb'))
     labeltext = [ x.strip() for x in open(labelfilename) ]
     samples = [ (i, x) for i, x in enumerate(labeltext) ]
-
-    fig = pylab.figure(figsize=(5,8))
-    #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
-    Y = sch.linkage(D, method='single') # centroid
-    Z1 = sch.dendrogram(Y, labels=labeltext)
-    #ax1.set_xticks([])
-    #ax1.set_yticks([])
-
-    fig.show()
-    fig.savefig('xxx.png')
-
-    # XXX
 
     fig = pylab.figure(figsize=(8,8))
     #ax1 = fig.add_axes([0.09,0.1,0.2,0.6])                                     

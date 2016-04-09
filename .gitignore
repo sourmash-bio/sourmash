@@ -5,3 +5,6 @@
 *.keep
 *.pyc
 *.sig
+*.png
+*.labels.txt
+distances

@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 import yaml
 import hashlib
-import sys
-import sourmash
-import hashlib
+import sourmash_lib
 
 class SourmashSignature(object):
     def __init__(self, email, estimator, name='', filename=''):
@@ -89,7 +87,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     ksize = sketch['ksize']
     prime = sketch['prime']
     mins = list(map(int, sketch['mins']))
-    e = sourmash.Estimators(ksize=ksize, max_prime=prime, n=0)
+    e = sourmash_lib.Estimators(ksize=ksize, max_prime=prime, n=0)
     e._mins = mins
 
     sig = SourmashSignature(email, e)
@@ -139,7 +137,7 @@ def save_signatures(siglist):
     assert 0
 
 def test_roundtrip():
-    e = sourmash.Estimators()
+    e = sourmash_lib.Estimators()
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = load_signatures(s)
@@ -149,7 +147,7 @@ def test_roundtrip():
     assert e.jaccard(e2) == 1.0
 
 def test_md5():
-    e = sourmash.Estimators()
+    e = sourmash_lib.Estimators()
     sig = SourmashSignature('titus@idyll.org', e)
     print(sig.save())
     assert sig.md5sum() == '9e1f3d700a7344f61db1d37fa11f60f2', sig.md5sum()
