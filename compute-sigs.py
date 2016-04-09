@@ -52,8 +52,8 @@ def main():
                 fp.close()
 
             s = record.sequence
-            for i in 'R', 'W', 'Y':
-                s = s.replace(i, 'N')
+#            for i in 'R', 'W', 'Y':
+#                s = s.replace(i, 'N')
             for E in Elist:
                 E.add_sequence(s)
 
