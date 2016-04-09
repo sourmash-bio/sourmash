@@ -3,7 +3,7 @@ import sys
 import sourmash
 import argparse
 import screed
-import sig
+import sourmash_signature as sig
 import scipy
 import pylab
 import scipy.cluster.hierarchy as sch

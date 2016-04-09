@@ -1,9 +1,9 @@
 #! /usr/bin/env python
-import sourmash
 import argparse
-import screed
-import sig
 import os
+import screed
+import sourmash
+import sourmash_signature as sig
 
 LEN_CUTOFF=80
 
@@ -52,8 +52,8 @@ def main():
                 fp.close()
 
             s = record.sequence
-#            for i in 'R', 'W', 'Y':
-#                s = s.replace(i, 'N')
+            for i in 'R', 'W', 'Y':
+                s = s.replace(i, 'N')
             for E in Elist:
                 E.add_sequence(s)
 

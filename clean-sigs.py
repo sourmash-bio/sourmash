@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import sig
+import sourmash_signature as sig
 import argparse
 
 def main():
