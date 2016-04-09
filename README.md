@@ -2,11 +2,11 @@
 
 Compute MinHash signatures for RNAseq reads.
 
-Usage::
+Usage:
 
-   ./sourmash compute *.fq.gz
-   ./sourmash compare *.sig -o distances
-   ./plot-comparison.py distances
+    ./sourmash compute *.fq.gz
+    ./sourmash compare *.sig -o distances
+    ./plot-comparison.py distances
 
 ----
 
