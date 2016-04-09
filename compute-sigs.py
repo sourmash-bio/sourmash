@@ -38,6 +38,19 @@ def main():
         for n, record in enumerate(screed.open(filename)):
             if n % 10000 == 0:
                 print('...', filename, n)
+            if n % 100000 == 0 and n:
+                siglist = []
+                for E in Elist:
+                    signature = sig.SourmashSignature('titus@idyll.org',
+                                              E,
+                                              filename=filename)
+                    siglist.append(signature)
+            
+                data = sig.save_signatures(siglist)
+                fp = open(sigfile + '.%d' % n, 'w')
+                fp.write(data)
+                fp.close()
+
             for E in Elist:
                 E.add_sequence(record.sequence)
 
