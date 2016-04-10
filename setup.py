@@ -7,6 +7,7 @@ SETUP_METADATA = \
     "name": "sourmash",
     "version": VERSION,
     "description": "tools for comparing DNA sequences with MinHash sketches",
+    "url": "https://github.com/dib-lab/sourmash",
     "author": "C. Titus Brown",
     "author_email": "titus@idyll.org",
     "license": "BSD 3-clause",
