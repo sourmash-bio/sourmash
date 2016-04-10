@@ -16,9 +16,10 @@ class SourmashCommands(object):
 
 Commands can be:
 
-   compute <filenames>      Compute signatures for sequences in these files
-   compare <filenames.sig>  Compute distance matrix for given signatures
-   clean <filenames.sig>    Clean & manipulate signature files
+   compute <filenames>      Compute signatures for sequences in these files.
+   compare <filenames.sig>  Compute distance matrix for given signatures.
+   search <query> <against> Search for matching signatures.   
+   clean <filenames.sig>    Clean & manipulate signature files.
 .
 ''')
       parser.add_argument('command')
@@ -31,6 +32,45 @@ Commands can be:
       cmd = getattr(self, args.command)
       print('# running sourmash subcommand: %s' % args.command)
       cmd()
+
+   def search(self):
+      import sourmash_signature as sig
+      parser = argparse.ArgumentParser()
+      parser.add_argument('query')
+      parser.add_argument('against', nargs='+')
+      parser.add_argument('--threshold', default=0.08, type=float)
+      parser.add_argument('--ksize', default=DEFAULT_K)
+      args = parser.parse_args(sys.argv[2:])
+
+      sl = sig.load_signatures(open(args.query, 'r'), select_ksize=args.ksize)
+      if len(sl) != 1:
+         raise Exception("%d query signatures; need exactly one" % len(sl))
+      query = sl[0]
+
+      print('loading signatures from %d files' % len(args.against))
+      against = []
+      for filename in args.against:
+         if filename == args.query:
+            print('excluding query from database (file %s)' % filename)
+            continue
+         
+         sl = sig.load_signatures(open(filename, 'r'), select_ksize=args.ksize)
+         for x in sl:
+            against.append((x, filename))
+
+      distances = []
+      for (x, filename) in against:
+         distance = query.jaccard(x)
+         if distance >= args.threshold:
+            distances.append((distance, x, filename))
+
+      if distances:
+         distances.sort(reverse=True)
+         print('%d matches:' % len(distances))
+         for distance, match, filename in distances[:3]:
+            print('\t', match.name(), '\t', distance, '\t', filename)
+      else:
+         print('** no matches in %d signatures' % len(against))
       
    def compute(self):
       parser = argparse.ArgumentParser()
@@ -146,7 +186,7 @@ Commands can be:
 
       parser = argparse.ArgumentParser()
       parser.add_argument('signatures', nargs='+')
-      parser.add_argument('-k', '--ksize', type=int, default=32)
+      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
       parser.add_argument('-o', '--output-filename')
       args = parser.parse_args(sys.argv[2:])
 
