@@ -16,10 +16,11 @@ class SourmashCommands(object):
 
 Commands can be:
 
-   compute <filenames>      Compute signatures for sequences in these files.
-   compare <filenames.sig>  Compute distance matrix for given signatures.
-   search <query> <against> Search for matching signatures.   
-   clean <filenames.sig>    Clean & manipulate signature files.
+   compute <filenames>         Compute signatures for sequences in these files.
+   compare <filenames.sig>     Compute distance matrix for given signatures.
+   search <query> <against>    Search for matching signatures.
+   clean <filenames.sig>       Clean & manipulate signature files.
+   condense <out> <filenames>  Create species-general signature files.
 .
 ''')
       parser.add_argument('command')
@@ -72,6 +73,53 @@ Commands can be:
       else:
          print('** no matches in %d signatures' % len(against))
       
+   def condense(self):
+      parser = argparse.ArgumentParser()
+      parser.add_argument('output')
+      parser.add_argument('filenames', nargs='+')
+      parser.add_argument('-k', '--ksize', default=DEFAULT_K)
+      parser.add_argument('--name', default=None)
+      parser.add_argument('--threshold', type=int, default=2,
+                          help='threshold for solid hash values')
+      args = parser.parse_args(sys.argv[2:])
+
+      siglist = []
+      for filename in args.filenames:
+         sl = sig.load_signatures(open(filename, 'r'),
+                                  select_ksize=args.ksize)
+         siglist.extend(sl)
+
+      x = set()
+      for s in siglist:
+         x.add(s.estimator.p)
+      if len(x) != 1:
+         raise Exception('need the same prime across all estimators')
+      prime = x.pop()
+
+      hash_counts = {}
+      for s in siglist:
+         for hashval in s.estimator._mins:
+            hash_counts[hashval] = hash_counts.get(hashval, 0) + 1
+
+      solid_hashes = [ x for (x, y) in hash_counts.items() if y > args.threshold ]
+      solid_hashes.sort()
+
+      condensed_estimator = sourmash_lib.Estimators(n=0, ksize=args.ksize)
+      condensed_estimator.p = prime
+      condensed_estimator._mins = solid_hashes
+
+      condensed_sig = sig.SourmashSignature(siglist[0].d['email'],
+                                            condensed_estimator,
+                                            name=args.name)
+
+      print('condensed signature: %d hashvals' % len(solid_hashes))
+      data = sig.save_signatures([condensed_sig])
+
+      print('writing condensed signature to %s' % args.output)
+      fp = open(args.output, 'w')
+      fp.write(data)
+      fp.close()
+
    def compute(self):
       parser = argparse.ArgumentParser()
       parser.add_argument('filenames', nargs='+')
@@ -216,6 +264,9 @@ Commands can be:
          labeltext.append('%d-%s' % (i,E.name()))
          i += 1
 
+      print('min similarity in matrix:', numpy.min(D))
+      #print('max similarity in matrix:', numpy.max(D))
+
       if args.output_filename:
          labeloutname = args.output_filename + '.labels.txt'
          print('saving labels to:', labeloutname)
@@ -227,7 +278,7 @@ Commands can be:
          fp = open(args.output_filename, 'wb')
          numpy.save(fp, D)
          fp.close()
-         
+
 
 def main():
    SourmashCommands()
