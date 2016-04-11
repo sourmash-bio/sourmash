@@ -41,7 +41,7 @@ def is_prime(number):
 
 
 def get_prime_lt_x(target):
-    """Backward-find a prime smaller than target.
+    """Backward-find a prime smaller than (or equal to) target.
 
     Step backwards until a prime number (other than 2) has been
     found.
@@ -51,7 +51,7 @@ def get_prime_lt_x(target):
     if target == 1 and number == 1:
         return 1
 
-    i = int(target) - 1
+    i = int(target)
     if i % 2 == 0:
         i -= 1
     while i > 0:
