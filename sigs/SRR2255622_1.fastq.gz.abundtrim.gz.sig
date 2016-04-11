@@ -1,8 +1,8 @@
 class: sourmash_signature
 email: titus@idyll.org
 filename: SRR2255622_1.fastq.gz.abundtrim.gz
-signature:
-  ksize: 31
+signatures:
+- ksize: 31
   md5sum: ea379d78eba1240ab71c8f7fd113c96e
   mins: [168, 268, 316, 823, 873, 1364, 1514, 1606, 1737, 2085, 2093, 2170, 2558,
     2735, 2739, 2980, 3235, 3418, 3630, 4055, 4338, 4377, 4752, 4830, 5142, 5387,
@@ -1047,4 +1047,4 @@ signature:
     1846507, 1846553, 1846856, 1846867, 1846961, 1847065, 1847072, 1847103, 1847169]
   prime: 9999999967
 type: mrnaseq
-version: '0.1'
+version: '0.2'
