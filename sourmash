@@ -8,6 +8,7 @@ import sourmash_lib
 import sourmash_signature as sig
 
 DEFAULT_K=32
+DEFAULT_N=500
 
 class SourmashCommands(object):
    def __init__(self):
@@ -148,7 +149,7 @@ Commands can be:
 
          Elist = []
          for k in ksizes:
-            E = sourmash_lib.Estimators(ksize=k, n=500)
+            E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N)
             Elist.append(E)
 
          for n, record in enumerate(screed.open(filename)):
@@ -278,6 +279,35 @@ Commands can be:
          fp = open(args.output_filename, 'wb')
          numpy.save(fp, D)
          fp.close()
+
+   def sniff(self):
+      parser = argparse.ArgumentParser()
+      parser.add_argument('sequencefile')
+      parser.add_argument('signatures', nargs='+')
+      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+      args = parser.parse_args(sys.argv[2:])
+
+      seqfile = args.sequencefile
+      siglist = []
+      for filename in args.signatures:
+         data = open(filename).read()
+         print('loading', filename)
+         loaded = sig.load_signatures(data, select_ksize=args.ksize)
+         siglist.extend(loaded)
+
+
+      ###
+
+      E = sourmash_lib.Estimators(ksize=args.ksize, n=DEFAULT_N)
+      for n, record in enumerate(screed.open(args.sequencefile)):
+         if n % 10000 == 0:
+            print('...', n)
+            for x in siglist:
+               if x.estimator.common(E) >0:
+                  print('identified as', x.name())
+                  raise SystemExit
+         E.add_sequence(record.sequence)
+         
 
 
 def main():
