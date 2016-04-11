@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+import matplotlib
+matplotlib.use('Agg')
 import argparse
 import numpy
 import scipy
@@ -46,7 +48,7 @@ def main():
     idx2 = Z2['leaves']
     D = D[idx1,:]
     D = D[:,idx2]
-    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
+    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu, vmin=0)
     axmatrix.set_xticks([])
     axmatrix.set_yticks([])
 
