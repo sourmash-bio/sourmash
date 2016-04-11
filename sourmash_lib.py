@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+from __future__ import print_function
 import khmer
 import screed
 import argparse
@@ -24,6 +24,45 @@ def kmers(seq, ksize):
     for i in range(len(seq) - ksize + 1):
         yield seq[i:i+ksize]
 
+
+# taken from khmer 2.0; original author Jason Pell.
+def is_prime(number):
+    """Check if a number is prime."""
+    if number < 2:
+        return False
+    if number == 2:
+        return True
+    if number % 2 == 0:
+        return False
+    for _ in range(3, int(number ** 0.5) + 1, 2):
+        if number % _ == 0:
+            return False
+    return True
+
+
+def get_prime_lt_x(target):
+    """Backward-find a prime smaller than target.
+
+    Step backwards until a prime number (other than 2) has been
+    found.
+
+    Arguments: target -- the number to step backwards from
+    """
+    if target == 1 and number == 1:
+        return 1
+
+    i = int(target) - 1
+    if i % 2 == 0:
+        i -= 1
+    while i > 0:
+        if is_prime(i):
+            return i
+        i -= 2
+
+    if len(primes) != number:
+        raise RuntimeError("unable to find a prime number < %d" % (target))
+
+
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -40,7 +79,7 @@ class Estimators(object):
         self.ksize = ksize
 
         # get a prime to use for hashing
-        p = int(khmer.get_n_primes_near_x(1, max_prime)[0])
+        p = get_prime_lt_x(max_prime)
         self.p = p
 
         # initialize sketch to size n
@@ -136,15 +175,3 @@ def test_yield_overlaps_2():
     x2 = [1, 2, 6]
     assert len(list(yield_overlaps(x1, x2))) == 2
     assert len(list(yield_overlaps(x2, x1))) == 2
-
-    
-class WeightedEstimators(Estimators):
-    def _init_kh(self):
-        self._kh = khmer.Countgraph(ksize, 1e8, 4)
-
-    def add_sequence(self, seq):
-        seq = seq.upper().replace('N', 'G')
-        hs = self._kh.get_kmer_hashes(seq)
-        self._kh.consume(seq)           # track k-mer abundances
-        for h in hs:
-            self.add(h * self._kh.get(h)) # weight by k-mer abundances
