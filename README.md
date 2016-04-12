@@ -26,6 +26,18 @@ You can do:
 It currently requires khmer and PyYAML, and runs under both
 Python 2.7.11 and Python 3.5.
 
+## Development
+
+`sourmash` is the main command-line entry point; run it for help.
+
+`sourmash_lib.py` contains the MinHash sketch implementation.
+
+`sourmash_signature.py` contains the YAML sig formatting and I/O functions.
+
+`sourmash_fig.py` contains some plotting functionality.
+
+----
+
 CTB
 
-10.apr.2016
+12.apr.2016
