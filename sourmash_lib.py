@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 """
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """

@@ -1,9 +1,13 @@
 #! /usr/bin/env python
+"""
+Save and load MinHash sketches in a YAML format, along with some metadata.
+"""
 import yaml
 import hashlib
 import sourmash_lib
 
 class SourmashSignature(object):
+    "Main class for signature information."
     def __init__(self, email, estimator, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
@@ -17,12 +21,16 @@ class SourmashSignature(object):
         self.estimator = estimator
 
     def md5sum(self):
+        "Calculate md5 hash of the bottom sketch, specifically."
+        # @CTB: should include ksize, prime.
         m = hashlib.md5()
         for k in self.estimator._mins:
             m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
     def name(self):
+        "Return as nice a name as possible, defaulting to md5 prefix."
+        # @CTB convert to printable or something.
         if 'name' in self.d:
             return self.d.get('name')
         elif 'filename' in self.d:
@@ -31,6 +39,7 @@ class SourmashSignature(object):
             return self.md5sum()[:8]
 
     def save(self):
+        "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)
         estimator = self.estimator
 
@@ -45,12 +54,17 @@ class SourmashSignature(object):
                self.d.get('filename'), sketch
 
     def jaccard(self, other):
+        "Compute Jaccard similarity with the stored MinHash."
         return self.estimator.jaccard(other.estimator)
 
 
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
-    ## record header
+    """Load a YAML file with signatures into classes.
+
+    Returns list of SourmashSignature objects.
+    """
     
+    ## record header
     d = yaml.safe_load(data)
     if d.get('class') != 'sourmash_signature':
         raise Exception("incorrect class: %s" % d.get('class'))
@@ -64,14 +78,14 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     if 'filename' in d:
         filename = d['filename']
 
-    # one (old) or more (new) signatures
-    if d.has_key('signature'):          # old
+    ## one (old format) or more (new) signatures
+    if d.has_key('signature'):          # old format
         assert d['version'] == '0.1'
         sketch = d['signature']
         sig = _load_one_signature(sketch, email, name, filename, ignore_md5sum)
 
         return [sig]
-    elif d.has_key('signatures'):
+    elif d.has_key('signatures'):       # new format
         assert d['version'] == '0.2'
 
         siglist = []
@@ -84,6 +98,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
 
 
 def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
+    """Helper function to unpack and check one signature block only."""
     ksize = sketch['ksize']
     prime = sketch['prime']
     mins = list(map(int, sketch['mins']))
@@ -105,6 +120,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
 
 
 def save_signatures(siglist):
+    """Save multiple signatures into a YAML string."""
     top_records = {}
     for sig in siglist:
         email, name, filename, sketch = sig.save()
@@ -137,7 +153,7 @@ def save_signatures(siglist):
     assert 0
 
 def test_roundtrip():
-    e = sourmash_lib.Estimators()
+    e = sourmash_lib.Estimators(n=1, ksize=20)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = load_signatures(s)
@@ -147,7 +163,7 @@ def test_roundtrip():
     assert e.jaccard(e2) == 1.0
 
 def test_md5():
-    e = sourmash_lib.Estimators()
+    e = sourmash_lib.Estimators(n=1, ksize=20)
     sig = SourmashSignature('titus@idyll.org', e)
     print(sig.save())
-    assert sig.md5sum() == '9e1f3d700a7344f61db1d37fa11f60f2', sig.md5sum()
+    assert sig.md5sum() == '2af954d1c2a71ea480feef8ef51cf6cb', sig.md5sum()
