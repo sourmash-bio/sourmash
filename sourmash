@@ -36,6 +36,7 @@ Commands can be:
       cmd()
 
    def search(self):
+      "Search a query sig against one or more signatures; report top match."
       import sourmash_signature as sig
       parser = argparse.ArgumentParser()
       parser.add_argument('query')
@@ -75,6 +76,7 @@ Commands can be:
          print('** no matches in %d signatures' % len(against))
       
    def condense(self):
+      "Combine multiple signatures into one, to create e.g. a species sig."
       parser = argparse.ArgumentParser()
       parser.add_argument('output')
       parser.add_argument('filenames', nargs='+')
@@ -122,6 +124,7 @@ Commands can be:
       fp.close()
 
    def compute(self):
+      "Compute the signature for one or more files."
       parser = argparse.ArgumentParser()
       parser.add_argument('filenames', nargs='+')
       parser.add_argument('-k', '--ksizes',
@@ -188,6 +191,7 @@ Commands can be:
 
 
    def clean(self):
+      "Manipulate signature files in various ways."
       parser = argparse.ArgumentParser()
       parser.add_argument('sigfiles', nargs='+')
       parser.add_argument('-f', '--force', action='store_true',
@@ -231,6 +235,7 @@ Commands can be:
                fp.close()
 
    def compare(self):
+      "Compare multiple signature files and create a distance matrix."
       import numpy 
 
       parser = argparse.ArgumentParser()
