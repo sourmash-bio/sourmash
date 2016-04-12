@@ -262,7 +262,7 @@ Commands can be:
             j += 1
 
          print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
-         labeltext.append('%d-%s' % (i,E.name()))
+         labeltext.append(E.name())
          i += 1
 
       print('min similarity in matrix:', numpy.min(D))

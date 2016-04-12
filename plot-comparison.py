@@ -2,12 +2,13 @@
 from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
+import sourmash_fig
 import argparse
+
 import numpy
 import scipy
 import pylab
 import scipy.cluster.hierarchy as sch
-from sklearn import metrics
 import os.path
 
 def main():
@@ -43,34 +44,8 @@ def main():
     fig.savefig(dendrogram_out)
     print('wrote', dendrogram_out)
 
-    fig = pylab.figure(figsize=(8,8))
-    ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
-    Y = sch.linkage(D, method='single') # centroid
-    Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
-    ax1.set_xticks([])
-    ax1.set_yticks([])
-
-    # Compute and plot second dendrogram.
-    ax2 = fig.add_axes([0.3,0.71,0.6,0.2])
-    Y = sch.linkage(D, method='single')
-    Z2 = sch.dendrogram(Y, labels=labeltext)
-    ax2.set_xticks([])
-    ax2.set_yticks([])
-
-    # Plot distance matrix.
-    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
-    idx1 = Z1['leaves']
-    idx2 = Z2['leaves']
-    D = D[idx1,:]
-    D = D[:,idx2]
-    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu, vmin=0)
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
-
-    # Plot colorbar.
-    axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
-    pylab.colorbar(im, cax=axcolor)
-    fig.show()
+    fig = sourmash_fig.plot_composite_matrix(D, labeltext, show_labels=False,
+                                             show_indices=True)
     fig.savefig(matrix_out)
     print('wrote', matrix_out)
 
