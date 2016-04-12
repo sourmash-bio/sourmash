@@ -43,6 +43,7 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True):
     # (this reorders D by the clustering in Z1)
     idx1 = Z1['leaves']
     D = D[idx1,:]
+    D = D[:,idx1]
 
     # show matrix
     im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu, vmin=0, vmax=1)
