@@ -1,3 +1,8 @@
+#! /usr/bin/env python
+"""
+Plot things associated with the distance matrix+labels output by
+'sourmash compare'.
+"""
 import numpy
 import scipy
 import pylab
@@ -47,10 +52,5 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True):
     # Plot colorbar.                                                            
     axcolor = fig.add_axes([scale_xstart,0.1,0.02,0.6])
     pylab.colorbar(im, cax=axcolor)
-    
-    # print labels, if not shown
-    if not show_labels:
-        for i, label in enumerate(labeltext):
-            print('%d\t%s' % (i, label))
 
     return fig
