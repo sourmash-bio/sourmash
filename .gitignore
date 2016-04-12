@@ -8,3 +8,7 @@
 *.png
 *.labels.txt
 distances
+*.npy
+dist
+build
+sourmash.egg-info
