@@ -17,7 +17,7 @@ class SourmashSignature(object):
             self.d['name'] = name
         if filename:
             self.d['filename'] = filename
-        
+
         self.estimator = estimator
 
     def md5sum(self):
@@ -63,7 +63,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
 
     Returns list of SourmashSignature objects.
     """
-    
+
     ## record header
     d = yaml.safe_load(data)
     if d.get('class') != 'sourmash_signature':
@@ -79,13 +79,13 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
         filename = d['filename']
 
     ## one (old format) or more (new) signatures
-    if d.has_key('signature'):          # old format
+    if 'signature' in d:                # old format
         assert d['version'] == '0.1'
         sketch = d['signature']
         sig = _load_one_signature(sketch, email, name, filename, ignore_md5sum)
 
         return [sig]
-    elif d.has_key('signatures'):       # new format
+    elif 'signatures' in d:             # new format
         assert d['version'] == '0.2'
 
         siglist = []
@@ -127,7 +127,7 @@ def save_signatures(siglist):
         if not email:
             raise Exception('email must be non-unique')
         k = (email, name, filename)
-        
+
         x = top_records.get(k, [])
         x.append(sketch)
         top_records[k] = x
@@ -147,9 +147,9 @@ def save_signatures(siglist):
         record['version'] = '0.2'
         record['class'] = 'sourmash_signature'
         record['type'] = 'mrnaseq'
-        
+
         return yaml.dump(record)
-    
+
     assert 0
 
 def test_roundtrip():
@@ -159,7 +159,7 @@ def test_roundtrip():
     siglist = load_signatures(s)
     sig2 = siglist[0]
     e2 = sig2.estimator
-    
+
     assert e.jaccard(e2) == 1.0
 
 def test_md5():
