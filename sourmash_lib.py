@@ -91,6 +91,7 @@ class CompositionSketch(object):
 
         self.prefixsize = prefixsize
         self.ksize = ksize
+        self.threshold = 0.01
 
         # get a prime to use for hashing
         p = get_prime_lt_x(max_prime)
@@ -126,16 +127,17 @@ class CompositionSketch(object):
         return total / float(count)
 
     def similarity(self, other):
-        total = 0.
+        matches = 0
         count = 0
         for n, v in enumerate(self.sketches):
             try:
-                total += v.jaccard(other.sketches[n])
+                f = v.jaccard(other.sketches[n])
                 count += 1
+                if f > self.threshold:
+                    matches += 1
             except ValueError:
                 pass
-        return total / float(count)
-        
+        return matches / float(count)
 
 
 def _yield_overlaps(x1, x2):
