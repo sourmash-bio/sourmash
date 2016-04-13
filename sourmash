@@ -9,10 +9,11 @@ import sourmash_signature as sig
 
 DEFAULT_K=32
 DEFAULT_N=500
+DEFAULT_COMPOSITE_N=100
 
 class SourmashCommands(object):
    def __init__(self):
-      parser = argparse.ArgumentParser(description='RNAseq signatures',
+      parser = argparse.ArgumentParser(description='work with RNAseq signatures',
                                        usage='''sourmash <command> [<args>]
 
 Commands can be:
@@ -313,6 +314,63 @@ Commands can be:
                   raise SystemExit
          E.add_sequence(record.sequence)
          
+   def compute2(self):
+      "Compute the signature for one or more files."
+      parser = argparse.ArgumentParser()
+      parser.add_argument('filenames', nargs='+')
+      parser.add_argument('-k', '--ksizes',
+                          default=str(DEFAULT_K),
+                          help='comma-separated list of k-mer sizes')
+      parser.add_argument('-f', '--force', action='store_true')
+      args = parser.parse_args(sys.argv[2:])
+      
+      print('computing signatures for files:', args.filenames)
+
+      ksizes = args.ksizes
+      if ',' in ksizes:
+         ksizes = ksizes.split(',')
+         ksizes = list(map(int, ksizes))
+      else:
+         ksizes = [int(ksizes)]
+
+      print('Computing signature for ksizes: %s' % str(ksizes))
+
+      for filename in args.filenames:
+         sigfile = os.path.basename(filename) + '.sig'
+         if os.path.exists(sigfile) and not args.force:
+            print('skipping', filename, '- already done')
+            continue
+
+         Elist = []
+         for k in ksizes:
+            E = sourmash_lib.CompositionSketch(ksize=k, n=DEFAULT_COMPOSITE_N,
+                                               prefixsize=3)
+            Elist.append(E)
+
+         for n, record in enumerate(screed.open(filename)):
+            if n % 10000 == 0:
+               print('...', filename, n)
+
+            s = record.sequence
+#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
+#               s = s.replace(i, 'N')
+            for E in Elist:
+               E.add_sequence(s)
+
+         siglist = []
+         for E in Elist:
+            for F in Elist:
+               print(E.jaccard(F))
+               
+            signature = sig.SourmashCompositeSignature('titus@idyll.org',
+                                              E,
+                                              filename=filename)
+            siglist.append(signature)
+
+         data = sig.save_signatures(siglist)
+         fp = open(sigfile, 'w')
+         fp.write(data)
+         fp.close()
 
 
 def main():

@@ -19,9 +19,6 @@ class Estimators(object):
         if ksize is None:
             raise Exception
 
-        # this is only used for the murmurhash code, note.
-        _kh = khmer.Countgraph(ksize, 1, 1)
-        self._kh = _kh
         self.ksize = ksize
 
         # get a prime to use for hashing
@@ -53,7 +50,7 @@ class Estimators(object):
     def add_sequence(self, seq):
         "Sanitize and add a sequence to the sketch."
         seq = seq.upper().replace('N', 'G')
-        for kmer in kmers(seq, self._kh.ksize()):
+        for kmer in kmers(seq, self.ksize):
             h = khmer.hash_murmur3(kmer)
             self.add(h)
 
@@ -68,13 +65,54 @@ class Estimators(object):
             raise Exception("different primse - cannot compare")
 
         common = 0
-        for _ in _yield_overlaps(self._mins, other._mins):
+        for val in _yield_overlaps(self._mins, other._mins):
             common += 1
         return common
 
     def _truncate(self, n):
         self._mins = self._mins[:n]
-    
+
+
+class CompositionSketch(object):
+    def __init__(self, n=None, max_prime=1e10, ksize=None, prefixsize=None):
+        if n is None:
+            raise Exception
+        if ksize is None:
+            raise Exception
+        if prefixsize is None:
+            raise Exception
+
+        self.prefixsize = prefixsize
+        self.ksize = ksize
+
+        # get a prime to use for hashing
+        p = get_prime_lt_x(max_prime)
+        self.p = p
+
+        # initialize 4**prefixsize MinHash sketches
+        self.sketches = []
+        for i in range(4**prefixsize):
+            self.sketches.append(Estimators(n, self.p, ksize))
+
+    def add(self, kmer):
+        idx = khmer.forward_hash(kmer, self.prefixsize)
+        E = self.sketches[idx]
+        
+        hash = khmer.hash_murmur3(kmer)
+        E.add(hash)
+
+    def add_sequence(self, seq):
+        "Sanitize and add a sequence to the sketch."
+        seq = seq.upper().replace('N', 'G')
+        for kmer in kmers(seq, self.ksize):
+            self.add(kmer)
+
+    def jaccard(self, other):
+        total = 0.
+        for n, v in enumerate(self.sketches):
+            total += v.jaccard(other.sketches[n])
+        return total / float(len(self.sketches))
+
 
 def _yield_overlaps(x1, x2):
     "yield common hash values while iterating over two sorted lists of hashes"

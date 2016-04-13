@@ -44,7 +44,7 @@ class SourmashSignature(object):
         estimator = self.estimator
 
         sketch = {}
-        sketch['ksize'] = int(estimator._kh.ksize())
+        sketch['ksize'] = int(estimator.ksize)
         sketch['prime'] = estimator.p
         sketch['mins'] = list(map(int, estimator._mins))
         sketch['md5sum'] = self.md5sum()
@@ -56,6 +56,42 @@ class SourmashSignature(object):
     def jaccard(self, other):
         "Compute Jaccard similarity with the stored MinHash."
         return self.estimator.jaccard(other.estimator)
+
+
+class SourmashCompositeSignature(SourmashSignature):
+    def md5sum(self):
+        "Calculate md5 hash of the bottom sketch, specifically."
+        # @CTB: should include ksize, prime.
+        m = hashlib.md5()
+        for sk in self.estimator.sketches:
+            for k in sk._mins:
+                m.update(str(k).encode('utf-8'))
+        return m.hexdigest()
+    
+    def save(self):
+        "Return metadata and a dictionary containing the sketch info."
+        e = dict(self.d)
+        estimator = self.estimator
+
+        sketch = {}
+        sketch['ksize'] = int(estimator.ksize)
+        sketch['prime'] = estimator.p
+        sketch['prefixsize'] = estimator.prefixsize
+        sketch['type'] = 'composition'
+
+        x = []
+        for i, sk in enumerate(estimator.sketches):
+            d = {}
+            d['num'] = i
+            d['mins'] = list(map(int, sk._mins))
+            x.append(d)
+        sketch['subsketches'] = x
+            
+        sketch['md5sum'] = self.md5sum()
+        e['signature'] = sketch
+
+        return self.d.get('email'), self.d.get('name'), \
+               self.d.get('filename'), sketch
 
 
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
@@ -101,11 +137,26 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     """Helper function to unpack and check one signature block only."""
     ksize = sketch['ksize']
     prime = sketch['prime']
-    mins = list(map(int, sketch['mins']))
-    e = sourmash_lib.Estimators(ksize=ksize, max_prime=prime, n=0)
-    e._mins = mins
+    if sketch.get('type') == 'composition':
+        prefixsize = sketch['prefixsize']
+        e = sourmash_lib.CompositionSketch(ksize=ksize, max_prime=prime,
+                                         n=0, prefixsize=prefixsize)
 
-    sig = SourmashSignature(email, e)
+        for item in sketch['subsketches']:
+            n = item['num']
+            mins = item['mins']
+            n = int(n)
+            mins = list(map(int, mins))
+            e.sketches[n]._mins = mins
+        
+        sig = SourmashCompositeSignature(email, e)
+    else:
+        mins = list(map(int, sketch['mins']))
+        e = sourmash_lib.Estimators(ksize=ksize, max_prime=prime, n=0)
+        e._mins = mins
+
+        sig = SourmashSignature(email, e)
+        
     if not ignore_md5sum:
         md5sum = sketch['md5sum']
         if md5sum != sig.md5sum():
