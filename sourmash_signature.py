@@ -53,9 +53,9 @@ class SourmashSignature(object):
         return self.d.get('email'), self.d.get('name'), \
                self.d.get('filename'), sketch
 
-    def jaccard(self, other):
-        "Compute Jaccard similarity with the stored MinHash."
-        return self.estimator.jaccard(other.estimator)
+    def similarity(self, other):
+        "Compute similarity with the stored MinHash."
+        return self.estimator.similarity(other.estimator)
 
 
 class SourmashCompositeSignature(SourmashSignature):
@@ -205,13 +205,15 @@ def save_signatures(siglist):
 
 def test_roundtrip():
     e = sourmash_lib.Estimators(n=1, ksize=20)
+    e.add("AT"*10)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = load_signatures(s)
     sig2 = siglist[0]
     e2 = sig2.estimator
     
-    assert e.jaccard(e2) == 1.0
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
 
 def test_md5():
     e = sourmash_lib.Estimators(n=1, ksize=20)

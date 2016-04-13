@@ -9,7 +9,7 @@ import sourmash_signature as sig
 
 DEFAULT_K=32
 DEFAULT_N=500
-DEFAULT_COMPOSITE_N=100
+DEFAULT_COMPOSITE_N=500
 
 class SourmashCommands(object):
    def __init__(self):
@@ -64,7 +64,7 @@ Commands can be:
 
       distances = []
       for (x, filename) in against:
-         distance = query.jaccard(x)
+         distance = query.similarity(x)
          if distance >= args.threshold:
             distances.append((distance, x, filename))
 
@@ -257,6 +257,7 @@ Commands can be:
          sys.exit(-1)
 
       D = numpy.zeros([len(siglist), len(siglist)])
+      numpy.set_printoptions(precision=3, suppress=True)
 
       i = 0
       labeltext = []
@@ -264,7 +265,7 @@ Commands can be:
       for E in siglist:
          j = 0
          for E2 in siglist:
-            D[i][j] = E.jaccard(E2)
+            D[i][j] = E.similarity(E2)
             j += 1
 
          print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
@@ -360,7 +361,7 @@ Commands can be:
          siglist = []
          for E in Elist:
             for F in Elist:
-               print(E.jaccard(F))
+               print(E.similarity(F))
                
             signature = sig.SourmashCompositeSignature('titus@idyll.org',
                                               E,

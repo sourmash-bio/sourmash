@@ -28,10 +28,11 @@ class Estimators(object):
         # initialize sketch to size n
         self._mins = [p]*n
         
-    def add(self, hash):
-        "Add hash into sketch, keeping sketch sorted."
+    def add(self, kmer):
+        "Add kmer into sketch, keeping sketch sorted."
         _mins = self._mins
-        h = hash % self.p
+        h = khmer.hash_murmur3(kmer)
+        h = h % self.p
         
         if h >= _mins[-1]:
             return
@@ -51,17 +52,17 @@ class Estimators(object):
         "Sanitize and add a sequence to the sketch."
         seq = seq.upper().replace('N', 'G')
         for kmer in kmers(seq, self.ksize):
-            h = khmer.hash_murmur3(kmer)
-            self.add(h)
+            self.add(kmer)
 
     def jaccard(self, other):
-        truelen = len(self._mins) - 1
-        while truelen and self._mins[truelen] == self.p:
+        truelen = len(self._mins)
+        while truelen and self._mins[truelen - 1] == self.p:
             truelen -= 1
         if truelen == 0:
-            return 1
+            raise ValueError
         
         return self.common(other) / float(truelen)
+    similarity = jaccard
 
     def common(self, other):
         "Calculate number of common k-mers between two sketches."
@@ -115,9 +116,26 @@ class CompositionSketch(object):
 
     def jaccard(self, other):
         total = 0.
+        count = 0
         for n, v in enumerate(self.sketches):
-            total += v.jaccard(other.sketches[n])
-        return total / float(len(self.sketches))
+            try:
+                total += v.jaccard(other.sketches[n])
+                count += 1
+            except ValueError:
+                pass
+        return total / float(count)
+
+    def similarity(self, other):
+        total = 0.
+        count = 0
+        for n, v in enumerate(self.sketches):
+            try:
+                total += v.jaccard(other.sketches[n])
+                count += 1
+            except ValueError:
+                pass
+        return total / float(count)
+        
 
 
 def _yield_overlaps(x1, x2):
