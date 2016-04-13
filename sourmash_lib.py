@@ -55,7 +55,13 @@ class Estimators(object):
             self.add(h)
 
     def jaccard(self, other):
-        return self.common(other) / float(len(self._mins))
+        truelen = len(self._mins) - 1
+        while truelen and self._mins[truelen] == self.p:
+            truelen -= 1
+        if truelen == 0:
+            return 1
+        
+        return self.common(other) / float(truelen)
 
     def common(self, other):
         "Calculate number of common k-mers between two sketches."
