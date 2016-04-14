@@ -11,6 +11,10 @@ Usage:
 This is an exploratory project; it's not really ready for people to use yet.
 Buyers Beware.
 
+We have demo notebooks on binder:
+
+[![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
+
 ----
 
 The name comes from riffing off of https://github.com/marbl/Mash,
