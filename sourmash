@@ -127,6 +127,7 @@ Commands can be:
    def compute(self):
       "Compute the signature for one or more files."
       parser = argparse.ArgumentParser()
+      parser.add_argument('--protein', action='store_true')
       parser.add_argument('filenames', nargs='+')
       parser.add_argument('-k', '--ksizes',
                           default=str(DEFAULT_K),
@@ -153,7 +154,8 @@ Commands can be:
 
          Elist = []
          for k in ksizes:
-            E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N)
+            E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
+                                        protein=args.protein)
             Elist.append(E)
 
          for n, record in enumerate(screed.open(filename)):

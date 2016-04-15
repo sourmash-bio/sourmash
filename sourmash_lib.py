@@ -7,19 +7,23 @@ import khmer
 import screed
 import argparse
 import itertools
+import mmh3
 
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
     """
 
-    def __init__(self, n=None, max_prime=1e10, ksize=None):
+    def __init__(self, n=None, max_prime=1e10, ksize=None, protein=False):
         if n is None:
             raise Exception
         if ksize is None:
             raise Exception
 
         self.ksize = ksize
+        self.get_mers = kmers
+        if protein:
+            self.get_mers = kmers_prot
 
         # get a prime to use for hashing
         p = get_prime_lt_x(max_prime)
@@ -31,7 +35,7 @@ class Estimators(object):
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
         _mins = self._mins
-        h = khmer.hash_murmur3(kmer)
+        h = mmh3.hash(kmer) # khmer.hash_murmur3(kmer)
         h = h % self.p
         
         if h >= _mins[-1]:
@@ -51,7 +55,7 @@ class Estimators(object):
     def add_sequence(self, seq):
         "Sanitize and add a sequence to the sketch."
         seq = seq.upper().replace('N', 'G')
-        for kmer in kmers(seq, self.ksize):
+        for kmer in self.get_mers(seq, self.ksize):
             self.add(kmer)
 
     def jaccard(self, other):
@@ -161,6 +165,34 @@ def kmers(seq, ksize):
     "yield all k-mers of len ksize from seq"
     for i in range(len(seq) - ksize + 1):
         yield seq[i:i+ksize]
+
+def kmers_prot(seq, ksize):
+    "yield all k-mers of len ksize from seq"
+    for i in range(len(seq) - ksize + 1):
+        yield kmer_to_aa(seq[i:i+ksize])
+
+codon_table = {"TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
+               "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S",
+               "TAT":"Y", "TAC":"Y", "TAA":"*", "TAG":"*",
+               "TGT":"C", "TGC":"C", "TGA":"*", "TGG":"W",
+               "CTT":"L", "CTC":"L", "CTA":"L", "CTG":"L",
+               "CCT":"P", "CCC":"P", "CCA":"P", "CCG":"P",
+               "CAT":"H", "CAC":"H", "CAA":"Q", "CAG":"Q",
+               "CGT":"R", "CGC":"R", "CGA":"R", "CGG":"R",
+               "ATT":"I", "ATC":"I", "ATA":"I", "ATG":"M",
+               "ACT":"T", "ACC":"T", "ACA":"T", "ACG":"T",
+               "AAT":"N", "AAC":"N", "AAA":"K", "AAG":"K",
+               "AGT":"S", "AGC":"S", "AGA":"R", "AGG":"R",
+               "GTT":"V", "GTC":"V", "GTA":"V", "GTG":"V",
+               "GCT":"A", "GCC":"A", "GCA":"A", "GCG":"A",
+               "GAT":"D", "GAC":"D", "GAA":"E", "GAG":"E",
+               "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",}
+
+def kmer_to_aa(seq):
+    aa = []
+    for i in range(len(seq) - 2):
+        aa.append(codon_table[seq[i:i+3]])
+    return "".join(aa)
 
 
 # taken from khmer 2.0; original author Jason Pell.
