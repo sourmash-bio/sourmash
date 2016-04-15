@@ -190,7 +190,7 @@ codon_table = {"TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
 
 def kmer_to_aa(seq):
     aa = []
-    for i in range(len(seq) - 2):
+    for i in range(0, len(seq) - 2, 3):
         aa.append(codon_table[seq[i:i+3]])
     return "".join(aa)
 
