@@ -18,6 +18,8 @@ def main():
     parser.add_argument('--pdf', action='store_true')
     parser.add_argument('--labels', action='store_true')
     parser.add_argument('--indices', action='store_false')
+    parser.add_argument('--vmax', default=1.0, type=float)
+    parser.add_argument('--vmin', default=0.0, type=float)
     args = parser.parse_args()
 
     # load files
@@ -54,7 +56,9 @@ def main():
     ### make the dendrogram+matrix:
     fig = sourmash_fig.plot_composite_matrix(D, labeltext,
                                              show_labels=args.labels,
-                                             show_indices=args.indices)
+                                             show_indices=args.indices,
+                                             vmin=args.vmin,
+                                             vmax=args.vmax)
     fig.savefig(matrix_out)
     print('wrote', matrix_out)
 

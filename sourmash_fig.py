@@ -13,7 +13,8 @@ def load_matrix_and_labels(basefile):
     labeltext = [ x.strip() for x in open(basefile + '.labels.txt') ]
     return (D, labeltext)
 
-def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True):
+def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
+                          vmax=1.0, vmin=0.0):
     if show_labels:
         show_indices=True
 
@@ -46,7 +47,8 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True):
     D = D[:,idx1]
 
     # show matrix
-    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu, vmin=0, vmax=1)
+    im = axmatrix.matshow(D, aspect='auto', origin='lower',
+                          cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax)
     axmatrix.set_xticks([])
     axmatrix.set_yticks([])
 
