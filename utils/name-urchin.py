@@ -20,9 +20,9 @@ def main():
     for row in r:
         if row[0] in acc_dict:
             srr = row[1]
-            #print('../sourmash clean --set-name %s %s*' % (acc_dict[row[0]],
-            #                                               srr))
-            print('mv %s*.sig %s-%s.sig' % (srr, acc_dict[row[0]], srr))
+            print('../../sourmash clean --set-name %s *%s*' % (acc_dict[row[0]],
+                                                           srr))
+            print('mv *%s*.sig %s-%s.sig' % (srr, acc_dict[row[0]], srr))
 
 if __name__ == '__main__':
     main()
