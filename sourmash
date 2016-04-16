@@ -81,7 +81,7 @@ Commands can be:
       parser = argparse.ArgumentParser()
       parser.add_argument('output')
       parser.add_argument('filenames', nargs='+')
-      parser.add_argument('-k', '--ksize', default=DEFAULT_K)
+      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
       parser.add_argument('--name', default=None)
       parser.add_argument('--threshold', type=int, default=2,
                           help='threshold for solid hash values')
@@ -92,6 +92,8 @@ Commands can be:
          sl = sig.load_signatures(open(filename, 'r'),
                                   select_ksize=args.ksize)
          siglist.extend(sl)
+
+      assert len(siglist)
 
       x = set()
       for s in siglist:
@@ -214,6 +216,10 @@ Commands can be:
       assert not (args.name_from and args.set_name)
 
       for filename in args.sigfiles:
+         if not os.path.exists(filename):
+            print('ERROR - filename %s does not exist!' % filename)
+            continue
+
          print('loading', filename)
          siglist = sig.load_signatures(open(filename, 'r'),
                                        ignore_md5sum=ignore_md5sum)
