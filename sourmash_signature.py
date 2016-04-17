@@ -115,13 +115,13 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
         filename = d['filename']
 
     ## one (old format) or more (new) signatures
-    if d.has_key('signature'):          # old format
+    if 'signature' in d:          # old format
         assert d['version'] == '0.1'
         sketch = d['signature']
         sig = _load_one_signature(sketch, email, name, filename, ignore_md5sum)
 
         return [sig]
-    elif d.has_key('signatures'):       # new format
+    elif 'signatures' in d:       # new format
         assert d['version'] == '0.2'
 
         siglist = []

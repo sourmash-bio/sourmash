@@ -8,6 +8,7 @@ import screed
 import argparse
 import itertools
 import mmh3
+import string
 
 class Estimators(object):
     """
@@ -22,8 +23,10 @@ class Estimators(object):
 
         self.ksize = ksize
         self.get_mers = kmers
+        self.is_protein = False
         if protein:
             self.get_mers = kmers_prot
+            self.is_protein = True
 
         # get a prime to use for hashing
         p = get_prime_lt_x(max_prime)
@@ -166,10 +169,34 @@ def kmers(seq, ksize):
     for i in range(len(seq) - ksize + 1):
         yield seq[i:i+ksize]
 
+__complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
+def complement(s):
+    """
+    Return complement of 's'.
+    """
+    c = unicode(s).translate(__complementTranslation)
+    return c
+
+
+def reverse(s):
+    """
+    Return reverse of 's'.
+    """
+    r = "".join(reversed(s))
+
+    return r
+
+
 def kmers_prot(seq, ksize):
     "yield all k-mers of len ksize from seq"
     for i in range(len(seq) - ksize + 1):
         yield kmer_to_aa(seq[i:i+ksize])
+
+    # do reverse complement, too.
+    seq = reverse(complement(seq))
+    for i in range(len(seq) - ksize + 1):
+        yield kmer_to_aa(seq[i:i+ksize])
+
 
 codon_table = {"TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
                "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S",
@@ -271,3 +298,40 @@ def test_yield_overlaps_2():
     x2 = [1, 2, 6]
     assert len(list(_yield_overlaps(x1, x2))) == 2
     assert len(list(_yield_overlaps(x2, x1))) == 2
+
+
+def test_dna_mh():
+    e1 = Estimators(n=5, ksize=4)
+    e2 = Estimators(n=5, ksize=4)
+
+    seq = 'ATGGCAGTGACGATGCCAG'
+    e1.add_sequence(seq)
+    for i in range(len(seq) - 3):
+        e2.add(seq[i:i+4])
+
+    assert e1._mins == e2._mins
+    assert 1149966211 in e1._mins
+    assert 530237262 in e1._mins
+
+
+def test_protein_mh():
+    e1 = Estimators(n=5, ksize=6, protein=True)
+    e2 = Estimators(n=5, ksize=6, protein=True)
+
+    seq = 'ATGGCAGTGACGATGCCG'
+    e1.add_sequence(seq)
+    for i in range(len(seq) - 5):
+        kmer = seq[i:i+6]
+        aa = kmer_to_aa(kmer)
+        e2.add(aa)
+        
+    rcseq = reverse(complement(seq))
+    for i in range(len(rcseq) - 5):
+        kmer = rcseq[i:i+6]
+        aa = kmer_to_aa(kmer)
+        e2.add(aa)
+
+    assert e1._mins == e2._mins
+    print(e1._mins)
+    assert 857194471 in e1._mins
+    assert 1054538492 in e1._mins
