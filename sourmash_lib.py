@@ -9,6 +9,7 @@ import argparse
 import itertools
 import mmh3
 import string
+import _sketch
 
 class Estimators(object):
     """
@@ -34,22 +35,29 @@ class Estimators(object):
 
         # initialize sketch to size n
         self._mins = [p]*n
+        self.mh = _sketch.MinHash(n, ksize, p, protein)
         
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
-        _mins = self._mins
         h = mmh3.hash(kmer) # khmer.hash_murmur3(kmer)
         h = h % self.p
+        self.mh.add_hash(h)
+        self._mins = self.mh.get_mins()
+        return
         
+        _mins = self._mins
         if h >= _mins[-1]:
+            print(self._mins[:10])
             return
 
         for i, v in enumerate(_mins):
             if h < v:
                 _mins.insert(i, h)
                 _mins.pop()
+                print(self._mins[:10])
                 return
             elif h == v:
+                print(self._mins[:10])
                 return
             # else: h > v, keep on going.
 
