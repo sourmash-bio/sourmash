@@ -23,8 +23,10 @@ class Estimators(object):
 
         self.ksize = ksize
         self.get_mers = kmers
+        self.is_protein = False
         if protein:
             self.get_mers = kmers_prot
+            self.is_protein = True
 
         # get a prime to use for hashing
         p = get_prime_lt_x(max_prime)
