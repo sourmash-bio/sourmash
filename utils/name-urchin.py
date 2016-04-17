@@ -5,6 +5,8 @@ import csv
 
 def main():
     acc_dict = {}
+    full_dict = {}
+
     r = csv.reader(open('sra_result.csv', 'r', encoding='utf-8'))
     for row in r:
         if row[0] == 'Experiment Accession':
@@ -15,14 +17,16 @@ def main():
 #        if organism.startswith('Strongyl'):
 #            continue
         acc_dict[acc] = organism.split(' ')[1]
+        full_dict[acc] = organism
 
     r = csv.reader(open('ftp_list.csv', 'r', encoding='utf-8'))
     for row in r:
         if row[0] in acc_dict:
             srr = row[1]
-            print('../../sourmash clean --set-name %s *%s*' % (acc_dict[row[0]],
+            print('../../sourmash clean --set-name "%s" *%s*' % (full_dict[row[0]],
                                                            srr))
             print('mv *%s*.sig %s-%s.sig' % (srr, acc_dict[row[0]], srr))
+            del acc_dict[row[0]]
 
 if __name__ == '__main__':
     main()
