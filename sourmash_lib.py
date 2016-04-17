@@ -8,6 +8,7 @@ import screed
 import argparse
 import itertools
 import mmh3
+import string
 
 class Estimators(object):
     """
@@ -166,10 +167,34 @@ def kmers(seq, ksize):
     for i in range(len(seq) - ksize + 1):
         yield seq[i:i+ksize]
 
+__complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
+def complement(s):
+    """
+    Return complement of 's'.
+    """
+    c = s.translate(__complementTranslation)
+    return c
+
+
+def reverse(s):
+    """
+    Return reverse of 's'.
+    """
+    r = "".join(reversed(s))
+
+    return r
+
+
 def kmers_prot(seq, ksize):
     "yield all k-mers of len ksize from seq"
     for i in range(len(seq) - ksize + 1):
         yield kmer_to_aa(seq[i:i+ksize])
+
+    # do reverse complement, too.
+    seq = reverse(complement(seq))
+    for i in range(len(seq) - ksize + 1):
+        yield kmer_to_aa(seq[i:i+ksize])
+
 
 codon_table = {"TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
                "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S",
