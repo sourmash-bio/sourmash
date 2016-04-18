@@ -40,7 +40,8 @@ class Estimators(object):
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
         h = mmh3.hash(kmer) # khmer.hash_murmur3(kmer)
-        h = h % self.p
+        #h = h % self.p
+        print('python inserting:', h)
         self.mh.add_hash(h)
         self._mins = self.mh.get_mins()
         return

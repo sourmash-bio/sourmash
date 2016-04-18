@@ -63,7 +63,7 @@ typedef struct {
   CMinHashType * mins;
   unsigned int num;
   unsigned int ksize;
-  HashIntoType prime;
+  long int prime;
   bool is_protein;
 } sketch_MinHash_Object;
 
@@ -124,6 +124,10 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
   }
   CMinHashType * mins = me->mins;
 
+  hh = ((hh % me->prime) + me->prime) % me->prime;
+
+  std::cout << "inserting: " << hh << " " << me->prime << "\n";
+
   mins->insert(hh);
 
   if (mins->size() > me->num) {
@@ -180,9 +184,10 @@ sketch_MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         return NULL;
     }
 
-    unsigned int _n, _ksize, _p;
+    unsigned int _n, _ksize;
+    long int _p;
     PyObject * is_protein_o;
-    if (!PyArg_ParseTuple(args, "IIKO", &_n, &_ksize, &_p, &is_protein_o)){
+    if (!PyArg_ParseTuple(args, "IIlO", &_n, &_ksize, &_p, &is_protein_o)){
       return NULL;
     }
     
