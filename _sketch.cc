@@ -59,21 +59,47 @@ typedef unsigned long long HashIntoType;
 typedef std::set<HashIntoType> CMinHashType;
 int _hash_murmur(const std::string& kmer);
 
-typedef struct {
-  PyObject_HEAD
-  CMinHashType * mins;
+
+////
+
+class KmerMinHash
+{
+public:
   unsigned int num;
   unsigned int ksize;
   long int prime;
   bool is_protein;
+  CMinHashType mins;
+
+  KmerMinHash(unsigned int n, unsigned int k, long int p, bool prot) :
+    num(n), ksize(k), prime(p), is_protein(prot) { };
+
+  void add_hash(long int h)
+  {
+    h = ((h % prime) + prime) % prime;
+    mins.insert(h);
+
+    if (mins.size() > num) {
+      CMinHashType::iterator mi = mins.end();
+      mi--;
+      mins.erase(mi);
+    }
+  }
+};
+
+////
+
+typedef struct {
+  PyObject_HEAD
+  KmerMinHash * mh;
 } sketch_MinHash_Object;
 
 static
 void
 sketch_MinHash_dealloc(sketch_MinHash_Object * obj)
 {
-  delete obj->mins;
-  obj->mins = NULL;
+  delete obj->mh;
+  obj->mh = NULL;
   Py_TYPE(obj)->tp_free((PyObject*)obj);
 }
 
@@ -182,68 +208,34 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
   if (!PyArg_ParseTuple(args, "s", &sequence)) {
     return NULL;
   }
-  CMinHashType * mins = me->mins;
+  KmerMinHash * mh = me->mh;
   CMinHashType::iterator mins_end;
   
   long int h = 0;
+  unsigned int ksize = mh->ksize;
 
-  if (!me->is_protein) {
+  if (!mh->is_protein) {
     std::string seq = sequence;
-    for (unsigned int i = 0; i < seq.length() - me->ksize + 1; i++) {
-      std::string kmer = seq.substr(i, me->ksize);
+    for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
+      std::string kmer = seq.substr(i, ksize);
 
       h = _hash_murmur(kmer);
-      h = ((h % me->prime) + me->prime) % me->prime;
-
-      if (mins->size() == me->num) {
-        mins_end = mins->end();
-        mins_end--;
-        if (h < *mins_end) {
-          mins->erase(mins_end);
-          mins->insert(h);
-        }
-      }
-      else {
-        mins->insert(h);
-      }
+      mh->add_hash(h);
     }
   } else {
     std::string seq = sequence;
-    for (unsigned int i = 0; i < seq.length() - me->ksize + 1; i ++) {
-      std::string kmer = seq.substr(i, me->ksize);
+    for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
+      std::string kmer = seq.substr(i, ksize);
       std::string aa = _dna_to_aa(kmer);
 
       h = _hash_murmur(aa);
-      h = ((h % me->prime) + me->prime) % me->prime;
-
-      if (mins->size() == me->num) {
-        mins_end = mins->end();
-        mins_end--;
-        if (h < *mins_end) {
-          mins->erase(mins_end);
-          mins->insert(h);
-        }
-      }
-      else {
-        mins->insert(h);
-      }
+      mh->add_hash(h);
+      
       std::string rc = _revcomp(kmer);
       aa = _dna_to_aa(rc);
 
       h = _hash_murmur(aa);
-      h = ((h % me->prime) + me->prime) % me->prime;
-
-      if (mins->size() == me->num) {
-        mins_end = mins->end();
-        mins_end--;
-        if (h < *mins_end) {
-          mins->erase(mins_end);
-          mins->insert(h);
-        }
-      }
-      else {
-        mins->insert(h);
-      }
+      mh->add_hash(h);
     }
   }
     
@@ -259,17 +251,9 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
   if (!PyArg_ParseTuple(args, "l", &hh)) {
     return NULL;
   }
-  CMinHashType * mins = me->mins;
 
-  hh = ((hh % me->prime) + me->prime) % me->prime;
-
-  mins->insert(hh);
-
-  if (mins->size() > me->num) {
-    CMinHashType::iterator mi = mins->end();
-    mi--;
-    mins->erase(mi);
-  }
+  KmerMinHash * mh = me->mh;
+  mh->add_hash(hh);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -283,11 +267,11 @@ minhash_get_mins(sketch_MinHash_Object * me, PyObject * args)
     return NULL;
   }
 
-  CMinHashType * mins = me->mins;
-  PyObject * mins_o = PyList_New(mins->size());
+  KmerMinHash * mh = me->mh;
+  PyObject * mins_o = PyList_New(mh->mins.size());
 
   unsigned int j = 0;
-  for (CMinHashType::iterator i = mins->begin(); i != mins->end(); ++i) {
+  for (CMinHashType::iterator i = mh->mins.begin(); i != mh->mins.end(); ++i) {
     PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(*i));
     j++;
   }
@@ -328,11 +312,8 @@ sketch_MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     
     sketch_MinHash_Object * myself = (sketch_MinHash_Object *)self;
 
-    myself->mins = new CMinHashType;
-    myself->num = _n;
-    myself->ksize = _ksize;
-    myself->prime = _p;
-    myself->is_protein = PyObject_IsTrue(is_protein_o);
+    myself->mh = new KmerMinHash(_n, _ksize, _p,\
+                                 PyObject_IsTrue(is_protein_o));
 
     return self;
 }
