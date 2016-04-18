@@ -9,6 +9,7 @@ import argparse
 import itertools
 import string
 import _sketch
+import mmh3
 
 class Estimators(object):
     """
@@ -22,10 +23,8 @@ class Estimators(object):
             raise Exception
 
         self.ksize = ksize
-        self.get_mers = kmers
         self.is_protein = False
         if protein:
-            self.get_mers = kmers_prot
             self.is_protein = True
 
         # get a prime to use for hashing
@@ -43,8 +42,6 @@ class Estimators(object):
         "Sanitize and add a sequence to the sketch."
         seq = seq.upper().replace('N', 'G')
         self.mh.add_sequence(seq)
-#        for kmer in self.get_mers(seq, self.ksize):
-#            self.add(kmer)
 
     def jaccard(self, other):
         _mins = self.mh.get_mins()
@@ -151,6 +148,7 @@ def kmers(seq, ksize):
         yield seq[i:i+ksize]
 
 __complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
+
 def complement(s):
     """
     Return complement of 's'.
@@ -280,7 +278,7 @@ def test_yield_overlaps_2():
     assert len(list(_yield_overlaps(x2, x1))) == 1
                
 
-def test_yield_overlaps_2():
+def test_yield_overlaps_3():
     x1 = [1, 3, 6]
     x2 = [1, 2, 6]
     assert len(list(_yield_overlaps(x1, x2))) == 2
@@ -307,21 +305,13 @@ def test_protein_mh():
 
     seq = 'ATGGCAGTGACGATGCCG'
     e1.add_sequence(seq)
+
     for i in range(len(seq) - 5):
         kmer = seq[i:i+6]
-        aa = kmer_to_aa(kmer)
-        e2.add(aa)
-        
-    rcseq = reverse(complement(seq))
-    for i in range(len(rcseq) - 5):
-        kmer = rcseq[i:i+6]
-        aa = kmer_to_aa(kmer)
-        e2.add(aa)
+        e2.add(kmer)
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert 857194471 in e1.mh.get_mins()
     assert 1054538492 in e1.mh.get_mins()
-
 
 def test_complement():
     assert complement('ATGGCAGTGACGATGCCG') == 'TACCGTCACTGCTACGGC'
