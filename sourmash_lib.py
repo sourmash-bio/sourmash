@@ -174,7 +174,7 @@ def complement(s):
     """
     Return complement of 's'.
     """
-    c = "".join(__complementTranslation[n] for n in s[::-1])
+    c = "".join(__complementTranslation[n] for n in s)
     return c
 
 
@@ -338,4 +338,4 @@ def test_protein_mh():
 
 
 def test_complement():
-    assert complement('ATGGCAGTGACGATGCCG') == 'CGGCATCGTCACTGCCAT'
+    assert complement('ATGGCAGTGACGATGCCG') == 'TACCGTCACTGCTACGGC'
