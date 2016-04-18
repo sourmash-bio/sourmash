@@ -2,6 +2,9 @@
 // Python 2/3 compatibility: PyInt and PyLong
 //
 
+// Must be first.
+#include <Python.h>
+
 #if (PY_MAJOR_VERSION >= 3)
 #define PyInt_Check(arg) PyLong_Check(arg)
 #define PyInt_AsLong(arg) PyLong_AsLong(arg)
@@ -44,8 +47,6 @@ extern "C" {
     MOD_INIT(_sketch);
 }
 
-// Must be first.
-#include <Python.h>
 
 #include <string>
 #include <set>
