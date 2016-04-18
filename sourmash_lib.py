@@ -8,8 +8,7 @@ import screed
 import argparse
 import itertools
 import string
-import _sketch
-import mmh3
+import _minhash
 
 class Estimators(object):
     """
@@ -32,7 +31,7 @@ class Estimators(object):
         self.p = p
 
         # initialize sketch to size n
-        self.mh = _sketch.MinHash(n, ksize, p, protein)
+        self.mh = _minhash.MinHash(n, ksize, p, protein)
         
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."

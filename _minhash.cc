@@ -44,7 +44,7 @@
 //
 
 extern "C" {
-    MOD_INIT(_sketch);
+    MOD_INIT(_minhash);
 }
 
 
@@ -93,11 +93,11 @@ public:
 typedef struct {
   PyObject_HEAD
   KmerMinHash * mh;
-} sketch_MinHash_Object;
+} MinHash_Object;
 
 static
 void
-sketch_MinHash_dealloc(sketch_MinHash_Object * obj)
+MinHash_dealloc(MinHash_Object * obj)
 {
   delete obj->mh;
   obj->mh = NULL;
@@ -203,7 +203,7 @@ std::string _revcomp(const std::string& kmer);
 
 static
 PyObject *
-minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
+minhash_add_sequence(MinHash_Object * me, PyObject * args)
 {
   const char * sequence = NULL;
   if (!PyArg_ParseTuple(args, "s", &sequence)) {
@@ -246,7 +246,7 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
 
 static
 PyObject *
-minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
+minhash_add_hash(MinHash_Object * me, PyObject * args)
 {
   long int hh;
   if (!PyArg_ParseTuple(args, "l", &hh)) {
@@ -261,7 +261,7 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
 
 static
 PyObject *
-minhash_get_mins(sketch_MinHash_Object * me, PyObject * args)
+minhash_get_mins(MinHash_Object * me, PyObject * args)
 {
   if (!PyArg_ParseTuple(args, "")) {
     return NULL;
@@ -278,7 +278,7 @@ minhash_get_mins(sketch_MinHash_Object * me, PyObject * args)
   return(mins_o);
 }
 
-static PyMethodDef sketch_MinHash_methods [] = {
+static PyMethodDef MinHash_methods [] = {
   { "add_sequence",
     (PyCFunction)minhash_add_sequence, METH_VARARGS,
     "Add kmer into MinHash"
@@ -296,7 +296,7 @@ static PyMethodDef sketch_MinHash_methods [] = {
 
 static
 PyObject *
-sketch_MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
+MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
 {
     PyObject * self     = subtype->tp_alloc( subtype, 1 );
     if (self == NULL) {
@@ -310,7 +310,7 @@ sketch_MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
       return NULL;
     }
     
-    sketch_MinHash_Object * myself = (sketch_MinHash_Object *)self;
+    MinHash_Object * myself = (MinHash_Object *)self;
 
     myself->mh = new KmerMinHash(_n, _ksize, _p,\
                                  PyObject_IsTrue(is_protein_o));
@@ -318,12 +318,12 @@ sketch_MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     return self;
 }
 
-static PyTypeObject sketch_MinHash_Type = {
+static PyTypeObject MinHash_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)        /* init & ob_size */
-    "_sketch.MinHash",                    /* tp_name */
-    sizeof(sketch_MinHash_Object),         /* tp_basicsize */
+    "_minhash.MinHash",                    /* tp_name */
+    sizeof(MinHash_Object),         /* tp_basicsize */
     0,                                    /* tp_itemsize */
-    (destructor)sketch_MinHash_dealloc,    /* tp_dealloc */
+    (destructor)MinHash_dealloc,    /* tp_dealloc */
     0,                                    /* tp_print */
     0,                                    /* tp_getattr */
     0,                                    /* tp_setattr */
@@ -346,7 +346,7 @@ static PyTypeObject sketch_MinHash_Type = {
     0,                                    /* tp_weaklistoffset */
     0,                                    /* tp_iter */
     0,                                    /* tp_iternext */
-    sketch_MinHash_methods,               /* tp_methods */
+    MinHash_methods,               /* tp_methods */
     0,                                    /* tp_members */
     0,                                    /* tp_getset */
     0,                                         /* tp_base */
@@ -356,7 +356,7 @@ static PyTypeObject sketch_MinHash_Type = {
     0,                                         /* tp_dictoffset */
     0,                                         /* tp_init */
     0,                                         /* tp_alloc */
-    sketch_MinHash_new,                        /* tp_new */
+    MinHash_new,                        /* tp_new */
 };
 
 std::string _revcomp(const std::string& kmer)
@@ -398,29 +398,29 @@ int _hash_murmur32(const std::string& kmer)
   return out[0];
 }
 
-static PyMethodDef SketchMethods[] = {
+static PyMethodDef MinHashMethods[] = {
     { NULL, NULL, 0, NULL } // sentinel
 };
 
-MOD_INIT(_sketch)
+MOD_INIT(_minhash)
 {
-    if (PyType_Ready( &sketch_MinHash_Type ) < 0) {
+    if (PyType_Ready( &MinHash_Type ) < 0) {
         return MOD_ERROR_VAL;
     }
 
     PyObject * m;
 
-    MOD_DEF(m, "_sketch",
+    MOD_DEF(m, "_minhash",
             "interface for the sourmash module low-level extensions",
-            SketchMethods);
+            MinHashMethods);
 
     if (m == NULL) {
         return MOD_ERROR_VAL;
     }
 
-    Py_INCREF(&sketch_MinHash_Type);
+    Py_INCREF(&MinHash_Type);
     if (PyModule_AddObject( m, "MinHash",
-                            (PyObject *)&sketch_MinHash_Type ) < 0) {
+                            (PyObject *)&MinHash_Type ) < 0) {
         return MOD_ERROR_VAL;
     }
     return MOD_SUCCESS_VAL(m);
