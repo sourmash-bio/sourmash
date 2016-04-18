@@ -141,65 +141,6 @@ def _yield_overlaps(x1, x2):
     except IndexError:
         return
 
-def kmers(seq, ksize):
-    "yield all k-mers of len ksize from seq"
-    for i in range(len(seq) - ksize + 1):
-        yield seq[i:i+ksize]
-
-__complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
-
-def complement(s):
-    """
-    Return complement of 's'.
-    """
-    c = "".join(__complementTranslation[n] for n in s)
-    return c
-
-
-def reverse(s):
-    """
-    Return reverse of 's'.
-    """
-    r = "".join(reversed(s))
-
-    return r
-
-
-def kmers_prot(seq, ksize):
-    "yield all k-mers of len ksize from seq"
-    for i in range(len(seq) - ksize + 1):
-        yield kmer_to_aa(seq[i:i+ksize])
-
-    # do reverse complement, too.
-    seq = reverse(complement(seq))
-    for i in range(len(seq) - ksize + 1):
-        yield kmer_to_aa(seq[i:i+ksize])
-
-
-codon_table = {"TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
-               "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S",
-               "TAT":"Y", "TAC":"Y", "TAA":"*", "TAG":"*",
-               "TGT":"C", "TGC":"C", "TGA":"*", "TGG":"W",
-               "CTT":"L", "CTC":"L", "CTA":"L", "CTG":"L",
-               "CCT":"P", "CCC":"P", "CCA":"P", "CCG":"P",
-               "CAT":"H", "CAC":"H", "CAA":"Q", "CAG":"Q",
-               "CGT":"R", "CGC":"R", "CGA":"R", "CGG":"R",
-               "ATT":"I", "ATC":"I", "ATA":"I", "ATG":"M",
-               "ACT":"T", "ACC":"T", "ACA":"T", "ACG":"T",
-               "AAT":"N", "AAC":"N", "AAA":"K", "AAG":"K",
-               "AGT":"S", "AGC":"S", "AGA":"R", "AGG":"R",
-               "GTT":"V", "GTC":"V", "GTA":"V", "GTG":"V",
-               "GCT":"A", "GCC":"A", "GCA":"A", "GCG":"A",
-               "GAT":"D", "GAC":"D", "GAA":"E", "GAG":"E",
-               "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",}
-
-def kmer_to_aa(seq):
-    aa = []
-    for i in range(0, len(seq) - 2, 3):
-        aa.append(codon_table[seq[i:i+3]])
-    return "".join(aa)
-
-
 # taken from khmer 2.0; original author Jason Pell.
 def is_prime(number):
     """Check if a number is prime."""
@@ -311,6 +252,3 @@ def test_protein_mh():
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
     assert 1054538492 in e1.mh.get_mins()
-
-def test_complement():
-    assert complement('ATGGCAGTGACGATGCCG') == 'TACCGTCACTGCTACGGC'
