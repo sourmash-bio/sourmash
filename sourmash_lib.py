@@ -3,12 +3,14 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
+import sys
+sys.path.insert(0, '/Users/t/dev/khmer')
 import khmer
 import screed
 import argparse
 import itertools
 import string
-import _minhash
+import khmer._minhash as _minhash
 
 class Estimators(object):
     """
@@ -62,66 +64,6 @@ class Estimators(object):
         for val in _yield_overlaps(self_mins, other_mins):
             common += 1
         return common
-
-
-class CompositionSketch(object):
-    def __init__(self, n=None, max_prime=1e10, ksize=None, prefixsize=None):
-        if n is None:
-            raise Exception
-        if ksize is None:
-            raise Exception
-        if prefixsize is None:
-            raise Exception
-
-        self.prefixsize = prefixsize
-        self.ksize = ksize
-        self.threshold = 0.01
-
-        # get a prime to use for hashing
-        p = get_prime_lt_x(max_prime)
-        self.p = p
-
-        # initialize 4**prefixsize MinHash sketches
-        self.sketches = []
-        for i in range(4**prefixsize):
-            self.sketches.append(Estimators(n, self.p, ksize))
-
-    def add(self, kmer):
-        idx = khmer.forward_hash(kmer, self.prefixsize)
-        E = self.sketches[idx]
-        
-        hash = khmer.hash_murmur3(kmer)
-        E.add(hash)
-
-    def add_sequence(self, seq):
-        "Sanitize and add a sequence to the sketch."
-        seq = seq.upper().replace('N', 'G')
-        for kmer in kmers(seq, self.ksize):
-            self.add(kmer)
-
-    def jaccard(self, other):
-        total = 0.
-        count = 0
-        for n, v in enumerate(self.sketches):
-            try:
-                total += v.jaccard(other.sketches[n])
-                count += 1
-            except ValueError:
-                pass
-        return total / float(count)
-
-    def similarity(self, other):
-        matches = 0
-        count = 0
-        for n, v in enumerate(self.sketches):
-            try:
-                f = v.jaccard(other.sketches[n])
-                count += 1
-                if f > self.threshold:
-                    matches += 1
-            except ValueError:
-                pass
-        return matches / float(count)
 
 
 def _yield_overlaps(x1, x2):
