@@ -222,7 +222,7 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
       h = _hash_murmur(kmer);
       mh->add_hash(h);
     }
-  } else {
+  } else {                      // protein
     std::string seq = sequence;
     for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
       std::string kmer = seq.substr(i, ksize);
@@ -252,8 +252,7 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
     return NULL;
   }
 
-  KmerMinHash * mh = me->mh;
-  mh->add_hash(hh);
+  me->mh->add_hash(hh);
 
   Py_INCREF(Py_None);
   return Py_None;
