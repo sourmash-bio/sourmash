@@ -58,7 +58,7 @@ extern "C" {
 
 typedef unsigned long long HashIntoType;
 typedef std::set<HashIntoType> CMinHashType;
-int _hash_murmur(const std::string& kmer);
+int _hash_murmur32(const std::string& kmer);
 
 
 ////
@@ -220,7 +220,7 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
     for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
       std::string kmer = seq.substr(i, ksize);
 
-      h = _hash_murmur(kmer);
+      h = _hash_murmur32(kmer);
       mh->add_hash(h);
     }
   } else {                      // protein
@@ -229,13 +229,13 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
       std::string kmer = seq.substr(i, ksize);
       std::string aa = _dna_to_aa(kmer);
 
-      h = _hash_murmur(aa);
+      h = _hash_murmur32(aa);
       mh->add_hash(h);
       
       std::string rc = _revcomp(kmer);
       aa = _dna_to_aa(rc);
 
-      h = _hash_murmur(aa);
+      h = _hash_murmur32(aa);
       mh->add_hash(h);
     }
   }
@@ -389,7 +389,7 @@ std::string _revcomp(const std::string& kmer)
     return out;
 }
 
-int _hash_murmur(const std::string& kmer)
+int _hash_murmur32(const std::string& kmer)
 {
   int out[2];
   HashIntoType h, r;
