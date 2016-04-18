@@ -12,3 +12,5 @@ distances
 dist
 build
 sourmash.egg-info
+.ipynb_checkpoints
+_sketch.so
