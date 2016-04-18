@@ -97,10 +97,6 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
       h = _hash_murmur(kmer);
       h = ((h % me->prime) + me->prime) % me->prime;
 
-      // std::cout << "xx h is " << _hash_murmur(kmer) << " for " << kmer << "\n";
-      
-      // std::cout << "inserting: " << h << " " << me->prime << "\n";
-
       if (mins->size() == me->num) {
         mins_end = mins->end();
         mins_end--;
@@ -130,8 +126,6 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
   CMinHashType * mins = me->mins;
 
   hh = ((hh % me->prime) + me->prime) % me->prime;
-
-  // std::cout << "inserting: " << hh << " " << me->prime << "\n";
 
   mins->insert(hh);
 
