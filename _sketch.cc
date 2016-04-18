@@ -49,6 +49,7 @@ extern "C" {
 
 #include <string>
 #include <set>
+#include <map>
 #include <exception>
 #include <iostream>
 
@@ -76,6 +77,103 @@ sketch_MinHash_dealloc(sketch_MinHash_Object * obj)
   Py_TYPE(obj)->tp_free((PyObject*)obj);
 }
 
+static std::map<std::string, std::string> * _codon_table = NULL;
+
+static std::string _dna_to_aa(const std::string& dna)
+{
+  if (_codon_table == NULL) {
+    _codon_table = new std::map<std::string, std::string>;
+    (*_codon_table)["TTT"] = "F";
+    (*_codon_table)["TTC"] = "F";
+    (*_codon_table)["TTA"] = "L";
+    (*_codon_table)["TTG"] = "L";
+    
+    (*_codon_table)["TCT"] = "S";
+    (*_codon_table)["TCC"] = "S";
+    (*_codon_table)["TCA"] = "S";
+    (*_codon_table)["TCG"] = "S";
+    
+    (*_codon_table)["TAT"] = "Y";
+    (*_codon_table)["TAC"] = "Y";
+    (*_codon_table)["TAA"] = "*";
+    (*_codon_table)["TAG"] = "*";
+    
+    (*_codon_table)["TGT"] = "C";
+    (*_codon_table)["TGC"] = "C";
+    (*_codon_table)["TGA"] = "*";
+    (*_codon_table)["TGG"] = "W";
+    
+    (*_codon_table)["CTT"] = "L";
+    (*_codon_table)["CTC"] = "L";
+    (*_codon_table)["CTA"] = "L";
+    (*_codon_table)["CTG"] = "L";
+    
+    (*_codon_table)["CCT"] = "P";
+    (*_codon_table)["CCC"] = "P";
+    (*_codon_table)["CCA"] = "P";
+    (*_codon_table)["CCG"] = "P";
+    
+    (*_codon_table)["CAT"] = "H";
+    (*_codon_table)["CAC"] = "H";
+    (*_codon_table)["CAA"] = "Q";
+    (*_codon_table)["CAG"] = "Q";
+    
+    (*_codon_table)["CGT"] = "R";
+    (*_codon_table)["CGC"] = "R";
+    (*_codon_table)["CGA"] = "R";
+    (*_codon_table)["CGG"] = "R";
+    
+    (*_codon_table)["ATT"] = "I";
+    (*_codon_table)["ATC"] = "I";
+    (*_codon_table)["ATA"] = "I";
+    (*_codon_table)["ATG"] = "M";
+    
+    (*_codon_table)["ACT"] = "T";
+    (*_codon_table)["ACC"] = "T";
+    (*_codon_table)["ACA"] = "T";
+    (*_codon_table)["ACG"] = "T";
+    
+    (*_codon_table)["AAT"] = "N";
+    (*_codon_table)["AAC"] = "N";
+    (*_codon_table)["AAA"] = "K";
+    (*_codon_table)["AAG"] = "K";
+    
+    (*_codon_table)["AGT"] = "S";
+    (*_codon_table)["AGC"] = "S";
+    (*_codon_table)["AGA"] = "R";
+    (*_codon_table)["AGG"] = "R";
+    
+    (*_codon_table)["GTT"] = "V";
+    (*_codon_table)["GTC"] = "V";
+    (*_codon_table)["GTA"] = "V";
+    (*_codon_table)["GTG"] = "V";
+    
+    (*_codon_table)["GCT"] = "A";
+    (*_codon_table)["GCC"] = "A";
+    (*_codon_table)["GCA"] = "A";
+    (*_codon_table)["GCG"] = "A";
+    
+    (*_codon_table)["GAT"] = "D";
+    (*_codon_table)["GAC"] = "D";
+    (*_codon_table)["GAA"] = "E";
+    (*_codon_table)["GAG"] = "E";
+    
+    (*_codon_table)["GGT"] = "G";
+    (*_codon_table)["GGC"] = "G";
+    (*_codon_table)["GGA"] = "G";
+    (*_codon_table)["GGG"] = "G";
+  }
+
+  std::string aa;
+  for (unsigned int j = 0; j < dna.size(); j += 3) {
+    std::string codon = dna.substr(j, 3);
+    aa += (*_codon_table)[codon];
+  }
+  return aa;
+}
+
+std::string _revcomp(const std::string& kmer);
+
 static
 PyObject *
 minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
@@ -95,6 +193,44 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
       std::string kmer = seq.substr(i, me->ksize);
 
       h = _hash_murmur(kmer);
+      h = ((h % me->prime) + me->prime) % me->prime;
+
+      if (mins->size() == me->num) {
+        mins_end = mins->end();
+        mins_end--;
+        if (h < *mins_end) {
+          mins->erase(mins_end);
+          mins->insert(h);
+        }
+      }
+      else {
+        mins->insert(h);
+      }
+    }
+  } else {
+    std::string seq = sequence;
+    for (unsigned int i = 0; i < seq.length() - me->ksize + 1; i ++) {
+      std::string kmer = seq.substr(i, me->ksize);
+      std::string aa = _dna_to_aa(kmer);
+
+      h = _hash_murmur(aa);
+      h = ((h % me->prime) + me->prime) % me->prime;
+
+      if (mins->size() == me->num) {
+        mins_end = mins->end();
+        mins_end--;
+        if (h < *mins_end) {
+          mins->erase(mins_end);
+          mins->insert(h);
+        }
+      }
+      else {
+        mins->insert(h);
+      }
+      std::string rc = _revcomp(kmer);
+      aa = _dna_to_aa(rc);
+
+      h = _hash_murmur(aa);
       h = ((h % me->prime) + me->prime) % me->prime;
 
       if (mins->size() == me->num) {
@@ -281,25 +417,7 @@ int _hash_murmur(const std::string& kmer)
   return out[0];
 }
 
-static PyObject * murmur3_forward_hash(PyObject * self, PyObject * args)
-{
-    const char * kmer;
-
-    if (!PyArg_ParseTuple(args, "s", &kmer)) {
-        return NULL;
-    }
-
-    return PyLong_FromUnsignedLongLong(_hash_murmur(kmer));
-}
-
 static PyMethodDef SketchMethods[] = {
-    {
-        "hash_murmur3",
-        murmur3_forward_hash,
-        METH_VARARGS,
-        "Calculate the hash value of a k-mer using MurmurHash3 "
-        "(with reverse complement)",
-    },
     { NULL, NULL, 0, NULL } // sentinel
 };
 

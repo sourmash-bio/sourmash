@@ -7,7 +7,6 @@ import khmer
 import screed
 import argparse
 import itertools
-import mmh3
 import string
 import _sketch
 
@@ -43,8 +42,9 @@ class Estimators(object):
     def add_sequence(self, seq):
         "Sanitize and add a sequence to the sketch."
         seq = seq.upper().replace('N', 'G')
-        for kmer in self.get_mers(seq, self.ksize):
-            self.add(kmer)
+        self.mh.add_sequence(seq)
+#        for kmer in self.get_mers(seq, self.ksize):
+#            self.add(kmer)
 
     def jaccard(self, other):
         _mins = self.mh.get_mins()
