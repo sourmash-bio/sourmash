@@ -56,7 +56,7 @@ extern "C" {
 
 typedef unsigned long long HashIntoType;
 typedef std::set<HashIntoType> CMinHashType;
-HashIntoType _hash_murmur(const std::string& kmer);
+int _hash_murmur(const std::string& kmer);
 
 typedef struct {
   PyObject_HEAD
@@ -87,19 +87,24 @@ minhash_add_sequence(sketch_MinHash_Object * me, PyObject * args)
   CMinHashType * mins = me->mins;
   CMinHashType::iterator mins_end;
   
-  HashIntoType h = 0;
+  long int h = 0;
 
   if (!me->is_protein) {
     std::string seq = sequence;
     for (unsigned int i = 0; i < seq.length() - me->ksize + 1; i++) {
       std::string kmer = seq.substr(i, me->ksize);
-      h = _hash_murmur(kmer) % me->prime;
+
+      h = _hash_murmur(kmer);
+      h = ((h % me->prime) + me->prime) % me->prime;
+
+      // std::cout << "xx h is " << _hash_murmur(kmer) << " for " << kmer << "\n";
+      
+      // std::cout << "inserting: " << h << " " << me->prime << "\n";
 
       if (mins->size() == me->num) {
+        mins_end = mins->end();
+        mins_end--;
         if (h < *mins_end) {
-          mins_end = mins->end();
-          mins_end--;
-        
           mins->erase(mins_end);
           mins->insert(h);
         }
@@ -126,7 +131,7 @@ minhash_add_hash(sketch_MinHash_Object * me, PyObject * args)
 
   hh = ((hh % me->prime) + me->prime) % me->prime;
 
-  std::cout << "inserting: " << hh << " " << me->prime << "\n";
+  // std::cout << "inserting: " << hh << " " << me->prime << "\n";
 
   mins->insert(hh);
 
@@ -273,36 +278,13 @@ std::string _revcomp(const std::string& kmer)
     return out;
 }
 
-HashIntoType _hash_murmur(const std::string& kmer,
-                          HashIntoType& h, HashIntoType& r)
+int _hash_murmur(const std::string& kmer)
 {
-    HashIntoType out[2];
-    uint32_t seed = 0;
-    MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
-    h = out[0];
-
-    std::string rev = _revcomp(kmer);
-    MurmurHash3_x64_128((void *)rev.c_str(), rev.size(), seed, &out);
-    r = out[0];
-
-    return h ^ r;
-}
-
-HashIntoType _hash_murmur_forward(const std::string& kmer)
-{
-    HashIntoType h = 0;
-    HashIntoType r = 0;
-
-    _hash_murmur(kmer, h, r);
-    return h;
-}
-
-HashIntoType _hash_murmur(const std::string& kmer)
-{
-    HashIntoType h = 0;
-    HashIntoType r = 0;
-
-    return _hash_murmur(kmer, h, r);
+  int out[2];
+  HashIntoType h, r;
+  uint32_t seed = 0;
+  MurmurHash3_x86_32((void *)kmer.c_str(), kmer.size(), seed, &out);
+  return out[0];
 }
 
 static PyObject * murmur3_forward_hash(PyObject * self, PyObject * args)

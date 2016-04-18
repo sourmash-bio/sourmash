@@ -34,35 +34,11 @@ class Estimators(object):
         self.p = p
 
         # initialize sketch to size n
-        self._mins = [p]*n
         self.mh = _sketch.MinHash(n, ksize, p, protein)
         
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
-        h = mmh3.hash(kmer) # khmer.hash_murmur3(kmer)
-        #h = h % self.p
-        print('python inserting:', h)
-        self.mh.add_hash(h)
-        self._mins = self.mh.get_mins()
-        return
-        
-        _mins = self._mins
-        if h >= _mins[-1]:
-            print(self._mins[:10])
-            return
-
-        for i, v in enumerate(_mins):
-            if h < v:
-                _mins.insert(i, h)
-                _mins.pop()
-                print(self._mins[:10])
-                return
-            elif h == v:
-                print(self._mins[:10])
-                return
-            # else: h > v, keep on going.
-
-        assert 0, "should never reach this"
+        self.mh.add_sequence(kmer)
 
     def add_sequence(self, seq):
         "Sanitize and add a sequence to the sketch."
@@ -71,11 +47,8 @@ class Estimators(object):
             self.add(kmer)
 
     def jaccard(self, other):
-        truelen = len(self._mins)
-        while truelen and self._mins[truelen - 1] == self.p:
-            truelen -= 1
-        if truelen == 0:
-            raise ValueError
+        _mins = self.mh.get_mins()
+        truelen = len(_mins)
         
         return self.common(other) / float(truelen)
     similarity = jaccard
@@ -88,12 +61,11 @@ class Estimators(object):
             raise Exception("different primse - cannot compare")
 
         common = 0
-        for val in _yield_overlaps(self._mins, other._mins):
+        self_mins = self.mh.get_mins()
+        other_mins = other.mh.get_mins()
+        for val in _yield_overlaps(self_mins, other_mins):
             common += 1
         return common
-
-    def _truncate(self, n):
-        self._mins = self._mins[:n]
 
 
 class CompositionSketch(object):
@@ -270,21 +242,27 @@ def get_prime_lt_x(target):
 
 
 def test_jaccard_1():
-    E1 = Estimators(n=0, ksize=20)
-    E2 = Estimators(n=0, ksize=20)
+    E1 = Estimators(n=5, ksize=20)
+    E2 = Estimators(n=5, ksize=20)
 
-    E1._mins = [1, 2, 3, 4, 5]
-    E2._mins = [1, 2, 3, 4, 6]
+    for i in [1, 2, 3, 4, 5]:
+        E1.mh.add_hash(i)
+    for i in [1, 2, 3, 4, 6]:
+        E2.mh.add_hash(i)
+    
     assert E1.jaccard(E2) == 4/5.0
     assert E2.jaccard(E1) == 4/5.0
 
 
 def test_jaccard_2_difflen():
-    E1 = Estimators(n=0, ksize=20)
-    E2 = Estimators(n=0, ksize=20)
+    E1 = Estimators(n=5, ksize=20)
+    E2 = Estimators(n=5, ksize=20)
 
-    E1._mins = [1, 2, 3, 4, 5]
-    E2._mins = [1, 2, 3, 4]
+    for i in [1, 2, 3, 4, 5]:
+        E1.mh.add_hash(i)
+    for i in [1, 2, 3, 4]:
+        E2.mh.add_hash(i)
+    
     assert E1.jaccard(E2) == 4/5.0
     assert E2.jaccard(E1) == 4/4.0
 
@@ -318,9 +296,9 @@ def test_dna_mh():
     for i in range(len(seq) - 3):
         e2.add(seq[i:i+4])
 
-    assert e1._mins == e2._mins
-    assert 1149966211 in e1._mins
-    assert 530237262 in e1._mins
+    assert e1.mh.get_mins() == e2.mh.get_mins()
+    assert 1149966211 in e1.mh.get_mins()
+    assert 530237262 in e1.mh.get_mins()
 
 
 def test_protein_mh():
@@ -340,7 +318,6 @@ def test_protein_mh():
         aa = kmer_to_aa(kmer)
         e2.add(aa)
 
-    assert e1._mins == e2._mins
-    print(e1._mins)
-    assert 857194471 in e1._mins
-    assert 1054538492 in e1._mins
+    assert e1.mh.get_mins() == e2.mh.get_mins()
+    assert 857194471 in e1.mh.get_mins()
+    assert 1054538492 in e1.mh.get_mins()

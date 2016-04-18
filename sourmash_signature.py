@@ -24,7 +24,7 @@ class SourmashSignature(object):
         "Calculate md5 hash of the bottom sketch, specifically."
         # @CTB: should include ksize, prime.
         m = hashlib.md5()
-        for k in self.estimator._mins:
+        for k in self.estimator.mh.get_mins():
             m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
@@ -46,7 +46,7 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
         sketch['prime'] = estimator.p
-        sketch['mins'] = list(map(int, estimator._mins))
+        sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
         e['signature'] = sketch
 
@@ -64,7 +64,7 @@ class SourmashCompositeSignature(SourmashSignature):
         # @CTB: should include ksize, prime.
         m = hashlib.md5()
         for sk in self.estimator.sketches:
-            for k in sk._mins:
+            for k in sk.mh.get_mins():
                 m.update(str(k).encode('utf-8'))
         return m.hexdigest()
     
@@ -83,7 +83,7 @@ class SourmashCompositeSignature(SourmashSignature):
         for i, sk in enumerate(estimator.sketches):
             d = {}
             d['num'] = i
-            d['mins'] = list(map(int, sk._mins))
+            d['mins'] = list(map(int, sk.mh.get_mins()))
             x.append(d)
         sketch['subsketches'] = x
             
@@ -139,21 +139,24 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     prime = sketch['prime']
     if sketch.get('type') == 'composition':
         prefixsize = sketch['prefixsize']
+        n = int(sketch['subsketches']['num'])
         e = sourmash_lib.CompositionSketch(ksize=ksize, max_prime=prime,
-                                         n=0, prefixsize=prefixsize)
+                                         n=n, prefixsize=prefixsize)
 
         for item in sketch['subsketches']:
             n = item['num']
             mins = item['mins']
             n = int(n)
-            mins = list(map(int, mins))
-            e.sketches[n]._mins = mins
+            for m in map(int, mins):
+                e.sketches[n].mh.add_hash(m)
         
         sig = SourmashCompositeSignature(email, e)
     else:
         mins = list(map(int, sketch['mins']))
-        e = sourmash_lib.Estimators(ksize=ksize, max_prime=prime, n=0)
-        e._mins = mins
+        n = len(mins)
+        e = sourmash_lib.Estimators(ksize=ksize, max_prime=prime, n=n)
+        for m in mins:
+            e.mh.add_hash(m)
 
         sig = SourmashSignature(email, e)
         
@@ -217,6 +220,7 @@ def test_roundtrip():
 
 def test_md5():
     e = sourmash_lib.Estimators(n=1, ksize=20)
+    e.mh.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     print(sig.save())
-    assert sig.md5sum() == '2af954d1c2a71ea480feef8ef51cf6cb', sig.md5sum()
+    assert sig.md5sum() == 'e4da3b7fbbce2345d7772b0674a318d5', sig.md5sum()
