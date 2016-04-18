@@ -155,7 +155,7 @@ def complement(s):
     """
     Return complement of 's'.
     """
-    c = unicode(s).translate(__complementTranslation)
+    c = "".join(__complementTranslation[n] for n in s)
     return c
 
 
@@ -321,3 +321,7 @@ def test_protein_mh():
     assert e1.mh.get_mins() == e2.mh.get_mins()
     assert 857194471 in e1.mh.get_mins()
     assert 1054538492 in e1.mh.get_mins()
+
+
+def test_complement():
+    assert complement('ATGGCAGTGACGATGCCG') == 'TACCGTCACTGCTACGGC'
