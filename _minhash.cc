@@ -215,9 +215,15 @@ minhash_add_sequence(MinHash_Object * me, PyObject * args)
   long int h = 0;
   unsigned int ksize = mh->ksize;
 
+  if(strlen(sequence) < ksize) {
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+
   if (!mh->is_protein) {
     std::string seq = sequence;
     for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
+      //std::cout << i << " x " << ksize << " y " << seq.length() << "\n";
       std::string kmer = seq.substr(i, ksize);
 
       h = _hash_murmur32(kmer);
