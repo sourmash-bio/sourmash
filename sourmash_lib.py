@@ -21,6 +21,7 @@ class Estimators(object):
         if ksize is None:
             raise Exception
 
+        self.num = n
         self.ksize = ksize
         self.is_protein = False
         if protein:
@@ -32,6 +33,17 @@ class Estimators(object):
 
         # initialize sketch to size n
         self.mh = _minhash.MinHash(n, ksize, p, protein)
+
+    def __getstate__(self):             # enable pickling
+        return (self.num, self.ksize, self.is_protein, self.p,
+                self.mh.get_mins())
+
+    def __setstate__(self, tup):
+        (self.num, self.ksize, self.is_protein, self.p, mins) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize, self.p,
+                                   self.is_protein)
+        for m in mins:
+            self.mh.add_hash(m)
         
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
