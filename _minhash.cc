@@ -250,14 +250,12 @@ minhash_add_sequence(MinHash_Object * me, PyObject * args)
       std::string kmer = seq.substr(i, ksize);
       std::string aa = _dna_to_aa(kmer);
 
-      h = _hash_murmur32(aa);
-      mh->add_hash(h);
+      mh->add_kmer(aa);
       
       std::string rc = _revcomp(kmer);
       aa = _dna_to_aa(rc);
 
-      h = _hash_murmur32(aa);
-      mh->add_hash(h);
+      mh->add_kmer(aa);
     }
   }
     
