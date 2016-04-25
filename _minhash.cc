@@ -86,6 +86,18 @@ public:
       mins.erase(mi);
     }
   }
+  void add_kmer(std::string kmer)
+  {
+    long int hash = _hash_murmur32(kmer);
+    add_hash(hash);
+  }
+  int _hash_murmur32(const std::string& kmer)
+  {
+    int out[2];
+    uint32_t seed = 0;
+    MurmurHash3_x86_32((void *)kmer.c_str(), kmer.size(), seed, &out);
+    return out[0];
+  }
 };
 
 ////
@@ -225,9 +237,12 @@ minhash_add_sequence(MinHash_Object * me, PyObject * args)
     for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
       //std::cout << i << " x " << ksize << " y " << seq.length() << "\n";
       std::string kmer = seq.substr(i, ksize);
-
-      h = _hash_murmur32(kmer);
-      mh->add_hash(h);
+      mh->add_kmer(kmer);
+    }
+    std::string rc = _revcomp(seq);
+    for (unsigned int i = 0; i < rc.length() - ksize + 1; i++) {
+      std::string kmer = rc.substr(i, ksize);
+      mh->add_kmer(kmer);
     }
   } else {                      // protein
     std::string seq = sequence;
@@ -235,14 +250,12 @@ minhash_add_sequence(MinHash_Object * me, PyObject * args)
       std::string kmer = seq.substr(i, ksize);
       std::string aa = _dna_to_aa(kmer);
 
-      h = _hash_murmur32(aa);
-      mh->add_hash(h);
+      mh->add_kmer(aa);
       
       std::string rc = _revcomp(kmer);
       aa = _dna_to_aa(rc);
 
-      h = _hash_murmur32(aa);
-      mh->add_hash(h);
+      mh->add_kmer(aa);
     }
   }
     

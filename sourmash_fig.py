@@ -28,7 +28,7 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     if not show_labels:
         dendrolabels = [ str(i) for i in range(len(labeltext)) ]
                         
-    Z1 = sch.dendrogram(Y, orientation='right', labels=dendrolabels,
+    Z1 = sch.dendrogram(Y, orientation='left', labels=dendrolabels,
                         no_labels=not show_indices)
     ax1.set_xticks([])
 
