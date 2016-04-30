@@ -289,7 +289,7 @@ Commands can be:
             i += 1
 
         print('min similarity in matrix:', numpy.min(D))
-        #print('max similarity in matrix:', numpy.max(D))
+        # print('max similarity in matrix:', numpy.max(D))
 
         if args.output_filename:
             labeloutname = args.output_filename + '.labels.txt'
@@ -322,10 +322,163 @@ Commands can be:
 
         E = sourmash_lib.Estimators(ksize=args.ksize, n=DEFAULT_N)
         for n, record in enumerate(screed.open(args.sequencefile)):
+               if args.input_is_protein:
+                  E.mh.add_protein(s)
+               else:
+                  E.add_sequence(s)
+
+        siglist = []
+        for E in Elist:
+           signature = sig.SourmashSignature('titus@idyll.org',
+                                              E,
+                                              filename=filename)
+           siglist.append(signature)
+
+        data = sig.save_signatures(siglist)
+        fp = open(sigfile, 'w')
+        fp.write(data)
+        fp.close()
+
+    def clean(self):
+        "Manipulate signature files in various ways."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sigfiles', nargs='+')
+        parser.add_argument('-f', '--force', action='store_true',
+                            help='ignore MD5 and other optional checks')
+        parser.add_argument('-n', '--no-save', action='store_true')
+        parser.add_argument('-s', '--show', action='store_true',
+                            help='print to stdout instead of overwriting')
+        parser.add_argument('--name-from', help='transfer name from here')
+        parser.add_argument('--set-name', help='set the name')
+        args = parser.parse_args(sys.argv[2:])
+        
+        ignore_md5sum = False
+        if args.force:
+            print('ignoring md5sum because of --force')
+            ignore_md5sum = True
+            
+        assert not (args.name_from and args.set_name)
+
+        for filename in args.sigfiles:
+            if not os.path.exists(filename):
+                print('ERROR - filename %s does not exist!' % filename)
+                continue
+
+            print('loading', filename)
+            siglist = sig.load_signatures(open(filename, 'r'),
+                                        ignore_md5sum=ignore_md5sum)
+
+            if args.name_from:              # hackity hack hack
+                other = sig.load_signatures(open(args.name_from, 'r'))
+                for s in siglist:
+                    s.d['name'] = other[0].d['name']
+            elif args.set_name:
+                for s in siglist:
+                    s.d['name'] = args.set_name
+
+        data = sig.save_signatures(siglist)
+
+        if not args.no_save:
+            print('loaded and saving', filename)
+            if args.show:
+                print(data)
+            else:
+                fp = open(filename, 'w')
+                fp.write(data)
+                fp.close()
+
+    def compare(self):
+        "Compare multiple signature files and create a distance matrix."
+        import numpy 
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-o', '--output-filename')
+        parser.add_argument('-e', '--eliminate-singletons', action='store_true')
+        args = parser.parse_args(sys.argv[2:])
+
+        siglist = []
+        for filename in args.signatures:
+           data = open(filename).read()
+           print('loading', filename)
+           loaded = sig.load_signatures(data, select_ksize=args.ksize)
+           siglist.extend(loaded)
+
+        if args.eliminate_singletons:
+            start_sigs = len(siglist)
+            def match_above_threshold(sig1, siglist):
+                THRESHOLD = 0.05
+                for sig2 in siglist:
+                    if sig1 != sig2 and (sig1.similarity(sig2) > THRESHOLD or \
+                                         sig2.similarity(sig1) > THRESHOLD):
+                        return True
+                return False
+
+            siglist = [ s for s in siglist if match_above_threshold(s, siglist) ]
+            print('eliminated %d sigs (of %d)' % (len(siglist) - start_sigs,
+                                                  start_sigs))
+                                                      
+
+        if len(siglist) == 0:
+            print('no signatures!')
+            sys.exit(-1)
+
+        D = numpy.zeros([len(siglist), len(siglist)])
+        numpy.set_printoptions(precision=3, suppress=True)
+
+        i = 0
+        labeltext = []
+        samples = []
+        for E in siglist:
+           j = 0
+           for E2 in siglist:
+              D[i][j] = E.similarity(E2)
+              j += 1
+
+           print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
+           labeltext.append(E.name())
+           i += 1
+
+        print('min similarity in matrix:', numpy.min(D))
+        # print('max similarity in matrix:', numpy.max(D))
+
+        if args.output_filename:
+           labeloutname = args.output_filename + '.labels.txt'
+           print('saving labels to:', labeloutname)
+           fp = open(labeloutname, 'w')
+           fp.write("\n".join(labeltext))
+           fp.close()
+
+           print('saving distance matrix to:', args.output_filename)
+           fp = open(args.output_filename, 'wb')
+           numpy.save(fp, D)
+           fp.close()
+
+    def sniff(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sequencefile')
+        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        args = parser.parse_args(sys.argv[2:])
+
+        seqfile = args.sequencefile
+        siglist = []
+        for filename in args.signatures:
+            data = open(filename).read()
+            print('loading', filename)
+            loaded = sig.load_signatures(data, select_ksize=args.ksize)
+            siglist.extend(loaded)
+
+
+        ###
+
+        E = sourmash_lib.Estimators(ksize=args.ksize, n=DEFAULT_N)
+        for n, record in enumerate(screed.open(args.sequencefile)):
             if n % 10000 == 0:
                 print('...', n)
                 for x in siglist:
-                    if x.estimator.common(E) > 0:
+                    if x.estimator.common(E) >0:
                         print('identified as', x.name())
                         raise SystemExit
             E.add_sequence(record.sequence)
