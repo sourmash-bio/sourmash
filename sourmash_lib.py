@@ -192,7 +192,7 @@ def test_dna_mh():
         e2.add(seq[i:i + 4])
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert 1149966211 in e1.mh.get_mins()
+    assert 420042127 in e1.mh.get_mins()
     assert 530237262 in e1.mh.get_mins()
 
 
