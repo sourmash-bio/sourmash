@@ -8,26 +8,28 @@ import scipy
 import pylab
 import scipy.cluster.hierarchy as sch
 
+
 def load_matrix_and_labels(basefile):
     D = numpy.load(open(basefile, 'rb'))
-    labeltext = [ x.strip() for x in open(basefile + '.labels.txt') ]
+    labeltext = [x.strip() for x in open(basefile + '.labels.txt')]
     return (D, labeltext)
+
 
 def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
                           vmax=1.0, vmin=0.0):
     if show_labels:
-        show_indices=True
+        show_indices = True
 
-    fig = pylab.figure(figsize=(11,8))
-    ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
+    fig = pylab.figure(figsize=(11, 8))
+    ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
 
     # plot denderogram
-    Y = sch.linkage(D, method='single') # centroid  
-    
+    Y = sch.linkage(D, method='single')  # centroid
+
     dendrolabels = labeltext
     if not show_labels:
-        dendrolabels = [ str(i) for i in range(len(labeltext)) ]
-                        
+        dendrolabels = [str(i) for i in range(len(labeltext))]
+
     Z1 = sch.dendrogram(Y, orientation='left', labels=dendrolabels,
                         no_labels=not show_indices)
     ax1.set_xticks([])
@@ -39,12 +41,12 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     scale_xstart = xstart + width + 0.01
 
     # plot matrix
-    axmatrix = fig.add_axes([xstart,0.1, width,0.6])
+    axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
 
     # (this reorders D by the clustering in Z1)
     idx1 = Z1['leaves']
-    D = D[idx1,:]
-    D = D[:,idx1]
+    D = D[idx1, :]
+    D = D[:, idx1]
 
     # show matrix
     im = axmatrix.matshow(D, aspect='auto', origin='lower',
@@ -52,8 +54,8 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     axmatrix.set_xticks([])
     axmatrix.set_yticks([])
 
-    # Plot colorbar.                                                            
-    axcolor = fig.add_axes([scale_xstart,0.1,0.02,0.6])
+    # Plot colorbar.
+    axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
     pylab.colorbar(im, cax=axcolor)
 
     return fig

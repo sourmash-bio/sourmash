@@ -12,6 +12,7 @@ import itertools
 import string
 import khmer._minhash as _minhash
 
+
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -46,7 +47,7 @@ class Estimators(object):
                                    self.is_protein)
         for m in mins:
             self.mh.add_hash(m)
-        
+
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
         self.mh.add_sequence(kmer)
@@ -59,7 +60,7 @@ class Estimators(object):
     def jaccard(self, other):
         _mins = self.mh.get_mins()
         truelen = len(_mins)
-        
+
         return self.common(other) / float(truelen)
     similarity = jaccard
 
@@ -96,6 +97,8 @@ def _yield_overlaps(x1, x2):
         return
 
 # taken from khmer 2.0; original author Jason Pell.
+
+
 def is_prime(number):
     """Check if a number is prime."""
     if number < 2:
@@ -141,9 +144,9 @@ def test_jaccard_1():
         E1.mh.add_hash(i)
     for i in [1, 2, 3, 4, 6]:
         E2.mh.add_hash(i)
-    
-    assert E1.jaccard(E2) == 4/5.0
-    assert E2.jaccard(E1) == 4/5.0
+
+    assert E1.jaccard(E2) == 4 / 5.0
+    assert E2.jaccard(E1) == 4 / 5.0
 
 
 def test_jaccard_2_difflen():
@@ -154,23 +157,23 @@ def test_jaccard_2_difflen():
         E1.mh.add_hash(i)
     for i in [1, 2, 3, 4]:
         E2.mh.add_hash(i)
-    
-    assert E1.jaccard(E2) == 4/5.0
-    assert E2.jaccard(E1) == 4/4.0
+
+    assert E1.jaccard(E2) == 4 / 5.0
+    assert E2.jaccard(E1) == 4 / 4.0
 
 
 def test_yield_overlaps():
     x1 = [1, 3, 5]
     x2 = [2, 4, 6]
     assert len(list(_yield_overlaps(x1, x2))) == 0
-               
+
 
 def test_yield_overlaps_2():
     x1 = [1, 3, 5]
     x2 = [1, 2, 4, 6]
     assert len(list(_yield_overlaps(x1, x2))) == 1
     assert len(list(_yield_overlaps(x2, x1))) == 1
-               
+
 
 def test_yield_overlaps_3():
     x1 = [1, 3, 6]
@@ -186,7 +189,7 @@ def test_dna_mh():
     seq = 'ATGGCAGTGACGATGCCAG'
     e1.add_sequence(seq)
     for i in range(len(seq) - 3):
-        e2.add(seq[i:i+4])
+        e2.add(seq[i:i + 4])
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
     assert 1149966211 in e1.mh.get_mins()
@@ -201,7 +204,7 @@ def test_protein_mh():
     e1.add_sequence(seq)
 
     for i in range(len(seq) - 5):
-        kmer = seq[i:i+6]
+        kmer = seq[i:i + 6]
         e2.add(kmer)
 
     assert e1.mh.get_mins() == e2.mh.get_mins()

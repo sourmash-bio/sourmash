@@ -7,14 +7,16 @@ import screed
 import sourmash_lib
 import sourmash_signature as sig
 
-DEFAULT_K=32
-DEFAULT_N=500
-DEFAULT_COMPOSITE_N=500
+DEFAULT_K = 32
+DEFAULT_N = 500
+DEFAULT_COMPOSITE_N = 500
+
 
 class SourmashCommands(object):
-   def __init__(self):
-      parser = argparse.ArgumentParser(description='work with RNAseq signatures',
-                                       usage='''sourmash <command> [<args>]
+
+    def __init__(self):
+        parser = argparse.ArgumentParser(description='work with RNAseq signatures',
+                                         usage='''sourmash <command> [<args>]
 
 Commands can be:
 
@@ -25,427 +27,426 @@ Commands can be:
    condense <out> <filenames>  Create species-general signature files.
 .
 ''')
-      parser.add_argument('command')
-      args = parser.parse_args(sys.argv[1:2])
-      if not hasattr(self, args.command):
-         print('Unrecognized command')
-         parser.print_help()
-         sys.exit(1)
+        parser.add_argument('command')
+        args = parser.parse_args(sys.argv[1:2])
+        if not hasattr(self, args.command):
+            print('Unrecognized command')
+            parser.print_help()
+            sys.exit(1)
 
-      cmd = getattr(self, args.command)
-      print('# running sourmash subcommand: %s' % args.command)
-      cmd()
+        cmd = getattr(self, args.command)
+        print('# running sourmash subcommand: %s' % args.command)
+        cmd()
 
-   def search(self):
-      "Search a query sig against one or more signatures; report top match."
-      import sourmash_signature as sig
-      parser = argparse.ArgumentParser()
-      parser.add_argument('query')
-      parser.add_argument('against', nargs='+')
-      parser.add_argument('--threshold', default=0.08, type=float)
-      parser.add_argument('--ksize', default=DEFAULT_K)
-      args = parser.parse_args(sys.argv[2:])
+    def search(self):
+        "Search a query sig against one or more signatures; report top match."
+        import sourmash_signature as sig
+        parser = argparse.ArgumentParser()
+        parser.add_argument('query')
+        parser.add_argument('against', nargs='+')
+        parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('--ksize', default=DEFAULT_K)
+        args = parser.parse_args(sys.argv[2:])
 
-      sl = sig.load_signatures(open(args.query, 'r'), select_ksize=args.ksize)
-      if len(sl) != 1:
-         raise Exception("%d query signatures; need exactly one" % len(sl))
-      query = sl[0]
+        sl = sig.load_signatures(
+            open(args.query, 'r'), select_ksize=args.ksize)
+        if len(sl) != 1:
+            raise Exception("%d query signatures; need exactly one" % len(sl))
+        query = sl[0]
 
-      print('loading signatures from %d files' % len(args.against))
-      against = []
-      for filename in args.against:
-         if filename == args.query:
-            print('excluding query from database (file %s)' % filename)
-            continue
-         
-         sl = sig.load_signatures(open(filename, 'r'), select_ksize=args.ksize)
-         for x in sl:
-            against.append((x, filename))
+        print('loading signatures from %d files' % len(args.against))
+        against = []
+        for filename in args.against:
+            if filename == args.query:
+                print('excluding query from database (file %s)' % filename)
+                continue
 
-      distances = []
-      for (x, filename) in against:
-         distance = query.similarity(x)
-         if distance >= args.threshold:
-            distances.append((distance, x, filename))
+            sl = sig.load_signatures(
+                open(filename, 'r'), select_ksize=args.ksize)
+            for x in sl:
+                against.append((x, filename))
 
-      if distances:
-         distances.sort(reverse=True)
-         print('%d matches:' % len(distances))
-         for distance, match, filename in distances[:3]:
-            print('\t', match.name(), '\t', distance, '\t', filename)
-      else:
-         print('** no matches in %d signatures' % len(against))
-      
-   def condense(self):
-      "Combine multiple signatures into one, to create e.g. a species sig."
-      parser = argparse.ArgumentParser()
-      parser.add_argument('output')
-      parser.add_argument('filenames', nargs='+')
-      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-      parser.add_argument('--name', default=None)
-      parser.add_argument('--threshold', type=int, default=2,
-                          help='threshold for solid hash values')
-      args = parser.parse_args(sys.argv[2:])
+        distances = []
+        for (x, filename) in against:
+            distance = query.similarity(x)
+            if distance >= args.threshold:
+                distances.append((distance, x, filename))
 
-      siglist = []
-      for filename in args.filenames:
-         sl = sig.load_signatures(open(filename, 'r'),
-                                  select_ksize=args.ksize)
-         siglist.extend(sl)
+        if distances:
+            distances.sort(reverse=True)
+            print('%d matches:' % len(distances))
+            for distance, match, filename in distances[:3]:
+                print('\t', match.name(), '\t', distance, '\t', filename)
+        else:
+            print('** no matches in %d signatures' % len(against))
 
-      assert len(siglist)
+    def condense(self):
+        "Combine multiple signatures into one, to create e.g. a species sig."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('output')
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--name', default=None)
+        parser.add_argument('--threshold', type=int, default=2,
+                            help='threshold for solid hash values')
+        args = parser.parse_args(sys.argv[2:])
 
-      x = set()
-      for s in siglist:
-         x.add(s.estimator.p)
-      if len(x) != 1:
-         raise Exception('need the same prime across all estimators')
-      prime = x.pop()
+        siglist = []
+        for filename in args.filenames:
+            sl = sig.load_signatures(open(filename, 'r'),
+                                     select_ksize=args.ksize)
+            siglist.extend(sl)
 
-      hash_counts = {}
-      for s in siglist:
-         for hashval in s.estimator._mins:
-            hash_counts[hashval] = hash_counts.get(hashval, 0) + 1
+        assert len(siglist)
 
-      solid_hashes = [ x for (x, y) in hash_counts.items() if y > args.threshold ]
-      solid_hashes.sort()
+        x = set()
+        for s in siglist:
+            x.add(s.estimator.p)
+        if len(x) != 1:
+            raise Exception('need the same prime across all estimators')
+        prime = x.pop()
 
-      condensed_estimator = sourmash_lib.Estimators(n=0, ksize=args.ksize)
-      condensed_estimator.p = prime
-      condensed_estimator._mins = solid_hashes
+        hash_counts = {}
+        for s in siglist:
+            for hashval in s.estimator._mins:
+                hash_counts[hashval] = hash_counts.get(hashval, 0) + 1
 
-      condensed_sig = sig.SourmashSignature(siglist[0].d['email'],
-                                            condensed_estimator,
-                                            name=args.name)
+        solid_hashes = [x for (x, y) in hash_counts.items()
+                        if y > args.threshold]
+        solid_hashes.sort()
 
-      print('condensed signature: %d hashvals' % len(solid_hashes))
-      data = sig.save_signatures([condensed_sig])
+        condensed_estimator = sourmash_lib.Estimators(n=0, ksize=args.ksize)
+        condensed_estimator.p = prime
+        condensed_estimator._mins = solid_hashes
 
-      print('writing condensed signature to %s' % args.output)
-      fp = open(args.output, 'w')
-      fp.write(data)
-      fp.close()
+        condensed_sig = sig.SourmashSignature(siglist[0].d['email'],
+                                              condensed_estimator,
+                                              name=args.name)
 
-   def compute(self):
-      "Compute the signature for one or more files."
-      parser = argparse.ArgumentParser()
-      parser.add_argument('--protein', action='store_true')
-      parser.add_argument('--input-is-protein', action='store_true')
-      parser.add_argument('filenames', nargs='+')
-      parser.add_argument('-k', '--ksizes',
-                          default=str(DEFAULT_K),
-                          help='comma-separated list of k-mer sizes')
-      parser.add_argument('-f', '--force', action='store_true')
-      args = parser.parse_args(sys.argv[2:])
-      
-      print('computing signatures for files:', args.filenames)
+        print('condensed signature: %d hashvals' % len(solid_hashes))
+        data = sig.save_signatures([condensed_sig])
 
-      ksizes = args.ksizes
-      if ',' in ksizes:
-         ksizes = ksizes.split(',')
-         ksizes = list(map(int, ksizes))
-      else:
-         ksizes = [int(ksizes)]
+        print('writing condensed signature to %s' % args.output)
+        fp = open(args.output, 'w')
+        fp.write(data)
+        fp.close()
 
-      print('Computing signature for ksizes: %s' % str(ksizes))
+    def compute(self):
+        "Compute the signature for one or more files."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--protein', action='store_true')
+        parser.add_argument('--input-is-protein', action='store_true')
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('-k', '--ksizes',
+                            default=str(DEFAULT_K),
+                            help='comma-separated list of k-mer sizes')
+        parser.add_argument('-f', '--force', action='store_true')
+        args = parser.parse_args(sys.argv[2:])
 
-      for filename in args.filenames:
-         sigfile = os.path.basename(filename) + '.sig'
-         if os.path.exists(sigfile) and not args.force:
-            print('skipping', filename, '- already done')
-            continue
+        print('computing signatures for files:', args.filenames)
 
-         Elist = []
-         for k in ksizes:
-            E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
-                                        protein=args.protein)
-            Elist.append(E)
+        ksizes = args.ksizes
+        if ',' in ksizes:
+            ksizes = ksizes.split(',')
+            ksizes = list(map(int, ksizes))
+        else:
+            ksizes = [int(ksizes)]
 
-         for n, record in enumerate(screed.open(filename)):
-            if n % 10000 == 0:
-               print('...', filename, n)
-            if 0 and n % 100000 == 0 and n:
-               siglist = []
-               for E in Elist:
-                  signature = sig.SourmashSignature('titus@idyll.org',
-                                                 E,
-                                                 filename=filename)
-                  siglist.append(signature)
+        print('Computing signature for ksizes: %s' % str(ksizes))
 
-               data = sig.save_signatures(siglist)
-               fp = open(sigfile + '.%d' % n, 'w')
-               fp.write(data)
-               fp.close()
+        for filename in args.filenames:
+            sigfile = os.path.basename(filename) + '.sig'
+            if os.path.exists(sigfile) and not args.force:
+                print('skipping', filename, '- already done')
+                continue
 
-            s = record.sequence
-#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
-#               s = s.replace(i, 'N')
-            for E in Elist:
-               if args.input_is_protein:
-                  E.mh.add_protein(s)
-               else:
-                  E.add_sequence(s)
-
-         siglist = []
-         for E in Elist:
-            signature = sig.SourmashSignature('titus@idyll.org',
-                                              E,
-                                              filename=filename)
-            siglist.append(signature)
-
-         data = sig.save_signatures(siglist)
-         fp = open(sigfile, 'w')
-         fp.write(data)
-         fp.close()
-
-
-   def clean(self):
-      "Manipulate signature files in various ways."
-      parser = argparse.ArgumentParser()
-      parser.add_argument('sigfiles', nargs='+')
-      parser.add_argument('-f', '--force', action='store_true',
-                          help='ignore MD5 and other optional checks')
-      parser.add_argument('-n', '--no-save', action='store_true')
-      parser.add_argument('-s', '--show', action='store_true',
-                          help='print to stdout instead of overwriting')
-      parser.add_argument('--name-from', help='transfer name from here')
-      parser.add_argument('--set-name', help='set the name')
-      args = parser.parse_args(sys.argv[2:])
-
-      ignore_md5sum = False
-      if args.force:
-         print('ignoring md5sum because of --force')
-         ignore_md5sum = True
-
-      assert not (args.name_from and args.set_name)
-
-      for filename in args.sigfiles:
-         if not os.path.exists(filename):
-            print('ERROR - filename %s does not exist!' % filename)
-            continue
-
-         print('loading', filename)
-         siglist = sig.load_signatures(open(filename, 'r'),
-                                       ignore_md5sum=ignore_md5sum)
-
-         if args.name_from:              # hackity hack hack
-            other = sig.load_signatures(open(args.name_from, 'r'))
-            for s in siglist:
-               s.d['name'] = other[0].d['name']
-         elif args.set_name:
-            for s in siglist:
-               s.d['name'] = args.set_name
-
-         data = sig.save_signatures(siglist)
-
-         if not args.no_save:
-            print('loaded and saving', filename)
-            if args.show:
-               print(data)
-            else:
-               fp = open(filename, 'w')
-               fp.write(data)
-               fp.close()
-
-   def compare(self):
-      "Compare multiple signature files and create a distance matrix."
-      import numpy 
-
-      parser = argparse.ArgumentParser()
-      parser.add_argument('signatures', nargs='+')
-      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-      parser.add_argument('-o', '--output-filename')
-      args = parser.parse_args(sys.argv[2:])
-
-      siglist = []
-      for filename in args.signatures:
-         data = open(filename).read()
-         print('loading', filename)
-         loaded = sig.load_signatures(data, select_ksize=args.ksize)
-         siglist.extend(loaded)
-
-      if len(siglist) == 0:
-         print('no signatures!')
-         sys.exit(-1)
-
-      D = numpy.zeros([len(siglist), len(siglist)])
-      numpy.set_printoptions(precision=3, suppress=True)
-
-      i = 0
-      labeltext = []
-      samples = []
-      for E in siglist:
-         j = 0
-         for E2 in siglist:
-            D[i][j] = E.similarity(E2)
-            j += 1
-
-         print('%d-%20s\t%s' % (i, E.name(), D[i , :,],))
-         labeltext.append(E.name())
-         i += 1
-
-      print('min similarity in matrix:', numpy.min(D))
-      #print('max similarity in matrix:', numpy.max(D))
-
-      if args.output_filename:
-         labeloutname = args.output_filename + '.labels.txt'
-         print('saving labels to:', labeloutname)
-         fp = open(labeloutname, 'w')
-         fp.write("\n".join(labeltext))
-         fp.close()
-
-         print('saving distance matrix to:', args.output_filename)
-         fp = open(args.output_filename, 'wb')
-         numpy.save(fp, D)
-         fp.close()
-
-   def sniff(self):
-      parser = argparse.ArgumentParser()
-      parser.add_argument('sequencefile')
-      parser.add_argument('signatures', nargs='+')
-      parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-      args = parser.parse_args(sys.argv[2:])
-
-      seqfile = args.sequencefile
-      siglist = []
-      for filename in args.signatures:
-         data = open(filename).read()
-         print('loading', filename)
-         loaded = sig.load_signatures(data, select_ksize=args.ksize)
-         siglist.extend(loaded)
-
-
-      ###
-
-      E = sourmash_lib.Estimators(ksize=args.ksize, n=DEFAULT_N)
-      for n, record in enumerate(screed.open(args.sequencefile)):
-         if n % 10000 == 0:
-            print('...', n)
-            for x in siglist:
-               if x.estimator.common(E) >0:
-                  print('identified as', x.name())
-                  raise SystemExit
-         E.add_sequence(record.sequence)
-         
-   def compute2(self):
-      "Compute the signature for one or more files."
-      parser = argparse.ArgumentParser()
-      parser.add_argument('filenames', nargs='+')
-      parser.add_argument('-k', '--ksizes',
-                          default=str(DEFAULT_K),
-                          help='comma-separated list of k-mer sizes')
-      parser.add_argument('-f', '--force', action='store_true')
-      args = parser.parse_args(sys.argv[2:])
-      
-      print('computing signatures for files:', args.filenames)
-
-      ksizes = args.ksizes
-      if ',' in ksizes:
-         ksizes = ksizes.split(',')
-         ksizes = list(map(int, ksizes))
-      else:
-         ksizes = [int(ksizes)]
-
-      print('Computing signature for ksizes: %s' % str(ksizes))
-
-      for filename in args.filenames:
-         sigfile = os.path.basename(filename) + '.sig'
-         if os.path.exists(sigfile) and not args.force:
-            print('skipping', filename, '- already done')
-            continue
-
-         Elist = []
-         for k in ksizes:
-            E = sourmash_lib.CompositionSketch(ksize=k, n=DEFAULT_COMPOSITE_N,
-                                               prefixsize=3)
-            Elist.append(E)
-
-         for n, record in enumerate(screed.open(filename)):
-            if n % 10000 == 0:
-               print('...', filename, n)
-
-            s = record.sequence
-#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
-#               s = s.replace(i, 'N')
-            for E in Elist:
-               E.add_sequence(s)
-
-         siglist = []
-         for E in Elist:
-            for F in Elist:
-               print(E.similarity(F))
-               
-            signature = sig.SourmashCompositeSignature('titus@idyll.org',
-                                              E,
-                                              filename=filename)
-            siglist.append(signature)
-
-         data = sig.save_signatures(siglist)
-         fp = open(sigfile, 'w')
-         fp.write(data)
-         fp.close()
-
-   def compute_multisig(self):
-      "Compute the signature for each sequence in the input files."
-      parser = argparse.ArgumentParser()
-      parser.add_argument('--protein', action='store_true')
-      parser.add_argument('filenames', nargs='+')
-      parser.add_argument('-k', '--ksizes',
-                          default=str(DEFAULT_K),
-                          help='comma-separated list of k-mer sizes')
-      parser.add_argument('-f', '--force', action='store_true')
-      args = parser.parse_args(sys.argv[2:])
-      
-      print('computing signatures for files:', args.filenames)
-
-      ksizes = args.ksizes
-      if ',' in ksizes:
-         ksizes = ksizes.split(',')
-         ksizes = list(map(int, ksizes))
-      else:
-         ksizes = [int(ksizes)]
-
-      print('Computing signature for ksizes: %s' % str(ksizes))
-
-      n = 0
-      for filename in args.filenames:
-         for record in screed.open(filename):
-            n += 1
-            s = record.sequence
-            print('computing signature for:', record.name)
-            
-            siglist = []
             Elist = []
             for k in ksizes:
-               E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
-                                           protein=args.protein)
+                E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
+                                            protein=args.protein)
+                Elist.append(E)
 
-               t = s
-               for i in 'ACGT':
-                  t = t.replace(i, '')
-               for ch in set(t):
-                  s = s.replace(ch, 'N')
-                  
-               E.add_sequence(s)
-               Elist.append(E)
+            for n, record in enumerate(screed.open(filename)):
+                if n % 10000 == 0:
+                    print('...', filename, n)
+                if 0 and n % 100000 == 0 and n:
+                    siglist = []
+                    for E in Elist:
+                        signature = sig.SourmashSignature('titus@idyll.org',
+                                                          E,
+                                                          filename=filename)
+                        siglist.append(signature)
 
-               signature = sig.SourmashSignature('titus@idyll.org',
-                                                 E,
-                                                 name=str(record.name),
-                                                 filename=str(filename))
-               siglist.append(signature)
-               
+                    data = sig.save_signatures(siglist)
+                    fp = open(sigfile + '.%d' % n, 'w')
+                    fp.write(data)
+                    fp.close()
 
-            sigfile = '%s.%d.sig' % (os.path.basename(filename), n,)
+                s = record.sequence
+#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
+#               s = s.replace(i, 'N')
+                for E in Elist:
+                    if args.input_is_protein:
+                        E.mh.add_protein(s)
+                    else:
+                        E.add_sequence(s)
+
+            siglist = []
+            for E in Elist:
+                signature = sig.SourmashSignature('titus@idyll.org',
+                                                  E,
+                                                  filename=filename)
+                siglist.append(signature)
+
             data = sig.save_signatures(siglist)
             fp = open(sigfile, 'w')
             fp.write(data)
             fp.close()
 
+    def clean(self):
+        "Manipulate signature files in various ways."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sigfiles', nargs='+')
+        parser.add_argument('-f', '--force', action='store_true',
+                            help='ignore MD5 and other optional checks')
+        parser.add_argument('-n', '--no-save', action='store_true')
+        parser.add_argument('-s', '--show', action='store_true',
+                            help='print to stdout instead of overwriting')
+        parser.add_argument('--name-from', help='transfer name from here')
+        parser.add_argument('--set-name', help='set the name')
+        args = parser.parse_args(sys.argv[2:])
+
+        ignore_md5sum = False
+        if args.force:
+            print('ignoring md5sum because of --force')
+            ignore_md5sum = True
+
+        assert not (args.name_from and args.set_name)
+
+        for filename in args.sigfiles:
+            if not os.path.exists(filename):
+                print('ERROR - filename %s does not exist!' % filename)
+                continue
+
+            print('loading', filename)
+            siglist = sig.load_signatures(open(filename, 'r'),
+                                          ignore_md5sum=ignore_md5sum)
+
+            if args.name_from:              # hackity hack hack
+                other = sig.load_signatures(open(args.name_from, 'r'))
+                for s in siglist:
+                    s.d['name'] = other[0].d['name']
+            elif args.set_name:
+                for s in siglist:
+                    s.d['name'] = args.set_name
+
+            data = sig.save_signatures(siglist)
+
+            if not args.no_save:
+                print('loaded and saving', filename)
+                if args.show:
+                    print(data)
+                else:
+                    fp = open(filename, 'w')
+                    fp.write(data)
+                    fp.close()
+
+    def compare(self):
+        "Compare multiple signature files and create a distance matrix."
+        import numpy
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-o', '--output-filename')
+        args = parser.parse_args(sys.argv[2:])
+
+        siglist = []
+        for filename in args.signatures:
+            data = open(filename).read()
+            print('loading', filename)
+            loaded = sig.load_signatures(data, select_ksize=args.ksize)
+            siglist.extend(loaded)
+
+        if len(siglist) == 0:
+            print('no signatures!')
+            sys.exit(-1)
+
+        D = numpy.zeros([len(siglist), len(siglist)])
+        numpy.set_printoptions(precision=3, suppress=True)
+
+        i = 0
+        labeltext = []
+        samples = []
+        for E in siglist:
+            j = 0
+            for E2 in siglist:
+                D[i][j] = E.similarity(E2)
+                j += 1
+
+            print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
+            labeltext.append(E.name())
+            i += 1
+
+        print('min similarity in matrix:', numpy.min(D))
+        #print('max similarity in matrix:', numpy.max(D))
+
+        if args.output_filename:
+            labeloutname = args.output_filename + '.labels.txt'
+            print('saving labels to:', labeloutname)
+            fp = open(labeloutname, 'w')
+            fp.write("\n".join(labeltext))
+            fp.close()
+
+            print('saving distance matrix to:', args.output_filename)
+            fp = open(args.output_filename, 'wb')
+            numpy.save(fp, D)
+            fp.close()
+
+    def sniff(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sequencefile')
+        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        args = parser.parse_args(sys.argv[2:])
+
+        seqfile = args.sequencefile
+        siglist = []
+        for filename in args.signatures:
+            data = open(filename).read()
+            print('loading', filename)
+            loaded = sig.load_signatures(data, select_ksize=args.ksize)
+            siglist.extend(loaded)
+
+        ###
+
+        E = sourmash_lib.Estimators(ksize=args.ksize, n=DEFAULT_N)
+        for n, record in enumerate(screed.open(args.sequencefile)):
+            if n % 10000 == 0:
+                print('...', n)
+                for x in siglist:
+                    if x.estimator.common(E) > 0:
+                        print('identified as', x.name())
+                        raise SystemExit
+            E.add_sequence(record.sequence)
+
+    def compute2(self):
+        "Compute the signature for one or more files."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('-k', '--ksizes',
+                            default=str(DEFAULT_K),
+                            help='comma-separated list of k-mer sizes')
+        parser.add_argument('-f', '--force', action='store_true')
+        args = parser.parse_args(sys.argv[2:])
+
+        print('computing signatures for files:', args.filenames)
+
+        ksizes = args.ksizes
+        if ',' in ksizes:
+            ksizes = ksizes.split(',')
+            ksizes = list(map(int, ksizes))
+        else:
+            ksizes = [int(ksizes)]
+
+        print('Computing signature for ksizes: %s' % str(ksizes))
+
+        for filename in args.filenames:
+            sigfile = os.path.basename(filename) + '.sig'
+            if os.path.exists(sigfile) and not args.force:
+                print('skipping', filename, '- already done')
+                continue
+
+            Elist = []
+            for k in ksizes:
+                E = sourmash_lib.CompositionSketch(ksize=k, n=DEFAULT_COMPOSITE_N,
+                                                   prefixsize=3)
+                Elist.append(E)
+
+            for n, record in enumerate(screed.open(filename)):
+                if n % 10000 == 0:
+                    print('...', filename, n)
+
+                s = record.sequence
+#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
+#               s = s.replace(i, 'N')
+                for E in Elist:
+                    E.add_sequence(s)
+
+            siglist = []
+            for E in Elist:
+                for F in Elist:
+                    print(E.similarity(F))
+
+                signature = sig.SourmashCompositeSignature('titus@idyll.org',
+                                                           E,
+                                                           filename=filename)
+                siglist.append(signature)
+
+            data = sig.save_signatures(siglist)
+            fp = open(sigfile, 'w')
+            fp.write(data)
+            fp.close()
+
+    def compute_multisig(self):
+        "Compute the signature for each sequence in the input files."
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--protein', action='store_true')
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('-k', '--ksizes',
+                            default=str(DEFAULT_K),
+                            help='comma-separated list of k-mer sizes')
+        parser.add_argument('-f', '--force', action='store_true')
+        args = parser.parse_args(sys.argv[2:])
+
+        print('computing signatures for files:', args.filenames)
+
+        ksizes = args.ksizes
+        if ',' in ksizes:
+            ksizes = ksizes.split(',')
+            ksizes = list(map(int, ksizes))
+        else:
+            ksizes = [int(ksizes)]
+
+        print('Computing signature for ksizes: %s' % str(ksizes))
+
+        n = 0
+        for filename in args.filenames:
+            for record in screed.open(filename):
+                n += 1
+                s = record.sequence
+                print('computing signature for:', record.name)
+
+                siglist = []
+                Elist = []
+                for k in ksizes:
+                    E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
+                                                protein=args.protein)
+
+                    t = s
+                    for i in 'ACGT':
+                        t = t.replace(i, '')
+                    for ch in set(t):
+                        s = s.replace(ch, 'N')
+
+                    E.add_sequence(s)
+                    Elist.append(E)
+
+                    signature = sig.SourmashSignature('titus@idyll.org',
+                                                      E,
+                                                      name=str(record.name),
+                                                      filename=str(filename))
+                    siglist.append(signature)
+
+                sigfile = '%s.%d.sig' % (os.path.basename(filename), n,)
+                data = sig.save_signatures(siglist)
+                fp = open(sigfile, 'w')
+                fp.write(data)
+                fp.close()
 
 
 def main():
-   SourmashCommands()
+    SourmashCommands()
 
 if __name__ == '__main__':
-   main()
+    main()

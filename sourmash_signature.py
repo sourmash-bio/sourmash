@@ -6,8 +6,10 @@ import yaml
 import hashlib
 import sourmash_lib
 
+
 class SourmashSignature(object):
     "Main class for signature information."
+
     def __init__(self, email, estimator, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
@@ -17,7 +19,7 @@ class SourmashSignature(object):
             self.d['name'] = name
         if filename:
             self.d['filename'] = filename
-        
+
         self.estimator = estimator
 
     def md5sum(self):
@@ -51,7 +53,7 @@ class SourmashSignature(object):
         e['signature'] = sketch
 
         return self.d.get('email'), self.d.get('name'), \
-               self.d.get('filename'), sketch
+            self.d.get('filename'), sketch
 
     def similarity(self, other):
         "Compute similarity with the stored MinHash."
@@ -59,6 +61,7 @@ class SourmashSignature(object):
 
 
 class SourmashCompositeSignature(SourmashSignature):
+
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
         # @CTB: should include ksize, prime.
@@ -67,7 +70,7 @@ class SourmashCompositeSignature(SourmashSignature):
             for k in sk.mh.get_mins():
                 m.update(str(k).encode('utf-8'))
         return m.hexdigest()
-    
+
     def save(self):
         "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)
@@ -86,12 +89,12 @@ class SourmashCompositeSignature(SourmashSignature):
             d['mins'] = list(map(int, sk.mh.get_mins()))
             x.append(d)
         sketch['subsketches'] = x
-            
+
         sketch['md5sum'] = self.md5sum()
         e['signature'] = sketch
 
         return self.d.get('email'), self.d.get('name'), \
-               self.d.get('filename'), sketch
+            self.d.get('filename'), sketch
 
 
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
@@ -99,8 +102,8 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
 
     Returns list of SourmashSignature objects.
     """
-    
-    ## record header
+
+    # record header
     d = yaml.safe_load(data)
     if d.get('class') != 'sourmash_signature':
         raise Exception("incorrect class: %s" % d.get('class'))
@@ -114,7 +117,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     if 'filename' in d:
         filename = d['filename']
 
-    ## one (old format) or more (new) signatures
+    # one (old format) or more (new) signatures
     if 'signature' in d:          # old format
         assert d['version'] == '0.1'
         sketch = d['signature']
@@ -141,7 +144,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         prefixsize = sketch['prefixsize']
         n = int(sketch['subsketches']['num'])
         e = sourmash_lib.CompositionSketch(ksize=ksize, max_prime=prime,
-                                         n=n, prefixsize=prefixsize)
+                                           n=n, prefixsize=prefixsize)
 
         for item in sketch['subsketches']:
             n = item['num']
@@ -149,7 +152,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
             n = int(n)
             for m in map(int, mins):
                 e.sketches[n].mh.add_hash(m)
-        
+
         sig = SourmashCompositeSignature(email, e)
     else:
         mins = list(map(int, sketch['mins']))
@@ -159,7 +162,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
             e.mh.add_hash(m)
 
         sig = SourmashSignature(email, e)
-        
+
     if not ignore_md5sum:
         md5sum = sketch['md5sum']
         if md5sum != sig.md5sum():
@@ -181,12 +184,12 @@ def save_signatures(siglist):
         if not email:
             raise Exception('email must be non-unique')
         k = (email, name, filename)
-        
+
         x = top_records.get(k, [])
         x.append(sketch)
         top_records[k] = x
 
-    if len(top_records) > 1: # not yet tested
+    if len(top_records) > 1:  # not yet tested
         raise Exception("no support for multiple email/name/filename yet")
 
     for (email, name, filename), sketches in top_records.items():
@@ -201,22 +204,24 @@ def save_signatures(siglist):
         record['version'] = '0.2'
         record['class'] = 'sourmash_signature'
         record['type'] = 'mrnaseq'
-        
+
         return yaml.dump(record)
-    
+
     assert 0
+
 
 def test_roundtrip():
     e = sourmash_lib.Estimators(n=1, ksize=20)
-    e.add("AT"*10)
+    e.add("AT" * 10)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = load_signatures(s)
     sig2 = siglist[0]
     e2 = sig2.estimator
-    
+
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
+
 
 def test_md5():
     e = sourmash_lib.Estimators(n=1, ksize=20)
