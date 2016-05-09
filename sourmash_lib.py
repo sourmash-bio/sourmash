@@ -4,14 +4,13 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
 import sys
-sys.path.insert(0, '/Users/t/dev/khmer')
-import khmer
-import screed
 import argparse
 import itertools
 import string
-import khmer._minhash as _minhash
 
+#sys.path.insert(0, '/Users/t/dev/khmer')
+#import khmer._minhash as _minhash
+import _minhash
 
 class Estimators(object):
     """
