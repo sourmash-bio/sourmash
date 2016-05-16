@@ -1,4 +1,4 @@
-PYTHON=python
+PYTHON ?= python
 
 all:
 	$(PYTHON) setup.py build_ext -i
