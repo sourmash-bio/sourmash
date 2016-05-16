@@ -222,7 +222,12 @@ static PyObject * _MinHash_concat_inplace(PyObject * me_obj,
     me = (MinHash_Object *) me_obj;
     other = (MinHash_Object *) other_obj;
 
-    me->mh->merge(*other->mh);
+    try {
+        me->mh->merge(*other->mh);
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
+    }
 
     Py_INCREF(me);
     return (PyObject *) me;
@@ -254,7 +259,13 @@ static PyObject * minhash_merge(MinHash_Object * me, PyObject * args)
 
     KmerMinHash * mh = me->mh;
     KmerMinHash * other = ((MinHash_Object *) other_mh)->mh;
-    mh->merge(*other);
+
+    try {
+        mh->merge(*other);
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
+    }
 
     Py_INCREF(me);
     return (PyObject *) me;
@@ -271,8 +282,15 @@ static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
     if (!check_IsMinHash(other_mh)) {
         return NULL;
     }
+    MinHash_Object * other = (MinHash_Object*) other_mh;
 
-    unsigned int n = me->mh->count_common(*((MinHash_Object*)other_mh)->mh);
+    unsigned int n;
+    try {
+        n = me->mh->count_common(*other->mh);
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
+    }
     return PyInt_FromLong(n);
 }
 
@@ -287,9 +305,18 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
     if (!check_IsMinHash(other_mh)) {
         return NULL;
     }
+    MinHash_Object * other = (MinHash_Object*) other_mh;
 
-    unsigned int n = me->mh->count_common(*((MinHash_Object*)other_mh)->mh);
-    unsigned int size = me->mh->mins.size();
+    unsigned int n;
+    unsigned int size;
+
+    try {
+        n = me->mh->count_common(*other->mh);
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
+    }
+    size = me->mh->mins.size();
 
     return PyFloat_FromDouble(float(n) / float(size));
 }
@@ -427,4 +454,3 @@ int _hash_murmur32(const std::string& kmer) {
     MurmurHash3_x86_32((void *)kmer.c_str(), kmer.size(), seed, &out);
     return out[0];
 }
-

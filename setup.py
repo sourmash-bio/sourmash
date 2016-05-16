@@ -25,6 +25,7 @@ SETUP_METADATA = \
     "ext_modules": [Extension("_minhash",
                               sources=["_minhash.cc",
                                        "third-party/smhasher/MurmurHash3.cc"],
+                              depends=["_minhash.hh", "kmer_min_hash.hh"],
                               language="c++",
                               extra_compile_args=EXTRA_COMPILE_ARGS)],
     "scripts": ["sourmash"],

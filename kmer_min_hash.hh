@@ -3,6 +3,8 @@
 
 #include <set>
 #include <map>
+#include <exception>
+#include <string>
 
 // #include "kmer_hash.hh"
 
@@ -12,13 +14,30 @@
 
 typedef std::set<HashIntoType> CMinHashType;
 
+class minhash_exception : public std::exception
+{
+public:
+    explicit minhash_exception(const std::string& msg = "Generic minhash exception")
+        : _msg(msg) { }
+
+    virtual ~minhash_exception() throw() { }
+    virtual const char* what() const throw ()
+    {
+        return _msg.c_str();
+    }
+
+protected:
+    const std::string _msg;
+};
+
+
 class KmerMinHash
 {
 public:
-    unsigned int num;
-    unsigned int ksize;
-    long int prime;
-    bool is_protein;
+    const unsigned int num;
+    const unsigned int ksize;
+    const long int prime;
+    const bool is_protein;
     CMinHashType mins;
 
     KmerMinHash(unsigned int n, unsigned int k, long int p, bool prot) :
@@ -109,6 +128,15 @@ public:
 
     void merge(const KmerMinHash& other) {
         CMinHashType::iterator mi;
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be merged");
+        }
+        if (prime != other.prime) {
+            throw minhash_exception("different primes cannot be merged");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("different primes cannot be merged");
+        }
         for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
             mins.insert(*mi);
         }
@@ -116,6 +144,16 @@ public:
     }
     unsigned int count_common(const KmerMinHash& other) {
         CMinHashType combined;
+
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (prime != other.prime) {
+            throw minhash_exception("different primes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("different primes cannot be compared");
+        }
 
         CMinHashType::iterator mi;
         for (mi = mins.begin(); mi != mins.end(); ++mi) {

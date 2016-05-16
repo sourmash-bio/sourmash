@@ -147,6 +147,39 @@ def test_mh_count_common():
     assert b.count_common(a) == 10
 
 
+def test_mh_count_common_diff_prime():
+    a = MinHash(20, 5, 9999999967)
+    b = MinHash(20, 5, 9999999968)
+
+    try:
+        a.count_common(b)
+        assert 0, "count_common should fail with different prime"
+    except ValueError:
+        pass
+
+
+def test_mh_count_common_diff_protein():
+    a = MinHash(20, 5, 9999999967, False)
+    b = MinHash(20, 5, 9999999967, True)
+
+    try:
+        a.count_common(b)
+        assert 0, "count_common should fail with DNA vs protein"
+    except ValueError:
+        pass
+
+
+def test_mh_count_common_diff_ksize():
+    a = MinHash(20, 5)
+    b = MinHash(20, 6)
+
+    try:
+        a.count_common(b)
+        assert 0, "count_common should fail with different ksize"
+    except ValueError:
+        pass
+
+
 def test_mh_asymmetric():
     a = MinHash(20, 10)
     for i in range(0, 40, 2):
@@ -250,3 +283,101 @@ def test_mh_inplace_concat():
     assert c.get_mins() == d.get_mins()
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
+
+def test_mh_merge_diff_prime():
+    a = MinHash(20, 5, 9999999967)
+    b = MinHash(20, 5, 9999999968)
+
+    try:
+        a.merge(b)
+        assert 0, "merge should fail with different prime"
+    except ValueError:
+        pass
+
+
+def test_mh_merge_diff_protein():
+    a = MinHash(20, 5, 9999999967, False)
+    b = MinHash(20, 5, 9999999967, True)
+
+    try:
+        a.merge(b)
+        assert 0, "merge should fail with DNA vs protein"
+    except ValueError:
+        pass
+
+
+def test_mh_merge_diff_ksize():
+    a = MinHash(20, 5)
+    b = MinHash(20, 6)
+
+    try:
+        a.merge(b)
+        assert 0, "merge should fail with different ksize"
+    except ValueError:
+        pass
+
+
+def test_mh_compare_diff_prime():
+    a = MinHash(20, 5, 9999999967)
+    b = MinHash(20, 5, 9999999968)
+
+    try:
+        a.compare(b)
+        assert 0, "compare should fail with different prime"
+    except ValueError:
+        pass
+
+
+def test_mh_compare_diff_protein():
+    a = MinHash(20, 5, 9999999967, False)
+    b = MinHash(20, 5, 9999999967, True)
+
+    try:
+        a.compare(b)
+        assert 0, "compare should fail with DNA vs protein"
+    except ValueError:
+        pass
+
+
+def test_mh_compare_diff_ksize():
+    a = MinHash(20, 5)
+    b = MinHash(20, 6)
+
+    try:
+        a.compare(b)
+        assert 0, "compare should fail with different ksize"
+    except ValueError:
+        pass
+
+
+def test_mh_concat_diff_prime():
+    a = MinHash(20, 5, 9999999967)
+    b = MinHash(20, 5, 9999999968)
+
+    try:
+        a += b
+        assert 0, "concat should fail with different prime"
+    except ValueError:
+        pass
+
+
+def test_mh_concat_diff_protein():
+    a = MinHash(20, 5, 9999999967, False)
+    b = MinHash(20, 5, 9999999967, True)
+
+    try:
+        a += b
+        assert 0, "concat should fail with DNA vs protein"
+    except ValueError:
+        pass
+
+
+def test_mh_concat_diff_ksize():
+    a = MinHash(20, 5)
+    b = MinHash(20, 6)
+
+    try:
+        a += b
+        assert 0, "concat should fail with different ksize"
+    except ValueError:
+        pass
