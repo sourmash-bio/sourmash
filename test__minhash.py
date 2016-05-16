@@ -122,3 +122,40 @@ def test_mh_len():
     assert len(a) == 20
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     assert len(a) == 20
+
+
+def test_mh_len():
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    assert a.get_mins() == list(range(0, 40, 2))
+
+
+def test_mh_count_common():
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.count_common(b) == 10
+    assert b.count_common(a) == 10
+
+
+def test_mh_asymmetric():
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(10, 10)                   # different size: 10
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.count_common(b) == 10
+    assert b.count_common(a) == 10
+
+    assert a.compare(b) == 0.5
+    assert b.compare(a) == 1.0
