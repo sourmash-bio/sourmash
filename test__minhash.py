@@ -106,3 +106,19 @@ def test_compare_1():
     assert x >= 0.3, x
     assert a.compare(a) == 1.0
     assert b.compare(b) == 1.0
+
+
+def test_mh_copy():
+    a = MinHash(20, 10)
+
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    b = a.__copy__()
+    assert b.compare(a) == 1.0
+
+
+def test_mh_len():
+    a = MinHash(20, 10)
+
+    assert len(a) == 20
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    assert len(a) == 20

@@ -65,6 +65,13 @@ int _hash_murmur32(const std::string& kmer);
 
 #include "_minhash.hh"
 
+static int _MinHash_len(PyObject *);
+
+static PySequenceMethods _MinHash_seqmethods[] = {
+    (lenfunc)_MinHash_len, /* sq_length */
+    0,
+};
+
 PyTypeObject MinHash_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)        /* init & ob_size */
     "_minhash.MinHash",                   /* tp_name */
@@ -77,7 +84,7 @@ PyTypeObject MinHash_Type = {
     0,                                    /* tp_compare */
     0,                                    /* tp_repr */
     0,                                    /* tp_as_number */
-    0,                                    /* tp_as_sequence */
+    _MinHash_seqmethods,                  /* tp_as_sequence */
     0,                                    /* tp_as_mapping */
     0,                                    /* tp_hash */
     0,                                    /* tp_call */
@@ -193,6 +200,12 @@ minhash_get_mins(MinHash_Object * me, PyObject * args)
     return(mins_o);
 }
 
+static int _MinHash_len(PyObject * me)
+{
+    KmerMinHash * mh = ((MinHash_Object *)me)->mh;
+    return mh->num;
+}
+
 static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
 {
     if (!PyArg_ParseTuple(args, "")) {
@@ -205,17 +218,6 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     new_mh->merge(*mh);
 
     return build_MinHash_Object(new_mh);
-}
-
-static PyObject * minhash___len__(MinHash_Object * me, PyObject * args)
-{
-    if (!PyArg_ParseTuple(args, "")) {
-        return NULL;
-    }
-
-    KmerMinHash * mh = me->mh;
-
-    return PyInt_FromLong(mh->mins.size());
 }
 
 static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
@@ -277,11 +279,6 @@ static PyMethodDef MinHash_methods [] = {
         "__copy__",
         (PyCFunction)minhash___copy__, METH_VARARGS,
         "Copy this MinHash object",
-    },
-    {
-        "__len__",                  // @CTB this doesn't work...?
-        (PyCFunction)minhash___len__, METH_VARARGS,
-        "Number of hashes in this MinHash object",
     },
     {
         "count_common",
