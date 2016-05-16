@@ -220,6 +220,24 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     return build_MinHash_Object(new_mh);
 }
 
+static PyObject * minhash_merge(MinHash_Object * me, PyObject * args)
+{
+    PyObject * other_mh;
+    if (!PyArg_ParseTuple(args, "O", &other_mh)) {
+        return NULL;
+    }
+    if (!check_IsMinHash(other_mh)) {
+        return NULL;
+    }
+
+    KmerMinHash * mh = me->mh;
+    KmerMinHash * other = ((MinHash_Object *) other_mh)->mh;
+    mh->merge(*other);
+
+    Py_INCREF(me);
+    return (PyObject *) me;
+}
+
 static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
 {
     PyObject * other_mh;
@@ -289,6 +307,11 @@ static PyMethodDef MinHash_methods [] = {
         "compare",
         (PyCFunction)minhash_compare, METH_VARARGS,
         "Get the Jaccard similarity between this and other."
+    },
+    {
+        "merge",
+        (PyCFunction)minhash_merge, METH_VARARGS,
+        "Merge the other MinHash into this one."
     },
     { NULL, NULL, 0, NULL } // sentinel
 };

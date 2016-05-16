@@ -45,6 +45,7 @@ import screed
 # * trap error from handing protein/non-DNA to a DNA MH
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
+# * define equals
 
 def test_default_params():
     # verify that MHs have these default parameters.
@@ -159,3 +160,44 @@ def test_mh_asymmetric():
 
     assert a.compare(b) == 0.5
     assert b.compare(a) == 1.0
+
+
+def test_mh_merge():
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0
+
+
+def test_mh_asymmetric_merge():
+    # test merging two asymmetric (different size) MHs
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(10, 10)                   # different size: 10
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(a) == 20
+    assert len(b) == 10
+    assert len(c) == len(a)
+    assert len(d) == len(b)
+
+    assert d.compare(a) == 1.0
+    assert c.compare(b) == 0.5
