@@ -3,6 +3,7 @@ all:
 
 clean:
 	python setup.py clean
+	-rm -f *.so
 
-test:
+test: all
 	py.test sourmash_lib.py sourmash_signature.py test__minhash.py
