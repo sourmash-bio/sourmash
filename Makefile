@@ -1,8 +1,10 @@
+PYTHON=python
+
 all:
-	python setup.py build_ext -i
+	$(PYTHON) setup.py build_ext -i
 
 clean:
-	python setup.py clean --all
+	$(PYTHON) setup.py clean --all
 
 test: all
-	py.test sourmash_lib.py sourmash_signature.py test__minhash.py
+	$(PYTHON) -m pytest sourmash_lib.py sourmash_signature.py test__minhash.py
