@@ -76,3 +76,17 @@ def test_protein():
     mh.add_protein('AGYYG')
 
     assert len(mh.get_mins()) == 1
+
+
+def test_compare_1():
+    a = MinHash(20, 10)
+    b = MinHash(20, 10)
+
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+
+    assert a.compare(b) == 1.0
+
+    b.add_sequence('GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT')
+    x = a.compare(b)
+    assert x >= 0.3, x
