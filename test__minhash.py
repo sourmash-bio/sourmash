@@ -46,6 +46,7 @@ import screed
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
 # * define equals
+# * check prime, ksize, etc before comparing and merging
 
 def test_default_params():
     # verify that MHs have these default parameters.
