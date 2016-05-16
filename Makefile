@@ -5,4 +5,4 @@ clean:
 	python setup.py clean
 
 test:
-	py.test sourmash_lib.py sourmash_signature.py
+	py.test sourmash_lib.py sourmash_signature.py test__minhash.py
