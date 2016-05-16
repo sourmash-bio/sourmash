@@ -14,3 +14,4 @@ build
 sourmash.egg-info
 .ipynb_checkpoints
 _minhash.so
+.cache
