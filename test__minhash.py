@@ -86,7 +86,23 @@ def test_compare_1():
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
 
     assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
 
+    # add same sequence again
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
+
+    
     b.add_sequence('GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT')
     x = a.compare(b)
     assert x >= 0.3, x
+    
+    x = b.compare(a)
+    assert x >= 0.3, x
+    assert a.compare(a) == 1.0
+    assert b.compare(b) == 1.0
