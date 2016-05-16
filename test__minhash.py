@@ -182,6 +182,8 @@ def test_mh_merge():
     assert d.compare(c) == 1.0
 
 
+
+
 def test_mh_asymmetric_merge():
     # test merging two asymmetric (different size) MHs
     a = MinHash(20, 10)
@@ -202,3 +204,49 @@ def test_mh_asymmetric_merge():
 
     assert d.compare(a) == 1.0
     assert c.compare(b) == 0.5
+
+
+def test_mh_inplace_concat_asymmetric():
+    # test merging two asymmetric (different size) MHs
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(10, 10)                   # different size: 10
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.__copy__()
+    c += b
+
+    d = b.__copy__()
+    d += a
+
+    assert len(a) == 20
+    assert len(b) == 10
+    assert len(c) == len(a)
+    assert len(d) == len(b)
+
+    assert d.compare(a) == 1.0
+    assert c.compare(b) == 0.5
+
+
+def test_mh_inplace_concat():
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.__copy__()
+    c += b
+    d = b.__copy__()
+    d += a
+
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0

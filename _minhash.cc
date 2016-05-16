@@ -66,10 +66,19 @@ int _hash_murmur32(const std::string& kmer);
 #include "_minhash.hh"
 
 static int _MinHash_len(PyObject *);
+static PyObject * _MinHash_concat_inplace(PyObject *, PyObject *);
 
 static PySequenceMethods _MinHash_seqmethods[] = {
     (lenfunc)_MinHash_len, /* sq_length */
-    0,
+    0,      /* sq_concat */
+    0,                          /* sq_repeat */
+    0,                          /* sq_item */
+    0,                          /* sq_slice */
+    0,                          /* sq_ass_item */
+    0,                          /* sq_ass_slice */
+    0,                          /* sq_contains */
+    (binaryfunc)_MinHash_concat_inplace, /* sq_inplace_concat */
+    0                           /* sq_inplace_repeat */
 };
 
 PyTypeObject MinHash_Type = {
@@ -204,6 +213,19 @@ static int _MinHash_len(PyObject * me)
 {
     KmerMinHash * mh = ((MinHash_Object *)me)->mh;
     return mh->num;
+}
+
+static PyObject * _MinHash_concat_inplace(PyObject * me_obj,
+                                          PyObject * other_obj)
+{
+    MinHash_Object * me, * other;
+    me = (MinHash_Object *) me_obj;
+    other = (MinHash_Object *) other_obj;
+
+    me->mh->merge(*other->mh);
+
+    Py_INCREF(me);
+    return (PyObject *) me;
 }
 
 static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
