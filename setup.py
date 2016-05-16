@@ -5,7 +5,7 @@ from setuptools import Extension
 VERSION="0.2"
 
 # Don't forget to update lib/Makefile with these flags!
-EXTRA_COMPILE_ARGS = ['-g', '-std=c++11', '-pedantic']
+EXTRA_COMPILE_ARGS = ['-g', '-O3', '-std=c++0x', '-pedantic']
 
 if sys.platform == 'darwin':
     # force 64bit only builds
