@@ -58,7 +58,7 @@ extern "C" {
 
 typedef unsigned long long HashIntoType;
 typedef std::set<HashIntoType> CMinHashType;
-int _hash_murmur32(const std::string& kmer);
+uint64_t _hash_murmur(const std::string& kmer);
 
 
 ////
@@ -401,7 +401,7 @@ bool check_IsMinHash(PyObject * mh)
 }
 
 
-static PyObject * hash_murmur32(PyObject * self, PyObject * args)
+static PyObject * hash_murmur(PyObject * self, PyObject * args)
 {
     const char * kmer;
 
@@ -409,12 +409,12 @@ static PyObject * hash_murmur32(PyObject * self, PyObject * args)
         return NULL;
     }
 
-    return PyLong_FromUnsignedLongLong(_hash_murmur32(kmer));
+    return PyLong_FromUnsignedLongLong(_hash_murmur(kmer));
 }
 
 static PyMethodDef MinHashModuleMethods[] = {
     {
-        "hash_murmur32",     hash_murmur32,
+        "hash_murmur",     hash_murmur,
         METH_VARARGS,       "",
     },
     { NULL, NULL, 0, NULL } // sentinel
@@ -448,9 +448,9 @@ MOD_INIT(_minhash)
     return MOD_SUCCESS_VAL(m);
 }
 
-int _hash_murmur32(const std::string& kmer) {
-    int out[2];
-    uint32_t seed = 0;
-    MurmurHash3_x86_32((void *)kmer.c_str(), kmer.size(), seed, &out);
-    return out[0];
+uint64_t _hash_murmur(const std::string& kmer) {
+    uint64_t out = 0;
+    uint32_t seed = 42;
+    MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
+    return out;
 }

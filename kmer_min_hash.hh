@@ -51,12 +51,12 @@ public:
         }
     }
     void add_hash(long int h) {
-        h = ((h % prime) + prime) % prime;
+        // h = ((h % prime) + prime) % prime;
         mins.insert(h);
         _shrink();
     }
     void add_kmer(std::string kmer) {
-        long int hash = _hash_murmur32(kmer);
+        unsigned long hash = _hash_murmur(kmer);
         add_hash(hash);
     }
     void add_sequence(const char * sequence) {
