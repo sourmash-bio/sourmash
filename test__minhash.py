@@ -46,7 +46,6 @@ import screed
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
 # * define equals
-# * check prime, ksize, etc before comparing and merging
 
 def test_default_params():
     # verify that MHs have these default parameters.
@@ -379,5 +378,14 @@ def test_mh_concat_diff_ksize():
     try:
         a += b
         assert 0, "concat should fail with different ksize"
+    except ValueError:
+        pass
+
+
+def test_short_sequence():
+    a = MinHash(20, 5)
+    try:
+        a.add_sequence('GGGG')
+        assert 0, "adding too short a sequence should trigger ValueError"
     except ValueError:
         pass
