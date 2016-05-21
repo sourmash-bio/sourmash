@@ -137,7 +137,12 @@ minhash_add_sequence(MinHash_Object * me, PyObject * args)
     }
     KmerMinHash * mh = me->mh;
 
-    mh->add_sequence(sequence);
+    try {
+        mh->add_sequence(sequence);
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
+    }
 
     Py_INCREF(Py_None);
     return Py_None;

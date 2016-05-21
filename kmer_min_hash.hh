@@ -60,6 +60,9 @@ public:
         add_hash(hash);
     }
     void add_sequence(const char * sequence) {
+        if (strlen(sequence) < ksize) {
+            throw minhash_exception("sequence is shorter than ksize");
+        }
         if (!is_protein) {
             std::string seq = sequence;
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
