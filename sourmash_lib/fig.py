@@ -3,13 +3,13 @@
 Plot things associated with the distance matrix+labels output by
 'sourmash compare'.
 """
-import numpy
-import scipy
 try:
+    import numpy
+    import scipy
     import pylab
-except RuntimeError:
+    import scipy.cluster.hierarchy as sch
+except (RuntimeError, ImportError):       # for tests, ignore.
     pass
-import scipy.cluster.hierarchy as sch
 
 
 def load_matrix_and_labels(basefile):
