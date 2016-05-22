@@ -2,7 +2,7 @@
 from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
-import sourmash_fig
+from sourmash_lib import fig as sourmash_fig
 import argparse
 
 import numpy
