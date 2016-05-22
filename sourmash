@@ -5,7 +5,7 @@ import os
 import argparse
 import screed
 import sourmash_lib
-import sourmash_signature as sig
+from sourmash_lib import signature as sig
 
 DEFAULT_K = 32
 DEFAULT_N = 500
