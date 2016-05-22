@@ -36,7 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
-from _minhash import MinHash
+from ._minhash import MinHash
 import screed
 
 # add:
@@ -46,16 +46,6 @@ import screed
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
 # * define equals
-
-def test_default_params():
-    # verify that MHs have these default parameters.
-    mh = MinHash(100, 32)
-    mh2 = MinHash(100, 32, 9999999967, False)  # should not be changed!
-
-    mh.add_hash(9999999968)
-    mh2.add_hash(9999999968)
-    assert mh.get_mins() == mh2.get_mins()
-    assert mh.get_mins()[0] == 1
 
 def test_basic_dna():
     # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
@@ -73,7 +63,7 @@ def test_basic_dna():
 
 def test_protein():
     # verify that we can hash protein/aa sequences
-    mh = MinHash(1, 4, 9999999967, True)
+    mh = MinHash(1, 4, True)
     mh.add_protein('AGYYG')
 
     assert len(mh.get_mins()) == 1
@@ -146,20 +136,9 @@ def test_mh_count_common():
     assert b.count_common(a) == 10
 
 
-def test_mh_count_common_diff_prime():
-    a = MinHash(20, 5, 9999999967)
-    b = MinHash(20, 5, 9999999968)
-
-    try:
-        a.count_common(b)
-        assert 0, "count_common should fail with different prime"
-    except ValueError:
-        pass
-
-
 def test_mh_count_common_diff_protein():
-    a = MinHash(20, 5, 9999999967, False)
-    b = MinHash(20, 5, 9999999967, True)
+    a = MinHash(20, 5, False)
+    b = MinHash(20, 5, True)
 
     try:
         a.count_common(b)
@@ -283,20 +262,9 @@ def test_mh_inplace_concat():
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
 
-def test_mh_merge_diff_prime():
-    a = MinHash(20, 5, 9999999967)
-    b = MinHash(20, 5, 9999999968)
-
-    try:
-        a.merge(b)
-        assert 0, "merge should fail with different prime"
-    except ValueError:
-        pass
-
-
 def test_mh_merge_diff_protein():
-    a = MinHash(20, 5, 9999999967, False)
-    b = MinHash(20, 5, 9999999967, True)
+    a = MinHash(20, 5, False)
+    b = MinHash(20, 5, True)
 
     try:
         a.merge(b)
@@ -316,20 +284,9 @@ def test_mh_merge_diff_ksize():
         pass
 
 
-def test_mh_compare_diff_prime():
-    a = MinHash(20, 5, 9999999967)
-    b = MinHash(20, 5, 9999999968)
-
-    try:
-        a.compare(b)
-        assert 0, "compare should fail with different prime"
-    except ValueError:
-        pass
-
-
 def test_mh_compare_diff_protein():
-    a = MinHash(20, 5, 9999999967, False)
-    b = MinHash(20, 5, 9999999967, True)
+    a = MinHash(20, 5, False)
+    b = MinHash(20, 5, True)
 
     try:
         a.compare(b)
@@ -349,20 +306,9 @@ def test_mh_compare_diff_ksize():
         pass
 
 
-def test_mh_concat_diff_prime():
-    a = MinHash(20, 5, 9999999967)
-    b = MinHash(20, 5, 9999999968)
-
-    try:
-        a += b
-        assert 0, "concat should fail with different prime"
-    except ValueError:
-        pass
-
-
 def test_mh_concat_diff_protein():
-    a = MinHash(20, 5, 9999999967, False)
-    b = MinHash(20, 5, 9999999967, True)
+    a = MinHash(20, 5, False)
+    b = MinHash(20, 5, True)
 
     try:
         a += b

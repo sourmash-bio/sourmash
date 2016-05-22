@@ -10,8 +10,6 @@
 
 ////
 
-#define DEFAULT_MINHASH_PRIME 9999999967
-
 typedef std::set<HashIntoType> CMinHashType;
 
 class minhash_exception : public std::exception
@@ -36,12 +34,11 @@ class KmerMinHash
 public:
     const unsigned int num;
     const unsigned int ksize;
-    const long int prime;
     const bool is_protein;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, long int p, bool prot) :
-        num(n), ksize(k), prime(p), is_protein(prot) { };
+    KmerMinHash(unsigned int n, unsigned int k, bool prot) :
+        num(n), ksize(k), is_protein(prot) { };
 
     void _shrink() {
         while (mins.size() > num) {
@@ -51,7 +48,6 @@ public:
         }
     }
     void add_hash(long int h) {
-        // h = ((h % prime) + prime) % prime;
         mins.insert(h);
         _shrink();
     }
@@ -134,11 +130,8 @@ public:
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }
-        if (prime != other.prime) {
-            throw minhash_exception("different primes cannot be merged");
-        }
         if (is_protein != other.is_protein) {
-            throw minhash_exception("different primes cannot be merged");
+            throw minhash_exception("DNA/prot minhashes cannot be merged");
         }
         for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
             mins.insert(*mi);
@@ -151,11 +144,8 @@ public:
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
         }
-        if (prime != other.prime) {
-            throw minhash_exception("different primes cannot be compared");
-        }
         if (is_protein != other.is_protein) {
-            throw minhash_exception("different primes cannot be compared");
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
 
         CMinHashType::iterator mi;

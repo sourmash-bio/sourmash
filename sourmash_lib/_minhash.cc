@@ -54,7 +54,7 @@ extern "C" {
 #include <exception>
 #include <iostream>
 
-#include "third-party/smhasher/MurmurHash3.h"
+#include "../third-party/smhasher/MurmurHash3.h"
 
 typedef unsigned long long HashIntoType;
 typedef std::set<HashIntoType> CMinHashType;
@@ -245,8 +245,7 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     }
 
     KmerMinHash * mh = me->mh;
-    KmerMinHash * new_mh = new KmerMinHash(mh->num, mh->ksize, mh->prime,
-                                           mh->is_protein);
+    KmerMinHash * new_mh = new KmerMinHash(mh->num, mh->ksize, mh->is_protein);
     new_mh->merge(*mh);
 
     return build_MinHash_Object(new_mh);
@@ -380,9 +379,8 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     }
 
     unsigned int _n, _ksize;
-    long int _p = DEFAULT_MINHASH_PRIME;
     PyObject * is_protein_o = NULL;
-    if (!PyArg_ParseTuple(args, "II|lO", &_n, &_ksize, &_p, &is_protein_o)) {
+    if (!PyArg_ParseTuple(args, "II|O", &_n, &_ksize, &is_protein_o)) {
         return NULL;
     }
 
@@ -392,7 +390,7 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         is_protein = true;
     }
 
-    myself->mh = new KmerMinHash(_n, _ksize, _p, is_protein);
+    myself->mh = new KmerMinHash(_n, _ksize, is_protein);
 
     return self;
 }
