@@ -8,3 +8,6 @@ clean:
 
 test: all
 	$(PYTHON) -m pytest sourmash_lib.py sourmash_signature.py test__minhash.py
+
+coverage: all
+	$(PYTHON) -m pytest --cov sourmash_lib.py sourmash_lib.py
