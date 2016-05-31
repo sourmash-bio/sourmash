@@ -1,10 +1,17 @@
+from __future__ import print_function
 import sys
 from setuptools import setup
 from setuptools import Extension
+import os
 
 VERSION="0.2"
 
-EXTRA_COMPILE_ARGS = ['-g', '-O3', '-std=c++11', '-pedantic', '--coverage', '-lgcov']
+EXTRA_COMPILE_ARGS = ['-O3', '-std=c++11', '-pedantic']
+EXTRA_LINK_ARGS=[]
+if os.environ.get('SOURMASH_COVERAGE'):
+   print('ENABLING COVERAGE')
+   EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
+   EXTRA_LINK_ARGS=['--coverage', '-lgcov']
 
 if sys.platform == 'darwin':
     # force 64bit only builds
@@ -27,7 +34,7 @@ SETUP_METADATA = \
                               depends=["_minhash.hh", "kmer_min_hash.hh"],
                               language="c++",
                               extra_compile_args=EXTRA_COMPILE_ARGS,
-                              extra_link_args=['--coverage', '-lgcov'])],
+                              extra_link_args=EXTRA_LINK_ARGS)],
     "scripts": ["sourmash"],
     "install_requires": ["khmer>=2.0", "PyYAML>=3.11"]
     }
