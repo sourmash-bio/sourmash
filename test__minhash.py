@@ -36,7 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
-from _minhash import MinHash
+from _minhash import MinHash, hash_murmur32
 import screed
 
 # add:
@@ -396,4 +396,15 @@ def test_short_sequence():
         a.add_sequence('GGGG')
         assert 0, "adding too short a sequence should trigger ValueError"
     except ValueError:
+        pass
+
+
+def test_murmur():
+    x = hash_murmur32("ACG")
+    assert x == 1224338246
+
+    try:
+        x = hash_murmur32()
+        assert 0, "hash_murmur32 requires an argument"
+    except TypeError:
         pass
