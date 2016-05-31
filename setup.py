@@ -9,17 +9,18 @@ VERSION="0.2"
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
 
-if os.environ.get('SOURMASH_COVERAGE'):
-   print('Turning on coverage analysis.')
-   EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
-   EXTRA_LINK_ARGS=['--coverage', '-lgcov']
-else:
-    EXTRA_COMPILE_ARGS.append('-O3')
-
-if sys.platform == 'darwin':
+if sys.platform == 'darwin':              # Mac OS X?
     # force 64bit only builds
     EXTRA_COMPILE_ARGS.extend(['-arch', 'x86_64', '-mmacosx-version-min=10.7',
                                '-stdlib=libc++'])
+
+else:                                     # ...likely Linux
+   if os.environ.get('SOURMASH_COVERAGE'):
+      print('Turning on coverage analysis.')
+      EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
+      EXTRA_LINK_ARGS.extend(['--coverage', '-lgcov'])
+   else:
+      EXTRA_COMPILE_ARGS.append('-O3')
 
 SETUP_METADATA = \
                {
