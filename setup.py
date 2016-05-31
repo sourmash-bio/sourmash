@@ -1,11 +1,20 @@
+from __future__ import print_function
 import sys
 from setuptools import setup
 from setuptools import Extension
+import os
 
 VERSION="0.2"
 
-# Don't forget to update lib/Makefile with these flags!
-EXTRA_COMPILE_ARGS = ['-g', '-O3', '-std=c++11', '-pedantic']
+EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
+EXTRA_LINK_ARGS=[]
+
+if os.environ.get('SOURMASH_COVERAGE'):
+   print('Turning on coverage analysis.')
+   EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
+   EXTRA_LINK_ARGS=['--coverage', '-lgcov']
+else:
+    EXTRA_COMPILE_ARGS.append('-O3')
 
 if sys.platform == 'darwin':
     # force 64bit only builds
@@ -28,7 +37,8 @@ SETUP_METADATA = \
                               depends=["sourmash_lib/_minhash.hh",
                                        "sourmash_lib/kmer_min_hash.hh"],
                               language="c++",
-                              extra_compile_args=EXTRA_COMPILE_ARGS)],
+                              extra_compile_args=EXTRA_COMPILE_ARGS,
+                              extra_link_args=EXTRA_LINK_ARGS)],
     "scripts": ["sourmash"],
     "install_requires": ["khmer>=2.0", "PyYAML>=3.11"]
     }

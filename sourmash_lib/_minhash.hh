@@ -49,13 +49,4 @@ typedef struct {
     KmerMinHash * mh;
 } MinHash_Object;
 
-KmerMinHash * extract_KmerMinHash(PyObject * mh_obj)
-{
-    //if (!PyObject_TypeCheck(mh_obj, &MinHash_Type)) {
-    //  return NULL;
-    //}
-    MinHash_Object * obj = (MinHash_Object *) mh_obj;
-    return obj->mh;
-}
-
 #endif // _MINHASH_HH

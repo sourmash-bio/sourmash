@@ -117,7 +117,7 @@ public:
                 complement = 'A';
                 break;
             default:
-                throw std::exception();
+                throw minhash_exception("invalid DNA character in sequence");
                 break;
             }
             out[ksize - i - 1] = complement;

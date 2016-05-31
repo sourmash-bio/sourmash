@@ -165,15 +165,23 @@ minhash_add_protein(MinHash_Object * me, PyObject * args)
         return Py_None;
     }
 
-    if (!mh->is_protein) {
-        assert(0);
-    } else {                      // protein
-        std::string seq = sequence;
-        for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
-            std::string aa = seq.substr(i, ksize);
 
-            mh->add_kmer(aa);
+    try {
+        if (!mh->is_protein) {
+            PyErr_SetString(PyExc_ValueError,
+                            "cannot add amino acid sequence to DNA MinHash!");
+            return NULL;
+        } else {                      // protein
+            std::string seq = sequence;
+            for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
+                std::string aa = seq.substr(i, ksize);
+
+                mh->add_kmer(aa);
+            }
         }
+    } catch (minhash_exception &e) {
+        PyErr_SetString(PyExc_ValueError, e.what());
+        return NULL;
     }
 
     Py_INCREF(Py_None);

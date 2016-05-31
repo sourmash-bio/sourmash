@@ -36,7 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
-from ._minhash import MinHash
+from ._minhash import MinHash, hash_murmur
 import screed
 
 # add:
@@ -63,10 +63,38 @@ def test_basic_dna():
 
 def test_protein():
     # verify that we can hash protein/aa sequences
-    mh = MinHash(1, 4, True)
+    mh = MinHash(10, 6, True)
     mh.add_protein('AGYYG')
 
-    assert len(mh.get_mins()) == 1
+    assert len(mh.get_mins()) == 4
+
+
+def test_protein_short():
+    # verify that we can hash protein/aa sequences
+    mh = MinHash(10, 9, True)
+    mh.add_protein('AG')
+
+    assert len(mh.get_mins()) == 0, mh.get_mins()
+
+
+def test_basic_dna_bad():
+    # test behavior on bad DNA
+    mh = MinHash(1, 4)
+    try:
+        mh.add_sequence('ATGR')
+        assert 0, "should fail on invalid DNA sequence"
+    except ValueError:
+        pass
+
+
+def test_basic_dna_bad():
+    # test behavior on bad DNA
+    mh = MinHash(1, 6)
+    try:
+        mh.add_protein('YYYY')
+        assert 0, "should fail => this is a DNA MinHash"
+    except ValueError:
+        pass
 
 
 def test_compare_1():
@@ -334,4 +362,15 @@ def test_short_sequence():
         a.add_sequence('GGGG')
         assert 0, "adding too short a sequence should trigger ValueError"
     except ValueError:
+        pass
+
+
+def test_murmur():
+    x = hash_murmur("ACG")
+    assert x == 1731421407650554201
+
+    try:
+        x = hash_murmur()
+        assert 0, "hash_murmur requires an argument"
+    except TypeError:
         pass
