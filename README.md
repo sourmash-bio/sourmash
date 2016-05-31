@@ -2,7 +2,8 @@
 
 
 [![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
-[![Coverage Status](https://coveralls.io/repos/github/dib-lab/sourmash/badge.svg?branch=master)](https://coveralls.io/github/dib-lab/sourmash?branch=master)
+[![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
+
 
 Compute MinHash signatures for RNAseq reads.
 
