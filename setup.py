@@ -6,12 +6,15 @@ import os
 
 VERSION="0.2"
 
-EXTRA_COMPILE_ARGS = ['-O3', '-std=c++11', '-pedantic']
+EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
+
 if os.environ.get('SOURMASH_COVERAGE'):
-   print('ENABLING COVERAGE')
+   print('Turning on coverage analysis.')
    EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
    EXTRA_LINK_ARGS=['--coverage', '-lgcov']
+else:
+    EXTRA_COMPILE_ARGS.append('-O3')
 
 if sys.platform == 'darwin':
     # force 64bit only builds

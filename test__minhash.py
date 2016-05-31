@@ -87,6 +87,26 @@ def test_protein_short():
     assert len(mh.get_mins()) == 0, mh.get_mins()
 
 
+def test_basic_dna_bad():
+    # test behavior on bad DNA
+    mh = MinHash(1, 4)
+    try:
+        mh.add_sequence('ATGR')
+        assert 0, "should fail on invalid DNA sequence"
+    except ValueError:
+        pass
+
+
+def test_basic_dna_bad():
+    # test behavior on bad DNA
+    mh = MinHash(1, 6)
+    try:
+        mh.add_protein('YYYY')
+        assert 0, "should fail => this is a DNA MinHash"
+    except ValueError:
+        pass
+
+
 def test_compare_1():
     a = MinHash(20, 10)
     b = MinHash(20, 10)
