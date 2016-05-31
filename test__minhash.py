@@ -73,18 +73,18 @@ def test_basic_dna():
 
 def test_protein():
     # verify that we can hash protein/aa sequences
-    mh = MinHash(1, 4, 9999999967, True)
+    mh = MinHash(10, 6, 9999999967, True)
     mh.add_protein('AGYYG')
 
-    assert len(mh.get_mins()) == 1
+    assert len(mh.get_mins()) == 4
 
 
 def test_protein_short():
     # verify that we can hash protein/aa sequences
-    mh = MinHash(1, 4, 9999999967, True)
+    mh = MinHash(10, 9, 9999999967, True)
     mh.add_protein('AG')
 
-    assert len(mh.get_mins()) == 0
+    assert len(mh.get_mins()) == 0, mh.get_mins()
 
 
 def test_compare_1():
