@@ -4,8 +4,7 @@ from setuptools import Extension
 
 VERSION="0.2"
 
-# Don't forget to update lib/Makefile with these flags!
-EXTRA_COMPILE_ARGS = ['-g', '-O3', '-std=c++11', '-pedantic']
+EXTRA_COMPILE_ARGS = ['-g', '-O3', '-std=c++11', '-pedantic', '--coverage', '-lgcov']
 
 if sys.platform == 'darwin':
     # force 64bit only builds
@@ -27,7 +26,8 @@ SETUP_METADATA = \
                                        "third-party/smhasher/MurmurHash3.cc"],
                               depends=["_minhash.hh", "kmer_min_hash.hh"],
                               language="c++",
-                              extra_compile_args=EXTRA_COMPILE_ARGS)],
+                              extra_compile_args=EXTRA_COMPILE_ARGS,
+                              extra_link_args=['--coverage', '-lgcov'])],
     "scripts": ["sourmash"],
     "install_requires": ["khmer>=2.0", "PyYAML>=3.11"]
     }
