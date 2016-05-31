@@ -79,6 +79,14 @@ def test_protein():
     assert len(mh.get_mins()) == 1
 
 
+def test_protein_short():
+    # verify that we can hash protein/aa sequences
+    mh = MinHash(1, 4, 9999999967, True)
+    mh.add_protein('AG')
+
+    assert len(mh.get_mins()) == 0
+
+
 def test_compare_1():
     a = MinHash(20, 10)
     b = MinHash(20, 10)
