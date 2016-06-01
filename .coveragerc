@@ -1,2 +1,2 @@
 [run]
-omit=plot-comparison.py,setup.py
+omit=plot-comparison.py,setup.py,tests/test__minhash.py
