@@ -17,9 +17,9 @@ class Estimators(object):
 
     def __init__(self, n=None, ksize=None, protein=False):
         if n is None:
-            raise Exception
+            raise ValueError("n is required")
         if ksize is None:
-            raise Exception
+            raise ValueError("ksize is required")
 
         self.num = n
         self.ksize = ksize
@@ -83,6 +83,19 @@ def test_jaccard_2_difflen():
     assert round(E2.jaccard(E1), 2) == 4 / 4.0
 
 
+def test_common_1():
+    E1 = Estimators(n=5, ksize=20)
+    E2 = Estimators(n=5, ksize=20)
+
+    for i in [1, 2, 3, 4, 5]:
+        E1.mh.add_hash(i)
+    for i in [1, 2, 3, 4, 6]:
+        E2.mh.add_hash(i)
+
+    assert E1.count_common(E2) == 4
+    assert E2.count_common(E1) == 4
+
+
 def test_dna_mh():
     e1 = Estimators(n=5, ksize=4)
     e2 = Estimators(n=5, ksize=4)
@@ -111,3 +124,39 @@ def test_protein_mh():
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
     assert 901193879228338100 in e1.mh.get_mins()
+
+
+def test_pickle():
+    import pickle
+    from io import BytesIO
+
+    e1 = Estimators(n=5, ksize=6, protein=False)
+    seq = 'ATGGCAGTGACGATGCCG'
+    e1.add_sequence(seq)
+
+    fp = BytesIO()
+    pickle.dump(e1, fp)
+
+    fp2 = BytesIO(fp.getvalue())
+    e2 = pickle.load(fp2)
+
+    assert e1.mh.get_mins() == e2.mh.get_mins()
+    assert e1.num == e2.num
+    assert e1.ksize == e2.ksize
+    assert e1.is_protein == e2.is_protein
+
+
+def test_bad_construct_1():
+    try:
+        e1 = Estimators(ksize=6, protein=False)
+        assert 0, "require n in constructor"
+    except ValueError:
+        pass
+
+
+def test_bad_construct_2():
+    try:
+        e1 = Estimators(n=100, protein=False)
+        assert 0, "require ksize in constructor"
+    except ValueError:
+        pass
