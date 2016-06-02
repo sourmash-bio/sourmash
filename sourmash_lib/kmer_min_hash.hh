@@ -47,12 +47,12 @@ public:
             mins.erase(mi);
         }
     }
-    void add_hash(long int h) {
+    void add_hash(HashIntoType h) {
         mins.insert(h);
         _shrink();
     }
     void add_kmer(std::string kmer) {
-        unsigned long hash = _hash_murmur(kmer);
+        HashIntoType hash = _hash_murmur(kmer);
         add_hash(hash);
     }
     void add_sequence(const char * sequence) {

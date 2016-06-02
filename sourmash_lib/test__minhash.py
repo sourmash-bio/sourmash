@@ -151,6 +151,12 @@ def test_mh_len():
     assert a.get_mins() == list(range(0, 40, 2))
 
 
+def test_mh_unsigned_long_long():
+    a = MinHash(20, 10)
+    a.add_hash(9227159859419181011)        # too big for a C long int.
+    assert 9227159859419181011 in a.get_mins()
+
+
 def test_mh_count_common():
     a = MinHash(20, 10)
     for i in range(0, 40, 2):

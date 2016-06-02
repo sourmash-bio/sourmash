@@ -187,8 +187,8 @@ static
 PyObject *
 minhash_add_hash(MinHash_Object * me, PyObject * args)
 {
-    long int hh;
-    if (!PyArg_ParseTuple(args, "l", &hh)) {
+    HashIntoType hh;
+    if (!PyArg_ParseTuple(args, "K", &hh)) {
         return NULL;
     }
 
