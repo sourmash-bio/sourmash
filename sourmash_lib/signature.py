@@ -173,3 +173,28 @@ def test_md5():
     sig = SourmashSignature('titus@idyll.org', e)
     print(sig.save())
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
+
+
+def test_name():
+    e = sourmash_lib.Estimators(n=1, ksize=20)
+    sig = SourmashSignature('titus@idyll.org', e, name='foo')
+    assert sig.name() == 'foo'
+
+
+def test_name_2():
+    e = sourmash_lib.Estimators(n=1, ksize=20)
+    sig = SourmashSignature('titus@idyll.org', e, filename='foo.txt')
+    assert sig.name() == 'foo.txt'
+
+
+def test_name_3():
+    e = sourmash_lib.Estimators(n=1, ksize=20)
+    sig = SourmashSignature('titus@idyll.org', e, name='foo',
+                            filename='foo.txt')
+    assert sig.name() == 'foo'
+
+
+def test_name_4():
+    e = sourmash_lib.Estimators(n=1, ksize=20)
+    sig = SourmashSignature('titus@idyll.org', e)
+    assert sig.name() == sig.md5sum()[:8]
