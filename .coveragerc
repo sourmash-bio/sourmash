@@ -1,2 +1,3 @@
 [run]
-omit=plot-comparison.py,setup.py,sourmash/test__minhash.py,sourmash/test_sourmash.py,sourmash/sourmash_tst_utils.py
+include=sourmash,plot-comparison.py,sourmash_lib/*.py
+omit=plot-comparison.py,setup.py,sourmash_lib/test__minhash.py,sourmash_lib/test_sourmash.py,sourmash_lib/sourmash_tst_utils.py
