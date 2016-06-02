@@ -87,7 +87,7 @@ def test_basic_dna_bad():
         pass
 
 
-def test_basic_dna_bad():
+def test_basic_dna_bad_2():
     # test behavior on bad DNA
     mh = MinHash(1, 6)
     try:
