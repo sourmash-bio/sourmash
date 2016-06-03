@@ -140,6 +140,9 @@ Commands can be:
         parser.add_argument('-k', '--ksizes',
                             default=str(DEFAULT_K),
                             help='comma-separated list of k-mer sizes')
+        parser.add_argument('-n', '--num-hashes', type=int,
+                            default=DEFAULT_N,
+                            help='number of hashes to use in each sketch')
         parser.add_argument('-f', '--force', action='store_true')
         args = parser.parse_args(sys.argv[2:])
 
@@ -162,7 +165,7 @@ Commands can be:
 
             Elist = []
             for k in ksizes:
-                E = sourmash_lib.Estimators(ksize=k, n=DEFAULT_N,
+                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                             protein=args.protein)
                 Elist.append(E)
 
