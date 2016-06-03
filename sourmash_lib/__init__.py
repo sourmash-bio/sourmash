@@ -107,8 +107,8 @@ def test_dna_mh():
 
     assert e1.mh.get_mins() == e2.mh.get_mins()
     print(e1.mh.get_mins())
-    assert 58416682101672111 in e1.mh.get_mins()
     assert 726311917625663847 in e1.mh.get_mins()
+    assert 3697418565283905118 in e1.mh.get_mins()
 
 
 def test_protein_mh():

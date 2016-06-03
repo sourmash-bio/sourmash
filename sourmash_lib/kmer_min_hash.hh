@@ -63,12 +63,12 @@ public:
             std::string seq = sequence;
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 std::string kmer = seq.substr(i, ksize);
-                add_kmer(kmer);
-            }
-            std::string rc = _revcomp(seq);
-            for (unsigned int i = 0; i < rc.length() - ksize + 1; i++) {
-                std::string kmer = rc.substr(i, ksize);
-                add_kmer(kmer);
+                std::string rc = _revcomp(kmer);
+                if (kmer < rc) {
+                    add_kmer(kmer);
+                } else {
+                    add_kmer(rc);
+                }
             }
         } else {                      // protein
             std::string seq = sequence;
