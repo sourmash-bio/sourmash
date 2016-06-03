@@ -106,3 +106,23 @@ def runscript(scriptname, args, in_directory=None,
         assert False, (status, out, err)
 
     return status, out, err
+
+
+def get_test_data(filename):
+    filepath = None
+    try:
+        filepath = resource_filename(
+            Requirement.parse("sourmash"), "sourmash/sourmash_lib/test-data/"\
+                + filename)
+    except ResolutionError:
+        pass
+    if not filepath or not os.path.isfile(filepath):
+        filepath = os.path.join(os.path.dirname(__file__), 'test-data',
+                                filename)
+    return filepath
+
+
+
+
+
+

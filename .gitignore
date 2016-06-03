@@ -16,3 +16,4 @@ sourmash.egg-info
 _minhash.so
 .cache
 *.so
+.coverage
