@@ -38,7 +38,6 @@ Commands can be:
 
     def search(self):
         "Search a query sig against one or more signatures; report top match."
-        import sourmash_signature as sig
         parser = argparse.ArgumentParser()
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
@@ -74,7 +73,8 @@ Commands can be:
             distances.sort(reverse=True)
             print('%d matches:' % len(distances))
             for distance, match, filename in distances[:3]:
-                print('\t', match.name(), '\t', distance, '\t', filename)
+                print('\t', match.name(), '\t', "%.3f" % distance,
+                      '\t', filename)
         else:
             print('** no matches in %d signatures' % len(against))
 
