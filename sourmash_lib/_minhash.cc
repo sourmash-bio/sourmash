@@ -175,7 +175,7 @@ minhash_add_protein(MinHash_Object * me, PyObject * args)
         for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
             std::string aa = seq.substr(i, ksize);
 
-            mh->add_kmer(aa);
+            mh->add_word(aa);
         }
     }
 

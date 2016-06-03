@@ -51,8 +51,8 @@ public:
         mins.insert(h);
         _shrink();
     }
-    void add_kmer(std::string kmer) {
-        HashIntoType hash = _hash_murmur(kmer);
+    void add_word(std::string word) {
+        HashIntoType hash = _hash_murmur(word);
         add_hash(hash);
     }
     void add_sequence(const char * sequence) {
@@ -65,9 +65,9 @@ public:
                 std::string kmer = seq.substr(i, ksize);
                 std::string rc = _revcomp(kmer);
                 if (kmer < rc) {
-                    add_kmer(kmer);
+                    add_word(kmer);
                 } else {
-                    add_kmer(rc);
+                    add_word(rc);
                 }
             }
         } else {                      // protein
@@ -76,12 +76,12 @@ public:
                 std::string kmer = seq.substr(i, ksize);
                 std::string aa = _dna_to_aa(kmer);
 
-                add_kmer(aa);
+                add_word(aa);
 
                 std::string rc = _revcomp(kmer);
                 aa = _dna_to_aa(rc);
 
-                add_kmer(aa);
+                add_word(aa);
             }
         }
     }
