@@ -14,45 +14,57 @@ def test_run_plot_comparison():
 
 
 def test_do_plot_comparison():
-    testdata1 = utils.get_test_data('short.fa')
-    testdata2 = utils.get_test_data('short2.fa')
-    status, out, err = utils.runscript('sourmash',
-                                       ['compute', testdata1, testdata2])
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
 
     
-    status, out, err = utils.runscript('sourmash',
-                                       ['compare', 'short.fa.sig',
-                                        'short2.fa.sig', '-o', 'cmp'])
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'cmp'],
+                                           in_directory=location)
 
-    status, out, err = utils.runscript('plot-comparison.py', ['cmp'])
+        status, out, err = utils.runscript('plot-comparison.py',
+                                           ['cmp'],
+                                           in_directory=location)
 
 
-def test_do_plot_comparison():
-    testdata1 = utils.get_test_data('short.fa')
-    testdata2 = utils.get_test_data('short2.fa')
-    status, out, err = utils.runscript('sourmash',
-                                       ['compute', testdata1, testdata2])
+def test_do_plot_comparison_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
 
     
-    status, out, err = utils.runscript('sourmash',
-                                       ['compare', 'short.fa.sig',
-                                        'short2.fa.sig', '-o', 'cmp'])
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'cmp'],
+                                           in_directory=location)
 
-    status, out, err = utils.runscript('plot-comparison.py',
-                                       ['cmp', '--pdf'])
+        status, out, err = utils.runscript('plot-comparison.py',
+                                           ['cmp', '--pdf'],
+                                           in_directory=location)
 
 
 def test_do_plot_comparison_3():
-    testdata1 = utils.get_test_data('short.fa')
-    testdata2 = utils.get_test_data('short2.fa')
-    status, out, err = utils.runscript('sourmash',
-                                       ['compute', testdata1, testdata2])
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
 
     
-    status, out, err = utils.runscript('sourmash',
-                                       ['compare', 'short.fa.sig',
-                                        'short2.fa.sig', '-o', 'cmp'])
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'cmp'],
+                                           in_directory=location)
 
-    status, out, err = utils.runscript('plot-comparison.py',
-                                       ['cmp', '--labels'])
-
+        status, out, err = utils.runscript('plot-comparison.py',
+                                           ['cmp', '--labels'],
+                                           in_directory=location)

@@ -1,6 +1,8 @@
 from __future__ import print_function
 import sys
 import os
+import tempfile
+import shutil
 
 import pkg_resources
 from pkg_resources import Requirement, resource_filename, ResolutionError
@@ -122,7 +124,18 @@ def get_test_data(filename):
     return filepath
 
 
+class TempDirectory(object):
+    def __init__(self):
+        self.tempdir = tempfile.mkdtemp(prefix='sourmashtest_')
 
+    def __enter__(self):
+        return self.tempdir
 
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            shutil.rmtree(self.tempdir, ignore_errors=True)
+        except OSError:
+            pass
 
-
+        if exc_type:
+            return False
