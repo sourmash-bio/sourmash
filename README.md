@@ -1,12 +1,10 @@
 # sourmash
 
-
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 
-
-Compute MinHash signatures for RNAseq reads.
+Compute MinHash signatures for DNA sequences.
 
 Usage:
 
@@ -20,7 +18,7 @@ We have demo notebooks on binder:
 
 ----
 
-The name is a riff off of https://github.com/marbl/Mash, combined with
+The name is a riff off of [Mash](https://github.com/marbl/Mash), combined with
 my love of whiskey.  (Sour mash is used in making whiskey.)
 
 ## Installation
