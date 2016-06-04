@@ -42,7 +42,7 @@ Commands can be:
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
         parser.add_argument('--threshold', default=0.08, type=float)
-        parser.add_argument('--ksize', default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
         args = parser.parse_args(sys.argv[2:])
 
         sl = sig.load_signatures(

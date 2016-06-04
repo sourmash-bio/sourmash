@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os
+import glob
 
 from . import sourmash_tst_utils as utils
 import matplotlib
@@ -97,3 +98,28 @@ def test_sourmash_search():
         print(status, out, err)
         assert '1 matches' in out
         assert '0.956' in out
+
+
+def test_mash_csv_to_sig():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa.msh.dump')
+        testdata2 = utils.get_test_data('short.fa')
+
+        status, out, err = utils.runscript('mash-csv-to-sig.py',
+                                           [testdata1], in_directory=location)
+        sigfiles = glob.glob(os.path.join(location, '*.sig'))
+        assert len(sigfiles) == 1
+
+        sigfile = sigfiles[0]
+        
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '-k', '31',
+                                            'short.fa.sig',
+                                            sigfile],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches:' in out
