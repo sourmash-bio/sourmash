@@ -106,11 +106,8 @@ def test_mash_csv_to_sig():
         testdata2 = utils.get_test_data('short.fa')
 
         status, out, err = utils.runscript('mash-csv-to-sig.py',
-                                           [testdata1], in_directory=location)
-        sigfiles = glob.glob(os.path.join(location, '*.sig'))
-        assert len(sigfiles) == 1
-
-        sigfile = sigfiles[0]
+                                           [testdata1, '-o', 'xxx.sig'],
+                                           in_directory=location)
         
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31', testdata2],
@@ -118,8 +115,7 @@ def test_mash_csv_to_sig():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', '-k', '31',
-                                            'short.fa.sig',
-                                            sigfile],
+                                            'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches:' in out

@@ -39,6 +39,11 @@ class Estimators(object):
         for m in mins:
             self.mh.add_hash(m)
 
+    def __eq__(self, other):
+        print(self.__getstate__())
+        print(other.__getstate__())
+        return self.__getstate__() == other.__getstate__()
+
     def add(self, kmer):
         "Add kmer into sketch, keeping sketch sorted."
         self.mh.add_sequence(kmer)
