@@ -1,6 +1,7 @@
 # sourmash
 
 
+[![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 
@@ -13,18 +14,14 @@ Usage:
     ./sourmash compare *.sig -o distances
     ./plot-comparison.py distances
 
-This is an exploratory project; it's not really ready for people to use yet.
-Buyers Beware.
-
 We have demo notebooks on binder:
 
 [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
 
 ----
 
-The name comes from riffing off of https://github.com/marbl/Mash,
-combined with my love of whiskey.  (Sour mash is used in making
-whiskey.)
+The name is a riff off of https://github.com/marbl/Mash, combined with
+my love of whiskey.  (Sour mash is used in making whiskey.)
 
 ## Installation
 
@@ -32,21 +29,18 @@ You can do:
 
     pip install sourmash
 
-It currently requires khmer and PyYAML, and runs under both
-Python 2.7.11 and Python 3.5.
+It currently requires screed and PyYAML, and runs under both Python
+2.7.11 and Python 3.5.  You will need the CPython development headers
+and libraries in order to compile the C++ extension.
 
 ## Development
 
 `sourmash` is the main command-line entry point; run it for help.
 
-`sourmash_lib.py` contains the MinHash sketch implementation.
-
-`sourmash_signature.py` contains the YAML sig formatting and I/O functions.
-
-`sourmash_fig.py` contains some plotting functionality.
+`sourmash_lib/` contains the library code.
 
 ----
 
 CTB
 
-12.apr.2016
+6.jun.2016
