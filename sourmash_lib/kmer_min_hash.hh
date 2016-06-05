@@ -55,12 +55,11 @@ public:
         HashIntoType hash = _hash_murmur(word);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence) {
+    void add_sequence(const char * sequence, bool force=false) {
         if (strlen(sequence) < ksize) {
             throw minhash_exception("sequence is shorter than ksize");
         }
-        std::string seq = sequence;
-        _checkdna(seq);
+        const std::string seq = _checkdna(sequence, force);
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 std::string kmer = seq.substr(i, ksize);
@@ -96,8 +95,10 @@ public:
         return aa;
     }
 
-    void _checkdna(const std::string& seq) const {
-        size_t seqsize = seq.size();
+    std::string _checkdna(const char * s, bool force=false) const {
+        size_t seqsize = strlen(s);
+
+        std::string seq = s;
 
         for (size_t i=0; i < seqsize; ++i) {
             switch(seq[i]) {
@@ -107,12 +108,17 @@ public:
             case 'T':
                 break;
             default:
-                std::string msg = "invalid DNA character in sequence: ";
-                msg += seq[i];
-
-                throw minhash_exception(msg);
+                if (force) {
+                    seq[i] = 'N';
+                } else {
+                    std::string msg = "invalid DNA character in sequence: ";
+                    msg += seq[i];
+                    throw minhash_exception(msg);
+                }
+                break;
             }
         }
+        return seq;
     }
 
     std::string _revcomp(const std::string& kmer) const {
@@ -134,6 +140,9 @@ public:
                 break;
             case 'T':
                 complement = 'A';
+                break;
+            case 'N':
+                complement = 'N';
                 break;
             default:
                 std::string msg = "invalid DNA character in sequence: ";

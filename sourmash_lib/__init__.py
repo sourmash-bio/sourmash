@@ -43,10 +43,9 @@ class Estimators(object):
         "Add kmer into sketch, keeping sketch sorted."
         self.mh.add_sequence(kmer)
 
-    def add_sequence(self, seq):
+    def add_sequence(self, seq, force=False):
         "Sanitize and add a sequence to the sketch."
-        seq = seq.upper().replace('N', 'G')
-        self.mh.add_sequence(seq)
+        self.mh.add_sequence(seq, force)
 
     def jaccard(self, other):
         return self.mh.compare(other.mh)

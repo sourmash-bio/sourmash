@@ -97,6 +97,18 @@ def test_basic_dna_bad_2():
         pass
 
 
+def test_basic_dna_bad_force():
+    # test behavior on bad DNA
+    mh = MinHash(1, 4)
+    assert len(mh.get_mins()) == 0
+    mh.add_sequence('ATGR', True)
+    assert len(mh.get_mins()) == 1
+    mh.add_sequence('ATGN', True)         # R --> N w/force
+    assert len(mh.get_mins()) == 1
+    mh.add_sequence('NCAT', True)         # reverse complement of N -> N
+    assert len(mh.get_mins()) == 1
+
+
 def test_compare_1():
     a = MinHash(20, 10)
     b = MinHash(20, 10)

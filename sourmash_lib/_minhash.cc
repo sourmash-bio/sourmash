@@ -132,13 +132,18 @@ PyObject *
 minhash_add_sequence(MinHash_Object * me, PyObject * args)
 {
     const char * sequence = NULL;
-    if (!PyArg_ParseTuple(args, "s", &sequence)) {
+    PyObject * force_o = NULL;
+    if (!PyArg_ParseTuple(args, "s|O", &sequence, &force_o)) {
         return NULL;
     }
     KmerMinHash * mh = me->mh;
+    bool force = false;
+    if (force_o && PyObject_IsTrue(force_o)) {
+        force = true;
+    }
 
     try {
-        mh->add_sequence(sequence);
+        mh->add_sequence(sequence, force);
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());
         return NULL;

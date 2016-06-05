@@ -133,13 +133,11 @@ Commands can be:
                     fp.close()
 
                 s = record.sequence
-#            for i in 'R', 'W', 'Y': # sanitizing refseq mRNA
-#               s = s.replace(i, 'N')
                 for E in Elist:
                     if args.input_is_protein:
                         E.mh.add_protein(s)
                     else:
-                        E.add_sequence(s)
+                        E.add_sequence(s, args.force)
 
             siglist = []
             for E in Elist:
