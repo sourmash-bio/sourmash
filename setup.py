@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.2"
+VERSION="0.3"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
@@ -41,7 +41,7 @@ SETUP_METADATA = \
                               extra_compile_args=EXTRA_COMPILE_ARGS,
                               extra_link_args=EXTRA_LINK_ARGS)],
     "scripts": ["sourmash"],
-    "install_requires": ["khmer>=2.0", "PyYAML>=3.11"]
+    "install_requires": ["screed>=0.9", "PyYAML>=3.11"]
     }
 
 setup(**SETUP_METADATA)
