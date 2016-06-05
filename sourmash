@@ -165,7 +165,7 @@ Commands can be:
         parser = argparse.ArgumentParser()
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-        parser.add_argument('-o', '--output-filename')
+        parser.add_argument('-o', '--output')
         args = parser.parse_args(args)
 
         # load in the various signatures
@@ -174,6 +174,9 @@ Commands can be:
             print('loading', filename, file=sys.stderr)
             data = open(filename).read()
             loaded = sig.load_signatures(data, select_ksize=args.ksize)
+            if not loaded:
+                print('warning: no signatures loaded at given ksize from %s' %
+                          filename, file=sys.stderr)
             siglist.extend(loaded)
 
         if len(siglist) == 0:
@@ -198,15 +201,15 @@ Commands can be:
         print('min similarity in matrix:', numpy.min(D), file=sys.stderr)
 
         # shall we output a matrix?
-        if args.output_filename:
-            labeloutname = args.output_filename + '.labels.txt'
+        if args.output:
+            labeloutname = args.output + '.labels.txt'
             print('saving labels to:', labeloutname, file=sys.stderr)
             with open(labeloutname, 'w') as fp:
                 fp.write("\n".join(labeltext))
 
-            print('saving distance matrix to:', args.output_filename,
+            print('saving distance matrix to:', args.output,
                   file=sys.stderr)
-            with open(args.output_filename, 'wb') as fp:
+            with open(args.output, 'wb') as fp:
                 numpy.save(fp, D)
 
 
