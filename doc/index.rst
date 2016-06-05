@@ -35,7 +35,9 @@ In brief,
 
 * ``sourmash`` is developed `on GitHub
   <https://github.com/dib-lab/sourmash>`__ and is freely and openly
-  available under the BSD 3-clause license.
+  available under the BSD 3-clause license.  Please see `the README
+  <https://github.com/dib-lab/sourmash/blob/master/README.md>`__ for
+  more information on development, support, and contributing.
 
 Contents:
 ---------
