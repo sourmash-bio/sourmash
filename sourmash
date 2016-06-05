@@ -3,6 +3,8 @@ from __future__ import print_function
 import sys
 import os, os.path
 import argparse
+import csv
+
 import screed
 import sourmash_lib
 from sourmash_lib import signature as sig
@@ -23,6 +25,9 @@ Commands can be:
    compute <filenames>         Compute signatures for sequences in these files.
    compare <filenames.sig>     Compute distance matrix for given signatures.
    search <query> <against>    Search for matching signatures.
+   plot <matrix>               Plot a distance matrix made by 'compare'.
+
+   import_csv                  Import signatures from a CSV file.
 .
 ''')
         parser.add_argument('command')
@@ -265,6 +270,44 @@ Commands can be:
         # print out sample numbering for FYI.
         for i, name in enumerate(labeltext):
             print(i, '\t', name)
+
+    def import_csv(self, args):
+        "Import a CSV file full of signatures/hashes."
+        p = argparse.ArgumentParser()
+        p.add_argument('mash_csvfile')
+        p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                       default=sys.stdout)
+        args = p.parse_args(args)
+
+        with open(args.mash_csvfile, 'r') as fp:
+            reader = csv.reader(fp)
+            siglist = []
+            for row in reader:
+                hashfn = row[0]
+                hashseed = int(row[1])
+
+                # only support a limited import type, for now ;)
+                assert hashfn == 'murmur64'
+                assert hashseed == 42
+
+                _, _, ksize, name, hashes = row
+                ksize = int(ksize)
+
+                hashes = hashes.strip()
+                hashes = list(map(int, hashes.split(' ' )))
+
+                e = sourmash_lib.Estimators(len(hashes), ksize)
+                for h in hashes:
+                    e.mh.add_hash(h)
+                s = sig.SourmashSignature('titus@idyll.org',
+                                                  e, filename=name)
+                siglist.append(s)
+                print('loaded signature:', name,
+                      s.md5sum()[:8], file=sys.stderr)
+
+            print('saving %d signatures to YAML' % (len(siglist),),
+                  file=sys.stderr)
+            sig.save_signatures(siglist, args.output)
 
 
 def main():

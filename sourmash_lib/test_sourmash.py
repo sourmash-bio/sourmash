@@ -99,8 +99,9 @@ def test_mash_csv_to_sig():
         testdata1 = utils.get_test_data('short.fa.msh.dump')
         testdata2 = utils.get_test_data('short.fa')
 
-        status, out, err = utils.runscript('mash-csv-to-sig.py',
-                                           [testdata1, '-o', 'xxx.sig'],
+        status, out, err = utils.runscript('sourmash', ['import_csv',
+                                                        testdata1,
+                                                        '-o', 'xxx.sig'],
                                            in_directory=location)
         
         status, out, err = utils.runscript('sourmash',
