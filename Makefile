@@ -10,7 +10,7 @@ clean:
 	cd doc && make clean
 
 test: all
-	$(PYTHON) -m pytest sourmash_lib/*.py
+	$(PYTHON) -m pytest
 
 doc: .PHONY
 	cd doc && make html
@@ -18,4 +18,4 @@ doc: .PHONY
 coverage: all
 	$(PYTHON) setup.py clean --all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=. sourmash_lib/*.py
+	$(PYTHON) -m pytest --cov=.

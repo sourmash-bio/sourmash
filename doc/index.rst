@@ -47,6 +47,7 @@ Contents:
 
    command-line
    api
+   api-example
 
 
 Indices and tables
