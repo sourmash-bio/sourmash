@@ -59,8 +59,9 @@ public:
         if (strlen(sequence) < ksize) {
             throw minhash_exception("sequence is shorter than ksize");
         }
+        std::string seq = sequence;
+        _checkdna(seq);
         if (!is_protein) {
-            std::string seq = sequence;
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 std::string kmer = seq.substr(i, ksize);
                 std::string rc = _revcomp(kmer);
@@ -71,7 +72,6 @@ public:
                 }
             }
         } else {                      // protein
-            std::string seq = sequence;
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
                 std::string kmer = seq.substr(i, ksize);
                 std::string aa = _dna_to_aa(kmer);
@@ -96,7 +96,26 @@ public:
         return aa;
     }
 
-    std::string _revcomp(const std::string& kmer) {
+    void _checkdna(const std::string& seq) const {
+        size_t seqsize = seq.size();
+
+        for (size_t i=0; i < seqsize; ++i) {
+            switch(seq[i]) {
+            case 'A':
+            case 'C':
+            case 'G':
+            case 'T':
+                break;
+            default:
+                std::string msg = "invalid DNA character in sequence: ";
+                msg += seq[i];
+
+                throw minhash_exception(msg);
+            }
+        }
+    }
+
+    std::string _revcomp(const std::string& kmer) const {
         std::string out = kmer;
         size_t ksize = out.size();
 
@@ -117,8 +136,10 @@ public:
                 complement = 'A';
                 break;
             default:
-                throw minhash_exception("invalid DNA character in sequence");
-                break;
+                std::string msg = "invalid DNA character in sequence: ";
+                msg += kmer[i];
+
+                throw minhash_exception(msg);
             }
             out[ksize - i - 1] = complement;
         }
