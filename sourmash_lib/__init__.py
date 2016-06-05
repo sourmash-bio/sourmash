@@ -8,8 +8,6 @@ import argparse
 import itertools
 import string
 
-from . import _minhash
-
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -26,6 +24,8 @@ class Estimators(object):
 
     def __init__(self, n=None, ksize=None, protein=False):
         "Create a new MinHash estimator with size n and k-mer size ksize."
+        from . import _minhash
+
         if n is None:
             raise ValueError("n is required")
         if ksize is None:
@@ -44,6 +44,8 @@ class Estimators(object):
         return (self.num, self.ksize, self.is_protein, self.mh.get_mins())
 
     def __setstate__(self, tup):
+        from . import _minhash
+
         (self.num, self.ksize, self.is_protein, mins) = tup
         self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein)
         for m in mins:
