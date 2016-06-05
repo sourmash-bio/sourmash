@@ -3,11 +3,17 @@ PYTHON ?= python
 all:
 	$(PYTHON) setup.py build_ext -i
 
+.PHONY:
+
 clean:
 	$(PYTHON) setup.py clean --all
+	cd doc && make clean
 
 test: all
 	$(PYTHON) -m pytest sourmash_lib/*.py
+
+doc: .PHONY
+	cd doc && make html
 
 coverage: all
 	$(PYTHON) setup.py clean --all

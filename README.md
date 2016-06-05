@@ -27,15 +27,22 @@ You can do:
 
     pip install sourmash
 
-It currently requires screed and PyYAML, and runs under both Python
-2.7.11 and Python 3.5.  You will need the CPython development headers
-and libraries in order to compile the C++ extension.
+sourmash runs under both Python 2.7.x and Python 3.5.  The base
+requirements are screed and PyYAML, together with a C++ development
+environment and the CPython development headers and libraries (for the
+C++ extension).
+
+The comparison code (`sourmash compare`) uses numpy, and the plotting
+code uses matplotlib and scipy, but most of the code is usable without
+these.
 
 ## Development
 
 `sourmash` is the main command-line entry point; run it for help.
 
 `sourmash_lib/` contains the library code.
+
+Tests require py.test and can be run with `make test`.
 
 ----
 
