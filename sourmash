@@ -32,29 +32,35 @@ Commands can be:
             sys.exit(1)
 
         cmd = getattr(self, args.command)
-        print('# running sourmash subcommand: %s' % args.command)
-        cmd()
+        print('# running sourmash subcommand: %s' % args.command,
+              file=sys.stderr)
+        cmd(sys.argv[2:])
 
-    def search(self):
+    def search(self, args):
         "Search a query sig against one or more signatures; report top match."
         parser = argparse.ArgumentParser()
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
-        args = parser.parse_args(sys.argv[2:])
+        parser.add_argument('-f', '--force', action='store_true')
+        args = parser.parse_args(args)
 
+        # get the query signature
         sl = sig.load_signatures(
             open(args.query, 'r'), select_ksize=args.ksize)
         if len(sl) != 1:
             raise Exception("%d query signatures; need exactly one" % len(sl))
         query = sl[0]
 
-        print('loading signatures from %d files' % len(args.against))
+        # get the signatures to query
+        print('loading db of signatures from %d files' % len(args.against),
+              file=sys.stderr)
         against = []
         for filename in args.against:
-            if filename == args.query:
-                print('excluding query from database (file %s)' % filename)
+            if filename == args.query and not args.force:
+                print('excluding query from database (file %s)' % filename,
+                      file=sys.stderr)
                 continue
 
             sl = sig.load_signatures(
@@ -62,12 +68,14 @@ Commands can be:
             for x in sl:
                 against.append((x, filename))
 
+        # compute query x db
         distances = []
         for (x, filename) in against:
             distance = query.similarity(x)
             if distance >= args.threshold:
                 distances.append((distance, x, filename))
 
+        # any matches? sort, show.
         if distances:
             distances.sort(reverse=True)
             print('%d matches:' % len(distances))
@@ -75,14 +83,15 @@ Commands can be:
                 print('\t', match.name(), '\t', "%.3f" % distance,
                       '\t', filename)
         else:
-            print('** no matches in %d signatures' % len(against))
+            print('** no matches in %d signatures' % len(against),
+                  file=sys.stderr)
 
-    def compute(self):
+    def compute(self, args):
         "Compute the signature for one or more files."
         parser = argparse.ArgumentParser()
+        parser.add_argument('filenames', nargs='+')
         parser.add_argument('--protein', action='store_true')
         parser.add_argument('--input-is-protein', action='store_true')
-        parser.add_argument('filenames', nargs='+')
         parser.add_argument('-k', '--ksizes',
                             default=str(DEFAULT_K),
                             help='comma-separated list of k-mer sizes')
@@ -91,11 +100,12 @@ Commands can be:
                             help='number of hashes to use in each sketch')
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-        args = parser.parse_args(sys.argv[2:])
+        args = parser.parse_args(args)
 
         print('computing signatures for files:', args.filenames,
               file=sys.stderr)
 
+        # get list of k-mer sizes for which to compute sketches
         ksizes = args.ksizes
         if ',' in ksizes:
             ksizes = ksizes.split(',')
@@ -106,33 +116,26 @@ Commands can be:
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
 
+        # for each file, load & compute sketch.
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'
             if os.path.exists(sigfile) and not args.force:
-                print('skipping', filename, '- already done')
+                print('skipping', filename, '- already done',
+                      file=sys.stderr)
                 continue
 
+            # one estimator for each ksize
             Elist = []
             for k in ksizes:
                 E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                             protein=args.protein)
                 Elist.append(E)
 
+            # consume & calculate signatures
+            print('... reading sequences from', filename, file=sys.stderr)
             for n, record in enumerate(screed.open(filename)):
-                if n % 10000 == 0:
-                    print('...', filename, n)
-                if 0 and n % 100000 == 0 and n:
-                    siglist = []
-                    for E in Elist:
-                        signature = sig.SourmashSignature('titus@idyll.org',
-                                                          E,
-                                                          filename=filename)
-                        siglist.append(signature)
-
-                    data = sig.save_signatures(siglist)
-                    fp = open(sigfile + '.%d' % n, 'w')
-                    fp.write(data)
-                    fp.close()
+                if n % 10000 == 0 and n:
+                    print('...', filename, n, file=sys.stderr)
 
                 s = record.sequence
                 for E in Elist:
@@ -141,19 +144,15 @@ Commands can be:
                     else:
                         E.add_sequence(s, args.force)
 
-            siglist = []
-            for E in Elist:
-                signature = sig.SourmashSignature('titus@idyll.org',
-                                                  E,
-                                                  filename=filename)
-                siglist.append(signature)
+            # convert into a signature
+            siglist = [ sig.SourmashSignature('titus@idyll.org', E,
+                                              filename=filename) ]
 
-            data = sig.save_signatures(siglist)
-            fp = open(sigfile, 'w')
-            fp.write(data)
-            fp.close()
+            # save!
+            with open(sigfile, 'w') as fp:
+                data = sig.save_signatures(siglist, fp)
 
-    def compare(self):
+    def compare(self, args):
         "Compare multiple signature files and create a distance matrix."
         import numpy
 
@@ -161,66 +160,48 @@ Commands can be:
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('-o', '--output-filename')
-        parser.add_argument('-e', '--eliminate-singletons',
-                            action='store_true')
-        args = parser.parse_args(sys.argv[2:])
+        args = parser.parse_args(args)
 
+        # load in the various signatures
         siglist = []
         for filename in args.signatures:
+            print('loading', filename, file=sys.stderr)
             data = open(filename).read()
-            print('loading', filename)
             loaded = sig.load_signatures(data, select_ksize=args.ksize)
             siglist.extend(loaded)
 
-        if args.eliminate_singletons:
-            start_sigs = len(siglist)
-
-            def match_above_threshold(sig1, siglist):
-                THRESHOLD = 0.05
-                for sig2 in siglist:
-                    if sig1 != sig2 and (sig1.similarity(sig2) > THRESHOLD or
-                                         sig2.similarity(sig1) > THRESHOLD):
-                        return True
-                return False
-
-            siglist = [s for s in siglist if match_above_threshold(s, siglist)]
-            print('eliminated %d sigs (of %d)' % (len(siglist) - start_sigs,
-                                                  start_sigs))
-
         if len(siglist) == 0:
-            print('no signatures!')
+            print('no signatures!', file=sys.stderr)
             sys.exit(-1)
 
+        # build the distance matrix
         D = numpy.zeros([len(siglist), len(siglist)])
         numpy.set_printoptions(precision=3, suppress=True)
 
+        # do all-by-all calculation
         i = 0
         labeltext = []
-        samples = []
-        for E in siglist:
-            j = 0
-            for E2 in siglist:
+        for i, E in enumerate(siglist):
+            for j, E2 in enumerate(siglist):
                 D[i][j] = E.similarity(E2)
-                j += 1
 
             print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
             labeltext.append(E.name())
             i += 1
 
-        print('min similarity in matrix:', numpy.min(D))
-        # print('max similarity in matrix:', numpy.max(D))
+        print('min similarity in matrix:', numpy.min(D), file=sys.stderr)
 
+        # shall we output a matrix?
         if args.output_filename:
             labeloutname = args.output_filename + '.labels.txt'
-            print('saving labels to:', labeloutname)
-            fp = open(labeloutname, 'w')
-            fp.write("\n".join(labeltext))
-            fp.close()
+            print('saving labels to:', labeloutname, file=sys.stderr)
+            with open(labeloutname, 'w') as fp:
+                fp.write("\n".join(labeltext))
 
-            print('saving distance matrix to:', args.output_filename)
-            fp = open(args.output_filename, 'wb')
-            numpy.save(fp, D)
-            fp.close()
+            print('saving distance matrix to:', args.output_filename,
+                  file=sys.stderr)
+            with open(args.output_filename, 'wb') as fp:
+                numpy.save(fp, D)
 
 
 def main():
