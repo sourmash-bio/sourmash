@@ -97,7 +97,7 @@ def test_sourmash_search():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '0.956' in out
+        assert '0.958' in out
 
 
 def test_mash_csv_to_sig():

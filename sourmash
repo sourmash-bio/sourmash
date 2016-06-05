@@ -7,9 +7,8 @@ import screed
 import sourmash_lib
 from sourmash_lib import signature as sig
 
-DEFAULT_K = 32
+DEFAULT_K = 31
 DEFAULT_N = 500
-DEFAULT_COMPOSITE_N = 500
 
 
 class SourmashCommands(object):
