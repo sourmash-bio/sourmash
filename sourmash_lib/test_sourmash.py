@@ -11,11 +11,6 @@ def test_run_sourmash():
     assert status != 0                    # no args provided, ok ;)
 
 
-def test_run_plot_comparison():
-    status, out, err = utils.runscript('plot-comparison.py', [], fail_ok=True)
-    assert status != 0
-
-
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -30,8 +25,7 @@ def test_do_plot_comparison():
                                             'short2.fa.sig', '-o', 'cmp'],
                                            in_directory=location)
 
-        status, out, err = utils.runscript('plot-comparison.py',
-                                           ['cmp'],
+        status, out, err = utils.runscript('sourmash', ['plot', 'cmp'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
@@ -52,8 +46,8 @@ def test_do_plot_comparison_2():
                                             'short2.fa.sig', '-o', 'cmp'],
                                            in_directory=location)
 
-        status, out, err = utils.runscript('plot-comparison.py',
-                                           ['cmp', '--pdf'],
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--pdf'],
                                            in_directory=location)
         assert os.path.exists(os.path.join(location, "cmp.dendro.pdf"))
         assert os.path.exists(os.path.join(location, "cmp.matrix.pdf"))
@@ -73,8 +67,8 @@ def test_do_plot_comparison_3():
                                             'short2.fa.sig', '-o', 'cmp'],
                                            in_directory=location)
 
-        status, out, err = utils.runscript('plot-comparison.py',
-                                           ['cmp', '--labels'],
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--labels'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
