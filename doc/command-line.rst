@@ -18,6 +18,9 @@ sourmash uses a subcommand syntax, so all commands start with
 ``sourmash`` followed by a subcommand specifying the action to be
 taken.
 
+.. contents::
+   :depth: 3
+
 An example
 ==========
 

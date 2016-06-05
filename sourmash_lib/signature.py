@@ -8,6 +8,7 @@ import sourmash_lib
 
 SIGNATURE_VERSION=0.4
 
+
 class SourmashSignature(object):
     "Main class for signature information."
 
@@ -69,7 +70,7 @@ class SourmashSignature(object):
 
 
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
-    """Load a YAML file with signatures into classes.
+    """Load a YAML string with signatures into classes.
 
     Returns list of SourmashSignature objects.
     """
@@ -131,7 +132,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
 
 
 def save_signatures(siglist, fp=None):
-    """Save multiple signatures into a YAML string."""
+    "Save multiple signatures into a YAML string (or into file handle 'fp')"
     top_records = {}
     for sig in siglist:
         email, name, filename, sketch = sig.save()

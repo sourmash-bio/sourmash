@@ -1,18 +1,20 @@
 #! /usr/bin/env python
 """
-Plot things associated with the distance matrix+labels output by
-'sourmash compare'.
+Make plots using the distance matrix+labels output by ``sourmash compare``.
 """
 try:
     import numpy
     import scipy
     import pylab
     import scipy.cluster.hierarchy as sch
-except (RuntimeError, ImportError):       # for tests, ignore.
+except (RuntimeError, ImportError):
     pass
 
-
 def load_matrix_and_labels(basefile):
+    """Load the comparison matrix and associated labels.
+
+    Returns a square numpy matrix & list of labels.
+    """
     D = numpy.load(open(basefile, 'rb'))
     labeltext = [x.strip() for x in open(basefile + '.labels.txt')]
     return (D, labeltext)
@@ -20,6 +22,9 @@ def load_matrix_and_labels(basefile):
 
 def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
                           vmax=1.0, vmin=0.0):
+    """Build a composite plot showing dendrogram + distance matrix/heatmap.
+
+    Returns a matplotlib figure."""
     if show_labels:
         show_indices = True
 

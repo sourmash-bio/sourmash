@@ -13,9 +13,19 @@ from . import _minhash
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
+
+    Usage::
+
+       E = Estimators(n=1000, ksize=31)
+       E.add_sequence(dna)
+       ...
+       E.jaccard(other_E)
+
+    ``Estimator`` supports the pickle protocol.
     """
 
     def __init__(self, n=None, ksize=None, protein=False):
+        "Create a new MinHash estimator with size n and k-mer size ksize."
         if n is None:
             raise ValueError("n is required")
         if ksize is None:
@@ -45,7 +55,7 @@ class Estimators(object):
         return self.__getstate__() == other.__getstate__()
 
     def add(self, kmer):
-        "Add kmer into sketch, keeping sketch sorted."
+        "Add kmer into sketch."
         self.mh.add_sequence(kmer)
 
     def add_sequence(self, seq, force=False):
@@ -53,6 +63,7 @@ class Estimators(object):
         self.mh.add_sequence(seq, force)
 
     def jaccard(self, other):
+        "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
     similarity = jaccard
 

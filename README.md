@@ -8,11 +8,11 @@ Compute MinHash signatures for DNA sequences.
 
 Usage:
 
-    ./sourmash compute *.fq.gz
-    ./sourmash compare *.sig -o distances
-    ./plot-comparison.py distances
+    sourmash compute *.fq.gz
+    sourmash compare *.sig -o distances
+    sourmash plot distances
 
-We have demo notebooks on binder:
+We have demo notebooks on binder that you can interact with:
 
 [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
 
@@ -20,6 +20,12 @@ We have demo notebooks on binder:
 
 The name is a riff off of [Mash](https://github.com/marbl/Mash), combined with
 my love of whiskey.  (Sour mash is used in making whiskey.)
+
+Authors: [C. Titus Brown](mailto:titus@idyll.org) and Luiz C. Irber, Jr.
+
+sourmash is a product of the
+[Lab for Data-Intensive Biology](http://ivory.idyll.org/lab/) at the
+[UC Davis School of Veterinary Medicine](http://www.vetmed.ucdavis.edu).
 
 ## Installation
 
@@ -36,7 +42,16 @@ The comparison code (`sourmash compare`) uses numpy, and the plotting
 code uses matplotlib and scipy, but most of the code is usable without
 these.
 
+## Support
+
+Please ask questions and files issues
+[on Github](https://github.com/dib-lab/sourmash/issues).  The developers
+sometimes hang out [on gitter](https://gitter.im/dib-lab/khmer).
+
 ## Development
+
+Development happens on github at
+[dib-lab/sourmash](https://github.com/dib-lab/sourmash).
 
 `sourmash` is the main command-line entry point; run it for help.
 
