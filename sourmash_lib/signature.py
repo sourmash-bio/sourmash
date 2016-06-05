@@ -6,6 +6,7 @@ import yaml
 import hashlib
 import sourmash_lib
 
+SIGNATURE_VERSION=0.4
 
 class SourmashSignature(object):
     "Main class for signature information."
@@ -30,6 +31,13 @@ class SourmashSignature(object):
             m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
+    def __eq__(self, other):
+        for k in self.d:
+            if self.d[k] != other.d[k]:
+                return False
+            
+        return self.estimator == other.estimator
+
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
         # @CTB convert to printable or something.
@@ -47,6 +55,7 @@ class SourmashSignature(object):
 
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
+        sketch['num'] = len(estimator.mh)
         sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
         e['signature'] = sketch
@@ -66,40 +75,42 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     """
 
     # record header
-    d = yaml.safe_load(data)
-    if d.get('class') != 'sourmash_signature':
-        raise Exception("incorrect class: %s" % d.get('class'))
-    email = d['email']
+    x = yaml.safe_load_all(data)
+    siglist = []
+    for d in x:      # allow empty records <-> concatenation of signatures
+        if not d:
+            continue
+        if d.get('class') != 'sourmash_signature':
+            raise Exception("incorrect class: %s" % d.get('class'))
+        email = d['email']
 
-    name = ''
-    if 'name' in d:
-        name = d['name']
+        name = ''
+        if 'name' in d:
+            name = d['name']
 
-    filename = ''
-    if 'filename' in d:
-        filename = d['filename']
+        filename = ''
+        if 'filename' in d:
+            filename = d['filename']
 
-    # one (old format) or more (new) signatures
-    if 'signature' in d:          # old format
-        raise Exception("cannot load old versions")
-    elif 'signatures' in d:       # new format
-        if d['version'] != '0.3':
+        if 'signatures' not in d:
+            raise Exception("invalid format")
+
+        if d['version'] != SIGNATURE_VERSION:
             raise Exception("cannot load version %s" % (d['version']))
 
-        siglist = []
         for sketch in d['signatures']:
             sig = _load_one_signature(sketch, email, name, filename,
-                                      ignore_md5sum)
+                                          ignore_md5sum)
             if not select_ksize or select_ksize == sig.estimator.ksize:
                 siglist.append(sig)
-        return siglist
+    return siglist
 
 
 def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     """Helper function to unpack and check one signature block only."""
     ksize = sketch['ksize']
     mins = list(map(int, sketch['mins']))
-    n = len(mins)
+    n = int(sketch['num'])
     e = sourmash_lib.Estimators(ksize=ksize, n=n)
     for m in mins:
         e.mh.add_hash(m)
@@ -119,7 +130,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     return sig
 
 
-def save_signatures(siglist):
+def save_signatures(siglist, fp=None):
     """Save multiple signatures into a YAML string."""
     top_records = {}
     for sig in siglist:
@@ -132,9 +143,7 @@ def save_signatures(siglist):
         x.append(sketch)
         top_records[k] = x
 
-    if len(top_records) > 1:  # not yet tested
-        raise Exception("no support for multiple email/name/filename yet")
-
+    records = []
     for (email, name, filename), sketches in top_records.items():
         record = {}
         record['email'] = email
@@ -144,14 +153,21 @@ def save_signatures(siglist):
             record['filename'] = filename
         record['signatures'] = sketches
 
-        record['version'] = '0.3'
+        record['version'] = SIGNATURE_VERSION
         record['class'] = 'sourmash_signature'
         record['type'] = 'mrnaseq'
         record['hash_function'] = '0.murmur64'
 
-        return yaml.dump(record)
+        records.append(record)
 
-    assert 0
+    s = yaml.dump_all(records, fp)
+    if len(records):
+        if fp:
+            fp.write('---\n')
+        else:
+            s += '---\n'
+
+    return s
 
 
 def test_roundtrip():
@@ -198,3 +214,21 @@ def test_name_4():
     e = sourmash_lib.Estimators(n=1, ksize=20)
     sig = SourmashSignature('titus@idyll.org', e)
     assert sig.name() == sig.md5sum()[:8]
+
+
+def test_save_load_multisig():
+    e1 = sourmash_lib.Estimators(n=1, ksize=20)
+    sig1 = SourmashSignature('titus@idyll.org', e1)
+    
+    e2 = sourmash_lib.Estimators(n=1, ksize=20)
+    sig2 = SourmashSignature('titus2@idyll.org', e2)
+
+    x = save_signatures([sig1, sig2])
+    y = load_signatures(x)
+
+    print(x)
+
+    assert len(y) == 2
+    assert sig1 in y                      # order not guaranteed, note.
+    assert sig2 in y
+    assert sig1 != sig2

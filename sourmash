@@ -90,9 +90,11 @@ Commands can be:
                             default=DEFAULT_N,
                             help='number of hashes to use in each sketch')
         parser.add_argument('-f', '--force', action='store_true')
+        parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         args = parser.parse_args(sys.argv[2:])
 
-        print('computing signatures for files:', args.filenames)
+        print('computing signatures for files:', args.filenames,
+              file=sys.stderr)
 
         ksizes = args.ksizes
         if ',' in ksizes:
@@ -101,7 +103,8 @@ Commands can be:
         else:
             ksizes = [int(ksizes)]
 
-        print('Computing signature for ksizes: %s' % str(ksizes))
+        print('Computing signature for ksizes: %s' % str(ksizes),
+              file=sys.stderr)
 
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'

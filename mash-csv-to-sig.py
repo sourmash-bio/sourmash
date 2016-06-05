@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import sys
 import argparse
 import csv
 import sourmash_lib
@@ -7,12 +8,14 @@ from sourmash_lib import signature
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('mash_csvfile')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout)
     args = p.parse_args()
 
     with open(args.mash_csvfile, 'r') as fp:
         reader = csv.reader(fp, delimiter=',')
+        siglist = []
         for row in reader:
-            print(row[0])
             hashfn = row[0]
             hashseed = int(row[1])
 
@@ -30,12 +33,13 @@ def main():
                 e.mh.add_hash(h)
             sig = signature.SourmashSignature('titus@idyll.org',
                                               e, filename=name)
-            outfile = sig.md5sum()[:8] + '.sig'
+            siglist.append(sig)
+            print('loaded signature:', name,
+                  sig.md5sum()[:8], file=sys.stderr)
 
-            print('wrote signature for %s to %s' % (name, outfile))
-            with open(outfile, 'wt') as outfp:
-                yaml = signature.save_signatures([sig])
-                outfp.write(yaml)
+        print('saving %d signatures to YAML' % (len(siglist),),
+              file=sys.stderr)
+        yaml = signature.save_signatures(siglist, args.output)
 
 
 if __name__ == '__main__':
