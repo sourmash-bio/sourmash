@@ -460,8 +460,9 @@ MOD_INIT(_minhash)
 }
 
 uint64_t _hash_murmur(const std::string& kmer) {
-    uint64_t out = 0;
+    uint64_t out[2];
+    out[0] = 0; out[1] = 0;
     uint32_t seed = 42;
     MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
-    return out;
+    return out[0];
 }
