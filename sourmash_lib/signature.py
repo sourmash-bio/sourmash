@@ -49,7 +49,7 @@ class SourmashSignature(object):
         else:
             return self.md5sum()[:8]
 
-    def save(self):
+    def _save(self):
         "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)
         estimator = self.estimator
@@ -65,8 +65,9 @@ class SourmashSignature(object):
             self.d.get('filename'), sketch
 
     def similarity(self, other):
-        "Compute similarity with the stored MinHash."
+        "Compute similarity with the other MinHash signature."
         return self.estimator.similarity(other.estimator)
+    jaccard = similarity
 
 
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
@@ -135,9 +136,7 @@ def save_signatures(siglist, fp=None):
     "Save multiple signatures into a YAML string (or into file handle 'fp')"
     top_records = {}
     for sig in siglist:
-        email, name, filename, sketch = sig.save()
-        if not email:
-            raise Exception('email must be non-unique')
+        email, name, filename, sketch = sig._save()
         k = (email, name, filename)
 
         x = top_records.get(k, [])
@@ -184,11 +183,24 @@ def test_roundtrip():
     assert sig2.similarity(sig) == 1.0
 
 
+def test_roundtrip_empty_email():
+    e = sourmash_lib.Estimators(n=1, ksize=20)
+    e.add("AT" * 10)
+    sig = SourmashSignature('', e)
+    s = save_signatures([sig])
+    siglist = load_signatures(s)
+    sig2 = siglist[0]
+    e2 = sig2.estimator
+
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
+
+
 def test_md5():
     e = sourmash_lib.Estimators(n=1, ksize=20)
     e.mh.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
-    print(sig.save())
+    print(sig._save())
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
 
 

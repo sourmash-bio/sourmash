@@ -106,6 +106,7 @@ Commands can be:
                             help='number of hashes to use in each sketch')
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+        parser.add_argument('--email', type=str, default='')
         args = parser.parse_args(args)
 
         print('computing signatures for files:', args.filenames,
@@ -151,7 +152,7 @@ Commands can be:
                         E.add_sequence(s, args.force)
 
             # convert into a signature
-            siglist = [ sig.SourmashSignature('titus@idyll.org', E,
+            siglist = [ sig.SourmashSignature(args.email, E,
                                               filename=filename) ]
 
             # save!
@@ -280,6 +281,7 @@ Commands can be:
         p.add_argument('mash_csvfile')
         p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                        default=sys.stdout)
+        p.add_argument('--email', type=str, default='')
         args = p.parse_args(args)
 
         with open(args.mash_csvfile, 'r') as fp:
@@ -302,8 +304,7 @@ Commands can be:
                 e = sourmash_lib.Estimators(len(hashes), ksize)
                 for h in hashes:
                     e.mh.add_hash(h)
-                s = sig.SourmashSignature('titus@idyll.org',
-                                                  e, filename=name)
+                s = sig.SourmashSignature(args.email, e, filename=name)
                 siglist.append(s)
                 print('loaded signature:', name,
                       s.md5sum()[:8], file=sys.stderr)
