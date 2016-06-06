@@ -43,6 +43,7 @@ Suppose we want to create MinHash sketches from genomes --
 
 >>> import glob, pprint
 >>> genomes = glob.glob('data/GCF*.fna.gz')
+>>> genomes = list(sorted(genomes))
 >>> pprint.pprint(genomes)
 ['data/GCF_000005845.2_ASM584v2_genomic.fna.gz',
  'data/GCF_000006945.1_ASM694v1_genomic.fna.gz',
