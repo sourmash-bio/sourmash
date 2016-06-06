@@ -2,6 +2,8 @@
 ``sourmash`` Python examples
 ============================
 
+>>> from __future__ import print_function
+
 A very simple example: two k-mers
 ---------------------------------
 
