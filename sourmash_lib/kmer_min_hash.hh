@@ -57,7 +57,7 @@ public:
     }
     void add_sequence(const char * sequence, bool force=false) {
         if (strlen(sequence) < ksize) {
-            throw minhash_exception("sequence is shorter than ksize");
+            return;
         }
         const std::string seq = _checkdna(sequence, force);
         if (!is_protein) {
