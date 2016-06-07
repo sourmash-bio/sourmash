@@ -3,6 +3,7 @@
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
+[![DOI](https://zenodo.org/badge/22555/dib-lab/sourmash.svg)](https://zenodo.org/badge/latestdoi/22555/dib-lab/sourmash)
 
 Compute MinHash signatures for DNA sequences.
 
@@ -18,8 +19,10 @@ We have demo notebooks on binder that you can interact with:
 
 ----
 
-The name is a riff off of [Mash](https://github.com/marbl/Mash), combined with
-my love of whiskey.  (Sour mash is used in making whiskey.)
+The name is a riff off of [Mash](https://github.com/marbl/Mash),
+combined with @ctb's love of whiskey.
+([Sour mash](https://en.wikipedia.org/wiki/Sour_mash) is used in
+making whiskey.)
 
 Authors: [C. Titus Brown](mailto:titus@idyll.org) and Luiz C. Irber, Jr.
 
