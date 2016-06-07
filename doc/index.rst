@@ -48,6 +48,7 @@ Contents:
    command-line
    api
    api-example
+   requirements
    more-info
 
 
