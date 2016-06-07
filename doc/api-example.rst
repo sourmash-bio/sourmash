@@ -67,11 +67,11 @@ And now the estimators can be compared against each other:
 
 >>> import sys
 >>> for i, e in enumerate(estimators):
-...    sys.stdout.write(genomes[i][:20] + ' ')
+...    _ = sys.stdout.write(genomes[i][:20] + ' ')
 ...    for j, e2 in enumerate(estimators):
 ...       x = e.jaccard(estimators[j])
-...       sys.stdout.write(str(round(x, 3)) + ' ')
-...    sys.stdout.write('\n')
+...       _ = sys.stdout.write(str(round(x, 3)) + ' ')
+...    _= sys.stdout.write('\n')
 data/GCF_000005845.2 1.0 0.0 0.0 
 data/GCF_000006945.1 0.0 1.0 0.0 
 data/GCF_000783305.1 0.0 0.0 1.0 
