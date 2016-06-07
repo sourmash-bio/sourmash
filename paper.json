@@ -1,0 +1,17 @@
+{
+  "@context": "https://raw.githubusercontent.com/mbjones/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+
+  ],
+  "identifier": "",
+  "codeRepository": "https://github.com/dib-lab/sourmash",
+  "datePublished": "2016-06-07",
+  "dateModified": "2016-06-07",
+  "dateCreated": "2016-06-07",
+  "description": "Generate, compare, and manipulate MinHash sketches of genomic data",
+  "keywords": "MinHash, k-mers, Python",
+  "license": "BSD 3-clause",
+  "title": "sourmash",
+  "version": "v1.0.0"
+}
