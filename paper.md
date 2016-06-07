@@ -24,7 +24,7 @@ MinHash sketches provide a lightweight way to store "signatures" of
 large DNA or RNA sequence collections, and then compare or search them
 using a Jaccard index.  MinHash sketches can be used to identify samples,
 find similar samples, identify data sets with shared sequences, and
-build phylogenetic trees. [@mash]
+build phylogenetic trees [@ondov2015fast].
 
 sourmash provides a command line script, a Python library, and a CPython
 module for MinHash sketches.
