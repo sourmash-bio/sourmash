@@ -17,7 +17,7 @@ class Estimators(object):
        E = Estimators(n=1000, ksize=31)
        E.add_sequence(dna)
        ...
-       E.jaccard(other_E)
+       similarity = E.jaccard(other_E)
 
     ``Estimator`` supports the pickle protocol.
     """
