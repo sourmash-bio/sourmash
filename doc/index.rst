@@ -8,13 +8,17 @@ Welcome to sourmash!
 
 sourmash is a command-line tool and Python library for computing
 `MinHash sketches <https://en.wikipedia.org/wiki/MinHash>`__ from DNA
-sequences, compare them to each other, and plot the results.  This
-allows you to estimate sequence similarity quickly and accurately.
+sequences, comparing them to each other, and plotting the results.
+This allows you to estimate sequence similarity between even very
+large data sets quickly and accurately.
 
 Please see the `mash <http://mash.readthedocs.io/en/latest/>`__
 software and the `mash paper (Ondov et al., 2016)
 <http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
 information on how and why MinHash sketches work.
+
+To use sourmash, you must be comfortable with the UNIX command line;
+programmers may find the Python library and API useful as well.
 
 In brief,
 
