@@ -12,7 +12,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends ${PACKAGES} && \
     apt-get clean
 
+USER main
+
 RUN pip install -U setuptools pip
 RUN pip install sourmash
-
-USER main
