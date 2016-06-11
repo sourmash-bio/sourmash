@@ -24,7 +24,8 @@ combined with @ctb's love of whiskey.
 ([Sour mash](https://en.wikipedia.org/wiki/Sour_mash) is used in
 making whiskey.)
 
-Authors: [C. Titus Brown](mailto:titus@idyll.org) and Luiz C. Irber, Jr.
+Authors: [C. Titus Brown](mailto:titus@idyll.org) (`@ctb
+<http://github.com/ctb>`__) and Luiz C. Irber, Jr.
 
 sourmash is a product of the
 [Lab for Data-Intensive Biology](http://ivory.idyll.org/lab/) at the

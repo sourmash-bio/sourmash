@@ -43,6 +43,13 @@ In brief,
   <https://github.com/dib-lab/sourmash/blob/master/README.md>`__ for
   more information on development, support, and contributing.
 
+You can take a look at sourmash analyses on real data `in a saved
+Jupyter notebook
+<https://github.com/dib-lab/sourmash/blob/master/demo/00-demo.ipynb>`__,
+and experiment with it yourself `interactively with a binder
+<http://mybinder.org/repo/dib-lab/sourmash>`__ at `mybinder.org
+<http://mybinder.org>`__.
+
 Contents:
 ---------
 
