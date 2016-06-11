@@ -12,21 +12,24 @@ from sourmash_lib import fig as sourmash_fig
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('sigfile')
-    parser.add_argument('name')
+    parser.add_argument('sigfiles', nargs='+')
+    parser.add_argument('--name', type=str, default='')
     args = parser.parse_args()
 
-    print('setting name on %s to %s' % (args.sigfile, args.name))
+    assert args.name
 
-    with open(args.sigfile, 'rt') as fp:
-        sigs = sig.load_signatures(fp)
+    for sigfile in args.sigfiles:
+        print('setting name on "%s" to "%s"' % (sigfile, args.name))
 
-    for s in sigs:
-        s.d['name'] = args.name
+        with open(sigfile, 'rt') as fp:
+            sigs = sig.load_signatures(fp)
 
-    outputname = os.path.basename(args.sigfile)
-    with open(outputname, 'wt') as fp:
-        sig.save_signatures(sigs, fp)
+        for s in sigs:
+            s.d['name'] = args.name
+
+        outputname = os.path.basename(sigfile)
+        with open(outputname, 'wt') as fp:
+            sig.save_signatures(sigs, fp)
 
 
 if __name__ == '__main__':
