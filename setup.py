@@ -37,6 +37,8 @@ SETUP_METADATA = \
                                        "third-party/smhasher/MurmurHash3.cc"],
                               depends=["sourmash_lib/_minhash.hh",
                                        "sourmash_lib/kmer_min_hash.hh"],
+                              include_dirs=["./sourmash_lib",
+                                            "./third-party/smhasher/"],
                               language="c++",
                               extra_compile_args=EXTRA_COMPILE_ARGS,
                               extra_link_args=EXTRA_LINK_ARGS)],
