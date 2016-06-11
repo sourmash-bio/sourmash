@@ -7,7 +7,7 @@ def main():
     acc_dict = {}
     full_dict = {}
 
-    r = csv.reader(open('sra_result.csv', 'r', encoding='utf-8'))
+    r = csv.reader(open('sra.csv', 'r', encoding='utf-8'))
     for row in r:
         if row[0] == 'Experiment Accession':
             continue
@@ -23,8 +23,7 @@ def main():
     for row in r:
         if row[0] in acc_dict:
             srr = row[1]
-            print('../../sourmash clean --set-name "%s" *%s*' % (full_dict[row[0]],
-                                                           srr))
+            print('../utils/setname.py *%s*.sig --name="%s"' % (srr, full_dict[row[0]],))
             print('mv *%s*.sig %s-%s.sig' % (srr, acc_dict[row[0]], srr))
             del acc_dict[row[0]]
 

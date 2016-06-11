@@ -41,7 +41,7 @@ def main():
     fp = open('ftp_list.csv', 'w', encoding='utf-8')
     w = csv.writer(fp, dialect=csv.excel)
     
-    r = csv.reader(open('sra_result.csv', 'r', encoding='utf-8'))
+    r = csv.reader(open('sra.csv', 'r', encoding='utf-8'))
     for row in r:
         if row[0] == 'Experiment Accession':
             continue
