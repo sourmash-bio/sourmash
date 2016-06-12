@@ -15,7 +15,7 @@ RUN apt-get update && \
     apt-get clean
 
 RUN cd /home && \
-    git clone https://github.com/dib-lab/sourmash.git -b ${KHMER_VERSION} && \
+    git clone https://github.com/dib-lab/sourmash.git -b ${SOURMASH_VERSION} && \
     cd sourmash && \
     python setup.py install
 
