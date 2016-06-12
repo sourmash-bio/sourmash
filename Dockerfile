@@ -17,7 +17,6 @@ RUN apt-get update && \
 RUN cd /home && \
     git clone https://github.com/dib-lab/sourmash.git -b ${SOURMASH_VERSION} && \
     cd sourmash && \
-    python setup.py install && \
-    python setup.py build_ext -i
+    python setup.py install
 
 USER main
