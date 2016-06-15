@@ -83,7 +83,7 @@ Commands can be:
 
         # any matches? sort, show.
         if distances:
-            distances.sort(reverse=True)
+            distances.sort(reverse=True, key = lambda x: x[0])
             print('%d matches:' % len(distances))
             for distance, match, filename in distances[:3]:
                 print('\t', match.name(), '\t', "%.3f" % distance,

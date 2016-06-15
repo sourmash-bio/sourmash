@@ -94,6 +94,27 @@ def test_sourmash_search():
         assert '0.958' in out
 
 
+def test_sourmash_search_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            testdata3],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig', 'short3.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '2 matches' in out
+        assert '0.958' in out
+
+
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
