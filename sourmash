@@ -313,6 +313,24 @@ Commands can be:
                   file=sys.stderr)
             sig.save_signatures(siglist, args.output)
 
+    def dump(self, args):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        args = parser.parse_args(sys.argv[2:])
+
+        for filename in args.filenames:
+            data = open(filename).read()
+            print('loading', filename)
+            siglist = sig.load_signatures(data, select_ksize=args.ksize)
+            assert len(siglist) == 1
+
+            s = siglist[0]
+
+            fp = open(filename + '.dump.txt', 'w')
+            fp.write(" ".join((map(str, s.estimator.mh.get_mins()))))
+            fp.close()
+
 
 def main():
     SourmashCommands()
