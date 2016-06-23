@@ -159,6 +159,64 @@ Commands can be:
             with open(sigfile, 'w') as fp:
                 data = sig.save_signatures(siglist, fp)
 
+    def compute_each(self, args):
+        "Compute the signature for each sequence in a file"
+        parser = argparse.ArgumentParser()
+        parser.add_argument('filename')
+        parser.add_argument('--protein', action='store_true')
+        parser.add_argument('--input-is-protein', action='store_true')
+        parser.add_argument('-k', '--ksizes',
+                            default=str(DEFAULT_K),
+                            help='comma-separated list of k-mer sizes')
+        parser.add_argument('-n', '--num-hashes', type=int,
+                            default=DEFAULT_N,
+                            help='number of hashes to use in each sketch')
+        parser.add_argument('-f', '--force', action='store_true')
+        parser.add_argument('--email', type=str, default='')
+        args = parser.parse_args(args)
+
+        print('computing signatures for file:', args.filename,
+              file=sys.stderr)
+
+        # get list of k-mer sizes for which to compute sketches
+        ksizes = args.ksizes
+        if ',' in ksizes:
+            ksizes = ksizes.split(',')
+            ksizes = list(map(int, ksizes))
+        else:
+            ksizes = [int(ksizes)]
+
+        print('Computing signature for ksizes: %s' % str(ksizes),
+              file=sys.stderr)
+
+        # for each record, load & compute sketch.
+        print('... reading sequences from', args.filename, file=sys.stderr)
+        for n, record in enumerate(screed.open(args.filename)):
+
+            # one estimator for each ksize
+            Elist = []
+            for k in ksizes:
+                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                                            protein=args.protein)
+                Elist.append(E)
+
+            # consume & calculate signatures
+            s = record.sequence
+            for E in Elist:
+                if args.input_is_protein:
+                    E.mh.add_protein(s)
+                else:
+                    E.add_sequence(s, args.force)
+
+            # convert into a signature
+            siglist = [ sig.SourmashSignature(args.email, E,
+                        filename=args.filename) for E in Elist]
+
+            # save!
+            sigfile = os.path.basename(args.filename) + '.%d.sig' % (n+1,)
+            with open(sigfile, 'w') as fp:
+                data = sig.save_signatures(siglist, fp)
+
     def compare(self, args):
         "Compare multiple signature files and create a distance matrix."
         import numpy
