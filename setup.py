@@ -48,7 +48,8 @@ SETUP_METADATA = \
         'test' : ['pytest', 'pytest-cov'],
         'fig' : ['numpy', 'matplotlib', 'scipy'],
         'demo' : ['numpy', 'matplotlib', 'scipy', 'jupyter',
-                  'jupyter_client', 'ipython']
+                  'jupyter_client', 'ipython'],
+        'doc' : ['sphinx'],
         },
     }
 
