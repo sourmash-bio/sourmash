@@ -43,7 +43,13 @@ SETUP_METADATA = \
                               extra_compile_args=EXTRA_COMPILE_ARGS,
                               extra_link_args=EXTRA_LINK_ARGS)],
     "scripts": ["sourmash"],
-    "install_requires": ["screed>=0.9", "PyYAML>=3.11"]
+    "install_requires": ["screed>=0.9", "PyYAML>=3.11"],
+    "extras_require": {
+        'test' : ['pytest', 'pytest-cov'],
+        'fig' : ['numpy', 'matplotlib', 'scipy'],
+        'demo' : ['numpy', 'matplotlib', 'scipy', 'jupyter',
+                  'jupyter_client', 'ipython']
+        },
     }
 
 setup(**SETUP_METADATA)
