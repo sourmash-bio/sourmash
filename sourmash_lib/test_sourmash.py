@@ -6,9 +6,39 @@ from . import sourmash_tst_utils as utils
 import matplotlib
 matplotlib.use('Agg')
 
+from sourmash_lib import signature
+
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
+
+
+def test_do_sourmash_compute():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+        assert os.path.exists(os.path.join(location, 'short.fa.sig'))
+
+
+def test_do_sourmash_compute_multik():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = signature.load_signatures(sigdata)
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 31 in ksizes
 
 
 def test_do_plot_comparison():
