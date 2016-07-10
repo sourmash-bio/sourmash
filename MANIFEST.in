@@ -1,7 +1,6 @@
-include LICENSE
+include LICENSE Makefile Dockerfile LICENSE Makefile README.md
 recursive-include sourmash_lib *
-recursive-include third-party *.cc *.hh
-recursive-include lib *.hh *.cc [Mm]akefile* *.rst README*
+recursive-include third-party *.cc *.h
 recursive-include README.rst
 global-exclude *.orig
 global-exclude *.pyc
