@@ -1,3 +1,6 @@
 pytest
 screed
 PyYAML
+numpy
+matplotlib
+scipy

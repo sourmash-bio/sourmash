@@ -5,6 +5,11 @@ Releasing a new version of sourmash
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
+Remember to update release numbers/RC in:
+
+* this document
+* setup.py
+
 Testing a release
 -----------------
 
@@ -17,7 +22,7 @@ Testing a release
 #. Set your new version number and release candidate::
 
         new_version=0.9.3
-        rc=rc5
+        rc=rc6
 
    and then tag the release candidate with the new version number prefixed by
    the letter 'v'::
