@@ -3,8 +3,11 @@ import os
 import glob
 
 from . import sourmash_tst_utils as utils
-import matplotlib
-matplotlib.use('Agg')
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+except ImportError:
+    pass
 
 from sourmash_lib import signature
 

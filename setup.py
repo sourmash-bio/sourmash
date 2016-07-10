@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.9.2"
+VERSION="0.9.3"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
@@ -34,8 +34,8 @@ SETUP_METADATA = \
     "packages": ["sourmash_lib"],
     "ext_modules": [Extension("sourmash_lib._minhash",
                               sources=["sourmash_lib/_minhash.cc",
-                                       "third-party/smhasher/MurmurHash3.cc"],
-                              depends=["sourmash_lib/_minhash.hh",
+                                       "third-party/smhasher/MurmurHash3.cc",
+                                       "sourmash_lib/_minhash.hh",
                                        "sourmash_lib/kmer_min_hash.hh"],
                               include_dirs=["./sourmash_lib",
                                             "./third-party/smhasher/"],

@@ -1,6 +1,9 @@
 Additional information on sourmash
 ==================================
 
+Blog posts
+----------
+
 Titus wrote a few blog posts on sourmash:
 
 * `Applying MinHash to cluster RNAseq samples <http://ivory.idyll.org/blog/2016-sourmash.html>`__
@@ -20,3 +23,14 @@ Interoperability with mash
 The default sketches computed by sourmash and mash are comparable, but
 we are still [working on ways to convert the file
 formats](https://github.com/marbl/Mash/issues/27).
+
+Developing sourmash
+-------------------
+
+Please see:
+
+.. toctree::
+   :maxdepth: 2
+
+   developer
+   release
