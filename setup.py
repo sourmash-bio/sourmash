@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.9.3-rc4"
+VERSION="0.9.3-rc5"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
@@ -65,7 +65,7 @@ SETUP_METADATA = \
     "scripts": ["sourmash"],
     "install_requires": ["screed>=0.9", "PyYAML>=3.11"],
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
         'fig' : ['numpy', 'matplotlib', 'scipy'],
         'demo' : ['numpy', 'matplotlib', 'scipy', 'jupyter',
                   'jupyter_client', 'ipython'],
