@@ -34,8 +34,8 @@ SETUP_METADATA = \
     "packages": ["sourmash_lib"],
     "ext_modules": [Extension("sourmash_lib._minhash",
                               sources=["sourmash_lib/_minhash.cc",
-                                       "third-party/smhasher/MurmurHash3.cc",
-                                       "sourmash_lib/_minhash.hh",
+                                       "third-party/smhasher/MurmurHash3.cc"],
+                              depends=["sourmash_lib/_minhash.hh",
                                        "sourmash_lib/kmer_min_hash.hh"],
                               include_dirs=["./sourmash_lib",
                                             "./third-party/smhasher/"],
@@ -51,6 +51,7 @@ SETUP_METADATA = \
                   'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
+    "include_package_data": True,
     }
 
 setup(**SETUP_METADATA)
