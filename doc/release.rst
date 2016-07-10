@@ -22,7 +22,7 @@ Testing a release
 #. Set your new version number and release candidate::
 
         new_version=0.9.3
-        rc=rc8
+        rc=rc9
 
    and then tag the release candidate with the new version number prefixed by
    the letter 'v'::
@@ -75,6 +75,7 @@ Testing a release
         pip install pytest
         tar xzf sourmash*tar.gz
         cd sourmash*
+        pip install -r requirements.txt
         make dist
         make test
         pip uninstall -y sourmash; pip uninstall -y sourmash; make install
@@ -96,15 +97,11 @@ Testing a release
         cd ../../testenv4
         source bin/activate
         pip install -U setuptools==3.4.1
-        pip install screed pytest
+        pip install screed pytest numpy matplotlib scipy
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
         py.test --pyargs sourmash_lib
-        cd build/sourmash
-        make test
 
-#. Do any final testing (BaTLab and/or acceptance tests).
-
-#. Make sure any release notes are merged into doc/release-notes/.
+#. Do any final testing
 
 How to make a final release
 ---------------------------

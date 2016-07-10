@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.9.3-rc8"
+VERSION="0.9.3"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
@@ -24,6 +24,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.5",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
+
 if "-rc" in VERSION:
     CLASSIFIERS.append("Development Status :: 4 - Beta")
 else:
