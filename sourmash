@@ -126,7 +126,7 @@ Commands can be:
         # for each file, load & compute sketch.
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'
-            if os.path.exists(sigfile) and not args.force:
+            if not args.output and os.path.exists(sigfile) and not args.force:
                 print('skipping', filename, '- already done',
                       file=sys.stderr)
                 continue
@@ -156,8 +156,11 @@ Commands can be:
                         filename=filename) for E in Elist ]
 
             # save!
-            with open(sigfile, 'w') as fp:
-                data = sig.save_signatures(siglist, fp)
+            if args.output:
+                data = sig.save_signatures(siglist, args.output)
+            else:
+                with open(sigfile, 'w') as fp:
+                    data = sig.save_signatures(siglist, fp)
 
     def compare(self, args):
         "Compare multiple signature files and create a distance matrix."
