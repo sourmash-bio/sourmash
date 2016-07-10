@@ -22,7 +22,7 @@ Testing a release
 #. Set your new version number and release candidate::
 
         new_version=0.9.3
-        rc=rc7
+        rc=rc8
 
    and then tag the release candidate with the new version number prefixed by
    the letter 'v'::
