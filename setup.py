@@ -4,10 +4,30 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.9.3"
+VERSION="0.9.3-rc4"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
+
+CLASSIFIERS = [
+    "Environment :: Console",
+    "Environment :: MacOS X",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3.3",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+if "-rc" in VERSION:
+    CLASSIFIERS.append("Development Status :: 4 - Beta")
+else:
+    CLASSIFIERS.append("Development Status :: 5 - Production/Stable")
 
 if sys.platform == 'darwin':              # Mac OS X?
     # force 64bit only builds
@@ -52,6 +72,7 @@ SETUP_METADATA = \
         'doc' : ['sphinx'],
         },
     "include_package_data": True,
+    "classifiers": CLASSIFIERS
     }
 
 setup(**SETUP_METADATA)
