@@ -112,7 +112,7 @@ so:
 #. Create the final tag and publish the new release on PyPI (requires an
    authorized account).::
 
-        cd ../../../sourmash
+        cd ../../sourmash
         git tag v${new_version}
         python setup.py register sdist upload
 
@@ -132,5 +132,12 @@ so:
         source bin/activate
         pip install -U setuptools==3.4.1 wheel
         pip install --no-clean sourmash==${new_version}
-        cd build/sourmash
-        ./setup.py bdist_wheel upload
+        python ./setup.py bdist_wheel upload
+
+To test on a blank Ubuntu system
+--------------------------------
+
+::
+
+   apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
+   pip install sourmash[test] && py.test --pyargs sourmash_lib

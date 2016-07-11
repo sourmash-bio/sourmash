@@ -67,9 +67,7 @@ SETUP_METADATA = \
     "install_requires": ["screed>=0.9", "PyYAML>=3.11"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
-        'fig' : ['numpy', 'matplotlib', 'scipy'],
-        'demo' : ['numpy', 'matplotlib', 'scipy', 'jupyter',
-                  'jupyter_client', 'ipython'],
+        'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
     "include_package_data": True,
