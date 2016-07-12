@@ -53,8 +53,11 @@ SETUP_METADATA = \
     "author_email": "titus@idyll.org",
     "license": "BSD 3-clause",
     "packages": ["sourmash_lib"],
-    "ext_modules": [Extension("sourmash_lib._minhash",
-                              sources=["sourmash_lib/_minhash.cc",
+    "entry_points": {'console_scripts': [
+        'my_project = my_project.__main__:main'
+        ]
+     },"ext_modules": [Extension("sourmash_lib._minhash",
+                                sources=["sourmash_lib/_minhash.cc",
                                        "third-party/smhasher/MurmurHash3.cc"],
                               depends=["sourmash_lib/_minhash.hh",
                                        "sourmash_lib/kmer_min_hash.hh"],
