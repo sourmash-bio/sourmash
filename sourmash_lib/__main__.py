@@ -336,6 +336,4 @@ Commands can be:
 
 def main():
     SourmashCommands()
-
-if __name__ == '__main__':
-    main()
+    return 0
