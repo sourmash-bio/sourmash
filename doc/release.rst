@@ -101,7 +101,9 @@ Testing a release
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
         py.test --pyargs sourmash_lib
 
-#. Do any final testing
+#. Do any final testing:
+
+   * check that the binder demo notebook is up to date
 
 How to make a final release
 ---------------------------
