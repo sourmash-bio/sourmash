@@ -54,7 +54,7 @@ SETUP_METADATA = \
     "license": "BSD 3-clause",
     "packages": ["sourmash_lib"],
     "entry_points": {'console_scripts': [
-        'my_project = my_project.__main__:main'
+        'sourmash = sourmash_lib.__main__:main'
         ]
      },"ext_modules": [Extension("sourmash_lib._minhash",
                                 sources=["sourmash_lib/_minhash.cc",
