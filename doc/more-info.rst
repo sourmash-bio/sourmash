@@ -1,6 +1,13 @@
 Additional information on sourmash
 ==================================
 
+Other MinHash implementations for DNA
+-------------------------------------
+
+In addition to `mash <https://github.com/marbl/Mash>`__, also see
+`RKMH: Read Classification by Kmers
+<https://github.com/edawson/rkmh>`__.
+
 Blog posts
 ----------
 
@@ -21,8 +28,7 @@ Interoperability with mash
 --------------------------
 
 The default sketches computed by sourmash and mash are comparable, but
-we are still [working on ways to convert the file
-formats](https://github.com/marbl/Mash/issues/27).
+we are still `working on ways to convert the file formats <https://github.com/marbl/Mash/issues/27>`__.
 
 Developing sourmash
 -------------------
