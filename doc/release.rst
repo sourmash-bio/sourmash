@@ -21,7 +21,7 @@ Testing a release
 
 #. Set your new version number and release candidate::
 
-        new_version=0.9.5
+        new_version=0.9.6
         rc=rc1
 
    and then tag the release candidate with the new version number prefixed by
