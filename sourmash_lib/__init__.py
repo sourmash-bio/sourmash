@@ -7,6 +7,7 @@ import sys
 import argparse
 import itertools
 import string
+from _minhash import MinHash
 
 class Estimators(object):
     """
