@@ -21,7 +21,7 @@ sourmash clone directory, you can do::
 
     python -m virtualenv dev
     . dev/bin/activate
-    make clean all test
+    make clean test
 
 Automated tests and code coverage calculation
 ---------------------------------------------
