@@ -16,6 +16,7 @@ dist: FORCE
 	$(PYTHON) setup.py sdist
 
 test: all
+	pip install '.[test]'
 	$(PYTHON) -m pytest
 
 doc: .PHONY
