@@ -97,7 +97,8 @@ Testing a release
         cd ../../testenv4
         source bin/activate
         pip install -U setuptools==3.4.1
-        pip install screed pytest numpy matplotlib scipy
+        # install as much as possible from non-test server!
+        pip install screed pytest numpy matplotlib scipy PyYAML
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
         py.test --pyargs sourmash_lib
 
@@ -114,7 +115,7 @@ so:
 #. Create the final tag and publish the new release on PyPI (requires an
    authorized account).::
 
-        cd ../../sourmash
+        cd ../sourmash
         git tag v${new_version}
         python setup.py register sdist upload
 
@@ -134,6 +135,7 @@ so:
         source bin/activate
         pip install -U setuptools==3.4.1 wheel
         pip install --no-clean sourmash==${new_version}
+        cd ../
         python ./setup.py bdist_wheel upload
 
 To test on a blank Ubuntu system
