@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="0.9.6"
+VERSION="1.0"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
@@ -25,10 +25,7 @@ CLASSIFIERS = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
-if "-rc" in VERSION:
-    CLASSIFIERS.append("Development Status :: 4 - Beta")
-else:
-    CLASSIFIERS.append("Development Status :: 5 - Production/Stable")
+CLASSIFIERS.append("Development Status :: 5 - Production/Stable")
 
 if sys.platform == 'darwin':              # Mac OS X?
     # force 64bit only builds

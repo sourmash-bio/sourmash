@@ -11,7 +11,7 @@ authors:
  - name: Luiz Irber
    orcid: 0000-0003-4371-9659
    affiliation: University of California, Davis
-date: 6 June 2016
+date: 13 Sep 2016
 bibliography: paper.bib
 ---
 
