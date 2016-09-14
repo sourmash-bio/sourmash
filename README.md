@@ -3,7 +3,7 @@
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
-[![DOI](https://zenodo.org/badge/22555/dib-lab/sourmash.svg)](https://zenodo.org/badge/latestdoi/22555/dib-lab/sourmash)
+[![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 
 Compute MinHash signatures for DNA sequences.
 
@@ -16,6 +16,8 @@ Usage:
 We have demo notebooks on binder that you can interact with:
 
 [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
+
+Sourmash is [published on JOSS](http://dx.doi.org/10.21105/joss.00027).
 
 ----
 
