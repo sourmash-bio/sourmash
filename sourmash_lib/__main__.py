@@ -319,7 +319,7 @@ Commands can be:
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-        args = parser.parse_args(sys.argv[2:])
+        args = parser.parse_args(args)
 
         for filename in args.filenames:
             data = open(filename).read()
@@ -332,6 +332,50 @@ Commands can be:
             fp = open(filename + '.dump.txt', 'w')
             fp.write(" ".join((map(str, s.estimator.mh.get_mins()))))
             fp.close()
+
+    def sbt_index(self, args):
+        from sbt import SBT, GraphFactory
+        from sbtmh import search_minhashes, SigLeaf
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sbt_name')
+        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        args = parser.parse_args(args)
+
+        factory = GraphFactory(1, 1e5, 4)
+        tree = SBT(factory)
+
+        print(args.sbt_name)
+        print('loading {} signatures into SBT'.format(len(args.signatures)))
+        for f in args.signatures:
+            with open(f, 'r') as fp:
+                s = sig.load_signatures(fp, select_ksize=args.ksize)
+            ss = s[0]
+            leaf = SigLeaf(ss.md5sum(), ss)
+            tree.add_node(leaf)
+
+        print('loaded; saving SBT under "{}".'.format(args.sbt_name))
+        tree.save(args.sbt_name)
+
+    def sbt_search(self, args):
+        from sbt import SBT, GraphFactory
+        from sbtmh import search_minhashes, SigLeaf
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sbt_name')
+        parser.add_argument('query')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--threshold', default=0.08, type=float)
+        args = parser.parse_args(args)
+
+        tree = SBT.load(args.sbt_name + '.sbt.json', leaf_loader=SigLeaf.load)
+        with open(args.query, 'r') as data:
+            s = sig.load_signatures(data, select_ksize=args.ksize)
+        ss = s[0]
+
+        for leaf in tree.find(search_minhashes, ss, args.threshold):
+            print(leaf.data.d['filename'], ss.similarity(leaf.data))
 
 
 def main():
