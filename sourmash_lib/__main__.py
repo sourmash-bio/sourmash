@@ -374,8 +374,13 @@ Commands can be:
             s = sig.load_signatures(data, select_ksize=args.ksize)
         ss = s[0]
 
+        results = []
         for leaf in tree.find(search_minhashes, ss, args.threshold):
-            print(leaf.data.d['filename'], ss.similarity(leaf.data))
+            results.append((ss.similarity(leaf.data), leaf.data))
+
+        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+        for (similarity, ss) in results:
+            print('{:.2f} {}'.format(similarity, ss.d['filename']))
 
 
 def main():
