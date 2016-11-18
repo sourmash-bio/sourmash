@@ -74,6 +74,16 @@ def GraphFactory(ksize, starting_size, n_tables):
     return create_nodegraph
 
 
+class LazyNode(object):
+    def __init__(self, load_fn, *args):
+        self.load_fn = load_fn
+        self.args = args
+
+    def do_load(self):
+        sbt_node = self.load_fn(*self.args)
+        return sbt_node
+
+
 class SBT(object):
 
     def __init__(self, factory, d=2):
@@ -133,6 +143,7 @@ class SBT(object):
         while queue:
             node_p = queue.pop(0)
             node_g = self.nodes[node_p]
+            node_g = node_g.do_load()
             if node_p not in visited and node_g is not None:
                 visited.add(node_p)
                 if search_fn(node_g, *args):
@@ -190,29 +201,31 @@ class SBT(object):
             leaf_loader = Leaf.load
 
         with open(sbt_fn) as fp:
-            nodes = json.load(fp)
+            jnodes = json.load(fp)
 
-        if nodes[0] is None:
+        if jnodes[0] is None:
             # TODO error!
             raise ValueError("Empty tree!")
 
         sbt_nodes = []
 
-        ksize, tablesize, ntables, _, _, _ = khmer.extract_nodegraph_info(nodes[0]['filename'])
+        ksize, tablesize, ntables, _, _, _ = khmer.extract_nodegraph_info(jnodes[0]['filename'])
         factory = GraphFactory(ksize, tablesize, ntables)
 
-        for node in nodes:
-            if node is None:
+        for jnode in jnodes:
+            if jnode is None:
                 sbt_nodes.append(None)
                 continue
 
-            if 'internal' in node['filename']:
-                node['factory'] = factory
-                new_node = Node.load(node)
+            if 'internal' in jnode['filename']:
+                jnode['factory'] = factory
+                #sbt_node = Node.load(jnode)
+                sbt_node = LazyNode(Node.load, jnode)
             else:
-                new_node = leaf_loader(node)
+                #sbt_node = leaf_loader(jnode)
+                sbt_node = LazyNode(leaf_loader, jnode)
 
-            sbt_nodes.append(new_node)
+            sbt_nodes.append(sbt_node)
 
         tree = SBT(factory)
         tree.nodes = sbt_nodes
