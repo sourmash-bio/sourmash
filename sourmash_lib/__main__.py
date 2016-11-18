@@ -377,10 +377,56 @@ Commands can be:
         results = []
         for leaf in tree.find(search_minhashes, ss, args.threshold):
             results.append((ss.similarity(leaf.data), leaf.data))
+            #results.append((leaf.data.similarity(ss), leaf.data))
 
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
         for (similarity, ss) in results:
             print('{:.2f} {}'.format(similarity, ss.d['filename']))
+
+
+    def sbt_gather(self, args):
+        from sourmash_lib.sbt import SBT, GraphFactory
+        from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sbt_name')
+        parser.add_argument('query')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--threshold', default=0.08, type=float)
+        args = parser.parse_args(args)
+
+        tree = SBT.load(args.sbt_name + '.sbt.json', leaf_loader=SigLeaf.load)
+        with open(args.query, 'r') as data:
+            s = sig.load_signatures(data, select_ksize=args.ksize)
+        ss = s[0]
+
+        found = []
+        while 1:
+
+            results = []
+            for leaf in tree.find(search_minhashes, ss, args.threshold):
+                #results.append((ss.similarity(leaf.data), leaf.data))
+                results.append((leaf.data.similarity(ss), leaf.data))
+
+            results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+            if not len(results):
+                print('nothing found')
+                break
+            best_sim, best_ss = results[0]
+            print('found: {:.2f} {}'.format(best_sim, best_ss.d['filename']))
+            found.append((best_sim, best_ss))
+
+            new_mins = set(ss.estimator.mh.get_mins())
+            found_mins = best_ss.estimator.mh.get_mins()
+            new_mins -= set(found_mins)
+
+            e = sourmash_lib.Estimators(ksize=31, n=len(new_mins))
+            for m in new_mins:
+                e.mh.add_hash(m)
+            new_ss = sig.SourmashSignature('foo', e)
+            ss = new_ss
+
+        print(len(found))
 
 
 def main():
