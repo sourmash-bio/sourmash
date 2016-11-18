@@ -334,8 +334,8 @@ Commands can be:
             fp.close()
 
     def sbt_index(self, args):
-        from sbt import SBT, GraphFactory
-        from sbtmh import search_minhashes, SigLeaf
+        from sourmash_lib.sbt import SBT, GraphFactory
+        from sourmash_lib.sbtmh import search_minhashes, SigLeaf
 
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
@@ -359,8 +359,8 @@ Commands can be:
         tree.save(args.sbt_name)
 
     def sbt_search(self, args):
-        from sbt import SBT, GraphFactory
-        from sbtmh import search_minhashes, SigLeaf
+        from sourmash_lib.sbt import SBT, GraphFactory
+        from sourmash_lib.sbtmh import search_minhashes, SigLeaf
 
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
