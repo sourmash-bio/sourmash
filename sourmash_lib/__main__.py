@@ -341,14 +341,25 @@ Commands can be:
         parser.add_argument('sbt_name')
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--traverse-directory', action='store_true')
         args = parser.parse_args(args)
 
         factory = GraphFactory(1, 1e5, 4)
         tree = SBT(factory)
 
-        print(args.sbt_name)
-        print('loading {} signatures into SBT'.format(len(args.signatures)))
-        for f in args.signatures:
+        inp_files = list(args.signatures)
+
+        if args.traverse_directory:
+            inp_files = []
+            for dirname in args.signatures:
+                for root, dirs, files in os.walk(dirname):
+                    for name in files:
+                        if name.endswith('.sig'):
+                            fullname = os.path.join(root, name)
+                            inp_files.append(fullname)
+
+        print('loading {} signatures into SBT'.format(len(inp_files)))
+        for f in inp_files:
             with open(f, 'r') as fp:
                 s = sig.load_signatures(fp, select_ksize=args.ksize)
             ss = s[0]
