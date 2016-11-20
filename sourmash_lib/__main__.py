@@ -92,7 +92,13 @@ Commands can be:
                   file=sys.stderr)
 
     def compute(self, args):
-        "Compute the signature for one or more files."
+        """Compute the signature for one or more files.
+
+        Use cases:
+            sourmash compute multiseq.fa              => multiseq.fa.sig, etc.
+            sourmash compute genome.fa --singleton    => genome.fa.sig
+            sourmash compute file1.fa file2.fa --name => specify w/-o
+        """
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
         parser.add_argument('--protein', action='store_true')
@@ -103,9 +109,12 @@ Commands can be:
         parser.add_argument('-n', '--num-hashes', type=int,
                             default=DEFAULT_N,
                             help='number of hashes to use in each sketch')
+        parser.add_argument('--check-sequence', action='store_true')
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--email', type=str, default='')
+        parser.add_argument('--singleton', action='store_true')
+        parser.add_argument('--name', type=str, default='')
         args = parser.parse_args(args)
 
         print('computing signatures for files:', args.filenames,
@@ -119,47 +128,81 @@ Commands can be:
         else:
             ksizes = [int(ksizes)]
 
-        print('Computing signature for ksizes: %s' % str(ksizes),
-              file=sys.stderr)
 
-        # for each file, load & compute sketch.
-        for filename in args.filenames:
-            sigfile = os.path.basename(filename) + '.sig'
-            if not args.output and os.path.exists(sigfile) and not args.force:
-                print('skipping', filename, '- already done',
-                      file=sys.stderr)
-                continue
-
+        def make_estimators():
             # one estimator for each ksize
             Elist = []
             for k in ksizes:
                 E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                             protein=args.protein)
                 Elist.append(E)
+            return Elist
 
-            # consume & calculate signatures
-            print('... reading sequences from', filename, file=sys.stderr)
-            for n, record in enumerate(screed.open(filename)):
-                if n % 10000 == 0 and n:
-                    print('...', filename, n, file=sys.stderr)
+        def add_seq(Elist, seq, input_is_protein, check_sequence):
+            for E in Elist:
+                if input_is_protein:
+                    E.mh.add_protein(seq)
+                else:
+                    E.add_sequence(seq, not check_sequence)
 
-                s = record.sequence
-                for E in Elist:
-                    if args.input_is_protein:
-                        E.mh.add_protein(s)
-                    else:
-                        E.add_sequence(s, args.force)
+        def build_siglist(email, Elist, filename, name=None):
+            return [ sig.SourmashSignature(email, E, filename=filename,
+                                           name=name) for E in Elist ]
 
-            # convert into a signature
-            siglist = [ sig.SourmashSignature(args.email, E,
-                        filename=filename) for E in Elist ]
-
+        def save_siglist(siglist, output_fp, filename):
             # save!
-            if args.output:
+            if output_fp:
                 data = sig.save_signatures(siglist, args.output)
             else:
                 with open(sigfile, 'w') as fp:
-                    data = sig.save_signatures(siglist, fp)
+                   data = sig.save_signatures(siglist, fp)
+
+        print('Computing signature for ksizes: %s' % str(ksizes),
+              file=sys.stderr)
+
+        if not args.name:
+            for filename in args.filenames:
+                sigfile = os.path.basename(filename) + '.sig'
+                if not args.output and os.path.exists(sigfile) and not \
+                    args.force:
+                    print('skipping', filename, '- already done',
+                          file=sys.stderr)
+                    continue
+
+                if args.singleton:
+                    siglist = []
+                    for n, record in enumerate(screed.open(filename)):
+                        # make estimators for each sequence
+                        Elist = make_estimators()
+                        add_seq(Elist, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+
+                        siglist += build_siglist(args.email, Elist, filename,
+                                                 name=record.name)
+                    print('calculated {} signatures for {} sequences in {}'.\
+                              format(len(siglist), n + 1, filename))
+                else:
+                    # make estimators for the whole file
+                    Elist = make_estimators()
+                    
+                    # consume & calculate signatures
+                    print('... reading sequences from', filename,
+                          file=sys.stderr)
+                    for n, record in enumerate(screed.open(filename)):
+                        if n % 10000 == 0 and n:
+                            print('...', filename, n, file=sys.stderr)
+
+                        s = record.sequence
+                        add_seq(Elist, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+
+                    siglist = build_siglist(args.email, Elist, filename)
+                    print('calculated {} signatures for {} sequences in {}'.\
+                              format(len(siglist), n + 1, filename))
+                # at end, save!
+                save_siglist(siglist, args.output, sigfile)
+        else:
+            pass
 
     def compare(self, args):
         "Compare multiple signature files and create a distance matrix."
