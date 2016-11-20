@@ -128,6 +128,9 @@ Commands can be:
         else:
             ksizes = [int(ksizes)]
 
+        if args.name and not args.output:
+            print("must specify -o with --name", file=sys.stderr)
+            sys.exit(-1)
 
         def make_estimators():
             # one estimator for each ksize
