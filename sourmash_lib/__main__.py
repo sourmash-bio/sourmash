@@ -461,6 +461,7 @@ Commands can be:
         with open(args.query, 'r') as data:
             s = sig.load_signatures(data, select_ksize=args.ksize)
         ss = s[0]
+        orig_ss = ss
 
         found = []
         while 1:
@@ -472,7 +473,7 @@ Commands can be:
 
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             if not len(results):
-                print('nothing found')
+                print('done')
                 break
             best_sim, best_ss = results[0]
             print('found: {:.2f} {}'.format(best_sim, best_ss.name()))
