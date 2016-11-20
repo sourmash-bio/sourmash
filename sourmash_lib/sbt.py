@@ -288,6 +288,9 @@ class Node(object):
         new_node.data = khmer.load_nodegraph(info['filename'])
         return new_node
 
+    def do_load(self):                    # for lazy loading, quickfix
+        return self
+
 
 class Leaf(object):
     def __init__(self, metadata, data, name=None):
@@ -296,6 +299,9 @@ class Leaf(object):
             name = metadata
         self.name = name
         self.data = data
+
+    def do_load(self):                    # for lazy loading, quickfix
+        return self
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
