@@ -404,15 +404,20 @@ Commands can be:
                             fullname = os.path.join(root, name)
                             inp_files.append(fullname)
 
-        print('loading {} signatures into SBT'.format(len(inp_files)))
+        print('loading {} files into SBT'.format(len(inp_files)))
+
+        n = 0
         for f in inp_files:
             with open(f, 'r') as fp:
                 s = sig.load_signatures(fp, select_ksize=args.ksize)
-            ss = s[0]
-            leaf = SigLeaf(ss.md5sum(), ss)
-            tree.add_node(leaf)
 
-        print('loaded; saving SBT under "{}".'.format(args.sbt_name))
+            for ss in s:
+                leaf = SigLeaf(ss.md5sum(), ss)
+                tree.add_node(leaf)
+                n += 1
+
+        print('loaded {} sigs; saving SBT under "{}".'.format(n,
+                                                              args.sbt_name))
         tree.save(args.sbt_name)
 
     def sbt_search(self, args):
@@ -470,7 +475,7 @@ Commands can be:
                 print('nothing found')
                 break
             best_sim, best_ss = results[0]
-            print('found: {:.2f} {}'.format(best_sim, best_ss.d['filename']))
+            print('found: {:.2f} {}'.format(best_sim, best_ss.name()))
             found.append((best_sim, best_ss))
 
             new_mins = set(ss.estimator.mh.get_mins())
