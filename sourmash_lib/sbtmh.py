@@ -46,7 +46,7 @@ def search_minhashes(node, sig, threshold, results=None):
 def test_tree_save_load():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
-    for f in glob("urchin/*.sig"):
+    for f in glob("demo/*.sig"):
         with open(f, 'r') as data:
             sig = signature.load_signatures(data)
         leaf = SigLeaf(os.path.basename(f), sig[0])
@@ -58,9 +58,9 @@ def test_tree_save_load():
     old_result = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
     print(*old_result, sep='\n')
 
-    tree.save('urchin')
+    tree.save('demo')
 
-    tree = SBT.load('urchin.sbt.json', leaf_loader=SigLeaf.load)
+    tree = SBT.load('demo.sbt.json', leaf_loader=SigLeaf.load)
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
@@ -77,7 +77,7 @@ def test_binary_nary_tree():
     trees[5] = SBT(factory, d=5)
     trees[10] = SBT(factory, d=10)
 
-    for f in glob("urchin/*.sig"):
+    for f in glob("demo/*.sig"):
         with open(f, 'r') as data:
             sig = signature.load_signatures(data)
         leaf = SigLeaf(os.path.basename(f), sig[0])

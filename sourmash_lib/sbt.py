@@ -143,8 +143,11 @@ class SBT(object):
         while queue:
             node_p = queue.pop(0)
             node_g = self.nodes[node_p]
+            if node_g is None:
+                continue
+
             node_g = node_g.do_load()
-            if node_p not in visited and node_g is not None:
+            if node_p not in visited:
                 visited.add(node_p)
                 if search_fn(node_g, *args):
                     if isinstance(node_g, Leaf):
