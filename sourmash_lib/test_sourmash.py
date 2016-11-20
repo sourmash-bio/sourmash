@@ -22,7 +22,29 @@ def test_do_sourmash_compute():
         status, out, err = utils.runscript('sourmash',
                                            ['compute', testdata1],
                                            in_directory=location)
-        assert os.path.exists(os.path.join(location, 'short.fa.sig'))
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile, 'rt') as fp:
+            sig = signature.load_signatures(fp)[0]
+        assert sig.name().endswith('short.fa')
+
+
+def test_do_sourmash_compute_singleton():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--singleton',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile, 'rt') as fp:
+            sig = signature.load_signatures(fp)[0]
+        assert sig.name().endswith('shortName')
 
 
 def test_do_sourmash_compute_multik():
