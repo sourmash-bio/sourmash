@@ -38,7 +38,7 @@ def search_minhashes(node, sig, threshold, results=None):
     if results is not None:
         results[node.name] = matches / len(mins)
 
-    if matches / len(mins) >= threshold:
+    if len(mins) and matches / len(mins) >= threshold:
         return 1
     return 0
 
