@@ -152,12 +152,14 @@ Commands can be:
             return [ sig.SourmashSignature(email, E, filename=filename,
                                            name=name) for E in Elist ]
 
-        def save_siglist(siglist, output_fp, filename):
+        def save_siglist(siglist, output_fp, filename=None):
             # save!
             if output_fp:
                 data = sig.save_signatures(siglist, args.output)
             else:
-                with open(sigfile, 'w') as fp:
+                if filename is None:
+                    raise Exception("internal error, filename is None")
+                with open(filename, 'w') as fp:
                    data = sig.save_signatures(siglist, fp)
 
         print('Computing signature for ksizes: %s' % str(ksizes),
@@ -204,8 +206,28 @@ Commands can be:
                               format(len(siglist), n + 1, filename))
                 # at end, save!
                 save_siglist(siglist, args.output, sigfile)
-        else:
-            pass
+        else:                             # single name specified - combine all
+            # make estimators for the whole file
+            Elist = make_estimators()
+
+            for filename in args.filenames:
+                # consume & calculate signatures
+                print('... reading sequences from', filename,
+                      file=sys.stderr)
+                for n, record in enumerate(screed.open(filename)):
+                    if n % 10000 == 0 and n:
+                        print('...', filename, n, file=sys.stderr)
+
+                    s = record.sequence
+                    add_seq(Elist, record.sequence,
+                            args.input_is_protein, args.check_sequence)
+
+            siglist = build_siglist(args.email, Elist, filename,
+                                    name=args.name)
+            print('calculated {} signatures for {} sequences taken from {}'.\
+                   format(len(siglist), n + 1, " ".join(args.filenames)))
+            # at end, save!
+            save_siglist(siglist, args.output)
 
     def compare(self, args):
         "Compare multiple signature files and create a distance matrix."
