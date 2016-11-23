@@ -465,7 +465,7 @@ Commands can be:
 
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
         for (similarity, ss) in results:
-            print('{:.2f} {}'.format(similarity, ss.d['filename']))
+            print('{:.2f} {}'.format(similarity, ss.name()))
 
 
     def sbt_gather(self, args):
@@ -485,6 +485,7 @@ Commands can be:
         ss = s[0]
         orig_ss = ss
 
+        sum_found = 0.
         found = []
         while 1:
 
@@ -493,14 +494,20 @@ Commands can be:
                 #results.append((ss.similarity(leaf.data), leaf.data))
                 results.append((leaf.data.similarity(ss), leaf.data))
 
-            results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             if not len(results):
                 print('done')
                 break
+
+            # take the best result
+            results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_sim, best_ss = results[0]
+
+            # print interim & save
             print('found: {:.2f} {}'.format(best_sim, best_ss.name()))
             found.append((best_sim, best_ss))
+            sum_found += best_sim
 
+            # subtract found hashes from search hashes, construct new search
             new_mins = set(ss.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
             new_mins -= set(found_mins)
@@ -512,6 +519,9 @@ Commands can be:
             ss = new_ss
 
         print(len(found))
+
+        for (similarity, ss) in found:
+            print("{:.2f} {}".format(similarity / sum_found, ss.name()))
 
 
 def main():
