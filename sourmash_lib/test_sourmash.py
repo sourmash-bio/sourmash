@@ -47,6 +47,33 @@ def test_do_sourmash_compute_singleton():
         assert sig.name().endswith('shortName')
 
 
+def test_do_sourmash_compute_name():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1, '-o', 'foo.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'foo.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile, 'rt') as fp:
+            sig = signature.load_signatures(fp)[0]
+        assert sig.name() == 'foo'
+
+
+def test_do_sourmash_compute_name_fail_no_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
+
 def test_do_sourmash_compute_multik():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
