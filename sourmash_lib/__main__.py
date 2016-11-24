@@ -47,6 +47,7 @@ Commands can be:
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
         parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('-n', '--num-results', default=3, type=int)
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
         parser.add_argument('-f', '--force', action='store_true')
         args = parser.parse_args(args)
@@ -72,6 +73,7 @@ Commands can be:
                 open(filename, 'r'), select_ksize=args.ksize)
             for x in sl:
                 against.append((x, filename))
+        print('loaded {} signatures total.'.format(len(against)))
 
         # compute query x db
         distances = []
@@ -84,7 +86,7 @@ Commands can be:
         if distances:
             distances.sort(reverse=True, key = lambda x: x[0])
             print('%d matches:' % len(distances))
-            for distance, match, filename in distances[:3]:
+            for distance, match, filename in distances[:args.num_results]:
                 print('\t', match.name(), '\t', "%.3f" % distance,
                       '\t', filename)
         else:
@@ -218,7 +220,6 @@ Commands can be:
                     if n % 10000 == 0 and n:
                         print('...', filename, n, file=sys.stderr)
 
-                    s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
@@ -491,8 +492,8 @@ Commands can be:
 
             results = []
             for leaf in tree.find(search_minhashes, ss, args.threshold):
-                #results.append((ss.similarity(leaf.data), leaf.data))
-                results.append((leaf.data.similarity(ss), leaf.data))
+                results.append((orig_ss.similarity(leaf.data), leaf.data))
+                #results.append((leaf.data.similarity(ss), leaf.data))
 
             if not len(results):
                 print('done')
