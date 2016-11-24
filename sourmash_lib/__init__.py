@@ -8,6 +8,14 @@ import argparse
 import itertools
 import string
 from ._minhash import MinHash
+import re
+
+khmer_available = False
+try:
+    import khmer
+    khmer_available = True
+except ImportError:
+    pass
 
 class Estimators(object):
     """
@@ -23,7 +31,8 @@ class Estimators(object):
     ``Estimator`` supports the pickle protocol.
     """
 
-    def __init__(self, n=None, ksize=None, protein=False):
+    def __init__(self, n=None, ksize=None, protein=False,
+                 with_cardinality=False):
         "Create a new MinHash estimator with size n and k-mer size ksize."
         from . import _minhash
 
@@ -38,23 +47,32 @@ class Estimators(object):
         if protein:
             self.is_protein = True
 
+        self.hll = None
+        if with_cardinality:
+            if protein:
+                raise Exception("Cannot do cardinality counting with protein")
+            if not khmer_available:
+                raise Exception("Error: to do cardinality counting, " + \
+                                "we require the khmer package.")
+            self.hll = khmer.HLLCounter()
+
         # initialize sketch to size n
         self.mh = _minhash.MinHash(n, ksize, protein)
 
     def __getstate__(self):             # enable pickling
-        return (self.num, self.ksize, self.is_protein, self.mh.get_mins())
+        return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
+                self.hll)
 
     def __setstate__(self, tup):
         from . import _minhash
 
-        (self.num, self.ksize, self.is_protein, mins) = tup
+        (self.num, self.ksize, self.is_protein, mins, hll) = tup
         self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein)
         for m in mins:
             self.mh.add_hash(m)
+        self.hll = hll
 
     def __eq__(self, other):
-        print(self.__getstate__())
-        print(other.__getstate__())
         return self.__getstate__() == other.__getstate__()
 
     def add(self, kmer):
@@ -64,6 +82,11 @@ class Estimators(object):
     def add_sequence(self, seq, force=False):
         "Sanitize and add a sequence to the sketch."
         self.mh.add_sequence(seq, force)
+        if self.hll is not None:
+            # @CTB hack to deal with HLL behavior around non-ACGTN.
+            if force:
+                seq = re.sub('[^ACGT]', 'A', seq)
+            self.hll.consume_string(seq)
 
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."

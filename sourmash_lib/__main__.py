@@ -117,6 +117,7 @@ Commands can be:
         parser.add_argument('--email', type=str, default='')
         parser.add_argument('--singleton', action='store_true')
         parser.add_argument('--name', type=str, default='')
+        parser.add_argument('--with-cardinality', action='store_true')
         args = parser.parse_args(args)
 
         print('computing signatures for files:', args.filenames,
@@ -139,7 +140,8 @@ Commands can be:
             Elist = []
             for k in ksizes:
                 E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                            protein=args.protein)
+                                            protein=args.protein,
+                                        with_cardinality=args.with_cardinality)
                 Elist.append(E)
             return Elist
 

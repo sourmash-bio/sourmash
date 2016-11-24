@@ -41,7 +41,6 @@ class SourmashSignature(object):
 
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
-        # @CTB convert to printable or something.
         if 'name' in self.d:
             return self.d.get('name')
         elif 'filename' in self.d:
@@ -59,6 +58,8 @@ class SourmashSignature(object):
         sketch['num'] = len(estimator.mh)
         sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
+        if estimator.hll is not None:
+            sketch['cardinality'] = estimator.hll.estimate_cardinality()
         e['signature'] = sketch
 
         return self.d.get('email'), self.d.get('name'), \
@@ -128,6 +129,8 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         sig.d['name'] = name
     if filename:
         sig.d['filename'] = filename
+    if 'cardinality' in sketch:
+        sig.d['cardinality'] = int(sketch['cardinality'])
 
     return sig
 
