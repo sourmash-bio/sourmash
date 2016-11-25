@@ -112,6 +112,27 @@ def test_do_sourmash_compute_multik_outfile():
             assert 31 in ksizes
 
 
+def test_do_sourmash_compute_with_cardinality():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--with-cardinality',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = signature.load_signatures(sigdata)
+            assert len(siglist) == 2
+
+            cards = [ x.d['cardinality'] for x in siglist ]
+            assert len(cards) == 2
+            assert set(cards) == set([ 966, 986 ])
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
