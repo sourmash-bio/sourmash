@@ -480,6 +480,8 @@ Commands can be:
         parser.add_argument('query')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+        parser.add_argument('--csv', type=argparse.FileType('wt'))
         args = parser.parse_args(args)
 
         tree = SBT.load(args.sbt_name + '.sbt.json', leaf_loader=SigLeaf.load)
@@ -494,21 +496,26 @@ Commands can be:
 
             results = []
             for leaf in tree.find(search_minhashes, ss, args.threshold):
-                results.append((orig_ss.similarity(leaf.data), leaf.data))
+                results.append((ss.similarity(leaf.data), leaf.data))
                 #results.append((leaf.data.similarity(ss), leaf.data))
 
             if not len(results):
-                print('done')
                 break
 
             # take the best result
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_sim, best_ss = results[0]
 
+            # adjust by size of leaf (kmer cardinality of original genome)
+            leaf_kmers = best_ss.estimator.hll.estimate_cardinality()
+            query_kmers = orig_ss.estimator.hll.estimate_cardinality()
+            sim = best_ss.similarity(orig_ss)
+            f_of_total = leaf_kmers / query_kmers * sim
+
             # print interim & save
-            print('found: {:.2f} {}'.format(best_sim, best_ss.name()))
-            found.append((best_sim, best_ss))
-            sum_found += best_sim
+            print('found: {:.2f} {}'.format(f_of_total, best_ss.name()))
+            found.append((f_of_total, best_ss, sim))
+            sum_found += f_of_total
 
             # subtract found hashes from search hashes, construct new search
             new_mins = set(ss.estimator.mh.get_mins())
@@ -521,10 +528,32 @@ Commands can be:
             new_ss = sig.SourmashSignature('foo', e)
             ss = new_ss
 
-        print(len(found))
+        print('found {}, total fraction {:.3f}'.format(len(found), sum_found))
+        print('')
 
-        for (similarity, ss) in found:
-            print("{:.2f} {}".format(similarity / sum_found, ss.name()))
+        found.sort()
+        found.reverse()
+
+        print('Composition:')
+        for (frac, leaf_sketch, sim) in found:
+            print('{:.2f} {}'.format(frac, leaf_sketch.name()))
+
+        if args.output:
+            print('Composition:', file=args.output)
+            for (frac, leaf_sketch, sim) in found:
+                print('{:.2f} {}'.format(frac, leaf_sketch.name()),
+                      file=args.output)
+
+        if args.csv:
+            fieldnames = ['fraction', 'name', 'similarity', 'sketch_kmers']
+            w = csv.DictWriter(args.csv, fieldnames=fieldnames)
+
+            w.writeheader()
+            for (frac, leaf_sketch, sim) in found:
+                cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+                w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
+                                similarity=sim,
+                                sketch_kmers=cardinality))
 
 
 def main():
