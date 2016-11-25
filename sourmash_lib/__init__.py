@@ -54,7 +54,7 @@ class Estimators(object):
             if not khmer_available:
                 raise Exception("Error: to do cardinality counting, " + \
                                 "we require the khmer package.")
-            self.hll = khmer.HLLCounter()
+            self.hll = khmer.HLLCounter(.01, ksize)
 
         # initialize sketch to size n
         self.mh = _minhash.MinHash(n, ksize, protein)
