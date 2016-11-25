@@ -9,6 +9,20 @@ import sourmash_lib
 SIGNATURE_VERSION=0.4
 
 
+class FakeHLL(object):
+    def __init__(self, cardinality):
+        self.cardinality = int(cardinality)
+
+    def estimate_cardinality(self):
+        return self.cardinality
+
+    def consume_string(self):
+        raise Exception("cannot add to this HLL")
+
+    def __eq__(self, other):
+        return self.cardinality == other.cardinality
+
+
 class SourmashSignature(object):
     "Main class for signature information."
 
@@ -117,6 +131,8 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     e = sourmash_lib.Estimators(ksize=ksize, n=n)
     for m in mins:
         e.mh.add_hash(m)
+    if 'cardinality' in sketch:
+        e.hll = FakeHLL(int(sketch['cardinality']))
 
     sig = SourmashSignature(email, e)
 
@@ -129,8 +145,6 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         sig.d['name'] = name
     if filename:
         sig.d['filename'] = filename
-    if 'cardinality' in sketch:
-        sig.d['cardinality'] = int(sketch['cardinality'])
 
     return sig
 

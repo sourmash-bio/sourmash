@@ -128,7 +128,7 @@ def test_do_sourmash_compute_with_cardinality():
             siglist = signature.load_signatures(sigdata)
             assert len(siglist) == 2
 
-            cards = [ x.d['cardinality'] for x in siglist ]
+            cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
             assert len(cards) == 2
             assert set(cards) == set([ 966, 986 ])
 
