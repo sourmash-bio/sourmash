@@ -117,6 +117,7 @@ Commands can be:
         parser.add_argument('--email', type=str, default='')
         parser.add_argument('--singleton', action='store_true')
         parser.add_argument('--name', type=str, default='')
+        parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
         args = parser.parse_args(args)
 
@@ -197,15 +198,19 @@ Commands can be:
                     # consume & calculate signatures
                     print('... reading sequences from', filename,
                           file=sys.stderr)
+                    name = None
                     for n, record in enumerate(screed.open(filename)):
-                        if n % 10000 == 0 and n:
-                            print('...', filename, n, file=sys.stderr)
+                        if n % 10000 == 0:
+                            if n:
+                                print('...', filename, n, file=sys.stderr)
+                            elif args.name_from_first:
+                                name = record.name
 
                         s = record.sequence
                         add_seq(Elist, record.sequence,
                                 args.input_is_protein, args.check_sequence)
 
-                    siglist = build_siglist(args.email, Elist, filename)
+                    siglist = build_siglist(args.email, Elist, filename, name)
                     print('calculated {} signatures for {} sequences in {}'.\
                               format(len(siglist), n + 1, filename))
                 # at end, save!
