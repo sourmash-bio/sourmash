@@ -199,10 +199,11 @@ class SBT(object):
         return fn
 
     @staticmethod
-    def load(sbt_fn, leaf_loader=None):
+    def load(sbt_name, leaf_loader=None):
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
+        sbt_fn = sbt_name + '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
 

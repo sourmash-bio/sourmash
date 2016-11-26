@@ -461,7 +461,7 @@ Commands can be:
         parser.add_argument('--threshold', default=0.08, type=float)
         args = parser.parse_args(args)
 
-        tree = SBT.load(args.sbt_name + '.sbt.json', leaf_loader=SigLeaf.load)
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         with open(args.query, 'r') as data:
             s = sig.load_signatures(data, select_ksize=args.ksize)
         ss = s[0]
@@ -489,7 +489,7 @@ Commands can be:
         parser.add_argument('--csv', type=argparse.FileType('wt'))
         args = parser.parse_args(args)
 
-        tree = SBT.load(args.sbt_name + '.sbt.json', leaf_loader=SigLeaf.load)
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         with open(args.query, 'r') as data:
             s = sig.load_signatures(data, select_ksize=args.ksize)
         ss = s[0]
