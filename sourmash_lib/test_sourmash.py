@@ -74,6 +74,22 @@ def test_do_sourmash_compute_name_fail_no_output():
         assert status == -1
 
 
+def test_do_sourmash_compute_name_from_first():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short3.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name-from-first',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short3.fa.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile, 'rt') as fp:
+            sig = signature.load_signatures(fp)[0]
+        assert sig.name() == 'firstname'
+
+
 def test_do_sourmash_compute_multik():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
