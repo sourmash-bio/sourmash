@@ -60,7 +60,7 @@ def test_tree_save_load():
 
     tree.save('demo')
 
-    tree = SBT.load('demo.sbt.json', leaf_loader=SigLeaf.load)
+    tree = SBT.load('demo', leaf_loader=SigLeaf.load)
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
