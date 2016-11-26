@@ -194,7 +194,7 @@ Commands can be:
                 else:
                     # make estimators for the whole file
                     Elist = make_estimators()
-                    
+
                     # consume & calculate signatures
                     print('... reading sequences from', filename,
                           file=sys.stderr)
