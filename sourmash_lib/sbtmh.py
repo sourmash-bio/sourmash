@@ -2,6 +2,7 @@ from glob import glob
 import os
 
 from sourmash_lib import signature
+from sourmash_lib import sourmash_tst_utils as utils
 from .sbt import SBT, GraphFactory, Leaf
 
 
@@ -58,16 +59,18 @@ def test_tree_save_load():
     old_result = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
     print(*old_result, sep='\n')
 
-    tree.save('demo')
+    with utils.TempDirectory() as location:
+        tree.save(os.path.join(location, 'demo'))
+        tree = SBT.load(os.path.join(location, 'demo'),
+                        leaf_loader=SigLeaf.load)
 
-    tree = SBT.load('demo', leaf_loader=SigLeaf.load)
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = [str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)]
+        print(*new_result, sep='\n')
 
-    print('*' * 60)
-    print("{}:".format(to_search.metadata))
-    new_result = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
-    print(*new_result, sep='\n')
-
-    assert old_result == new_result
+        assert old_result == new_result
 
 
 def test_binary_nary_tree():
