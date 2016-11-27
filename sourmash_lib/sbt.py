@@ -170,7 +170,9 @@ class SBT(object):
         return NodePos(cd, self.nodes[cd])
 
     def save(self, tag):
-        dirname = '.sbt.' + tag
+        basetag = os.path.basename(tag)
+        dirtag = os.path.dirname(tag)
+        dirname = os.path.join(dirtag, '.sbt.' + basetag)
 
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -181,9 +183,10 @@ class SBT(object):
                 structure.append(None)
                 continue
 
+            basename = os.path.basename(node.name)
             data = {
-                'filename': os.path.join('.sbt.' + tag,
-                                         '.'.join([tag, node.name, 'sbt'])),
+                'filename': os.path.join(dirtag, '.sbt.' + basetag,
+                                         '.'.join([basetag, basename, 'sbt'])),
                 'name': node.name
             }
             if isinstance(node, Leaf):
@@ -203,7 +206,9 @@ class SBT(object):
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
-        sbt_fn = sbt_name + '.sbt.json'
+        sbt_fn = sbt_name
+        if not sbt_fn.endswith('.sbt.json'):
+            sbt_fn = sbt_fn + '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
 
