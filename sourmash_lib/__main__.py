@@ -53,8 +53,7 @@ Commands can be:
         args = parser.parse_args(args)
 
         # get the query signature
-        sl = sig.load_signatures(
-            open(args.query, 'r'), select_ksize=args.ksize)
+        sl = sig.load_signatures(args.query, select_ksize=args.ksize)
         if len(sl) != 1:
             raise Exception("%d query signatures; need exactly one" % len(sl))
         query = sl[0]
@@ -69,8 +68,7 @@ Commands can be:
                       file=sys.stderr)
                 continue
 
-            sl = sig.load_signatures(
-                open(filename, 'r'), select_ksize=args.ksize)
+            sl = sig.load_signatures(filename, select_ksize=args.ksize)
             for x in sl:
                 against.append((x, filename))
         print('loaded {} signatures total.'.format(len(against)))
@@ -251,8 +249,7 @@ Commands can be:
         siglist = []
         for filename in args.signatures:
             print('loading', filename, file=sys.stderr)
-            data = open(filename).read()
-            loaded = sig.load_signatures(data, select_ksize=args.ksize)
+            loaded = sig.load_signatures(filename, select_ksize=args.ksize)
             if not loaded:
                 print('warning: no signatures loaded at given ksize from %s' %
                           filename, file=sys.stderr)
@@ -398,9 +395,8 @@ Commands can be:
         args = parser.parse_args(args)
 
         for filename in args.filenames:
-            data = open(filename).read()
             print('loading', filename)
-            siglist = sig.load_signatures(data, select_ksize=args.ksize)
+            siglist = sig.load_signatures(filename, select_ksize=args.ksize)
             assert len(siglist) == 1
 
             s = siglist[0]
@@ -438,8 +434,7 @@ Commands can be:
 
         n = 0
         for f in inp_files:
-            with open(f, 'r') as fp:
-                s = sig.load_signatures(fp, select_ksize=args.ksize)
+            s = sig.load_signatures(f, select_ksize=args.ksize)
 
             for ss in s:
                 leaf = SigLeaf(ss.md5sum(), ss)
@@ -462,8 +457,7 @@ Commands can be:
         args = parser.parse_args(args)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        with open(args.query, 'r') as data:
-            s = sig.load_signatures(data, select_ksize=args.ksize)
+        s = sig.load_signatures(args.query, select_ksize=args.ksize)
         ss = s[0]
 
         results = []
@@ -490,8 +484,7 @@ Commands can be:
         args = parser.parse_args(args)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        with open(args.query, 'r') as data:
-            s = sig.load_signatures(data, select_ksize=args.ksize)
+        s = sig.load_signatures(args.query, select_ksize=args.ksize)
         ss = s[0]
         orig_ss = ss
 

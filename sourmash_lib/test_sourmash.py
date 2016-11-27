@@ -26,8 +26,7 @@ def test_do_sourmash_compute():
         sigfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(sigfile)
 
-        with open(sigfile, 'rt') as fp:
-            sig = signature.load_signatures(fp)[0]
+        sig = signature.load_signatures(sigfile)[0]
         assert sig.name().endswith('short.fa')
 
 
@@ -42,8 +41,7 @@ def test_do_sourmash_compute_singleton():
         sigfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(sigfile)
 
-        with open(sigfile, 'rt') as fp:
-            sig = signature.load_signatures(fp)[0]
+        sig = signature.load_signatures(sigfile)[0]
         assert sig.name().endswith('shortName')
 
 
@@ -58,8 +56,7 @@ def test_do_sourmash_compute_name():
         sigfile = os.path.join(location, 'foo.sig')
         assert os.path.exists(sigfile)
 
-        with open(sigfile, 'rt') as fp:
-            sig = signature.load_signatures(fp)[0]
+        sig = signature.load_signatures(sigfile)[0]
         assert sig.name() == 'foo'
 
 
@@ -85,8 +82,7 @@ def test_do_sourmash_compute_name_from_first():
         sigfile = os.path.join(location, 'short3.fa.sig')
         assert os.path.exists(sigfile)
 
-        with open(sigfile, 'rt') as fp:
-            sig = signature.load_signatures(fp)[0]
+        sig = signature.load_signatures(sigfile)[0]
         assert sig.name() == 'firstname'
 
 
@@ -100,13 +96,11 @@ def test_do_sourmash_compute_multik():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 31 in ksizes
+        siglist = signature.load_signatures(outfile)
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 31 in ksizes
 
 
 def test_do_sourmash_compute_multik_outfile():
@@ -119,13 +113,11 @@ def test_do_sourmash_compute_multik_outfile():
                                            in_directory=location)
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 31 in ksizes
+        siglist = signature.load_signatures(outfile)
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 31 in ksizes
 
 
 def test_do_sourmash_compute_with_cardinality():
@@ -139,14 +131,12 @@ def test_do_sourmash_compute_with_cardinality():
                                             in_directory=location)
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
-            assert len(siglist) == 2
+        siglist = signature.load_signatures(outfile)
+        assert len(siglist) == 2
 
-            cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
-            assert len(cards) == 2
-            assert set(cards) == set([ 966, 986 ])
+        cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
+        assert len(cards) == 2
+        assert set(cards) == set([ 966, 986 ])
 
 
 def test_do_plot_comparison():
