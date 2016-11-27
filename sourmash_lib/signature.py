@@ -6,6 +6,10 @@ import yaml
 import hashlib
 import sourmash_lib
 
+import io
+import gzip
+import bz2file
+
 SIGNATURE_VERSION=0.4
 
 
@@ -85,11 +89,57 @@ class SourmashSignature(object):
     jaccard = similarity
 
 
+def _guess_open(filename):
+    """
+    Make a best-effort guess as to how to parse the given sequence file.
+
+    Handles '-' as shortcut for stdin.
+    Deals with .gz and .bz2 as well as plain text.
+    """
+    magic_dict = {
+        b"\x1f\x8b\x08": "gz",
+        b"\x42\x5a\x68": "bz2",
+    }  # Inspired by http://stackoverflow.com/a/13044946/1585509
+
+    if filename == '-':
+        filename = '/dev/stdin'
+
+    bufferedfile = io.open(file=filename, mode='rb', buffering=8192)
+    num_bytes_to_peek = max(len(x) for x in magic_dict)
+    file_start = bufferedfile.peek(num_bytes_to_peek)
+    compression = None
+    for magic, ftype in magic_dict.items():
+        if file_start.startswith(magic):
+            compression = ftype
+            break
+    if compression is 'bz2':
+        sigfile = bz2file.BZ2File(filename=bufferedfile)
+    elif compression is 'gz':
+        if not bufferedfile.seekable():
+            bufferedfile.close()
+            raise ValueError("gziped data not streamable, pipe through zcat \
+                            first")
+        sigfile = gzip.GzipFile(filename=filename)
+    else:
+        sigfile = bufferedfile
+
+    return sigfile
+
+
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     """Load a YAML string with signatures into classes.
 
     Returns list of SourmashSignature objects.
     """
+
+    # is it a data string?
+    if 'class: sourmash_signature' not in data:
+        try:                                  # is it a file handle?
+            data.read
+        except AttributeError:                # no - treat it like a filename.
+            data = _guess_open(data)
+
+    # at this point, whatever 'data' is, it should be loadable!
 
     # record header
     x = yaml.safe_load_all(data)
