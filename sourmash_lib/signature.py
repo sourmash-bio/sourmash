@@ -133,7 +133,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     """
 
     # is it a data string?
-    if 'class: sourmash_signature' not in data:
+    if hasattr(data, 'find') and data.find('class: sourmash_signature') == -1:
         try:                                  # is it a file handle?
             data.read
         except AttributeError:                # no - treat it like a filename.
