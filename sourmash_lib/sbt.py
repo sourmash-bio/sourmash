@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 A trial implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
@@ -119,7 +118,7 @@ class SBT(object):
             n = Node(self.factory, name="internal." + str(p.pos))
             self.nodes[p.pos] = n
 
-            c1, c2, *remainder = self.children(p.pos)
+            c1, c2 = self.children(p.pos)[:2]
 
             self.nodes[c1.pos] = p.node
             self.nodes[c2.pos] = node
