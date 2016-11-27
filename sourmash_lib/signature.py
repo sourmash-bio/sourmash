@@ -142,7 +142,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     # at this point, whatever 'data' is, it should be loadable!
 
     # record header
-    x = yaml.safe_load_all(data)
+    x = yaml.load_all(data)
     siglist = []
     for d in x:      # allow empty records <-> concatenation of signatures
         if not d:
