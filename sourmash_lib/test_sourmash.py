@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import glob
+import gzip
 
 from . import sourmash_tst_utils as utils
 try:
@@ -216,6 +217,31 @@ def test_sourmash_search():
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in out
+        assert '0.958' in out
+
+
+def test_sourmash_search_gzip():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        data = open(os.path.join(location, 'short.fa.sig'), 'rb').read()
+        with gzip.open(os.path.join(location, 'zzz.gz'), 'wb') as fp:
+            fp.write(data)
+
+        data = open(os.path.join(location, 'short2.fa.sig'), 'rb').read()
+        with gzip.open(os.path.join(location, 'yyy.gz'), 'wb') as fp:
+            fp.write(data)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'zzz.gz',
+                                            'yyy.gz'],
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
