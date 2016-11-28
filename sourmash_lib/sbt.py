@@ -170,8 +170,8 @@ class SBT(object):
 
     def save(self, tag):
         basetag = os.path.basename(tag)
-        dirtag = os.path.dirname(tag)
-        dirname = os.path.join(dirtag, '.sbt.' + basetag)
+        dirprefix = os.path.dirname(tag)
+        dirname = os.path.join(dirprefix, '.sbt.' + basetag)
 
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -184,14 +184,14 @@ class SBT(object):
 
             basename = os.path.basename(node.name)
             data = {
-                'filename': os.path.join(dirtag, '.sbt.' + basetag,
+                'filename': os.path.join('.sbt.' + basetag,
                                          '.'.join([basetag, basename, 'sbt'])),
                 'name': node.name
             }
             if isinstance(node, Leaf):
                 data['metadata'] = node.metadata
 
-            node.save(data['filename'])
+            node.save(os.path.join(dirprefix, data['filename']))
             structure.append(data)
 
         fn = tag + '.sbt.json'
@@ -202,13 +202,16 @@ class SBT(object):
 
     @staticmethod
     def load(sbt_name, leaf_loader=None):
+        dirname = os.path.dirname(sbt_name)
+        sbt_name = os.path.basename(sbt_name)
+
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
         sbt_fn = sbt_name
         if not sbt_fn.endswith('.sbt.json'):
             sbt_fn = sbt_fn + '.sbt.json'
-        with open(sbt_fn) as fp:
+        with open(os.path.join(dirname, sbt_fn)) as fp:
             jnodes = json.load(fp)
 
         if jnodes[0] is None:
@@ -217,7 +220,9 @@ class SBT(object):
 
         sbt_nodes = []
 
-        ksize, tablesize, ntables, _, _, _ = khmer.extract_nodegraph_info(jnodes[0]['filename'])
+        sample_bf = os.path.join(dirname, jnodes[0]['filename'])
+        ksize, tablesize, ntables, _, _, _ = \
+          khmer.extract_nodegraph_info(sample_bf)
         factory = GraphFactory(ksize, tablesize, ntables)
 
         for jnode in jnodes:
@@ -228,10 +233,10 @@ class SBT(object):
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
                 #sbt_node = Node.load(jnode)
-                sbt_node = LazyNode(Node.load, jnode)
+                sbt_node = LazyNode(Node.load, jnode, dirname)
             else:
                 #sbt_node = leaf_loader(jnode)
-                sbt_node = LazyNode(leaf_loader, jnode)
+                sbt_node = LazyNode(leaf_loader, jnode, dirname)
 
             sbt_nodes.append(sbt_node)
 
@@ -291,9 +296,11 @@ class Node(object):
         self.data.save(filename)
 
     @staticmethod
-    def load(info):
+    def load(info, dirname):
         new_node = Node(info['factory'], name=info['name'])
-        new_node.data = khmer.load_nodegraph(info['filename'])
+
+        filename = os.path.join(dirname, info['filename'])
+        new_node.data = khmer.load_nodegraph(filename)
         return new_node
 
     def do_load(self):                    # for lazy loading, quickfix
@@ -324,8 +331,9 @@ class Leaf(object):
         parent.data.update(self.data)
 
     @staticmethod
-    def load(info):
-        data = khmer.load_nodegraph(info['filename'])
+    def load(info, dirname):
+        filepath = os.path.join(dirname, info['filename'])
+        data = khmer.load_nodegraph(filepath)
         return Leaf(info['metadata'], data, name=info['name'])
 
 
