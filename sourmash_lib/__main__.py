@@ -55,6 +55,7 @@ Commands can be:
 
         # get the query signature
         sl = sig.load_signatures(args.query, select_ksize=args.ksize)
+        sl = list(sl)
         if len(sl) != 1:
             raise Exception("%d query signatures; need exactly one" % len(sl))
         query = sl[0]
@@ -258,6 +259,7 @@ Commands can be:
         for filename in args.signatures:
             print('loading', filename, file=sys.stderr)
             loaded = sig.load_signatures(filename, select_ksize=args.ksize)
+            loaded = list(loaded)
             if not loaded:
                 print('warning: no signatures loaded at given ksize from %s' %
                           filename, file=sys.stderr)
@@ -405,6 +407,7 @@ Commands can be:
         for filename in args.filenames:
             print('loading', filename)
             siglist = sig.load_signatures(filename, select_ksize=args.ksize)
+            siglist = list(siglist)
             assert len(siglist) == 1
 
             s = siglist[0]
@@ -468,7 +471,7 @@ Commands can be:
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         s = sig.load_signatures(args.query, select_ksize=args.ksize)
-        ss = s[0]
+        ss = next(s)
 
         results = []
         for leaf in tree.find(search_minhashes, ss, args.threshold):
@@ -501,7 +504,7 @@ Commands can be:
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         s = sig.load_signatures(args.query, select_ksize=args.ksize)
-        ss = s[0]
+        ss = next(s)
         orig_ss = ss
 
         sum_found = 0.

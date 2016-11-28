@@ -27,7 +27,7 @@ def test_do_sourmash_compute():
         sigfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(sigfile)
 
-        sig = signature.load_signatures(sigfile)[0]
+        sig = next(signature.load_signatures(sigfile))
         assert sig.name().endswith('short.fa')
 
 
@@ -42,7 +42,7 @@ def test_do_sourmash_compute_singleton():
         sigfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(sigfile)
 
-        sig = signature.load_signatures(sigfile)[0]
+        sig = next(signature.load_signatures(sigfile))
         assert sig.name().endswith('shortName')
 
 
@@ -57,7 +57,7 @@ def test_do_sourmash_compute_name():
         sigfile = os.path.join(location, 'foo.sig')
         assert os.path.exists(sigfile)
 
-        sig = signature.load_signatures(sigfile)[0]
+        sig = next(signature.load_signatures(sigfile))
         assert sig.name() == 'foo'
 
 
@@ -83,7 +83,7 @@ def test_do_sourmash_compute_name_from_first():
         sigfile = os.path.join(location, 'short3.fa.sig')
         assert os.path.exists(sigfile)
 
-        sig = signature.load_signatures(sigfile)[0]
+        sig = next(signature.load_signatures(sigfile))
         assert sig.name() == 'firstname'
 
 
@@ -97,7 +97,7 @@ def test_do_sourmash_compute_multik():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        siglist = signature.load_signatures(outfile)
+        siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
         ksizes = set([ x.estimator.ksize for x in siglist ])
         assert 21 in ksizes
@@ -114,7 +114,7 @@ def test_do_sourmash_compute_multik_outfile():
                                            in_directory=location)
         assert os.path.exists(outfile)
 
-        siglist = signature.load_signatures(outfile)
+        siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
         ksizes = set([ x.estimator.ksize for x in siglist ])
         assert 21 in ksizes
@@ -132,7 +132,7 @@ def test_do_sourmash_compute_with_cardinality():
                                             in_directory=location)
         assert os.path.exists(outfile)
 
-        siglist = signature.load_signatures(outfile)
+        siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
         cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]

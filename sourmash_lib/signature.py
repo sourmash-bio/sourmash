@@ -144,7 +144,9 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     # record header
     x = yaml.load_all(data)
     siglist = []
-    for d in x:      # allow empty records <-> concatenation of signatures
+    for n, d in enumerate(x): # allow empty records & concat of signatures
+        if n > 0 and n % 100 == 0:
+            print('...sig loading {}'.format(n))
         if not d:
             continue
         if d.get('class') != 'sourmash_signature':
@@ -169,8 +171,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
             sig = _load_one_signature(sketch, email, name, filename,
                                           ignore_md5sum)
             if not select_ksize or select_ksize == sig.estimator.ksize:
-                siglist.append(sig)
-    return siglist
+                yield sig
 
 
 def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
@@ -242,7 +243,7 @@ def test_roundtrip():
     e.add("AT" * 10)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
-    siglist = load_signatures(s)
+    siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator
 
@@ -255,7 +256,7 @@ def test_roundtrip_empty_email():
     e.add("AT" * 10)
     sig = SourmashSignature('', e)
     s = save_signatures([sig])
-    siglist = load_signatures(s)
+    siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator
 
@@ -304,7 +305,7 @@ def test_save_load_multisig():
     sig2 = SourmashSignature('titus2@idyll.org', e2)
 
     x = save_signatures([sig1, sig2])
-    y = load_signatures(x)
+    y = list(load_signatures(x))
 
     print(x)
 
