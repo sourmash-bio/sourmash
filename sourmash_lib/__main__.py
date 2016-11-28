@@ -504,7 +504,7 @@ Commands can be:
         parser.add_argument('sbt_name')
         parser.add_argument('query')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-        parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('--threshold', default=0.05, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
         args = parser.parse_args(args)
@@ -520,11 +520,12 @@ Commands can be:
             search_fn = SearchMinHashesFindBest().search
 
             results = []
-            for leaf in tree.find(search_fn, ss, args.threshold):
+            # use super low threshold for this part of the search
+            for leaf in tree.find(search_fn, ss, 0.00001):
                 results.append((ss.similarity(leaf.data), leaf.data))
                 #results.append((leaf.data.similarity(ss), leaf.data))
 
-            if not len(results):
+            if not len(results):          # no matches at all!
                 break
 
             # take the best result
@@ -536,6 +537,11 @@ Commands can be:
             query_kmers = orig_ss.estimator.hll.estimate_cardinality()
             sim = best_ss.similarity(orig_ss)
             f_of_total = leaf_kmers / query_kmers * sim
+
+            if sim < args.threshold:
+                print('best match at {:.5f} of db signature.'.format(sim))
+                print('this is below specified threshold; exiting.')
+                break
 
             # subtract found hashes from search hashes, construct new search
             new_mins = set(ss.estimator.mh.get_mins())
