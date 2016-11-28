@@ -537,16 +537,18 @@ Commands can be:
             sim = best_ss.similarity(orig_ss)
             f_of_total = leaf_kmers / query_kmers * sim
 
-            # print interim & save
-            print('found: {:.2f} {}'.format(f_of_total, best_ss.name()))
-            found.append((f_of_total, best_ss, sim))
-            sum_found += f_of_total
-
             # subtract found hashes from search hashes, construct new search
             new_mins = set(ss.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
-            new_mins -= set(found_mins)
 
+            # print interim & save
+            print('found: {:.2f} {} {}'.format(f_of_total,
+                                               len(new_mins),
+                                               best_ss.name()))
+            found.append((f_of_total, best_ss, sim))
+            sum_found += f_of_total
+
+            new_mins -= set(found_mins)
             e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
             for m in new_mins:
                 e.mh.add_hash(m)
