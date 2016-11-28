@@ -460,6 +460,7 @@ Commands can be:
     def sbt_search(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
         from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+        from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
@@ -467,14 +468,19 @@ Commands can be:
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+        parser.add_argument('--best-only', action='store_true')
         args = parser.parse_args(args)
+
+        search_fn = search_minhashes
+        if args.best_only:
+            search_fn = SearchMinHashesFindBest().search
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         s = sig.load_signatures(args.query, select_ksize=args.ksize)
         ss = next(s)
 
         results = []
-        for leaf in tree.find(search_minhashes, ss, args.threshold):
+        for leaf in tree.find(search_fn, ss, args.threshold):
             results.append((ss.similarity(leaf.data), leaf.data))
             #results.append((leaf.data.similarity(ss), leaf.data))
 

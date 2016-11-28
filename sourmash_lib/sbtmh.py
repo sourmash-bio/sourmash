@@ -48,6 +48,29 @@ def search_minhashes(node, sig, threshold, results=None):
     return 0
 
 
+class SearchMinHashesFindBest(object):
+    def __init__(self):
+        self.best_match = 0.
+
+    def search(self, node, sig, threshold, results=None):
+        mins = sig.estimator.mh.get_mins()
+
+        if isinstance(node, SigLeaf):
+            matches = node.data.estimator.count_common(sig.estimator)
+        else:  # Node or Leaf, Nodegraph by minhash comparison
+            matches = sum(1 for value in mins if node.data.get(value))
+
+        if results is not None:
+            results[node.name] = float(matches) / len(mins)
+
+        if len(mins) and float(matches) / len(mins) >= threshold:
+            if float(matches) / len(mins) > self.best_match:
+                if isinstance(node, SigLeaf):
+                    self.best_match = float(matches) / len(mins)
+                return 1
+        return 0
+
+
 def test_tree_save_load():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
