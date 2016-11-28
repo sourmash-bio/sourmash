@@ -60,14 +60,21 @@ class SearchMinHashesFindBest(object):
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 
-        if results is not None:
-            results[node.name] = float(matches) / len(mins)
+        score = 0
+        if len(mins):
+            score = float(matches) / len(mins)
 
-        if len(mins) and float(matches) / len(mins) >= threshold:
+        if results is not None:
+            results[node.name] = score
+
+        if score >= threshold:
+            # have we done better than this? if yes, truncate.
             if float(matches) / len(mins) > self.best_match:
+                # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
                     self.best_match = float(matches) / len(mins)
                 return 1
+
         return 0
 
 
