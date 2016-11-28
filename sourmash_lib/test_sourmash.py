@@ -290,6 +290,7 @@ def test_mash_csv_to_sig():
         print(status, out, err)
         assert '1 matches:' in out
 
+
 def test_do_sourmash_sbt_search():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -310,6 +311,32 @@ def test_do_sourmash_sbt_search():
                                            ['sbt_search', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+        assert testdata2 in out
+
+
+def test_do_sourmash_sbt_search_otherdir():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'xxx/zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location,'xxx', 'zzz',)
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', sbt_name, sig_loc])
         print(out)
 
         assert testdata1 in out

@@ -23,9 +23,11 @@ class SigLeaf(Leaf):
             parent.data.count(v)
 
     @staticmethod
-    def load(info):
+    def load(info, dirname):
         from sourmash_lib import signature
-        with open(info['filename'], 'r') as fp:
+
+        filename = os.path.join(dirname, info['filename'])
+        with open(filename, 'r') as fp:
             data = signature.load_signatures(fp)[0]
         return SigLeaf(info['metadata'], data, name=info['name'])
 
