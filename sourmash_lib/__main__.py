@@ -520,7 +520,7 @@ Commands can be:
             found_mins = best_ss.estimator.mh.get_mins()
             new_mins -= set(found_mins)
 
-            e = sourmash_lib.Estimators(ksize=31, n=len(new_mins))
+            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
             for m in new_mins:
                 e.mh.add_hash(m)
             new_ss = sig.SourmashSignature('foo', e)
