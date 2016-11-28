@@ -28,7 +28,7 @@ class SigLeaf(Leaf):
 
         filename = os.path.join(dirname, info['filename'])
         with open(filename, 'r') as fp:
-            data = signature.load_signatures(fp)[0]
+            data = next(signature.load_signatures(fp))
         return SigLeaf(info['metadata'], data, name=info['name'])
 
 
@@ -53,8 +53,8 @@ def test_tree_save_load():
     tree = SBT(factory)
     for f in glob("demo/*.sig"):
         with open(f, 'r') as data:
-            sig = signature.load_signatures(data)
-        leaf = SigLeaf(os.path.basename(f), sig[0])
+            sig = next(signature.load_signatures(data))
+        leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
 
@@ -86,8 +86,8 @@ def test_binary_nary_tree():
 
     for f in glob("demo/*.sig"):
         with open(f, 'r') as data:
-            sig = signature.load_signatures(data)
-        leaf = SigLeaf(os.path.basename(f), sig[0])
+            sig = next(signature.load_signatures(data))
+        leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
             tree.add_node(leaf)
         to_search = leaf
