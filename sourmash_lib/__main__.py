@@ -539,8 +539,9 @@ Commands can be:
             f_of_total = leaf_kmers / query_kmers * sim
 
             if sim < args.threshold:
-                print('best match at {:.5f} of db signature.'.format(sim))
-                print('this is below specified threshold; exiting.')
+                print('best match: {}'.format(best_ss.name()))
+                print('similarity is {:.5f} of db signature;'.format(sim))
+                print('this is below specified threshold => exiting.')
                 break
 
             # subtract found hashes from search hashes, construct new search
@@ -563,6 +564,9 @@ Commands can be:
 
         print('found {}, total fraction {:.3f}'.format(len(found), sum_found))
         print('')
+
+        if not found:
+            sys.exit(0)
 
         found.sort()
         found.reverse()
