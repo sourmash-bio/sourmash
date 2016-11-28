@@ -152,7 +152,8 @@ class SBT(object):
                     if isinstance(node_g, Leaf):
                         matches.append(node_g)
                     elif isinstance(node_g, Node):
-                        queue.extend(c.pos for c in self.children(node_p))
+                        for c in self.children(node_p):
+                            queue.insert(0, c.pos)
         return matches
 
     def parent(self, pos):
