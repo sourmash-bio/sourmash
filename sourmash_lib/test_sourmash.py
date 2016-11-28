@@ -288,7 +288,7 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches:' in out
+        assert '1 matches; showing 3:' in out
 
 
 def test_do_sourmash_sbt_search():
