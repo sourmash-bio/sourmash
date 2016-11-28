@@ -507,7 +507,6 @@ Commands can be:
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
-        parser.add_argument('--best-only', action='store_true')
         args = parser.parse_args(args)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
@@ -518,12 +517,10 @@ Commands can be:
         sum_found = 0.
         found = []
         while 1:
-            search_fn = search_minhashes
-            if args.best_only:
-                search_fn = SearchMinHashesFindBest().search
+            search_fn = SearchMinHashesFindBest().search
 
             results = []
-            for leaf in tree.find(search_minhashes, ss, args.threshold):
+            for leaf in tree.find(search_fn, ss, args.threshold):
                 results.append((ss.similarity(leaf.data), leaf.data))
                 #results.append((leaf.data.similarity(ss), leaf.data))
 
