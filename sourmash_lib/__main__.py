@@ -50,6 +50,7 @@ Commands can be:
         parser.add_argument('-n', '--num-results', default=3, type=int)
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
         parser.add_argument('-f', '--force', action='store_true')
+        parser.add_argument('--save-matches', type=argparse.FileType('wt'))
         args = parser.parse_args(args)
 
         # get the query signature
@@ -83,10 +84,17 @@ Commands can be:
         # any matches? sort, show.
         if distances:
             distances.sort(reverse=True, key = lambda x: x[0])
-            print('%d matches:' % len(distances))
+            print('{} matches; showing {}:'.format(len(distances),
+                                                   args.num_results))
             for distance, match, filename in distances[:args.num_results]:
                 print('\t', match.name(), '\t', "%.3f" % distance,
                       '\t', filename)
+
+            if args.save_matches:
+                outname = args.save_matches.name
+                print('saving all matches to "{}"'.format(outname))
+                sig.save_signatures([ m for (d, m, f) in distances ],
+                                    args.save_matches)
         else:
             print('** no matches in %d signatures' % len(against),
                   file=sys.stderr)
@@ -158,12 +166,12 @@ Commands can be:
         def save_siglist(siglist, output_fp, filename=None):
             # save!
             if output_fp:
-                data = sig.save_signatures(siglist, args.output)
+                sig.save_signatures(siglist, args.output)
             else:
                 if filename is None:
                     raise Exception("internal error, filename is None")
                 with open(filename, 'w') as fp:
-                   data = sig.save_signatures(siglist, fp)
+                    sig.save_signatures(siglist, fp)
 
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
@@ -454,6 +462,7 @@ Commands can be:
         parser.add_argument('query')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('--save-matches', type=argparse.FileType('wt'))
         args = parser.parse_args(args)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
@@ -468,6 +477,12 @@ Commands can be:
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
         for (similarity, ss) in results:
             print('{:.2f} {}'.format(similarity, ss.name()))
+
+        if args.save_matches:
+            outname = args.save_matches.name
+            print('saving all matches to "{}"'.format(outname))
+            sig.save_signatures([ m for (sim, m) in results ],
+                                args.save_matches)
 
 
     def sbt_gather(self, args):
