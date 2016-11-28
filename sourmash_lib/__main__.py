@@ -422,9 +422,10 @@ Commands can be:
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--traverse-directory', action='store_true')
+        parser.add_argument('-x', '--bf-size', type=float, default=1e5)
         args = parser.parse_args(args)
 
-        factory = GraphFactory(1, 1e5, 4)
+        factory = GraphFactory(1, args.bf_size, 4)
         tree = SBT(factory)
 
         inp_files = list(args.signatures)
