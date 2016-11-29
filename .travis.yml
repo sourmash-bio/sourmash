@@ -1,13 +1,12 @@
 language: python
 python: 3.5
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-4.9
-      - g++-4.9
+sudo: required
+dist: trusty
+
+branches:
+  only:
+    - master
 
 env:
   - TOX_ENV=py27
@@ -17,4 +16,4 @@ install:
 - pip install tox
 
 script:
-    CXX="g++-4.9" CC="gcc-4.9" tox -e $TOX_ENV
+    tox -e $TOX_ENV
