@@ -164,12 +164,18 @@ minhash_get_mins(MinHash_Object * me, PyObject * args)
         return NULL;
     }
 
-    KmerMinHash * mh = me->mh;
+    KmerMinAbundance * mh = (KmerMinAbundance*)(me->mh);
     PyObject * mins_o = PyList_New(mh->mins.size());
 
     unsigned int j = 0;
-    for (CMinHashType::iterator i = mh->mins.begin(); i != mh->mins.end(); ++i) {
-        PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(*i));
+    for (CMinAbundanceType::iterator i = mh->mins.begin();
+         i != mh->mins.end();
+         ++i) {
+        PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(i->first));
+/*        PyList_SET_ITEM(mins_o, j,
+            Py_BuildValue("(KK)", PyLong_FromUnsignedLongLong(i->first),
+                                  PyLong_FromUnsignedLongLong(i->second)));
+*/
         j++;
     }
     return(mins_o);
@@ -206,7 +212,7 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     }
 
     KmerMinHash * mh = me->mh;
-    KmerMinHash * new_mh = new KmerMinHash(mh->num, mh->ksize, mh->is_protein);
+    KmerMinHash * new_mh = new KmerMinAbundance(mh->num, mh->ksize, mh->is_protein);
     new_mh->merge(*mh);
 
     return build_MinHash_Object(new_mh);
@@ -373,7 +379,7 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         is_protein = true;
     }
 
-    myself->mh = new KmerMinHash(_n, _ksize, is_protein);
+    myself->mh = new KmerMinAbundance(_n, _ksize, is_protein);
 
     return self;
 }

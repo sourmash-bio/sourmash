@@ -14,7 +14,7 @@
 
 typedef std::set<HashIntoType> CMinHashType;
 
-typedef std::unordered_map<HashIntoType, uint64_t> CMinAbundanceType;
+typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
 
 typedef std::priority_queue<HashIntoType> CMinTrackType;
 
@@ -46,14 +46,14 @@ public:
     KmerMinHash(unsigned int n, unsigned int k, bool prot) :
         num(n), ksize(k), is_protein(prot) { };
 
-    void _shrink() {
+    virtual void _shrink() {
         while (mins.size() > num) {
             CMinHashType::iterator mi = mins.end();
             mi--;
             mins.erase(mi);
         }
     }
-    void add_hash(HashIntoType h) {
+    virtual void add_hash(HashIntoType h) {
         mins.insert(h);
         _shrink();
     }
@@ -252,17 +252,25 @@ class KmerMinAbundance: public KmerMinHash {
     CMinAbundanceType mins;
     CMinTrackType top_mins;
 
+    KmerMinAbundance(unsigned int n, unsigned int k, bool prot) :
+        KmerMinHash(n, k, prot) { };
+
     void add_hash(HashIntoType h) {
-        auto top = top_mins.top();
-        if (h < top) {
-            top_mins.pop();
+        if (mins.size() < num) {
             top_mins.push(h);
-            mins.erase(top);
-            mins.emplace(h, 1);
+            mins[h] += 1;
         } else {
-            auto item = mins.find(h);
-            if (item != mins.end()) {
-                mins[h] += 1;
+            auto top = top_mins.top();
+            if (h < top) {
+                top_mins.pop();
+                top_mins.push(h);
+                mins.erase(top);
+                mins.emplace(h, 1);
+            } else {
+                auto item = mins.find(h);
+                if (item != mins.end()) {
+                    mins[h] += 1;
+                }
             }
         }
         _shrink();
@@ -270,9 +278,8 @@ class KmerMinAbundance: public KmerMinHash {
 
     void _shrink() {
         while (mins.size() > num) {
-            auto top = top_mins.top();
+            mins.erase(top_mins.top());
             top_mins.pop();
-            mins.erase(top);
         }
     }
 
