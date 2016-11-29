@@ -538,7 +538,7 @@ Commands can be:
             sim = best_ss.similarity(orig_ss)
             f_of_total = leaf_kmers / query_kmers * sim
 
-            if sim < args.threshold:
+            if not found and sim < args.threshold:
                 print('best match: {}'.format(best_ss.name()))
                 print('similarity is {:.5f} of db signature;'.format(sim))
                 print('this is below specified threshold => exiting.')
