@@ -3,14 +3,20 @@
 
 #include <set>
 #include <map>
+#include <queue>
 #include <exception>
 #include <string>
+#include <unordered_map>
 
 // #include "kmer_hash.hh"
 
 ////
 
 typedef std::set<HashIntoType> CMinHashType;
+
+typedef std::unordered_map<HashIntoType, uint64_t> CMinAbundanceType;
+
+typedef std::priority_queue<HashIntoType> CMinTrackType;
 
 class minhash_exception : public std::exception
 {
@@ -231,6 +237,37 @@ private:
 
         {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
     };
+};
+
+class KmerMinAbundance: public KmerMinHash {
+ public:
+    CMinAbundanceType mins;
+    CMinTrackType top_mins;
+
+    void add_hash(HashIntoType h) {
+        auto top = top_mins.top();
+        if (h < top) {
+            top_mins.pop();
+            top_mins.push(h);
+            mins.erase(top);
+            mins.emplace(h, 1);
+        } else {
+            auto item = mins.find(h);
+            if (item != mins.end()) {
+                mins[h] += 1;
+            }
+        }
+        _shrink();
+    }
+
+    void _shrink() {
+        while (mins.size() > num) {
+            auto top = top_mins.top();
+            top_mins.pop();
+            mins.erase(top);
+        }
+    }
+
 };
 
 #endif // KMER_MIN_HASH_HH
