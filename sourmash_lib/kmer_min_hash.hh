@@ -170,15 +170,14 @@ public:
     }
 
     void merge(const KmerMinHash& other) {
-        CMinHashType::iterator mi;
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be merged");
         }
-        for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
-            mins.insert(*mi);
+        for (auto mi: other.mins) {
+            mins.insert(mi);
         }
         _shrink();
     }
@@ -201,6 +200,7 @@ public:
         }
         return mins.size() + other.mins.size() - combined.size();
     }
+    virtual ~KmerMinHash() throw() { }
 
 private:
     std::map<std::string, std::string> _codon_table = {
