@@ -60,11 +60,12 @@ PyTypeObject MinHash_Type = {
 
 bool check_IsMinHash(PyObject * mh);
 
-PyObject * build_MinHash_Object(KmerMinHash * mh)
+PyObject * build_MinHash_Object(KmerMinHash * mh, bool track_abundance = false)
 {
     MinHash_Object * obj = (MinHash_Object *) \
                            PyObject_New(MinHash_Object, &MinHash_Type);
     obj->mh = mh;
+    obj->track_abundance = track_abundance;
 
     return (PyObject *) obj;
 }
@@ -160,17 +161,41 @@ static
 PyObject *
 minhash_get_mins(MinHash_Object * me, PyObject * args)
 {
-    if (!PyArg_ParseTuple(args, "")) {
+    PyObject * with_abundance_o = Py_False;
+    if (!PyArg_ParseTuple(args, "|O", &with_abundance_o)) {
         return NULL;
     }
 
-    KmerMinHash * mh = me->mh;
-    PyObject * mins_o = PyList_New(mh->mins.size());
+    bool with_abundance = false;
+    if (PyObject_IsTrue(with_abundance_o)) {
+        with_abundance = true;
+    }
 
-    unsigned int j = 0;
-    for (CMinHashType::iterator i = mh->mins.begin(); i != mh->mins.end(); ++i) {
-        PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(*i));
-        j++;
+    PyObject * mins_o = NULL;
+    if (with_abundance and me->track_abundance) {
+        KmerMinAbundance * mh = (KmerMinAbundance*)(me->mh);
+        mins_o = PyDict_New();
+        for (auto i: mh->mins) {
+            PyDict_SetItem(mins_o,
+               PyLong_FromUnsignedLongLong(i.first),
+               PyLong_FromUnsignedLongLong(i.second));
+        }
+    } else if (me->track_abundance) {
+        KmerMinAbundance * mh = (KmerMinAbundance*)(me->mh);
+        mins_o = PyList_New(mh->mins.size());
+        unsigned int j = 0;
+        for (auto i: mh->mins) {
+            PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(i.first));
+            j++;
+        }
+    } else {
+        unsigned int j = 0;
+        KmerMinHash * mh = me->mh;
+        mins_o = PyList_New(mh->mins.size());
+        for (auto i: mh->mins) {
+            PyList_SET_ITEM(mins_o, j, PyLong_FromUnsignedLongLong(i));
+            j++;
+        }
     }
     return(mins_o);
 }
@@ -189,7 +214,11 @@ static PyObject * _MinHash_concat_inplace(PyObject * me_obj,
     other = (MinHash_Object *) other_obj;
 
     try {
-        me->mh->merge(*other->mh);
+        if (me->track_abundance == true) {
+            ((KmerMinAbundance*)me->mh)->merge(*(KmerMinAbundance*)other->mh);
+        } else {
+            me->mh->merge(*other->mh);
+        }
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());
         return NULL;
@@ -206,10 +235,17 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     }
 
     KmerMinHash * mh = me->mh;
-    KmerMinHash * new_mh = new KmerMinHash(mh->num, mh->ksize, mh->is_protein);
-    new_mh->merge(*mh);
+    KmerMinHash * new_mh = NULL;
 
-    return build_MinHash_Object(new_mh);
+    if (me->track_abundance == true) {
+         new_mh = new KmerMinAbundance(mh->num, mh->ksize, mh->is_protein);
+         ((KmerMinAbundance*)new_mh)->merge(*(KmerMinAbundance*)mh);
+    } else {
+         new_mh = new KmerMinHash(mh->num, mh->ksize, mh->is_protein);
+         new_mh->merge(*mh);
+    }
+
+    return build_MinHash_Object(new_mh, me->track_abundance);
 }
 
 static PyObject * minhash_merge(MinHash_Object * me, PyObject * args)
@@ -226,7 +262,11 @@ static PyObject * minhash_merge(MinHash_Object * me, PyObject * args)
     KmerMinHash * other = ((MinHash_Object *) other_mh)->mh;
 
     try {
-        mh->merge(*other);
+        if (me->track_abundance == true) {
+            ((KmerMinAbundance*)mh)->merge(*(KmerMinAbundance*)other);
+        } else {
+            mh->merge(*other);
+        }
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());
         return NULL;
@@ -251,7 +291,11 @@ static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
 
     unsigned int n;
     try {
-        n = me->mh->count_common(*other->mh);
+        if (me->track_abundance) {
+            n = ((KmerMinAbundance*)me->mh)->count_common(*(KmerMinAbundance*)(other->mh));
+        } else {
+            n = me->mh->count_common(*other->mh);
+        }
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());
         return NULL;
@@ -276,12 +320,17 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
     unsigned int size;
 
     try {
-        n = me->mh->count_common(*other->mh);
+        if (me->track_abundance) {
+            n = ((KmerMinAbundance*)me->mh)->count_common(*(KmerMinAbundance*)(other->mh));
+            size = ((KmerMinAbundance*)me->mh)->mins.size();
+        } else {
+            n = me->mh->count_common(*other->mh);
+            size = me->mh->mins.size();
+        }
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());
         return NULL;
     }
-    size = me->mh->mins.size();
 
     return PyFloat_FromDouble(float(n) / float(size));
 }
@@ -340,8 +389,10 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     }
 
     unsigned int _n, _ksize;
+    PyObject * track_abundance_o = Py_False;
     PyObject * is_protein_o = NULL;
-    if (!PyArg_ParseTuple(args, "II|O", &_n, &_ksize, &is_protein_o)) {
+    if (!PyArg_ParseTuple(args, "II|OO",
+                          &_n, &_ksize, &is_protein_o, &track_abundance_o)) {
         return NULL;
     }
 
@@ -351,7 +402,13 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         is_protein = true;
     }
 
-    myself->mh = new KmerMinHash(_n, _ksize, is_protein);
+    if (PyObject_IsTrue(track_abundance_o)) {
+        myself->mh = new KmerMinAbundance(_n, _ksize, is_protein);
+        myself->track_abundance = true;
+    } else {
+        myself->mh = new KmerMinHash(_n, _ksize, is_protein);
+        myself->track_abundance = false;
+    }
 
     return self;
 }

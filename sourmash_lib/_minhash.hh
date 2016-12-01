@@ -47,6 +47,7 @@
 typedef struct {
     PyObject_HEAD
     KmerMinHash * mh;
+    bool track_abundance = false;
 } MinHash_Object;
 
 #endif // _MINHASH_HH
