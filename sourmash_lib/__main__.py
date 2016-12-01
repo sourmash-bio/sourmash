@@ -95,7 +95,17 @@ Commands can be:
         "Compute the signature for one or more files."
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('--protein', action='store_true')
+
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', action='store_true')
+        parser.add_argument('--no-dna', dest='dna',
+                            action='store_false')
+        parser.set_defaults(dna=True)
+
         parser.add_argument('--input-is-protein', action='store_true')
         parser.add_argument('-k', '--ksizes',
                             default=str(DEFAULT_K),
@@ -107,6 +117,11 @@ Commands can be:
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--email', type=str, default='')
         args = parser.parse_args(args)
+
+        if args.input_is_protein and args.dna:
+            print('WARNING: input is protein, turning off DNA hash computing.',
+                  file=sys.stderr)
+            args.dna = False
 
         print('computing signatures for files:', args.filenames,
               file=sys.stderr)
@@ -122,6 +137,26 @@ Commands can be:
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
 
+        num_sigs = 0
+        if args.dna and args.protein:
+            print('Computing both DNA and protein signatures.',
+                  file=sys.stderr)
+            num_sigs = 2*len(ksizes)
+        elif args.dna:
+            print('Computing only DNA (and not protein) signatures.',
+                  file=sys.stderr)
+            num_sigs = len(ksizes)
+        elif args.protein:
+            print('Computing only protein (and not DNA) signatures.',
+                  file=sys.stderr)
+            num_sigs = len(ksizes)
+
+        print('Computing a total of {} signatures.'.format(num_sigs),
+              file=sys.stderr)
+        if num_sigs == 0:
+            print('...nothing to calculate!? Exiting!', file=sys.stderr)
+            sys.exit(-1)
+
         # for each file, load & compute sketch.
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'
@@ -130,12 +165,17 @@ Commands can be:
                       file=sys.stderr)
                 continue
 
-            # one estimator for each ksize
+            # one estimator for each ksize & each molecule type
             Elist = []
             for k in ksizes:
-                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                            protein=args.protein)
-                Elist.append(E)
+                if args.protein:
+                    E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                                                protein=True)
+                    Elist.append(E)
+                if args.dna:
+                    E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                                                protein=False)
+                    Elist.append(E)
 
             # consume & calculate signatures
             print('... reading sequences from', filename, file=sys.stderr)
