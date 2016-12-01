@@ -59,6 +59,10 @@ class SourmashSignature(object):
         sketch['num'] = len(estimator.mh)
         sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
+        if estimator.mh.is_protein():
+            sketch['molecule'] = 'protein'
+        else:
+            sketch['molecule'] = 'dna'
         e['signature'] = sketch
 
         return self.d.get('email'), self.d.get('name'), \
@@ -113,7 +117,15 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     ksize = sketch['ksize']
     mins = list(map(int, sketch['mins']))
     n = int(sketch['num'])
-    e = sourmash_lib.Estimators(ksize=ksize, n=n)
+    molecule = sketch.get('molecule', 'dna')
+    if molecule == 'protein':
+        is_protein = True
+    elif molecule == 'dna':
+        is_protein = False
+    else:
+        raise Exception("unknown molecule type: {}".format(molecule))
+
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein)
     for m in mins:
         e.mh.add_hash(m)
 
