@@ -1,6 +1,7 @@
 #ifndef KMER_MIN_HASH_HH
 #define KMER_MIN_HASH_HH
 
+#include <algorithm>
 #include <set>
 #include <map>
 #include <queue>
@@ -15,8 +16,6 @@
 typedef std::set<HashIntoType> CMinHashType;
 
 typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
-
-typedef std::priority_queue<HashIntoType> CMinTrackType;
 
 class minhash_exception : public std::exception
 {
@@ -169,7 +168,7 @@ public:
         return out;
     }
 
-    void merge(const KmerMinHash& other) {
+    virtual void merge(const KmerMinHash& other) {
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }
@@ -181,7 +180,7 @@ public:
         }
         _shrink();
     }
-    unsigned int count_common(const KmerMinHash& other) {
+    virtual unsigned int count_common(const KmerMinHash& other) {
         CMinHashType combined;
 
         if (ksize != other.ksize) {
@@ -250,27 +249,27 @@ private:
 class KmerMinAbundance: public KmerMinHash {
  public:
     CMinAbundanceType mins;
-    CMinTrackType top_mins;
+    HashIntoType max_mins;
 
     KmerMinAbundance(unsigned int n, unsigned int k, bool prot) :
         KmerMinHash(n, k, prot) { };
 
     void add_hash(HashIntoType h) {
         if (mins.size() < num) {
-            top_mins.push(h);
             mins[h] += 1;
+            max_mins = std::max(max_mins, h);
+            return;
+        }
+
+        if (h > max_mins) {
+            return;
         } else {
-            auto top = top_mins.top();
-            if (h < top) {
-                top_mins.pop();
-                top_mins.push(h);
-                mins.erase(top);
-                mins.emplace(h, 1);
+            if (mins.find(h) != mins.end()) {
+                mins[h] += 1;
             } else {
-                auto item = mins.find(h);
-                if (item != mins.end()) {
-                    mins[h] += 1;
-                }
+                mins.emplace(h, 1);
+                mins.erase(max_mins);
+                max_mins = (*std::max_element(mins.begin(), mins.end())).first;
             }
         }
         _shrink();
@@ -278,9 +277,42 @@ class KmerMinAbundance: public KmerMinHash {
 
     void _shrink() {
         while (mins.size() > num) {
-            mins.erase(top_mins.top());
-            top_mins.pop();
+            mins.erase(max_mins);
+            max_mins = (*std::max_element(mins.begin(), mins.end())).first;
         }
+    }
+
+    void merge(const KmerMinAbundance& other) {
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be merged");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be merged");
+        }
+        for (auto mi: other.mins) {
+            mins[mi.first] += mi.second;
+            max_mins = std::max(mi.first, max_mins);
+        }
+        _shrink();
+    }
+
+    unsigned int count_common(const KmerMinAbundance& other) {
+        CMinHashType combined;
+
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+
+        for (auto mi: mins) {
+            combined.insert(mi.first);
+        }
+        for (auto mi: other.mins) {
+            combined.insert(mi.first);
+        }
+        return mins.size() + other.mins.size() - combined.size();
     }
 
 };
