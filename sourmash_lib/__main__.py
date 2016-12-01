@@ -49,13 +49,40 @@ Commands can be:
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
         parser.add_argument('-f', '--force', action='store_true')
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', default=None,
+                            action='store_true')
+        parser.add_argument('--no-dna', dest='dna', action='store_false')
+        parser.set_defaults(dna=None)
+
         args = parser.parse_args(args)
 
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+
+        if args.protein:
+            moltype = 'protein'
+        elif args.dna:
+            moltype = 'dna'
+        else:
+            print('Must specify either --protein or --dna!', file=sys.stderr)
+            sys.exit(-1)
+
         # get the query signature
-        sl = sig.load_signatures(
-            open(args.query, 'r'), select_ksize=args.ksize)
+        sl = sig.load_signatures(open(args.query, 'r'),
+                                 select_ksize=args.ksize,
+                                 select_moltype=moltype)
         if len(sl) != 1:
-            raise Exception("%d query signatures; need exactly one" % len(sl))
+            print('When loading query from "{}",'.format(args.query),
+                  file=sys.stderr)
+            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            sys.exit(-1)
         query = sl[0]
 
         # get the signatures to query
@@ -69,7 +96,8 @@ Commands can be:
                 continue
 
             sl = sig.load_signatures(
-                open(filename, 'r'), select_ksize=args.ksize)
+                open(filename, 'r'), select_ksize=args.ksize,
+                     select_moltype=moltype)
             for x in sl:
                 against.append((x, filename))
 
@@ -84,7 +112,7 @@ Commands can be:
         if distances:
             distances.sort(reverse=True, key = lambda x: x[0])
             print('%d matches:' % len(distances))
-            for distance, match, filename in distances[:3]:
+            for distance, match, filename in distances[:5]:
                 print('\t', match.name(), '\t', "%.3f" % distance,
                       '\t', filename)
         else:

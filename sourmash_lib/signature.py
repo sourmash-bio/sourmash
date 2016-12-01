@@ -74,7 +74,8 @@ class SourmashSignature(object):
     jaccard = similarity
 
 
-def load_signatures(data, select_ksize=None, ignore_md5sum=False):
+def load_signatures(data, select_ksize=None, select_moltype=None,
+                    ignore_md5sum=False):
     """Load a YAML string with signatures into classes.
 
     Returns list of SourmashSignature objects.
@@ -108,7 +109,9 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
             sig = _load_one_signature(sketch, email, name, filename,
                                           ignore_md5sum)
             if not select_ksize or select_ksize == sig.estimator.ksize:
-                siglist.append(sig)
+                if not select_moltype or \
+                     sig.estimator.is_molecule_type(select_moltype):
+                    siglist.append(sig)
     return siglist
 
 
