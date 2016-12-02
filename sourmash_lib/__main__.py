@@ -68,8 +68,9 @@ Commands can be:
                       file=sys.stderr)
                 continue
 
-            sl = sig.load_signatures(
-                open(filename, 'r'), select_ksize=args.ksize)
+            with open(filename, 'r') as fh:
+                sl = sig.load_signatures(fh, select_ksize=args.ksize)
+                
             for x in sl:
                 against.append((x, filename))
 
