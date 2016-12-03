@@ -9,7 +9,7 @@ clean:
 	$(PYTHON) setup.py clean --all
 	cd doc && make clean
 
-install:
+install: all
 	$(PYTHON) setup.py install
 
 dist: FORCE

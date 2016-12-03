@@ -92,7 +92,7 @@ Here, ``/tmp/genome1.sig`` is a YAML file that can now be loaded and
 compared -- first, load:
 
 >>> sigdata = open('/tmp/genome1.sig', 'rt').read()
->>> siglist = signature.load_signatures(sigdata)
+>>> siglist = list(signature.load_signatures(sigdata))
 >>> loaded_sig = siglist[0]
 
 then compare:
