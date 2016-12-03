@@ -152,6 +152,7 @@ Commands can be:
             print('WARNING: input is protein, turning off DNA hash computing.',
                   file=sys.stderr)
             args.dna = False
+            args.protein = True
 
         print('computing signatures for files:', args.filenames,
               file=sys.stderr)

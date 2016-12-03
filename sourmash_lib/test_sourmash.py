@@ -97,6 +97,31 @@ def test_do_sourmash_compute_multik_only_protein():
             assert 31 in ksizes
 
 
+def test_do_sourmash_compute_multik_input_is_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa.gz')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--input-is-protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'ecoli.faa.gz.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = signature.load_signatures(sigdata)
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 31 in ksizes
+
+            moltype = set([ x.estimator.is_molecule_type('protein')
+                            for x in siglist ])
+            assert len(moltype) == 1
+            assert True in moltype
+
+
 def test_do_sourmash_compute_multik_outfile():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
