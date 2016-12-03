@@ -108,7 +108,7 @@ def test_do_sourmash_compute_multik_with_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
+                                           ['compute', '-k', '21,30',
                                             '--protein',
                                             testdata1],
                                            in_directory=location)
@@ -121,7 +121,7 @@ def test_do_sourmash_compute_multik_with_protein():
             assert len(siglist) == 4
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
-            assert 31 in ksizes
+            assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -137,11 +137,25 @@ def test_do_sourmash_compute_multik_with_nothing():
         assert not os.path.exists(outfile)
 
 
+def test_do_sourmash_compute_multik_protein_bad_ksize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '20,32',
+                                            '--protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert not os.path.exists(outfile)
+        assert 'protein ksizes must be divisible by 3' in err
+
+
 def test_do_sourmash_compute_multik_only_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
+                                           ['compute', '-k', '21,30',
                                             '--protein', '--no-dna',
                                             testdata1],
                                            in_directory=location)
@@ -154,14 +168,14 @@ def test_do_sourmash_compute_multik_only_protein():
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
-            assert 31 in ksizes
+            assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_input_is_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa.gz')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
+                                           ['compute', '-k', '21,30',
                                             '--input-is-protein',
                                             testdata1],
                                            in_directory=location)
@@ -174,7 +188,7 @@ def test_do_sourmash_compute_multik_input_is_protein():
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
-            assert 31 in ksizes
+            assert 30 in ksizes
 
             moltype = set([ x.estimator.is_molecule_type('protein')
                             for x in siglist ])

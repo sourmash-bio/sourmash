@@ -214,6 +214,15 @@ Commands can be:
                   file=sys.stderr)
             num_sigs = len(ksizes)
 
+        if args.protein:
+            bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
+            if bad_ksizes:
+                print('protein ksizes must be divisible by 3, sorry!',
+                      file=sys.stderr)
+                print('bad ksizes: {}'.format(", ".join(bad_ksizes)),
+                      file=sys.stderr)
+                sys.exit(-1)
+
         print('Computing a total of {} signatures.'.format(num_sigs),
               file=sys.stderr)
 
