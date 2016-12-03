@@ -65,6 +65,8 @@ Commands can be:
             if args.dna is True:
                 raise Exception('cannot specify both --dna and --protein!')
             args.dna = False
+        else:
+            args.dna = True
 
         if args.protein:
             moltype = 'protein'
