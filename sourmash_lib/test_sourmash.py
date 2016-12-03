@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import glob
+import gzip
 
 from . import sourmash_tst_utils as utils
 try:
@@ -22,7 +23,68 @@ def test_do_sourmash_compute():
         status, out, err = utils.runscript('sourmash',
                                            ['compute', testdata1],
                                            in_directory=location)
-        assert os.path.exists(os.path.join(location, 'short.fa.sig'))
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name().endswith('short.fa')
+
+
+def test_do_sourmash_compute_singleton():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--singleton',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name().endswith('shortName')
+
+
+def test_do_sourmash_compute_name():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1, '-o', 'foo.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'foo.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name() == 'foo'
+
+
+def test_do_sourmash_compute_name_fail_no_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
+
+def test_do_sourmash_compute_name_from_first():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short3.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name-from-first',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short3.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name() == 'firstname'
 
 
 def test_do_sourmash_compute_multik():
@@ -35,13 +97,11 @@ def test_do_sourmash_compute_multik():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 31 in ksizes
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 31 in ksizes
 
 
 def test_do_sourmash_compute_multik_with_protein():
@@ -57,7 +117,7 @@ def test_do_sourmash_compute_multik_with_protein():
 
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
+            siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 4
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
@@ -90,7 +150,7 @@ def test_do_sourmash_compute_multik_only_protein():
 
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
+            siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
@@ -110,7 +170,7 @@ def test_do_sourmash_compute_multik_input_is_protein():
 
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
+            siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
@@ -132,13 +192,30 @@ def test_do_sourmash_compute_multik_outfile():
                                            in_directory=location)
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = signature.load_signatures(sigdata)
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 31 in ksizes
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 31 in ksizes
+
+
+def test_do_sourmash_compute_with_cardinality():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--with-cardinality',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
+        assert len(cards) == 2
+        assert set(cards) == set([ 966, 986 ])
 
 
 def test_do_plot_comparison():
@@ -224,6 +301,31 @@ def test_sourmash_search():
         assert '0.958' in out
 
 
+def test_sourmash_search_gzip():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        data = open(os.path.join(location, 'short.fa.sig'), 'rb').read()
+        with gzip.open(os.path.join(location, 'zzz.gz'), 'wb') as fp:
+            fp.write(data)
+
+        data = open(os.path.join(location, 'short2.fa.sig'), 'rb').read()
+        with gzip.open(os.path.join(location, 'yyy.gz'), 'wb') as fp:
+            fp.write(data)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'zzz.gz',
+                                            'yyy.gz'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in out
+        assert '0.958' in out
+
+
 def test_sourmash_search_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -264,4 +366,6 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches:' in out
+        assert '1 matches; showing 3:' in out
+
+
