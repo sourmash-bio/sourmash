@@ -42,7 +42,7 @@ Commands can be:
         cmd(sys.argv[2:])
 
     def search(self, args):
-        "Search a query sig against one or more signatures; report top match."
+        "Search a query sig against one or more signatures; report up to the 3 top matches."
         parser = argparse.ArgumentParser()
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
