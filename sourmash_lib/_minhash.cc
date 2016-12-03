@@ -286,6 +286,23 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
     return PyFloat_FromDouble(float(n) / float(size));
 }
 
+static PyObject * minhash_is_protein(MinHash_Object * me, PyObject * args)
+{
+    if (!PyArg_ParseTuple(args, "")) {
+        return NULL;
+    }
+
+    PyObject * r = NULL;
+    if (me->mh->is_protein) {
+        r = Py_True;
+    } else {
+        r = Py_False;
+    }
+    Py_INCREF(r);
+
+    return r;
+}
+
 static PyMethodDef MinHash_methods [] = {
     {
         "add_sequence",
@@ -326,6 +343,11 @@ static PyMethodDef MinHash_methods [] = {
         "merge",
         (PyCFunction)minhash_merge, METH_VARARGS,
         "Merge the other MinHash into this one."
+    },
+    {
+        "is_protein",
+        (PyCFunction)minhash_is_protein, METH_VARARGS,
+        "Return False if a DNA MinHash, True if protein."
     },
     { NULL, NULL, 0, NULL } // sentinel
 };

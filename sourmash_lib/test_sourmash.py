@@ -104,6 +104,98 @@ def test_do_sourmash_compute_multik():
         assert 31 in ksizes
 
 
+def test_do_sourmash_compute_multik_with_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 4
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+
+def test_do_sourmash_compute_multik_with_nothing():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--no-protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert not os.path.exists(outfile)
+
+
+def test_do_sourmash_compute_multik_protein_bad_ksize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '20,32',
+                                            '--protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert not os.path.exists(outfile)
+        assert 'protein ksizes must be divisible by 3' in err
+
+
+def test_do_sourmash_compute_multik_only_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+
+def test_do_sourmash_compute_multik_input_is_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--input-is-protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'ecoli.faa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+            moltype = set([ x.estimator.is_molecule_type('protein')
+                            for x in siglist ])
+            assert len(moltype) == 1
+            assert True in moltype
+
+
 def test_do_sourmash_compute_multik_outfile():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -138,6 +230,124 @@ def test_do_sourmash_compute_with_cardinality():
         cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
         assert len(cards) == 2
         assert set(cards) == set([ 966, 986 ])
+
+
+def test_do_sourmash_check_protein_comparisons():
+    # this test checks 2 x 2 protein comparisons with E. coli genes.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--input-is-protein',
+                                            '--singleton',
+                                            testdata1],
+                                           in_directory=location)
+        sig1 = os.path.join(location, 'ecoli.faa.sig')
+        assert os.path.exists(sig1)
+
+        testdata2 = utils.get_test_data('ecoli.genes.fna')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--protein', '--no-dna',
+                                            '--singleton',
+                                            testdata2],
+                                           in_directory=location)
+        sig2 = os.path.join(location, 'ecoli.genes.fna.sig')
+        assert os.path.exists(sig2)
+
+        # I'm not sure why load_signatures is randomizing order, but ok.
+        x = list(signature.load_signatures(sig1))
+        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name())
+
+        x = list(signature.load_signatures(sig2))
+        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name())
+
+        name1 = sig1_aa.name().split()[0]
+        assert name1 == 'NP_414543.1'
+        name2 = sig2_aa.name().split()[0]
+        assert name2 == 'NP_414544.1'
+        name3 = sig1_trans.name().split()[0]
+        assert name3 == 'gi|556503834:2801-3733'
+        name4 = sig2_trans.name().split()[0]
+        assert name4 == 'gi|556503834:337-2799'
+
+        print(name1, name3, round(sig1_aa.similarity(sig1_trans), 3))
+        print(name2, name3, round(sig2_aa.similarity(sig1_trans), 3))
+        print(name1, name4, round(sig1_aa.similarity(sig2_trans), 3))
+        print(name2, name4, round(sig2_aa.similarity(sig2_trans), 3))
+
+        assert round(sig1_aa.similarity(sig1_trans), 3) == 0.0
+        assert round(sig2_aa.similarity(sig1_trans), 3) == 0.273
+        assert round(sig1_aa.similarity(sig2_trans), 3) == 0.174
+        assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
+
+
+def test_do_sourmash_check_knowngood_dna_comparisons():
+    # this test checks against a known good signature calculated
+    # by utils/compute-dna-mh-another-way.py
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.genes.fna')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--singleton', '--dna',
+                                            testdata1],
+                                           in_directory=location)
+        sig1 = os.path.join(location, 'ecoli.genes.fna.sig')
+        assert os.path.exists(sig1)
+
+        x = list(signature.load_signatures(sig1))
+        sig1, sig2 = sorted(x, key=lambda x: x.name())
+
+        knowngood = utils.get_test_data('benchmark.dna.sig')
+        good = list(signature.load_signatures(knowngood))[0]
+
+        assert sig2.similarity(good) == 1.0
+
+
+def test_do_sourmash_check_knowngood_input_protein_comparisons():
+    # this test checks against a known good signature calculated
+    # by utils/compute-input-prot-another-way.py
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--input-is-protein',
+                                            '--singleton',
+                                            testdata1],
+                                           in_directory=location)
+        sig1 = os.path.join(location, 'ecoli.faa.sig')
+        assert os.path.exists(sig1)
+
+        x = list(signature.load_signatures(sig1))
+        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name())
+
+        knowngood = utils.get_test_data('benchmark.input_prot.sig')
+        good_aa = list(signature.load_signatures(knowngood))[0]
+
+        assert sig1_aa.similarity(good_aa) == 1.0
+
+
+def test_do_sourmash_check_knowngood_protein_comparisons():
+    # this test checks against a known good signature calculated
+    # by utils/compute-prot-mh-another-way.py
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.genes.fna')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--singleton', '--protein',
+                                            '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        sig1 = os.path.join(location, 'ecoli.genes.fna.sig')
+        assert os.path.exists(sig1)
+
+        x = list(signature.load_signatures(sig1))
+        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name())
+
+        knowngood = utils.get_test_data('benchmark.prot.sig')
+        good_trans = list(signature.load_signatures(knowngood))[0]
+
+        assert sig2_trans.similarity(good_trans) == 1.0
 
 
 def test_do_plot_comparison():

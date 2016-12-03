@@ -59,6 +59,13 @@ class Estimators(object):
         # initialize sketch to size n
         self.mh = _minhash.MinHash(n, ksize, protein)
 
+    def is_molecule_type(self, molecule):
+        if molecule == 'dna' and not self.mh.is_protein():
+            return True
+        if molecule == 'protein' and self.mh.is_protein():
+            return True
+        return False
+
     def __getstate__(self):             # enable pickling
         return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
                 self.hll)

@@ -71,16 +71,24 @@ public:
                 }
             }
         } else {                      // protein
-            for (unsigned int i = 0; i < seq.length() - ksize + 1; i ++) {
-                std::string kmer = seq.substr(i, ksize);
-                std::string aa = _dna_to_aa(kmer);
+            std::string rc = _revcomp(seq);
+            for (unsigned int i = 0; i < 3; i++) {
+                std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i));
+                unsigned int aa_ksize = int(ksize / 3);
+                std::string kmer;
 
-                add_word(aa);
+                for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
+                    kmer = aa.substr(j, aa_ksize);
+                    add_word(kmer);
+                }
 
-                std::string rc = _revcomp(kmer);
-                aa = _dna_to_aa(rc);
+                aa = _dna_to_aa(rc.substr(i, rc.length() - i));
+                aa_ksize = int(ksize / 3);
 
-                add_word(aa);
+                for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
+                    kmer = aa.substr(j, aa_ksize);
+                    add_word(kmer);
+                }
             }
         }
     }
