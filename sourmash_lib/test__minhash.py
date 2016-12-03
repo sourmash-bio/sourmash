@@ -390,3 +390,31 @@ def test_murmur():
         assert 0, "hash_murmur requires an argument"
     except TypeError:
         pass
+
+
+def test_abundance_simple():
+    a = MinHash(20, 5, False, True)
+
+    a.add_sequence('AAAAA')
+    assert a.get_mins() == [2110480117637990133]
+    assert a.get_mins(True) == {2110480117637990133: 1}
+
+    a.add_sequence('AAAAA')
+    assert a.get_mins() == [2110480117637990133]
+    assert a.get_mins(True) == {2110480117637990133: 2}
+
+
+def test_abundance_simple_2():
+    a = MinHash(20, 5, False, True)
+    b = MinHash(20, 5, False, True)
+
+    a.add_sequence('AAAAA')
+    assert a.get_mins() == [2110480117637990133]
+    assert a.get_mins(True) == {2110480117637990133: 1}
+
+    a.add_sequence('AAAAA')
+    assert a.get_mins() == [2110480117637990133]
+    assert a.get_mins(True) == {2110480117637990133: 2}
+
+    b.add_sequence('AAAAA')
+    assert a.count_common(b) == 1
