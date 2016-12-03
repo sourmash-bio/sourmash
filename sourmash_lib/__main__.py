@@ -114,10 +114,10 @@ Commands can be:
         parser.add_argument('--input-is-protein', action='store_true')
         parser.add_argument('-k', '--ksizes',
                             default=str(DEFAULT_K),
-                            help='comma-separated list of k-mer sizes')
+                            help='comma-separated list of k-mer sizes (default: %(default)s)')
         parser.add_argument('-n', '--num-hashes', type=int,
                             default=DEFAULT_N,
-                            help='number of hashes to use in each sketch')
+                            help='number of hashes to use in each sketch (default: %(default)i)')
         parser.add_argument('--check-sequence', action='store_true')
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
@@ -250,7 +250,7 @@ Commands can be:
 
         parser = argparse.ArgumentParser()
         parser.add_argument('signatures', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
         parser.add_argument('-o', '--output')
         args = parser.parse_args(args)
 
@@ -312,8 +312,8 @@ Commands can be:
         parser.add_argument('--pdf', action='store_true')
         parser.add_argument('--labels', action='store_true')
         parser.add_argument('--indices', action='store_false')
-        parser.add_argument('--vmax', default=1.0, type=float)
-        parser.add_argument('--vmin', default=0.0, type=float)
+        parser.add_argument('--vmax', default=1.0, type=float, help='(default: %(default)f)')
+        parser.add_argument('--vmin', default=0.0, type=float, help='(default: %(default)f)')
         args = parser.parse_args(args)
 
         # load files
@@ -365,8 +365,8 @@ Commands can be:
         p = argparse.ArgumentParser()
         p.add_argument('mash_csvfile')
         p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                       default=sys.stdout)
-        p.add_argument('--email', type=str, default='')
+                       default=sys.stdout, help='(default: stdout)')
+        p.add_argument('--email', type=str, default='', help='(default: %(default)s)')
         args = p.parse_args(args)
 
         with open(args.mash_csvfile, 'r') as fp:
@@ -401,7 +401,7 @@ Commands can be:
     def dump(self, args):
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)i)')
         args = parser.parse_args(args)
 
         for filename in args.filenames:
