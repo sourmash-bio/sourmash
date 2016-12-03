@@ -173,13 +173,13 @@ def test_do_sourmash_compute_multik_only_protein():
 
 def test_do_sourmash_compute_multik_input_is_protein():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.faa.gz')
+        testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21,30',
                                             '--input-is-protein',
                                             testdata1],
                                            in_directory=location)
-        outfile = os.path.join(location, 'ecoli.faa.gz.sig')
+        outfile = os.path.join(location, 'ecoli.faa.sig')
         assert os.path.exists(outfile)
 
         with open(outfile, 'rt') as fp:
@@ -230,6 +230,56 @@ def test_do_sourmash_compute_with_cardinality():
         cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
         assert len(cards) == 2
         assert set(cards) == set([ 966, 986 ])
+
+
+def test_do_sourmash_check_protein_comparisons():
+    # this test checks 2 x 2 protein comparisons with E. coli genes.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--input-is-protein',
+                                            '--singleton',
+                                            testdata1],
+                                           in_directory=location)
+        sig1 = os.path.join(location, 'ecoli.faa.sig')
+        assert os.path.exists(sig1)
+
+        testdata2 = utils.get_test_data('ecoli.genes.fna')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21',
+                                            '--protein', '--no-dna',
+                                            '--singleton',
+                                            testdata2],
+                                           in_directory=location)
+        sig2 = os.path.join(location, 'ecoli.genes.fna.sig')
+        assert os.path.exists(sig2)
+
+        # I'm not sure why load_signatures is randomizing order, but ok.
+        x = list(signature.load_signatures(sig1))
+        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name())
+
+        x = list(signature.load_signatures(sig2))
+        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name())
+
+        name1 = sig1_aa.name().split()[0]
+        assert name1 == 'NP_414543.1'
+        name2 = sig2_aa.name().split()[0]
+        assert name2 == 'NP_414544.1'
+        name3 = sig1_trans.name().split()[0]
+        assert name3 == 'gi|556503834:2801-3733'
+        name4 = sig2_trans.name().split()[0]
+        assert name4 == 'gi|556503834:337-2799'
+
+        print(name1, name3, round(sig1_aa.similarity(sig1_trans), 3))
+        print(name2, name3, round(sig2_aa.similarity(sig1_trans), 3))
+        print(name1, name4, round(sig1_aa.similarity(sig2_trans), 3))
+        print(name2, name4, round(sig2_aa.similarity(sig2_trans), 3))
+
+        assert round(sig1_aa.similarity(sig1_trans), 3) == 0.0
+        assert round(sig2_aa.similarity(sig1_trans), 3) == 0.273
+        assert round(sig1_aa.similarity(sig2_trans), 3) == 0.174
+        assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
 
 
 def test_do_plot_comparison():

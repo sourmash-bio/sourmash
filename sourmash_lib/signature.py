@@ -138,6 +138,8 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
     """Load a YAML string with signatures into classes.
 
     Returns list of SourmashSignature objects.
+
+    Note, the order is not necessarily the same as what is in the source file.
     """
 
     # is it a data string?
