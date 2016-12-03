@@ -3,6 +3,7 @@ import sys
 import os, os.path
 import argparse
 import csv
+import gzip
 
 import screed
 import sourmash_lib
@@ -172,7 +173,8 @@ Commands can be:
                             help='number of hashes to use in each sketch (default: %(default)i)')
         parser.add_argument('--check-sequence', action='store_true')
         parser.add_argument('-f', '--force', action='store_true')
-        parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+        parser.add_argument('-o', '--output', type=argparse.FileType('wb'))
+        parser.add_argument('--gzip', action='store_true')
         parser.add_argument('--email', type=str, default='')
         parser.add_argument('--singleton', action='store_true')
         parser.add_argument('--name', type=str, default='')
@@ -269,12 +271,18 @@ Commands can be:
         def save_siglist(siglist, output_fp, filename=None):
             # save!
             if output_fp:
+                if args.gzip:
+                    raise Exception("cannot write gzip to output yet")
                 sig.save_signatures(siglist, args.output)
             else:
                 if filename is None:
                     raise Exception("internal error, filename is None")
-                with open(filename, 'w') as fp:
-                    sig.save_signatures(siglist, fp)
+                if filename.endswith('.gz') or args.gzip:
+                    with gzip.open(filename, 'wb') as fp:
+                        sig.save_signatures(siglist, fp)
+                else:
+                    with open(filename, 'wb') as fp:
+                        sig.save_signatures(siglist, fp)
 
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
@@ -282,6 +290,8 @@ Commands can be:
         if not args.name:
             for filename in args.filenames:
                 sigfile = os.path.basename(filename) + '.sig'
+                if args.gzip:
+                    sigfile += '.gz'
                 if not args.output and os.path.exists(sigfile) and not \
                     args.force:
                     print('skipping', filename, '- already done',
@@ -299,7 +309,8 @@ Commands can be:
                         siglist += build_siglist(args.email, Elist, filename,
                                                  name=record.name)
                     print('calculated {} signatures for {} sequences in {}'.\
-                              format(len(siglist), n + 1, filename))
+                              format(len(siglist), n + 1, filename),
+                          file=sys.stderr)
                 else:
                     # make estimators for the whole file
                     Elist = make_estimators()
@@ -321,7 +332,8 @@ Commands can be:
 
                     siglist = build_siglist(args.email, Elist, filename, name)
                     print('calculated {} signatures for {} sequences in {}'.\
-                              format(len(siglist), n + 1, filename))
+                              format(len(siglist), n + 1, filename),
+                          file=sys.stderr)
                 # at end, save!
                 save_siglist(siglist, args.output, sigfile)
         else:                             # single name specified - combine all
@@ -342,7 +354,8 @@ Commands can be:
             siglist = build_siglist(args.email, Elist, filename,
                                     name=args.name)
             print('calculated {} signatures for {} sequences taken from {}'.\
-                   format(len(siglist), n + 1, " ".join(args.filenames)))
+                   format(len(siglist), n + 1, " ".join(args.filenames)),
+                  file=sys.stderr)
             # at end, save!
             save_siglist(siglist, args.output)
 
@@ -466,7 +479,7 @@ Commands can be:
         "Import a CSV file full of signatures/hashes."
         p = argparse.ArgumentParser()
         p.add_argument('mash_csvfile')
-        p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+        p.add_argument('-o', '--output', type=argparse.FileType('wb'),
                        default=sys.stdout, help='(default: stdout)')
         p.add_argument('--email', type=str, default='', help='(default: %(default)s)')
         args = p.parse_args(args)

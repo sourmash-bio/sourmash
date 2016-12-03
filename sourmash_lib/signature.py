@@ -143,7 +143,7 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
     """
 
     # is it a data string?
-    if hasattr(data, 'find') and data.find('class: sourmash_signature') == -1:
+    if hasattr(data, 'find') and data.find(b'class: sourmash_signature') == -1:
         try:                                  # is it a file handle?
             data.read
         except AttributeError:                # no - treat it like a filename.
@@ -248,10 +248,12 @@ def save_signatures(siglist, fp=None):
 
         records.append(record)
 
-    s = yaml.dump_all(records, fp)
+    s = yaml.dump_all(records)
+    if fp:
+        fp.write(s.encode('utf-8'))
     if len(records):
         if fp:
-            fp.write('---\n')
+            fp.write('---\n'.encode('utf-8'))
         else:
             s += '---\n'
 

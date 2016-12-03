@@ -458,6 +458,27 @@ def test_sourmash_search_gzip():
         assert '0.958' in out
 
 
+def test_sourmash_generate_gzip():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--gzip'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'short.fa.sig.gz'))
+        assert os.path.exists(os.path.join(location, 'short2.fa.sig.gz'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig.gz',
+                                            'short2.fa.sig.gz'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in out
+        assert '0.958' in out
+
+
 def test_sourmash_search_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

@@ -42,15 +42,17 @@ def _runscript(scriptname):
             scriptname, namespace)
         return 0
     except pkg_resources.ResolutionError:
-        path = scriptpath()
+        pass
+    
+    path = scriptpath()
 
-        scriptfile = os.path.join(path, scriptname)
+    scriptfile = os.path.join(path, scriptname)
+    if os.path.isfile(scriptfile):
         if os.path.isfile(scriptfile):
-            if os.path.isfile(scriptfile):
-                exec(  # pylint: disable=exec-used
-                    compile(open(scriptfile).read(), scriptfile, 'exec'),
-                    namespace)
-                return 0
+            exec(  # pylint: disable=exec-used
+                compile(open(scriptfile).read(), scriptfile, 'exec'),
+                namespace)
+            return 0
 
     return -1
 

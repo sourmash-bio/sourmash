@@ -85,13 +85,13 @@ Saving and loading signature files
 >>> from sourmash_lib import signature
 >>> sig1 = signature.SourmashSignature('titus@idyll.org', estimators[0],
 ...                                    name=genomes[0][:20])
->>> with open('/tmp/genome1.sig', 'wt') as fp:
-...   signature.save_signatures([sig1], fp)
+>>> with open('/tmp/genome1.sig', 'wb') as fp:
+...   _= signature.save_signatures([sig1], fp)
 
 Here, ``/tmp/genome1.sig`` is a YAML file that can now be loaded and
 compared -- first, load:
 
->>> sigdata = open('/tmp/genome1.sig', 'rt').read()
+>>> sigdata = open('/tmp/genome1.sig', 'rb').read()
 >>> siglist = list(signature.load_signatures(sigdata))
 >>> loaded_sig = siglist[0]
 
