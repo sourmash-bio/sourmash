@@ -42,7 +42,7 @@ Commands can be:
         cmd(sys.argv[2:])
 
     def search(self, args):
-        "Search a query sig against one or more signatures; report top match."
+        "Search a query sig against one or more signatures; report up to the 3 top matches."
         parser = argparse.ArgumentParser()
         parser.add_argument('query')
         parser.add_argument('against', nargs='+')
@@ -51,14 +51,52 @@ Commands can be:
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', default=None,
+                            action='store_true')
+        parser.add_argument('--no-dna', dest='dna', action='store_false')
+        parser.set_defaults(dna=None)
+
         args = parser.parse_args(args)
 
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+
+        moltype = None
+        if args.protein:
+            moltype = 'protein'
+        elif args.dna:
+            moltype = 'dna'
+
         # get the query signature
-        sl = sig.load_signatures(args.query, select_ksize=args.ksize)
+        sl = sig.load_signatures(args.query,
+                                 select_ksize=args.ksize,
+                                 select_moltype=moltype)
         sl = list(sl)
+
         if len(sl) != 1:
-            raise Exception("%d query signatures; need exactly one" % len(sl))
+            print('When loading query from "{}",'.format(args.query),
+                  file=sys.stderr)
+            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            sys.exit(-1)
         query = sl[0]
+
+        query_moltype = 'UNKNOWN'
+        if query.estimator.is_molecule_type('dna'):
+            query_moltype = 'DNA'
+        elif query.estimator.is_molecule_type('protein'):
+            query_moltype = 'protein'
+        query_ksize = query.estimator.ksize
+        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
+                                                      query_ksize,
+                                                      query_moltype))
 
         # get the signatures to query
         print('loading db of signatures from %d files' % len(args.against),
@@ -70,7 +108,10 @@ Commands can be:
                       file=sys.stderr)
                 continue
 
-            sl = sig.load_signatures(filename, select_ksize=args.ksize)
+            sl = sig.load_signatures(filename,
+                                     select_ksize=args.ksize,
+                                     select_moltype=moltype)
+
             for x in sl:
                 against.append((x, filename))
         print('loaded {} signatures total.'.format(len(against)))
@@ -88,6 +129,7 @@ Commands can be:
             print('{} matches; showing {}:'.format(len(distances),
                                                    args.num_results))
             for distance, match, filename in distances[:args.num_results]:
+
                 print('\t', match.name(), '\t', "%.3f" % distance,
                       '\t', filename)
 
@@ -110,14 +152,24 @@ Commands can be:
         """
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('--protein', action='store_true')
+
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', action='store_true')
+        parser.add_argument('--no-dna', dest='dna',
+                            action='store_false')
+        parser.set_defaults(dna=True)
+
         parser.add_argument('--input-is-protein', action='store_true')
         parser.add_argument('-k', '--ksizes',
                             default=str(DEFAULT_K),
-                            help='comma-separated list of k-mer sizes')
+                            help='comma-separated list of k-mer sizes (default: %(default)s)')
         parser.add_argument('-n', '--num-hashes', type=int,
                             default=DEFAULT_N,
-                            help='number of hashes to use in each sketch')
+                            help='number of hashes to use in each sketch (default: %(default)i)')
         parser.add_argument('--check-sequence', action='store_true')
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
@@ -127,6 +179,18 @@ Commands can be:
         parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
         args = parser.parse_args(args)
+
+        if args.input_is_protein and args.dna:
+            print('WARNING: input is protein, turning off DNA hash computing.',
+                  file=sys.stderr)
+            args.dna = False
+            args.protein = True
+
+        if not args.dna and args.protein:
+            if args.with_cardinality:
+                print('Cannot compute cardinality for protein sequences.',
+                       file=sys.stderr)
+                sys.exit(-1)
 
         print('computing signatures for files:', args.filenames,
               file=sys.stderr)
@@ -139,6 +203,39 @@ Commands can be:
         else:
             ksizes = [int(ksizes)]
 
+        print('Computing signature for ksizes: %s' % str(ksizes),
+              file=sys.stderr)
+
+        num_sigs = 0
+        if args.dna and args.protein:
+            print('Computing both DNA and protein signatures.',
+                  file=sys.stderr)
+            num_sigs = 2*len(ksizes)
+        elif args.dna:
+            print('Computing only DNA (and not protein) signatures.',
+                  file=sys.stderr)
+            num_sigs = len(ksizes)
+        elif args.protein:
+            print('Computing only protein (and not DNA) signatures.',
+                  file=sys.stderr)
+            num_sigs = len(ksizes)
+
+        if args.protein:
+            bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
+            if bad_ksizes:
+                print('protein ksizes must be divisible by 3, sorry!',
+                      file=sys.stderr)
+                print('bad ksizes: {}'.format(", ".join(bad_ksizes)),
+                      file=sys.stderr)
+                sys.exit(-1)
+
+        print('Computing a total of {} signatures.'.format(num_sigs),
+              file=sys.stderr)
+
+        if num_sigs == 0:
+            print('...nothing to calculate!? Exiting!', file=sys.stderr)
+            sys.exit(-1)
+
         if args.name and not args.output:
             print("must specify -o with --name", file=sys.stderr)
             sys.exit(-1)
@@ -147,10 +244,15 @@ Commands can be:
             # one estimator for each ksize
             Elist = []
             for k in ksizes:
-                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                            protein=args.protein,
+                if args.protein:
+                    E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                                                protein=True)
+                    Elist.append(E)
+                if args.dna:
+                    E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                                                protein=False,
                                         with_cardinality=args.with_cardinality)
-                Elist.append(E)
+                    Elist.append(E)
             return Elist
 
         def add_seq(Elist, seq, input_is_protein, check_sequence):
@@ -250,7 +352,7 @@ Commands can be:
 
         parser = argparse.ArgumentParser()
         parser.add_argument('signatures', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
         parser.add_argument('-o', '--output')
         args = parser.parse_args(args)
 
@@ -312,8 +414,8 @@ Commands can be:
         parser.add_argument('--pdf', action='store_true')
         parser.add_argument('--labels', action='store_true')
         parser.add_argument('--indices', action='store_false')
-        parser.add_argument('--vmax', default=1.0, type=float)
-        parser.add_argument('--vmin', default=0.0, type=float)
+        parser.add_argument('--vmax', default=1.0, type=float, help='(default: %(default)f)')
+        parser.add_argument('--vmin', default=0.0, type=float, help='(default: %(default)f)')
         args = parser.parse_args(args)
 
         # load files
@@ -365,8 +467,8 @@ Commands can be:
         p = argparse.ArgumentParser()
         p.add_argument('mash_csvfile')
         p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                       default=sys.stdout)
-        p.add_argument('--email', type=str, default='')
+                       default=sys.stdout, help='(default: stdout)')
+        p.add_argument('--email', type=str, default='', help='(default: %(default)s)')
         args = p.parse_args(args)
 
         with open(args.mash_csvfile, 'r') as fp:
@@ -401,7 +503,7 @@ Commands can be:
     def dump(self, args):
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)i)')
         args = parser.parse_args(args)
 
         for filename in args.filenames:
