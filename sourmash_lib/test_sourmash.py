@@ -366,5 +366,3 @@ def test_do_sourmash_sbt_search_bestonly():
         print(out)
 
         assert testdata1 in out
-
-
