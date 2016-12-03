@@ -68,16 +68,12 @@ Commands can be:
             if args.dna is True:
                 raise Exception('cannot specify both --dna and --protein!')
             args.dna = False
-        else:
-            args.dna = True
 
+        moltype = None
         if args.protein:
             moltype = 'protein'
         elif args.dna:
             moltype = 'dna'
-        else:
-            print('Must specify either --protein or --dna!', file=sys.stderr)
-            sys.exit(-1)
 
         # get the query signature
         sl = sig.load_signatures(args.query,
@@ -91,6 +87,16 @@ Commands can be:
             print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
             sys.exit(-1)
         query = sl[0]
+
+        query_moltype = 'UNKNOWN'
+        if query.estimator.is_molecule_type('dna'):
+            query_moltype = 'DNA'
+        elif query.estimator.is_molecule_type('protein'):
+            query_moltype = 'protein'
+        query_ksize = query.estimator.ksize
+        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
+                                                      query_ksize,
+                                                      query_moltype))
 
         # get the signatures to query
         print('loading db of signatures from %d files' % len(args.against),
