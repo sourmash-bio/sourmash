@@ -6,7 +6,25 @@ import yaml
 import hashlib
 import sourmash_lib
 
+import io
+import gzip
+import bz2file
+
 SIGNATURE_VERSION=0.4
+
+
+class FakeHLL(object):
+    def __init__(self, cardinality):
+        self.cardinality = int(cardinality)
+
+    def estimate_cardinality(self):
+        return self.cardinality
+
+    def consume_string(self):
+        raise Exception("cannot add to this HLL")
+
+    def __eq__(self, other):
+        return self.cardinality == other.cardinality
 
 
 class SourmashSignature(object):
@@ -41,7 +59,6 @@ class SourmashSignature(object):
 
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
-        # @CTB convert to printable or something.
         if 'name' in self.d:
             return self.d.get('name')
         elif 'filename' in self.d:
@@ -59,6 +76,8 @@ class SourmashSignature(object):
         sketch['num'] = len(estimator.mh)
         sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
+        if estimator.hll is not None:
+            sketch['cardinality'] = estimator.hll.estimate_cardinality()
         e['signature'] = sketch
 
         return self.d.get('email'), self.d.get('name'), \
@@ -70,16 +89,64 @@ class SourmashSignature(object):
     jaccard = similarity
 
 
+def _guess_open(filename):
+    """
+    Make a best-effort guess as to how to parse the given sequence file.
+
+    Handles '-' as shortcut for stdin.
+    Deals with .gz and .bz2 as well as plain text.
+    """
+    magic_dict = {
+        b"\x1f\x8b\x08": "gz",
+        b"\x42\x5a\x68": "bz2",
+    }  # Inspired by http://stackoverflow.com/a/13044946/1585509
+
+    if filename == '-':
+        filename = '/dev/stdin'
+
+    bufferedfile = io.open(file=filename, mode='rb', buffering=8192)
+    num_bytes_to_peek = max(len(x) for x in magic_dict)
+    file_start = bufferedfile.peek(num_bytes_to_peek)
+    compression = None
+    for magic, ftype in magic_dict.items():
+        if file_start.startswith(magic):
+            compression = ftype
+            break
+    if compression is 'bz2':
+        sigfile = bz2file.BZ2File(filename=bufferedfile)
+    elif compression is 'gz':
+        if not bufferedfile.seekable():
+            bufferedfile.close()
+            raise ValueError("gziped data not streamable, pipe through zcat \
+                            first")
+        sigfile = gzip.GzipFile(filename=filename)
+    else:
+        sigfile = bufferedfile
+
+    return sigfile
+
+
 def load_signatures(data, select_ksize=None, ignore_md5sum=False):
     """Load a YAML string with signatures into classes.
 
     Returns list of SourmashSignature objects.
     """
 
+    # is it a data string?
+    if hasattr(data, 'find') and data.find('class: sourmash_signature') == -1:
+        try:                                  # is it a file handle?
+            data.read
+        except AttributeError:                # no - treat it like a filename.
+            data = _guess_open(data)
+
+    # at this point, whatever 'data' is, it should be loadable!
+
     # record header
-    x = yaml.safe_load_all(data)
+    x = yaml.load_all(data)
     siglist = []
-    for d in x:      # allow empty records <-> concatenation of signatures
+    for n, d in enumerate(x): # allow empty records & concat of signatures
+        if n > 0 and n % 100 == 0:
+            print('...sig loading {}'.format(n))
         if not d:
             continue
         if d.get('class') != 'sourmash_signature':
@@ -104,8 +171,7 @@ def load_signatures(data, select_ksize=None, ignore_md5sum=False):
             sig = _load_one_signature(sketch, email, name, filename,
                                           ignore_md5sum)
             if not select_ksize or select_ksize == sig.estimator.ksize:
-                siglist.append(sig)
-    return siglist
+                yield sig
 
 
 def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
@@ -116,6 +182,8 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     e = sourmash_lib.Estimators(ksize=ksize, n=n)
     for m in mins:
         e.mh.add_hash(m)
+    if 'cardinality' in sketch:
+        e.hll = FakeHLL(int(sketch['cardinality']))
 
     sig = SourmashSignature(email, e)
 
@@ -175,7 +243,7 @@ def test_roundtrip():
     e.add("AT" * 10)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
-    siglist = load_signatures(s)
+    siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator
 
@@ -188,7 +256,7 @@ def test_roundtrip_empty_email():
     e.add("AT" * 10)
     sig = SourmashSignature('', e)
     s = save_signatures([sig])
-    siglist = load_signatures(s)
+    siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator
 
@@ -237,7 +305,7 @@ def test_save_load_multisig():
     sig2 = SourmashSignature('titus2@idyll.org', e2)
 
     x = save_signatures([sig1, sig2])
-    y = load_signatures(x)
+    y = list(load_signatures(x))
 
     print(x)
 
