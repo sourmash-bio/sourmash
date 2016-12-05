@@ -528,7 +528,26 @@ Commands can be:
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--traverse-directory', action='store_true')
         parser.add_argument('-x', '--bf-size', type=float, default=1e5)
+
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', action='store_true')
+        parser.add_argument('--no-dna', dest='dna',
+                            action='store_false')
+        parser.set_defaults(dna=None)
         args = parser.parse_args(args)
+
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+            moltype = 'protein'
+        else:
+            args.dna = True
+            moltype = 'dna'
 
         factory = GraphFactory(1, args.bf_size, 4)
         tree = SBT(factory)
@@ -548,7 +567,8 @@ Commands can be:
 
         n = 0
         for f in inp_files:
-            s = sig.load_signatures(f, select_ksize=args.ksize)
+            s = sig.load_signatures(f, select_ksize=args.ksize,
+                                    select_moltype=moltype)
 
             for ss in s:
                 leaf = SigLeaf(ss.md5sum(), ss)
@@ -571,24 +591,62 @@ Commands can be:
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
         parser.add_argument('--best-only', action='store_true')
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', default=None,
+                            action='store_true')
+        parser.add_argument('--no-dna', dest='dna', action='store_false')
+        parser.set_defaults(dna=None)
         args = parser.parse_args(args)
+
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+
+        moltype = None
+        if args.protein:
+            moltype = 'protein'
+        elif args.dna:
+            moltype = 'dna'
 
         search_fn = search_minhashes
         if args.best_only:
             search_fn = SearchMinHashesFindBest().search
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        s = sig.load_signatures(args.query, select_ksize=args.ksize)
-        ss = next(s)
+        sl = sig.load_signatures(args.query, select_ksize=args.ksize,
+                                 select_moltype=moltype)
+        sl = list(sl)
+        if len(sl) != 1:
+            print('When loading query from "{}",'.format(args.query),
+                  file=sys.stderr)
+            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            sys.exit(-1)
+
+        query = sl[0]
+
+        query_moltype = 'UNKNOWN'
+        if query.estimator.is_molecule_type('dna'):
+            query_moltype = 'DNA'
+        elif query.estimator.is_molecule_type('protein'):
+            query_moltype = 'protein'
+        query_ksize = query.estimator.ksize
+        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
+                                                      query_ksize,
+                                                      query_moltype))
 
         results = []
-        for leaf in tree.find(search_fn, ss, args.threshold):
-            results.append((ss.similarity(leaf.data), leaf.data))
+        for leaf in tree.find(search_fn, query, args.threshold):
+            results.append((query.similarity(leaf.data), leaf.data))
             #results.append((leaf.data.similarity(ss), leaf.data))
 
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
-        for (similarity, ss) in results:
-            print('{:.2f} {}'.format(similarity, ss.name()))
+        for (similarity, query) in results:
+            print('{:.2f} {}'.format(similarity, query.name()))
 
         if args.save_matches:
             outname = args.save_matches.name
@@ -609,12 +667,55 @@ Commands can be:
         parser.add_argument('--threshold', default=0.05, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
+
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', default=None,
+                            action='store_true')
+        parser.add_argument('--no-dna', dest='dna', action='store_false')
+        parser.set_defaults(dna=None)
+
         args = parser.parse_args(args)
+
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+
+        moltype = None
+        if args.protein:
+            moltype = 'protein'
+        elif args.dna:
+            moltype = 'dna'
+
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+        sl = sig.load_signatures(args.query, select_ksize=args.ksize,
+                                 select_moltype=moltype)
+        sl = list(sl)
+        if len(sl) != 1:
+            print('When loading query from "{}",'.format(args.query),
+                  file=sys.stderr)
+            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            sys.exit(-1)
+
+        query = sl[0]
+
+        query_moltype = 'UNKNOWN'
+        if query.estimator.is_molecule_type('dna'):
+            query_moltype = 'DNA'
+        elif query.estimator.is_molecule_type('protein'):
+            query_moltype = 'protein'
+        query_ksize = query.estimator.ksize
+        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
+                                                      query_ksize,
+                                                      query_moltype))
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         s = sig.load_signatures(args.query, select_ksize=args.ksize)
-        ss = next(s)
-        orig_ss = ss
+        orig_query = query
 
         sum_found = 0.
         found = []
@@ -623,8 +724,8 @@ Commands can be:
 
             results = []
             # use super low threshold for this part of the search
-            for leaf in tree.find(search_fn, ss, 0.00001):
-                results.append((ss.similarity(leaf.data), leaf.data))
+            for leaf in tree.find(search_fn, query, 0.00001):
+                results.append((query.similarity(leaf.data), leaf.data))
                 #results.append((leaf.data.similarity(ss), leaf.data))
 
             if not len(results):          # no matches at all!
@@ -633,12 +734,15 @@ Commands can be:
             # take the best result
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_sim, best_ss = results[0]
+            sim = best_ss.similarity(orig_query)
 
             # adjust by size of leaf (kmer cardinality of original genome)
-            leaf_kmers = best_ss.estimator.hll.estimate_cardinality()
-            query_kmers = orig_ss.estimator.hll.estimate_cardinality()
-            sim = best_ss.similarity(orig_ss)
-            f_of_total = leaf_kmers / query_kmers * sim
+            if best_ss.estimator.hll:
+                leaf_kmers = best_ss.estimator.hll.estimate_cardinality()
+                query_kmers = orig_query.estimator.hll.estimate_cardinality()
+                f_of_total = leaf_kmers / query_kmers * sim
+            else:
+                f_of_total = 0
 
             if not found and sim < args.threshold:
                 print('best match: {}'.format(best_ss.name()))
@@ -647,7 +751,7 @@ Commands can be:
                 break
 
             # subtract found hashes from search hashes, construct new search
-            new_mins = set(ss.estimator.mh.get_mins())
+            new_mins = set(query.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
 
             # print interim & save
@@ -662,7 +766,7 @@ Commands can be:
             for m in new_mins:
                 e.mh.add_hash(m)
             new_ss = sig.SourmashSignature('foo', e)
-            ss = new_ss
+            query = new_ss
 
         print('found {}, total fraction {:.3f}'.format(len(found), sum_found))
         print('')
