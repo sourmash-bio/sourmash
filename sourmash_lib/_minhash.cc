@@ -159,6 +159,27 @@ minhash_add_hash(MinHash_Object * me, PyObject * args)
 
 static
 PyObject *
+minhash_set_counters(MinHash_Object * me, PyObject * args)
+{
+    PyObject* dict;
+    if (!PyArg_ParseTuple(args, "O!", &PyDict_Type, &dict)) {
+        return NULL;
+    }
+
+    KmerMinAbundance *mh = (KmerMinAbundance*)me->mh;
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        mh->mins[PyLong_AsUnsignedLongLong(key)] = PyLong_AsUnsignedLong(value);
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static
+PyObject *
 minhash_get_mins(MinHash_Object * me, PyObject * args, PyObject * kwargs)
 {
     PyObject * with_abundance_o = Py_False;
@@ -325,6 +346,10 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
 
     try {
         if (me->track_abundance) {
+            if (not other->track_abundance) {
+                /* TODO: this is not strictly true, but let's throw an error for now */
+                throw minhash_exception("Both minhashes must track_abundance to be comparable");
+            }
             n = ((KmerMinAbundance*)me->mh)->count_common(*(KmerMinAbundance*)(other->mh));
             size = ((KmerMinAbundance*)me->mh)->mins.size();
         } else {
@@ -376,6 +401,11 @@ static PyMethodDef MinHash_methods [] = {
         "get_mins",
         (PyCFunction)minhash_get_mins, METH_VARARGS | METH_KEYWORDS,
         "Get MinHash signature"
+    },
+    {
+        "set_abundances",
+        (PyCFunction)minhash_set_counters, METH_VARARGS,
+        "Set abundances for MinHash hashes.",
     },
     {
         "__copy__",

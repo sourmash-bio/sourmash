@@ -74,7 +74,12 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
         sketch['num'] = len(estimator.mh)
-        sketch['mins'] = list(map(int, estimator.mh.get_mins()))
+        if self.estimator.track_abundance:
+            values = estimator.mh.get_mins(with_abundance=True)
+            sketch['mins'] = list(map(int, values.keys()))
+            sketch['abundances'] = list(map(int, values.values()))
+        else:
+            sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
         if estimator.mh.is_protein():
@@ -199,11 +204,17 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
 
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein)
-    for m in mins:
-        e.mh.add_hash(m)
+    track_abundance = 'abundances' in sketch
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance)
+    if track_abundance:
+        abundances = list(map(int, sketch['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+    else:
+        for m in mins:
+            e.mh.add_hash(m)
     if 'cardinality' in sketch:
         e.hll = FakeHLL(int(sketch['cardinality']))
+
 
     sig = SourmashSignature(email, e)
 

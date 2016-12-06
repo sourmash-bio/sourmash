@@ -254,7 +254,7 @@ class KmerMinAbundance: public KmerMinHash {
     KmerMinAbundance(unsigned int n, unsigned int k, bool prot) :
         KmerMinHash(n, k, prot) { };
 
-    void add_hash(HashIntoType h) {
+    virtual void add_hash(HashIntoType h) {
         if (mins.size() < num) {
             mins[h] += 1;
             max_mins = std::max(max_mins, h);
@@ -275,14 +275,14 @@ class KmerMinAbundance: public KmerMinHash {
         _shrink();
     }
 
-    void _shrink() {
+    virtual void _shrink() {
         while (mins.size() > num) {
             mins.erase(max_mins);
             max_mins = (*std::max_element(mins.begin(), mins.end())).first;
         }
     }
 
-    void merge(const KmerMinAbundance& other) {
+    virtual void merge(const KmerMinAbundance& other) {
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }
@@ -296,7 +296,7 @@ class KmerMinAbundance: public KmerMinHash {
         _shrink();
     }
 
-    unsigned int count_common(const KmerMinAbundance& other) {
+    virtual unsigned int count_common(const KmerMinAbundance& other) {
         CMinHashType combined;
 
         if (ksize != other.ksize) {
