@@ -1,11 +1,8 @@
 from __future__ import print_function
 from __future__ import division
-from glob import glob
 import os
 
-from sourmash_lib import signature
-from sourmash_lib import sourmash_tst_utils as utils
-from .sbt import SBT, GraphFactory, Leaf
+from .sbt import Leaf
 
 
 class SigLeaf(Leaf):
@@ -76,65 +73,3 @@ class SearchMinHashesFindBest(object):
                 return 1
 
         return 0
-
-
-def test_tree_save_load():
-    factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory)
-
-    for f in glob("demo/*.sig"):
-        with open(f, 'r') as data:
-            sig = next(signature.load_signatures(data))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        try:
-            tree.add_node(leaf)
-        except TypeError:
-            raise Exception("check your version of khmer - you need khmer>2.1")
-        to_search = leaf
-
-    print('*' * 60)
-    print("{}:".format(to_search.metadata))
-    old_result = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
-    print(*old_result, sep='\n')
-
-    with utils.TempDirectory() as location:
-        tree.save(os.path.join(location, 'demo'))
-        tree = SBT.load(os.path.join(location, 'demo'),
-                        leaf_loader=SigLeaf.load)
-
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        new_result = [str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)]
-        print(*new_result, sep='\n')
-
-        assert old_result == new_result
-
-
-def test_binary_nary_tree():
-    factory = GraphFactory(31, 1e5, 4)
-    trees = {}
-    trees[2] = SBT(factory)
-    trees[5] = SBT(factory, d=5)
-    trees[10] = SBT(factory, d=10)
-
-    for f in glob("demo/*.sig"):
-        with open(f, 'r') as data:
-            sig = next(signature.load_signatures(data))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        for tree in trees.values():
-            tree.add_node(leaf)
-        to_search = leaf
-
-    results = {}
-    print('*' * 60)
-    print("{}:".format(to_search.metadata))
-    for d, tree in trees.items():
-        results[d] = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
-    print(*results[2], sep='\n')
-
-    assert set(results[2]) == set(results[5])
-    assert set(results[5]) == set(results[10])
-
-if __name__ == "__main__":
-    test_binary_nary_tree()

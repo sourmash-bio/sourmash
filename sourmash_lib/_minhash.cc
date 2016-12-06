@@ -159,10 +159,14 @@ minhash_add_hash(MinHash_Object * me, PyObject * args)
 
 static
 PyObject *
-minhash_get_mins(MinHash_Object * me, PyObject * args)
+minhash_get_mins(MinHash_Object * me, PyObject * args, PyObject * kwargs)
 {
     PyObject * with_abundance_o = Py_False;
-    if (!PyArg_ParseTuple(args, "|O", &with_abundance_o)) {
+    static const char* const_kwlist[] = {"with_abundance", NULL};
+    static char** kwlist = const_cast<char**>(const_kwlist);
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist,
+                                     &with_abundance_o)) {
         return NULL;
     }
 
@@ -292,7 +296,7 @@ static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
     unsigned int n;
     try {
         if (me->track_abundance) {
-            n = ((KmerMinAbundance*)me->mh)->count_common(*(KmerMinAbundance*)(other->mh));
+            n = ((KmerMinAbundance*)me->mh)->count_common(*dynamic_cast<KmerMinAbundance*>(other->mh));
         } else {
             n = me->mh->count_common(*other->mh);
         }
@@ -370,7 +374,7 @@ static PyMethodDef MinHash_methods [] = {
     },
     {
         "get_mins",
-        (PyCFunction)minhash_get_mins, METH_VARARGS,
+        (PyCFunction)minhash_get_mins, METH_VARARGS | METH_KEYWORDS,
         "Get MinHash signature"
     },
     {
@@ -413,7 +417,11 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     unsigned int _n, _ksize;
     PyObject * track_abundance_o = Py_False;
     PyObject * is_protein_o = NULL;
-    if (!PyArg_ParseTuple(args, "II|OO",
+
+    static const char* const_kwlist[] = {"n", "ksize", "is_protein", "track_abundance", NULL};
+    static char** kwlist = const_cast<char**>(const_kwlist);
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "II|OO", kwlist,
                           &_n, &_ksize, &is_protein_o, &track_abundance_o)) {
         return NULL;
     }
