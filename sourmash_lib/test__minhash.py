@@ -418,6 +418,7 @@ def test_abundance_simple_2():
     b.add_sequence('AAAAA')
     assert a.count_common(b) == 1
 
+
 def test_abundance_count_common():
     a = MinHash(20, 5, False, track_abundance=True)
     b = MinHash(20, 5, False, track_abundance=False)
