@@ -317,9 +317,20 @@ static PyObject * minhash_count_common(MinHash_Object * me, PyObject * args)
     unsigned int n;
     try {
         if (me->track_abundance) {
-            n = ((KmerMinAbundance*)me->mh)->count_common(*dynamic_cast<KmerMinAbundance*>(other->mh));
+            KmerMinAbundance *mh = dynamic_cast<KmerMinAbundance*>(me->mh);
+            if (other->track_abundance) {
+                KmerMinAbundance *other_mh = dynamic_cast<KmerMinAbundance*>(other->mh);
+                n = mh->count_common(*other_mh);
+            } else {
+                n = mh->count_common(*other->mh);
+            }
         } else {
-            n = me->mh->count_common(*other->mh);
+            if (other->track_abundance) {
+                KmerMinAbundance *other_mh = dynamic_cast<KmerMinAbundance*>(other->mh);
+                n = other_mh->count_common(*me->mh);
+            } else {
+                n = me->mh->count_common(*other->mh);
+            }
         }
     } catch (minhash_exception &e) {
         PyErr_SetString(PyExc_ValueError, e.what());

@@ -315,6 +315,25 @@ class KmerMinAbundance: public KmerMinHash {
         return mins.size() + other.mins.size() - combined.size();
     }
 
+    virtual unsigned int count_common(const KmerMinHash& other) {
+        CMinHashType combined;
+
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+
+        for (auto mi: mins) {
+            combined.insert(mi.first);
+        }
+        for (auto mi: other.mins) {
+            combined.insert(mi);
+        }
+        return mins.size() + other.mins.size() - combined.size();
+    }
+
 };
 
 #endif // KMER_MIN_HASH_HH

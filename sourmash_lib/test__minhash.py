@@ -417,3 +417,48 @@ def test_abundance_simple_2():
 
     b.add_sequence('AAAAA')
     assert a.count_common(b) == 1
+
+def test_abundance_count_common():
+    a = MinHash(20, 5, False, track_abundance=True)
+    b = MinHash(20, 5, False, track_abundance=False)
+
+    a.add_sequence('AAAAA')
+    a.add_sequence('AAAAA')
+    assert a.get_mins() == [2110480117637990133]
+    assert a.get_mins(with_abundance=True) == {2110480117637990133: 2}
+
+    b.add_sequence('AAAAA')
+    b.add_sequence('GGGGG')
+    assert a.count_common(b) == 1
+    assert a.count_common(b) == b.count_common(a)
+
+    assert b.get_mins(with_abundance=True) == [2110480117637990133,
+                                               10798773792509008305]
+
+def test_abundance_compare():
+    a = MinHash(20, 10, track_abundance=True)
+    b = MinHash(20, 10, track_abundance=False)
+
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+
+    assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
+
+    # add same sequence again
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+    assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
+
+    b.add_sequence('GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT')
+    x = a.compare(b)
+    assert x >= 0.3, x
+
+    x = b.compare(a)
+    assert x >= 0.3, x
+    assert a.compare(a) == 1.0
+    assert b.compare(b) == 1.0
