@@ -81,11 +81,15 @@ class SearchMinHashesFindBest(object):
 def test_tree_save_load():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
+
     for f in glob("demo/*.sig"):
         with open(f, 'r') as data:
             sig = next(signature.load_signatures(data))
         leaf = SigLeaf(os.path.basename(f), sig)
-        tree.add_node(leaf)
+        try:
+            tree.add_node(leaf)
+        except TypeError:
+            raise Exception("check your version of khmer - you need khmer>2.1")
         to_search = leaf
 
     print('*' * 60)
