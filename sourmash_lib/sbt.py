@@ -223,6 +223,14 @@ class SBT(object):
             2: cls._load_v2,
         }
 
+        # @CTB hack: check to make sure khmer Nodegraph supports the
+        # correct methods.
+        x = khmer.Nodegraph(1, 1, 1)
+        try:
+            x.count(10)
+        except TypeError:
+            raise Exception("khmer version is too old; need >= 2.1.")
+
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
