@@ -8,10 +8,10 @@ dynamically loaded for each query.
 
 To try it out, do::
 
-    factory = GraphFactory(ksize, tablesizes)
+    factory = GraphFactory(ksize, tablesizes, n_tables)
     root = Node(factory)
 
-    graph1 = factory.create_nodegraph()
+    graph1 = factory()
     # ... add stuff to graph1 ...
     leaf1 = Leaf("a", graph1)
     root.add_node(leaf1)
@@ -21,12 +21,13 @@ For example, ::
     # filenames: list of fa/fq files
     # ksize: k-mer size
     # tablesizes: Bloom filter table sizes
+    # n_tables: Number of tables
 
-    factory = GraphFactory(ksize, tablesizes)
+    factory = GraphFactory(ksize, tablesizes, n_tables)
     root = Node(factory)
 
     for filename in filenames:
-        graph = factory.create_nodegraph()
+        graph = factory()
         graph.consume_fasta(filename)
         leaf = Leaf(filename, graph)
         root.add_node(leaf)
@@ -38,15 +39,15 @@ then define a search function, ::
             yield seq[start:start + k]
 
     def search_transcript(node, seq, threshold):
-        presence = [ node.graph.get(kmer) for kmer in kmers(ksize, seq) ]
+        presence = [ node.data.get(kmer) for kmer in kmers(ksize, seq) ]
         if sum(presence) >= int(threshold * len(seq)):
             return 1
         return 0
 """
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple
+from collections import namedtuple, Mapping
 import hashlib
 import json
 import math
@@ -90,16 +91,19 @@ class SBT(object):
         self.nodes = [None]
         self.d = d
 
-    def add_node(self, node):
+    def new_node_pos(self, node):
         try:
             pos = self.nodes.index(None)
         except ValueError:
             # There aren't any empty positions left.
             # Extend array
-            current_size = len(self.nodes)
-            # TODO: this is too much, figure out the lower bound
-            self.nodes += [None] * (2 * (current_size + 1) * self.d)
+            height = math.floor(math.log(len(self.nodes), self.d)) + 1
+            self.nodes += [None] * int(self.d ** height)
             pos = self.nodes.index(None)
+        return pos
+
+    def add_node(self, node):
+        pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree
             self.nodes[0] = node
@@ -135,8 +139,7 @@ class SBT(object):
             node.update(p.node)
             p = self.parent(p.pos)
 
-
-    def find(self, search_fn, *args):
+    def find(self, search_fn, *args, **kwargs):
         matches = []
         visited, queue = set(), [0]
         while queue:
@@ -152,8 +155,11 @@ class SBT(object):
                     if isinstance(node_g, Leaf):
                         matches.append(node_g)
                     elif isinstance(node_g, Node):
-                        for c in self.children(node_p):
-                            queue.insert(0, c.pos)
+                        if kwargs.get('dfs', True):  # defaults search to dfs
+                            for c in self.children(node_p):
+                                queue.insert(0, c.pos)
+                        else: # bfs
+                            queue.extend(c.pos for c in self.children(node_p))
         return matches
 
     def parent(self, pos):
@@ -170,6 +176,7 @@ class SBT(object):
         return NodePos(cd, self.nodes[cd])
 
     def save(self, tag):
+        version = 2
         basetag = os.path.basename(tag)
         dirprefix = os.path.dirname(tag)
         dirname = os.path.join(dirprefix, '.sbt.' + basetag)
@@ -177,10 +184,14 @@ class SBT(object):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        structure = []
-        for node in self.nodes:
+        info = {}
+        info['d'] = self.d
+        info['version'] = version
+
+        structure = {}
+        for i, node in iter(self):
             if node is None:
-                structure.append(None)
+                structure[i] = None
                 continue
 
             basename = os.path.basename(node.name)
@@ -193,18 +204,24 @@ class SBT(object):
                 data['metadata'] = node.metadata
 
             node.save(os.path.join(dirprefix, data['filename']))
-            structure.append(data)
+            structure[i] = data
 
         fn = tag + '.sbt.json'
+        info['nodes'] = structure
         with open(fn, 'w') as fp:
-            json.dump(structure, fp)
+            json.dump(info, fp)
 
         return fn
 
-    @staticmethod
-    def load(sbt_name, leaf_loader=None):
+    @classmethod
+    def load(cls, sbt_name, leaf_loader=None):
         dirname = os.path.dirname(sbt_name)
         sbt_name = os.path.basename(sbt_name)
+
+        loaders = {
+            1: cls._load_v1,
+            2: cls._load_v2,
+        }
 
         if leaf_loader is None:
             leaf_loader = Leaf.load
@@ -215,6 +232,15 @@ class SBT(object):
         with open(os.path.join(dirname, sbt_fn)) as fp:
             jnodes = json.load(fp)
 
+        version = 1
+        if isinstance(jnodes, Mapping):
+            version = jnodes['version']
+
+        return loaders[version](jnodes, leaf_loader, dirname)
+
+    @staticmethod
+    def _load_v1(jnodes, leaf_loader, dirname):
+
         if jnodes[0] is None:
             # TODO error!
             raise ValueError("Empty tree!")
@@ -222,8 +248,7 @@ class SBT(object):
         sbt_nodes = []
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
-        ksize, tablesize, ntables, _, _, _ = \
-          khmer.extract_nodegraph_info(sample_bf)
+        ksize, tablesize, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(ksize, tablesize, ntables)
 
         for jnode in jnodes:
@@ -233,15 +258,44 @@ class SBT(object):
 
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
-                #sbt_node = Node.load(jnode)
                 sbt_node = LazyNode(Node.load, jnode, dirname)
             else:
-                #sbt_node = leaf_loader(jnode)
                 sbt_node = LazyNode(leaf_loader, jnode, dirname)
 
             sbt_nodes.append(sbt_node)
 
         tree = SBT(factory)
+        tree.nodes = sbt_nodes
+
+        return tree
+
+    @classmethod
+    def _load_v2(cls, info, leaf_loader, dirname):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
+        if nodes[0] is None:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = []
+
+        sample_bf = os.path.join(dirname, nodes[0]['filename'])
+        k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        factory = GraphFactory(k, size, ntables)
+
+        for i, node in sorted(nodes.items()):
+            if node is None:
+                sbt_nodes.append(None)
+                continue
+
+            if 'internal' in node['filename']:
+                node['factory'] = factory
+                sbt_node = LazyNode(Node.load, node, dirname)
+            else:
+                sbt_node = LazyNode(leaf_loader, node, dirname)
+
+            sbt_nodes.append(sbt_node)
+
+        tree = cls(factory, d=info['d'])
         tree.nodes = sbt_nodes
 
         return tree
@@ -256,7 +310,7 @@ class SBT(object):
         edge [arrowsize=0.8];
         """)
 
-        for i, node in enumerate(self.nodes):
+        for i, node in iter(self):
             if node is None:
                 continue
 
@@ -280,6 +334,11 @@ class SBT(object):
                 if isinstance(node_g, Node):
                     stack.extend(c.pos for c in self.children(node_p)
                                        if c.pos not in visited)
+
+    def __iter__(self):
+        for i, node in enumerate(self.nodes):
+            yield (i, node)
+
 
 class Node(object):
     "Internal node of SBT; has 0, 1, or 2 children."
