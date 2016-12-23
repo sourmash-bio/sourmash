@@ -675,7 +675,8 @@ Commands can be:
         parser.add_argument('--no-dna', dest='dna', action='store_false')
         parser.set_defaults(dna=None)
 
-        parser.add_argument('--csv', type=argparse.FileType('wt'))
+        parser.add_argument('--csv', type=argparse.FileType('at'))
+        parser.add_argument('--load-csv', default=None)
         
         args = parser.parse_args(args)
 
@@ -690,11 +691,23 @@ Commands can be:
         elif args.dna:
             moltype = 'dna'
 
+        already_names = set()
+        if args.load_csv:
+            with open(args.load_csv, 'rt') as fp:
+                r = csv.reader(fp)
+                for row in r:
+                    already_names.add(row[0])
+
         search_fn = SearchMinHashesFindBest().search
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
+        n_skipped = 0
         for queryfile in args.queries:
+            if queryfile in already_names:
+                n_skipped += 1
+                continue
+
             sl = sig.load_signatures(queryfile, select_ksize=args.ksize,
                                      select_moltype=moltype)
             sl = list(sl)
@@ -720,19 +733,23 @@ Commands can be:
             for leaf in tree.find(search_fn, query, args.threshold):
                 results.append((query.similarity(leaf.data), leaf.data))
 
-            if not results:
+            best_hit_sim = 0.0
+            best_hit_query_name = ""
+            if results:
+                results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+                best_hit_sim, best_hit_query = results[0]
+                print('for {}, found: {:.2f} {}'.format(query.name(),
+                                                        best_hit_sim,
+                                                        best_hit_query.name()))
+                best_hit_query_name = best_hit_query.name()
+            else:
                 print('for {}, no match found'.format(query.name()))
-                continue
-
-            results.sort(key=lambda x: -x[0])   # reverse sort on similarity
-            best_hit_sim, best_hit_query = results[0]
-            print('for {}, found: {:.2f} {}'.format(query.name(),
-                                                    best_hit_sim,
-                                                    best_hit_query.name()))
 
             if args.csv:
                 w = csv.writer(args.csv)
-                w.writerow([queryfile, best_hit_query.name(), best_hit_sim])
+                w.writerow([queryfile, best_hit_query_name, best_hit_sim])
+
+        print('note: skipped {}'.format(n_skipped))
 
     def sbt_gather(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
