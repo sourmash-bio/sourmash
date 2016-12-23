@@ -655,6 +655,85 @@ Commands can be:
                                 args.save_matches)
 
 
+    def categorize(self, args):
+        from sourmash_lib.sbt import SBT, GraphFactory
+        from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+        from sourmash_lib.sbtmh import SearchMinHashesFindBest
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sbt_name')
+        parser.add_argument('queries', nargs='+')
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('--protein', dest='protein', action='store_true')
+        parser.add_argument('--no-protein', dest='protein',
+                            action='store_false')
+        parser.set_defaults(protein=False)
+
+        parser.add_argument('--dna', dest='dna', default=None,
+                            action='store_true')
+        parser.add_argument('--no-dna', dest='dna', action='store_false')
+        parser.set_defaults(dna=None)
+
+        parser.add_argument('--csv', type=argparse.FileType('wt'))
+        
+        args = parser.parse_args(args)
+
+        if args.protein:
+            if args.dna is True:
+                raise Exception('cannot specify both --dna and --protein!')
+            args.dna = False
+
+        moltype = None
+        if args.protein:
+            moltype = 'protein'
+        elif args.dna:
+            moltype = 'dna'
+
+        search_fn = SearchMinHashesFindBest().search
+
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+
+        for queryfile in args.queries:
+            sl = sig.load_signatures(queryfile, select_ksize=args.ksize,
+                                     select_moltype=moltype)
+            sl = list(sl)
+            if len(sl) != 1:
+                print('When loading query from "{}",'.format(queryfile),
+                      file=sys.stderr)
+                print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+                continue
+
+            query = sl[0]
+
+            query_moltype = 'UNKNOWN'
+            if query.estimator.is_molecule_type('dna'):
+                query_moltype = 'DNA'
+            elif query.estimator.is_molecule_type('protein'):
+                query_moltype = 'protein'
+            query_ksize = query.estimator.ksize
+            print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
+                                                          query_ksize,
+                                                          query_moltype))
+
+            results = []
+            for leaf in tree.find(search_fn, query, args.threshold):
+                results.append((query.similarity(leaf.data), leaf.data))
+
+            if not results:
+                print('for {}, no match found'.format(query.name()))
+                continue
+
+            results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+            best_hit_sim, best_hit_query = results[0]
+            print('for {}, found: {:.2f} {}'.format(query.name(),
+                                                    best_hit_sim,
+                                                    best_hit_query.name()))
+
+            if args.csv:
+                w = csv.writer(args.csv)
+                w.writerow([queryfile, best_hit_query.name(), best_hit_sim])
+
     def sbt_gather(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
         from sourmash_lib.sbtmh import search_minhashes, SigLeaf
