@@ -514,15 +514,8 @@ Commands can be:
         parser.add_argument('--traverse-directory', action='store_true')
         parser.add_argument('-x', '--bf-size', type=float, default=1e5)
 
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
+        sourmash_args.add_moltype_args(parser)
 
-        parser.add_argument('--dna', dest='dna', action='store_true')
-        parser.add_argument('--no-dna', dest='dna',
-                            action='store_false')
-        parser.set_defaults(dna=None)
         args = parser.parse_args(args)
 
         if args.protein:
@@ -576,15 +569,8 @@ Commands can be:
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
         parser.add_argument('--best-only', action='store_true')
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
 
-        parser.add_argument('--dna', dest='dna', default=None,
-                            action='store_true')
-        parser.add_argument('--no-dna', dest='dna', action='store_false')
-        parser.set_defaults(dna=None)
+        sourmash_args.add_moltype_args(parser)
         args = parser.parse_args(args)
 
         if args.protein:
@@ -650,15 +636,8 @@ Commands can be:
         parser.add_argument('queries', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
 
-        parser.add_argument('--dna', dest='dna', default=None,
-                            action='store_true')
-        parser.add_argument('--no-dna', dest='dna', action='store_false')
-        parser.set_defaults(dna=None)
+        sourmash_args.add_moltype_args(parser)
 
         parser.add_argument('--csv', type=argparse.FileType('at'))
         parser.add_argument('--load-csv', default=None)
@@ -749,15 +728,7 @@ Commands can be:
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
 
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
-
-        parser.add_argument('--dna', dest='dna', default=None,
-                            action='store_true')
-        parser.add_argument('--no-dna', dest='dna', action='store_false')
-        parser.set_defaults(dna=None)
+        sourmash_args.add_moltype_args(parser)
 
         args = parser.parse_args(args)
 
