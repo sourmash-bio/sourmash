@@ -8,6 +8,7 @@ import screed
 import sourmash_lib
 from sourmash_lib import signature as sig
 from sourmash_lib import fig as sourmash_fig
+from . import sourmash_args
 
 DEFAULT_K = 31
 DEFAULT_N = 500
@@ -52,15 +53,7 @@ Commands can be:
         parser.add_argument('-f', '--force', action='store_true')
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
 
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
-
-        parser.add_argument('--dna', dest='dna', default=None,
-                            action='store_true')
-        parser.add_argument('--no-dna', dest='dna', action='store_false')
-        parser.set_defaults(dna=None)
+        sourmash_args.add_moltype_args(parser)
 
         args = parser.parse_args(args)
 
@@ -153,15 +146,7 @@ Commands can be:
         parser = argparse.ArgumentParser()
         parser.add_argument('filenames', nargs='+')
 
-        parser.add_argument('--protein', dest='protein', action='store_true')
-        parser.add_argument('--no-protein', dest='protein',
-                            action='store_false')
-        parser.set_defaults(protein=False)
-
-        parser.add_argument('--dna', dest='dna', action='store_true')
-        parser.add_argument('--no-dna', dest='dna',
-                            action='store_false')
-        parser.set_defaults(dna=True)
+        sourmash_args.add_moltype_args(parser, default_dna=True)
 
         parser.add_argument('--input-is-protein', action='store_true')
         parser.add_argument('-k', '--ksizes',
