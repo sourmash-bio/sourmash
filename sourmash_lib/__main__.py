@@ -680,29 +680,9 @@ Commands can be:
 
         print('found {} files to query'.format(len(inp_files)))
 
-        n_skipped = 0
-        for queryfile in inp_files:
-            if queryfile in already_names:
-                n_skipped += 1
-                continue
-
-            sl = sig.load_signatures(queryfile, select_ksize=args.ksize,
-                                     select_moltype=moltype)
-            sl = list(sl)
-            if len(sl) != 1:
-                print('When loading query from "{}",'.format(queryfile),
-                      file=sys.stderr)
-                print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
-                continue
-
-            query = sl[0]
-
-            query_moltype = 'UNKNOWN'
-            if query.estimator.is_molecule_type('dna'):
-                query_moltype = 'DNA'
-            elif query.estimator.is_molecule_type('protein'):
-                query_moltype = 'protein'
-            query_ksize = query.estimator.ksize
+        loader = sourmash_args.LoadSingleSignatures(inp_files,
+                                                    args.ksize, moltype)
+        for query, query_moltype, query_ksize in loader:
             print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                           query_ksize,
                                                           query_moltype))
@@ -729,7 +709,10 @@ Commands can be:
                 w = csv.writer(args.csv)
                 w.writerow([queryfile, best_hit_query_name, best_hit_sim])
 
-        print('note: skipped {}'.format(n_skipped))
+        if loader.skipped_ignore:
+            print('skipped/ignore: {}'.format(loader.skipped_ignore))
+        if loader.skipped_nosig:
+            print('skipped/nosig: {}'.format(loader.skipped_nosig))
 
     def sbt_gather(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
