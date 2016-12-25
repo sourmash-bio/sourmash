@@ -636,7 +636,7 @@ Commands can be:
         parser.add_argument('queries', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
-        parser.add_argument('--traverse-directory')
+        parser.add_argument('--traverse-directory', action="store_true")
 
         sourmash_args.add_moltype_args(parser)
 
