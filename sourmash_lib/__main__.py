@@ -709,7 +709,9 @@ Commands can be:
 
             results = []
             for leaf in tree.find(search_fn, query, args.threshold):
-                results.append((query.similarity(leaf.data), leaf.data))
+                # ignore self
+                if leaf.data.md5sum() != query.md5sum():
+                    results.append((query.similarity(leaf.data), leaf.data))
 
             best_hit_sim = 0.0
             best_hit_query_name = ""
