@@ -636,6 +636,7 @@ Commands can be:
         parser.add_argument('queries', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
+        parser.add_argument('--traverse-directory')
 
         sourmash_args.add_moltype_args(parser)
 
@@ -666,8 +667,21 @@ Commands can be:
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
+        if args.traverse_directory:
+            inp_files = []
+            for dirname in args.queries:
+                for root, dirs, files in os.walk(dirname):
+                    for name in files:
+                        if name.endswith('.sig'):
+                            fullname = os.path.join(root, name)
+                            inp_files.append(fullname)
+        else:
+            inp_files = args.queries
+
+        print('found {} files to query'.format(len(inp_files)))
+
         n_skipped = 0
-        for queryfile in args.queries:
+        for queryfile in inp_files:
             if queryfile in already_names:
                 n_skipped += 1
                 continue
