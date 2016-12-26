@@ -95,10 +95,13 @@ class SourmashSignature(object):
         return self.d.get('email'), self.d.get('name'), \
             self.d.get('filename'), sketch
 
-    def similarity(self, other):
+    def similarity(self, other, ignore_abundance=False):
         "Compute similarity with the other MinHash signature."
-        return self.estimator.similarity(other.estimator)
-    jaccard = similarity
+        return self.estimator.similarity(other.estimator, ignore_abundance)
+
+    def jaccard(self, other):
+        "Compute Jaccard similarity with the other MinHash signature."
+        return self.estimator.similarity(other.estimator, True)
 
 
 def _guess_open(filename):

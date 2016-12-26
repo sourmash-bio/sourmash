@@ -357,6 +357,7 @@ Commands can be:
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
         parser.add_argument('-o', '--output')
+        parser.add_argument('--ignore-abundance', action='store_true')
         args = parser.parse_args(args)
 
         # load in the various signatures
@@ -382,7 +383,7 @@ Commands can be:
         labeltext = []
         for i, E in enumerate(siglist):
             for j, E2 in enumerate(siglist):
-                D[i][j] = E.similarity(E2)
+                D[i][j] = E.similarity(E2, args.ignore_abundance)
 
             print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
             labeltext.append(E.name())
