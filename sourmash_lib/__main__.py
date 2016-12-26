@@ -170,6 +170,7 @@ Commands can be:
         parser.add_argument('--name', type=str, default='')
         parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
+        parser.add_argument('--track-abundance', action='store_true')
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
@@ -238,12 +239,14 @@ Commands can be:
             for k in ksizes:
                 if args.protein:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                                protein=True)
+                                                protein=True,
+                                        track_abundance=args.track_abundance)
                     Elist.append(E)
                 if args.dna:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=False,
-                                        with_cardinality=args.with_cardinality)
+                                        with_cardinality=args.with_cardinality,
+                                        track_abundance=args.track_abundance)
                     Elist.append(E)
             return Elist
 
@@ -270,6 +273,14 @@ Commands can be:
 
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
+
+        if args.with_cardinality:
+            print('Calculating k-mer cardinality of input sequences.',
+                  file=sys.stderr)
+
+        if args.track_abundance:
+            print('Tracking abundance of input k-mers.',
+                  file=sys.stderr)
 
         if not args.name:
             for filename in args.filenames:
