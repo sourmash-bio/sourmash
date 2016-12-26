@@ -1,5 +1,8 @@
 from . import Estimators
 
+# below, 'track_abundance' is toggled to both True and False by py.test --
+# see conftest.py.
+
 
 def test_jaccard_1(track_abundance):
     E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
