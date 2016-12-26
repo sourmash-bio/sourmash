@@ -94,7 +94,24 @@ class Estimators(object):
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
-    similarity = jaccard
+
+    def similarity(self, other):
+        if not self.track_abundance:
+            return self.jaccard(other)
+        else:
+            a = self.mh.get_mins(with_abundance=True)
+            b = other.mh.get_mins(with_abundance=True)
+
+            print(a)
+            print(b)
+
+            common_abund = 0
+            total_abund = 0
+            for k, abundance in a.items():
+                print(k, abundance)
+                common_abund += b.get(k, 0)
+                total_abund += abundance
+            return common_abund / float(total_abund)
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
