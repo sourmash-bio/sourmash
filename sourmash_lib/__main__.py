@@ -361,7 +361,6 @@ Commands can be:
         numpy.set_printoptions(precision=3, suppress=True)
 
         # do all-by-all calculation
-        i = 0
         labeltext = []
         for i, E in enumerate(siglist):
             for j, E2 in enumerate(siglist):
@@ -369,7 +368,6 @@ Commands can be:
 
             print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
             labeltext.append(E.name())
-            i += 1
 
         print('min similarity in matrix:', numpy.min(D), file=sys.stderr)
 
@@ -663,8 +661,6 @@ Commands can be:
                 for row in r:
                     already_names.add(row[0])
 
-        search_fn = SearchMinHashesFindBest().search
-
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
         if args.traverse_directory:
@@ -688,6 +684,8 @@ Commands can be:
                                                           query_moltype))
 
             results = []
+            search_fn = SearchMinHashesFindBest().search
+
             for leaf in tree.find(search_fn, query, args.threshold):
                 # ignore self
                 if leaf.data.md5sum() != query.md5sum():
