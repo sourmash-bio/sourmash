@@ -13,6 +13,13 @@ from . import sourmash_args
 DEFAULT_K = 31
 DEFAULT_N = 500
 
+WATERMARK_SIZE=10000
+
+
+def notify(s, *args, **kwargs):
+    "A simple logging function => stderr."
+    print(s.format(*args, **kwargs), file=sys.stderr)
+
 
 class SourmashCommands(object):
 
@@ -846,6 +853,94 @@ Commands can be:
                 w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                                 similarity=sim,
                                 sketch_kmers=cardinality))
+
+    def watch(self, args):
+        "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
+        from sourmash_lib.sbt import SBT, GraphFactory
+        from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+        from sourmash_lib.sbtmh import SearchMinHashesFindBest
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('sbt_name')
+        parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('--threshold', default=0.05, type=float)
+        parser.add_argument('--input-is-protein', action='store_true')
+        sourmash_args.add_moltype_args(parser, default_dna=True)
+        parser.add_argument('-n', '--num-hashes', type=int,
+                            default=DEFAULT_N,
+                            help='number of hashes to use in each sketch (default: %(default)i)')
+        parser.add_argument('--name', type=str, default='stdin')
+        args = parser.parse_args(args)
+
+        if args.input_is_protein and args.dna:
+            print('WARNING: input is protein, turning off DNA hash computing.',
+                  file=sys.stderr)
+            args.dna = False
+            args.protein = True
+
+        if args.dna and args.protein:
+            notify('ERROR: cannot use "watch" with both DNA and protein.')
+
+        if args.dna:
+            moltype = 'DNA'
+            is_protein = False
+        else:
+            moltype = 'protein'
+            is_protein = True
+
+        E = sourmash_lib.Estimators(ksize=args.ksize, n=args.num_hashes,
+                                    protein=is_protein)
+        streamsig = sig.SourmashSignature('', E, filename='stdin',
+                                          name=args.name)
+
+        notify('Computing signature for k={}, {} from stdin',
+               args.ksize, moltype)
+
+
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+
+        def do_search():
+            search_fn = SearchMinHashesFindBest().search
+
+            results = []
+            for leaf in tree.find(search_fn, streamsig, args.threshold):
+                results.append((streamsig.similarity(leaf.data),
+                                leaf.data))
+
+            return results
+
+        notify('reading sequences from stdin')
+        screed_iter = screed.open('/dev/stdin')
+        watermark = WATERMARK_SIZE
+
+        # iterate over input records
+        n = 0
+        for n, record in enumerate(screed_iter):
+            # at each watermark, print status & check cardinality
+            if n >= watermark:
+                notify('... read {} sequences', n)
+                watermark += WATERMARK_SIZE
+
+                if do_search():
+                    break
+
+            if args.input_is_protein:
+                E.mh.add_protein(record.sequence)
+            else:
+                E.add_sequence(record.sequence, False)
+
+        results = do_search()
+        if not results:
+            notify('... read {} sequences, no matches found.', n)
+        else:
+            results.sort(key=lambda x: -x[0])   # take best
+            similarity, found_sig = results[0]
+            notify('FOUND: {}, at {:.3f}', found_sig.name(),
+                   similarity)
+
+        if args.output:
+            sig.save_signatures([streamsig], args.output)
 
 
 def main():
