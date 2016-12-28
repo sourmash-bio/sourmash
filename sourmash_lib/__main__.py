@@ -678,7 +678,7 @@ Commands can be:
 
         loader = sourmash_args.LoadSingleSignatures(inp_files,
                                                     args.ksize, moltype)
-        for query, query_moltype, query_ksize in loader:
+        for queryfile, query, query_moltype, query_ksize in loader:
             print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                           query_ksize,
                                                           query_moltype))

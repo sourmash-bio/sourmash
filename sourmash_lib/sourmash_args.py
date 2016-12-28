@@ -47,4 +47,4 @@ class LoadSingleSignatures(object):
                 query_moltype = 'protein'
             query_ksize = query.estimator.ksize
 
-            yield query, query_moltype, query_ksize
+            yield filename, query, query_moltype, query_ksize
