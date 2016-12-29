@@ -357,14 +357,21 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
 
     try {
         if (me->track_abundance) {
-            if (not other->track_abundance) {
-                /* TODO: this is not strictly true, but let's throw an error for now */
-                throw minhash_exception("Both minhashes must track_abundance to be comparable");
+            KmerMinAbundance *mh = dynamic_cast<KmerMinAbundance*>(me->mh);
+            if (other->track_abundance) {
+                KmerMinAbundance *other_mh = dynamic_cast<KmerMinAbundance*>(other->mh);
+                n = mh->count_common(*other_mh);
+            } else {
+                n = mh->count_common(*other->mh);
             }
-            n = ((KmerMinAbundance*)me->mh)->count_common(*(KmerMinAbundance*)(other->mh));
-            size = ((KmerMinAbundance*)me->mh)->mins.size();
+            size = mh->mins.size();
         } else {
-            n = me->mh->count_common(*other->mh);
+            if (other->track_abundance) {
+                KmerMinAbundance *other_mh = dynamic_cast<KmerMinAbundance*>(other->mh);
+                n = other_mh->count_common(*me->mh);
+            } else {
+                n = me->mh->count_common(*other->mh);
+            }
             size = me->mh->mins.size();
         }
     } catch (minhash_exception &e) {
