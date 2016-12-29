@@ -8,6 +8,9 @@ from sourmash_lib import sourmash_tst_utils as utils
 from .sbt import SBT, GraphFactory, Leaf
 
 
+cache = {}
+
+
 class SigLeaf(Leaf):
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
@@ -27,9 +30,15 @@ class SigLeaf(Leaf):
         from sourmash_lib import signature
 
         filename = os.path.join(dirname, info['filename'])
+        if filename in cache:
+            return cache[filename]
+
         with open(filename, 'r') as fp:
             data = next(signature.load_signatures(fp))
-        return SigLeaf(info['metadata'], data, name=info['name'])
+
+        x = SigLeaf(info['metadata'], data, name=info['name'])
+        cache[filename] = x
+        return x
 
 
 def search_minhashes(node, sig, threshold, results=None):
