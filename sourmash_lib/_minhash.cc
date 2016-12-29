@@ -11,6 +11,17 @@ uint64_t _hash_murmur(const std::string& kmer);
 #include "_minhash.hh"
 #include "../third-party/smhasher/MurmurHash3.h"
 
+//
+// Python 2/3 compatibility: PyInt and PyLong
+//
+
+#if (PY_MAJOR_VERSION >= 3)
+#define PyInt_Check(arg) PyLong_Check(arg)
+#define PyInt_AsLong(arg) PyLong_AsLong(arg)
+#define PyInt_FromLong(arg) PyLong_FromLong(arg)
+#define Py_TPFLAGS_HAVE_ITER 0
+#endif
+
 
 extern "C" {
     MOD_INIT(_minhash);
@@ -171,7 +182,21 @@ minhash_set_counters(MinHash_Object * me, PyObject * args)
     Py_ssize_t pos = 0;
 
     while (PyDict_Next(dict, &pos, &key, &value)) {
-        mh->mins[PyLong_AsUnsignedLongLong(key)] = PyLong_AsUnsignedLong(value);
+        HashIntoType keyc = 0;
+        if (PyLong_Check(key)) {
+            keyc = PyLong_AsUnsignedLongLong(key);
+        } else if (PyInt_Check(key)) {
+            keyc = PyInt_AsLong(key);
+        }
+
+        uint64_t valuec = 0;
+        if (PyLong_Check(value)) {
+            valuec = PyLong_AsUnsignedLongLong(value);
+        } else if (PyInt_Check(value)) {
+            valuec = PyInt_AsLong(value);
+        }
+
+        mh->mins[keyc] = valuec;
     }
 
     Py_INCREF(Py_None);
