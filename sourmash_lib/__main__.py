@@ -677,7 +677,8 @@ Commands can be:
                     for name in files:
                         if name.endswith('.sig'):
                             fullname = os.path.join(root, name)
-                            inp_files.append(fullname)
+                            if fullname not in already_names:
+                                inp_files.append(fullname)
         else:
             inp_files = args.queries
 
