@@ -1,5 +1,6 @@
 from __future__ import print_function
 from __future__ import division
+import pickle
 from glob import glob
 import os
 
@@ -14,9 +15,8 @@ class SigLeaf(Leaf):
                 name=self.name, metadata=self.metadata)
 
     def save(self, filename):
-        from sourmash_lib import signature
-        with open(filename, 'w') as fp:
-            signature.save_signatures([self.data], fp)
+        with open(filename, 'wb') as fp:
+            pickle.dump(self.data, fp)
 
     def update(self, parent):
         for v in self.data.estimator.mh.get_mins():
@@ -27,8 +27,8 @@ class SigLeaf(Leaf):
         from sourmash_lib import signature
 
         filename = os.path.join(dirname, info['filename'])
-        with open(filename, 'r') as fp:
-            data = next(signature.load_signatures(fp))
+        with open(filename, 'rb') as fp:
+            data = pickle.load(fp)
         return SigLeaf(info['metadata'], data, name=info['name'])
 
 
