@@ -340,6 +340,8 @@ class SBT(object):
 class Node(object):
     "Internal node of SBT."
 
+    _cache = {}
+
     def __init__(self, factory, name=None, fullpath=None):
         self.name = name
         self._factory = factory
@@ -367,15 +369,21 @@ class Node(object):
     def data(self, new_data):
         self._data = new_data
 
-    @staticmethod
-    def load(info, dirname):
-        # TODO: add cache check here
+    @classmethod
+    def load(cls, info, dirname):
         filename = os.path.join(dirname, info['filename'])
-        new_node = Node(info['factory'], name=info['name'], fullpath=filename)
-        return new_node
+        # TODO: keep cache small?
+        if filename not in cls._cache:
+            cls._cache[filename] = Node(info['factory'],
+                                        name=info['name'],
+                                        fullpath=filename)
+        return cls._cache[filename]
 
 
 class Leaf(object):
+
+    _cache = {}
+
     def __init__(self, metadata, data=None, name=None, fullpath=None):
         self.metadata = metadata
         if name is None:
@@ -409,9 +417,13 @@ class Leaf(object):
 
     @classmethod
     def load(cls, info, dirname):
-        # TODO: add cache check here
+        # TODO: keep cache small?
         filename = os.path.join(dirname, info['filename'])
-        return cls(info['metadata'], name=info['name'], fullpath=filename)
+        if filename not in cls._cache:
+            cls._cache[filename] = cls(info['metadata'],
+                                       name=info['name'],
+                                       fullpath=filename)
+        return cls._cache[filename]
 
 
 def filter_distance( filter_a, filter_b, n=1000 ) :

@@ -6,10 +6,10 @@ from .sbt import Leaf
 
 
 
-cache = {}
-
-
 class SigLeaf(Leaf):
+
+    _cache = {}
+
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
