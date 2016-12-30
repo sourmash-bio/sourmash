@@ -56,10 +56,11 @@ import random
 import shutil
 from tempfile import NamedTemporaryFile
 
+from cachetools import LFUCache
+
 import khmer
 from khmer import khmer_args
 from random import randint
-from numpy import array
 
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
@@ -340,7 +341,7 @@ class SBT(object):
 class Node(object):
     "Internal node of SBT."
 
-    _cache = {}
+    _cache = LFUCache(maxsize=128)
 
     def __init__(self, factory, name=None, fullpath=None):
         self.name = name
@@ -382,7 +383,7 @@ class Node(object):
 
 class Leaf(object):
 
-    _cache = {}
+    _cache = LFUCache(maxsize=128)
 
     def __init__(self, metadata, data=None, name=None, fullpath=None):
         self.metadata = metadata
@@ -435,6 +436,7 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
     filter_b : Second filter
     n        : Number of positions to compare (in groups of 8)
     """
+    from numpy import array
     A = filter_a.graph.get_raw_tables()
     B = filter_b.graph.get_raw_tables()
     distance = 0

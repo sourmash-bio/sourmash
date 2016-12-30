@@ -2,13 +2,16 @@ from __future__ import print_function
 from __future__ import division
 import os
 
-from .sbt import Leaf
+from cachetools import LFUCache
 
+from sourmash_lib import signature
+from sourmash_lib import sourmash_tst_utils as utils
+from .sbt import SBT, GraphFactory, Leaf
 
 
 class SigLeaf(Leaf):
 
-    _cache = {}
+    _cache = LFUCache(maxsize=128)
 
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
