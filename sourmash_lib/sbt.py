@@ -74,16 +74,6 @@ def GraphFactory(ksize, starting_size, n_tables):
     return create_nodegraph
 
 
-class LazyNode(object):
-    def __init__(self, load_fn, *args):
-        self.load_fn = load_fn
-        self.args = args
-
-    def do_load(self):
-        sbt_node = self.load_fn(*self.args)
-        return sbt_node
-
-
 class SBT(object):
 
     def __init__(self, factory, d=2):
@@ -148,7 +138,6 @@ class SBT(object):
             if node_g is None:
                 continue
 
-            node_g = node_g.do_load()
             if node_p not in visited:
                 visited.add(node_p)
                 if search_fn(node_g, *args):
@@ -266,9 +255,9 @@ class SBT(object):
 
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
-                sbt_node = LazyNode(Node.load, jnode, dirname)
+                sbt_node = Node.load(jnode, dirname)
             else:
-                sbt_node = LazyNode(leaf_loader, jnode, dirname)
+                sbt_node = leaf_loader(jnode, dirname)
 
             sbt_nodes.append(sbt_node)
 
@@ -297,9 +286,9 @@ class SBT(object):
 
             if 'internal' in node['filename']:
                 node['factory'] = factory
-                sbt_node = LazyNode(Node.load, node, dirname)
+                sbt_node = Node.load(node, dirname)
             else:
-                sbt_node = LazyNode(leaf_loader, node, dirname)
+                sbt_node = leaf_loader(node, dirname)
 
             sbt_nodes.append(sbt_node)
 
@@ -349,11 +338,13 @@ class SBT(object):
 
 
 class Node(object):
-    "Internal node of SBT; has 0, 1, or 2 children."
+    "Internal node of SBT."
 
-    def __init__(self, factory, name=None):
-        self.data = factory()
+    def __init__(self, factory, name=None, fullpath=None):
         self.name = name
+        self._factory = factory
+        self._data = None
+        self._filename = fullpath
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
@@ -363,28 +354,35 @@ class Node(object):
     def save(self, filename):
         self.data.save(filename)
 
+    @property
+    def data(self):
+        if self._data is None:
+            if self._filename is None:
+                self._data = self._factory()
+            else:
+                self._data = khmer.load_nodegraph(self._filename)
+        return self._data
+
+    @data.setter
+    def data(self, new_data):
+        self._data = new_data
+
     @staticmethod
     def load(info, dirname):
-        new_node = Node(info['factory'], name=info['name'])
-
+        # TODO: add cache check here
         filename = os.path.join(dirname, info['filename'])
-        new_node.data = khmer.load_nodegraph(filename)
+        new_node = Node(info['factory'], name=info['name'], fullpath=filename)
         return new_node
-
-    def do_load(self):                    # for lazy loading, quickfix
-        return self
 
 
 class Leaf(object):
-    def __init__(self, metadata, data, name=None):
+    def __init__(self, metadata, data=None, name=None, fullpath=None):
         self.metadata = metadata
         if name is None:
             name = metadata
         self.name = name
-        self.data = data
-
-    def do_load(self):                    # for lazy loading, quickfix
-        return self
+        self._data = data
+        self._filename = fullpath
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
@@ -392,17 +390,28 @@ class Leaf(object):
                 nb=self.data.n_occupied(),
                 fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
 
+    @property
+    def data(self):
+        if self._data is None:
+            # TODO: what if self._filename is None?
+            self._data = khmer.load_nodegraph(self._filename)
+        return self._data
+
+    @data.setter
+    def data(self, new_data):
+        self._data = new_data
+
     def save(self, filename):
         self.data.save(filename)
 
     def update(self, parent):
         parent.data.update(self.data)
 
-    @staticmethod
-    def load(info, dirname):
-        filepath = os.path.join(dirname, info['filename'])
-        data = khmer.load_nodegraph(filepath)
-        return Leaf(info['metadata'], data, name=info['name'])
+    @classmethod
+    def load(cls, info, dirname):
+        # TODO: add cache check here
+        filename = os.path.join(dirname, info['filename'])
+        return cls(info['metadata'], name=info['name'], fullpath=filename)
 
 
 def filter_distance( filter_a, filter_b, n=1000 ) :
