@@ -1,10 +1,8 @@
 from __future__ import print_function
 from __future__ import division
-import os
 
 from .sbt import Leaf
 from . import Estimators
-
 
 class SigLeaf(Leaf):
     def __str__(self):
@@ -20,14 +18,17 @@ class SigLeaf(Leaf):
         for v in self.data.estimator.mh.get_mins():
             parent.data.count(v)
 
-    @staticmethod
-    def load(info, dirname):
-        from sourmash_lib import signature
+    @property
+    def data(self):
+        if self._data is None:
+            from sourmash_lib import signature
+            it = signature.load_signatures(self._filename)
+            self._data, = list(it)              # should only be one signature
+        return self._data
 
-        filename = os.path.join(dirname, info['filename'])
-        it = signature.load_signatures(filename)
-        data, = list(it)              # should only be one signature
-        return SigLeaf(info['metadata'], data, name=info['name'])
+    @data.setter
+    def data(self, new_data):
+        self._data = new_data
 
 
 def search_minhashes(node, sig, threshold, results=None):
