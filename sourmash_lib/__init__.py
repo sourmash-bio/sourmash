@@ -4,6 +4,7 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
 import re
+import math
 
 khmer_available = False
 try:
@@ -100,14 +101,15 @@ class Estimators(object):
             return self.jaccard(other)
         else:
             a = self.mh.get_mins(with_abundance=True)
+            norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
             b = other.mh.get_mins(with_abundance=True)
+            norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
 
             common_abund = 0
-            total_abund = 0
             for k, abundance in a.items():
-                common_abund += b.get(k, 0)
-                total_abund += abundance
-            return common_abund / float(total_abund)
+                common_abund += (abundance / norm_a) * (b.get(k, 0) / norm_b)
+                
+            return math.sqrt(common_abund)
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
