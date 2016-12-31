@@ -1,7 +1,7 @@
 # sourmash
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
-[![Build Status](https://drone.io/github.com/dib-lab/sourmash/status.png)](https://drone.io/github.com/dib-lab/sourmash/latest)
+[![Build Status](https://travis-ci.org/dib-lab/sourmash.svg?branch=master)](https://travis-ci.org/dib-lab/sourmash)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 
@@ -26,7 +26,7 @@ combined with @ctb's love of whiskey.
 ([Sour mash](https://en.wikipedia.org/wiki/Sour_mash) is used in
 making whiskey.)
 
-Authors: [C. Titus Brown](mailto:titus@idyll.org) ([@ctb](http://github.com/ctb)) and Luiz C. Irber, Jr.
+Authors: [C. Titus Brown](mailto:titus@idyll.org) ([@ctb](http://github.com/ctb)) and [Luiz C. Irber, Jr](mailto:sourmash@luizirber.org) ([@luizirber](http://github.com/luizirber)).
 
 sourmash is a product of the
 [Lab for Data-Intensive Biology](http://ivory.idyll.org/lab/) at the

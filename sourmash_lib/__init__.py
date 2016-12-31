@@ -3,11 +3,6 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
-import sys
-import argparse
-import itertools
-import string
-from ._minhash import MinHash
 import re
 
 khmer_available = False
@@ -32,7 +27,7 @@ class Estimators(object):
     """
 
     def __init__(self, n=None, ksize=None, protein=False,
-                 with_cardinality=False):
+                 with_cardinality=False, track_abundance=False):
         "Create a new MinHash estimator with size n and k-mer size ksize."
         from . import _minhash
 
@@ -55,19 +50,27 @@ class Estimators(object):
                 raise Exception("Error: to do cardinality counting, " + \
                                 "we require the khmer package.")
             self.hll = khmer.HLLCounter(.01, ksize)
+        self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize, protein)
+        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance)
+
+    def is_molecule_type(self, molecule):
+        if molecule == 'dna' and not self.mh.is_protein():
+            return True
+        if molecule == 'protein' and self.mh.is_protein():
+            return True
+        return False
 
     def __getstate__(self):             # enable pickling
         return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
-                self.hll)
+                self.hll, self.track_abundance)
 
     def __setstate__(self, tup):
         from . import _minhash
 
-        (self.num, self.ksize, self.is_protein, mins, hll) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein)
+        (self.num, self.ksize, self.is_protein, mins, hll, self.track_abundance) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein, self.track_abundance)
         for m in mins:
             self.mh.add_hash(m)
         self.hll = hll
@@ -91,113 +94,21 @@ class Estimators(object):
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
-    similarity = jaccard
+
+    def similarity(self, other, ignore_abundance=False):
+        if not self.track_abundance or ignore_abundance:
+            return self.jaccard(other)
+        else:
+            a = self.mh.get_mins(with_abundance=True)
+            b = other.mh.get_mins(with_abundance=True)
+
+            common_abund = 0
+            total_abund = 0
+            for k, abundance in a.items():
+                common_abund += b.get(k, 0)
+                total_abund += abundance
+            return common_abund / float(total_abund)
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
         return self.mh.count_common(other.mh)
-
-
-def test_jaccard_1():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
-
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4, 6]:
-        E2.mh.add_hash(i)
-
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 5.0
-
-
-def test_jaccard_2_difflen():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
-
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4]:
-        E2.mh.add_hash(i)
-
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 4.0
-
-
-def test_common_1():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
-
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4, 6]:
-        E2.mh.add_hash(i)
-
-    assert E1.count_common(E2) == 4
-    assert E2.count_common(E1) == 4
-
-
-def test_dna_mh():
-    e1 = Estimators(n=5, ksize=4)
-    e2 = Estimators(n=5, ksize=4)
-
-    seq = 'ATGGCAGTGACGATGCCAG'
-    e1.add_sequence(seq)
-    for i in range(len(seq) - 3):
-        e2.add(seq[i:i + 4])
-
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    print(e1.mh.get_mins())
-    assert 726311917625663847 in e1.mh.get_mins()
-    assert 3697418565283905118 in e1.mh.get_mins()
-
-
-def test_protein_mh():
-    e1 = Estimators(n=5, ksize=6, protein=True)
-    e2 = Estimators(n=5, ksize=6, protein=True)
-
-    seq = 'ATGGCAGTGACGATGCCG'
-    e1.add_sequence(seq)
-
-    for i in range(len(seq) - 5):
-        kmer = seq[i:i + 6]
-        e2.add(kmer)
-
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert 901193879228338100 in e1.mh.get_mins()
-
-
-def test_pickle():
-    import pickle
-    from io import BytesIO
-
-    e1 = Estimators(n=5, ksize=6, protein=False)
-    seq = 'ATGGCAGTGACGATGCCG'
-    e1.add_sequence(seq)
-
-    fp = BytesIO()
-    pickle.dump(e1, fp)
-
-    fp2 = BytesIO(fp.getvalue())
-    e2 = pickle.load(fp2)
-
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert e1.num == e2.num
-    assert e1.ksize == e2.ksize
-    assert e1.is_protein == e2.is_protein
-
-
-def test_bad_construct_1():
-    try:
-        e1 = Estimators(ksize=6, protein=False)
-        assert 0, "require n in constructor"
-    except ValueError:
-        pass
-
-
-def test_bad_construct_2():
-    try:
-        e1 = Estimators(n=100, protein=False)
-        assert 0, "require ksize in constructor"
-    except ValueError:
-        pass
