@@ -10,7 +10,6 @@ if sys.version_info[0] < 3:
     warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
 
 import sourmash_lib
-from sourmash_lib.signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
 
 import io
 import json
@@ -57,6 +56,8 @@ def _json_next_signature(iterable,
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
+    from .signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
+
     d = dict()
     prefix, event, value = next(iterable)
     if event == 'start_map':
@@ -296,6 +297,7 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
     """
+    from .signature import SIGNATURE_VERSION
 
     top_records = {}
     for sig in siglist:
