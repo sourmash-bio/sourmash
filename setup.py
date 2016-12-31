@@ -65,7 +65,7 @@ SETUP_METADATA = \
                               extra_link_args=EXTRA_LINK_ARGS)],
     "install_requires": ["screed>=0.9", "PyYAML>=3.11"],
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'ijson'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
