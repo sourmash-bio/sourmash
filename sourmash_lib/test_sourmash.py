@@ -117,8 +117,7 @@ def test_do_sourmash_compute_multik_with_protein():
         assert os.path.exists(outfile)
 
         with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(signature.load_signatures(fp))
             assert len(siglist) == 4
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
@@ -164,8 +163,7 @@ def test_do_sourmash_compute_multik_only_protein():
         assert os.path.exists(outfile)
 
         with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(signature.load_signatures(fp))
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes
@@ -184,8 +182,7 @@ def test_do_sourmash_compute_multik_input_is_protein():
         assert os.path.exists(outfile)
 
         with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
+            siglist = list(signature.load_signatures(fp))
             assert len(siglist) == 2
             ksizes = set([ x.estimator.ksize for x in siglist ])
             assert 21 in ksizes

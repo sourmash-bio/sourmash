@@ -91,8 +91,8 @@ Saving and loading signature files
 Here, ``/tmp/genome1.sig`` is a YAML file that can now be loaded and
 compared -- first, load:
 
->>> sigdata = open('/tmp/genome1.sig', 'rt').read()
->>> siglist = list(signature.load_signatures(sigdata))
+>>> sigfp = open('/tmp/genome1.sig', 'rt')
+>>> siglist = list(signature.load_signatures(sigfp))
 >>> loaded_sig = siglist[0]
 
 then compare:

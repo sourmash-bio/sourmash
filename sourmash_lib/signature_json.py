@@ -333,6 +333,8 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
 
 def test_save_load_multisig_json():
+    from .signature import SourmashSignature
+
     e1 = sourmash_lib.Estimators(n=1, ksize=20)
     sig1 = SourmashSignature('lalala@land.org', e1)
 
