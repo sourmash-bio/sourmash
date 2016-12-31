@@ -68,6 +68,9 @@ def _json_next_signature(iterable,
         if key == 'mins':
             value = _json_next_atomic_array(iterable,
                                             prefix_item=prefix_item, ijson=ijson)
+        elif key == 'abundances':
+            value = _json_next_atomic_array(iterable,
+                                            prefix_item=prefix_item, ijson=ijson)
         else:
             prefix, event, value = next(iterable)
         d[key] = value
