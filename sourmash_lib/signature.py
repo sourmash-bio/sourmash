@@ -150,19 +150,117 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
+    is_fp = False
     if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
         try:                                  # is it a file handle?
             data.read
+            is_fp = True
         except AttributeError:                # no - treat it like a filename.
             data = _guess_open(data)
+            is_fp = True
 
-    for sig in signature_json.load_signatures_json(data, ignore_md5sum=ignore_md5sum):
-        if not select_ksize or select_ksize == sig.estimator.ksize:
-            if not select_moltype or \
-                 sig.estimator.is_molecule_type(select_moltype):
-                yield sig
+    try:
+        # support YAML until next major release
+        if hasattr(data, 'peek'):
+            p = data.peek(6)
+
+            if p[:6] == b'class:': # YAML - legacy format
+                for sig in yaml_load(data,
+                                     select_ksize=select_ksize,
+                                     select_moltype=select_moltype,
+                                     ignore_md5sum=ignore_md5sum):
+                    yield sig
+                return
+
+        # JSON format
+        for sig in signature_json.load_signatures_json(data,
+                                                     ignore_md5sum=ignore_md5sum):
+            if not select_ksize or select_ksize == sig.estimator.ksize:
+                if not select_moltype or \
+                     sig.estimator.is_molecule_type(select_moltype):
+                    yield sig
+    finally:
+        if is_fp:
+            data.close()
 
 
 def save_signatures(siglist, fp=None):
     "Save multiple signatures into a YAML string (or into file handle 'fp')"
     return signature_json.save_signatures_json(siglist, fp)
+
+
+def yaml_load(data, select_ksize=None, select_moltype=None,
+              ignore_md5sum=False):
+    # record header
+    x = yaml.load_all(data)
+    siglist = []
+    for n, d in enumerate(x): # allow empty records & concat of signatures
+        if n > 0 and n % 100 == 0:
+            print('...sig loading {}'.format(n))
+        if not d:
+            continue
+        if d.get('class') != 'sourmash_signature':
+            raise Exception("incorrect class: %s" % d.get('class'))
+        email = d['email']
+
+        name = ''
+        if 'name' in d:
+            name = d['name']
+
+        filename = ''
+        if 'filename' in d:
+            filename = d['filename']
+
+        if 'signatures' not in d:
+            raise Exception("invalid format")
+
+        if d['version'] != SIGNATURE_VERSION:
+            raise Exception("cannot load version %s" % (d['version']))
+
+        for sketch in d['signatures']:
+            sig = _load_one_signature(sketch, email, name, filename,
+                                          ignore_md5sum)
+            if not select_ksize or select_ksize == sig.estimator.ksize:
+                if not select_moltype or \
+                     sig.estimator.is_molecule_type(select_moltype):
+                    yield sig
+
+
+def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
+    """Helper function to unpack and check one signature block only."""
+    ksize = sketch['ksize']
+    mins = list(map(int, sketch['mins']))
+    n = int(sketch['num'])
+    molecule = sketch.get('molecule', 'dna')
+    if molecule == 'protein':
+        is_protein = True
+    elif molecule == 'dna':
+        is_protein = False
+    else:
+        raise Exception("unknown molecule type: {}".format(molecule))
+
+    track_abundance = 'abundances' in sketch
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance)
+    if track_abundance:
+        abundances = list(map(int, sketch['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+    else:
+        for m in mins:
+            e.mh.add_hash(m)
+    if 'cardinality' in sketch:
+        e.hll = FakeHLL(int(sketch['cardinality']))
+
+
+    sig = SourmashSignature(email, e)
+
+    if not ignore_md5sum:
+        md5sum = sketch['md5sum']
+        if md5sum != sig.md5sum():
+            raise Exception('error loading - md5 of estimator does not match')
+
+    if name:
+        sig.d['name'] = name
+    if filename:
+        sig.d['filename'] = filename
+
+    return sig

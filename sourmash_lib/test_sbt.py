@@ -128,8 +128,7 @@ def test_tree_save_load():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
     for f in glob("demo/*.sig"):
-        with open(f, 'r') as data:
-            sig = next(signature.load_signatures(data))
+        sig = next(signature.load_signatures(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
@@ -161,8 +160,7 @@ def test_binary_nary_tree():
     trees[10] = SBT(factory, d=10)
 
     for f in glob("demo/*.sig"):
-        with open(f, 'r') as data:
-            sig = next(signature.load_signatures(data))
+        sig = next(signature.load_signatures(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
             tree.add_node(leaf)
