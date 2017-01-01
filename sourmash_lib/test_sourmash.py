@@ -694,7 +694,7 @@ def test_do_sourmash_categorize_traverse():
         assert sig == './short.fa.sig'
         assert matchname.endswith('short2.fa')
         assert round(float(match), 2) == 0.96
-        
+
         sig, matchname, match = next(r)
         print((sig, matchname, match,))
         assert sig == './short2.fa.sig'
