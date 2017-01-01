@@ -136,6 +136,9 @@ def dotproduct(a, b, normalize=True):
     if normalize:
         norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
         norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
+
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
     else:
         norm_a = 1.0
         norm_b = 1.0
@@ -178,3 +181,11 @@ def test_dotproduct_1():
     a = {'x': 1}
     e = {'y': 1}
     assert dotproduct(a, e, normalize=True) == 0.0
+
+
+def test_dotproduct_zeroes():
+    a = {'x': 1}
+    b = {}
+
+    assert dotproduct(a, b) == 0.0
+    assert dotproduct(b, a) == 0.0
