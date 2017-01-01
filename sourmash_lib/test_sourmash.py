@@ -700,3 +700,36 @@ def test_do_sourmash_categorize_traverse():
         assert sig == './short2.fa.sig'
         assert matchname == ''
         assert round(float(match), 2) == 0.0
+
+
+def test_do_sourmash_watch():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        cmd = """
+
+           cat {testdata} |
+           {scripts}/sourmash watch zzz
+
+        """.format(testdata=testdata1,
+                   scripts=utils.scriptpath())
+        (status, out, err) = utils.run_shell_cmd(cmd, in_directory=location)
+        print(out)
+        print(err)
+
+        assert not out
+        assert 'FOUND' in err
+        assert 'short.fa' in err
+        assert 'at 1.000' in err
