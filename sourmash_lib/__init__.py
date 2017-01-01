@@ -118,6 +118,7 @@ class Estimators(object):
             a = self.mh.get_mins(with_abundance=True)
             b = other.mh.get_mins(with_abundance=True)
             prod = dotproduct(a, b)
+            prod = min(1.0, prod)
 
             distance = 2*math.acos(prod) / math.pi
             return 1.0 - distance
