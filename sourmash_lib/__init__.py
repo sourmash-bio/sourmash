@@ -101,16 +101,62 @@ class Estimators(object):
             return self.jaccard(other)
         else:
             a = self.mh.get_mins(with_abundance=True)
-            norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
             b = other.mh.get_mins(with_abundance=True)
-            norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
-
-            common_abund = 0
-            for k, abundance in a.items():
-                common_abund += (abundance / norm_a) * (b.get(k, 0) / norm_b)
-                
-            return math.sqrt(common_abund)
+            return dotproduct(a, b)
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
         return self.mh.count_common(other.mh)
+
+
+def dotproduct(a, b, normalize=True):
+    """
+    Compute the (normalized) dot product of two dictionaries {k: v} where v is
+    abundance.
+    """
+
+    if normalize:
+        norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
+        norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
+    else:
+        norm_a = 1.0
+        norm_b = 1.0
+
+    prod = 0.
+    for k, abundance in a.items():
+        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
+
+    return prod
+
+
+def test_dotproduct_1():
+    a = {'x': 1}
+    assert dotproduct(a, a) == 1.0
+
+    a = {'x': 1}
+    b = {'x': 1}
+    assert dotproduct(a, b) == 1.0
+
+    c = {'x': 1, 'y': 1}
+    prod = dotproduct(c, c, normalize=True)
+    assert round(prod, 2) == 1.0
+
+    # check a.c => 45 degree angle
+    a = {'x': 1}
+    c = {'x': 1, 'y': 1}
+
+    angle = 45
+    rad = math.radians(angle)
+    cosval = math.cos(rad)
+    prod = dotproduct(a, c)
+    assert round(prod, 2) == 0.71
+    assert round(cosval, 2) == round(prod, 2)
+
+    c = {'x': 1, 'y': 1}
+    d = {'x': 1, 'y': 1}
+    prod = dotproduct(c, d)
+    assert round(prod, 2) == 1.0
+
+    a = {'x': 1}
+    e = {'y': 1}
+    assert dotproduct(a, e) == 0.0
