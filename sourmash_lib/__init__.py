@@ -97,12 +97,30 @@ class Estimators(object):
         return self.mh.compare(other.mh)
 
     def similarity(self, other, ignore_abundance=False):
+        """\
+        Calculate similarity of two sketches.
+
+        If the sketches are not abundance weighted, or ignore_abundance=True,
+        compute Jaccard similarity.
+
+        If the sketches are abundance weighted, calculate a distance metric
+        based on the cosine similarity.
+
+        Note, because the term frequencies (tf-idf weights) cannot be negative,
+        the angle will never be < 0deg or > 90deg.
+
+        See https://en.wikipedia.org/wiki/Cosine_similarity
+        """
+
         if not self.track_abundance or ignore_abundance:
             return self.jaccard(other)
         else:
             a = self.mh.get_mins(with_abundance=True)
             b = other.mh.get_mins(with_abundance=True)
-            return dotproduct(a, b)
+            prod = dotproduct(a, b)
+
+            distance = 2*math.acos(prod) / math.pi
+            return 1.0 - distance
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
@@ -111,7 +129,7 @@ class Estimators(object):
 
 def dotproduct(a, b, normalize=True):
     """
-    Compute the (normalized) dot product of two dictionaries {k: v} where v is
+    Compute the dot product of two dictionaries {k: v} where v is
     abundance.
     """
 
@@ -131,11 +149,11 @@ def dotproduct(a, b, normalize=True):
 
 def test_dotproduct_1():
     a = {'x': 1}
-    assert dotproduct(a, a) == 1.0
+    assert dotproduct(a, a, normalize=True) == 1.0
 
     a = {'x': 1}
     b = {'x': 1}
-    assert dotproduct(a, b) == 1.0
+    assert dotproduct(a, b, normalize=True) == 1.0
 
     c = {'x': 1, 'y': 1}
     prod = dotproduct(c, c, normalize=True)
@@ -148,15 +166,15 @@ def test_dotproduct_1():
     angle = 45
     rad = math.radians(angle)
     cosval = math.cos(rad)
-    prod = dotproduct(a, c)
+    prod = dotproduct(a, c, normalize=True)
     assert round(prod, 2) == 0.71
     assert round(cosval, 2) == round(prod, 2)
 
     c = {'x': 1, 'y': 1}
     d = {'x': 1, 'y': 1}
-    prod = dotproduct(c, d)
+    prod = dotproduct(c, d, normalize=True)
     assert round(prod, 2) == 1.0
 
     a = {'x': 1}
     e = {'y': 1}
-    assert dotproduct(a, e) == 0.0
+    assert dotproduct(a, e, normalize=True) == 0.0

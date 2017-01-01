@@ -609,11 +609,12 @@ def test_sourmash_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+                        track_abundance=True)
         E2 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+                        track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
+
         E1.mh.add_sequence('ATGGA')
         E2.mh.add_sequence('ATGGA')
 
@@ -629,4 +630,33 @@ def test_sourmash_compare_with_abundance_2():
                                            ['search', 'e1.sig', 'e2.sig',
                                             '-k' ,'5'],
                                            in_directory=location)
-        assert '0.500' in out
+        assert '1.0' in out
+
+
+def test_sourmash_compare_with_abundance_3():
+    with utils.TempDirectory() as location:
+        # create two signatures
+        E1 = Estimators(ksize=5, n=5, protein=False,
+                        track_abundance=True)
+        E2 = Estimators(ksize=5, n=5, protein=False,
+                        track_abundance=True)
+
+        E1.mh.add_sequence('ATGGA')
+        E1.mh.add_sequence('GGACA')
+
+        E1.mh.add_sequence('ATGGA')
+        E2.mh.add_sequence('ATGGA')
+
+        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+
+        signature.save_signatures([s1],
+                                  open(os.path.join(location, 'e1.sig'), 'w'))
+        signature.save_signatures([s2],
+                                  open(os.path.join(location, 'e2.sig'), 'w'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'e1.sig', 'e2.sig',
+                                            '-k' ,'5'],
+                                           in_directory=location)
+        assert '0.705' in out

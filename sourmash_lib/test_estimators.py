@@ -107,3 +107,19 @@ def test_bad_construct_2(track_abundance):
         assert 0, "require ksize in constructor"
     except ValueError:
         pass
+
+
+def test_abund_similarity():
+    E1 = Estimators(n=5, ksize=20, track_abundance=True)
+    E2 = Estimators(n=5, ksize=20, track_abundance=True)
+
+    for i in [1]:
+        E1.mh.add_hash(i)
+    for i in [1, 2]:
+        E2.mh.add_hash(i)
+
+    assert round(E1.similarity(E1)) == 1.0
+    assert round(E1.similarity(E2), 2) == 0.5
+
+    assert round(E1.similarity(E1, ignore_abundance=True)) == 1.0
+    assert round(E1.similarity(E2, ignore_abundance=True), 2) == 1.0
