@@ -150,7 +150,7 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
-    if hasattr(data, 'find') and not data.find('sourmash_signature'):   # filename
+    if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
         try:                                  # is it a file handle?
             data.read
         except AttributeError:                # no - treat it like a filename.
