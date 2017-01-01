@@ -27,7 +27,7 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
         prefix, event, value = next(iterable)
     prefix, event, value = next(iterable)
     while event != 'end_array':
-        assert prefix == prefix_item
+        #assert prefix == prefix_item, (prefix, event, value)
         l.append(value)
         prefix, event, value = next(iterable)
     return tuple(l)
@@ -45,7 +45,7 @@ def _json_next_signature(iterable,
                          name = None,
                          filename = None,
                          ignore_md5sum=False,
-                         prefix_item='mins.item',
+                         prefix_item='abundances.item',
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
@@ -75,13 +75,33 @@ def _json_next_signature(iterable,
             prefix, event, value = next(iterable)
         d[key] = value
         prefix, event, value = next(iterable)
-        
+
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
-    e = sourmash_lib.Estimators(ksize=ksize, n=n)
-    for m in mins:
-        e.mh.add_hash(m)
+
+    molecule = d.get('molecule', 'dna')
+    if molecule == 'protein':
+        is_protein = True
+    elif molecule == 'dna':
+        is_protein = False
+    else:
+        raise Exception("unknown molecule type: {}".format(molecule))
+
+    track_abundance = False
+    if 'abundances' in d:
+        track_abundance = True
+
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein,
+                                track_abundance=track_abundance)
+
+    if not track_abundance:
+        for m in mins:
+            e.mh.add_hash(m)
+    else:
+        abundances = list(map(int, d['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])
 
