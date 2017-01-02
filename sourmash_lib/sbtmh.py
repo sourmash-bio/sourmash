@@ -25,7 +25,8 @@ class SigLeaf(Leaf):
         from sourmash_lib import signature
 
         filename = os.path.join(dirname, info['filename'])
-        data = next(signature.load_signatures(filename))
+        it = signature.load_signatures(filename)
+        data, = list(it)              # should only be one signature
         return SigLeaf(info['metadata'], data, name=info['name'])
 
 
