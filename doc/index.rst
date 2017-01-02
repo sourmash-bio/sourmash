@@ -27,8 +27,8 @@ In brief,
   sketches by distance (see `the command-line docs <command-line.html>`__).
 
 * ``sourmash`` supports saving, loading, and communication of MinHash
-  sketches via `YAML <http://yaml.org/>`__, a ~human-readable & editable
-  format.
+  sketches via `JSON <http://www.json.org/>`__, a ~human-readable &
+  editable format.
 
 * ``sourmash`` also has a simple Python API for interacting with sketches,
   including support for online updating and querying of sketches

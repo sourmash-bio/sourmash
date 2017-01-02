@@ -17,10 +17,10 @@ Titus wrote a few blog posts on sourmash:
 
 * `MinHash signatures as ways to find samples, and collaborators? <http://ivory.idyll.org/blog/2016-sourmash-signatures.html>`__
 
-YAML format for the signature
+JSON format for the signature
 -----------------------------
 
-The YAML format is not necessarily final; this is a TODO item for future
+The JSON format is not necessarily final; this is a TODO item for future
 releases.  In particular, we'd like to update it to store more metadata
 for samples.
 

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-Save and load MinHash sketches in a YAML format, along with some metadata.
+Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 import yaml
 import hashlib
@@ -144,7 +144,7 @@ def _guess_open(filename):
 
 def load_signatures(data, select_ksize=None, select_moltype=None,
                     ignore_md5sum=False):
-    """Load a YAML string with signatures into classes.
+    """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
 
@@ -185,7 +185,7 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
 
 def save_signatures(siglist, fp=None):
-    "Save multiple signatures into a YAML string (or into file handle 'fp')"
+    "Save multiple signatures into a JSON string (or into file handle 'fp')"
     return signature_json.save_signatures_json(siglist, fp)
 
 

@@ -498,7 +498,7 @@ Commands can be:
                 print('loaded signature:', name,
                       s.md5sum()[:8], file=sys.stderr)
 
-            print('saving %d signatures to YAML' % (len(siglist),),
+            print('saving %d signatures to JSON' % (len(siglist),),
                   file=sys.stderr)
             sig.save_signatures(siglist, args.output)
 

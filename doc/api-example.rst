@@ -88,7 +88,7 @@ Saving and loading signature files
 >>> with open('/tmp/genome1.sig', 'wt') as fp:
 ...   signature.save_signatures([sig1], fp)
 
-Here, ``/tmp/genome1.sig`` is a YAML file that can now be loaded and
+Here, ``/tmp/genome1.sig`` is a JSON file that can now be loaded and
 compared -- first, load:
 
 >>> sigfp = open('/tmp/genome1.sig', 'rt')

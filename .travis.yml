@@ -14,7 +14,6 @@ env:
 
 install:
 - pip install tox
-- pip install ijson
 
 script:
     tox -e $TOX_ENV
