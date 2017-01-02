@@ -50,7 +50,7 @@ def _json_next_signature(iterable,
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
-    - email: 
+    - email:
     - name:
     - filename:
     - ignore_md5sum:
@@ -152,7 +152,7 @@ def test__json_next_signature():
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=False,
                                ijson=ijson)
-        
+
 def load_signature_json(iterable,
                         ignore_md5sum=False,
                         prefix_item='signatures.item.mins.item',
@@ -167,7 +167,7 @@ def load_signature_json(iterable,
     prefix, event, value = next(iterable)
     if event != 'start_map':
         raise ValueError('expected "start_map".')
-    
+
     prefix, event, value = next(iterable)
     while event != 'end_map':
         assert event == 'map_key'
@@ -226,22 +226,22 @@ def test_load_signature_json():
     it = ijson.parse(io.StringIO(unicode(s)))
     # no MD5SUM
     sig_entry = load_signature_json(it, ignore_md5sum=True)
-        
+
 
 def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
     - select_ksize:
     - ignore_md5sum:
-    - ijson: ijson backend    
+    - ijson: ijson backend
     """
-    
+
     parser = ijson.parse(data)
 
     prefix, event, value = next(parser)
     assert prefix == '' and event == 'start_array' and value is None
 
-    siglist = []    
+    siglist = []
     n = 0
     while True:
         try:
@@ -269,7 +269,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
 
     if isinstance(data, str):
         data = io.StringIO(unicode(data))
-        
+
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
@@ -279,11 +279,11 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             print('\r...sig loading {:,}'.format(n), end='', flush=True)
         for sig in sigset['signatures']:
             yield sig
-            
+
     if n > 1:
         print('\r...sig loading {:,}'.format(n), flush=True)
 
-    
+
 # integration test more than a unit test
 def test_load_signaturesset_json_iter():
     from collections import OrderedDict
@@ -312,8 +312,8 @@ def test_load_signaturesset_json_iter():
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     assert len(sig_entries) == 2
-        
-        
+
+
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
