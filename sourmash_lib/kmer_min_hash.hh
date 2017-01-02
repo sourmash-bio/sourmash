@@ -37,13 +37,14 @@ protected:
 class KmerMinHash
 {
 public:
+    const uint32_t seed;
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot) :
-        num(n), ksize(k), is_protein(prot) { };
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
+      num(n), ksize(k), is_protein(prot), seed(seed) { };
 
     virtual void _shrink() {
         while (mins.size() > num) {
@@ -56,8 +57,8 @@ public:
         mins.insert(h);
         _shrink();
     }
-    void add_word(std::string word) {
-        HashIntoType hash = _hash_murmur(word);
+  void add_word(std::string word) {
+    HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
     void add_sequence(const char * sequence, bool force=false) {
@@ -251,8 +252,8 @@ class KmerMinAbundance: public KmerMinHash {
     CMinAbundanceType mins;
     HashIntoType max_mins;
 
-    KmerMinAbundance(unsigned int n, unsigned int k, bool prot) :
-        KmerMinHash(n, k, prot) { };
+  KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
+      KmerMinHash(n, k, prot, seed) { };
 
     virtual void add_hash(HashIntoType h) {
         if (mins.size() < num) {
