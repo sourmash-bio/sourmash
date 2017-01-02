@@ -279,7 +279,7 @@ class KmerMinAbundance: public KmerMinHash {
     virtual void _shrink() {
         while (mins.size() > num) {
             mins.erase(max_mins);
-            max_mins = (*std::max_element(mins.begin(), m ins.end())).first;
+            max_mins = (*std::max_element(mins.begin(), mins.end())).first;
         }
     }
 
