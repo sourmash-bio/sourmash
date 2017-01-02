@@ -38,6 +38,8 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     it = ijson.parse(io.StringIO(s))
     a = _json_next_atomic_array(it)
     assert len(t) == len(a)
@@ -111,6 +113,8 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     it = ijson.parse(io.StringIO(s))
     # no MD5SUM
     sig = _json_next_signature(it, email, name, filename,
@@ -125,6 +129,8 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     it = ijson.parse(io.StringIO(s))
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=False,
@@ -200,6 +206,8 @@ def test_load_signature_json():
                                        ('mins', minhash))),
                       ))))
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     it = ijson.parse(io.StringIO(s))
     # no MD5SUM
     sig_entry = load_signature_json(it, ignore_md5sum=True)
