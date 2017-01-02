@@ -51,3 +51,4 @@ typedef struct {
 } MinHash_Object;
 
 #endif // _MINHASH_HH
+ 
