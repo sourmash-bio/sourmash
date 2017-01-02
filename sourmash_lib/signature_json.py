@@ -7,10 +7,6 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 from __future__ import print_function
 
 import sys
-import warnings
-if sys.version_info[0] < 3:
-    warnings.warn("The module 'signature_json' was written for Python 3 and your Python version is older.")
-
 import sourmash_lib
 
 import io
