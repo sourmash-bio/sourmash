@@ -20,6 +20,7 @@ def test_roundtrip_empty_email(track_abundance):
     e.add("AT" * 10)
     sig = SourmashSignature('', e)
     s = save_signatures([sig])
+    print(s)
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator

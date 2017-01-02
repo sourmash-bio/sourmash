@@ -36,10 +36,10 @@ We have a number of blog posts on sourmash and MinHash more generally:
   <http://blog.luizirber.org/2016/12/28/soursigs-arch-1/>`__ - on
   approaches to computing MinHashes for large collections of public data.
 
-YAML format for the signature
+JSON format for the signature
 -----------------------------
 
-The YAML format is not necessarily final; this is a TODO item for future
+The JSON format is not necessarily final; this is a TODO item for future
 releases.  In particular, we'd like to update it to store more metadata
 for samples.
 

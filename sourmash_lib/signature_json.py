@@ -7,12 +7,7 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 from __future__ import print_function
 
 import sys
-import warnings
-if sys.version_info[0] < 3:
-    warnings.warn("The module 'signature_json' was written for Python 3 and your Python version is older.")
-
 import sourmash_lib
-from sourmash_lib.signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
 
 import io
 import json
@@ -30,7 +25,7 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
         prefix, event, value = next(iterable)
     prefix, event, value = next(iterable)
     while event != 'end_array':
-        assert prefix == prefix_item
+        #assert prefix == prefix_item
         l.append(value)
         prefix, event, value = next(iterable)
     return tuple(l)
@@ -41,38 +36,62 @@ def _json_next_signature(iterable,
                          name = None,
                          filename = None,
                          ignore_md5sum=False,
-                         prefix_item='mins.item',
+                         prefix_item='abundances.item',
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
-    - email: 
+    - email:
     - name:
     - filename:
     - ignore_md5sum:
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
+    from .signature import FakeHLL, SourmashSignature
+
     d = dict()
     prefix, event, value = next(iterable)
     if event == 'start_map':
         prefix, event, value = next(iterable)
     while event != 'end_map':
-        assert event == 'map_key'
         key = value
         if key == 'mins':
+            value = _json_next_atomic_array(iterable,
+                                            prefix_item=prefix_item, ijson=ijson)
+        elif key == 'abundances':
             value = _json_next_atomic_array(iterable,
                                             prefix_item=prefix_item, ijson=ijson)
         else:
             prefix, event, value = next(iterable)
         d[key] = value
         prefix, event, value = next(iterable)
-        
+
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
-    e = sourmash_lib.Estimators(ksize=ksize, n=n)
-    for m in mins:
-        e.mh.add_hash(m)
+
+    molecule = d.get('molecule', 'dna')
+    if molecule == 'protein':
+        is_protein = True
+    elif molecule == 'dna':
+        is_protein = False
+    else:
+        raise Exception("unknown molecule type: {}".format(molecule))
+
+    track_abundance = False
+    if 'abundances' in d:
+        track_abundance = True
+
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein,
+                                track_abundance=track_abundance)
+
+    if not track_abundance:
+        for m in mins:
+            e.mh.add_hash(m)
+    else:
+        abundances = list(map(int, d['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])
 
@@ -90,7 +109,6 @@ def _json_next_signature(iterable,
 
     return sig
 
-        
 def load_signature_json(iterable,
                         ignore_md5sum=False,
                         prefix_item='signatures.item.mins.item',
@@ -105,7 +123,7 @@ def load_signature_json(iterable,
     prefix, event, value = next(iterable)
     if event != 'start_map':
         raise ValueError('expected "start_map".')
-    
+
     prefix, event, value = next(iterable)
     while event != 'end_map':
         assert event == 'map_key'
@@ -146,15 +164,15 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
     - data: file handle (or file handle-like) object
     - select_ksize:
     - ignore_md5sum:
-    - ijson: ijson backend    
+    - ijson: ijson backend
     """
-    
+
     parser = ijson.parse(data)
 
     prefix, event, value = next(parser)
     assert prefix == '' and event == 'start_array' and value is None
 
-    siglist = []    
+    siglist = []
     n = 0
     while True:
         try:
@@ -185,7 +203,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
         if sys.version_info[0] < 3:
             data = unicode(data)
         data = io.StringIO(data)
-        
+
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
@@ -195,11 +213,11 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             print('\r...sig loading {:,}'.format(n), end='', flush=True)
         for sig in sigset['signatures']:
             yield sig
-            
+
     if n > 1:
         print('\r...sig loading {:,}'.format(n), flush=True)
-        
-        
+
+
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
@@ -207,6 +225,7 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
     """
+    from .signature import SIGNATURE_VERSION
 
     top_records = {}
     for sig in siglist:
@@ -239,4 +258,3 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         s = json.dumps(records, indent=indent, sort_keys=sort_keys)
 
     return s
-  
