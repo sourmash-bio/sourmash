@@ -4,6 +4,7 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
 import re
+from ._minhash import MinHash
 
 khmer_available = False
 try:

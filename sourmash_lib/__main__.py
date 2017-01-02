@@ -782,7 +782,7 @@ Commands can be:
                                                       query_moltype))
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        s = sig.load_signatures(args.query, select_ksize=args.ksize)
+        #s = sig.load_signatures(args.query, select_ksize=args.ksize)
         orig_query = query
 
         sum_found = 0.

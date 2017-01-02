@@ -5,6 +5,7 @@ Save and load MinHash sketches in a YAML format, along with some metadata.
 import yaml
 import hashlib
 import sourmash_lib
+from . import signature_json
 
 import io
 import gzip
@@ -149,16 +150,47 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
-
-    # is it a data string?
-    if hasattr(data, 'find') and data.find('class: sourmash_signature') == -1:
+    is_fp = False
+    if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
         try:                                  # is it a file handle?
             data.read
+            is_fp = True
         except AttributeError:                # no - treat it like a filename.
             data = _guess_open(data)
+            is_fp = True
 
-    # at this point, whatever 'data' is, it should be loadable!
+    try:
+        # support YAML until next major release
+        if hasattr(data, 'peek'):
+            p = data.peek(6)
 
+            if p[:6] == b'class:': # YAML - legacy format
+                for sig in yaml_load(data,
+                                     select_ksize=select_ksize,
+                                     select_moltype=select_moltype,
+                                     ignore_md5sum=ignore_md5sum):
+                    yield sig
+                return
+
+        # JSON format
+        for sig in signature_json.load_signatures_json(data,
+                                                     ignore_md5sum=ignore_md5sum):
+            if not select_ksize or select_ksize == sig.estimator.ksize:
+                if not select_moltype or \
+                     sig.estimator.is_molecule_type(select_moltype):
+                    yield sig
+    finally:
+        if is_fp:
+            data.close()
+
+
+def save_signatures(siglist, fp=None):
+    "Save multiple signatures into a YAML string (or into file handle 'fp')"
+    return signature_json.save_signatures_json(siglist, fp)
+
+
+def yaml_load(data, select_ksize=None, select_moltype=None,
+              ignore_md5sum=False):
     # record header
     x = yaml.load_all(data)
     siglist = []
@@ -232,41 +264,3 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         sig.d['filename'] = filename
 
     return sig
-
-
-def save_signatures(siglist, fp=None):
-    "Save multiple signatures into a YAML string (or into file handle 'fp')"
-    top_records = {}
-    for sig in siglist:
-        email, name, filename, sketch = sig._save()
-        k = (email, name, filename)
-
-        x = top_records.get(k, [])
-        x.append(sketch)
-        top_records[k] = x
-
-    records = []
-    for (email, name, filename), sketches in top_records.items():
-        record = {}
-        record['email'] = email
-        if name:
-            record['name'] = name
-        if filename:
-            record['filename'] = filename
-        record['signatures'] = sketches
-
-        record['version'] = SIGNATURE_VERSION
-        record['class'] = 'sourmash_signature'
-        record['type'] = 'mrnaseq'
-        record['hash_function'] = '0.murmur64'
-
-        records.append(record)
-
-    s = yaml.dump_all(records, fp)
-    if len(records):
-        if fp:
-            fp.write('---\n')
-        else:
-            s += '---\n'
-
-    return s
