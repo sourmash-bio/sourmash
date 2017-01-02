@@ -9,7 +9,7 @@ from __future__ import print_function
 import sys
 import warnings
 if sys.version_info[0] < 3:
-    warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
+    warnings.warn("The module 'signature_json' was written for Python 3 and your Python version is older.")
 
 import sourmash_lib
 from sourmash_lib.signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
@@ -198,8 +198,6 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             
     if n > 1:
         print('\r...sig loading {:,}'.format(n), flush=True)
-
-    
         
         
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
@@ -241,3 +239,4 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         s = json.dumps(records, indent=indent, sort_keys=sort_keys)
 
     return s
+  
