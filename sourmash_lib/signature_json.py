@@ -109,7 +109,6 @@ def _json_next_signature(iterable,
 
     return sig
 
-
 def load_signature_json(iterable,
                         ignore_md5sum=False,
                         prefix_item='signatures.item.mins.item',
