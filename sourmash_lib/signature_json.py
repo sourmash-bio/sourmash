@@ -2,14 +2,17 @@
 Extension to sourmash.signature using JSON (making load times of collection of signatures
 10 to 20 times faster). -- Laurent Gautier
 """
+
 # This was written for Python 3, may be there is a chance it will work with Python 2...
 from __future__ import print_function
+
 import sys
 import warnings
 if sys.version_info[0] < 3:
-    warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
+    warnings.warn("The module 'signature_json' was written for Python 3 and your Python version is older.")
 
 import sourmash_lib
+
 import io
 import json
 import ijson
@@ -26,20 +29,11 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
         prefix, event, value = next(iterable)
     prefix, event, value = next(iterable)
     while event != 'end_array':
-        #assert prefix == prefix_item, (prefix, event, value)
+        #assert prefix == prefix_item
         l.append(value)
         prefix, event, value = next(iterable)
     return tuple(l)
 
-def test__json_next_atomic_array():
-    t = (2,3,4,5,6)
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    a = _json_next_atomic_array(it)
-    assert len(t) == len(a)
-    assert all(x == y for x,y in zip(t, a))
 
 def _json_next_signature(iterable,
                          email = None,
@@ -50,21 +44,20 @@ def _json_next_signature(iterable,
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
-    - email: 
+    - email:
     - name:
     - filename:
     - ignore_md5sum:
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
-    from .signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
+    from .signature import FakeHLL, SourmashSignature
 
     d = dict()
     prefix, event, value = next(iterable)
     if event == 'start_map':
         prefix, event, value = next(iterable)
     while event != 'end_map':
-        assert event == 'map_key'
         key = value
         if key == 'mins':
             value = _json_next_atomic_array(iterable,
@@ -101,8 +94,6 @@ def _json_next_signature(iterable,
             e.mh.add_hash(m)
     else:
         abundances = list(map(int, d['abundances']))
-        if len(abundances) != len(mins):
-            raise ValueError("abundances must match number of hashes")
         e.mh.set_abundances(dict(zip(mins, abundances)))
 
     if 'cardinality' in d:
@@ -122,44 +113,7 @@ def _json_next_signature(iterable,
 
     return sig
 
-# integration test more than a unit test...
-def test__json_next_signature():
-    from collections import OrderedDict
-    email = 'foo@bar.com'
-    name = 'Foo Bar'
-    filename = '/tmp/foobar'
 
-    minhash = (2,3,4,5,6)
-    t = OrderedDict((('ksize', 21),
-                     ('num', len(minhash)),
-                     #('md5sum', ),
-                     ('cardinality', 123456),
-                     ('mins', minhash)))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    # no MD5SUM
-    sig = _json_next_signature(it, email, name, filename,
-                               ignore_md5sum=True,
-                               ijson=ijson)
-
-    ## check MD5SUM
-    minhash = (5,)
-    t = OrderedDict((('ksize', 20),
-                     ('num', len(minhash)),
-                     ('md5sum', 'eae27d77ca20db309e056e3d2dcd7d69'),
-                     ('cardinality', 123456),
-                     ('mins', minhash)))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-
-    sig = _json_next_signature(it, email, name, filename,
-                               ignore_md5sum=False,
-                               ijson=ijson)
-        
 def load_signature_json(iterable,
                         ignore_md5sum=False,
                         prefix_item='signatures.item.mins.item',
@@ -174,7 +128,7 @@ def load_signature_json(iterable,
     prefix, event, value = next(iterable)
     if event != 'start_map':
         raise ValueError('expected "start_map".')
-    
+
     prefix, event, value = next(iterable)
     while event != 'end_map':
         assert event == 'map_key'
@@ -210,47 +164,20 @@ def load_signature_json(iterable,
     return d
 
 
-# integration test more than a unit test
-def test_load_signature_json():
-    from collections import OrderedDict
-    email = 'foo@bar.com'
-    name = 'Foo Bar'
-    filename = '/tmp/foobar'
-
-    minhash = (2,3,4,5,6)
-    t = OrderedDict((('email', email),
-                     ('name', name),
-                     ('filename', filename),
-                     ('signatures',
-                      (
-                          OrderedDict((('ksize', 21),
-                                       ('num', len(minhash)),
-                                       #('md5sum', ),
-                                       ('cardinality', 123456),
-                                       ('mins', minhash))),
-                      ))))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    # no MD5SUM
-    sig_entry = load_signature_json(it, ignore_md5sum=True)
-        
-
 def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
     - select_ksize:
     - ignore_md5sum:
-    - ijson: ijson backend    
+    - ijson: ijson backend
     """
-    
+
     parser = ijson.parse(data)
 
     prefix, event, value = next(parser)
     assert prefix == '' and event == 'start_array' and value is None
 
-    siglist = []    
+    siglist = []
     n = 0
     while True:
         try:
@@ -281,7 +208,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
         if sys.version_info[0] < 3:
             data = unicode(data)
         data = io.StringIO(data)
-        
+
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
@@ -291,43 +218,11 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             print('\r...sig loading {:,}'.format(n), end='', flush=True)
         for sig in sigset['signatures']:
             yield sig
-            
+
     if n > 1:
         print('\r...sig loading {:,}'.format(n), flush=True)
 
-    
-# integration test more than a unit test
-def test_load_signaturesset_json_iter():
-    from collections import OrderedDict
 
-    t = list()
-    for email, name, filename in (('foo@foo.com', 'Foo', '/tmp/foo'),
-                                  ('bar@bar.com', 'Bar', '/tmp/bar')):
-        minhash = (2,3,4,5,6)
-        t.append(OrderedDict((
-            ('class', 'sourmash_signature'),
-            ('email', email),
-            ('name', name),
-            ('filename', filename),
-            ('signatures',
-             (
-                 OrderedDict((('ksize', 21),
-                              ('num', len(minhash)),
-                              #('md5sum', ),
-                              ('cardinality', 123456),
-                              ('mins', minhash))),
-             )))))
-
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
-                                                    ignore_md5sum=True,
-                                                    ijson=ijson))
-    assert len(sig_entries) == 2
-        
-        
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
@@ -368,23 +263,3 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         s = json.dumps(records, indent=indent, sort_keys=sort_keys)
 
     return s
-
-
-def test_save_load_multisig_json():
-    from .signature import SourmashSignature
-
-    e1 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig1 = SourmashSignature('lalala@land.org', e1)
-
-    e2 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig2 = SourmashSignature('lalala2@land.org', e2)
-
-    x = save_signatures_json([sig1, sig2])
-    y = list(load_signatures_json(x))
-
-    print(x)
-
-    assert len(y) == 2
-    assert sig1 in y                      # order not guaranteed, note.
-    assert sig2 in y
-    assert sig1 != sig2

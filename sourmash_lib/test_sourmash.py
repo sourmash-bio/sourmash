@@ -624,3 +624,106 @@ def test_sourmash_compare_with_abundance_2():
                                             '-k' ,'5'],
                                            in_directory=location)
         assert '0.500' in out
+
+
+def test_do_sourmash_categorize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['categorize', 'zzz',
+                                            'short.fa.sig',
+                                            '--csv', 'xxx.csv'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'xxx.csv'))
+
+        import csv
+        r = csv.reader(open(os.path.join(location, 'xxx.csv')))
+        sig, matchname, match = next(r)
+        assert sig == 'short.fa.sig'
+        assert matchname.endswith('short2.fa')
+        assert round(float(match), 2) == 0.96
+
+
+def test_do_sourmash_categorize_traverse():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['categorize', 'zzz',
+                                            '--traverse-directory', '.',
+                                            '--csv', 'xxx.csv'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'xxx.csv'))
+
+        import csv
+        r = csv.reader(open(os.path.join(location, 'xxx.csv')))
+        sig, matchname, match = next(r)
+        assert sig == './short.fa.sig'
+        assert matchname.endswith('short2.fa')
+        assert round(float(match), 2) == 0.96
+
+        sig, matchname, match = next(r)
+        print((sig, matchname, match,))
+        assert sig == './short2.fa.sig'
+        assert matchname == ''
+        assert round(float(match), 2) == 0.0
+
+
+def test_do_sourmash_watch():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        cmd = """
+
+           cat {testdata} |
+           {scripts}/sourmash watch zzz
+
+        """.format(testdata=testdata1,
+                   scripts=utils.scriptpath())
+        (status, out, err) = utils.run_shell_cmd(cmd, in_directory=location)
+        print(out)
+        print(err)
+
+        assert not out
+        assert 'FOUND' in err
+        assert 'short.fa' in err
+        assert 'at 1.000' in err
