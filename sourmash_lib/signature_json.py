@@ -101,6 +101,8 @@ def _json_next_signature(iterable,
             e.mh.add_hash(m)
     else:
         abundances = list(map(int, d['abundances']))
+        if len(abundances) != len(mins):
+            raise ValueError("abundances must match number of hashes")
         e.mh.set_abundances(dict(zip(mins, abundances)))
 
     if 'cardinality' in d:
