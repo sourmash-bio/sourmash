@@ -2,6 +2,7 @@
 Extension to sourmash.signature using JSON (making load times of collection of signatures
 10 to 20 times faster). -- Laurent Gautier
 """
+from __future__ import print_function
 
 # This was written for Python 3, may be there is a chance it will work with Python 2...
 import sys
@@ -10,7 +11,6 @@ if sys.version_info[0] < 3:
     warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
 
 import sourmash_lib
-from sourmash_lib.signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
 
 import io
 import json
@@ -28,7 +28,7 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
         prefix, event, value = next(iterable)
     prefix, event, value = next(iterable)
     while event != 'end_array':
-        assert prefix == prefix_item
+        #assert prefix == prefix_item, (prefix, event, value)
         l.append(value)
         prefix, event, value = next(iterable)
     return tuple(l)
@@ -36,7 +36,7 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.StringIO(unicode(s)))
     a = _json_next_atomic_array(it)
     assert len(t) == len(a)
     assert all(x == y for x,y in zip(t, a))
@@ -46,7 +46,7 @@ def _json_next_signature(iterable,
                          name = None,
                          filename = None,
                          ignore_md5sum=False,
-                         prefix_item='mins.item',
+                         prefix_item='abundances.item',
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
@@ -57,6 +57,8 @@ def _json_next_signature(iterable,
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
+    from .signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
+
     d = dict()
     prefix, event, value = next(iterable)
     if event == 'start_map':
@@ -67,17 +69,40 @@ def _json_next_signature(iterable,
         if key == 'mins':
             value = _json_next_atomic_array(iterable,
                                             prefix_item=prefix_item, ijson=ijson)
+        elif key == 'abundances':
+            value = _json_next_atomic_array(iterable,
+                                            prefix_item=prefix_item, ijson=ijson)
         else:
             prefix, event, value = next(iterable)
         d[key] = value
         prefix, event, value = next(iterable)
-        
+
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
-    e = sourmash_lib.Estimators(ksize=ksize, n=n)
-    for m in mins:
-        e.mh.add_hash(m)
+
+    molecule = d.get('molecule', 'dna')
+    if molecule == 'protein':
+        is_protein = True
+    elif molecule == 'dna':
+        is_protein = False
+    else:
+        raise Exception("unknown molecule type: {}".format(molecule))
+
+    track_abundance = False
+    if 'abundances' in d:
+        track_abundance = True
+
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein,
+                                track_abundance=track_abundance)
+
+    if not track_abundance:
+        for m in mins:
+            e.mh.add_hash(m)
+    else:
+        abundances = list(map(int, d['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])
 
@@ -109,7 +134,7 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.StringIO(unicode(s)))
     # no MD5SUM
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=True,
@@ -123,7 +148,7 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.StringIO(unicode(s)))
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=False,
                                ijson=ijson)
@@ -198,7 +223,7 @@ def test_load_signature_json():
                                        ('mins', minhash))),
                       ))))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.StringIO(unicode(s)))
     # no MD5SUM
     sig_entry = load_signature_json(it, ignore_md5sum=True)
         
@@ -243,7 +268,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
     n = 0
 
     if isinstance(data, str):
-        data = io.StringIO(data)
+        data = io.StringIO(unicode(data))
         
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
                                      ignore_md5sum=ignore_md5sum,
@@ -283,7 +308,7 @@ def test_load_signaturesset_json_iter():
 
     s = json.dumps(t)
     # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
+    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(unicode(s)),
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     assert len(sig_entries) == 2
@@ -296,6 +321,7 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
     """
+    from .signature import SIGNATURE_VERSION
 
     top_records = {}
     for sig in siglist:
@@ -331,6 +357,8 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
 
 def test_save_load_multisig_json():
+    from .signature import SourmashSignature
+
     e1 = sourmash_lib.Estimators(n=1, ksize=20)
     sig1 = SourmashSignature('lalala@land.org', e1)
 

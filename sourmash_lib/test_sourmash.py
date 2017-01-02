@@ -116,13 +116,11 @@ def test_do_sourmash_compute_multik_with_protein():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 4
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 4
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -163,13 +161,11 @@ def test_do_sourmash_compute_multik_only_protein():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_input_is_protein():
@@ -183,18 +179,16 @@ def test_do_sourmash_compute_multik_input_is_protein():
         outfile = os.path.join(location, 'ecoli.faa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+        ksizes = set([ x.estimator.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 30 in ksizes
 
-            moltype = set([ x.estimator.is_molecule_type('protein')
-                            for x in siglist ])
-            assert len(moltype) == 1
-            assert True in moltype
+        moltype = set([ x.estimator.is_molecule_type('protein')
+                        for x in siglist ])
+        assert len(moltype) == 1
+        assert True in moltype
 
 
 def test_do_sourmash_compute_multik_outfile():
