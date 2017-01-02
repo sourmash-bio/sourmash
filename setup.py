@@ -63,7 +63,7 @@ SETUP_METADATA = \
                               language="c++",
                               extra_compile_args=EXTRA_COMPILE_ARGS,
                               extra_link_args=EXTRA_LINK_ARGS)],
-    "install_requires": ["screed>=0.9", "PyYAML>=3.11"],
+    "install_requires": ["screed>=0.9", "PyYAML>=3.11", "ijson"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],

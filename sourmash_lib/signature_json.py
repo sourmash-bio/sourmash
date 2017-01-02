@@ -2,16 +2,14 @@
 Extension to sourmash.signature using JSON (making load times of collection of signatures
 10 to 20 times faster). -- Laurent Gautier
 """
-from __future__ import print_function
-
 # This was written for Python 3, may be there is a chance it will work with Python 2...
+from __future__ import print_function
 import sys
 import warnings
 if sys.version_info[0] < 3:
     warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
 
 import sourmash_lib
-
 import io
 import json
 import ijson
@@ -36,7 +34,9 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(unicode(s)))
+    if sys.version_info[0] < 3:
+        s = unicode(s)
+    it = ijson.parse(io.StringIO(s))
     a = _json_next_atomic_array(it)
     assert len(t) == len(a)
     assert all(x == y for x,y in zip(t, a))
@@ -134,7 +134,9 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(unicode(s)))
+    if sys.version_info[0] < 3:
+        s = unicode(s)
+    it = ijson.parse(io.StringIO(s))
     # no MD5SUM
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=True,
@@ -148,7 +150,10 @@ def test__json_next_signature():
                      ('cardinality', 123456),
                      ('mins', minhash)))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(unicode(s)))
+    if sys.version_info[0] < 3:
+        s = unicode(s)
+    it = ijson.parse(io.StringIO(s))
+
     sig = _json_next_signature(it, email, name, filename,
                                ignore_md5sum=False,
                                ijson=ijson)
@@ -223,7 +228,9 @@ def test_load_signature_json():
                                        ('mins', minhash))),
                       ))))
     s = json.dumps(t)
-    it = ijson.parse(io.StringIO(unicode(s)))
+    if sys.version_info[0] < 3:
+        s = unicode(s)
+    it = ijson.parse(io.StringIO(s))
     # no MD5SUM
     sig_entry = load_signature_json(it, ignore_md5sum=True)
         
@@ -268,7 +275,10 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
     n = 0
 
     if isinstance(data, str):
-        data = io.StringIO(unicode(data))
+        # Required for compatibility with Python 2
+        if sys.version_info[0] < 3:
+            data = unicode(data)
+        data = io.StringIO(data)
         
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
                                      ignore_md5sum=ignore_md5sum,
@@ -307,8 +317,10 @@ def test_load_signaturesset_json_iter():
              )))))
 
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(unicode(s)),
+    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     assert len(sig_entries) == 2
