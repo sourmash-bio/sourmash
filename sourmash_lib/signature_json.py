@@ -9,7 +9,7 @@ from __future__ import print_function
 import sys
 import warnings
 if sys.version_info[0] < 3:
-    warnings.warn("The module 'signature_json' was written for Python 3 and you Python version is older.")
+    warnings.warn("The module 'signature_json' was written for Python 3 and your Python version is older.")
 
 import sourmash_lib
 from sourmash_lib.signature import FakeHLL, SourmashSignature, SIGNATURE_VERSION
@@ -35,15 +35,6 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
         prefix, event, value = next(iterable)
     return tuple(l)
 
-def test__json_next_atomic_array():
-    t = (2,3,4,5,6)
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    a = _json_next_atomic_array(it)
-    assert len(t) == len(a)
-    assert all(x == y for x,y in zip(t, a))
 
 def _json_next_signature(iterable,
                          email = None,
@@ -99,42 +90,6 @@ def _json_next_signature(iterable,
 
     return sig
 
-# integration test more than a unit test...
-def test__json_next_signature():
-    from collections import OrderedDict
-    email = 'foo@bar.com'
-    name = 'Foo Bar'
-    filename = '/tmp/foobar'
-
-    minhash = (2,3,4,5,6)
-    t = OrderedDict((('ksize', 21),
-                     ('num', len(minhash)),
-                     #('md5sum', ),
-                     ('cardinality', 123456),
-                     ('mins', minhash)))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    # no MD5SUM
-    sig = _json_next_signature(it, email, name, filename,
-                               ignore_md5sum=True,
-                               ijson=ijson)
-
-    ## check MD5SUM
-    minhash = (5,)
-    t = OrderedDict((('ksize', 20),
-                     ('num', len(minhash)),
-                     ('md5sum', 'eae27d77ca20db309e056e3d2dcd7d69'),
-                     ('cardinality', 123456),
-                     ('mins', minhash)))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    sig = _json_next_signature(it, email, name, filename,
-                               ignore_md5sum=False,
-                               ijson=ijson)
         
 def load_signature_json(iterable,
                         ignore_md5sum=False,
@@ -185,33 +140,6 @@ def load_signature_json(iterable,
 
     return d
 
-
-# integration test more than a unit test
-def test_load_signature_json():
-    from collections import OrderedDict
-    email = 'foo@bar.com'
-    name = 'Foo Bar'
-    filename = '/tmp/foobar'
-
-    minhash = (2,3,4,5,6)
-    t = OrderedDict((('email', email),
-                     ('name', name),
-                     ('filename', filename),
-                     ('signatures',
-                      (
-                          OrderedDict((('ksize', 21),
-                                       ('num', len(minhash)),
-                                       #('md5sum', ),
-                                       ('cardinality', 123456),
-                                       ('mins', minhash))),
-                      ))))
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
-    # no MD5SUM
-    sig_entry = load_signature_json(it, ignore_md5sum=True)
-        
 
 def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ijson=ijson):
     """
@@ -270,38 +198,6 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             
     if n > 1:
         print('\r...sig loading {:,}'.format(n), flush=True)
-
-    
-# integration test more than a unit test
-def test_load_signaturesset_json_iter():
-    from collections import OrderedDict
-
-    t = list()
-    for email, name, filename in (('foo@foo.com', 'Foo', '/tmp/foo'),
-                                  ('bar@bar.com', 'Bar', '/tmp/bar')):
-        minhash = (2,3,4,5,6)
-        t.append(OrderedDict((
-            ('class', 'sourmash_signature'),
-            ('email', email),
-            ('name', name),
-            ('filename', filename),
-            ('signatures',
-             (
-                 OrderedDict((('ksize', 21),
-                              ('num', len(minhash)),
-                              #('md5sum', ),
-                              ('cardinality', 123456),
-                              ('mins', minhash))),
-             )))))
-
-    s = json.dumps(t)
-    if sys.version_info[0] < 3:
-        s = unicode(s)
-    # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
-                                                    ignore_md5sum=True,
-                                                    ijson=ijson))
-    assert len(sig_entries) == 2
         
         
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
@@ -343,21 +239,4 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         s = json.dumps(records, indent=indent, sort_keys=sort_keys)
 
     return s
-
-
-def test_save_load_multisig_json():
-    e1 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig1 = SourmashSignature('lalala@land.org', e1)
-
-    e2 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig2 = SourmashSignature('lalala2@land.org', e2)
-
-    x = save_signatures_json([sig1, sig2])
-    y = list(load_signatures_json(x))
-
-    print(x)
-
-    assert len(y) == 2
-    assert sig1 in y                      # order not guaranteed, note.
-    assert sig2 in y
-    assert sig1 != sig2
+  
