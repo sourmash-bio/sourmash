@@ -253,6 +253,9 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
     n = 0
 
     if isinstance(data, str):
+        # Required for compatibility with Python 2
+        if sys.version_info[0] < 3:
+            data = unicode(data)
         data = io.StringIO(data)
         
     it = load_signatureset_json_iter(data, select_ksize=select_ksize,
@@ -292,6 +295,8 @@ def test_load_signaturesset_json_iter():
              )))))
 
     s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
     # no MD5SUM
     sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
                                                     ignore_md5sum=True,
