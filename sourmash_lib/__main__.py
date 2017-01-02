@@ -498,7 +498,7 @@ Commands can be:
                 print('loaded signature:', name,
                       s.md5sum()[:8], file=sys.stderr)
 
-            print('saving %d signatures to YAML' % (len(siglist),),
+            print('saving %d signatures to JSON' % (len(siglist),),
                   file=sys.stderr)
             sig.save_signatures(siglist, args.output)
 
@@ -689,7 +689,8 @@ Commands can be:
                     for name in files:
                         if name.endswith('.sig'):
                             fullname = os.path.join(root, name)
-                            inp_files.append(fullname)
+                            if fullname not in already_names:
+                                inp_files.append(fullname)
         else:
             inp_files = args.queries
 
@@ -782,7 +783,7 @@ Commands can be:
                                                       query_moltype))
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        s = sig.load_signatures(args.query, select_ksize=args.ksize)
+        #s = sig.load_signatures(args.query, select_ksize=args.ksize)
         orig_query = query
 
         sum_found = 0.

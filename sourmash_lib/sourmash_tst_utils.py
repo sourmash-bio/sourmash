@@ -1,8 +1,11 @@
+"Various utilities used by sourmash tests."
+
 from __future__ import print_function
 import sys
 import os
 import tempfile
 import shutil
+import subprocess
 
 import pkg_resources
 from pkg_resources import Requirement, resource_filename, ResolutionError
@@ -141,3 +144,27 @@ class TempDirectory(object):
 
         if exc_type:
             return False
+
+
+def run_shell_cmd(cmd, fail_ok=False, in_directory=None):
+    cwd = os.getcwd()
+    if in_directory:
+        os.chdir(in_directory)
+
+    print('running: ', cmd)
+    try:
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        (out, err) = proc.communicate()
+
+        out = out.decode('utf-8')
+        err = err.decode('utf-8')
+
+        if proc.returncode != 0 and not fail_ok:
+            print('out:', out)
+            print('err:', err)
+            raise AssertionError("exit code is non zero: %d" % proc.returncode)
+
+        return (proc.returncode, out, err)
+    finally:
+        os.chdir(cwd)

@@ -39,7 +39,7 @@ You can do:
     pip install sourmash
 
 sourmash runs under both Python 2.7.x and Python 3.5.  The base
-requirements are screed and PyYAML, together with a C++ development
+requirements are screed and ijson, together with a C++ development
 environment and the CPython development headers and libraries (for the
 C++ extension).
 
