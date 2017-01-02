@@ -394,7 +394,7 @@ def test_murmur():
     assert x == 1731421407650554201
     
     y = hash_murmur("ACG", 43)
-     assert y != x
+    assert y != x
     
 
 def test_abundance_simple():
