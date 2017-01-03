@@ -298,7 +298,11 @@ Commands can be:
                     siglist = []
                     for n, record in enumerate(screed.open(filename)):
                         if n % args.progress_stepsize == 0:
-                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
+                            if sys.version_info[0] < 3:
+                                print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r')
+                                sys.stderr.flush()
+                            else:
+                                print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
 
                         # make estimators for each sequence
                         Elist = make_estimators()
@@ -307,7 +311,12 @@ Commands can be:
 
                         siglist += build_siglist(args.email, Elist, filename,
                                                  name=record.name)
-                    print('%s: %i entries' % (filename, n+1), file=sys.stderr, flush=True)
+                        if sys.version_info[0] < 3:
+                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r')
+                            sys.stderr.flush()
+                        else:
+                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
+
                     print('calculated {} signatures for {} sequences in {}'.\
                               format(len(siglist), n + 1, filename))
                 else:
