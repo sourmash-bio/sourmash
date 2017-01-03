@@ -46,6 +46,9 @@ public:
         num(n), ksize(k), is_protein(prot) { };
 
     virtual void _shrink() {
+        if (num == 0) {
+            return;
+        }
         while (mins.size() > num) {
             CMinHashType::iterator mi = mins.end();
             mi--;
