@@ -52,5 +52,6 @@ typedef struct {
     bool track_abundance = false;
 } MinHash_Object;
 
+
 #endif // _MINHASH_HH
  
