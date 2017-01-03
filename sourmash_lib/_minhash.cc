@@ -600,7 +600,7 @@ bool check_IsMinHash(PyObject * mh)
 PyDoc_STRVAR(hash_murmur_doc,
              "hash_murmur(string [, seed])\n\n"
              "Compute a hash for a string, optionally using a seed (an integer). "
-             "The default seed is in DEFAULT_HASH_SEED.");
+             "The current default seed is returned by hash_seed().");
 
 static PyObject * hash_murmur(PyObject * self, PyObject * args)
 {
@@ -614,10 +614,23 @@ static PyObject * hash_murmur(PyObject * self, PyObject * args)
     return PyLong_FromUnsignedLongLong(_hash_murmur(kmer, seed));
 }
 
+PyDoc_STRVAR(hash_seed_doc,
+             "hash_seed() -> int\n\n"
+	     "Return the default seed when hashing.");
+
+static PyObject * hash_seed(void *)
+{
+  return PyLong_FromUnsignedLong((long)MINHASH_DEFAULT_SEED);
+}
+
 static PyMethodDef MinHashModuleMethods[] = {
     {
-        "hash_murmur", hash_murmur,
+      "hash_murmur", (PyCFunction)hash_murmur,
         METH_VARARGS, hash_murmur_doc,
+    },
+    {
+      "hash_seed", (PyCFunction)hash_seed,
+        METH_NOARGS, hash_seed_doc,
     },
     { NULL, NULL, 0, NULL } // sentinel
 };
@@ -635,8 +648,6 @@ MOD_INIT(_minhash)
     if (m == NULL) {
         return MOD_ERROR_VAL;
     }
-
-    PyModule_AddIntConstant(m, "DEFAULT_HASH_SEED", MINHASH_DEFAULT_SEED);
 
     if (PyType_Ready( &MinHash_Type ) < 0) {
         return MOD_ERROR_VAL;
