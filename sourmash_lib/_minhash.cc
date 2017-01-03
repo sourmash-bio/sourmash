@@ -177,7 +177,15 @@ minhash_set_counters(MinHash_Object * me, PyObject * args)
         return NULL;
     }
 
+    if (!me->track_abundance) {
+        KmerMinHash *old_mh = me->mh;
+        me->mh = new KmerMinAbundance(*old_mh);
+        me->track_abundance = true;
+        delete old_mh;
+    }
+
     KmerMinAbundance *mh = (KmerMinAbundance*)me->mh;
+
     PyObject *key, *value;
     Py_ssize_t pos = 0;
 

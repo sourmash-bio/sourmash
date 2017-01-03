@@ -46,6 +46,7 @@ from ._minhash import MinHash, hash_murmur
 # * nan on empty minhash
 # * define equals
 
+
 def test_basic_dna(track_abundance):
     # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
     mh = MinHash(1, 4, track_abundance=track_abundance)
@@ -463,3 +464,10 @@ def test_abundance_compare():
     assert x >= 0.3, x
     assert a.compare(a) == 1.0
     assert b.compare(b) == 1.0
+
+
+def test_set_abundance():
+    a = MinHash(20, 10, track_abundance=False)
+    a.add_hash(1)
+    a.add_hash(2)
+    a.set_abundances({1: 3, 2: 4})

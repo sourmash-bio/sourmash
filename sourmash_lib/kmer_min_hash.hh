@@ -254,6 +254,14 @@ class KmerMinAbundance: public KmerMinHash {
     KmerMinAbundance(unsigned int n, unsigned int k, bool prot) :
         KmerMinHash(n, k, prot) { };
 
+    KmerMinAbundance(KmerMinHash minhash) :
+        KmerMinHash(minhash) {
+            for (auto m : minhash.mins) {
+                mins[m] = 1;
+            }
+            max_mins = (*std::max_element(mins.begin(), mins.end())).first;
+        };
+
     virtual void add_hash(HashIntoType h) {
         if (mins.size() < num) {
             mins[h] += 1;
