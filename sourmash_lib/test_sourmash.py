@@ -116,11 +116,13 @@ def test_do_sourmash_compute_multik_with_protein():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 4
-        ksizes = set([ x.estimator.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 4
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -161,11 +163,13 @@ def test_do_sourmash_compute_multik_only_protein():
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
 
 
 def test_do_sourmash_compute_multik_input_is_protein():
@@ -179,16 +183,18 @@ def test_do_sourmash_compute_multik_input_is_protein():
         outfile = os.path.join(location, 'ecoli.faa.sig')
         assert os.path.exists(outfile)
 
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.estimator.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
 
-        moltype = set([ x.estimator.is_molecule_type('protein')
-                        for x in siglist ])
-        assert len(moltype) == 1
-        assert True in moltype
+            moltype = set([ x.estimator.is_molecule_type('protein')
+                            for x in siglist ])
+            assert len(moltype) == 1
+            assert True in moltype
 
 
 def test_do_sourmash_compute_multik_outfile():
@@ -603,11 +609,12 @@ def test_sourmash_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+                        track_abundance=True)
         E2 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+                        track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
+
         E1.mh.add_sequence('ATGGA')
         E2.mh.add_sequence('ATGGA')
 
@@ -623,107 +630,33 @@ def test_sourmash_compare_with_abundance_2():
                                            ['search', 'e1.sig', 'e2.sig',
                                             '-k' ,'5'],
                                            in_directory=location)
-        assert '0.500' in out
+        assert '1.0' in out
 
 
-def test_do_sourmash_categorize():
+def test_sourmash_compare_with_abundance_3():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
-                                           in_directory=location)
+        # create two signatures
+        E1 = Estimators(ksize=5, n=5, protein=False,
+                        track_abundance=True)
+        E2 = Estimators(ksize=5, n=5, protein=False,
+                        track_abundance=True)
+
+        E1.mh.add_sequence('ATGGA')
+        E1.mh.add_sequence('GGACA')
+
+        E1.mh.add_sequence('ATGGA')
+        E2.mh.add_sequence('ATGGA')
+
+        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+
+        signature.save_signatures([s1],
+                                  open(os.path.join(location, 'e1.sig'), 'w'))
+        signature.save_signatures([s2],
+                                  open(os.path.join(location, 'e2.sig'), 'w'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['sbt_index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
+                                           ['search', 'e1.sig', 'e2.sig',
+                                            '-k' ,'5'],
                                            in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['categorize', 'zzz',
-                                            'short.fa.sig',
-                                            '--csv', 'xxx.csv'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'xxx.csv'))
-
-        import csv
-        r = csv.reader(open(os.path.join(location, 'xxx.csv')))
-        sig, matchname, match = next(r)
-        assert sig == 'short.fa.sig'
-        assert matchname.endswith('short2.fa')
-        assert round(float(match), 2) == 0.96
-
-
-def test_do_sourmash_categorize_traverse():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['categorize', 'zzz',
-                                            '--traverse-directory', '.',
-                                            '--csv', 'xxx.csv'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'xxx.csv'))
-
-        import csv
-        r = csv.reader(open(os.path.join(location, 'xxx.csv')))
-        sig, matchname, match = next(r)
-        assert sig == './short.fa.sig'
-        assert matchname.endswith('short2.fa')
-        assert round(float(match), 2) == 0.96
-
-        sig, matchname, match = next(r)
-        print((sig, matchname, match,))
-        assert sig == './short2.fa.sig'
-        assert matchname == ''
-        assert round(float(match), 2) == 0.0
-
-
-def test_do_sourmash_watch():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-
-        cmd = """
-
-           cat {testdata} |
-           {scripts}/sourmash watch zzz
-
-        """.format(testdata=testdata1,
-                   scripts=utils.scriptpath())
-        (status, out, err) = utils.run_shell_cmd(cmd, in_directory=location)
-        print(out)
-        print(err)
-
-        assert not out
-        assert 'FOUND' in err
-        assert 'short.fa' in err
-        assert 'at 1.000' in err
+        assert '0.705' in out
