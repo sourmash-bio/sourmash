@@ -98,6 +98,37 @@ def test_size_limit_none(track_abundance):
     assert mh.get_mins() == [5, 10, 20, 30]
 
 
+def test_max_hash(track_abundance):
+    # test behavior with max_hash
+    mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35)
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(40)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(36)
+    assert mh.get_mins() == [10, 20, 30]
+
+
+def test_max_hash_with_limit(track_abundance):
+    # test behavior with max_hash and a limit (not sure sensible use case...)
+    mh = MinHash(2, 4, track_abundance=track_abundance, max_hash=35)
+
+    mh.add_hash(40)
+    assert mh.get_mins() == []
+
+    mh.add_hash(36)
+    assert mh.get_mins() == []
+
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [20, 30]
+
+    mh.add_hash(10)
+    assert mh.get_mins() == [10, 20]
+
+
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
@@ -210,6 +241,17 @@ def test_mh_count_common_diff_protein(track_abundance):
     try:
         a.count_common(b)
         assert 0, "count_common should fail with DNA vs protein"
+    except ValueError:
+        pass
+
+
+def test_mh_count_common_diff_maxhash(track_abundance):
+    a = MinHash(20, 5, False, track_abundance=track_abundance, max_hash=1)
+    b = MinHash(20, 5, True, track_abundance=track_abundance, max_hash=2)
+
+    try:
+        a.count_common(b)
+        assert 0, "count_common should fail with different max_hash values"
     except ValueError:
         pass
 

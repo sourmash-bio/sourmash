@@ -61,7 +61,7 @@ public:
     }
     virtual void add_hash(HashIntoType h) {
         if (max_hash) {
-            if (h < max_hash) {
+            if (h <= max_hash) {
                 mins.insert(h);
             }
         } else {
