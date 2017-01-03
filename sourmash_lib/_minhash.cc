@@ -23,8 +23,6 @@ uint64_t _hash_murmur(const std::string& kmer,
 #define Py_TPFLAGS_HAVE_ITER 0
 #endif
 
-#define  DEFAULT_SEED 42
-
 extern "C" {
     MOD_INIT(_minhash);
 }
@@ -492,7 +490,7 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     }
 
     unsigned int _n, _ksize;
-    uint32_t seed = DEFAULT_SEED;
+    uint32_t seed = MINHASH_DEFAULT_SEED;
     PyObject * track_abundance_o = Py_False;
     PyObject * is_protein_o = NULL;
  
@@ -535,7 +533,7 @@ bool check_IsMinHash(PyObject * mh)
 static PyObject * hash_murmur(PyObject * self, PyObject * args)
 {
     const char * kmer;
-    uint32_t seed = DEFAULT_SEED;
+    uint32_t seed = MINHASH_DEFAULT_SEED;
 
       if (!PyArg_ParseTuple(args, "s|I", &kmer, &seed)) {
         return NULL;
@@ -571,6 +569,8 @@ MOD_INIT(_minhash)
     if (m == NULL) {
         return MOD_ERROR_VAL;
     }
+
+    PyModule_AddIntConstant(m, "DEFAULT_HASH_SEED", MINHASH_DEFAULT_SEED);
 
     Py_INCREF(&MinHash_Type);
     if (PyModule_AddObject( m, "MinHash",
