@@ -258,13 +258,13 @@ class KmerMinAbundance: public KmerMinHash {
         KmerMinHash(n, k, prot) { };
 
     virtual void add_hash(HashIntoType h) {
-        if (mins.size() < num) {
+        if (!num || mins.size() < num) {
             mins[h] += 1;
             max_mins = std::max(max_mins, h);
             return;
         }
 
-        if (h > max_mins) {
+        if (num && h > max_mins) {
             return;
         } else {
             if (mins.find(h) != mins.end()) {
@@ -279,6 +279,9 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual void _shrink() {
+        if (num == 0) {
+            return;
+        }
         while (mins.size() > num) {
             mins.erase(max_mins);
             max_mins = (*std::max_element(mins.begin(), mins.end())).first;
