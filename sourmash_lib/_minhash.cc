@@ -488,14 +488,18 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     }
 
     unsigned int _n, _ksize;
+    HashIntoType max_hash = 0;
+
     PyObject * track_abundance_o = Py_False;
     PyObject * is_protein_o = NULL;
+    PyObject * max_hash_o = NULL;
 
-    static const char* const_kwlist[] = {"n", "ksize", "is_protein", "track_abundance", NULL};
+    static const char* const_kwlist[] = {"n", "ksize", "is_protein", "track_abundance", "max_hash", NULL};
     static char** kwlist = const_cast<char**>(const_kwlist);
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "II|OO", kwlist,
-                          &_n, &_ksize, &is_protein_o, &track_abundance_o)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "II|OOO", kwlist,
+                             &_n, &_ksize, &is_protein_o, &track_abundance_o,
+                             &max_hash_o)) {
         return NULL;
     }
 
@@ -505,11 +509,15 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         is_protein = true;
     }
 
+    if (max_hash_o) {
+        max_hash = PyLong_AsLong(max_hash_o);
+    }
+
     if (PyObject_IsTrue(track_abundance_o)) {
-        myself->mh = new KmerMinAbundance(_n, _ksize, is_protein);
+        myself->mh = new KmerMinAbundance(_n, _ksize, is_protein, max_hash);
         myself->track_abundance = true;
     } else {
-        myself->mh = new KmerMinHash(_n, _ksize, is_protein);
+        myself->mh = new KmerMinHash(_n, _ksize, is_protein, max_hash);
         myself->track_abundance = false;
     }
 
