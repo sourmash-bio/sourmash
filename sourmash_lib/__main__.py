@@ -294,6 +294,9 @@ Commands can be:
                 if args.singleton:
                     siglist = []
                     for n, record in enumerate(screed.open(filename)):
+                        if n % 50 == 0:
+                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
+
                         # make estimators for each sequence
                         Elist = make_estimators()
                         add_seq(Elist, record.sequence,
@@ -301,6 +304,7 @@ Commands can be:
 
                         siglist += build_siglist(args.email, Elist, filename,
                                                  name=record.name)
+                    print('%s: %i entries' % (filename, n+1), file=sys.stderr, flush=True)
                     print('calculated {} signatures for {} sequences in {}'.\
                               format(len(siglist), n + 1, filename))
                 else:
