@@ -530,6 +530,11 @@ bool check_IsMinHash(PyObject * mh)
 }
 
 
+PyDoc_STRVAR(hash_murmur_doc,
+             "hash_murmur(string [, seed])\n\n"
+             "Compute a hash for a string, optionally using a seed (an integer). "
+             "The default seed is in DEFAULT_HASH_SEED.");
+
 static PyObject * hash_murmur(PyObject * self, PyObject * args)
 {
     const char * kmer;
@@ -544,8 +549,8 @@ static PyObject * hash_murmur(PyObject * self, PyObject * args)
 
 static PyMethodDef MinHashModuleMethods[] = {
     {
-        "hash_murmur",     hash_murmur,
-        METH_VARARGS,       "",
+        "hash_murmur", hash_murmur,
+        METH_VARARGS, hash_murmur_doc,
     },
     { NULL, NULL, 0, NULL } // sentinel
 };
