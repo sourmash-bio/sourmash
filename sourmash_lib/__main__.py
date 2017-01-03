@@ -171,6 +171,7 @@ Commands can be:
         parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
         parser.add_argument('--track-abundance', action='store_true')
+        parser.add_argument('--scaled', type=float)
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
@@ -237,16 +238,22 @@ Commands can be:
             # one estimator for each ksize
             Elist = []
             for k in ksizes:
+                max_hash = 0
+                if args.scaled:
+                    max_hash = int(round(4**k / float(args.scaled)))
+
                 if args.protein:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=True,
-                                        track_abundance=args.track_abundance)
+                                        track_abundance=args.track_abundance,
+                                                max_hash=max_hash)
                     Elist.append(E)
                 if args.dna:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=False,
                                         with_cardinality=args.with_cardinality,
-                                        track_abundance=args.track_abundance)
+                                        track_abundance=args.track_abundance,
+                                                max_hash=max_hash)
                     Elist.append(E)
             return Elist
 
