@@ -235,13 +235,13 @@ Commands can be:
             sys.exit(-1)
 
         def make_estimators():
+            max_hash = 0
+            if args.scaled:
+                max_hash = 2**64 / args.scaled
+
             # one estimator for each ksize
             Elist = []
             for k in ksizes:
-                max_hash = 0
-                if args.scaled:
-                    max_hash = int(round(4**k / float(args.scaled)))
-
                 if args.protein:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=True,
