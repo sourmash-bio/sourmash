@@ -1,16 +1,21 @@
 #ifndef KMER_MIN_HASH_HH
 #define KMER_MIN_HASH_HH
 
+#include <algorithm>
 #include <set>
 #include <map>
+#include <queue>
 #include <exception>
 #include <string>
+#include <unordered_map>
 
 // #include "kmer_hash.hh"
 
 ////
 
 typedef std::set<HashIntoType> CMinHashType;
+
+typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
 
 class minhash_exception : public std::exception
 {
@@ -32,27 +37,28 @@ protected:
 class KmerMinHash
 {
 public:
+    const uint32_t seed;
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot) :
-        num(n), ksize(k), is_protein(prot) { };
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
+      num(n), ksize(k), is_protein(prot), seed(seed) { };
 
-    void _shrink() {
+    virtual void _shrink() {
         while (mins.size() > num) {
             CMinHashType::iterator mi = mins.end();
             mi--;
             mins.erase(mi);
         }
     }
-    void add_hash(HashIntoType h) {
+    virtual void add_hash(HashIntoType h) {
         mins.insert(h);
         _shrink();
     }
-    void add_word(std::string word) {
-        HashIntoType hash = _hash_murmur(word);
+  void add_word(std::string word) {
+    HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
     void add_sequence(const char * sequence, bool force=false) {
@@ -163,20 +169,19 @@ public:
         return out;
     }
 
-    void merge(const KmerMinHash& other) {
-        CMinHashType::iterator mi;
+    virtual void merge(const KmerMinHash& other) {
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be merged");
         }
-        for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
-            mins.insert(*mi);
+        for (auto mi: other.mins) {
+            mins.insert(mi);
         }
         _shrink();
     }
-    unsigned int count_common(const KmerMinHash& other) {
+    virtual unsigned int count_common(const KmerMinHash& other) {
         CMinHashType combined;
 
         if (ksize != other.ksize) {
@@ -195,6 +200,7 @@ public:
         }
         return mins.size() + other.mins.size() - combined.size();
     }
+    virtual ~KmerMinHash() throw() { }
 
 private:
     std::map<std::string, std::string> _codon_table = {
@@ -239,6 +245,96 @@ private:
 
         {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
     };
+};
+
+class KmerMinAbundance: public KmerMinHash {
+ public:
+    CMinAbundanceType mins;
+    HashIntoType max_mins;
+
+  KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
+      KmerMinHash(n, k, prot, seed) { };
+
+    virtual void add_hash(HashIntoType h) {
+        if (mins.size() < num) {
+            mins[h] += 1;
+            max_mins = std::max(max_mins, h);
+            return;
+        }
+
+        if (h > max_mins) {
+            return;
+        } else {
+            if (mins.find(h) != mins.end()) {
+                mins[h] += 1;
+            } else {
+                mins.emplace(h, 1);
+                mins.erase(max_mins);
+                max_mins = (*std::max_element(mins.begin(), mins.end())).first;
+            }
+        }
+        _shrink();
+    }
+
+    virtual void _shrink() {
+        while (mins.size() > num) {
+            mins.erase(max_mins);
+            max_mins = (*std::max_element(mins.begin(), mins.end())).first;
+        }
+    }
+
+    virtual void merge(const KmerMinAbundance& other) {
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be merged");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be merged");
+        }
+        for (auto mi: other.mins) {
+            mins[mi.first] += mi.second;
+            max_mins = std::max(mi.first, max_mins);
+        }
+        _shrink();
+    }
+
+    virtual unsigned int count_common(const KmerMinAbundance& other) {
+        CMinHashType combined;
+
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+
+        for (auto mi: mins) {
+            combined.insert(mi.first);
+        }
+        for (auto mi: other.mins) {
+            combined.insert(mi.first);
+        }
+        return mins.size() + other.mins.size() - combined.size();
+    }
+
+    virtual unsigned int count_common(const KmerMinHash& other) {
+        CMinHashType combined;
+
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+
+        for (auto mi: mins) {
+            combined.insert(mi.first);
+        }
+        for (auto mi: other.mins) {
+            combined.insert(mi);
+        }
+        return mins.size() + other.mins.size() - combined.size();
+    }
+
 };
 
 #endif // KMER_MIN_HASH_HH
