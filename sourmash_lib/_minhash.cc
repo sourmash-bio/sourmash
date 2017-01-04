@@ -178,10 +178,10 @@ minhash_set_counters(MinHash_Object * me, PyObject * args)
     }
 
     if (!me->track_abundance) {
-        KmerMinHash *old_mh = me->mh;
-        me->mh = new KmerMinAbundance(*old_mh);
-        me->track_abundance = true;
-        delete old_mh;
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "Use track_abundance=True when constructing the MinHash to use set_abundances.");
+        return NULL;
     }
 
     KmerMinAbundance *mh = (KmerMinAbundance*)me->mh;

@@ -36,6 +36,8 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import pytest
+
 from ._minhash import MinHash, hash_murmur
 
 # add:
@@ -468,6 +470,8 @@ def test_abundance_compare():
 
 def test_set_abundance():
     a = MinHash(20, 10, track_abundance=False)
-    a.add_hash(1)
-    a.add_hash(2)
-    a.set_abundances({1: 3, 2: 4})
+
+    with pytest.raises(RuntimeError) as e:
+        a.set_abundances({1: 3, 2: 4})
+
+    assert "track_abundance=True when constructing" in e.value.args[0]
