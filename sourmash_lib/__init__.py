@@ -3,12 +3,9 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
-import sys
-import argparse
-import itertools
-import string
-from ._minhash import MinHash
 import re
+import math
+from ._minhash import MinHash
 
 khmer_available = False
 try:
@@ -32,7 +29,7 @@ class Estimators(object):
     """
 
     def __init__(self, n=None, ksize=None, protein=False,
-                 with_cardinality=False):
+                 with_cardinality=False, track_abundance=False):
         "Create a new MinHash estimator with size n and k-mer size ksize."
         from . import _minhash
 
@@ -55,9 +52,10 @@ class Estimators(object):
                 raise Exception("Error: to do cardinality counting, " + \
                                 "we require the khmer package.")
             self.hll = khmer.HLLCounter(.01, ksize)
+        self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize, protein)
+        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
@@ -68,13 +66,13 @@ class Estimators(object):
 
     def __getstate__(self):             # enable pickling
         return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
-                self.hll)
+                self.hll, self.track_abundance)
 
     def __setstate__(self, tup):
         from . import _minhash
 
-        (self.num, self.ksize, self.is_protein, mins, hll) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein)
+        (self.num, self.ksize, self.is_protein, mins, hll, self.track_abundance) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein, self.track_abundance)
         for m in mins:
             self.mh.add_hash(m)
         self.hll = hll
@@ -98,113 +96,98 @@ class Estimators(object):
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
-    similarity = jaccard
+
+    def similarity(self, other, ignore_abundance=False):
+        """\
+        Calculate similarity of two sketches.
+
+        If the sketches are not abundance weighted, or ignore_abundance=True,
+        compute Jaccard similarity.
+
+        If the sketches are abundance weighted, calculate a distance metric
+        based on the cosine similarity.
+
+        Note, because the term frequencies (tf-idf weights) cannot be negative,
+        the angle will never be < 0deg or > 90deg.
+
+        See https://en.wikipedia.org/wiki/Cosine_similarity
+        """
+
+        if not self.track_abundance or ignore_abundance:
+            return self.jaccard(other)
+        else:
+            a = self.mh.get_mins(with_abundance=True)
+            b = other.mh.get_mins(with_abundance=True)
+            prod = dotproduct(a, b)
+            prod = min(1.0, prod)
+
+            distance = 2*math.acos(prod) / math.pi
+            return 1.0 - distance
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
         return self.mh.count_common(other.mh)
 
 
-def test_jaccard_1():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
+def dotproduct(a, b, normalize=True):
+    """
+    Compute the dot product of two dictionaries {k: v} where v is
+    abundance.
+    """
 
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4, 6]:
-        E2.mh.add_hash(i)
+    if normalize:
+        norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
+        norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
 
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 5.0
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
+    else:
+        norm_a = 1.0
+        norm_b = 1.0
 
+    prod = 0.
+    for k, abundance in a.items():
+        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
 
-def test_jaccard_2_difflen():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
-
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4]:
-        E2.mh.add_hash(i)
-
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 4.0
+    return prod
 
 
-def test_common_1():
-    E1 = Estimators(n=5, ksize=20)
-    E2 = Estimators(n=5, ksize=20)
+def test_dotproduct_1():
+    a = {'x': 1}
+    assert dotproduct(a, a, normalize=True) == 1.0
 
-    for i in [1, 2, 3, 4, 5]:
-        E1.mh.add_hash(i)
-    for i in [1, 2, 3, 4, 6]:
-        E2.mh.add_hash(i)
+    a = {'x': 1}
+    b = {'x': 1}
+    assert dotproduct(a, b, normalize=True) == 1.0
 
-    assert E1.count_common(E2) == 4
-    assert E2.count_common(E1) == 4
+    c = {'x': 1, 'y': 1}
+    prod = dotproduct(c, c, normalize=True)
+    assert round(prod, 2) == 1.0
 
+    # check a.c => 45 degree angle
+    a = {'x': 1}
+    c = {'x': 1, 'y': 1}
 
-def test_dna_mh():
-    e1 = Estimators(n=5, ksize=4)
-    e2 = Estimators(n=5, ksize=4)
+    angle = 45
+    rad = math.radians(angle)
+    cosval = math.cos(rad)
+    prod = dotproduct(a, c, normalize=True)
+    assert round(prod, 2) == 0.71
+    assert round(cosval, 2) == round(prod, 2)
 
-    seq = 'ATGGCAGTGACGATGCCAG'
-    e1.add_sequence(seq)
-    for i in range(len(seq) - 3):
-        e2.add(seq[i:i + 4])
+    c = {'x': 1, 'y': 1}
+    d = {'x': 1, 'y': 1}
+    prod = dotproduct(c, d, normalize=True)
+    assert round(prod, 2) == 1.0
 
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    print(e1.mh.get_mins())
-    assert 726311917625663847 in e1.mh.get_mins()
-    assert 3697418565283905118 in e1.mh.get_mins()
-
-
-def test_protein_mh():
-    e1 = Estimators(n=5, ksize=6, protein=True)
-    e2 = Estimators(n=5, ksize=6, protein=True)
-
-    seq = 'ATGGCAGTGACGATGCCG'
-    e1.add_sequence(seq)
-
-    for i in range(len(seq) - 5):
-        kmer = seq[i:i + 6]
-        e2.add(kmer)
-
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert 901193879228338100 in e1.mh.get_mins()
+    a = {'x': 1}
+    e = {'y': 1}
+    assert dotproduct(a, e, normalize=True) == 0.0
 
 
-def test_pickle():
-    import pickle
-    from io import BytesIO
+def test_dotproduct_zeroes():
+    a = {'x': 1}
+    b = {}
 
-    e1 = Estimators(n=5, ksize=6, protein=False)
-    seq = 'ATGGCAGTGACGATGCCG'
-    e1.add_sequence(seq)
-
-    fp = BytesIO()
-    pickle.dump(e1, fp)
-
-    fp2 = BytesIO(fp.getvalue())
-    e2 = pickle.load(fp2)
-
-    assert e1.mh.get_mins() == e2.mh.get_mins()
-    assert e1.num == e2.num
-    assert e1.ksize == e2.ksize
-    assert e1.is_protein == e2.is_protein
-
-
-def test_bad_construct_1():
-    try:
-        e1 = Estimators(ksize=6, protein=False)
-        assert 0, "require n in constructor"
-    except ValueError:
-        pass
-
-
-def test_bad_construct_2():
-    try:
-        e1 = Estimators(n=100, protein=False)
-        assert 0, "require ksize in constructor"
-    except ValueError:
-        pass
+    assert dotproduct(a, b) == 0.0
+    assert dotproduct(b, a) == 0.0

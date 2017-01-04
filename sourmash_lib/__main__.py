@@ -170,6 +170,7 @@ Commands can be:
         parser.add_argument('--name', type=str, default='')
         parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
+        parser.add_argument('--track-abundance', action='store_true')
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
@@ -238,12 +239,14 @@ Commands can be:
             for k in ksizes:
                 if args.protein:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                                protein=True)
+                                                protein=True,
+                                        track_abundance=args.track_abundance)
                     Elist.append(E)
                 if args.dna:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=False,
-                                        with_cardinality=args.with_cardinality)
+                                        with_cardinality=args.with_cardinality,
+                                        track_abundance=args.track_abundance)
                     Elist.append(E)
             return Elist
 
@@ -270,6 +273,14 @@ Commands can be:
 
         print('Computing signature for ksizes: %s' % str(ksizes),
               file=sys.stderr)
+
+        if args.with_cardinality:
+            print('Calculating k-mer cardinality of input sequences.',
+                  file=sys.stderr)
+
+        if args.track_abundance:
+            print('Tracking abundance of input k-mers.',
+                  file=sys.stderr)
 
         if not args.name:
             for filename in args.filenames:
@@ -346,6 +357,7 @@ Commands can be:
         parser.add_argument('signatures', nargs='+')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
         parser.add_argument('-o', '--output')
+        parser.add_argument('--ignore-abundance', action='store_true')
         args = parser.parse_args(args)
 
         # load in the various signatures
@@ -371,7 +383,7 @@ Commands can be:
         labeltext = []
         for i, E in enumerate(siglist):
             for j, E2 in enumerate(siglist):
-                D[i][j] = E.similarity(E2)
+                D[i][j] = E.similarity(E2, args.ignore_abundance)
 
             print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
             labeltext.append(E.name())
@@ -486,7 +498,7 @@ Commands can be:
                 print('loaded signature:', name,
                       s.md5sum()[:8], file=sys.stderr)
 
-            print('saving %d signatures to YAML' % (len(siglist),),
+            print('saving %d signatures to JSON' % (len(siglist),),
                   file=sys.stderr)
             sig.save_signatures(siglist, args.output)
 
@@ -677,7 +689,8 @@ Commands can be:
                     for name in files:
                         if name.endswith('.sig'):
                             fullname = os.path.join(root, name)
-                            inp_files.append(fullname)
+                            if fullname not in already_names:
+                                inp_files.append(fullname)
         else:
             inp_files = args.queries
 
@@ -770,7 +783,7 @@ Commands can be:
                                                       query_moltype))
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        s = sig.load_signatures(args.query, select_ksize=args.ksize)
+        #s = sig.load_signatures(args.query, select_ksize=args.ksize)
         orig_query = query
 
         sum_found = 0.

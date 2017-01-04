@@ -1,10 +1,11 @@
 #! /usr/bin/env python
 """
-Save and load MinHash sketches in a YAML format, along with some metadata.
+Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 import yaml
 import hashlib
 import sourmash_lib
+from . import signature_json
 
 import io
 import gzip
@@ -74,7 +75,12 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
         sketch['num'] = len(estimator.mh)
-        sketch['mins'] = list(map(int, estimator.mh.get_mins()))
+        if self.estimator.track_abundance:
+            values = estimator.mh.get_mins(with_abundance=True)
+            sketch['mins'] = list(map(int, values.keys()))
+            sketch['abundances'] = list(map(int, values.values()))
+        else:
+            sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
         if estimator.mh.is_protein():
@@ -90,10 +96,13 @@ class SourmashSignature(object):
         return self.d.get('email'), self.d.get('name'), \
             self.d.get('filename'), sketch
 
-    def similarity(self, other):
+    def similarity(self, other, ignore_abundance=False):
         "Compute similarity with the other MinHash signature."
-        return self.estimator.similarity(other.estimator)
-    jaccard = similarity
+        return self.estimator.similarity(other.estimator, ignore_abundance)
+
+    def jaccard(self, other):
+        "Compute Jaccard similarity with the other MinHash signature."
+        return self.estimator.similarity(other.estimator, True)
 
 
 def _guess_open(filename):
@@ -135,22 +144,53 @@ def _guess_open(filename):
 
 def load_signatures(data, select_ksize=None, select_moltype=None,
                     ignore_md5sum=False):
-    """Load a YAML string with signatures into classes.
+    """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
 
     Note, the order is not necessarily the same as what is in the source file.
     """
-
-    # is it a data string?
-    if hasattr(data, 'find') and data.find('class: sourmash_signature') == -1:
+    is_fp = False
+    if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
         try:                                  # is it a file handle?
             data.read
+            is_fp = True
         except AttributeError:                # no - treat it like a filename.
             data = _guess_open(data)
+            is_fp = True
 
-    # at this point, whatever 'data' is, it should be loadable!
+    try:
+        # support YAML until next major release
+        if hasattr(data, 'peek'):
+            p = data.peek(6)
 
+            if p[:6] == b'class:': # YAML - legacy format
+                for sig in yaml_load(data,
+                                     select_ksize=select_ksize,
+                                     select_moltype=select_moltype,
+                                     ignore_md5sum=ignore_md5sum):
+                    yield sig
+                return
+
+        # JSON format
+        for sig in signature_json.load_signatures_json(data,
+                                                     ignore_md5sum=ignore_md5sum):
+            if not select_ksize or select_ksize == sig.estimator.ksize:
+                if not select_moltype or \
+                     sig.estimator.is_molecule_type(select_moltype):
+                    yield sig
+    finally:
+        if is_fp:
+            data.close()
+
+
+def save_signatures(siglist, fp=None):
+    "Save multiple signatures into a JSON string (or into file handle 'fp')"
+    return signature_json.save_signatures_json(siglist, fp)
+
+
+def yaml_load(data, select_ksize=None, select_moltype=None,
+              ignore_md5sum=False):
     # record header
     x = yaml.load_all(data)
     siglist = []
@@ -199,11 +239,17 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
 
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein)
-    for m in mins:
-        e.mh.add_hash(m)
+    track_abundance = 'abundances' in sketch
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance)
+    if track_abundance:
+        abundances = list(map(int, sketch['abundances']))
+        e.mh.set_abundances(dict(zip(mins, abundances)))
+    else:
+        for m in mins:
+            e.mh.add_hash(m)
     if 'cardinality' in sketch:
         e.hll = FakeHLL(int(sketch['cardinality']))
+
 
     sig = SourmashSignature(email, e)
 
@@ -218,118 +264,3 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         sig.d['filename'] = filename
 
     return sig
-
-
-def save_signatures(siglist, fp=None):
-    "Save multiple signatures into a YAML string (or into file handle 'fp')"
-    top_records = {}
-    for sig in siglist:
-        email, name, filename, sketch = sig._save()
-        k = (email, name, filename)
-
-        x = top_records.get(k, [])
-        x.append(sketch)
-        top_records[k] = x
-
-    records = []
-    for (email, name, filename), sketches in top_records.items():
-        record = {}
-        record['email'] = email
-        if name:
-            record['name'] = name
-        if filename:
-            record['filename'] = filename
-        record['signatures'] = sketches
-
-        record['version'] = SIGNATURE_VERSION
-        record['class'] = 'sourmash_signature'
-        record['type'] = 'mrnaseq'
-        record['hash_function'] = '0.murmur64'
-
-        records.append(record)
-
-    s = yaml.dump_all(records, fp)
-    if len(records):
-        if fp:
-            fp.write('---\n')
-        else:
-            s += '---\n'
-
-    return s
-
-
-def test_roundtrip():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    e.add("AT" * 10)
-    sig = SourmashSignature('titus@idyll.org', e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
-    sig2 = siglist[0]
-    e2 = sig2.estimator
-
-    assert sig.similarity(sig2) == 1.0
-    assert sig2.similarity(sig) == 1.0
-
-
-def test_roundtrip_empty_email():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    e.add("AT" * 10)
-    sig = SourmashSignature('', e)
-    s = save_signatures([sig])
-    siglist = list(load_signatures(s))
-    sig2 = siglist[0]
-    e2 = sig2.estimator
-
-    assert sig.similarity(sig2) == 1.0
-    assert sig2.similarity(sig) == 1.0
-
-
-def test_md5():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    e.mh.add_hash(5)
-    sig = SourmashSignature('titus@idyll.org', e)
-    print(sig._save())
-    assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
-
-
-def test_name():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    sig = SourmashSignature('titus@idyll.org', e, name='foo')
-    assert sig.name() == 'foo'
-
-
-def test_name_2():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    sig = SourmashSignature('titus@idyll.org', e, filename='foo.txt')
-    assert sig.name() == 'foo.txt'
-
-
-def test_name_3():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    sig = SourmashSignature('titus@idyll.org', e, name='foo',
-                            filename='foo.txt')
-    assert sig.name() == 'foo'
-
-
-def test_name_4():
-    e = sourmash_lib.Estimators(n=1, ksize=20)
-    sig = SourmashSignature('titus@idyll.org', e)
-    assert sig.name() == sig.md5sum()[:8]
-
-
-def test_save_load_multisig():
-    e1 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig1 = SourmashSignature('titus@idyll.org', e1)
-    
-    e2 = sourmash_lib.Estimators(n=1, ksize=20)
-    sig2 = SourmashSignature('titus2@idyll.org', e2)
-
-    x = save_signatures([sig1, sig2])
-    y = list(load_signatures(x))
-
-    print(x)
-
-    assert len(y) == 2
-    assert sig1 in y                      # order not guaranteed, note.
-    assert sig2 in y
-    assert sig1 != sig2

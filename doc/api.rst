@@ -15,7 +15,7 @@ underlying C++ code, but for now this is undocumented.)
 .. automodule:: sourmash_lib
    :members:
 
-``SourmashSignature``: save and load MinHash sketches in YAML
+``SourmashSignature``: save and load MinHash sketches in JSON
 =============================================================
 
 .. automodule:: sourmash_lib.signature
