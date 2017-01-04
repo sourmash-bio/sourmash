@@ -29,7 +29,8 @@ class Estimators(object):
     """
 
     def __init__(self, n=None, ksize=None, protein=False,
-                 with_cardinality=False, track_abundance=False):
+                 with_cardinality=False, track_abundance=False,
+                 max_hash=0):
         "Create a new MinHash estimator with size n and k-mer size ksize."
         from . import _minhash
 
@@ -41,6 +42,7 @@ class Estimators(object):
         self.num = n
         self.ksize = ksize
         self.is_protein = False
+        self.max_hash = max_hash
         if protein:
             self.is_protein = True
 
@@ -55,7 +57,8 @@ class Estimators(object):
         self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance)
+        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance,
+                                   max_hash)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
@@ -65,16 +68,29 @@ class Estimators(object):
         return False
 
     def __getstate__(self):             # enable pickling
-        return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
-                self.hll, self.track_abundance)
+        with_abundance = False
+        if self.track_abundance:
+            with_abundance = True
+
+        return (self.num, self.ksize, self.is_protein,
+                self.mh.get_mins(with_abundance=with_abundance),
+                self.hll, self.track_abundance, self.max_hash)
 
     def __setstate__(self, tup):
         from . import _minhash
 
-        (self.num, self.ksize, self.is_protein, mins, hll, self.track_abundance) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein, self.track_abundance)
-        for m in mins:
-            self.mh.add_hash(m)
+        (self.num, self.ksize, self.is_protein, mins, hll,
+         self.track_abundance, self.max_hash) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein,
+                                   track_abundance=self.track_abundance,
+                                   max_hash=self.max_hash)
+
+        if not self.track_abundance:
+            for m in mins:
+                self.mh.add_hash(m)
+        else:
+            self.mh.set_abundances(mins)
+
         self.hll = hll
 
     def __eq__(self, other):
@@ -118,6 +134,7 @@ class Estimators(object):
         else:
             a = self.mh.get_mins(with_abundance=True)
             b = other.mh.get_mins(with_abundance=True)
+
             prod = dotproduct(a, b)
             prod = min(1.0, prod)
 

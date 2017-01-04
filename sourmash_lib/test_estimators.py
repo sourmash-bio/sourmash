@@ -77,8 +77,11 @@ def test_pickle(track_abundance):
     import pickle
     from io import BytesIO
 
-    e1 = Estimators(n=5, ksize=6, protein=False, track_abundance=track_abundance)
+    e1 = Estimators(n=5, ksize=6, protein=False,
+                    track_abundance=track_abundance)
+
     seq = 'ATGGCAGTGACGATGCCG'
+    e1.add_sequence(seq)
     e1.add_sequence(seq)
 
     fp = BytesIO()
@@ -87,10 +90,12 @@ def test_pickle(track_abundance):
     fp2 = BytesIO(fp.getvalue())
     e2 = pickle.load(fp2)
 
-    assert e1.mh.get_mins() == e2.mh.get_mins()
+    assert e1.mh.get_mins(with_abundance=track_abundance) == \
+           e2.mh.get_mins(with_abundance=track_abundance)
     assert e1.num == e2.num
     assert e1.ksize == e2.ksize
     assert e1.is_protein == e2.is_protein
+    assert e1.max_hash == e2.max_hash
 
 
 def test_bad_construct_1(track_abundance):
