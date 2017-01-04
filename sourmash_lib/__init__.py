@@ -42,7 +42,7 @@ class Estimators(object):
         self.num = n
         self.ksize = ksize
         self.is_protein = False
-        self.max_hash = 0
+        self.max_hash = max_hash
         if protein:
             self.is_protein = True
 
@@ -130,10 +130,12 @@ class Estimators(object):
         """
 
         if not self.track_abundance or ignore_abundance:
+            print('HERE')
             return self.jaccard(other)
         else:
             a = self.mh.get_mins(with_abundance=True)
             b = other.mh.get_mins(with_abundance=True)
+
             prod = dotproduct(a, b)
             prod = min(1.0, prod)
 

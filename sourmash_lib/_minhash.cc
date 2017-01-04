@@ -404,6 +404,10 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
         return NULL;
     }
 
+    if (size == 0) {
+        return PyFloat_FromDouble(0.0);
+    }
+
     return PyFloat_FromDouble(float(n) / float(size));
 }
 

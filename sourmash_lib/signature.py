@@ -75,10 +75,12 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
         sketch['num'] = len(estimator.mh)
+        sketch['max_hash'] = int(estimator.max_hash)
         if self.estimator.track_abundance:
             values = estimator.mh.get_mins(with_abundance=True)
             sketch['mins'] = list(map(int, values.keys()))
             sketch['abundances'] = list(map(int, values.values()))
+            print('ABUND SAVE', sketch['abundances'])
         else:
             sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
@@ -239,17 +241,21 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
 
+    max_hash = 0
+    if 'max_hash' in sketch:
+        max_hash = int(sketch['max_hash'])
+
     track_abundance = 'abundances' in sketch
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance)
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance, max_hash=max_hash)
     if track_abundance:
         abundances = list(map(int, sketch['abundances']))
         e.mh.set_abundances(dict(zip(mins, abundances)))
     else:
         for m in mins:
             e.mh.add_hash(m)
+
     if 'cardinality' in sketch:
         e.hll = FakeHLL(int(sketch['cardinality']))
-
 
     sig = SourmashSignature(email, e)
 
