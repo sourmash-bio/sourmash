@@ -68,16 +68,29 @@ class Estimators(object):
         return False
 
     def __getstate__(self):             # enable pickling
-        return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
-                self.hll, self.track_abundance)
+        with_abundance = False
+        if self.track_abundance:
+            with_abundance = True
+
+        return (self.num, self.ksize, self.is_protein,
+                self.mh.get_mins(with_abundance=with_abundance),
+                self.hll, self.track_abundance, self.max_hash)
 
     def __setstate__(self, tup):
         from . import _minhash
 
-        (self.num, self.ksize, self.is_protein, mins, hll, self.track_abundance) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein, self.track_abundance)
-        for m in mins:
-            self.mh.add_hash(m)
+        (self.num, self.ksize, self.is_protein, mins, hll,
+         self.track_abundance, self.max_hash) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein,
+                                   track_abundance=self.track_abundance,
+                                   max_hash=self.max_hash)
+
+        if not self.track_abundance:
+            for m in mins:
+                self.mh.add_hash(m)
+        else:
+            self.mh.set_abundances(mins)
+
         self.hll = hll
 
     def __eq__(self, other):
