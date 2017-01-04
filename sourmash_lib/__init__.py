@@ -57,8 +57,10 @@ class Estimators(object):
         self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance,
-                                   max_hash)
+        self.mh = _minhash.MinHash(n, ksize,
+                                   is_protein=protein,
+                                   track_abundance=track_abundance,
+                                   max_hash=max_hash)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
