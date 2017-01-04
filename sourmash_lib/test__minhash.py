@@ -390,6 +390,12 @@ def test_murmur():
     except TypeError:
         pass
 
+    x = hash_murmur("ACG", 42)
+    assert x == 1731421407650554201
+    
+    y = hash_murmur("ACG", 43)
+    assert y != x
+    
 
 def test_abundance_simple():
     a = MinHash(20, 5, False, track_abundance=True)

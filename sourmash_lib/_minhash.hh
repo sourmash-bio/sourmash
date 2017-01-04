@@ -42,6 +42,8 @@
           ob = Py_InitModule3(name, methods, doc);
 #endif
 
+#define MINHASH_DEFAULT_SEED 42
+
 #include "kmer_min_hash.hh"
 
 typedef struct {
@@ -50,4 +52,6 @@ typedef struct {
     bool track_abundance = false;
 } MinHash_Object;
 
+
 #endif // _MINHASH_HH
+ 
