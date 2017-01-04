@@ -130,7 +130,6 @@ class Estimators(object):
         """
 
         if not self.track_abundance or ignore_abundance:
-            print('HERE')
             return self.jaccard(other)
         else:
             a = self.mh.get_mins(with_abundance=True)

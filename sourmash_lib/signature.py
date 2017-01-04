@@ -80,7 +80,6 @@ class SourmashSignature(object):
             values = estimator.mh.get_mins(with_abundance=True)
             sketch['mins'] = list(map(int, values.keys()))
             sketch['abundances'] = list(map(int, values.values()))
-            print('ABUND SAVE', sketch['abundances'])
         else:
             sketch['mins'] = list(map(int, estimator.mh.get_mins()))
         sketch['md5sum'] = self.md5sum()
