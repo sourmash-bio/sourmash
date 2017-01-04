@@ -66,6 +66,7 @@ SETUP_METADATA = \
     "install_requires": ["screed>=0.9", "PyYAML>=3.11", "ijson"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'sbt' : ['khmer>2.0', 'cachetools'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
