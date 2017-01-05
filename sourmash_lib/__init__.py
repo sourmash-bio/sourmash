@@ -14,6 +14,8 @@ try:
 except ImportError:
     pass
 
+DEFAULT_SEED=MinHash(1,1).seed
+
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -30,7 +32,7 @@ class Estimators(object):
 
     def __init__(self, n=None, ksize=None, protein=False,
                  with_cardinality=False, track_abundance=False,
-                 max_hash=0):
+                 max_hash=0, seed=DEFAULT_SEED):
         "Create a new MinHash estimator with size n and k-mer size ksize."
         from . import _minhash
 
@@ -43,6 +45,7 @@ class Estimators(object):
         self.ksize = ksize
         self.is_protein = False
         self.max_hash = max_hash
+        self.seed = seed
         if protein:
             self.is_protein = True
 
@@ -60,7 +63,8 @@ class Estimators(object):
         self.mh = _minhash.MinHash(n, ksize,
                                    is_protein=protein,
                                    track_abundance=track_abundance,
-                                   max_hash=max_hash)
+                                   max_hash=max_hash,
+                                   seed=seed)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
@@ -76,16 +80,19 @@ class Estimators(object):
 
         return (self.num, self.ksize, self.is_protein,
                 self.mh.get_mins(with_abundance=with_abundance),
-                self.hll, self.track_abundance, self.max_hash)
+                self.hll, self.track_abundance, self.max_hash,
+                self.seed)
 
     def __setstate__(self, tup):
         from . import _minhash
 
         (self.num, self.ksize, self.is_protein, mins, hll,
-         self.track_abundance, self.max_hash) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein,
+         self.track_abundance, self.max_hash, self.seed) = tup
+        self.mh = _minhash.MinHash(self.num, self.ksize,
+                                   is_protein=self.is_protein,
                                    track_abundance=self.track_abundance,
-                                   max_hash=self.max_hash)
+                                   max_hash=self.max_hash,
+                                   seed=self.seed)
 
         if not self.track_abundance:
             for m in mins:

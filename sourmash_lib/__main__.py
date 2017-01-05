@@ -6,9 +6,10 @@ import csv
 
 import screed
 import sourmash_lib
-from sourmash_lib import signature as sig
-from sourmash_lib import fig as sourmash_fig
+from . import signature as sig
+from . import fig as sourmash_fig
 from . import sourmash_args
+from ._minhash import MinHash
 
 DEFAULT_K = 31
 DEFAULT_N = 500
@@ -172,6 +173,8 @@ Commands can be:
         parser.add_argument('--with-cardinality', action='store_true')
         parser.add_argument('--track-abundance', action='store_true')
         parser.add_argument('--scaled', type=float)
+        parser.add_argument('--seed', type=int, help='hash seed',
+                            default=sourmash_lib.DEFAULT_SEED)
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
@@ -235,6 +238,7 @@ Commands can be:
             sys.exit(-1)
 
         def make_estimators():
+            seed = args.seed
             max_hash = 0
             if args.scaled:
                 max_hash = 2**64 / args.scaled
@@ -246,14 +250,16 @@ Commands can be:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=True,
                                         track_abundance=args.track_abundance,
-                                                max_hash=max_hash)
+                                                max_hash=max_hash,
+                                                seed=seed)
                     Elist.append(E)
                 if args.dna:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
                                                 protein=False,
                                         with_cardinality=args.with_cardinality,
                                         track_abundance=args.track_abundance,
-                                                max_hash=max_hash)
+                                                max_hash=max_hash,
+                                                seed=seed)
                     Elist.append(E)
             return Elist
 
