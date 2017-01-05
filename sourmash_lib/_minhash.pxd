@@ -1,10 +1,14 @@
+# -*- coding: UTF-8 -*-
+# cython: c_string_type=str, c_string_encoding=ascii
+
+from __future__ import unicode_literals
+
 from libcpp cimport bool
 from libcpp.map cimport map
 from libcpp.set cimport set
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint64_t
 
-cdef uint32_t MINHASH_DEFAULT_SEED = 42
 
 cdef extern from "kmer_min_hash.hh":
     ctypedef uint64_t HashIntoType;
@@ -18,7 +22,7 @@ cdef extern from "kmer_min_hash.hh":
     cdef cppclass KmerMinHash:
         #const uint32_t seed;
         const unsigned int num;
-        #const unsigned int ksize;
+        const unsigned int ksize;
         const bool is_protein;
         CMinHashType mins;
 
@@ -28,7 +32,7 @@ cdef extern from "kmer_min_hash.hh":
         void add_word(string word)
         void add_sequence(const char *, bool)
         void merge(const KmerMinHash&)
-        unsigned int count_common(const KmerMinHash&)
+        unsigned int count_common(const KmerMinHash&) except +
 
 
     cdef cppclass KmerMinAbundance(KmerMinHash):
@@ -40,8 +44,8 @@ cdef extern from "kmer_min_hash.hh":
         void add_sequence(const char *, bool)
         void merge(const KmerMinAbundance&)
         void merge(const KmerMinHash&)
-        unsigned int count_common(const KmerMinAbundance&)
-        unsigned int count_common(const KmerMinHash&)
+        unsigned int count_common(const KmerMinAbundance&) except +
+        #unsigned int count_common(const KmerMinHash&) except +
 
 
 cdef class MinHash(object):
@@ -52,6 +56,7 @@ cdef class MinHash(object):
     cpdef get_mins(self, bool with_abundance=*)
     cpdef add_hash(self, uint64_t h)
     cpdef set_abundances(self, dict)
-    #cdef add_protein()
+    cpdef uint64_t count_common(self, MinHash other)
+    cpdef add_protein(self, str sequence)
     #cdef __copy__()
     #cdef merge()
