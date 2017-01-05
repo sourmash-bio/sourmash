@@ -37,16 +37,21 @@ protected:
 class KmerMinHash
 {
 public:
-    const uint32_t seed;
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
+    const uint32_t seed;
+    const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
-      num(n), ksize(k), is_protein(prot), seed(seed) { };
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
+                HashIntoType mx) :
+        num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) { };
 
     virtual void _shrink() {
+        if (num == 0) {
+            return;
+        }
         while (mins.size() > num) {
             CMinHashType::iterator mi = mins.end();
             mi--;
@@ -54,11 +59,17 @@ public:
         }
     }
     virtual void add_hash(HashIntoType h) {
-        mins.insert(h);
+        if (max_hash) {
+            if (h <= max_hash) {
+                mins.insert(h);
+            }
+        } else {
+            mins.insert(h);
+        }
         _shrink();
     }
-  void add_word(std::string word) {
-    HashIntoType hash = _hash_murmur(word, seed);
+    void add_word(std::string word) {
+        HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
     void add_sequence(const char * sequence, bool force=false) {
@@ -176,6 +187,12 @@ public:
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be merged");
         }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; merge fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; merge fail");
+        }
         for (auto mi: other.mins) {
             mins.insert(mi);
         }
@@ -189,6 +206,12 @@ public:
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         CMinHashType::iterator mi;
@@ -252,17 +275,22 @@ class KmerMinAbundance: public KmerMinHash {
     CMinAbundanceType mins;
     HashIntoType max_mins;
 
-  KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed) :
-      KmerMinHash(n, k, prot, seed) { };
+    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed,
+                     HashIntoType mx) :
+        KmerMinHash(n, k, prot, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
-        if (mins.size() < num) {
+        if (max_hash && h > max_hash) {
+            return;
+        }
+
+        if (!num || mins.size() < num) {
             mins[h] += 1;
             max_mins = std::max(max_mins, h);
             return;
         }
 
-        if (h > max_mins) {
+        if (num && h > max_mins) {
             return;
         } else {
             if (mins.find(h) != mins.end()) {
@@ -277,6 +305,9 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual void _shrink() {
+        if (num == 0) {
+            return;
+        }
         while (mins.size() > num) {
             mins.erase(max_mins);
             max_mins = (*std::max_element(mins.begin(), mins.end())).first;
@@ -289,6 +320,12 @@ class KmerMinAbundance: public KmerMinHash {
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be merged");
+        }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; merge fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; merge fail");
         }
         for (auto mi: other.mins) {
             mins[mi.first] += mi.second;
@@ -305,6 +342,12 @@ class KmerMinAbundance: public KmerMinHash {
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         for (auto mi: mins) {
@@ -324,6 +367,12 @@ class KmerMinAbundance: public KmerMinHash {
         }
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         for (auto mi: mins) {

@@ -36,6 +36,8 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import pytest
+
 from ._minhash import MinHash, hash_murmur
 
 # add:
@@ -45,6 +47,7 @@ from ._minhash import MinHash, hash_murmur
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
 # * define equals
+
 
 def test_basic_dna(track_abundance):
     # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
@@ -76,24 +79,72 @@ def test_protein_short(track_abundance):
     assert len(mh.get_mins()) == 0, mh.get_mins()
 
 
+def test_size_limit(track_abundance):
+    # test behavior with size limit of 3
+    mh = MinHash(3, 4, track_abundance=track_abundance)
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(5) # -> should push 30 off end
+    assert mh.get_mins() == [5, 10, 20]
+
+
+def test_size_limit_none(track_abundance):
+    # test behavior with size limit of 0 (=> no size limit)
+    mh = MinHash(0, 4, track_abundance=track_abundance)
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(5) # -> should retain all, b/c size limit is 0
+    assert mh.get_mins() == [5, 10, 20, 30]
+
+
+def test_max_hash(track_abundance):
+    # test behavior with max_hash
+    mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35)
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(40)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(36)
+    assert mh.get_mins() == [10, 20, 30]
+
+
+def test_max_hash_with_limit(track_abundance):
+    # test behavior with max_hash and a limit (not sure sensible use case...)
+    mh = MinHash(2, 4, track_abundance=track_abundance, max_hash=35)
+
+    mh.add_hash(40)
+    assert mh.get_mins() == []
+
+    mh.add_hash(36)
+    assert mh.get_mins() == []
+
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [20, 30]
+
+    mh.add_hash(10)
+    assert mh.get_mins() == [10, 20]
+
+
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
-    try:
+    with pytest.raises(ValueError):
         mh.add_sequence('ATGR')
-        assert 0, "should fail on invalid DNA sequence"
-    except ValueError:
-        pass
 
 
 def test_basic_dna_bad_2(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 6, track_abundance=track_abundance)
-    try:
+
+    with pytest.raises(ValueError):
         mh.add_protein('YYYY')
-        assert 0, "should fail => this is a DNA MinHash"
-    except ValueError:
-        pass
 
 
 def test_basic_dna_bad_force(track_abundance):
@@ -185,22 +236,32 @@ def test_mh_count_common_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.count_common(b)
-        assert 0, "count_common should fail with DNA vs protein"
-    except ValueError:
-        pass
+
+
+def test_mh_count_common_diff_maxhash(track_abundance):
+    a = MinHash(20, 5, False, track_abundance=track_abundance, max_hash=1)
+    b = MinHash(20, 5, True, track_abundance=track_abundance, max_hash=2)
+
+    with pytest.raises(ValueError):
+        a.count_common(b)
+
+
+def test_mh_count_common_diff_seed(track_abundance):
+    a = MinHash(20, 5, False, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, True, track_abundance=track_abundance, seed=2)
+
+    with pytest.raises(ValueError):
+        a.count_common(b)
 
 
 def test_mh_count_common_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.count_common(b)
-        assert 0, "count_common should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_mh_asymmetric(track_abundance):
@@ -311,66 +372,80 @@ def test_mh_merge_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.merge(b)
-        assert 0, "merge should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_merge_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.merge(b)
-        assert 0, "merge should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_mh_compare_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.compare(b)
-        assert 0, "compare should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_compare_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.compare(b)
-        assert 0, "compare should fail with different ksize"
-    except ValueError:
-        pass
+
+
+def test_mh_compare_diff_seed(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, track_abundance=track_abundance, seed=2)
+
+    with pytest.raises(ValueError):
+        a.compare(b)
+
+
+def test_mh_compare_diff_max_hash(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, max_hash=5)
+    b = MinHash(20, 5, track_abundance=track_abundance, max_hash=10)
+
+    with pytest.raises(ValueError):
+        a.compare(b)
 
 
 def test_mh_concat_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a += b
-        assert 0, "concat should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_concat_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a += b
-        assert 0, "concat should fail with different ksize"
-    except ValueError:
-        pass
+
+
+def test_mh_concat_diff_max_hash(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, max_hash=5)
+    b = MinHash(20, 5, track_abundance=track_abundance, max_hash=10)
+
+    with pytest.raises(ValueError):
+        a += b
+
+
+def test_mh_concat_diff_seed(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, track_abundance=track_abundance, seed=2)
+
+    with pytest.raises(ValueError):
+        a += b
 
 
 def test_short_sequence(track_abundance):
@@ -469,3 +544,12 @@ def test_abundance_compare():
     assert x >= 0.3, x
     assert a.compare(a) == 1.0
     assert b.compare(b) == 1.0
+
+
+def test_set_abundance():
+    a = MinHash(20, 10, track_abundance=False)
+
+    with pytest.raises(RuntimeError) as e:
+        a.set_abundances({1: 3, 2: 4})
+
+    assert "track_abundance=True when constructing" in e.value.args[0]

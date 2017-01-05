@@ -1,3 +1,4 @@
+import pytest
 from . import Estimators
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
@@ -43,6 +44,19 @@ def test_common_1(track_abundance):
     assert E2.count_common(E1) == 4
 
 
+def test_diff_seed(track_abundance):
+    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=1)
+    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=2)
+
+    for i in [1, 2, 3, 4, 5]:
+        E1.mh.add_hash(i)
+    for i in [1, 2, 3, 4, 6]:
+        E2.mh.add_hash(i)
+
+    with pytest.raises(ValueError):
+        E1.count_common(E2)
+
+
 def test_dna_mh(track_abundance):
     e1 = Estimators(n=5, ksize=4, track_abundance=track_abundance)
     e2 = Estimators(n=5, ksize=4, track_abundance=track_abundance)
@@ -59,8 +73,10 @@ def test_dna_mh(track_abundance):
 
 
 def test_protein_mh(track_abundance):
-    e1 = Estimators(n=5, ksize=6, protein=True, track_abundance=track_abundance)
-    e2 = Estimators(n=5, ksize=6, protein=True, track_abundance=track_abundance)
+    e1 = Estimators(n=5, ksize=6, is_protein=True,
+                    track_abundance=track_abundance)
+    e2 = Estimators(n=5, ksize=6, is_protein=True,
+                    track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
     e1.add_sequence(seq)
@@ -77,8 +93,11 @@ def test_pickle(track_abundance):
     import pickle
     from io import BytesIO
 
-    e1 = Estimators(n=5, ksize=6, protein=False, track_abundance=track_abundance)
+    e1 = Estimators(n=5, ksize=6, is_protein=False,
+                    track_abundance=track_abundance)
+
     seq = 'ATGGCAGTGACGATGCCG'
+    e1.add_sequence(seq)
     e1.add_sequence(seq)
 
     fp = BytesIO()
@@ -87,15 +106,19 @@ def test_pickle(track_abundance):
     fp2 = BytesIO(fp.getvalue())
     e2 = pickle.load(fp2)
 
-    assert e1.mh.get_mins() == e2.mh.get_mins()
+    assert e1.mh.get_mins(with_abundance=track_abundance) == \
+           e2.mh.get_mins(with_abundance=track_abundance)
     assert e1.num == e2.num
     assert e1.ksize == e2.ksize
     assert e1.is_protein == e2.is_protein
+    assert e1.max_hash == e2.max_hash
+    assert e1.seed == e2.seed
 
 
 def test_bad_construct_1(track_abundance):
     try:
-        e1 = Estimators(ksize=6, protein=False, track_abundance=track_abundance)
+        e1 = Estimators(ksize=6, is_protein=False,
+                        track_abundance=track_abundance)
         assert 0, "require n in constructor"
     except ValueError:
         pass
@@ -103,7 +126,8 @@ def test_bad_construct_1(track_abundance):
 
 def test_bad_construct_2(track_abundance):
     try:
-        e1 = Estimators(n=100, protein=False, track_abundance=track_abundance)
+        e1 = Estimators(n=100, is_protein=False,
+                        track_abundance=track_abundance)
         assert 0, "require ksize in constructor"
     except ValueError:
         pass
