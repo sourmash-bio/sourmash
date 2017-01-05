@@ -247,9 +247,28 @@ def test_do_sourmash_compute_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        cards = [ x.estimator.max_hash for x in siglist ]
-        assert len(cards) == 2
-        assert set(cards) == set([ 2**64/100 ])
+        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set([ 2**64/100 ])
+
+
+def test_do_sourmash_compute_with_seed():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--seed', '43',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        seeds = [ x.estimator.seed for x in siglist ]
+        assert len(seeds) == 2
+        assert set(seeds) == set([ 43 ])
 
 
 def test_do_sourmash_check_protein_comparisons():

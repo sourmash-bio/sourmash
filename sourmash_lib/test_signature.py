@@ -46,6 +46,22 @@ def test_roundtrip_max_hash(track_abundance):
     assert sig2.similarity(sig) == 1.0
 
 
+def test_roundtrip_seed(track_abundance):
+    e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance,
+                                seed=10)
+    e.mh.add_hash(5)
+    sig = SourmashSignature('titus@idyll.org', e)
+    s = save_signatures([sig])
+    siglist = list(load_signatures(s))
+    sig2 = siglist[0]
+    e2 = sig2.estimator
+
+    assert e.seed == e2.seed
+
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
+
+
 def test_roundtrip_empty_email(track_abundance):
     e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
