@@ -400,6 +400,22 @@ def test_mh_compare_diff_ksize(track_abundance):
         a.compare(b)
 
 
+def test_mh_compare_diff_seed(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, track_abundance=track_abundance, seed=2)
+
+    with pytest.raises(ValueError):
+        a.compare(b)
+
+
+def test_mh_compare_diff_max_hash(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, max_hash=5)
+    b = MinHash(20, 5, track_abundance=track_abundance, max_hash=10)
+
+    with pytest.raises(ValueError):
+        a.compare(b)
+
+
 def test_mh_concat_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
@@ -411,6 +427,22 @@ def test_mh_concat_diff_protein(track_abundance):
 def test_mh_concat_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
+
+    with pytest.raises(ValueError):
+        a += b
+
+
+def test_mh_concat_diff_max_hash(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, max_hash=5)
+    b = MinHash(20, 5, track_abundance=track_abundance, max_hash=10)
+
+    with pytest.raises(ValueError):
+        a += b
+
+
+def test_mh_concat_diff_seed(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, track_abundance=track_abundance, seed=2)
 
     with pytest.raises(ValueError):
         a += b
