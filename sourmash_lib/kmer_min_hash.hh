@@ -190,6 +190,9 @@ public:
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; merge fail");
         }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; merge fail");
+        }
         for (auto mi: other.mins) {
             mins.insert(mi);
         }
@@ -206,6 +209,9 @@ public:
         }
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         CMinHashType::iterator mi;
@@ -318,6 +324,9 @@ class KmerMinAbundance: public KmerMinHash {
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; merge fail");
         }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; merge fail");
+        }
         for (auto mi: other.mins) {
             mins[mi.first] += mi.second;
             max_mins = std::max(mi.first, max_mins);
@@ -336,6 +345,9 @@ class KmerMinAbundance: public KmerMinHash {
         }
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         for (auto mi: mins) {
@@ -358,6 +370,9 @@ class KmerMinAbundance: public KmerMinHash {
         }
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
         }
 
         for (auto mi: mins) {

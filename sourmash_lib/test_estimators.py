@@ -1,3 +1,4 @@
+import pytest
 from . import Estimators
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
@@ -41,6 +42,19 @@ def test_common_1(track_abundance):
 
     assert E1.count_common(E2) == 4
     assert E2.count_common(E1) == 4
+
+
+def test_diff_seed(track_abundance):
+    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=1)
+    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=2)
+
+    for i in [1, 2, 3, 4, 5]:
+        E1.mh.add_hash(i)
+    for i in [1, 2, 3, 4, 6]:
+        E2.mh.add_hash(i)
+
+    with pytest.raises(ValueError):
+        E1.count_common(E2)
 
 
 def test_dna_mh(track_abundance):
@@ -96,6 +110,7 @@ def test_pickle(track_abundance):
     assert e1.ksize == e2.ksize
     assert e1.is_protein == e2.is_protein
     assert e1.max_hash == e2.max_hash
+    assert e1.seed == e2.seed
 
 
 def test_bad_construct_1(track_abundance):

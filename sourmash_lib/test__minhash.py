@@ -135,21 +135,16 @@ def test_max_hash_with_limit(track_abundance):
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
-    try:
+    with pytest.raises(ValueError):
         mh.add_sequence('ATGR')
-        assert 0, "should fail on invalid DNA sequence"
-    except ValueError:
-        pass
 
 
 def test_basic_dna_bad_2(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 6, track_abundance=track_abundance)
-    try:
+
+    with pytest.raises(ValueError):
         mh.add_protein('YYYY')
-        assert 0, "should fail => this is a DNA MinHash"
-    except ValueError:
-        pass
 
 
 def test_basic_dna_bad_force(track_abundance):
@@ -241,33 +236,32 @@ def test_mh_count_common_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.count_common(b)
-        assert 0, "count_common should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_count_common_diff_maxhash(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance, max_hash=1)
     b = MinHash(20, 5, True, track_abundance=track_abundance, max_hash=2)
 
-    try:
+    with pytest.raises(ValueError):
         a.count_common(b)
-        assert 0, "count_common should fail with different max_hash values"
-    except ValueError:
-        pass
+
+
+def test_mh_count_common_diff_seed(track_abundance):
+    a = MinHash(20, 5, False, track_abundance=track_abundance, seed=1)
+    b = MinHash(20, 5, True, track_abundance=track_abundance, seed=2)
+
+    with pytest.raises(ValueError):
+        a.count_common(b)
 
 
 def test_mh_count_common_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.count_common(b)
-        assert 0, "count_common should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_mh_asymmetric(track_abundance):
@@ -378,66 +372,48 @@ def test_mh_merge_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.merge(b)
-        assert 0, "merge should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_merge_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.merge(b)
-        assert 0, "merge should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_mh_compare_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.compare(b)
-        assert 0, "compare should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_compare_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a.compare(b)
-        assert 0, "compare should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_mh_concat_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a += b
-        assert 0, "concat should fail with DNA vs protein"
-    except ValueError:
-        pass
 
 
 def test_mh_concat_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
-    try:
+    with pytest.raises(ValueError):
         a += b
-        assert 0, "concat should fail with different ksize"
-    except ValueError:
-        pass
 
 
 def test_short_sequence(track_abundance):
