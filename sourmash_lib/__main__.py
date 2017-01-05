@@ -171,6 +171,9 @@ Commands can be:
         parser.add_argument('--name-from-first', action='store_true')
         parser.add_argument('--with-cardinality', action='store_true')
         parser.add_argument('--track-abundance', action='store_true')
+        parser.add_argument('--progress-stepsize', type=int,
+                            default = 10000,
+                            help='number of entries in input after which progress is printed to stderr.')
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
@@ -294,6 +297,13 @@ Commands can be:
                 if args.singleton:
                     siglist = []
                     for n, record in enumerate(screed.open(filename)):
+                        if n % args.progress_stepsize == 0:
+                            if sys.version_info[0] < 3:
+                                print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r')
+                                sys.stderr.flush()
+                            else:
+                                print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
+
                         # make estimators for each sequence
                         Elist = make_estimators()
                         add_seq(Elist, record.sequence,
@@ -301,6 +311,12 @@ Commands can be:
 
                         siglist += build_siglist(args.email, Elist, filename,
                                                  name=record.name)
+                        if sys.version_info[0] < 3:
+                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r')
+                            sys.stderr.flush()
+                        else:
+                            print('%s: %i entries' % (filename, n+1), file=sys.stderr, end='\r', flush=True)
+
                     print('calculated {} signatures for {} sequences in {}'.\
                               format(len(siglist), n + 1, filename))
                 else:
@@ -312,7 +328,7 @@ Commands can be:
                           file=sys.stderr)
                     name = None
                     for n, record in enumerate(screed.open(filename)):
-                        if n % 10000 == 0:
+                        if n % args.progress_stepsize == 0:
                             if n:
                                 print('...', filename, n, file=sys.stderr)
                             elif args.name_from_first:
