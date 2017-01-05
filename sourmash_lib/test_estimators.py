@@ -73,8 +73,10 @@ def test_dna_mh(track_abundance):
 
 
 def test_protein_mh(track_abundance):
-    e1 = Estimators(n=5, ksize=6, protein=True, track_abundance=track_abundance)
-    e2 = Estimators(n=5, ksize=6, protein=True, track_abundance=track_abundance)
+    e1 = Estimators(n=5, ksize=6, is_protein=True,
+                    track_abundance=track_abundance)
+    e2 = Estimators(n=5, ksize=6, is_protein=True,
+                    track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
     e1.add_sequence(seq)
@@ -91,7 +93,7 @@ def test_pickle(track_abundance):
     import pickle
     from io import BytesIO
 
-    e1 = Estimators(n=5, ksize=6, protein=False,
+    e1 = Estimators(n=5, ksize=6, is_protein=False,
                     track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
@@ -115,7 +117,8 @@ def test_pickle(track_abundance):
 
 def test_bad_construct_1(track_abundance):
     try:
-        e1 = Estimators(ksize=6, protein=False, track_abundance=track_abundance)
+        e1 = Estimators(ksize=6, is_protein=False,
+                        track_abundance=track_abundance)
         assert 0, "require n in constructor"
     except ValueError:
         pass
@@ -123,7 +126,8 @@ def test_bad_construct_1(track_abundance):
 
 def test_bad_construct_2(track_abundance):
     try:
-        e1 = Estimators(n=100, protein=False, track_abundance=track_abundance)
+        e1 = Estimators(n=100, is_protein=False,
+                        track_abundance=track_abundance)
         assert 0, "require ksize in constructor"
     except ValueError:
         pass

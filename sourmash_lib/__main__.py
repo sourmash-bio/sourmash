@@ -248,14 +248,14 @@ Commands can be:
             for k in ksizes:
                 if args.protein:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                                protein=True,
+                                                is_protein=True,
                                         track_abundance=args.track_abundance,
                                                 max_hash=max_hash,
                                                 seed=seed)
                     Elist.append(E)
                 if args.dna:
                     E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
-                                                protein=False,
+                                                is_protein=False,
                                         with_cardinality=args.with_cardinality,
                                         track_abundance=args.track_abundance,
                                                 max_hash=max_hash,
@@ -916,7 +916,7 @@ Commands can be:
             is_protein = True
 
         E = sourmash_lib.Estimators(ksize=args.ksize, n=args.num_hashes,
-                                    protein=is_protein)
+                                    is_protein=is_protein)
         streamsig = sig.SourmashSignature('', E, filename='stdin',
                                           name=args.name)
 

@@ -30,10 +30,18 @@ class Estimators(object):
     ``Estimator`` supports the pickle protocol.
     """
 
-    def __init__(self, n=None, ksize=None, protein=False,
+    def __init__(self, n=None, ksize=None, is_protein=False,
                  with_cardinality=False, track_abundance=False,
                  max_hash=0, seed=DEFAULT_SEED):
-        "Create a new MinHash estimator with size n and k-mer size ksize."
+        """\
+        Create a new MinHash estimator with size n and k-mer size ksize.
+
+        is_protein - compute hashes from amino acid translation (False)
+        with_cardinality - count total unique k-mers (False)
+        track_abundance - track abundance of k-mers as well as presence (False)
+        max_hash - only admit hash values under this number (not set)
+        seed - hash function seed
+        """
         from . import _minhash
 
         if n is None:
@@ -46,12 +54,12 @@ class Estimators(object):
         self.is_protein = False
         self.max_hash = max_hash
         self.seed = seed
-        if protein:
+        if is_protein:
             self.is_protein = True
 
         self.hll = None
         if with_cardinality:
-            if protein:
+            if is_protein:
                 raise Exception("Cannot do cardinality counting with protein")
             if not khmer_available:
                 raise Exception("Error: to do cardinality counting, " + \
@@ -61,7 +69,7 @@ class Estimators(object):
 
         # initialize sketch to size n
         self.mh = _minhash.MinHash(n, ksize,
-                                   is_protein=protein,
+                                   is_protein=is_protein,
                                    track_abundance=track_abundance,
                                    max_hash=max_hash,
                                    seed=seed)

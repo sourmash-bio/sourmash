@@ -620,10 +620,10 @@ def test_do_sourmash_sbt_search_bestonly():
 def test_sourmash_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
+                        track_abundance=True)
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
+                        track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
         E2.mh.add_sequence('ATGGA')
@@ -646,9 +646,9 @@ def test_sourmash_compare_with_abundance_1():
 def test_sourmash_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
@@ -674,9 +674,9 @@ def test_sourmash_compare_with_abundance_2():
 def test_sourmash_compare_with_abundance_3():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
