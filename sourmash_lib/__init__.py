@@ -14,6 +14,8 @@ try:
 except ImportError:
     pass
 
+DEFAULT_SEED=MinHash(1,1).seed
+
 class Estimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
@@ -28,11 +30,18 @@ class Estimators(object):
     ``Estimator`` supports the pickle protocol.
     """
 
-    def __init__(self, n=None, ksize=None, protein=False,
-                 with_cardinality=False, track_abundance=False):
-        "Create a new MinHash estimator with size n and k-mer size ksize."
-        from . import _minhash
+    def __init__(self, n=None, ksize=None, is_protein=False,
+                 with_cardinality=False, track_abundance=False,
+                 max_hash=0, seed=DEFAULT_SEED):
+        """\
+        Create a new MinHash estimator with size n and k-mer size ksize.
 
+        is_protein - compute hashes from amino acid translation (False)
+        with_cardinality - count total unique k-mers (False)
+        track_abundance - track abundance of k-mers as well as presence (False)
+        max_hash - only admit hash values under this number (not set)
+        seed - hash function seed
+        """
         if n is None:
             raise ValueError("n is required")
         if ksize is None:
@@ -41,12 +50,14 @@ class Estimators(object):
         self.num = n
         self.ksize = ksize
         self.is_protein = False
-        if protein:
+        self.max_hash = max_hash
+        self.seed = seed
+        if is_protein:
             self.is_protein = True
 
         self.hll = None
         if with_cardinality:
-            if protein:
+            if is_protein:
                 raise Exception("Cannot do cardinality counting with protein")
             if not khmer_available:
                 raise Exception("Error: to do cardinality counting, " + \
@@ -55,7 +66,11 @@ class Estimators(object):
         self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize, protein, track_abundance)
+        self.mh = MinHash(n, ksize,
+                          is_protein=is_protein,
+                          track_abundance=track_abundance,
+                          max_hash=max_hash,
+                          seed=seed)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
@@ -65,16 +80,30 @@ class Estimators(object):
         return False
 
     def __getstate__(self):             # enable pickling
-        return (self.num, self.ksize, self.is_protein, self.mh.get_mins(),
-                self.hll, self.track_abundance)
+        with_abundance = False
+        if self.track_abundance:
+            with_abundance = True
+
+        return (self.num, self.ksize, self.is_protein,
+                self.mh.get_mins(with_abundance=with_abundance),
+                self.hll, self.track_abundance, self.max_hash,
+                self.seed)
 
     def __setstate__(self, tup):
-        from . import _minhash
+        (self.num, self.ksize, self.is_protein, mins, hll,
+         self.track_abundance, self.max_hash, self.seed) = tup
+        self.mh = MinHash(self.num, self.ksize,
+                          is_protein=self.is_protein,
+                          track_abundance=self.track_abundance,
+                          max_hash=self.max_hash,
+                          seed=self.seed)
 
-        (self.num, self.ksize, self.is_protein, mins, hll, self.track_abundance) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize, self.is_protein, self.track_abundance)
-        for m in mins:
-            self.mh.add_hash(m)
+        if not self.track_abundance:
+            for m in mins:
+                self.mh.add_hash(m)
+        else:
+            self.mh.set_abundances(mins)
+
         self.hll = hll
 
     def __eq__(self, other):
@@ -118,6 +147,7 @@ class Estimators(object):
         else:
             a = self.mh.get_mins(with_abundance=True)
             b = other.mh.get_mins(with_abundance=True)
+
             prod = dotproduct(a, b)
             prod = min(1.0, prod)
 

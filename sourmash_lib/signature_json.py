@@ -69,6 +69,8 @@ def _json_next_signature(iterable,
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
+    max_hash = d.get('max_hash', 0)
+    seed = d.get('seed', sourmash_lib.DEFAULT_SEED)
 
     molecule = d.get('molecule', 'dna')
     if molecule == 'protein':
@@ -82,8 +84,9 @@ def _json_next_signature(iterable,
     if 'abundances' in d:
         track_abundance = True
 
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein,
-                                track_abundance=track_abundance)
+    e = sourmash_lib.Estimators(ksize=ksize, n=n, is_protein=is_protein,
+                                track_abundance=track_abundance,
+                                max_hash=max_hash, seed=seed)
 
     if not track_abundance:
         for m in mins:

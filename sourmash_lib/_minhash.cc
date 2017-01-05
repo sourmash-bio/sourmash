@@ -415,12 +415,12 @@ static PyObject * minhash___copy__(MinHash_Object * me, PyObject * args)
     KmerMinHash * new_mh = NULL;
 
     if (me->track_abundance == true) {
-      new_mh = new KmerMinAbundance(mh->num, mh->ksize,
-				    mh->is_protein, mh->seed);
+        new_mh = new KmerMinAbundance(mh->num, mh->ksize,
+                                      mh->is_protein, mh->seed, mh->max_hash);
          ((KmerMinAbundance*)new_mh)->merge(*(KmerMinAbundance*)mh);
     } else {
       new_mh = new KmerMinHash(mh->num, mh->ksize,
-			       mh->is_protein, mh->seed);
+                               mh->is_protein, mh->seed, mh->max_hash);
          new_mh->merge(*mh);
     }
 
@@ -533,6 +533,10 @@ static PyObject * minhash_compare(MinHash_Object * me, PyObject * args)
         return NULL;
     }
 
+    if (size == 0) {
+        return PyFloat_FromDouble(0.0);
+    }
+
     return PyFloat_FromDouble(float(n) / float(size));
 }
 
@@ -564,17 +568,21 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
     }
 
     unsigned int _n, _ksize;
+    HashIntoType max_hash = 0;
+    PyObject * max_hash_o = NULL;
     uint32_t seed = MINHASH_DEFAULT_SEED;
     PyObject * track_abundance_o = Py_False;
     PyObject * is_protein_o = NULL;
  
-    static const char* const_kwlist[] = {"n", "ksize", "is_protein", "track_abundance", "seed", NULL};
+    static const char* const_kwlist[] = {"n", "ksize", "is_protein",
+                                         "track_abundance", "seed",
+                                         "max_hash", NULL};
     static char** kwlist = const_cast<char**>(const_kwlist);
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "II|OOI", kwlist,
-				     &_n, &_ksize, &is_protein_o,
-				     &track_abundance_o,
-				     &seed)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "II|OOIO", kwlist,
+                                     &_n, &_ksize, &is_protein_o,
+                                     &track_abundance_o,
+                                     &seed, &max_hash_o)) {
         return NULL;
     }
 
@@ -584,11 +592,16 @@ MinHash_new(PyTypeObject * subtype, PyObject * args, PyObject * kwds)
         is_protein = true;
     }
 
+    if (max_hash_o) {
+        max_hash = PyLong_AsLong(max_hash_o);
+    }
+
     if (PyObject_IsTrue(track_abundance_o)) {
-      myself->mh = new KmerMinAbundance(_n, _ksize, is_protein, seed);
+        myself->mh = new KmerMinAbundance(_n, _ksize, is_protein, seed,
+                                          max_hash);
         myself->track_abundance = true;
     } else {
-      myself->mh = new KmerMinHash(_n, _ksize, is_protein, seed);
+        myself->mh = new KmerMinHash(_n, _ksize, is_protein, seed, max_hash);
         myself->track_abundance = false;
     }
 
@@ -671,7 +684,7 @@ MOD_INIT(_minhash)
 }
 
 uint64_t _hash_murmur(const std::string& kmer,
-		      const uint32_t seed) {
+                      const uint32_t seed) {
     uint64_t out[2];
     out[0] = 0; out[1] = 0;
     MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);

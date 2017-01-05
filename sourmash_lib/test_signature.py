@@ -1,5 +1,6 @@
 import sourmash_lib
-from sourmash_lib.signature import SourmashSignature, save_signatures, load_signatures
+from sourmash_lib.signature import SourmashSignature, save_signatures, \
+    load_signatures
 
 
 def test_roundtrip(track_abundance):
@@ -10,6 +11,52 @@ def test_roundtrip(track_abundance):
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
     e2 = sig2.estimator
+
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
+
+
+def test_roundtrip_empty(track_abundance):
+    # edge case, but: empty estimator? :)
+    e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance)
+
+    sig = SourmashSignature('titus@idyll.org', e)
+    s = save_signatures([sig])
+    siglist = list(load_signatures(s))
+    sig2 = siglist[0]
+    e2 = sig2.estimator
+
+    assert sig.similarity(sig2) == 0
+    assert sig2.similarity(sig) == 0
+
+
+def test_roundtrip_max_hash(track_abundance):
+    e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance,
+                                max_hash=10)
+    e.mh.add_hash(5)
+    sig = SourmashSignature('titus@idyll.org', e)
+    s = save_signatures([sig])
+    siglist = list(load_signatures(s))
+    sig2 = siglist[0]
+    e2 = sig2.estimator
+
+    assert e.max_hash == e2.max_hash
+
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
+
+
+def test_roundtrip_seed(track_abundance):
+    e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance,
+                                seed=10)
+    e.mh.add_hash(5)
+    sig = SourmashSignature('titus@idyll.org', e)
+    s = save_signatures([sig])
+    siglist = list(load_signatures(s))
+    sig2 = siglist[0]
+    e2 = sig2.estimator
+
+    assert e.seed == e2.seed
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0

@@ -75,6 +75,8 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
         sketch['num'] = len(estimator.mh)
+        sketch['max_hash'] = int(estimator.max_hash)
+        sketch['seed'] = int(estimator.seed)
         if self.estimator.track_abundance:
             values = estimator.mh.get_mins(with_abundance=True)
             sketch['mins'] = list(map(int, values.keys()))
@@ -232,6 +234,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     mins = list(map(int, sketch['mins']))
     n = int(sketch['num'])
     molecule = sketch.get('molecule', 'dna')
+    seed = sketch.get('seed', sourmash_lib.DEFAULT_SEED)
     if molecule == 'protein':
         is_protein = True
     elif molecule == 'dna':
@@ -239,17 +242,23 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
 
+    max_hash = int(sketch.get('max_hash', 0))
+    seed = int(sketch.get('seed', sourmash_lib.DEFAULT_SEED))
+
     track_abundance = 'abundances' in sketch
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, protein=is_protein, track_abundance=track_abundance)
+    e = sourmash_lib.Estimators(ksize=ksize, n=n,
+                                is_protein=is_protein,
+                                track_abundance=track_abundance,
+                                max_hash=max_hash, seed=seed)
     if track_abundance:
         abundances = list(map(int, sketch['abundances']))
         e.mh.set_abundances(dict(zip(mins, abundances)))
     else:
         for m in mins:
             e.mh.add_hash(m)
+
     if 'cardinality' in sketch:
         e.hll = FakeHLL(int(sketch['cardinality']))
-
 
     sig = SourmashSignature(email, e)
 

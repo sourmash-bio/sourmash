@@ -233,6 +233,44 @@ def test_do_sourmash_compute_with_cardinality():
         assert set(cards) == set([ 966, 986 ])
 
 
+def test_do_sourmash_compute_with_scaled():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '100',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set([ int(2**64 /100.) ])
+
+
+def test_do_sourmash_compute_with_seed():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--seed', '43',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        seeds = [ x.estimator.seed for x in siglist ]
+        assert len(seeds) == 2
+        assert set(seeds) == set([ 43 ])
+
+
 def test_do_sourmash_check_protein_comparisons():
     # this test checks 2 x 2 protein comparisons with E. coli genes.
     with utils.TempDirectory() as location:
@@ -582,10 +620,10 @@ def test_do_sourmash_sbt_search_bestonly():
 def test_sourmash_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
-                                     track_abundance=True)
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
+                        track_abundance=True)
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
+                        track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
         E2.mh.add_sequence('ATGGA')
@@ -608,9 +646,9 @@ def test_sourmash_compare_with_abundance_1():
 def test_sourmash_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
@@ -636,9 +674,9 @@ def test_sourmash_compare_with_abundance_2():
 def test_sourmash_compare_with_abundance_3():
     with utils.TempDirectory() as location:
         # create two signatures
-        E1 = Estimators(ksize=5, n=5, protein=False,
+        E1 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
-        E2 = Estimators(ksize=5, n=5, protein=False,
+        E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
         E1.mh.add_sequence('ATGGA')
