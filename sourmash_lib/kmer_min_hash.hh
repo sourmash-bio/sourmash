@@ -9,9 +9,17 @@
 #include <string>
 #include <unordered_map>
 
-// #include "kmer_hash.hh"
+#include "../third-party/smhasher/MurmurHash3.h"
 
-////
+uint64_t _hash_murmur(const std::string& kmer,
+                      const uint32_t seed) {
+    uint64_t out[2];
+    out[0] = 0; out[1] = 0;
+    MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
+    return out[0];
+}
+
+typedef uint64_t HashIntoType;
 
 typedef std::set<HashIntoType> CMinHashType;
 
