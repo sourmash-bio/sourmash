@@ -42,8 +42,6 @@ class Estimators(object):
         max_hash - only admit hash values under this number (not set)
         seed - hash function seed
         """
-        from . import _minhash
-
         if n is None:
             raise ValueError("n is required")
         if ksize is None:
@@ -68,11 +66,11 @@ class Estimators(object):
         self.track_abundance = track_abundance
 
         # initialize sketch to size n
-        self.mh = _minhash.MinHash(n, ksize,
-                                   is_protein=is_protein,
-                                   track_abundance=track_abundance,
-                                   max_hash=max_hash,
-                                   seed=seed)
+        self.mh = MinHash(n, ksize,
+                          is_protein=is_protein,
+                          track_abundance=track_abundance,
+                          max_hash=max_hash,
+                          seed=seed)
 
     def is_molecule_type(self, molecule):
         if molecule == 'dna' and not self.mh.is_protein():
@@ -92,15 +90,13 @@ class Estimators(object):
                 self.seed)
 
     def __setstate__(self, tup):
-        from . import _minhash
-
         (self.num, self.ksize, self.is_protein, mins, hll,
          self.track_abundance, self.max_hash, self.seed) = tup
-        self.mh = _minhash.MinHash(self.num, self.ksize,
-                                   is_protein=self.is_protein,
-                                   track_abundance=self.track_abundance,
-                                   max_hash=self.max_hash,
-                                   seed=self.seed)
+        self.mh = MinHash(self.num, self.ksize,
+                          is_protein=self.is_protein,
+                          track_abundance=self.track_abundance,
+                          max_hash=self.max_hash,
+                          seed=self.seed)
 
         if not self.track_abundance:
             for m in mins:
