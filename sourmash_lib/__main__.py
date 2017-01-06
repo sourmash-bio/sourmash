@@ -705,7 +705,7 @@ Commands can be:
                             if fullname not in already_names:
                                 inp_files.append(fullname)
         else:
-            inp_files = args.queries
+            inp_files = set(args.queries) - already_names
 
         print('found {} files to query'.format(len(inp_files)))
 
