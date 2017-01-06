@@ -839,10 +839,13 @@ Commands can be:
 
             # print interim & save
             print('found: {:.2f} {} {}'.format(f_of_total,
-                                               len(new_mins),
+                                               len(new_mins.intersection(found_mins)),
                                                best_ss.name()))
             found.append((f_of_total, best_ss, sim))
             sum_found += f_of_total
+
+            if len(new_mins.intersection(found_mins)) <= 16:
+                break
 
             new_mins -= set(found_mins)
             e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins),
