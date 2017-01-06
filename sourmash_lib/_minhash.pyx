@@ -138,3 +138,6 @@ cdef class MinHash(object):
 
         for i in range(0, len(sequence) - ksize + 1):
             self._this.add_word(to_bytes(sequence[i:i + ksize]))
+
+    def __dealloc__(self):
+        del self._this
