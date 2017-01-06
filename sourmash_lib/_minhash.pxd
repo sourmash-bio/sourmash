@@ -46,18 +46,11 @@ cdef extern from "kmer_min_hash.hh":
         void merge(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
-        #unsigned int count_common(const KmerMinHash&) except +
 
 
 cdef class MinHash(object):
     cdef KmerMinHash *_this
     cdef bool track_abundance
 
-    #cpdef add_sequence(self, str sequence, bool force=*)
     cpdef get_mins(self, bool with_abundance=*)
-    #cpdef add_hash(self, uint64_t h)
     cpdef set_abundances(self, dict)
-    #cpdef uint64_t count_common(self, MinHash other) except +ValueError
-    #cpdef add_protein(self, str sequence)
-    #cpdef merge(self, MinHash other)
-    #cdef __copy__()

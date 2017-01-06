@@ -66,7 +66,6 @@ cdef class MinHash(object):
         self._this.add_hash(h)
 
     def count_common(self, MinHash other):
-        # TODO: add exception handling
         cdef KmerMinAbundance *mh = NULL
         cdef KmerMinAbundance *other_mh = NULL
         cdef uint64_t n = 0
@@ -88,16 +87,14 @@ cdef class MinHash(object):
         return n
 
     def compare(self, MinHash other):
-        # TODO: add exception handling
         n = self.count_common(other)
 
         if self.track_abundance:
-            #size = (<KmerMinAbundance*>self._this).mins.size()
-            size = (<KmerMinAbundance*>self._this).num
+            size = (<KmerMinAbundance*>self._this).mins.size()
         else:
-            #size = self._this.mins.size()
-            size = self._this.num
+            size = self._this.mins.size()
 
+        size = max(size, 1)
         return n / size
 
     def __iadd__(self, MinHash other):
@@ -132,6 +129,3 @@ cdef class MinHash(object):
 
         for i in range(0, len(sequence) - ksize + 1):
             self._this.add_word(sequence[i:i + ksize])
-
-    #cdef __copy__()
-    #cdef merge()
