@@ -757,6 +757,7 @@ Commands can be:
         parser.add_argument('--threshold', default=0.05, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
+        parser.add_argument('--save-matches', type=argparse.FileType('wt'))
 
         sourmash_args.add_moltype_args(parser)
 
@@ -844,7 +845,8 @@ Commands can be:
             sum_found += f_of_total
 
             new_mins -= set(found_mins)
-            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
+            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins),
+                                        max_hash=query.estimator.max_hash)
             for m in new_mins:
                 e.mh.add_hash(m)
             new_ss = sig.SourmashSignature('foo', e)
@@ -856,7 +858,7 @@ Commands can be:
         if not found:
             sys.exit(0)
 
-        found.sort()
+        found.sort(key=lambda x: x[0])
         found.reverse()
 
         print('Composition:')
@@ -879,6 +881,11 @@ Commands can be:
                 w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                                 similarity=sim,
                                 sketch_kmers=cardinality))
+        if args.save_matches:
+            outname = args.save_matches.name
+            print('saving all matches to "{}"'.format(outname))
+            sig.save_signatures([ ss for (f, ss, sim) in found ],
+                                args.save_matches)
 
     def watch(self, args):
         "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
