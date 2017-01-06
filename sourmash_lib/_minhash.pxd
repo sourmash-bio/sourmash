@@ -20,31 +20,32 @@ cdef extern from "kmer_min_hash.hh":
 
 
     cdef cppclass KmerMinHash:
-        #const uint32_t seed;
+        const uint32_t seed;
         const unsigned int num;
         const unsigned int ksize;
         const bool is_protein;
+        const HashIntoType max_hash;
         CMinHashType mins;
 
-        KmerMinHash(unsigned int, unsigned int, bool, uint32_t)
+        KmerMinHash(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
         void _shrink()
-        void add_hash(HashIntoType)
-        void add_word(string word)
-        void add_sequence(const char *, bool)
-        void merge(const KmerMinHash&)
-        unsigned int count_common(const KmerMinHash&) except +
+        void add_hash(HashIntoType) except +ValueError
+        void add_word(string word) except +ValueError
+        void add_sequence(const char *, bool) except +ValueError
+        void merge(const KmerMinHash&) except +ValueError
+        unsigned int count_common(const KmerMinHash&) except +ValueError
 
 
     cdef cppclass KmerMinAbundance(KmerMinHash):
         CMinAbundanceType mins;
 
-        KmerMinAbundance(unsigned int, unsigned int, bool, uint32_t)
-        void add_hash(HashIntoType)
-        void add_word(string word)
-        void add_sequence(const char *, bool)
-        void merge(const KmerMinAbundance&)
-        void merge(const KmerMinHash&)
-        unsigned int count_common(const KmerMinAbundance&) except +
+        KmerMinAbundance(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
+        void add_hash(HashIntoType) except +ValueError
+        void add_word(string word) except +ValueError
+        void add_sequence(const char *, bool) except +ValueError
+        void merge(const KmerMinAbundance&) except +ValueError
+        void merge(const KmerMinHash&) except +ValueError
+        unsigned int count_common(const KmerMinAbundance&) except +ValueError
         #unsigned int count_common(const KmerMinHash&) except +
 
 
@@ -52,11 +53,11 @@ cdef class MinHash(object):
     cdef KmerMinHash *_this
     cdef bool track_abundance
 
-    cpdef add_sequence(self, str sequence, bool force=*)
+    #cpdef add_sequence(self, str sequence, bool force=*)
     cpdef get_mins(self, bool with_abundance=*)
-    cpdef add_hash(self, uint64_t h)
+    #cpdef add_hash(self, uint64_t h)
     cpdef set_abundances(self, dict)
-    cpdef uint64_t count_common(self, MinHash other)
-    cpdef add_protein(self, str sequence)
+    #cpdef uint64_t count_common(self, MinHash other) except +ValueError
+    #cpdef add_protein(self, str sequence)
+    #cpdef merge(self, MinHash other)
     #cdef __copy__()
-    #cdef merge()

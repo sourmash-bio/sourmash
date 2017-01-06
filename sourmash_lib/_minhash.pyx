@@ -10,7 +10,9 @@ from libc.stdint cimport uint32_t
 
 from _minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 
+
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
+
 
 def hash_murmur(str kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
     "hash_murmur(string, [,seed])\n\n"
@@ -25,16 +27,21 @@ cdef class MinHash(object):
     def __cinit__(self, unsigned int n, unsigned int ksize,
                         bool is_protein=False,
                         bool track_abundance=False,
-                        uint32_t seed=MINHASH_DEFAULT_SEED):
+                        uint32_t seed=MINHASH_DEFAULT_SEED,
+                        HashIntoType max_hash=0):
         self.track_abundance = track_abundance
         if track_abundance:
-            self._this = new KmerMinAbundance(n, ksize, is_protein, seed)
+            self._this = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
         else:
-            self._this = new KmerMinHash(n, ksize, is_protein, seed)
+            self._this = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
 
+    def __copy__(self):
+        a = MinHash(self._this.num, self._this.ksize, self._this.is_protein,
+                    self.track_abundance, self._this.seed, self._this.max_hash)
+        a.merge(self)
+        return a
 
-    cpdef add_sequence(self, str sequence, bool force=True):
-        # TODO: add exception handling
+    def add_sequence(self, str sequence, bool force=True):
         self._this.add_sequence(sequence, force)
 
     def __len__(self):
@@ -48,13 +55,17 @@ cdef class MinHash(object):
         else:
             return list(sorted(self._this.mins))
 
+    @property
+    def seed(self):
+        return self._this.seed
+
     def is_protein(self):
         return self._this.is_protein
 
-    cpdef add_hash(self, uint64_t h):
+    def add_hash(self, uint64_t h):
         self._this.add_hash(h)
 
-    cpdef uint64_t count_common(self, MinHash other):
+    def count_common(self, MinHash other):
         # TODO: add exception handling
         cdef KmerMinAbundance *mh = NULL
         cdef KmerMinAbundance *other_mh = NULL
@@ -79,18 +90,39 @@ cdef class MinHash(object):
     def compare(self, MinHash other):
         # TODO: add exception handling
         n = self.count_common(other)
+
         if self.track_abundance:
-            size = (<KmerMinAbundance*>self._this).mins.size()
+            #size = (<KmerMinAbundance*>self._this).mins.size()
+            size = (<KmerMinAbundance*>self._this).num
         else:
-            size = self._this.mins.size()
+            #size = self._this.mins.size()
+            size = self._this.num
+
         return n / size
 
-    cpdef set_abundances(self, dict values):
-        # TODO: need to check if track_abundance is True
-        for k, v in values.items():
-            (<KmerMinAbundance*>self._this).mins[k] = v
+    def __iadd__(self, MinHash other):
+#        if self.track_abundance:
+#            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
+#        else:
+#            self._this.merge(deref(other._this))
+        pass
 
-    cpdef add_protein(self, str sequence):
+    def merge(self, MinHash other):
+        if self.track_abundance:
+            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
+        else:
+            self._this.merge(deref(other._this))
+        return self
+
+    cpdef set_abundances(self, dict values):
+        if self.track_abundance:
+            for k, v in values.items():
+                (<KmerMinAbundance*>self._this).mins[k] = v
+        else:
+            raise RuntimeError("Use track_abundance=True when constructing "
+                               "the MinHash to use set_abundances.")
+
+    def add_protein(self, str sequence):
         cdef uint32_t ksize = self._this.ksize / 3
         if len(sequence) < ksize:
             return
@@ -101,6 +133,5 @@ cdef class MinHash(object):
         for i in range(0, len(sequence) - ksize + 1):
             self._this.add_word(sequence[i:i + ksize])
 
-    #cdef add_protein()
     #cdef __copy__()
     #cdef merge()
