@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import os
 import glob
 import gzip
@@ -397,7 +397,7 @@ def test_do_plot_comparison():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-    
+
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '-o', 'cmp'],
@@ -418,7 +418,7 @@ def test_do_plot_comparison_2():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-    
+
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '-o', 'cmp'],
@@ -439,7 +439,7 @@ def test_do_plot_comparison_3():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-    
+
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '-o', 'cmp'],
@@ -527,7 +527,7 @@ def test_mash_csv_to_sig():
                                                         testdata1,
                                                         '-o', 'xxx.sig'],
                                            in_directory=location)
-        
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31', testdata2],
                                            in_directory=location)

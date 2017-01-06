@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cython: c_string_type=str, c_string_encoding=ascii
+# cython: language_level=3, c_string_type=str, c_string_encoding=ascii
 
 from __future__ import unicode_literals
 
@@ -8,7 +8,7 @@ from cython.operator cimport dereference as deref
 from libcpp cimport bool
 from libc.stdint cimport uint32_t
 
-from _minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
+from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 
 
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
@@ -120,7 +120,7 @@ cdef class MinHash(object):
                                "the MinHash to use set_abundances.")
 
     def add_protein(self, str sequence):
-        cdef uint32_t ksize = self._this.ksize / 3
+        cdef uint32_t ksize = self._this.ksize // 3
         if len(sequence) < ksize:
             return
 

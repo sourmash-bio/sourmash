@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-# cython: c_string_type=str, c_string_encoding=ascii
+# cython: language_level=3, c_string_type=str, c_string_encoding=ascii
 
 from __future__ import unicode_literals
 
