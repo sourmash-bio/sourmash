@@ -14,12 +14,21 @@ from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
 
 
-def hash_murmur(str kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
+cdef bytes to_bytes(s):
+    if not isinstance(s, (basestring, bytes)):
+        raise TypeError("Requires a string-like sequence")
+
+    if isinstance(s, unicode):
+        s = s.encode('utf-8')
+    return s
+
+
+def hash_murmur(kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
     "hash_murmur(string, [,seed])\n\n"
     "Compute a hash for a string, optionally using a seed (an integer). "
     "The current default seed is returned by hash_seed()."
 
-    return _hash_murmur(kmer, seed)
+    return _hash_murmur(to_bytes(kmer), seed)
 
 
 cdef class MinHash(object):
@@ -41,8 +50,8 @@ cdef class MinHash(object):
         a.merge(self)
         return a
 
-    def add_sequence(self, str sequence, bool force=False):
-        self._this.add_sequence(sequence, force)
+    def add_sequence(self, sequence, bool force=False):
+        self._this.add_sequence(to_bytes(sequence), force)
 
     def __len__(self):
         return self._this.num
@@ -119,7 +128,7 @@ cdef class MinHash(object):
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")
 
-    def add_protein(self, str sequence):
+    def add_protein(self, sequence):
         cdef uint32_t ksize = self._this.ksize // 3
         if len(sequence) < ksize:
             return
@@ -128,4 +137,4 @@ cdef class MinHash(object):
             raise ValueError("cannot add amino acid sequence to DNA MinHash!")
 
         for i in range(0, len(sequence) - ksize + 1):
-            self._this.add_word(sequence[i:i + ksize])
+            self._this.add_word(to_bytes(sequence[i:i + ksize]))
