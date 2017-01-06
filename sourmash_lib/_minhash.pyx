@@ -41,7 +41,7 @@ cdef class MinHash(object):
         a.merge(self)
         return a
 
-    def add_sequence(self, str sequence, bool force=True):
+    def add_sequence(self, str sequence, bool force=False):
         self._this.add_sequence(sequence, force)
 
     def __len__(self):
@@ -101,11 +101,11 @@ cdef class MinHash(object):
         return n / size
 
     def __iadd__(self, MinHash other):
-#        if self.track_abundance:
-#            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
-#        else:
-#            self._this.merge(deref(other._this))
-        pass
+        if self.track_abundance:
+            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
+        else:
+            self._this.merge(deref(other._this))
+        return self
 
     def merge(self, MinHash other):
         if self.track_abundance:
