@@ -13,7 +13,7 @@ env:
   - TOX_ENV=py35
 
 install:
-- pip install tox
+- pip install tox Cython
 
 script:
     tox -e $TOX_ENV
