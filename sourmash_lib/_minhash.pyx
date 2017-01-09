@@ -58,11 +58,11 @@ cdef class MinHash(object):
 
     cpdef get_mins(self, bool with_abundance=False):
         if with_abundance and self.track_abundance:
-            return dict((<KmerMinAbundance*>self._this).mins)
+            return (<KmerMinAbundance*>self._this).mins
         elif self.track_abundance:
-            return list(sorted((<KmerMinAbundance*>self._this).mins.keys()))
+            return [it.first for it in (<KmerMinAbundance*>self._this).mins]
         else:
-            return list(sorted(self._this.mins))
+            return [it for it in self._this.mins]
 
     @property
     def seed(self):
@@ -97,13 +97,7 @@ cdef class MinHash(object):
 
     def compare(self, MinHash other):
         n = self.count_common(other)
-
-        if self.track_abundance:
-            size = (<KmerMinAbundance*>self._this).mins.size()
-        else:
-            size = self._this.mins.size()
-
-        size = max(size, 1)
+        size = max(self._this.size(), 1)
         return n / size
 
     def __iadd__(self, MinHash other):

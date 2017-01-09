@@ -231,6 +231,11 @@ public:
         }
         return mins.size() + other.mins.size() - combined.size();
     }
+
+    virtual size_t size() {
+        return mins.size();
+    }
+
     virtual ~KmerMinHash() throw() { }
 
 private:
@@ -390,6 +395,10 @@ class KmerMinAbundance: public KmerMinHash {
             combined.insert(mi);
         }
         return mins.size() + other.mins.size() - combined.size();
+    }
+
+    virtual size_t size() {
+        return mins.size();
     }
 
 };
