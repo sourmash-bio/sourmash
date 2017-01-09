@@ -57,10 +57,9 @@ class TimeMinHashSuite:
             mh.merge(other_mh)
 
     def time_copy(self):
-        mh = self.mh
-        other_mh = self.populated_mh
+        mh = self.populated_mh
         for i in range(500):
-            mh.__copy__(other_mh)
+            mh.__copy__()
 
     def time_concat(self):
         mh = self.mh
@@ -102,7 +101,7 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
 
     def time_set_abundances(self):
         mh = self.mh
-        mins = self.populated_mh.get_mins()
+        mins = self.populated_mh.get_mins(with_abundance=True)
         for i in range(500):
             mh.set_abundances(mins)
 
