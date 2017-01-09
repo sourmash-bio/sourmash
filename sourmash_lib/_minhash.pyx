@@ -33,28 +33,33 @@ def hash_murmur(kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
 
 cdef class MinHash(object):
 
-    def __cinit__(self, unsigned int n, unsigned int ksize,
-                        bool is_protein=False,
-                        bool track_abundance=False,
-                        uint32_t seed=MINHASH_DEFAULT_SEED,
-                        HashIntoType max_hash=0):
+    def __init__(self, unsigned int n, unsigned int ksize,
+                       bool is_protein=False,
+                       bool track_abundance=False,
+                       uint32_t seed=MINHASH_DEFAULT_SEED,
+                       HashIntoType max_hash=0):
         self.track_abundance = track_abundance
+
+        cdef KmerMinHash *mh = NULL
         if track_abundance:
-            self._this = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
         else:
-            self._this = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+
+        self._this.reset(mh)
 
     def __copy__(self):
-        a = MinHash(self._this.num, self._this.ksize, self._this.is_protein,
-                    self.track_abundance, self._this.seed, self._this.max_hash)
+        a = MinHash(deref(self._this).num, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, deref(self._this).max_hash)
         a.merge(self)
         return a
 
     def add_sequence(self, sequence, bool force=False):
-        self._this.add_sequence(to_bytes(sequence), force)
+        deref(self._this).add_sequence(to_bytes(sequence), force)
 
     def __len__(self):
-        return self._this.num
+        return deref(self._this).num
 
     cpdef get_mins(self, bool with_abundance=False):
         if with_abundance and self.track_abundance:
@@ -66,32 +71,24 @@ cdef class MinHash(object):
 
     @property
     def seed(self):
-        return self._this.seed
+        return deref(self._this).seed
 
     def is_protein(self):
-        return self._this.is_protein
+        return deref(self._this).is_protein
 
     def add_hash(self, uint64_t h):
-        self._this.add_hash(h)
+        deref(self._this).add_hash(h)
 
     def count_common(self, MinHash other):
-        cdef KmerMinAbundance *mh = NULL
-        cdef KmerMinAbundance *other_mh = NULL
         cdef uint64_t n = 0
 
         if self.track_abundance:
-            mh = <KmerMinAbundance*>(self._this)
-            if other.track_abundance:
-                other_mh = <KmerMinAbundance*>(other._this)
-                n = mh.count_common(deref(other_mh))
-            else:
-                n = mh.count_common(deref(other._this))
+            n = deref(self._this).count_common(deref(other._this))
         else:
             if other.track_abundance:
-                other_mh = <KmerMinAbundance*>(other._this)
-                n = other_mh.count_common(deref(self._this))
+                n = deref(other._this).count_common(deref(self._this))
             else:
-                n = self._this.count_common(deref(other._this))
+                n = deref(self._this).count_common(deref(other._this))
 
         return n
 
@@ -102,36 +99,33 @@ cdef class MinHash(object):
 
     def __iadd__(self, MinHash other):
         if self.track_abundance:
-            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
+            deref(self._this).merge(deref(other._this))
         else:
-            self._this.merge(deref(other._this))
+            deref(self._this).merge(deref(other._this))
         return self
 
     def merge(self, MinHash other):
         if self.track_abundance:
-            (<KmerMinAbundance*>self._this).merge(deref(<KmerMinAbundance*>other._this))
+            deref(self._this).merge(deref(other._this))
         else:
-            self._this.merge(deref(other._this))
+            deref(self._this).merge(deref(other._this))
         return self
 
     cpdef set_abundances(self, dict values):
         if self.track_abundance:
             for k, v in values.items():
-                (<KmerMinAbundance*>self._this).mins[k] = v
+                (<KmerMinAbundance>deref(self._this)).mins[k] = v
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")
 
     def add_protein(self, sequence):
-        cdef uint32_t ksize = self._this.ksize // 3
+        cdef uint32_t ksize = deref(self._this).ksize // 3
         if len(sequence) < ksize:
             return
 
-        if not self._this.is_protein:
+        if not deref(self._this).is_protein:
             raise ValueError("cannot add amino acid sequence to DNA MinHash!")
 
         for i in range(0, len(sequence) - ksize + 1):
-            self._this.add_word(to_bytes(sequence[i:i + ksize]))
-
-    def __dealloc__(self):
-        del self._this
+            deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))

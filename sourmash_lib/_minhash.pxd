@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 from libcpp cimport bool
 from libcpp.map cimport map
+from libcpp.memory cimport unique_ptr
 from libcpp.set cimport set
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint64_t
@@ -51,7 +52,8 @@ cdef extern from "kmer_min_hash.hh":
 
 
 cdef class MinHash(object):
-    cdef KmerMinHash *_this
+    cdef unique_ptr[KmerMinHash] _this
+    #cdef unique_ptr[KmerMinAbundance] _this
     cdef bool track_abundance
 
     cpdef get_mins(self, bool with_abundance=*)
