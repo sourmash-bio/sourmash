@@ -3,7 +3,7 @@
 
 from __future__ import unicode_literals
 
-from cython.operator cimport dereference as deref
+from cython.operator cimport dereference as deref, address
 
 from libcpp cimport bool
 from libc.stdint cimport uint32_t
@@ -62,12 +62,13 @@ cdef class MinHash(object):
         return deref(self._this).num
 
     cpdef get_mins(self, bool with_abundance=False):
+        cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         if with_abundance and self.track_abundance:
-            return (<KmerMinAbundance*>self._this).mins
+            return mh.mins
         elif self.track_abundance:
-            return [it.first for it in (<KmerMinAbundance*>self._this).mins]
+            return [it.first for it in mh.mins]
         else:
-            return [it for it in self._this.mins]
+            return [it for it in deref(self._this).mins]
 
     @property
     def seed(self):
@@ -80,13 +81,21 @@ cdef class MinHash(object):
         deref(self._this).add_hash(h)
 
     def count_common(self, MinHash other):
+        cdef KmerMinAbundance *mh = NULL
+        cdef KmerMinAbundance *other_mh = NULL
         cdef uint64_t n = 0
 
         if self.track_abundance:
-            n = deref(self._this).count_common(deref(other._this))
+            mh = <KmerMinAbundance*>address(deref(self._this))
+            if other.track_abundance:
+                other_mh = <KmerMinAbundance*>address(deref(other._this))
+                n = mh.count_common(deref(other_mh))
+            else:
+                n = mh.count_common(deref(other._this))
         else:
             if other.track_abundance:
-                n = deref(other._this).count_common(deref(self._this))
+                other_mh = <KmerMinAbundance*>address(deref(other._this))
+                n = other_mh.count_common(deref(self._this))
             else:
                 n = deref(self._this).count_common(deref(other._this))
 
@@ -94,27 +103,24 @@ cdef class MinHash(object):
 
     def compare(self, MinHash other):
         n = self.count_common(other)
-        size = max(self._this.size(), 1)
+        size = max(deref(self._this).size(), 1)
         return n / size
 
     def __iadd__(self, MinHash other):
+        cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
+        cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
         if self.track_abundance:
-            deref(self._this).merge(deref(other._this))
+             mh.merge(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
-        return self
 
-    def merge(self, MinHash other):
-        if self.track_abundance:
-            deref(self._this).merge(deref(other._this))
-        else:
-            deref(self._this).merge(deref(other._this))
         return self
+    merge = __iadd__
 
     cpdef set_abundances(self, dict values):
         if self.track_abundance:
             for k, v in values.items():
-                (<KmerMinAbundance>deref(self._this)).mins[k] = v
+                (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")
