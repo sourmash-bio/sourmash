@@ -7,7 +7,6 @@
 #include <queue>
 #include <exception>
 #include <string>
-#include <unordered_map>
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
@@ -21,7 +20,8 @@ uint64_t _hash_murmur(const std::string& kmer,
 
 typedef uint64_t HashIntoType;
 
-typedef std::set<HashIntoType> CMinHashType;
+//typedef std::set<HashIntoType> CMinHashType;
+typedef std::vector<HashIntoType> CMinHashType;
 
 typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
 
@@ -54,27 +54,30 @@ public:
 
     KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
                 HashIntoType mx) :
-        num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) { };
+        num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
+          mins.reserve(num + 1);
+        };
 
     virtual void _shrink() {
-        if (num == 0) {
-            return;
-        }
-        while (mins.size() > num) {
-            CMinHashType::iterator mi = mins.end();
-            mi--;
-            mins.erase(mi);
-        }
+        // pass
     }
     virtual void add_hash(HashIntoType h) {
-        if (max_hash) {
-            if (h <= max_hash) {
-                mins.insert(h);
-            }
-        } else {
-            mins.insert(h);
+      if (mins.back() > h or mins.size() < num) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+
+        // must still be growing, we know the list won't get too long
+        if (pos == mins.cend()) {
+          mins.push_back(h);
         }
-        _shrink();
+        // inserting somewhere in the middle, if this value isn't already
+        // in mins store it and shrink list if needed
+        else if (*pos != h) {
+          mins.insert(pos, h);
+          if (mins.size() > num) {
+            mins.pop_back();
+          }
+        }
+      }
     }
     void add_word(std::string word) {
         HashIntoType hash = _hash_murmur(word, seed);
@@ -201,13 +204,14 @@ public:
         if (seed != other.seed) {
             throw minhash_exception("mismatch in seed; merge fail");
         }
-        for (auto mi: other.mins) {
-            mins.insert(mi);
-        }
-        _shrink();
+        CMinHashType merged;
+        merged.reserve(other.mins.size() + mins.size());
+        std::merge(other.mins.begin(), other.mins.end(),
+                   mins.begin(), mins.end(), std::back_inserter(merged));
+        mins = merged;
     }
     virtual unsigned int count_common(const KmerMinHash& other) {
-        CMinHashType combined;
+        std::set<HashIntoType> combined;
 
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
@@ -222,11 +226,11 @@ public:
             throw minhash_exception("mismatch in seed; comparison fail");
         }
 
-        CMinHashType::iterator mi;
-        for (mi = mins.begin(); mi != mins.end(); ++mi) {
+        //CMinHashType::iterator mi;
+        for (auto mi = mins.begin(); mi != mins.end(); ++mi) {
             combined.insert(*mi);
         }
-        for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
+        for (auto mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
             combined.insert(*mi);
         }
         return mins.size() + other.mins.size() - combined.size();
@@ -348,7 +352,7 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual unsigned int count_common(const KmerMinAbundance& other) {
-        CMinHashType combined;
+        std::set<HashIntoType> combined;
 
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
@@ -373,7 +377,7 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual unsigned int count_common(const KmerMinHash& other) {
-        CMinHashType combined;
+        std::set<HashIntoType> combined;
 
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
