@@ -61,7 +61,7 @@ public:
     virtual void _shrink() {
         // pass
     }
-    virtual void add_hash(HashIntoType h) {
+    virtual void add_hash(const HashIntoType h) {
       if (mins.back() > h or mins.size() < num) {
         auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
@@ -79,8 +79,8 @@ public:
         }
       }
     }
-    void add_word(std::string word) {
-        HashIntoType hash = _hash_murmur(word, seed);
+    void add_word(const std::string& word) {
+        const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
     void add_sequence(const char * sequence, bool force=false) {
@@ -90,8 +90,8 @@ public:
         const std::string seq = _checkdna(sequence, force);
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-                std::string kmer = seq.substr(i, ksize);
-                std::string rc = _revcomp(kmer);
+                const std::string kmer = seq.substr(i, ksize);
+                const std::string rc = _revcomp(kmer);
                 if (kmer < rc) {
                     add_word(kmer);
                 } else {
