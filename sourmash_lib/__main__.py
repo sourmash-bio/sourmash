@@ -795,6 +795,7 @@ Commands can be:
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
                                                       query_moltype))
+        notify('query signature has max_hash: {}', query.estimator.max_hash)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         #s = sig.load_signatures(args.query, select_ksize=args.ksize)
@@ -809,7 +810,6 @@ Commands can be:
             # use super low threshold for this part of the search
             for leaf in tree.find(search_fn, query, 0.00001):
                 results.append((query.similarity(leaf.data), leaf.data))
-                #results.append((leaf.data.similarity(ss), leaf.data))
 
             if not len(results):          # no matches at all!
                 break
@@ -837,10 +837,21 @@ Commands can be:
             new_mins = set(query.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
 
+            # intersection:
+            intersect_mins = new_mins.intersection(found_mins)
+
+            # first denominator - genome size
+            genome_n_mins = len(found_mins)
+            f_genome = len(intersect_mins) / float(genome_n_mins)
+
+            # second denominator - metagenome size
+            query_n_mins = len(orig_query.estimator.mh.get_mins())
+            f_query = len(intersect_mins) / float(query_n_mins)
+
             # print interim & save
-            print('found: {:.2f} {} {}'.format(f_of_total,
-                                               len(new_mins.intersection(found_mins)),
-                                               best_ss.name()))
+            print('found: {:.2f} {:.2f} {}'.format(f_genome,
+                                                  f_query,
+                                                  best_ss.name()))
             found.append((f_of_total, best_ss, sim))
             sum_found += f_of_total
 
