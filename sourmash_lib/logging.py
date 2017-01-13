@@ -1,3 +1,5 @@
+from __future__ import print_function
+import sys
 
 _quiet = False
 def notify(s, *args, **kwargs):
