@@ -41,6 +41,14 @@ protected:
     const std::string _msg;
 };
 
+// Looks like a iterator but all it does is counts push_backs
+struct Counter {
+  struct value_type {
+    template <typename T> value_type(const T &) {}
+  };
+  void push_back(const value_type &) { ++count; }
+  size_t count = 0;
+};
 
 class KmerMinHash
 {
@@ -227,8 +235,6 @@ public:
         }
     }
     virtual unsigned int count_common(const KmerMinHash& other) {
-        std::set<HashIntoType> combined;
-
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
         }
@@ -242,14 +248,11 @@ public:
             throw minhash_exception("mismatch in seed; comparison fail");
         }
 
-        //CMinHashType::iterator mi;
-        for (auto mi = mins.begin(); mi != mins.end(); ++mi) {
-            combined.insert(*mi);
-        }
-        for (auto mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
-            combined.insert(*mi);
-        }
-        return mins.size() + other.mins.size() - combined.size();
+        Counter counter;
+        std::set_intersection(mins.begin(), mins.end(),
+                              other.mins.begin(), other.mins.end(),
+                              std::back_inserter(counter));
+        return counter.count;
     }
 
     virtual size_t size() {

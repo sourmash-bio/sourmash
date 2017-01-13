@@ -583,6 +583,7 @@ def test_abundance_count_common():
     assert b.get_mins(with_abundance=True) == [2110480117637990133,
                                                10798773792509008305]
 
+
 def test_abundance_compare():
     a = MinHash(20, 10, track_abundance=True)
     b = MinHash(20, 10, track_abundance=False)
