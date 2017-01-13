@@ -9,17 +9,13 @@ import sourmash_lib
 from . import signature as sig
 from . import fig as sourmash_fig
 from . import sourmash_args
+from .logging import notify, error
 from ._minhash import MinHash
 
 DEFAULT_K = 31
 DEFAULT_N = 500
 
 WATERMARK_SIZE=10000
-
-
-def notify(s, *args, **kwargs):
-    "A simple logging function => stderr."
-    print(s.format(*args, **kwargs), file=sys.stderr)
 
 
 class SourmashCommands(object):
