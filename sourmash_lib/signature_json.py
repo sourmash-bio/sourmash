@@ -12,6 +12,7 @@ import sourmash_lib
 import io
 import json
 import ijson
+from .logging import notify
 
 def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
     """
