@@ -53,16 +53,27 @@ public:
     CMinHashType mins;
 
     KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
-                HashIntoType mx) :
-        num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
-          mins.reserve(num + 1);
-        };
+                HashIntoType mx)
+        : // overflow num to represent "no maximum"
+          num(n > 0 ? n : -1),
+          ksize(k), is_protein(prot), seed(s),
+          // overflow max_hash to represent "no maximum", this simplifies
+          // the comparison in add_hash()
+          max_hash(mx > 0 ? mx : -1) {
+      if (n > 0) {
+        mins.reserve(num + 1);
+      }
+      // only reserve a finite amount of space for unbounded MinHashes
+      else {
+        mins.reserve(1000);
+      }
+    };
 
     virtual void _shrink() {
         // pass
     }
     virtual void add_hash(const HashIntoType h) {
-      if (mins.back() > h or mins.size() < num) {
+      if (h <= max_hash and (mins.back() > h or mins.size() < num)) {
         auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
         // must still be growing, we know the list won't get too long
@@ -132,9 +143,8 @@ public:
     }
 
     std::string _checkdna(const char * s, bool force=false) const {
-        size_t seqsize = strlen(s);
-
         std::string seq = s;
+        const size_t seqsize = strlen(s);
 
         for (size_t i=0; i < seqsize; ++i) {
             switch(seq[i]) {
@@ -206,9 +216,15 @@ public:
         }
         CMinHashType merged;
         merged.reserve(other.mins.size() + mins.size());
-        std::merge(other.mins.begin(), other.mins.end(),
-                   mins.begin(), mins.end(), std::back_inserter(merged));
-        mins = merged;
+        std::set_union(other.mins.begin(), other.mins.end(),
+                       mins.begin(), mins.end(),
+                       std::back_inserter(merged));
+        if (merged.size() < num) {
+          mins = merged;
+        }
+        else {
+          mins = CMinHashType(std::begin(merged), std::begin(merged) + num);
+        }
     }
     virtual unsigned int count_common(const KmerMinHash& other) {
         std::set<HashIntoType> combined;

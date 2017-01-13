@@ -326,6 +326,33 @@ def test_mh_merge(track_abundance):
     assert d.compare(c) == 1.0
 
 
+def test_mh_merge_check_length(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    assert(len(c.get_mins()) == 20)
+
+
+def test_mh_merge_check_length2(track_abundance):
+    # merged MH doesn't have full number of elements
+    a = MinHash(4, 10, track_abundance=track_abundance)
+    a.add_hash(3)
+    a.add_hash(1)
+    a.add_hash(4)
+
+    b = MinHash(4, 10, track_abundance=track_abundance)
+    b.add_hash(3)
+    b.add_hash(1)
+    b.add_hash(4)
+
+    c = a.merge(b)
+    assert(len(c.get_mins()) == 3)
 
 
 def test_mh_asymmetric_merge(track_abundance):
@@ -394,6 +421,7 @@ def test_mh_inplace_concat(track_abundance):
     assert c.get_mins() == d.get_mins()
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
+
 
 def test_mh_merge_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
