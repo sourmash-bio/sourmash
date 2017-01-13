@@ -213,7 +213,6 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
 
     for n, sigset in enumerate(it):
         if n > 0 and n % 100 == 0:
-            assert 0
             notify('\r...sig loading {:,}', n, end='', flush=True)
         for sig in sigset['signatures']:
             yield sig
