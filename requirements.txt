@@ -4,3 +4,4 @@ PyYAML
 numpy
 matplotlib
 scipy
+Cython

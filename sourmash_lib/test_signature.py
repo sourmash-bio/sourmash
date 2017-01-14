@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 import sourmash_lib
 from sourmash_lib.signature import SourmashSignature, save_signatures, \
     load_signatures
