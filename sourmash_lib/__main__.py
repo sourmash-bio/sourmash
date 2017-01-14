@@ -500,8 +500,7 @@ Commands can be:
                 hashes = list(map(int, hashes.split(' ' )))
 
                 e = sourmash_lib.Estimators(len(hashes), ksize)
-                for h in hashes:
-                    e.mh.add_hash(h)
+                e.add_many(hashes)
                 s = sig.SourmashSignature(args.email, e, filename=name)
                 siglist.append(s)
                 print('loaded signature:', name,
@@ -526,7 +525,7 @@ Commands can be:
             s = siglist[0]
 
             fp = open(filename + '.dump.txt', 'w')
-            fp.write(" ".join((map(str, s.estimator.mh.get_mins()))))
+            fp.write(" ".join((map(str, s.estimator.get_hashes()))))
             fp.close()
 
     def sbt_index(self, args):
@@ -801,10 +800,9 @@ Commands can be:
 
         R_metagenome = 2**64 / orig_query.estimator.max_hash
 
-        new_mins = query.estimator.mh.get_mins()
+        new_mins = query.estimator.get_hashes()
         e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
-        for m in new_mins:
-            e.mh.add_hash(m)
+        e.update(query.estimator)
         query = sig.SourmashSignature('', e)
 
         sum_found = 0.
@@ -825,8 +823,8 @@ Commands can be:
             best_sim, best_ss = results[0]
 
             # subtract found hashes from search hashes, construct new search
-            new_mins = set(query.estimator.mh.get_mins())
-            found_mins = best_ss.estimator.mh.get_mins()
+            new_mins = set(query.estimator.get_hashes())
+            found_mins = best_ss.estimator.get_hashes()
 
             if best_ss.estimator.max_hash:
                 R_genome = 2**64 / best_ss.estimator.max_hash
@@ -858,7 +856,7 @@ Commands can be:
             f_genome = len(intersect_mins) / float(genome_n_mins)
 
             # second denominator - metagenome size
-            query_n_mins = len(orig_query.estimator.mh.get_mins())
+            query_n_mins = len(orig_query.estimator.get_hashes())
             f_query = len(intersect_mins) / float(query_n_mins)
 
             # print interim & save
@@ -872,8 +870,7 @@ Commands can be:
 
             new_mins -= set(found_mins)
             e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
-            for m in new_mins:
-                e.mh.add_hash(m)
+            e.add_many(new_mins)
             query = sig.SourmashSignature('', e)
 
         print('found {}, total fraction {:.3f}'.format(len(found), sum_found))

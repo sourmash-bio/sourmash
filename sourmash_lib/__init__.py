@@ -99,8 +99,7 @@ class Estimators(object):
                           seed=self.seed)
 
         if not self.track_abundance:
-            for m in mins:
-                self.mh.add_hash(m)
+            self.add_many(mins)
         else:
             self.mh.set_abundances(mins)
 
@@ -112,6 +111,17 @@ class Estimators(object):
     def add(self, kmer):
         "Add kmer into sketch."
         self.mh.add_sequence(kmer)
+
+    def add_many(self, hashes):
+        "Add many hashes in at once."
+        for hash in hashes:
+            self.mh.add_hash(hash)
+
+    def update(self, other):
+        self.add_many(other.mh.get_mins())
+
+    def get_hashes(self):
+        return self.mh.get_mins()
 
     def add_sequence(self, seq, force=False):
         "Sanitize and add a sequence to the sketch."
