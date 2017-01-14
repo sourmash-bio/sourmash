@@ -16,5 +16,3 @@ def error(s, *args, **kwargs):
     print(s.format(*args, **kwargs), file=sys.stderr)
     if kwargs.get('flush'):
         sys.stderr.flush()
-
-
