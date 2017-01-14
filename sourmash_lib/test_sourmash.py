@@ -595,6 +595,30 @@ def test_do_sourmash_sbt_search():
         assert testdata2 in out
 
 
+def test_do_sourmash_sbt_index_single():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+
+
 def test_do_sourmash_sbt_search_selectprot():
     # sbt_index should fail when run on signatures with multiple types
     with utils.TempDirectory() as location:
