@@ -2,6 +2,8 @@
 """
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
+from __future__ import print_function
+import sys
 import yaml
 import hashlib
 import sourmash_lib
@@ -181,6 +183,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
                 if not select_moltype or \
                      sig.estimator.is_molecule_type(select_moltype):
                     yield sig
+    except Exception as e:
+        print("Error in parsing signature; quitting.", file=sys.stderr)
+        print("Exception: {}".format(str(e)), file=sys.stderr)
     finally:
         if is_fp:
             data.close()
