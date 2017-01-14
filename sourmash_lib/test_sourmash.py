@@ -734,6 +734,40 @@ def test_sbt_gather():
         assert 'found: 1.00 1.00 ' in out
 
 
+def test_sbt_gather_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--with-cardinality'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found: 1.00 1.00 ' in out
+
+
 def test_sbt_gather_error_no_cardinality_query():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
