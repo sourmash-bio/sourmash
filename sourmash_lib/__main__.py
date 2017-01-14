@@ -634,7 +634,7 @@ Commands can be:
         if args.traverse_directory:
             inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
         else:
-            inp_files = args.queries
+            inp_files = set(args.queries) - already_names
 
         inp_files = set(inp_files) - already_names
 
