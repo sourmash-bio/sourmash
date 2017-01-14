@@ -1,3 +1,6 @@
+"""
+sourmash command line.
+"""
 from __future__ import print_function
 import sys
 import os, os.path
@@ -552,16 +555,11 @@ Commands can be:
         factory = GraphFactory(1, args.bf_size, 4)
         tree = SBT(factory)
 
-        inp_files = list(args.signatures)
-
         if args.traverse_directory:
-            inp_files = []
-            for dirname in args.signatures:
-                for root, dirs, files in os.walk(dirname):
-                    for name in files:
-                        if name.endswith('.sig'):
-                            fullname = os.path.join(root, name)
-                            inp_files.append(fullname)
+            inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+        else:
+            inp_files = list(args.signatures)
+
 
         print('loading {} files into SBT'.format(len(inp_files)))
 
@@ -703,16 +701,11 @@ Commands can be:
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
         if args.traverse_directory:
-            inp_files = []
-            for dirname in args.queries:
-                for root, dirs, files in os.walk(dirname):
-                    for name in files:
-                        if name.endswith('.sig'):
-                            fullname = os.path.join(root, name)
-                            if fullname not in already_names:
-                                inp_files.append(fullname)
+            inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
         else:
-            inp_files = set(args.queries) - already_names
+            inp_files = args.queries
+
+        inp_files = set(inp_files) - already_names
 
         print('found {} files to query'.format(len(inp_files)))
 

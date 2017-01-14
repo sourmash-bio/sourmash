@@ -1,6 +1,9 @@
+"""
+Utility functions for dealing with input args to the sourmash command line.
+"""
 import sys
+import os
 from sourmash_lib import signature
-
 
 def add_moltype_args(parser, default_dna=None):
     parser.add_argument('--protein', dest='protein', action='store_true')
@@ -64,3 +67,11 @@ class LoadSingleSignatures(object):
             if len(self.ksizes) > 1 or len(self.moltypes) > 1:
                 raise ValueError('multiple k-mer sizes/molecule types present')
 
+
+def traverse_find_sigs(dirnames):
+    for dirname in dirnames:
+        for root, dirs, files in os.walk(dirname):
+            for name in files:
+                if name.endswith('.sig'):
+                    fullname = os.path.join(root, name)
+                    yield fullname
