@@ -1,3 +1,3 @@
 [run]
 include=sourmash,sourmash_lib/*.py
-omit=setup.py,sourmash_lib/test__minhash.py,sourmash_lib/test_sourmash.py,sourmash_lib/sourmash_tst_utils.py
+omit=setup.py,sourmash_lib/test__minhash.py,sourmash_lib/test_sourmash.py,sourmash_lib/sourmash_tst_utils.py,third-party/smhasher/MurmurHash3.cc
