@@ -118,9 +118,11 @@ class Estimators(object):
             self.mh.add_hash(hash)
 
     def update(self, other):
+        "Update this estimator from all the hashes from the other."
         self.add_many(other.mh.get_mins())
 
     def get_hashes(self):
+        "Get the list of hashes."
         return self.mh.get_mins()
 
     def add_sequence(self, seq, force=False):
