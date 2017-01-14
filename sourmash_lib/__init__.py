@@ -126,6 +126,14 @@ class Estimators(object):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
 
+    def similarity_ignore_maxhash(self, other):
+        a = set(self.mh.get_mins())
+        b = set(other.mh.get_mins())
+
+        overlap = a.intersection(b)
+        return float(len(overlap)) / float(len(a))
+
+
     def similarity(self, other, ignore_abundance=False):
         """\
         Calculate similarity of two sketches.

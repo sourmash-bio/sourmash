@@ -744,7 +744,7 @@ Commands can be:
     def sbt_gather(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
         from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-        from sourmash_lib.sbtmh import SearchMinHashesFindBest
+        from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
@@ -791,21 +791,31 @@ Commands can be:
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
                                                       query_moltype))
-        notify('query signature has max_hash: {}', query.estimator.max_hash)
+        if query.estimator.max_hash == 0:
+            error('query signature needs to be created with --scaled')
+            error('or using --with-cardinality.')
+            sys.exit(-1)
 
-        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        #s = sig.load_signatures(args.query, select_ksize=args.ksize)
+        notify('query signature has max_hash: {}', query.estimator.max_hash)
         orig_query = query
+
+        R_metagenome = 2**64 / orig_query.estimator.max_hash
+
+        new_mins = query.estimator.mh.get_mins()
+        e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
+        for m in new_mins:
+            e.mh.add_hash(m)
+        query = sig.SourmashSignature('', e)
 
         sum_found = 0.
         found = []
         while 1:
-            search_fn = SearchMinHashesFindBest().search
+            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
 
             results = []
             # use super low threshold for this part of the search
             for leaf in tree.find(search_fn, query, 0.00001):
-                results.append((query.similarity(leaf.data), leaf.data))
+                results.append((query.estimator.similarity_ignore_maxhash(leaf.data.estimator), leaf.data))
 
             if not len(results):          # no matches at all!
                 break
@@ -813,28 +823,35 @@ Commands can be:
             # take the best result
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_sim, best_ss = results[0]
-            sim = best_ss.similarity(orig_query)
-
-            # adjust by size of leaf (kmer cardinality of original genome)
-            if best_ss.estimator.hll:
-                leaf_kmers = best_ss.estimator.hll.estimate_cardinality()
-                query_kmers = orig_query.estimator.hll.estimate_cardinality()
-                f_of_total = leaf_kmers / query_kmers * sim
-            else:
-                f_of_total = 0
-
-            if not found and sim < args.threshold:
-                print('best match: {}'.format(best_ss.name()))
-                print('similarity is {:.5f} of db signature;'.format(sim))
-                print('this is below specified threshold => exiting.')
-                break
 
             # subtract found hashes from search hashes, construct new search
             new_mins = set(query.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
 
+            if best_ss.estimator.max_hash:
+                R_genome = 2**64 / best_ss.estimator.max_hash
+            elif best_ss.estimator.hll:
+                genome_size = best_ss.estimator.hll.estimate_cardinality()
+                genome_max_hash = max(found_mins)
+                R_genome = float(genome_size) / float(genome_max_hash)
+            else:
+                error('Best hash match in sbt_gather has no cardinality')
+                error('Please prepare database of sequences with --scaled')
+                error('...or with --with-cardinality')
+                sys.exit(-1)
+
+            R_comparison = max(R_metagenome, R_genome)
+            new_max_hash = 2**64 / R_comparison
+            new_mins = set([ i for i in new_mins if i < new_max_hash ])
+            found_mins = set([ i for i in found_mins if i < new_max_hash ])
+
             # intersection:
             intersect_mins = new_mins.intersection(found_mins)
+
+            if len(intersect_mins) < 5:   # hard cutoff for now
+                notify('found only {} hashes in common.', len(intersect_mins))
+                notify('this is below a sane threshold => exiting.')
+                break
 
             # first denominator - genome size
             genome_n_mins = len(found_mins)
@@ -848,19 +865,16 @@ Commands can be:
             print('found: {:.2f} {:.2f} {}'.format(f_genome,
                                                   f_query,
                                                   best_ss.name()))
-            found.append((f_of_total, best_ss, sim))
-            sum_found += f_of_total
+            found.append((f_genome, best_ss))
 
             if len(new_mins.intersection(found_mins)) <= 16:
                 break
 
             new_mins -= set(found_mins)
-            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins),
-                                        max_hash=query.estimator.max_hash)
+            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
             for m in new_mins:
                 e.mh.add_hash(m)
-            new_ss = sig.SourmashSignature('foo', e)
-            query = new_ss
+            query = sig.SourmashSignature('', e)
 
         print('found {}, total fraction {:.3f}'.format(len(found), sum_found))
         print('')
@@ -872,29 +886,28 @@ Commands can be:
         found.reverse()
 
         print('Composition:')
-        for (frac, leaf_sketch, sim) in found:
+        for (frac, leaf_sketch) in found:
             print('{:.2f} {}'.format(frac, leaf_sketch.name()))
 
         if args.output:
             print('Composition:', file=args.output)
-            for (frac, leaf_sketch, sim) in found:
+            for (frac, leaf_sketch) in found:
                 print('{:.2f} {}'.format(frac, leaf_sketch.name()),
                       file=args.output)
 
         if args.csv:
-            fieldnames = ['fraction', 'name', 'similarity', 'sketch_kmers']
+            fieldnames = ['fraction', 'name', 'sketch_kmers']
             w = csv.DictWriter(args.csv, fieldnames=fieldnames)
 
             w.writeheader()
-            for (frac, leaf_sketch, sim) in found:
+            for (frac, leaf_sketch) in found:
                 cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
                 w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
-                                similarity=sim,
                                 sketch_kmers=cardinality))
         if args.save_matches:
             outname = args.save_matches.name
             print('saving all matches to "{}"'.format(outname))
-            sig.save_signatures([ ss for (f, ss, sim) in found ],
+            sig.save_signatures([ ss for (f, ss) in found ],
                                 args.save_matches)
 
     def watch(self, args):
