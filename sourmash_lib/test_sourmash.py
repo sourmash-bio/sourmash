@@ -956,6 +956,68 @@ def test_sbt_categorize():
         assert './4.sig,genome-s10.fa.gz,0.50' in out_csv
 
 
+def test_sbt_categorize_already_done():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+
+        # omit 3
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
+            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+
+        args = ['categorize', 'zzz', './2.sig', './4.sig',
+                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'for genome-s11.fa.gz, no match found'
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in out
+
+
+def test_sbt_categorize_already_done_traverse():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+
+        # omit 3
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
+            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+
+        args = ['categorize', 'zzz', '--traverse-directory', '.',
+                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'for genome-s11.fa.gz, no match found'
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in out
+
+
 def test_sbt_categorize_multiple_ksizes_moltypes():
     # 'categorize' should fail when there are multiple ksizes or moltypes
     # present
