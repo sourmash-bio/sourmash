@@ -53,23 +53,27 @@ SETUP_METADATA = \
     "entry_points": {'console_scripts': [
         'sourmash = sourmash_lib.__main__:main'
         ]
-     },"ext_modules": [Extension("sourmash_lib._minhash",
-                                sources=["sourmash_lib/_minhash.cc",
-                                       "third-party/smhasher/MurmurHash3.cc"],
-                              depends=["sourmash_lib/_minhash.hh",
-                                       "sourmash_lib/kmer_min_hash.hh"],
-                              include_dirs=["./sourmash_lib",
-                                            "./third-party/smhasher/"],
-                              language="c++",
-                              extra_compile_args=EXTRA_COMPILE_ARGS,
-                              extra_link_args=EXTRA_LINK_ARGS)],
+    },
+    "ext_modules": [Extension("sourmash_lib._minhash",
+                               sources=["sourmash_lib/_minhash.pyx",
+                                        "third-party/smhasher/MurmurHash3.cc"],
+                               depends=["sourmash_lib/kmer_min_hash.hh"],
+                               include_dirs=["./sourmash_lib",
+                                             "./third-party/smhasher/"],
+                               language="c++",
+                               extra_compile_args=EXTRA_COMPILE_ARGS,
+                               extra_link_args=EXTRA_LINK_ARGS)],
     "install_requires": ["screed>=0.9", "PyYAML>=3.11", "ijson"],
+    "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
     "include_package_data": True,
+    "package_data": {
+        "sourmash_lib": ['*.pxd']
+    },
     "classifiers": CLASSIFIERS
     }
 

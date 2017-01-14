@@ -63,6 +63,33 @@ def test_basic_dna(track_abundance):
     assert len(b) == 1
 
 
+def test_bytes_dna(track_abundance):
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh.add_sequence('ATGC')
+    mh.add_sequence(b'ATGC')
+    mh.add_sequence(u'ATGC')
+    a = mh.get_mins()
+
+    mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
+    mh.add_sequence(b'GCAT')             # this will not get added; hash > ATGC
+    mh.add_sequence(u'GCAT')             # this will not get added; hash > ATGC
+    b = mh.get_mins()
+
+    print(a, b)
+    assert a == b
+    assert len(b) == 1
+
+
+def test_bytes_protein(track_abundance):
+    # verify that we can hash protein/aa sequences
+    mh = MinHash(10, 6, True, track_abundance=track_abundance)
+    mh.add_protein('AGYYG')
+    mh.add_protein(u'AGYYG')
+    mh.add_protein(b'AGYYG')
+
+    assert len(mh.get_mins()) == 4
+
+
 def test_protein(track_abundance):
     # verify that we can hash protein/aa sequences
     mh = MinHash(10, 6, True, track_abundance=track_abundance)
@@ -455,6 +482,17 @@ def test_short_sequence(track_abundance):
     assert len(a.get_mins()) == 0
 
 
+def test_bytes_murmur():
+    x = hash_murmur("ACG")
+    assert x == 1731421407650554201
+
+    x = hash_murmur(b"ACG")
+    assert x == 1731421407650554201
+
+    x = hash_murmur(u"ACG")
+    assert x == 1731421407650554201
+
+
 def test_murmur():
     x = hash_murmur("ACG")
     assert x == 1731421407650554201
@@ -467,10 +505,10 @@ def test_murmur():
 
     x = hash_murmur("ACG", 42)
     assert x == 1731421407650554201
-    
+
     y = hash_murmur("ACG", 43)
     assert y != x
-    
+
 
 def test_abundance_simple():
     a = MinHash(20, 5, False, track_abundance=True)
