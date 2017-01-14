@@ -8,6 +8,7 @@ import yaml
 import hashlib
 import sourmash_lib
 from . import signature_json
+from .logging import notify, error
 
 import io
 import gzip
@@ -184,8 +185,8 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
                      sig.estimator.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
-        print("Error in parsing signature; quitting.", file=sys.stderr)
-        print("Exception: {}".format(str(e)), file=sys.stderr)
+        error("Error in parsing signature; quitting.")
+        error("Exception: {}", str(e))
     finally:
         if is_fp:
             data.close()
@@ -203,7 +204,7 @@ def yaml_load(data, select_ksize=None, select_moltype=None,
     siglist = []
     for n, d in enumerate(x): # allow empty records & concat of signatures
         if n > 0 and n % 100 == 0:
-            print('...sig loading {}'.format(n))
+           notify('...sig loading {}', n)
         if not d:
             continue
         if d.get('class') != 'sourmash_signature':
