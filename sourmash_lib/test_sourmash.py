@@ -453,7 +453,7 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
-def test_sourmash_search():
+def test_search():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -472,7 +472,7 @@ def test_sourmash_search():
         assert '0.958' in out
 
 
-def test_sourmash_search_gzip():
+def test_search_gzip():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -497,7 +497,7 @@ def test_sourmash_search_gzip():
         assert '0.958' in out
 
 
-def test_sourmash_search_2():
+def test_search_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -617,7 +617,7 @@ def test_do_sourmash_sbt_search_bestonly():
         assert testdata1 in out
 
 
-def test_sourmash_compare_with_abundance_1():
+def test_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -643,7 +643,7 @@ def test_sourmash_compare_with_abundance_1():
         assert '1.000' in out
 
 
-def test_sourmash_compare_with_abundance_2():
+def test_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -671,7 +671,7 @@ def test_sourmash_compare_with_abundance_2():
         assert '1.0' in out
 
 
-def test_sourmash_compare_with_abundance_3():
+def test_compare_with_abundance_3():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -700,7 +700,7 @@ def test_sourmash_compare_with_abundance_3():
         assert '0.705' in out
 
 
-def test_sourmash_sbt_gather():
+def test_sbt_gather():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -764,7 +764,7 @@ def test_sbt_gather_error_no_cardinality_query():
         assert "query signature needs to be created with --scaled" in err
 
 
-def test_sourmash_sbt_gather_error_no_cardinality():
+def test_sbt_gather_error_no_cardinality():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
