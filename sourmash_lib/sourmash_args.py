@@ -29,6 +29,21 @@ def get_moltype(sig, require=False):
     return moltype
 
 
+def calculate_moltype(args, default=None):
+    if args.protein:
+        if args.dna is True:
+            error('cannot specify both --dna and --protein!')
+            sys.exit(-1)
+        args.dna = False
+
+    moltype = default
+    if args.protein:
+        moltype = 'protein'
+    elif args.dna:
+        moltype = 'dna'
+
+    return moltype
+
 def load_query_signature(filename, select_ksize, select_moltype):
     sl = signature.load_signatures(filename,
                                    select_ksize=select_ksize,

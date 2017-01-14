@@ -63,18 +63,7 @@ Commands can be:
         sourmash_args.add_moltype_args(parser)
 
         args = parser.parse_args(args)
-
-        if args.protein:
-            if args.dna is True:
-                error('cannot specify both --dna and --protein!')
-                sys.exit(-1)
-            args.dna = False
-
-        moltype = None
-        if args.protein:
-            moltype = 'protein'
-        elif args.dna:
-            moltype = 'dna'
+        moltype = sourmash_args.calculate_moltype(args)
 
         # get the query signature
         query = sourmash_args.load_query_signature(args.query,
@@ -533,16 +522,7 @@ Commands can be:
         sourmash_args.add_moltype_args(parser)
 
         args = parser.parse_args(args)
-
-        moltype = None
-        if args.protein:
-            if args.dna is True:
-                raise Exception('cannot specify both --dna and --protein!')
-            args.dna = False
-            moltype = 'protein'
-        elif args.dna:
-            args.dna = True
-            moltype = 'dna'
+        moltype = sourmash_args.calculate_moltype(args)
 
         factory = GraphFactory(1, args.bf_size, 4)
         tree = SBT(factory)
@@ -602,17 +582,7 @@ Commands can be:
 
         sourmash_args.add_moltype_args(parser)
         args = parser.parse_args(args)
-
-        if args.protein:
-            if args.dna is True:
-                raise Exception('cannot specify both --dna and --protein!')
-            args.dna = False
-
-        moltype = None
-        if args.protein:
-            moltype = 'protein'
-        elif args.dna:
-            moltype = 'dna'
+        moltype = sourmash_args.calculate_moltype(args)
 
         search_fn = search_minhashes
         if args.best_only:
@@ -662,17 +632,7 @@ Commands can be:
         parser.add_argument('--load-csv', default=None)
         
         args = parser.parse_args(args)
-
-        if args.protein:
-            if args.dna is True:
-                raise Exception('cannot specify both --dna and --protein!')
-            args.dna = False
-
-        moltype = None
-        if args.protein:
-            moltype = 'protein'
-        elif args.dna:
-            moltype = 'dna'
+        moltype = sourmash_args.calculate_moltype(args)
 
         already_names = set()
         if args.load_csv:
@@ -744,17 +704,7 @@ Commands can be:
         sourmash_args.add_moltype_args(parser)
 
         args = parser.parse_args(args)
-
-        if args.protein:
-            if args.dna is True:
-                raise Exception('cannot specify both --dna and --protein!')
-            args.dna = False
-
-        moltype = None
-        if args.protein:
-            moltype = 'protein'
-        elif args.dna:
-            moltype = 'dna'
+        moltype = sourmash_args.calculate_moltype(args)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         query = sourmash_args.load_query_signature(args.query,
