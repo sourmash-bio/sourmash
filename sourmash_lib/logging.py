@@ -32,7 +32,7 @@ def test_notify():
         saveerr, sys.stderr = sys.stderr, saveerr
 
     print(type(saveerr))
-    assert 'hello, world' in saveerr.getvalue()
+    assert 'hello, world\n' in saveerr.getvalue()
 
 
 def test_notify_flush():
@@ -49,6 +49,22 @@ def test_notify_flush():
 
     print(type(saveerr))
     assert 'hello, world' in saveerr.getvalue()
+
+
+def test_notify_end():
+    global _quiet
+
+    qsave = _quiet
+    saveerr, sys.stderr = sys.stderr, StringIO()
+    try:
+        _quiet = False
+        notify(u'hello, world', end=u'FOO')
+    finally:
+        _quiet = qsave
+        saveerr, sys.stderr = sys.stderr, saveerr
+
+    print(type(saveerr))
+    assert 'hello, worldFOO' in saveerr.getvalue()
 
 
 def test_notify_quiet():
@@ -80,7 +96,7 @@ def test_error():
         saveerr, sys.stderr = sys.stderr, saveerr
 
     print(type(saveerr))
-    assert 'hello, world' in saveerr.getvalue()
+    assert 'hello, world\n' in saveerr.getvalue()
 
 
 def test_error_flush():
