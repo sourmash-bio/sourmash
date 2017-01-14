@@ -77,17 +77,9 @@ Commands can be:
             moltype = 'dna'
 
         # get the query signature
-        sl = sig.load_signatures(args.query,
-                                 select_ksize=args.ksize,
-                                 select_moltype=moltype)
-        sl = list(sl)
-
-        if len(sl) != 1:
-            error('When loading query from "{}",', args.query)
-            error('{} query signatures matching ksize and molecule type; need exactly one.', len(sl))
-            sys.exit(-1)
-        query = sl[0]
-
+        query = sourmash_args.load_query_signature(args.query,
+                                                   select_ksize=args.ksize,
+                                                   select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
@@ -627,18 +619,9 @@ Commands can be:
             search_fn = SearchMinHashesFindBest().search
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        sl = sig.load_signatures(args.query, select_ksize=args.ksize,
-                                 select_moltype=moltype)
-        sl = list(sl)
-        if len(sl) != 1:
-            error('When loading query from "{}",', args.query)
-            error('{} query signatures matching ksize and molecule type;',
-                  format(len(sl))),
-            error('need exactly one.')
-            sys.exit(-1)
-
-        query = sl[0]
-
+        query = sourmash_args.load_query_signature(args.query,
+                                                   select_ksize=args.ksize,
+                                                   select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
@@ -774,22 +757,15 @@ Commands can be:
             moltype = 'dna'
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
-        sl = sig.load_signatures(args.query, select_ksize=args.ksize,
-                                 select_moltype=moltype)
-        sl = list(sl)
-        if len(sl) != 1:
-            print('When loading query from "{}",'.format(args.query),
-                  file=sys.stderr)
-            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
-            sys.exit(-1)
-
-        query = sl[0]
-
+        query = sourmash_args.load_query_signature(args.query,
+                                                   select_ksize=args.ksize,
+                                                   select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
                                                       query_moltype))
+
         if query.estimator.max_hash == 0:
             error('query signature needs to be created with --scaled')
             error('or using --with-cardinality.')

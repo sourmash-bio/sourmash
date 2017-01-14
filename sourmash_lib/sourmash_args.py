@@ -3,7 +3,8 @@ Utility functions for dealing with input args to the sourmash command line.
 """
 import sys
 import os
-from sourmash_lib import signature
+from . import signature
+from .logging import error, notify
 
 def add_moltype_args(parser, default_dna=None):
     parser.add_argument('--protein', dest='protein', action='store_true')
@@ -26,6 +27,21 @@ def get_moltype(sig, require=False):
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
     return moltype
+
+
+def load_query_signature(filename, select_ksize, select_moltype):
+    sl = signature.load_signatures(filename,
+                                   select_ksize=select_ksize,
+                                   select_moltype=select_moltype)
+    sl = list(sl)
+
+    if len(sl) != 1:
+        error('When loading query from "{}"', filename)
+        error('{} signatures matching ksize and molecule type;', len(sl))
+        error('need exactly one. Specify --ksize or --dna/--protein.')
+        sys.exit(-1)
+
+    return sl[0]
 
 
 class LoadSingleSignatures(object):

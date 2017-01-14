@@ -637,6 +637,8 @@ def test_do_sourmash_sbt_search_dnaprotquery():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
         assert status != 0
+        print(out)
+        print(err)
         assert 'need exactly one' in err
 
 
