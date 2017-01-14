@@ -18,6 +18,12 @@ def test_run_sourmash():
     assert status != 0                    # no args provided, ok ;)
 
 
+def test_run_sourmash_badcmd():
+    status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
+    assert status != 0                    # bad arg!
+    assert "Unrecognized command" in err
+
+
 def test_do_sourmash_compute():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -540,6 +546,25 @@ def test_mash_csv_to_sig():
         assert '1 matches; showing 3:' in out
 
 
+def test_do_sourmash_sbt_index_bad_args():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '--dna', '--protein'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "cannot specify both --dna and --protein!" in err
+        assert status != 0
+
+
 def test_do_sourmash_sbt_search():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -555,6 +580,77 @@ def test_do_sourmash_sbt_search():
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+        assert testdata2 in out
+
+
+def test_do_sourmash_sbt_search_selectprot():
+    # sbt_index should fail when run on signatures with multiple types
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        args = ['compute', testdata1, testdata2,
+                '--protein', '--dna', '-k', '30']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['sbt_index', 'zzz', 'short.fa.sig', 'short2.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+
+        print(out)
+        print(err)
+        assert status != 0
+
+
+def test_do_sourmash_sbt_search_dnaprotquery():
+    # sbt_search should fail if non-single query sig given
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        args = ['compute', testdata1, testdata2,
+                '--protein', '--dna', '-k', '30']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['sbt_index', 'zzz', '--protein', 'short.fa.sig',
+                'short2.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        args = ['sbt_search', 'zzz', 'short.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+        assert status != 0
+        assert 'need exactly one' in err
+
+
+def test_do_sourmash_sbt_index_traverse():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            '--traverse-dir', '.'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert 'loaded 2 sigs; saving SBT under' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', 'zzz',

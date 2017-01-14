@@ -37,12 +37,12 @@ Commands can be:
         parser.add_argument('command')
         args = parser.parse_args(sys.argv[1:2])
         if not hasattr(self, args.command):
-            print('Unrecognized command')
+            error('Unrecognized command')
             parser.print_help()
             sys.exit(1)
 
         cmd = getattr(self, args.command)
-        print('# running sourmash subcommand: %s' % args.command,
+        notify('# running sourmash subcommand: %s' % args.command,
               file=sys.stderr)
         cmd(sys.argv[2:])
 
@@ -63,7 +63,8 @@ Commands can be:
 
         if args.protein:
             if args.dna is True:
-                raise Exception('cannot specify both --dna and --protein!')
+                error('cannot specify both --dna and --protein!')
+                sys.exit(-1)
             args.dna = False
 
         moltype = None
@@ -79,17 +80,12 @@ Commands can be:
         sl = list(sl)
 
         if len(sl) != 1:
-            print('When loading query from "{}",'.format(args.query),
-                  file=sys.stderr)
-            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            error('When loading query from "{}",', args.query)
+            error('{} query signatures matching ksize and molecule type; need exactly one.', len(sl))
             sys.exit(-1)
         query = sl[0]
 
-        query_moltype = 'UNKNOWN'
-        if query.estimator.is_molecule_type('dna'):
-            query_moltype = 'DNA'
-        elif query.estimator.is_molecule_type('protein'):
-            query_moltype = 'protein'
+        query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
@@ -535,7 +531,7 @@ Commands can be:
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
         parser.add_argument('signatures', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=None)
         parser.add_argument('--traverse-directory', action='store_true')
         parser.add_argument('-x', '--bf-size', type=float, default=1e5)
 
@@ -543,12 +539,13 @@ Commands can be:
 
         args = parser.parse_args(args)
 
+        moltype = None
         if args.protein:
             if args.dna is True:
                 raise Exception('cannot specify both --dna and --protein!')
             args.dna = False
             moltype = 'protein'
-        else:
+        elif args.dna:
             args.dna = True
             moltype = 'dna'
 
@@ -569,17 +566,35 @@ Commands can be:
         print('loading {} files into SBT'.format(len(inp_files)))
 
         n = 0
+        ksizes = set()
+        moltypes = set()
         for f in inp_files:
-            s = sig.load_signatures(f, select_ksize=args.ksize,
-                                    select_moltype=moltype)
+            siglist = sig.load_signatures(f, select_ksize=args.ksize,
+                                          select_moltype=moltype)
 
-            for ss in s:
+            # load all matching signatures in this file
+            for ss in siglist:
+                ksizes.add(ss.estimator.ksize)
+                moltypes.add(sourmash_args.get_moltype(ss))
+
                 leaf = SigLeaf(ss.md5sum(), ss)
                 tree.add_node(leaf)
                 n += 1
 
-        print('loaded {} sigs; saving SBT under "{}".'.format(n,
-                                                              args.sbt_name))
+            # check to make sure we aren't loading incompatible signatures
+            if len(ksizes) > 1 or len(moltypes) > 1:
+                error('multiple k-mer sizes or molecule types present; fail.')
+                error('specify --dna/--protein and --ksize as necessary')
+                error('ksizes: {}; moltypes: {}',
+                      ", ".join(map(str, ksizes)), ", ".join(moltypes))
+                sys.exit(-1)
+
+        # did we load any!?
+        if n == 0:
+            error('no signatures found to load into tree!? failing.')
+            sys.exit(-1)
+
+        notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
         tree.save(args.sbt_name)
 
     def sbt_search(self, args):
@@ -618,18 +633,15 @@ Commands can be:
                                  select_moltype=moltype)
         sl = list(sl)
         if len(sl) != 1:
-            print('When loading query from "{}",'.format(args.query),
-                  file=sys.stderr)
-            print('{} query signatures matching ksize and molecule type; need exactly one.'.format(len(sl)))
+            error('When loading query from "{}",', args.query)
+            error('{} query signatures matching ksize and molecule type;',
+                  format(len(sl))),
+            error('need exactly one.')
             sys.exit(-1)
 
         query = sl[0]
 
-        query_moltype = 'UNKNOWN'
-        if query.estimator.is_molecule_type('dna'):
-            query_moltype = 'DNA'
-        elif query.estimator.is_molecule_type('protein'):
-            query_moltype = 'protein'
+        query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
@@ -781,11 +793,7 @@ Commands can be:
 
         query = sl[0]
 
-        query_moltype = 'UNKNOWN'
-        if query.estimator.is_molecule_type('dna'):
-            query_moltype = 'DNA'
-        elif query.estimator.is_molecule_type('protein'):
-            query_moltype = 'protein'
+        query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,

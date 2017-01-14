@@ -1,5 +1,5 @@
 import sys
-from sourmash_lib import signature as sig
+from sourmash_lib import signature
 
 
 def add_moltype_args(parser, default_dna=None):
@@ -12,6 +12,17 @@ def add_moltype_args(parser, default_dna=None):
                         action='store_true')
     parser.add_argument('--no-dna', dest='dna', action='store_false')
     parser.set_defaults(dna=default_dna)
+
+
+def get_moltype(sig, require=False):
+    if sig.estimator.is_molecule_type('dna'):
+        moltype = 'DNA'
+    elif sig.estimator.is_molecule_type('protein'):
+        moltype = 'protein'
+    else:
+        raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
+
+    return moltype
 
 
 class LoadSingleSignatures(object):
@@ -31,9 +42,9 @@ class LoadSingleSignatures(object):
                 self.skipped_iignore += 1
                 continue
 
-            sl = sig.load_signatures(filename,
-                                     select_ksize=self.select_ksize,
-                                     select_moltype=self.select_moltype)
+            sl = signature.load_signatures(filename,
+                                           select_ksize=self.select_ksize,
+                                           select_moltype=self.select_moltype)
             sl = list(sl)
             if len(sl) != 1:
                 self.skipped_nosig += 1
