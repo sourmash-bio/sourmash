@@ -58,8 +58,8 @@ Commands can be:
     def search(self, args):
         "Search a query sig against one or more signatures; report up to the 3 top matches."
         parser = argparse.ArgumentParser()
-        parser.add_argument('query')
-        parser.add_argument('against', nargs='+')
+        parser.add_argument('query', help='query signature')
+        parser.add_argument('against', nargs='+', help='list of signatures')
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('-n', '--num-results', default=3, type=int)
         parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
@@ -130,7 +130,8 @@ Commands can be:
             sourmash compute file1.fa file2.fa --name => specify w/-o
         """
         parser = argparse.ArgumentParser()
-        parser.add_argument('filenames', nargs='+')
+        parser.add_argument('filenames', nargs='+',
+                            help='file(s) of sequences')
 
         sourmash_args.add_moltype_args(parser, default_dna=True)
 
@@ -148,9 +149,12 @@ Commands can be:
         parser.add_argument('--singleton', action='store_true')
         parser.add_argument('--name', type=str, default='')
         parser.add_argument('--name-from-first', action='store_true')
-        parser.add_argument('--with-cardinality', action='store_true')
-        parser.add_argument('--track-abundance', action='store_true')
-        parser.add_argument('--scaled', type=float)
+        parser.add_argument('--with-cardinality', action='store_true',
+                            help='calculate # of k-mers in input sequences')
+        parser.add_argument('--track-abundance', action='store_true',
+                            help='track k-mer abundances')
+        parser.add_argument('--scaled', type=float,
+                            help='set resolution of signature size')
         parser.add_argument('--seed', type=int, help='hash seed',
                             default=sourmash_lib.DEFAULT_SEED)
         args = parser.parse_args(args)
@@ -164,6 +168,11 @@ Commands can be:
             if args.with_cardinality:
                 error('Cannot compute cardinality for protein sequences.')
                 sys.exit(-1)
+
+        if args.scaled:
+            if args.num_hashes != 0:
+                notify('setting num_hashes to 0 because --scaled is set')
+                args.num_hashes = 0
 
         notify('computing signatures for files: {}', ", ".join(args.filenames))
 
@@ -334,10 +343,11 @@ Commands can be:
         import numpy
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('signatures', nargs='+', help='list of signatures')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
         parser.add_argument('-o', '--output')
-        parser.add_argument('--ignore-abundance', action='store_true')
+        parser.add_argument('--ignore-abundance', action='store_true',
+                            help='do NOT use k-mer abundances if present')
         args = parser.parse_args(args)
 
         # load in the various signatures
@@ -395,8 +405,10 @@ Commands can be:
         parser.add_argument('--pdf', action='store_true')
         parser.add_argument('--labels', action='store_true')
         parser.add_argument('--indices', action='store_false')
-        parser.add_argument('--vmax', default=1.0, type=float, help='(default: %(default)f)')
-        parser.add_argument('--vmin', default=0.0, type=float, help='(default: %(default)f)')
+        parser.add_argument('--vmax', default=1.0, type=float,
+                            help='(default: %(default)f)')
+        parser.add_argument('--vmin', default=0.0, type=float,
+                            help='(default: %(default)f)')
         args = parser.parse_args(args)
 
         # load files
@@ -501,8 +513,9 @@ Commands can be:
         from sourmash_lib.sbtmh import search_minhashes, SigLeaf
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('sbt_name')
-        parser.add_argument('signatures', nargs='+')
+        parser.add_argument('sbt_name', help='name to save SBT into')
+        parser.add_argument('signatures', nargs='+',
+                            help='signatures to load into SBT')
         parser.add_argument('-k', '--ksize', type=int, default=None)
         parser.add_argument('--traverse-directory', action='store_true')
         parser.add_argument('-x', '--bf-size', type=float, default=1e5)
@@ -561,8 +574,8 @@ Commands can be:
         from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('sbt_name')
-        parser.add_argument('query')
+        parser.add_argument('sbt_name', help='name of SBT to load')
+        parser.add_argument('query', help='signature to query')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--save-matches', type=argparse.FileType('wt'))
@@ -608,8 +621,9 @@ Commands can be:
         from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('sbt_name')
-        parser.add_argument('queries', nargs='+')
+        parser.add_argument('sbt_name', help='name of SBT to load')
+        parser.add_argument('queries', nargs='+',
+                            help='list of signatures to categorize')
         parser.add_argument('-k', '--ksize', type=int, default=None)
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--traverse-directory', action="store_true")
@@ -681,8 +695,8 @@ Commands can be:
         from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('sbt_name')
-        parser.add_argument('query')
+        parser.add_argument('sbt_name', help='name of SBT to search')
+        parser.add_argument('query', help='query signature')
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.05, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
@@ -824,7 +838,7 @@ Commands can be:
         from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
         parser = argparse.ArgumentParser()
-        parser.add_argument('sbt_name')
+        parser.add_argument('sbt_name', help='name of SBT to search')
         parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
