@@ -35,6 +35,12 @@ Commands can be:
    plot <matrix>               Plot a distance matrix made by 'compare'.
 
    import_csv                  Import signatures from a CSV file.
+
+   sbt_index                   Index signatures with a Sequence Bloom Tree.
+   sbt_search                  Search a Sequence Bloom Tree.
+   categorize                  Categorize signatures with a SBT.
+   sbt_gather                  Search a signature for multiple matches.
+   watch                       Classify a stream of sequences using a SBT.
 .
 ''')
         parser.add_argument('command')
@@ -790,9 +796,6 @@ Commands can be:
                                                   f_query,
                                                   best_ss.name()))
             found.append((f_genome, best_ss))
-
-            if len(new_mins.intersection(found_mins)) <= 16:
-                break
 
             new_mins -= set(found_mins)
             e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
