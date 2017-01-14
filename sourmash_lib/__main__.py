@@ -77,18 +77,16 @@ Commands can be:
                                                    select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
-        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
-                                                      query_ksize,
-                                                      query_moltype))
+        notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                 query_ksize,
+                                                 query_moltype)
 
         # get the signatures to query
-        print('loading db of signatures from %d files' % len(args.against),
-              file=sys.stderr)
+        notify('loading db of signatures from {} files', len(args.against))
         against = []
         for filename in args.against:
             if filename == args.query and not args.force:
-                print('excluding query from database (file %s)' % filename,
-                      file=sys.stderr)
+                notify('excluding query from database (file {})', filename)
                 continue
 
             sl = sig.load_signatures(filename,
@@ -97,7 +95,7 @@ Commands can be:
 
             for x in sl:
                 against.append((x, filename))
-        print('loaded {} signatures total.'.format(len(against)))
+        notify('loaded {} signatures total.', len(against))
 
         # compute query x db
         distances = []
@@ -109,8 +107,7 @@ Commands can be:
         # any matches? sort, show.
         if distances:
             distances.sort(reverse=True, key = lambda x: x[0])
-            print('{} matches; showing {}:'.format(len(distances),
-                                                   args.num_results))
+            notify('{} matches; showing {}:', len(distances), args.num_results)
             for distance, match, filename in distances[:args.num_results]:
 
                 print('\t', match.name(), '\t', "%.3f" % distance,
@@ -118,12 +115,11 @@ Commands can be:
 
             if args.save_matches:
                 outname = args.save_matches.name
-                print('saving all matches to "{}"'.format(outname))
+                notify('saving all matches to "{}"', outname)
                 sig.save_signatures([ m for (d, m, f) in distances ],
                                     args.save_matches)
         else:
-            print('** no matches in %d signatures' % len(against),
-                  file=sys.stderr)
+            notify('** no matches in {} signatures', len(against))
 
     def compute(self, args):
         """Compute the signature for one or more files.
@@ -160,19 +156,16 @@ Commands can be:
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
-            print('WARNING: input is protein, turning off DNA hash computing.',
-                  file=sys.stderr)
+            notify('WARNING: input is protein, turning off DNA hashing')
             args.dna = False
             args.protein = True
 
         if not args.dna and args.protein:
             if args.with_cardinality:
-                print('Cannot compute cardinality for protein sequences.',
-                       file=sys.stderr)
+                error('Cannot compute cardinality for protein sequences.')
                 sys.exit(-1)
 
-        print('computing signatures for files:', args.filenames,
-              file=sys.stderr)
+        notify('computing signatures for files: {}', ", ".join(args.filenames))
 
         # get list of k-mer sizes for which to compute sketches
         ksizes = args.ksizes
@@ -182,41 +175,34 @@ Commands can be:
         else:
             ksizes = [int(ksizes)]
 
-        print('Computing signature for ksizes: %s' % str(ksizes),
-              file=sys.stderr)
+        notify('Computing signature for ksizes: {}', str(ksizes))
 
         num_sigs = 0
         if args.dna and args.protein:
-            print('Computing both DNA and protein signatures.',
-                  file=sys.stderr)
+            notify('Computing both DNA and protein signatures.')
             num_sigs = 2*len(ksizes)
         elif args.dna:
-            print('Computing only DNA (and not protein) signatures.',
-                  file=sys.stderr)
+            notify('Computing only DNA (and not protein) signatures.')
             num_sigs = len(ksizes)
         elif args.protein:
-            print('Computing only protein (and not DNA) signatures.',
-                  file=sys.stderr)
+            notify('Computing only protein (and not DNA) signatures.')
             num_sigs = len(ksizes)
 
         if args.protein:
             bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
             if bad_ksizes:
-                print('protein ksizes must be divisible by 3, sorry!',
-                      file=sys.stderr)
-                print('bad ksizes: {}'.format(", ".join(bad_ksizes)),
-                      file=sys.stderr)
+                error('protein ksizes must be divisible by 3, sorry!')
+                error('bad ksizes: {}', ", ".join(bad_ksizes))
                 sys.exit(-1)
 
-        print('Computing a total of {} signatures.'.format(num_sigs),
-              file=sys.stderr)
+        notify('Computing a total of {} signatures.', num_sigs)
 
         if num_sigs == 0:
-            print('...nothing to calculate!? Exiting!', file=sys.stderr)
+            error('...nothing to calculate!? Exiting!')
             sys.exit(-1)
 
         if args.name and not args.output:
-            print("must specify -o with --name", file=sys.stderr)
+            error("must specify -o with --name")
             sys.exit(-1)
 
         def make_estimators():
@@ -266,8 +252,7 @@ Commands can be:
                 with open(filename, 'w') as fp:
                     sig.save_signatures(siglist, fp)
 
-        print('Computing signature for ksizes: %s' % str(ksizes),
-              file=sys.stderr)
+        notify('Computing signature for ksizes: {}', str(ksizes))
 
         if args.with_cardinality:
             print('Calculating k-mer cardinality of input sequences.',
@@ -362,12 +347,12 @@ Commands can be:
             loaded = sig.load_signatures(filename, select_ksize=args.ksize)
             loaded = list(loaded)
             if not loaded:
-                print('warning: no signatures loaded at given ksize from %s' %
-                          filename, file=sys.stderr)
+                notify('warning: no signatures loaded at given ksize from {}',
+                       filename)
             siglist.extend(loaded)
 
         if len(siglist) == 0:
-            print('no signatures!', file=sys.stderr)
+            error('no signatures!')
             sys.exit(-1)
 
         # build the distance matrix
@@ -383,17 +368,16 @@ Commands can be:
             print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
             labeltext.append(E.name())
 
-        print('min similarity in matrix:', numpy.min(D), file=sys.stderr)
+        notify('min similarity in matrix: {}', numpy.min(D))
 
         # shall we output a matrix?
         if args.output:
             labeloutname = args.output + '.labels.txt'
-            print('saving labels to:', labeloutname, file=sys.stderr)
+            notify('saving labels to: {}', labeloutname)
             with open(labeloutname, 'w') as fp:
                 fp.write("\n".join(labeltext))
 
-            print('saving distance matrix to:', args.output,
-                  file=sys.stderr)
+            notify('saving distance matrix to: {}', args.output)
             with open(args.output, 'wb') as fp:
                 numpy.save(fp, D)
 
@@ -444,7 +428,7 @@ Commands can be:
         Y = sch.linkage(D, method='single') # cluster!
         Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
         fig.savefig(dendrogram_out)
-        print('wrote', dendrogram_out)
+        notify('wrote {}', dendrogram_out)
 
         ### make the dendrogram+matrix:
         fig = sourmash_fig.plot_composite_matrix(D, labeltext,
@@ -453,7 +437,7 @@ Commands can be:
                                                  vmin=args.vmin,
                                                  vmax=args.vmax)
         fig.savefig(matrix_out)
-        print('wrote', matrix_out)
+        notify('wrote {}', matrix_out)
 
         # print out sample numbering for FYI.
         for i, name in enumerate(labeltext):
@@ -489,11 +473,9 @@ Commands can be:
                 e.add_many(hashes)
                 s = sig.SourmashSignature(args.email, e, filename=name)
                 siglist.append(s)
-                print('loaded signature:', name,
-                      s.md5sum()[:8], file=sys.stderr)
+                notify('loaded signature: {} {}', name, s.md5sum()[:8])
 
-            print('saving %d signatures to JSON' % (len(siglist),),
-                  file=sys.stderr)
+            notify('saving {} signatures to JSON', len(siglist))
             sig.save_signatures(siglist, args.output)
 
     def dump(self, args):
@@ -503,7 +485,7 @@ Commands can be:
         args = parser.parse_args(args)
 
         for filename in args.filenames:
-            print('loading', filename)
+            notify('loading {}', filename)
             siglist = sig.load_signatures(filename, select_ksize=args.ksize)
             siglist = list(siglist)
             assert len(siglist) == 1
@@ -539,7 +521,7 @@ Commands can be:
             inp_files = list(args.signatures)
 
 
-        print('loading {} files into SBT'.format(len(inp_files)))
+        notify('loading {} files into SBT', len(inp_files))
 
         n = 0
         ksizes = set()
@@ -600,9 +582,9 @@ Commands can be:
                                                    select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
-        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
-                                                      query_ksize,
-                                                      query_moltype))
+        notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                 query_ksize,
+                                                 query_moltype)
 
         results = []
         for leaf in tree.find(search_fn, query, args.threshold):
@@ -615,7 +597,7 @@ Commands can be:
 
         if args.save_matches:
             outname = args.save_matches.name
-            print('saving all matches to "{}"'.format(outname))
+            notify('saving all matches to "{}"', outname)
             sig.save_signatures([ m for (sim, m) in results ],
                                 args.save_matches)
 
@@ -656,7 +638,7 @@ Commands can be:
 
         inp_files = set(inp_files) - already_names
 
-        print('found {} files to query'.format(len(inp_files)))
+        notify('found {} files to query', len(inp_files))
 
         loader = sourmash_args.LoadSingleSignatures(inp_files,
                                                     args.ksize, moltype)
@@ -677,21 +659,21 @@ Commands can be:
             if results:
                 results.sort(key=lambda x: -x[0])   # reverse sort on similarity
                 best_hit_sim, best_hit_query = results[0]
-                print('for {}, found: {:.2f} {}'.format(query.name(),
-                                                        best_hit_sim,
-                                                        best_hit_query.name()))
+                notify('for {}, found: {:.2f} {}', query.name(),
+                                                   best_hit_sim,
+                                                   best_hit_query.name())
                 best_hit_query_name = best_hit_query.name()
             else:
-                print('for {}, no match found'.format(query.name()))
+                notify('for {}, no match found', query.name())
 
             if args.csv:
                 w = csv.writer(args.csv)
                 w.writerow([queryfile, best_hit_query_name, best_hit_sim])
 
         if loader.skipped_ignore:
-            print('skipped/ignore: {}'.format(loader.skipped_ignore))
+            notify('skipped/ignore: {}', loader.skipped_ignore)
         if loader.skipped_nosig:
-            print('skipped/nosig: {}'.format(loader.skipped_nosig))
+            notify('skipped/nosig: {}', loader.skipped_nosig)
 
     def sbt_gather(self, args):
         from sourmash_lib.sbt import SBT, GraphFactory
@@ -718,9 +700,9 @@ Commands can be:
                                                    select_moltype=moltype)
         query_moltype = sourmash_args.get_moltype(query)
         query_ksize = query.estimator.ksize
-        print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
-                                                      query_ksize,
-                                                      query_moltype))
+        notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                 query_ksize,
+                                                 query_moltype)
 
         if query.estimator.max_hash == 0:
             error('query signature needs to be created with --scaled')
@@ -792,9 +774,8 @@ Commands can be:
             f_query = len(intersect_mins) / float(query_n_mins)
 
             # print interim & save
-            print('found: {:.2f} {:.2f} {}'.format(f_genome,
-                                                  f_query,
-                                                  best_ss.name()))
+            notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
+                   best_ss.name())
             found.append((f_genome, best_ss))
 
             new_mins -= set(found_mins)
@@ -802,8 +783,8 @@ Commands can be:
             e.add_many(new_mins)
             query = sig.SourmashSignature('', e)
 
-        print('found {}, total fraction {:.3f}'.format(len(found), sum_found))
-        print('')
+        notify('found {}, total fraction {:.3f}', len(found), sum_found)
+        notify('')
 
         if not found:
             sys.exit(0)
@@ -811,9 +792,9 @@ Commands can be:
         found.sort(key=lambda x: x[0])
         found.reverse()
 
-        print('Composition:')
+        notify('Composition:')
         for (frac, leaf_sketch) in found:
-            print('{:.2f} {}'.format(frac, leaf_sketch.name()))
+            notify('{:.2f} {}', frac, leaf_sketch.name())
 
         if args.output:
             print('Composition:', file=args.output)
@@ -832,7 +813,7 @@ Commands can be:
                                 sketch_kmers=cardinality))
         if args.save_matches:
             outname = args.save_matches.name
-            print('saving all matches to "{}"'.format(outname))
+            notify('saving all matches to "{}"', outname)
             sig.save_signatures([ ss for (f, ss) in found ],
                                 args.save_matches)
 

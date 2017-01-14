@@ -479,7 +479,7 @@ def test_search():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in out
+        assert '1 matches' in err
         assert '0.958' in out
 
 
@@ -504,7 +504,7 @@ def test_search_gzip():
                                             'yyy.gz'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in out
+        assert '1 matches' in err
         assert '0.958' in out
 
 
@@ -525,7 +525,7 @@ def test_search_2():
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '2 matches' in out
+        assert '2 matches' in err
         assert '0.958' in out
 
 
@@ -548,7 +548,7 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches; showing 3:' in out
+        assert '1 matches; showing 3:' in err
 
 
 def test_do_sourmash_sbt_index_bad_args():
@@ -858,7 +858,7 @@ def test_sbt_gather():
         print(out)
         print(err)
 
-        assert 'found: 1.00 1.00 ' in out
+        assert 'found: 1.00 1.00 ' in err
 
 
 def test_sbt_gather_2():
@@ -892,7 +892,7 @@ def test_sbt_gather_2():
         print(out)
         print(err)
 
-        assert 'found: 1.00 1.00 ' in out
+        assert 'found: 1.00 1.00 ' in err
 
 
 def test_sbt_gather_error_no_cardinality_query():
@@ -977,7 +977,7 @@ def test_sbt_categorize():
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in out
+        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
         assert './4.sig,genome-s10.fa.gz,0.50' in out_csv
@@ -1011,7 +1011,7 @@ def test_sbt_categorize_already_done():
         print(out)
         print(err)
         assert 'for genome-s11.fa.gz, no match found'
-        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in out
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
 
 def test_sbt_categorize_already_done_traverse():
@@ -1042,7 +1042,7 @@ def test_sbt_categorize_already_done_traverse():
         print(out)
         print(err)
         assert 'for genome-s11.fa.gz, no match found'
-        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in out
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
 
 def test_sbt_categorize_multiple_ksizes_moltypes():
