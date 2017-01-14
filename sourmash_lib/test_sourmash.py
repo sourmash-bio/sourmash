@@ -6,6 +6,7 @@ import os
 import glob
 import gzip
 import shutil
+import screed
 
 from . import sourmash_tst_utils as utils
 from . import Estimators
@@ -1066,3 +1067,50 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
 
         assert status != 0
         assert 'multiple k-mer sizes/molecule types present' in err
+
+
+def test_watch():
+    with utils.TempDirectory() as location:
+        testdata0 = utils.get_test_data('genome-s10.fa.gz')
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        cmd = """
+
+             gunzip -c {} | {}/sourmash watch --ksize 21 --dna zzz
+
+        """.format(testdata0, utils.scriptpath())
+        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+
+
+def test_watch_coverage():
+    with utils.TempDirectory() as location:
+        testdata0 = utils.get_test_data('genome-s10.fa.gz')
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'query.fa'), 'wt') as fp:
+            record = list(screed.open(testdata0))[0]
+            for start in range(0, len(record), 100):
+                fp.write('>{}\n{}\n'.format(start,
+                                            record.sequence[start:start+500]))
+
+        args = ['watch', '--ksize', '21', '--dna', 'zzz', 'query.fa']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err

@@ -841,6 +841,7 @@ Commands can be:
 
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
+        parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
         parser.add_argument('--threshold', default=0.05, type=float)
@@ -889,7 +890,7 @@ Commands can be:
             return results
 
         notify('reading sequences from stdin')
-        screed_iter = screed.open('/dev/stdin')
+        screed_iter = screed.open(args.inp_file)
         watermark = WATERMARK_SIZE
 
         # iterate over input records
