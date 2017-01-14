@@ -237,7 +237,7 @@ Commands can be:
             seed = args.seed
             max_hash = 0
             if args.scaled:
-                max_hash = 2**64 / args.scaled
+                max_hash = 2**64 / float(args.scaled)
 
             # one estimator for each ksize
             Elist = []
@@ -798,7 +798,7 @@ Commands can be:
         notify('query signature has max_hash: {}', query.estimator.max_hash)
         orig_query = query
 
-        R_metagenome = 2**64 / orig_query.estimator.max_hash
+        R_metagenome = 2**64 / float(orig_query.estimator.max_hash)
 
         new_mins = query.estimator.get_hashes()
         e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
@@ -827,7 +827,7 @@ Commands can be:
             found_mins = best_ss.estimator.get_hashes()
 
             if best_ss.estimator.max_hash:
-                R_genome = 2**64 / best_ss.estimator.max_hash
+                R_genome = 2**64 / float(best_ss.estimator.max_hash)
             elif best_ss.estimator.hll:
                 genome_size = best_ss.estimator.hll.estimate_cardinality()
                 genome_max_hash = max(found_mins)
@@ -839,7 +839,7 @@ Commands can be:
                 sys.exit(-1)
 
             R_comparison = max(R_metagenome, R_genome)
-            new_max_hash = 2**64 / R_comparison
+            new_max_hash = 2**64 / float(R_comparison)
             new_mins = set([ i for i in new_mins if i < new_max_hash ])
             found_mins = set([ i for i in found_mins if i < new_max_hash ])
 
