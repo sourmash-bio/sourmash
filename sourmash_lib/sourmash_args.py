@@ -35,27 +35,32 @@ class LoadSingleSignatures(object):
 
         self.skipped_ignore = 0
         self.skipped_nosig = 0
+        self.ksizes = set()
+        self.moltypes = set()
 
     def __iter__(self):
         for filename in self.filelist:
             if filename in self.ignore_files:
-                self.skipped_iignore += 1
+                self.skipped_ignore += 1
                 continue
 
             sl = signature.load_signatures(filename,
                                            select_ksize=self.select_ksize,
                                            select_moltype=self.select_moltype)
             sl = list(sl)
-            if len(sl) != 1:
+            if len(sl) == 0:
                 self.skipped_nosig += 1
                 continue
 
-            query = sl[0]
-            query_moltype = 'UNKNOWN'
-            if query.estimator.is_molecule_type('dna'):
-                query_moltype = 'DNA'
-            elif query.estimator.is_molecule_type('protein'):
-                query_moltype = 'protein'
-            query_ksize = query.estimator.ksize
+            for query in sl:
+                query_moltype = get_moltype(query)
+                query_ksize = query.estimator.ksize
 
-            yield filename, query, query_moltype, query_ksize
+                self.ksizes.add(query_ksize)
+                self.moltypes.add(query_moltype)
+
+                yield filename, query, query_moltype, query_ksize
+
+            if len(self.ksizes) > 1 or len(self.moltypes) > 1:
+                raise ValueError('multiple k-mer sizes/molecule types present')
+

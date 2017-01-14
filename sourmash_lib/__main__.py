@@ -671,7 +671,7 @@ Commands can be:
         parser = argparse.ArgumentParser()
         parser.add_argument('sbt_name')
         parser.add_argument('queries', nargs='+')
-        parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
+        parser.add_argument('-k', '--ksize', type=int, default=None)
         parser.add_argument('--threshold', default=0.08, type=float)
         parser.add_argument('--traverse-directory', action="store_true")
 
@@ -718,17 +718,16 @@ Commands can be:
 
         loader = sourmash_args.LoadSingleSignatures(inp_files,
                                                     args.ksize, moltype)
+
         for queryfile, query, query_moltype, query_ksize in loader:
-            print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
-                                                          query_ksize,
-                                                          query_moltype))
+            notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                   query_ksize, query_moltype)
 
             results = []
             search_fn = SearchMinHashesFindBest().search
 
             for leaf in tree.find(search_fn, query, args.threshold):
-                # ignore self
-                if leaf.data.md5sum() != query.md5sum():
+                if leaf.data.md5sum() != query.md5sum(): # ignore self.
                     results.append((query.similarity(leaf.data), leaf.data))
 
             best_hit_sim = 0.0
@@ -935,8 +934,7 @@ Commands can be:
         args = parser.parse_args(args)
 
         if args.input_is_protein and args.dna:
-            print('WARNING: input is protein, turning off DNA hash computing.',
-                  file=sys.stderr)
+            notify('WARNING: input is protein, turning off DNA hashing.')
             args.dna = False
             args.protein = True
 
