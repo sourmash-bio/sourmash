@@ -56,10 +56,11 @@ import random
 import shutil
 from tempfile import NamedTemporaryFile
 
+from cachetools import LFUCache
+
 import khmer
 from khmer import khmer_args
 from random import randint
-from numpy import array
 
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
@@ -72,16 +73,6 @@ def GraphFactory(ksize, starting_size, n_tables):
         return khmer.Nodegraph(ksize, starting_size, n_tables)
 
     return create_nodegraph
-
-
-class LazyNode(object):
-    def __init__(self, load_fn, *args):
-        self.load_fn = load_fn
-        self.args = args
-
-    def do_load(self):
-        sbt_node = self.load_fn(*self.args)
-        return sbt_node
 
 
 class SBT(object):
@@ -148,7 +139,6 @@ class SBT(object):
             if node_g is None:
                 continue
 
-            node_g = node_g.do_load()
             if node_p not in visited:
                 visited.add(node_p)
                 if search_fn(node_g, *args):
@@ -266,9 +256,9 @@ class SBT(object):
 
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
-                sbt_node = LazyNode(Node.load, jnode, dirname)
+                sbt_node = Node.load(jnode, dirname)
             else:
-                sbt_node = LazyNode(leaf_loader, jnode, dirname)
+                sbt_node = leaf_loader(jnode, dirname)
 
             sbt_nodes.append(sbt_node)
 
@@ -297,9 +287,9 @@ class SBT(object):
 
             if 'internal' in node['filename']:
                 node['factory'] = factory
-                sbt_node = LazyNode(Node.load, node, dirname)
+                sbt_node = Node.load(node, dirname)
             else:
-                sbt_node = LazyNode(leaf_loader, node, dirname)
+                sbt_node = leaf_loader(node, dirname)
 
             sbt_nodes.append(sbt_node)
 
@@ -349,11 +339,15 @@ class SBT(object):
 
 
 class Node(object):
-    "Internal node of SBT; has 0, 1, or 2 children."
+    "Internal node of SBT."
 
-    def __init__(self, factory, name=None):
-        self.data = factory()
+    _cache = LFUCache(maxsize=128)
+
+    def __init__(self, factory, name=None, fullpath=None):
         self.name = name
+        self._factory = factory
+        self._data = None
+        self._filename = fullpath
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
@@ -363,28 +357,41 @@ class Node(object):
     def save(self, filename):
         self.data.save(filename)
 
-    @staticmethod
-    def load(info, dirname):
-        new_node = Node(info['factory'], name=info['name'])
+    @property
+    def data(self):
+        if self._data is None:
+            if self._filename is None:
+                self._data = self._factory()
+            else:
+                self._data = khmer.load_nodegraph(self._filename)
+        return self._data
 
+    @data.setter
+    def data(self, new_data):
+        self._data = new_data
+
+    @classmethod
+    def load(cls, info, dirname):
         filename = os.path.join(dirname, info['filename'])
-        new_node.data = khmer.load_nodegraph(filename)
-        return new_node
-
-    def do_load(self):                    # for lazy loading, quickfix
-        return self
+        # TODO: keep cache small?
+        if filename not in cls._cache:
+            cls._cache[filename] = Node(info['factory'],
+                                        name=info['name'],
+                                        fullpath=filename)
+        return cls._cache[filename]
 
 
 class Leaf(object):
-    def __init__(self, metadata, data, name=None):
+
+    _cache = LFUCache(maxsize=128)
+
+    def __init__(self, metadata, data=None, name=None, fullpath=None):
         self.metadata = metadata
         if name is None:
             name = metadata
         self.name = name
-        self.data = data
-
-    def do_load(self):                    # for lazy loading, quickfix
-        return self
+        self._data = data
+        self._filename = fullpath
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
@@ -392,17 +399,32 @@ class Leaf(object):
                 nb=self.data.n_occupied(),
                 fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
 
+    @property
+    def data(self):
+        if self._data is None:
+            # TODO: what if self._filename is None?
+            self._data = khmer.load_nodegraph(self._filename)
+        return self._data
+
+    @data.setter
+    def data(self, new_data):
+        self._data = new_data
+
     def save(self, filename):
         self.data.save(filename)
 
     def update(self, parent):
         parent.data.update(self.data)
 
-    @staticmethod
-    def load(info, dirname):
-        filepath = os.path.join(dirname, info['filename'])
-        data = khmer.load_nodegraph(filepath)
-        return Leaf(info['metadata'], data, name=info['name'])
+    @classmethod
+    def load(cls, info, dirname):
+        # TODO: keep cache small?
+        filename = os.path.join(dirname, info['filename'])
+        if filename not in cls._cache:
+            cls._cache[filename] = cls(info['metadata'],
+                                       name=info['name'],
+                                       fullpath=filename)
+        return cls._cache[filename]
 
 
 def filter_distance( filter_a, filter_b, n=1000 ) :
@@ -414,6 +436,7 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
     filter_b : Second filter
     n        : Number of positions to compare (in groups of 8)
     """
+    from numpy import array
     A = filter_a.graph.get_raw_tables()
     B = filter_b.graph.get_raw_tables()
     distance = 0

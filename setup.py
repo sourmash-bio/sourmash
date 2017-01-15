@@ -67,6 +67,7 @@ SETUP_METADATA = \
     "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'sbt' : ['khmer>2.0', 'cachetools'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
