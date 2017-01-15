@@ -1,6 +1,10 @@
+"""
+Utility functions for dealing with input args to the sourmash command line.
+"""
 import sys
-from sourmash_lib import signature as sig
-
+import os
+from . import signature
+from .logging import error, notify
 
 def add_moltype_args(parser, default_dna=None):
     parser.add_argument('--protein', dest='protein', action='store_true')
@@ -14,6 +18,47 @@ def add_moltype_args(parser, default_dna=None):
     parser.set_defaults(dna=default_dna)
 
 
+def get_moltype(sig, require=False):
+    if sig.estimator.is_molecule_type('dna'):
+        moltype = 'DNA'
+    elif sig.estimator.is_molecule_type('protein'):
+        moltype = 'protein'
+    else:
+        raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
+
+    return moltype
+
+
+def calculate_moltype(args, default=None):
+    if args.protein:
+        if args.dna is True:
+            error('cannot specify both --dna and --protein!')
+            sys.exit(-1)
+        args.dna = False
+
+    moltype = default
+    if args.protein:
+        moltype = 'protein'
+    elif args.dna:
+        moltype = 'dna'
+
+    return moltype
+
+def load_query_signature(filename, select_ksize, select_moltype):
+    sl = signature.load_signatures(filename,
+                                   select_ksize=select_ksize,
+                                   select_moltype=select_moltype)
+    sl = list(sl)
+
+    if len(sl) != 1:
+        error('When loading query from "{}"', filename)
+        error('{} signatures matching ksize and molecule type;', len(sl))
+        error('need exactly one. Specify --ksize or --dna/--protein.')
+        sys.exit(-1)
+
+    return sl[0]
+
+
 class LoadSingleSignatures(object):
     def __init__(self, filelist,  select_ksize=None, select_moltype=None,
                  ignore_files=set()):
@@ -24,27 +69,40 @@ class LoadSingleSignatures(object):
 
         self.skipped_ignore = 0
         self.skipped_nosig = 0
+        self.ksizes = set()
+        self.moltypes = set()
 
     def __iter__(self):
         for filename in self.filelist:
             if filename in self.ignore_files:
-                self.skipped_iignore += 1
+                self.skipped_ignore += 1
                 continue
 
-            sl = sig.load_signatures(filename,
-                                     select_ksize=self.select_ksize,
-                                     select_moltype=self.select_moltype)
+            sl = signature.load_signatures(filename,
+                                           select_ksize=self.select_ksize,
+                                           select_moltype=self.select_moltype)
             sl = list(sl)
-            if len(sl) != 1:
+            if len(sl) == 0:
                 self.skipped_nosig += 1
                 continue
 
-            query = sl[0]
-            query_moltype = 'UNKNOWN'
-            if query.estimator.is_molecule_type('dna'):
-                query_moltype = 'DNA'
-            elif query.estimator.is_molecule_type('protein'):
-                query_moltype = 'protein'
-            query_ksize = query.estimator.ksize
+            for query in sl:
+                query_moltype = get_moltype(query)
+                query_ksize = query.estimator.ksize
 
-            yield filename, query, query_moltype, query_ksize
+                self.ksizes.add(query_ksize)
+                self.moltypes.add(query_moltype)
+
+                yield filename, query, query_moltype, query_ksize
+
+            if len(self.ksizes) > 1 or len(self.moltypes) > 1:
+                raise ValueError('multiple k-mer sizes/molecule types present')
+
+
+def traverse_find_sigs(dirnames):
+    for dirname in dirnames:
+        for root, dirs, files in os.walk(dirname):
+            for name in files:
+                if name.endswith('.sig'):
+                    fullname = os.path.join(root, name)
+                    yield fullname

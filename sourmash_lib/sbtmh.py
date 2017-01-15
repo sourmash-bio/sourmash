@@ -3,7 +3,7 @@ from __future__ import division
 import os
 
 from .sbt import Leaf
-
+from . import Estimators
 
 
 class SigLeaf(Leaf):
@@ -55,6 +55,42 @@ class SearchMinHashesFindBest(object):
 
         if isinstance(node, SigLeaf):
             matches = node.data.estimator.count_common(sig.estimator)
+        else:  # Node or Leaf, Nodegraph by minhash comparison
+            matches = sum(1 for value in mins if node.data.get(value))
+
+        score = 0
+        if len(mins):
+            score = float(matches) / len(mins)
+
+        if results is not None:
+            results[node.name] = score
+
+        if score >= threshold:
+            # have we done better than this? if yes, truncate.
+            if float(matches) / len(mins) > self.best_match:
+                # update best if it's a leaf node...
+                if isinstance(node, SigLeaf):
+                    self.best_match = float(matches) / len(mins)
+                return 1
+
+        return 0
+
+
+class SearchMinHashesFindBestIgnoreMaxHash(object):
+    def __init__(self):
+        self.best_match = 0.
+
+    def search(self, node, sig, threshold, results=None):
+        mins = sig.estimator.mh.get_mins()
+
+        if isinstance(node, SigLeaf):
+            old_est = node.data.estimator
+            mh = old_est.mh
+            E = Estimators(ksize=old_est.ksize, n=old_est.num)
+            for m in mh.get_mins():
+                E.mh.add_hash(m)
+
+            matches = E.count_common(sig.estimator)
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 

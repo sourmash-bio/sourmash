@@ -1,7 +1,12 @@
+"""
+Tests for the 'sourmash' command line.
+"""
 from __future__ import print_function, unicode_literals
 import os
 import glob
 import gzip
+import shutil
+import screed
 
 from . import sourmash_tst_utils as utils
 from . import Estimators
@@ -16,6 +21,12 @@ from sourmash_lib import signature
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
+
+
+def test_run_sourmash_badcmd():
+    status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
+    assert status != 0                    # bad arg!
+    assert "Unrecognized command" in err
 
 
 def test_do_sourmash_compute():
@@ -453,7 +464,7 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
-def test_sourmash_search():
+def test_search():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -468,11 +479,11 @@ def test_sourmash_search():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in out
+        assert '1 matches' in err
         assert '0.958' in out
 
 
-def test_sourmash_search_gzip():
+def test_search_gzip():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -493,11 +504,11 @@ def test_sourmash_search_gzip():
                                             'yyy.gz'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in out
+        assert '1 matches' in err
         assert '0.958' in out
 
 
-def test_sourmash_search_2():
+def test_search_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -514,7 +525,7 @@ def test_sourmash_search_2():
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '2 matches' in out
+        assert '2 matches' in err
         assert '0.958' in out
 
 
@@ -537,7 +548,26 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches; showing 3:' in out
+        assert '1 matches; showing 3:' in err
+
+
+def test_do_sourmash_sbt_index_bad_args():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '--dna', '--protein'],
+                                           in_directory=location, fail_ok=True)
+
+        assert "cannot specify both --dna and --protein!" in err
+        assert status != 0
 
 
 def test_do_sourmash_sbt_search():
@@ -555,6 +585,103 @@ def test_do_sourmash_sbt_search():
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+        assert testdata2 in out
+
+
+def test_do_sourmash_sbt_index_single():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+
+
+def test_do_sourmash_sbt_search_selectprot():
+    # sbt_index should fail when run on signatures with multiple types
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        args = ['compute', testdata1, testdata2,
+                '--protein', '--dna', '-k', '30']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['sbt_index', 'zzz', 'short.fa.sig', 'short2.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+
+        print(out)
+        print(err)
+        assert status != 0
+
+
+def test_do_sourmash_sbt_search_dnaprotquery():
+    # sbt_search should fail if non-single query sig given
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        args = ['compute', testdata1, testdata2,
+                '--protein', '--dna', '-k', '30']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['sbt_index', 'zzz', '--protein', 'short.fa.sig',
+                'short2.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        args = ['sbt_search', 'zzz', 'short.fa.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+        assert status != 0
+        print(out)
+        print(err)
+        assert 'need exactly one' in err
+
+
+def test_do_sourmash_sbt_index_traverse():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            '--traverse-dir', '.'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert 'loaded 2 sigs; saving SBT under' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', 'zzz',
@@ -617,7 +744,7 @@ def test_do_sourmash_sbt_search_bestonly():
         assert testdata1 in out
 
 
-def test_sourmash_compare_with_abundance_1():
+def test_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -643,7 +770,7 @@ def test_sourmash_compare_with_abundance_1():
         assert '1.000' in out
 
 
-def test_sourmash_compare_with_abundance_2():
+def test_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -671,7 +798,7 @@ def test_sourmash_compare_with_abundance_2():
         assert '1.0' in out
 
 
-def test_sourmash_compare_with_abundance_3():
+def test_compare_with_abundance_3():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = Estimators(ksize=5, n=5, is_protein=False,
@@ -698,3 +825,292 @@ def test_sourmash_compare_with_abundance_3():
                                             '-k' ,'5'],
                                            in_directory=location)
         assert '0.705' in out
+
+
+def test_sbt_gather():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found: 1.00 1.00 ' in err
+
+
+def test_sbt_gather_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--with-cardinality'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found: 1.00 1.00 ' in err
+
+
+def test_sbt_gather_error_no_cardinality_query():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        testdata3 = utils.get_test_data('short3.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata3],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'short3.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+        assert "query signature needs to be created with --scaled" in err
+
+
+def test_sbt_gather_error_no_cardinality():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1, (status, out, err)
+        assert "Best hash match in sbt_gather has no cardinality" in err
+
+
+def test_sbt_categorize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+
+        # omit 3
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['categorize', 'zzz', '--traverse-directory', '.',
+                '--ksize', '21', '--dna', '--csv', 'out.csv']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+
+        out_csv = open(os.path.join(location, 'out.csv')).read()
+        assert './4.sig,genome-s10.fa.gz,0.50' in out_csv
+
+
+def test_sbt_categorize_already_done():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+
+        # omit 3
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
+            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+
+        args = ['categorize', 'zzz', './2.sig', './4.sig',
+                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'for genome-s11.fa.gz, no match found'
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+
+
+def test_sbt_categorize_already_done_traverse():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+        shutil.copyfile(testdata4, os.path.join(location, '4.sig'))
+
+        # omit 3
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'in.csv'), 'wt') as fp:
+            fp.write('./4.sig,genome-s10.fa.gz,0.50')
+
+        args = ['categorize', 'zzz', '--traverse-directory', '.',
+                '--ksize', '21', '--dna', '--load-csv', 'in.csv']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'for genome-s11.fa.gz, no match found'
+        assert not 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+
+
+def test_sbt_categorize_multiple_ksizes_moltypes():
+    # 'categorize' should fail when there are multiple ksizes or moltypes
+    # present
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+        shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
+        shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
+
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig', '2.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        args = ['categorize', 'zzz', '--traverse-directory', '.']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+
+        assert status != 0
+        assert 'multiple k-mer sizes/molecule types present' in err
+
+
+def test_watch():
+    with utils.TempDirectory() as location:
+        testdata0 = utils.get_test_data('genome-s10.fa.gz')
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        cmd = """
+
+             gunzip -c {} | {}/sourmash watch --ksize 21 --dna zzz
+
+        """.format(testdata0, utils.scriptpath())
+        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+
+
+def test_watch_coverage():
+    with utils.TempDirectory() as location:
+        testdata0 = utils.get_test_data('genome-s10.fa.gz')
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+
+        args = ['sbt_index', '--dna', '-k', '21', 'zzz', '1.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'query.fa'), 'wt') as fp:
+            record = list(screed.open(testdata0))[0]
+            for start in range(0, len(record), 100):
+                fp.write('>{}\n{}\n'.format(start,
+                                            record.sequence[start:start+500]))
+
+        args = ['watch', '--ksize', '21', '--dna', 'zzz', 'query.fa']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err

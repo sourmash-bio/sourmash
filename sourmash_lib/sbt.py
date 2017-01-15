@@ -105,9 +105,10 @@ class SBT(object):
     def add_node(self, node):
         pos = self.new_node_pos(node)
 
-        if pos == 0:  # empty tree
-            self.nodes[0] = node
-            return
+        if pos == 0:  # empty tree; initialize w/node.
+            n = Node(self.factory, name="internal." + str(pos))
+            self.nodes[0] = n
+            pos = self.new_node_pos(node)
 
         # Cases:
         # 1) parent is a Leaf (already covered)

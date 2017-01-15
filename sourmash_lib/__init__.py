@@ -99,8 +99,7 @@ class Estimators(object):
                           seed=self.seed)
 
         if not self.track_abundance:
-            for m in mins:
-                self.mh.add_hash(m)
+            self.add_many(mins)
         else:
             self.mh.set_abundances(mins)
 
@@ -112,6 +111,19 @@ class Estimators(object):
     def add(self, kmer):
         "Add kmer into sketch."
         self.mh.add_sequence(kmer)
+
+    def add_many(self, hashes):
+        "Add many hashes in at once."
+        for hash in hashes:
+            self.mh.add_hash(hash)
+
+    def update(self, other):
+        "Update this estimator from all the hashes from the other."
+        self.add_many(other.mh.get_mins())
+
+    def get_hashes(self):
+        "Get the list of hashes."
+        return self.mh.get_mins()
 
     def add_sequence(self, seq, force=False):
         "Sanitize and add a sequence to the sketch."
@@ -125,6 +137,14 @@ class Estimators(object):
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
+
+    def similarity_ignore_maxhash(self, other):
+        a = set(self.mh.get_mins())
+        b = set(other.mh.get_mins())
+
+        overlap = a.intersection(b)
+        return float(len(overlap)) / float(len(a))
+
 
     def similarity(self, other, ignore_abundance=False):
         """\
