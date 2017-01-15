@@ -9,17 +9,13 @@ import sourmash_lib
 from . import signature as sig
 from . import fig as sourmash_fig
 from . import sourmash_args
+from .logging import notify, error
 from ._minhash import MinHash
 
 DEFAULT_K = 31
 DEFAULT_N = 500
 
 WATERMARK_SIZE=10000
-
-
-def notify(s, *args, **kwargs):
-    "A simple logging function => stderr."
-    print(s.format(*args, **kwargs), file=sys.stderr)
 
 
 class SourmashCommands(object):
@@ -757,6 +753,7 @@ Commands can be:
         parser.add_argument('--threshold', default=0.05, type=float)
         parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
         parser.add_argument('--csv', type=argparse.FileType('wt'))
+        parser.add_argument('--save-matches', type=argparse.FileType('wt'))
 
         sourmash_args.add_moltype_args(parser)
 
@@ -794,6 +791,7 @@ Commands can be:
         print('loaded query: {}... (k={}, {})'.format(query.name()[:30],
                                                       query_ksize,
                                                       query_moltype))
+        notify('query signature has max_hash: {}', query.estimator.max_hash)
 
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
         #s = sig.load_signatures(args.query, select_ksize=args.ksize)
@@ -808,7 +806,6 @@ Commands can be:
             # use super low threshold for this part of the search
             for leaf in tree.find(search_fn, query, 0.00001):
                 results.append((query.similarity(leaf.data), leaf.data))
-                #results.append((leaf.data.similarity(ss), leaf.data))
 
             if not len(results):          # no matches at all!
                 break
@@ -836,15 +833,30 @@ Commands can be:
             new_mins = set(query.estimator.mh.get_mins())
             found_mins = best_ss.estimator.mh.get_mins()
 
+            # intersection:
+            intersect_mins = new_mins.intersection(found_mins)
+
+            # first denominator - genome size
+            genome_n_mins = len(found_mins)
+            f_genome = len(intersect_mins) / float(genome_n_mins)
+
+            # second denominator - metagenome size
+            query_n_mins = len(orig_query.estimator.mh.get_mins())
+            f_query = len(intersect_mins) / float(query_n_mins)
+
             # print interim & save
-            print('found: {:.2f} {} {}'.format(f_of_total,
-                                               len(new_mins),
-                                               best_ss.name()))
+            print('found: {:.2f} {:.2f} {}'.format(f_genome,
+                                                  f_query,
+                                                  best_ss.name()))
             found.append((f_of_total, best_ss, sim))
             sum_found += f_of_total
 
+            if len(new_mins.intersection(found_mins)) <= 16:
+                break
+
             new_mins -= set(found_mins)
-            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
+            e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins),
+                                        max_hash=query.estimator.max_hash)
             for m in new_mins:
                 e.mh.add_hash(m)
             new_ss = sig.SourmashSignature('foo', e)
@@ -856,7 +868,7 @@ Commands can be:
         if not found:
             sys.exit(0)
 
-        found.sort()
+        found.sort(key=lambda x: x[0])
         found.reverse()
 
         print('Composition:')
@@ -879,6 +891,11 @@ Commands can be:
                 w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                                 similarity=sim,
                                 sketch_kmers=cardinality))
+        if args.save_matches:
+            outname = args.save_matches.name
+            print('saving all matches to "{}"'.format(outname))
+            sig.save_signatures([ ss for (f, ss, sim) in found ],
+                                args.save_matches)
 
     def watch(self, args):
         "Build a signature from raw FASTA/FASTQ coming in on stdin, search."

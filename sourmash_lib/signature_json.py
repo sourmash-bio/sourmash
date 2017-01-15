@@ -213,12 +213,12 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
 
     for n, sigset in enumerate(it):
         if n > 0 and n % 100 == 0:
-            print('\r...sig loading {:,}'.format(n), end='', flush=True)
+            notify('\r...sig loading {:,}', n, end='', flush=True)
         for sig in sigset['signatures']:
             yield sig
 
     if n > 1:
-        print('\r...sig loading {:,}'.format(n), flush=True)
+        notify('\r...sig loading {:,}', n, flush=True)
 
 
 def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
