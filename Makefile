@@ -23,7 +23,7 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
-coverage: clean
+coverage:
 	$(PYTHON) setup.py clean --all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
 	$(PYTHON) -m pytest --cov=.
