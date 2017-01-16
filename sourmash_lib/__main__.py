@@ -944,9 +944,10 @@ def convert(args):
     
     import sourmash_lib.signature
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--minified', action="store_true", help='Store the JSON minified (uses less space) or not.')
-    parser.add_argument('yml_filenames', nargs='*', help='Name of yaml file')
+    parser = argparse.ArgumentParser("""Convert signature files in YAML (old format) to signature files in JSON (new format)""")
+    parser.add_argument('--minified', action="store_true",
+                        help='Store the JSON minified (uses less space but is less human-readable) or not.')
+    parser.add_argument('filename', nargs='*', help='Name of YAML file with signatures.')
     
     args = parser.parse_args(args)
 
