@@ -22,7 +22,7 @@ WATERMARK_SIZE=10000
 class SourmashCommands(object):
     commands = ['search', 'compute', 'compare', 'plot', 'import_csv',
                 'dump', 'sbt_index', 'sbt_search', 'categorize', 'sbt_gather',
-                'watch']
+                'watch', 'convert']
 
 
     def __init__(self):
@@ -37,6 +37,7 @@ Commands can be:
    plot <matrix>               Plot a distance matrix made by 'compare'.
 
    import_csv                  Import signatures from a CSV file.
+   convert                     Convert signatures from YAML to JSON.
 
    sbt_index                   Index signatures with a Sequence Bloom Tree.
    sbt_search                  Search a Sequence Bloom Tree.
@@ -938,6 +939,32 @@ def watch(args):
         sig.save_signatures([streamsig], args.output)
 
 
+def convert(args):
+    "Convert YAML to JSON"
+    
+    import sourmash_lib.signature
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--minified', action="store_true", help='Store the JSON minified (uses less space) or not.')
+    parser.add_argument('yml_filenames', nargs='*', help='Name of yaml file')
+    
+    args = parser.parse_args(args)
+
+    if args.minified:
+        kwargs = {'indent': None,
+                  'sort_keys': False}
+    else:
+        kwargs = {}
+    for fn in args.yml_filenames:
+        assert fn.endswith(".sig")
+        with open(fn) as fh:
+            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
+
+        out_fn = fn + ".json"
+        with open(out_fn, 'w') as fh:
+            sourmash_lib.signature.save_signatures_json(signatures, fp=fh, **kwargs)
+
+        
 def main():
     SourmashCommands()
     return 0
