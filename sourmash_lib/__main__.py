@@ -963,7 +963,7 @@ def convert(args):
 
         out_fn = fn + ".json"
         with open(out_fn, 'w') as fh:
-            sourmash_lib.signature.save_signatures_json(signatures, fp=fh, **kwargs)
+            sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
 
         
 def main():
