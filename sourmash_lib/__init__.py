@@ -3,6 +3,7 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
+from .version import VERSION as __version__
 import re
 import math
 from ._minhash import MinHash

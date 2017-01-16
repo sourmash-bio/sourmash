@@ -4,7 +4,9 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="1.1"
+VERSION='undefined'
+with open('sourmash_lib/version.py') as f:
+    exec(f.read())
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]

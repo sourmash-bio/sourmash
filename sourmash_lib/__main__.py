@@ -2,6 +2,8 @@
 sourmash command line.
 """
 from __future__ import print_function
+from .version import VERSION
+
 import sys
 import os, os.path
 import argparse
@@ -25,7 +27,8 @@ class SourmashCommands(object):
 
     def __init__(self):
         parser = argparse.ArgumentParser(description='work with RNAseq signatures',
-                                         usage='''sourmash <command> [<args>]
+                                         usage='''\
+sourmash <command> [<args>]
 
 Commands can be:
 
@@ -41,8 +44,10 @@ Commands can be:
    categorize                  Categorize signatures with a SBT.
    sbt_gather                  Search a signature for multiple matches.
    watch                       Classify a stream of sequences using a SBT.
-.
-''')
+
+sourmash v{}. Documentation is at http://sourmash.readthedocs.io/.
+ 
+'''.format(VERSION))
         parser.add_argument('command')
         args = parser.parse_args(sys.argv[1:2])
         if not hasattr(self, args.command):
