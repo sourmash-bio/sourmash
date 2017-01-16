@@ -944,9 +944,16 @@ def convert(args):
     
     import sourmash_lib.signature
 
-    parser = argparse.ArgumentParser("""Convert signature files in YAML (old format) to signature files in JSON (new format)""")
+    parser = argparse.ArgumentParser("""
+Ensure that signature files in YAML (old format) are converted to signature files in JSON (new format).
+The JSON-for-sure signature files are created in the same directory as the YAML-may-be files and are added
+the extension ".json".
+""")
     parser.add_argument('--minified', action="store_true",
                         help='Store the JSON minified (uses less space but is less human-readable) or not.')
+    parser.add_argument('-f', '--force',
+                        action="store_true",
+                        help="Overwrite existing files.")
     parser.add_argument('filename', nargs='*', help='Name of YAML file with signatures.')
     
     args = parser.parse_args(args)
@@ -957,11 +964,17 @@ def convert(args):
     else:
         kwargs = {}
     for fn in args.yml_filenames:
-        assert fn.endswith(".sig")
+        if not fn.endswith(".sig"):
+            notify("The file %s does not end end .sig. Skipping." % fn)
+            continue
         with open(fn) as fh:
             signatures = tuple(sourmash_lib.signature.load_signatures(fh))
 
         out_fn = fn + ".json"
+        if not args.force and os.path.exists(out_fn):
+            notify("The output file %s is already present. Use --force to force overwriting." % out_fn)
+            sys.exit(1)
+        
         with open(out_fn, 'w') as fh:
             sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
 
