@@ -8,6 +8,7 @@ all:
 clean:
 	$(PYTHON) setup.py clean --all
 	cd doc && make clean
+	-rm sourmash_lib/_minhash.cpp
 
 install: all
 	$(PYTHON) setup.py install
@@ -22,7 +23,7 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
-coverage: all
+coverage: clean
 	$(PYTHON) setup.py clean --all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
 	$(PYTHON) -m pytest --cov=.

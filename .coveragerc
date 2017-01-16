@@ -1,3 +1,4 @@
 [run]
-include=sourmash,sourmash_lib/*.py
+include=sourmash,sourmash_lib/*.py,sourmash_lib/_minhash.pyx
 omit=setup.py,sourmash_lib/test__minhash.py,sourmash_lib/test_sourmash.py,sourmash_lib/sourmash_tst_utils.py,third-party/smhasher/MurmurHash3.cc
+plugins=Cython.Coverage

@@ -4,10 +4,12 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
+
 VERSION="1.1"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
+MACROS = []
 
 CLASSIFIERS = [
     "Environment :: Console",
@@ -33,12 +35,20 @@ if sys.platform == 'darwin':              # Mac OS X?
                                '-stdlib=libc++'])
 
 else:                                     # ...likely Linux
-   if os.environ.get('SOURMASH_COVERAGE'):
-      print('Turning on coverage analysis.')
-      EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
-      EXTRA_LINK_ARGS.extend(['--coverage', '-lgcov'])
-   else:
-      EXTRA_COMPILE_ARGS.append('-O3')
+    if os.environ.get('SOURMASH_COVERAGE'):
+        print('Turning on coverage analysis.')
+        EXTRA_COMPILE_ARGS.extend(['-g', '--coverage', '-lgcov'])
+        EXTRA_LINK_ARGS.extend(['--coverage', '-lgcov'])
+        try:
+            import Cython.Compiler.Options
+        except ImportError:
+            print('Cython not found, not running coverage on it')
+        else:
+            MACROS.extend([('CYTHON_TRACE', '1')])
+            Cython.Compiler.Options.linetrace = True
+            Cython.Compiler.Options.binding = True
+    else:
+        EXTRA_COMPILE_ARGS.append('-O3')
 
 SETUP_METADATA = \
                {
@@ -62,11 +72,12 @@ SETUP_METADATA = \
                                              "./third-party/smhasher/"],
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
-                               extra_link_args=EXTRA_LINK_ARGS)],
+                               extra_link_args=EXTRA_LINK_ARGS,
+                               define_macros=MACROS,)],
     "install_requires": ["screed>=0.9", "PyYAML>=3.11", "ijson"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'Cython>=0.25.2'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
