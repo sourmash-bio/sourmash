@@ -1114,3 +1114,39 @@ def test_watch_coverage():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+
+
+def test_mash_yaml_to_json():
+    with utils.TempDirectory() as location:
+        orig_sig = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copy(orig_sig, location)
+        test_sig = os.path.join(location, os.path.basename(orig_sig))
+        
+        assert not os.path.exists(test_sig + ".json")
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        test_sig],
+                                           in_directory=location)
+        # check success
+        assert status == 0
+        # check existence of JSON file
+        assert os.path.exists(test_sig + ".json")
+        # check that the file can be read (as JSON)
+        with open(test_sig + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)
+
+        # try again: will fail because .json already found
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        test_sig],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == 1
+
+        # try again: will not fail when .json already found because of --force
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        '--force',
+                                                        test_sig],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == 0

@@ -963,7 +963,8 @@ the extension ".json".
                   'sort_keys': False}
     else:
         kwargs = {}
-    for fn in args.yml_filenames:
+
+    for fn in args.filename:
         if not fn.endswith(".sig"):
             notify("The file %s does not end end .sig. Skipping." % fn)
             continue
