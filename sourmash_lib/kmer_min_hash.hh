@@ -7,7 +7,6 @@
 #include <queue>
 #include <exception>
 #include <string>
-#include <unordered_map>
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
@@ -21,7 +20,8 @@ uint64_t _hash_murmur(const std::string& kmer,
 
 typedef uint64_t HashIntoType;
 
-typedef std::set<HashIntoType> CMinHashType;
+//typedef std::set<HashIntoType> CMinHashType;
+typedef std::vector<HashIntoType> CMinHashType;
 
 typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
 
@@ -41,6 +41,14 @@ protected:
     const std::string _msg;
 };
 
+// Looks like a iterator but all it does is counts push_backs
+struct Counter {
+  struct value_type {
+    template <typename T> value_type(const T &) {}
+  };
+  void push_back(const value_type &) { ++count; }
+  size_t count = 0;
+};
 
 class KmerMinHash
 {
@@ -53,31 +61,51 @@ public:
     CMinHashType mins;
 
     KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
-                HashIntoType mx) :
-        num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) { };
+                HashIntoType mx)
+        : // overflow num to represent "no maximum"
+          num(n > 0 ? n : -1),
+          ksize(k), is_protein(prot), seed(s),
+          // overflow max_hash to represent "no maximum", this simplifies
+          // the comparison in add_hash()
+          max_hash(mx > 0 ? mx : -1) {
+      if (n > 0) {
+        mins.reserve(num + 1);
+      }
+      // only reserve a finite amount of space for unbounded MinHashes
+      else {
+        mins.reserve(1000);
+      }
+    };
 
     virtual void _shrink() {
-        if (num == 0) {
-            return;
-        }
-        while (mins.size() > num) {
-            CMinHashType::iterator mi = mins.end();
-            mi--;
-            mins.erase(mi);
-        }
+        // pass
     }
-    virtual void add_hash(HashIntoType h) {
-        if (max_hash) {
-            if (h <= max_hash) {
-                mins.insert(h);
+    virtual void add_hash(const HashIntoType h) {
+      if (h <= max_hash) {
+        if (mins.size() == 0) {
+          mins.push_back(h);
+          return;
+        }
+        else if (mins.back() > h or mins.size() < num) {
+          auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+
+          // must still be growing, we know the list won't get too long
+          if (pos == mins.cend()) {
+            mins.push_back(h);
+          }
+          // inserting somewhere in the middle, if this value isn't already
+          // in mins store it and shrink list if needed
+          else if (*pos != h) {
+            mins.insert(pos, h);
+            if (mins.size() > num) {
+              mins.pop_back();
             }
-        } else {
-            mins.insert(h);
+          }
         }
-        _shrink();
+      }
     }
-    void add_word(std::string word) {
-        HashIntoType hash = _hash_murmur(word, seed);
+    void add_word(const std::string& word) {
+        const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
     void add_sequence(const char * sequence, bool force=false) {
@@ -87,8 +115,8 @@ public:
         const std::string seq = _checkdna(sequence, force);
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-                std::string kmer = seq.substr(i, ksize);
-                std::string rc = _revcomp(kmer);
+                const std::string kmer = seq.substr(i, ksize);
+                const std::string rc = _revcomp(kmer);
                 if (kmer < rc) {
                     add_word(kmer);
                 } else {
@@ -129,9 +157,8 @@ public:
     }
 
     std::string _checkdna(const char * s, bool force=false) const {
-        size_t seqsize = strlen(s);
-
         std::string seq = s;
+        const size_t seqsize = strlen(s);
 
         for (size_t i=0; i < seqsize; ++i) {
             switch(seq[i]) {
@@ -201,14 +228,19 @@ public:
         if (seed != other.seed) {
             throw minhash_exception("mismatch in seed; merge fail");
         }
-        for (auto mi: other.mins) {
-            mins.insert(mi);
+        CMinHashType merged;
+        merged.reserve(other.mins.size() + mins.size());
+        std::set_union(other.mins.begin(), other.mins.end(),
+                       mins.begin(), mins.end(),
+                       std::back_inserter(merged));
+        if (merged.size() < num) {
+          mins = merged;
         }
-        _shrink();
+        else {
+          mins = CMinHashType(std::begin(merged), std::begin(merged) + num);
+        }
     }
     virtual unsigned int count_common(const KmerMinHash& other) {
-        CMinHashType combined;
-
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
         }
@@ -222,14 +254,11 @@ public:
             throw minhash_exception("mismatch in seed; comparison fail");
         }
 
-        CMinHashType::iterator mi;
-        for (mi = mins.begin(); mi != mins.end(); ++mi) {
-            combined.insert(*mi);
-        }
-        for (mi = other.mins.begin(); mi != other.mins.end(); ++mi) {
-            combined.insert(*mi);
-        }
-        return mins.size() + other.mins.size() - combined.size();
+        Counter counter;
+        std::set_intersection(mins.begin(), mins.end(),
+                              other.mins.begin(), other.mins.end(),
+                              std::back_inserter(counter));
+        return counter.count;
     }
 
     virtual size_t size() {
@@ -348,7 +377,7 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual unsigned int count_common(const KmerMinAbundance& other) {
-        CMinHashType combined;
+        std::set<HashIntoType> combined;
 
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
@@ -373,7 +402,7 @@ class KmerMinAbundance: public KmerMinHash {
     }
 
     virtual unsigned int count_common(const KmerMinHash& other) {
-        CMinHashType combined;
+        std::set<HashIntoType> combined;
 
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
