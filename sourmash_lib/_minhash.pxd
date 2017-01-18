@@ -9,11 +9,12 @@ from libcpp.memory cimport unique_ptr
 from libcpp.set cimport set
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint64_t
+from libcpp.vector cimport vector
 
 
 cdef extern from "kmer_min_hash.hh":
     ctypedef uint64_t HashIntoType;
-    ctypedef set[HashIntoType] CMinHashType;
+    ctypedef vector[HashIntoType] CMinHashType;
     ctypedef map[HashIntoType, uint64_t] CMinAbundanceType;
 
 
