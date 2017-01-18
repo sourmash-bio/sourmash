@@ -966,7 +966,7 @@ the extension ".json".
 
     for fn in args.filename:
         if not fn.endswith(".sig"):
-            notify("The file %s does not end end .sig. Skipping." % fn)
+            notify("The file name %s does not end with '.sig'. Skipping." % fn)
             continue
         with open(fn) as fh:
             signatures = tuple(sourmash_lib.signature.load_signatures(fh))
