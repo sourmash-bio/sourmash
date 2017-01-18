@@ -81,19 +81,25 @@ public:
         // pass
     }
     virtual void add_hash(const HashIntoType h) {
-      if (h <= max_hash and (mins.back() > h or mins.size() < num)) {
-        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
-
-        // must still be growing, we know the list won't get too long
-        if (pos == mins.cend()) {
+      if (h <= max_hash) {
+        if (mins.size() == 0) {
           mins.push_back(h);
+          return;
         }
-        // inserting somewhere in the middle, if this value isn't already
-        // in mins store it and shrink list if needed
-        else if (*pos != h) {
-          mins.insert(pos, h);
-          if (mins.size() > num) {
-            mins.pop_back();
+        else if (mins.back() > h or mins.size() < num) {
+          auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+
+          // must still be growing, we know the list won't get too long
+          if (pos == mins.cend()) {
+            mins.push_back(h);
+          }
+          // inserting somewhere in the middle, if this value isn't already
+          // in mins store it and shrink list if needed
+          else if (*pos != h) {
+            mins.insert(pos, h);
+            if (mins.size() > num) {
+              mins.pop_back();
+            }
           }
         }
       }

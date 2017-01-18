@@ -620,3 +620,15 @@ def test_set_abundance():
         a.set_abundances({1: 3, 2: 4})
 
     assert "track_abundance=True when constructing" in e.value.args[0]
+
+
+def test_reviving_minhash():
+    # simulate reading a MinHash from disk
+    mh = MinHash(4294967295, 21, max_hash=184467440737095520, seed=42,
+                 track_abundance=False)
+    mins = (28945103950853965, 74690756200987412, 82962372765557409,
+            93503551367950366, 106923350319729608, 135116761470196737,
+            160165359281648267, 162390811417732001, 177939655451276972)
+
+    for m in mins:
+        mh.add_hash(m)
