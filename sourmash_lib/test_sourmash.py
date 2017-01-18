@@ -1121,10 +1121,15 @@ def test_mash_yaml_to_json():
         orig_sig = utils.get_test_data('genome-s10.fa.gz.sig')
         shutil.copy(orig_sig, location)
         test_sig = os.path.join(location, os.path.basename(orig_sig))
+
+        # create directory
+        os.mkdir(os.path.join(location, "foo"))
+        shutil.copy(orig_sig, os.path.join(location, "foo"))
         
         assert not os.path.exists(test_sig + ".json")
         status, out, err = utils.runscript('sourmash', ['convert',
-                                                        test_sig],
+                                                        test_sig,
+                                                        location],
                                            in_directory=location)
         # check success
         assert status == 0

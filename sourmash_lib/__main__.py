@@ -954,7 +954,8 @@ the extension ".json".
     parser.add_argument('-f', '--force',
                         action="store_true",
                         help="Overwrite existing files.")
-    parser.add_argument('filename', nargs='*', help='Name of YAML file with signatures.')
+    parser.add_argument('path', nargs='*',
+                        help='Path to YAML file with signatures, or directory containing signature files.')
     
     args = parser.parse_args(args)
 
@@ -964,17 +965,39 @@ the extension ".json".
     else:
         kwargs = {}
 
-    for fn in args.filename:
-        if not fn.endswith(".sig"):
-            notify("The file name %s does not end with '.sig'. Skipping." % fn)
-            continue
-        with open(fn) as fh:
-            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
 
-        out_fn = fn + ".json"
+    filenames = list()
+
+    while len(args.path) > 0:
+        path = args.path.pop()
+        
+        if not os.path.exists(path):
+            notify("The path name %s does not exist" % path)
+            sys.exit(1)
+
+        if os.path.isdir(path):
+            notify("The path %s is a directory (and we will search signatures in it)." % path)
+            args.path.extend(os.path.join(path, x) for x in os.listdir(path))
+            continue
+
+        # "path" is a file (not a directory) past this point        
+        if not path.endswith(".sig"):
+            notify("The file name %s does not end with '.sig'. Skipping." % path)
+            continue
+
+        # fail early if output already existing
+        out_fn = path + ".json"
         if not args.force and os.path.exists(out_fn):
             notify("The output file %s is already present. Use --force to force overwriting." % out_fn)
             sys.exit(1)
+
+        # path is a file and should be converted
+        filenames.append(path)
+
+    for path in filenames:
+        
+        with open(path) as fh:
+            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
         
         with open(out_fn, 'w') as fh:
             sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
