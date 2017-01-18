@@ -326,6 +326,33 @@ def test_mh_merge(track_abundance):
     assert d.compare(c) == 1.0
 
 
+def test_mh_merge_check_length(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    assert(len(c.get_mins()) == 20)
+
+
+def test_mh_merge_check_length2(track_abundance):
+    # merged MH doesn't have full number of elements
+    a = MinHash(4, 10, track_abundance=track_abundance)
+    a.add_hash(3)
+    a.add_hash(1)
+    a.add_hash(4)
+
+    b = MinHash(4, 10, track_abundance=track_abundance)
+    b.add_hash(3)
+    b.add_hash(1)
+    b.add_hash(4)
+
+    c = a.merge(b)
+    assert(len(c.get_mins()) == 3)
 
 
 def test_mh_asymmetric_merge(track_abundance):
@@ -394,6 +421,7 @@ def test_mh_inplace_concat(track_abundance):
     assert c.get_mins() == d.get_mins()
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
+
 
 def test_mh_merge_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
@@ -555,6 +583,7 @@ def test_abundance_count_common():
     assert b.get_mins(with_abundance=True) == [2110480117637990133,
                                                10798773792509008305]
 
+
 def test_abundance_compare():
     a = MinHash(20, 10, track_abundance=True)
     b = MinHash(20, 10, track_abundance=False)
@@ -591,3 +620,15 @@ def test_set_abundance():
         a.set_abundances({1: 3, 2: 4})
 
     assert "track_abundance=True when constructing" in e.value.args[0]
+
+
+def test_reviving_minhash():
+    # simulate reading a MinHash from disk
+    mh = MinHash(4294967295, 21, max_hash=184467440737095520, seed=42,
+                 track_abundance=False)
+    mins = (28945103950853965, 74690756200987412, 82962372765557409,
+            93503551367950366, 106923350319729608, 135116761470196737,
+            160165359281648267, 162390811417732001, 177939655451276972)
+
+    for m in mins:
+        mh.add_hash(m)
