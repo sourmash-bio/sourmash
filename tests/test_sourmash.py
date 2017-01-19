@@ -618,6 +618,104 @@ def test_search():
         assert '0.930' in out
 
 
+def test_compare_deduce_molecule():
+    # deduce DNA vs protein from query, if it is unique
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--no-dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.944' in err
+
+
+def test_search_deduce_molecule():
+    # deduce DNA vs protein from query, if it is unique
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--no-dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert '(k=30, protein)' in err
+
+
+def test_search_deduce_ksize():
+    # deduce ksize from query, if it is unique
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '23',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert 'k=23' in err
+
+
+def test_search_deduce_ksize_not_unique():
+    # deduce ksize from query, fail because it is not unique
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '23,25',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+        print(status, out, err)
+        assert status == -1
+        assert '2 signatures matching ksize' in err
+
+
+def test_search_deduce_ksize_vs_user_specified():
+    # user specified ksize is not available
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '23',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '-k', '24',
+                                            'short.fa.sig', 'short2.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+        print(status, out, err)
+        assert status == -1
+        assert '0 signatures matching ksize' in err
+
+
 def test_search_gzip():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -1151,6 +1249,76 @@ def test_sbt_gather_error_no_cardinality_query():
         assert "query signature needs to be created with --scaled" in err
 
 
+def test_sbt_gather_deduce_ksize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10', '-k', '23'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10', '-k', '23',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found: 1.00 1.00 ' in err
+
+
+def test_sbt_gather_deduce_moltype():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10', '-k', '30',
+                                            '--no-dna', '--protein'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10', '-k', '30',
+                                            '--no-dna', '--protein',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found: 1.00 1.00 ' in err
+
+
 def test_sbt_categorize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
@@ -1290,6 +1458,30 @@ def test_watch():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+
+
+def test_watch_deduce_ksize():
+    with utils.TempDirectory() as location:
+        testdata0 = utils.get_test_data('genome-s10.fa.gz')
+        utils.runscript('sourmash',
+                        ['compute', testdata0, '-k', '31', '-o', '1.sig'],
+                        in_directory=location)
+
+        args = ['sbt_index', '--dna', '-k', '31', 'zzz', '1.sig']
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        cmd = """
+
+             gunzip -c {} | {}/sourmash watch --dna zzz
+
+        """.format(testdata0, utils.scriptpath())
+        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+
+        print(out)
+        print(err)
+        assert 'Computing signature for k=31' in err
+        assert 'genome-s10.fa.gz, at 1.000' in err
 
 
 def test_watch_coverage():
