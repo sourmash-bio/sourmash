@@ -22,7 +22,7 @@ WATERMARK_SIZE=10000
 class SourmashCommands(object):
     commands = ['search', 'compute', 'compare', 'plot', 'import_csv',
                 'dump', 'sbt_index', 'sbt_search', 'categorize', 'sbt_gather',
-                'watch']
+                'watch', 'convert']
 
 
     def __init__(self):
@@ -37,6 +37,7 @@ Commands can be:
    plot <matrix>               Plot a distance matrix made by 'compare'.
 
    import_csv                  Import signatures from a CSV file.
+   convert                     Convert signatures from YAML to JSON.
 
    sbt_index                   Index signatures with a Sequence Bloom Tree.
    sbt_search                  Search a Sequence Bloom Tree.
@@ -938,6 +939,72 @@ def watch(args):
         sig.save_signatures([streamsig], args.output)
 
 
+def convert(args):
+    "Convert YAML to JSON"
+    
+    import sourmash_lib.signature
+
+    parser = argparse.ArgumentParser("""
+Ensure that signature files in YAML (old format) are converted to signature files in JSON (new format).
+The JSON-for-sure signature files are created in the same directory as the YAML-may-be files and are added
+the extension ".json".
+""")
+    parser.add_argument('--minified', action="store_true",
+                        help='Store the JSON minified (uses less space but is less human-readable) or not.')
+    parser.add_argument('-f', '--force',
+                        action="store_true",
+                        help="Overwrite existing files.")
+    parser.add_argument('path', nargs='*',
+                        help='Path to YAML file with signatures, or directory containing signature files.')
+    
+    args = parser.parse_args(args)
+
+    if args.minified:
+        kwargs = {'indent': None,
+                  'sort_keys': False}
+    else:
+        kwargs = {}
+
+
+    filenames = list()
+
+    while len(args.path) > 0:
+        path = args.path.pop()
+        
+        if not os.path.exists(path):
+            notify("The path name %s does not exist" % path)
+            sys.exit(1)
+
+        if os.path.isdir(path):
+            notify("The path %s is a directory (and we will search signatures in it)." % path)
+            args.path.extend(os.path.join(path, x) for x in os.listdir(path))
+            continue
+
+        # "path" is a file (not a directory) past this point        
+        if not path.endswith(".sig"):
+            notify("The file name %s does not end with '.sig'. Skipping." % path)
+            continue
+
+        # fail early if output already existing
+        out_fn = path + ".json"
+        if not args.force and os.path.exists(out_fn):
+            notify("The output file %s is already present. Use --force to force overwriting." % out_fn)
+            sys.exit(1)
+
+        # path is a file and should be converted
+        filenames.append(path)
+
+        
+    for i, path in enumerate(filenames, 1):
+        notify("\rConverting file %i/%i" % (i, len(filenames)), end="", flush=True)        
+        with open(path) as fh:
+            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
+
+        out_fn = path + ".json"
+        with open(out_fn, 'w') as fh:
+            sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
+    notify("\rConverting file %i/%i" % (i, len(filenames)))        
+        
 def main():
     SourmashCommands()
     return 0
