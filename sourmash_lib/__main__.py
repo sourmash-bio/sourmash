@@ -994,14 +994,15 @@ the extension ".json".
         # path is a file and should be converted
         filenames.append(path)
 
-    for path in filenames:
         
+    for i, path in enumerate(filenames, 1):
+        notify("\rConverting file %i/%i" % (i, len(filenames)), end="", flush=True)        
         with open(path) as fh:
             signatures = tuple(sourmash_lib.signature.load_signatures(fh))
         
         with open(out_fn, 'w') as fh:
             sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
-
+    notify("\rConverting file %i/%i" % (i, len(filenames)))        
         
 def main():
     SourmashCommands()

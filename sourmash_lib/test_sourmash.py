@@ -1133,10 +1133,14 @@ def test_mash_yaml_to_json():
                                            in_directory=location)
         # check success
         assert status == 0
-        # check existence of JSON file
-        assert os.path.exists(test_sig + ".json")
-        # check that the file can be read (as JSON)
+        # check existence of JSON files
+        assert os.path.exists(test_sig + ".json")        
+        assert os.path.exists(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json")
+        
+        # check that the files can be read (as JSON)
         with open(test_sig + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)
+        with open(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json") as fh:
             sig = signature.signature_json.load_signatures_json(fh)
 
         # try again: will fail because .json already found
@@ -1147,11 +1151,16 @@ def test_mash_yaml_to_json():
 
         assert status == 1
 
+        timestamp = os.path.getmtime(test_sig + ".json")
         # try again: will not fail when .json already found because of --force
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         '--force',
                                                         test_sig],
                                            in_directory=location,
                                            fail_ok=True)
-
         assert status == 0
+        # check that --force overwrote the file
+        assert timestamp != os.path.getmtime(test_sig + ".json")
+        # check that the file can be read (as JSON)
+        with open(test_sig + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)
