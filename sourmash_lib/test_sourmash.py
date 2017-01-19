@@ -1129,12 +1129,12 @@ def test_mash_yaml_to_json():
         assert not os.path.exists(test_sig + ".json")
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         test_sig,
-                                                        location],
+                                                        os.path.join(location, "foo")],
                                            in_directory=location)
         # check success
         assert status == 0
         # check existence of JSON files
-        assert os.path.exists(test_sig + ".json")        
+        assert os.path.exists(test_sig + ".json")
         assert os.path.exists(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json")
         
         # check that the files can be read (as JSON)
