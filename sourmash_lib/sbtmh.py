@@ -1,8 +1,11 @@
 from __future__ import print_function
 from __future__ import division
 
+import os
+
 from .sbt import Leaf
 from . import Estimators
+
 
 class SigLeaf(Leaf):
     def __str__(self):
@@ -11,6 +14,16 @@ class SigLeaf(Leaf):
 
     def save(self, filename):
         from sourmash_lib import signature
+
+        # this is here only for triggering the property load
+        # before we reopen the file (and overwrite the previous
+        # content) ...
+        self.data
+
+        if filename == self._filename and os.exists(filename):
+            # TODO: file already exists, do we want to overwrite?
+            return
+
         with open(filename, 'w') as fp:
             signature.save_signatures([self.data], fp)
 
