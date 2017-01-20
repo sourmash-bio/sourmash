@@ -963,6 +963,52 @@ def test_do_sourmash_sbt_combine():
         assert err.count(filename) == 3
 
 
+def test_do_sourmash_sbt_index_append():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2, testdata3],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig', 'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short3.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', sbt_name, sig_loc])
+        print(out)
+
+        assert testdata1 in out
+        assert testdata2 in out
+        assert testdata3 not in out
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', '--append',
+                                            'zzz',
+                                            'short3.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short3.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', '--threshold', '0.95',
+                                            sbt_name, sig_loc])
+        print(out)
+
+        assert testdata1 not in out
+        assert testdata2 in out
+        assert testdata3 in out
+
+
 def test_do_sourmash_sbt_search_otherdir():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

@@ -155,6 +155,7 @@ class SBT(object):
         if pos == 0:
             return None
         p = int(math.floor((pos - 1) / self.d))
+        self.nodes[p] = self.nodes[p].do_load()
         return NodePos(p, self.nodes[p])
 
     def children(self, pos):
@@ -162,6 +163,8 @@ class SBT(object):
 
     def child(self, parent, pos):
         cd = self.d * parent + pos + 1
+        if self.nodes[cd] is not None:
+            self.nodes[cd] = self.nodes[cd].do_load()
         return NodePos(cd, self.nodes[cd])
 
     def save(self, tag):
@@ -183,6 +186,7 @@ class SBT(object):
                 structure[i] = None
                 continue
 
+            node = node.do_load()
             basename = os.path.basename(node.name)
             data = {
                 'filename': os.path.join('.sbt.' + basetag,
