@@ -1,8 +1,6 @@
 from __future__ import print_function
 from __future__ import division
 
-import os
-
 from .sbt import Leaf
 from . import Estimators
 
@@ -17,12 +15,8 @@ class SigLeaf(Leaf):
 
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
-        # content) ...
+        # content...)
         self.data
-
-        if filename == self._filename and os.exists(filename):
-            # TODO: file already exists, do we want to overwrite?
-            return
 
         with open(filename, 'w') as fp:
             signature.save_signatures([self.data], fp)
