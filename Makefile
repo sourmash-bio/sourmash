@@ -27,4 +27,7 @@ coverage: all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
 	$(PYTHON) -m pytest --cov=.
 
+benchmark: all
+	asv continuous master
+
 FORCE:

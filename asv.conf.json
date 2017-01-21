@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "project": "sourmash",
+    "project_url": "https://github.com/dib-lab/sourmash",
+    "repo": ".",
+    "branches": ["master"], // for git
+    "dvcs": "git",
+    "environment_type": "virtualenv",
+    "pythons": ["2.7", "3.5", "3.6"],
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+}
