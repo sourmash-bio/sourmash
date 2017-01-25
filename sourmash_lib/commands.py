@@ -235,6 +235,9 @@ def compute(args):
               file=sys.stderr)
 
     if not args.name:
+        if args.output:
+            siglist = []
+
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
@@ -274,10 +277,18 @@ def compute(args):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
-                siglist = build_siglist(args.email, Elist, filename, name)
+                sigs = build_siglist(args.email, Elist, filename, name)
+                if args.output:
+                    siglist += sigs
+                else:
+                    siglist = sigs
                 print('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
-            # at end, save!
+
+            if not args.output:
+                save_siglist(siglist, args.output, sigfile)
+
+        if args.output:
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make estimators for the whole file
