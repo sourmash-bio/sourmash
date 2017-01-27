@@ -81,7 +81,7 @@ def test_do_sourmash_compute_output_and_name_valid_file():
 
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-o', sigfile,
-                                            '--name', '"name"',
+                                            '--merge', '"name"',
                                             testdata1,
                                             testdata2, testdata3],
                                            in_directory=location)
@@ -127,7 +127,7 @@ def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name', 'foo',
+                                           ['compute', '--merge', 'foo',
                                             testdata1, '-o', 'foo.sig'],
                                            in_directory=location)
 
@@ -137,10 +137,40 @@ def test_do_sourmash_compute_name():
         sig = next(signature.load_signatures(sigfile))
         assert sig.name() == 'foo'
 
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1, '-o', 'foo2.sig'],
+                                           in_directory=location)
+
+        sigfile2 = os.path.join(location, 'foo2.sig')
+        assert os.path.exists(sigfile)
+
+        sig2 = next(signature.load_signatures(sigfile))
+        assert sig2.name() == 'foo'
+        assert sig.name() == sig2.name()
+
 
 def test_do_sourmash_compute_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
+
+def test_do_sourmash_compute_merge_fail_no_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--name', 'foo',
                                             testdata1],
