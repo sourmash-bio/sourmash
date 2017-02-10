@@ -579,6 +579,20 @@ def sbt_search(args):
     for (similarity, query) in results:
         print('{:.2f} {}'.format(similarity, query.name()))
 
+    if args.output:
+        for (similarity, query) in results:
+            print('{:.2f} {}'.format(similarity, query.name()), file=args.output)
+
+    if args.csv:
+        fieldnames = ['fraction', 'name', 'sketch_kmers']
+        w = csv.DictWriter(args.csv, fieldnames=fieldnames)
+
+        w.writeheader()
+        for (frac, leaf_sketch) in found:
+            cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
+                            sketch_kmers=cardinality))
+
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
