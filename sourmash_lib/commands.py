@@ -549,6 +549,8 @@ def sbt_search(args):
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--best-only', action='store_true')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+    parser.add_argument('--csv', type=argparse.FileType('wt'))
 
     sourmash_args.add_moltype_args(parser)
     args = parser.parse_args(args)
