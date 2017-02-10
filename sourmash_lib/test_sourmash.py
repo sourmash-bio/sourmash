@@ -596,6 +596,33 @@ def test_do_sourmash_sbt_search():
         assert testdata2 in out
 
 
+def test_do_sourmash_sbt_search_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'short.fa.sig', '-o', 'foo'],
+                                           in_directory=location)
+        outfile = open(os.path.join(location, 'foo'))
+        output = outfile.read()
+        print(output)
+        assert testdata1 in output
+        assert testdata2 in output
+
+
 def test_do_sourmash_sbt_index_single():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -1125,7 +1152,7 @@ def test_mash_yaml_to_json():
         # create directory
         os.mkdir(os.path.join(location, "foo"))
         shutil.copy(orig_sig, os.path.join(location, "foo"))
-        
+
         assert not os.path.exists(test_sig + ".json")
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         test_sig,
@@ -1136,7 +1163,7 @@ def test_mash_yaml_to_json():
         # check existence of JSON files
         assert os.path.exists(test_sig + ".json")
         assert os.path.exists(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json")
-        
+
         # check that the files can be read (as JSON)
         with open(test_sig + ".json") as fh:
             sig = signature.signature_json.load_signatures_json(fh)
