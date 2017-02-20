@@ -735,13 +735,17 @@ def sbt_gather(args):
             error('...or with --with-cardinality')
             sys.exit(-1)
 
+        orig_mins = orig_query.estimator.get_hashes()
+
         R_comparison = max(R_metagenome, R_genome)
         new_max_hash = 2**64 / float(R_comparison)
         new_mins = set([ i for i in new_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
+        orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
 
         # intersection:
         intersect_mins = new_mins.intersection(found_mins)
+        intersect_orig_mins = orig_mins.intersection(found_mins)
 
         if len(intersect_mins) < 5:   # hard cutoff for now
             notify('found only {} hashes in common.', len(intersect_mins))
@@ -751,6 +755,7 @@ def sbt_gather(args):
         # first denominator - genome size
         genome_n_mins = len(found_mins)
         f_genome = len(intersect_mins) / float(genome_n_mins)
+        f_orig_query = len(intersect_orig_mins) / float(genome_n_mins)
 
         # second denominator - metagenome size
         query_n_mins = len(orig_query.estimator.get_hashes())
@@ -759,7 +764,7 @@ def sbt_gather(args):
         # print interim & save
         notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
                best_ss.name())
-        found.append((f_genome, best_ss))
+        found.append((f_genome, best_ss, f_orig_query))
 
         new_mins -= set(found_mins)
         e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
@@ -776,13 +781,13 @@ def sbt_gather(args):
     found.reverse()
 
     notify('Composition:')
-    for (frac, leaf_sketch) in found:
-        notify('{:.2f} {}', frac, leaf_sketch.name())
+    for (frac, leaf_sketch, genome_fraction) in found:
+        notify('{:.2f} {}', genome_fraction, leaf_sketch.name())
 
     if args.output:
         print('Composition:', file=args.output)
-        for (frac, leaf_sketch) in found:
-            print('{:.2f} {}'.format(frac, leaf_sketch.name()),
+        for (frac, leaf_sketch, genome_fraction) in found:
+            print('{:.2f} {}'.format(genome_fraction, leaf_sketch.name()),
                   file=args.output)
 
     if args.csv:
@@ -790,7 +795,7 @@ def sbt_gather(args):
         w = csv.DictWriter(args.csv, fieldnames=fieldnames)
 
         w.writeheader()
-        for (frac, leaf_sketch) in found:
+        for (genome_fraction, leaf_sketch, genome_fraction) in found:
             cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
             w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                             sketch_kmers=cardinality))
