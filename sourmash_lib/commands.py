@@ -759,6 +759,7 @@ def sbt_gather(args):
             error('...or with --with-cardinality')
             sys.exit(-1)
 
+        # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
         new_max_hash = 2**64 / float(R_comparison)
@@ -766,7 +767,7 @@ def sbt_gather(args):
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
 
-        # intersection:
+        # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
 
@@ -775,23 +776,25 @@ def sbt_gather(args):
             notify('this is below a sane threshold => exiting.')
             break
 
-        # first denominator - genome size
+        # calculate fractions wrt first denominator - genome size
         genome_n_mins = len(found_mins)
         f_genome = len(intersect_mins) / float(genome_n_mins)
         f_orig_query = len(intersect_orig_mins) / float(genome_n_mins)
 
-        # second denominator - metagenome size
+        # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.estimator.get_hashes())
         f_query = len(intersect_mins) / float(query_n_mins)
 
-        # print interim & save
+        # print interim result & save in a list for later use
         notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
                best_leaf.name())
         found.append((f_genome, best_leaf, f_orig_query))
 
+        # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
         query = build_new_signature(query_mins)
 
+    # basic reporting
     notify('found {} matches total', len(found))
     notify('the recovered matches hit {:.1f}% of the query',
            sum_found / len(orig_query.estimator.get_hashes()))
@@ -800,6 +803,7 @@ def sbt_gather(args):
     if not found:
         sys.exit(0)
 
+    # sort by fraction of genome (first key) - change this?
     found.sort(key=lambda x: x[0])
     found.reverse()
 
