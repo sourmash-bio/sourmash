@@ -95,8 +95,10 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
             matches = sum(1 for value in mins if node.data.get(value))
 
         score = 0
-        if len(mins):
-            score = float(matches) / len(mins)
+        if not len(mins):
+            return 0
+
+        score = float(matches) / len(mins)
 
         if results is not None:
             results[node.name] = score
