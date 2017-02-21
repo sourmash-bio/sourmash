@@ -7,6 +7,7 @@ import glob
 import gzip
 import shutil
 import screed
+import time
 
 from . import sourmash_tst_utils as utils
 from . import Estimators
@@ -1152,7 +1153,9 @@ def test_mash_yaml_to_json():
         assert status == 1
 
         timestamp = os.path.getmtime(test_sig + ".json")
+        
         # try again: will not fail when .json already found because of --force
+        time.sleep(1)
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         '--force',
                                                         test_sig],
@@ -1160,7 +1163,7 @@ def test_mash_yaml_to_json():
                                            fail_ok=True)
         assert status == 0
         # check that --force overwrote the file
-        assert timestamp != os.path.getmtime(test_sig + ".json")
+        assert int(timestamp) != int(os.path.getmtime(test_sig + ".json"))
         # check that the file can be read (as JSON)
         with open(test_sig + ".json") as fh:
             sig = signature.signature_json.load_signatures_json(fh)
