@@ -677,7 +677,10 @@ def sbt_gather(args):
     args = parser.parse_args(args)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # load in the SBT
     tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+
+    # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
@@ -687,6 +690,7 @@ def sbt_gather(args):
                                              query_ksize,
                                              query_moltype)
 
+    # verify signature was computed right.
     if query.estimator.max_hash == 0:
         error('query signature needs to be created with --scaled')
         error('or using --with-cardinality.')
@@ -694,39 +698,59 @@ def sbt_gather(args):
 
     notify('query signature has max_hash: {}', query.estimator.max_hash)
     orig_query = query
+    orig_mins = orig_query.estimator.get_hashes()
 
+    # calculate the band size/resolution R for the genome
     R_metagenome = 2**64 / float(orig_query.estimator.max_hash)
 
+    # define a function to do a 'best' search and get only top match.
+    def find_best(tree, query):
+        search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+
+        results = []
+        for leaf in tree.find(search_fn, query, 0.0):
+            leaf_e = leaf.data.estimator
+            similarity = query.estimator.similarity_ignore_maxhash(leaf_e)
+            if similarity > 0.0:
+                results.append((similarity, leaf.data))
+
+        if not results:
+            return None, None
+
+        # take the best result
+        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+        best_similarity, best_leaf = results[0]
+        return best_similarity, best_leaf
+
+
+    # define a function to build new signature object from set of mins
+    def build_new_signature(mins):
+        e = sourmash_lib.Estimators(ksize=args.ksize, n=len(mins))
+        e.add_many(mins)
+        return sig.SourmashSignature('', e)
+
+    # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.estimator.get_hashes()
-    e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
-    e.update(query.estimator)
-    query = sig.SourmashSignature('', e)
+    query = build_new_signature(new_mins)
 
     sum_found = 0.
     found = []
     while 1:
-        search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
-        results = []
-        # use super low threshold for this part of the search
-        for leaf in tree.find(search_fn, query, 0.00001):
-            results.append((query.estimator.similarity_ignore_maxhash(leaf.data.estimator), leaf.data))
-
-        if not len(results):          # no matches at all!
+        best_similarity, best_leaf = find_best(tree, query)
+        if not best_leaf:          # no matches at all!
             break
 
-        # take the best result
-        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
-        best_sim, best_ss = results[0]
-
         # subtract found hashes from search hashes, construct new search
-        new_mins = set(query.estimator.get_hashes())
-        found_mins = best_ss.estimator.get_hashes()
+        query_mins = set(query.estimator.get_hashes())
+        found_mins = best_leaf.estimator.get_hashes()
 
-        if best_ss.estimator.max_hash:
-            R_genome = 2**64 / float(best_ss.estimator.max_hash)
-        elif best_ss.estimator.hll:
-            genome_size = best_ss.estimator.hll.estimate_cardinality()
+        # figure out what the resolution of the banding on the genome is,
+        # based either on an explicit --scaled parameter, or by calculating
+        # using genome size est --with-cardinality.
+        if best_leaf.estimator.max_hash:
+            R_genome = 2**64 / float(best_leaf.estimator.max_hash)
+        elif best_leaf.estimator.hll:
+            genome_size = best_leaf.estimator.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
             R_genome = float(genome_size) / float(genome_max_hash)
         else:
@@ -735,16 +759,15 @@ def sbt_gather(args):
             error('...or with --with-cardinality')
             sys.exit(-1)
 
-        orig_mins = orig_query.estimator.get_hashes()
-
         R_comparison = max(R_metagenome, R_genome)
+
         new_max_hash = 2**64 / float(R_comparison)
-        new_mins = set([ i for i in new_mins if i < new_max_hash ])
+        query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
 
         # intersection:
-        intersect_mins = new_mins.intersection(found_mins)
+        intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
 
         if len(intersect_mins) < 5:   # hard cutoff for now
@@ -763,15 +786,15 @@ def sbt_gather(args):
 
         # print interim & save
         notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
-               best_ss.name())
-        found.append((f_genome, best_ss, f_orig_query))
+               best_leaf.name())
+        found.append((f_genome, best_leaf, f_orig_query))
 
-        new_mins -= set(found_mins)
-        e = sourmash_lib.Estimators(ksize=args.ksize, n=len(new_mins))
-        e.add_many(new_mins)
-        query = sig.SourmashSignature('', e)
+        query_mins -= set(found_mins)
+        query = build_new_signature(query_mins)
 
-    notify('found {}, total fraction {:.3f}', len(found), sum_found)
+    notify('found {} matches total', len(found))
+    notify('the recovered matches hit {:.1f}% of the query',
+           sum_found / len(orig_query.estimator.get_hashes()))
     notify('')
 
     if not found:
