@@ -770,6 +770,7 @@ def sbt_gather(args):
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
+        sum_found += len(intersect_mins)
 
         if len(intersect_mins) < 5:   # hard cutoff for now
             notify('found only {} hashes in common.', len(intersect_mins))
