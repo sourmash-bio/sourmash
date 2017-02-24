@@ -798,7 +798,7 @@ def sbt_gather(args):
     # basic reporting
     notify('found {} matches total', len(found))
     notify('the recovered matches hit {:.1f}% of the query',
-           sum_found / len(orig_query.estimator.get_hashes()))
+           100. * sum_found / len(orig_query.estimator.get_hashes()))
     notify('')
 
     if not found:
