@@ -896,6 +896,33 @@ def test_sbt_gather_2():
         assert 'found: 1.00 1.00 ' in err
 
 
+def test_sbt_gather_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        
+        cmd = ['sbt_index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+        
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'gcf_all',
+                                            query_sig, '-k', '21'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 11 matches total' in err
+        assert 'the recovered matches hit 100.0% of the query' in err
+
+
 def test_sbt_gather_error_no_cardinality_query():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
