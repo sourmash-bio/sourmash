@@ -112,11 +112,14 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
-        const std::string seq = _checkdna(sequence, force);
+        const std::string seq = _forcedna(sequence, force);
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
+                if ( ! _checkdna(kmer) ) continue;
+
                 const std::string rc = _revcomp(kmer);
+
                 if (kmer < rc) {
                     add_word(kmer);
                 } else {
@@ -156,7 +159,23 @@ public:
         return aa;
     }
 
-    std::string _checkdna(const char * s, bool force=false) const {
+    bool _checkdna(std::string seq) const {
+
+        for (size_t i=0; i < seq.length(); ++i) {
+            switch(seq[i]) {
+            case 'A':
+            case 'C':
+            case 'G':
+            case 'T':
+                break;
+            default:
+                return false;
+            }
+        }
+	return true;
+    }
+
+    std::string _forcedna(const char * s, bool force=false) const {
         std::string seq = s;
         const size_t seqsize = strlen(s);
 
