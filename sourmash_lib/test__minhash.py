@@ -162,8 +162,7 @@ def test_max_hash_with_limit(track_abundance):
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
-    with pytest.raises(ValueError):
-        mh.add_sequence('ATGR')
+    mh.add_sequence('ATGR')  #does not throw error but no sequence added
 
 
 def test_basic_dna_bad_2(track_abundance):
@@ -178,11 +177,11 @@ def test_basic_dna_bad_force(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
     assert len(mh.get_mins()) == 0
-    mh.add_sequence('ATGR', True)
+    mh.add_sequence('ATGN', True)     #ambiguous kmer skipped.
+    assert len(mh.get_mins()) == 0    
+    mh.add_sequence('AATGN', True)    #but sequence still used. 
     assert len(mh.get_mins()) == 1
-    mh.add_sequence('ATGN', True)         # R --> N w/force
-    assert len(mh.get_mins()) == 1
-    mh.add_sequence('NCAT', True)         # reverse complement of N -> N
+    mh.add_sequence('AATG', True)     #checking that right kmer was added
     assert len(mh.get_mins()) == 1
 
 
