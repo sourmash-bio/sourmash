@@ -3,9 +3,9 @@ Tests for the 'sourmash' command line.
 """
 from __future__ import print_function, unicode_literals
 import os
-import glob
 import gzip
 import shutil
+import time
 import screed
 
 from . import sourmash_tst_utils as utils
@@ -17,6 +17,7 @@ except ImportError:
     pass
 
 from sourmash_lib import signature
+
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -1125,7 +1126,7 @@ def test_mash_yaml_to_json():
         # create directory
         os.mkdir(os.path.join(location, "foo"))
         shutil.copy(orig_sig, os.path.join(location, "foo"))
-        
+
         assert not os.path.exists(test_sig + ".json")
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         test_sig,
@@ -1136,7 +1137,7 @@ def test_mash_yaml_to_json():
         # check existence of JSON files
         assert os.path.exists(test_sig + ".json")
         assert os.path.exists(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json")
-        
+
         # check that the files can be read (as JSON)
         with open(test_sig + ".json") as fh:
             sig = signature.signature_json.load_signatures_json(fh)
@@ -1152,6 +1153,9 @@ def test_mash_yaml_to_json():
         assert status == 1
 
         timestamp = os.path.getmtime(test_sig + ".json")
+        # briefly sleep to make sure the clock ticks at least once
+        # between the two timestamps
+        time.sleep(1)
         # try again: will not fail when .json already found because of --force
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         '--force',
