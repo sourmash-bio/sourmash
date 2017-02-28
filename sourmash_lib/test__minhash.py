@@ -162,7 +162,9 @@ def test_max_hash_with_limit(track_abundance):
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
-    mh.add_sequence('ATGR')  #does not throw error but no sequence added
+
+    with pytest.raises(ValueError):
+        mh.add_sequence('ATGR') 
 
 
 def test_basic_dna_bad_2(track_abundance):
