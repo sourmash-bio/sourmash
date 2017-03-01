@@ -179,12 +179,12 @@ def test_basic_dna_bad_force(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
     assert len(mh.get_mins()) == 0
-    mh.add_sequence('ATGN', True)     #ambiguous kmer skipped.
+    mh.add_sequence('ATGN', True)     # ambiguous kmer skipped.
     assert len(mh.get_mins()) == 0    
-    mh.add_sequence('AATGN', True)    #but sequence still used. 
+    mh.add_sequence('AATGN', True)    # but good k-mers still used. 
     assert len(mh.get_mins()) == 1
-    mh.add_sequence('AATG', True)     #checking that right kmer was added
-    assert len(mh.get_mins()) == 1
+    mh.add_sequence('AATG', True)     # checking that right kmer was added
+    assert len(mh.get_mins()) == 1    # (only 1 hash <- this is a dup)
 
 
 def test_compare_1(track_abundance):

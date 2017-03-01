@@ -112,11 +112,19 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
-        const std::string seq = _forcedna(sequence, force);
+        const std::string seq = sequence;
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
-                if ( ! _checkdna(kmer) ) continue;
+                if (! _checkdna(kmer)) {
+                    if (force) {
+                        continue;
+                    } else {
+                        std::string msg = "invalid DNA character in input: ";
+                        msg += seq[i];
+                        throw minhash_exception(msg);
+                    }
+                }
 
                 const std::string rc = _revcomp(kmer);
 
@@ -175,31 +183,6 @@ public:
 	return true;
     }
 
-    std::string _forcedna(const char * s, bool force=false) const {
-        std::string seq = s;
-        const size_t seqsize = strlen(s);
-
-        for (size_t i=0; i < seqsize; ++i) {
-            switch(seq[i]) {
-            case 'A':
-            case 'C':
-            case 'G':
-            case 'T':
-                break;
-            default:
-                if (force) {
-                    seq[i] = 'N';
-                } else {
-                    std::string msg = "invalid DNA character in sequence: ";
-                    msg += seq[i];
-                    throw minhash_exception(msg);
-                }
-                break;
-            }
-        }
-        return seq;
-    }
-
     std::string _revcomp(const std::string& kmer) const {
         std::string out = kmer;
         size_t ksize = out.size();
@@ -219,9 +202,6 @@ public:
                 break;
             case 'T':
                 complement = 'A';
-                break;
-            case 'N':
-                complement = 'N';
                 break;
             default:
                 std::string msg = "invalid DNA character in sequence: ";
