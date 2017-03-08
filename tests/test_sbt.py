@@ -74,6 +74,7 @@ def test_simple():
     print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
     print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
 
+
 def test_longer_search():
     ksize = 5
     factory = GraphFactory(ksize, 100, 3)
@@ -205,3 +206,30 @@ def test_binary_nary_tree():
 
     assert set(results[2]) == set(results[5])
     assert set(results[5]) == set(results[10])
+
+
+def test_sbt_combine():
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory)
+    tree_1 = SBT(factory)
+    tree_2 = SBT(factory)
+
+    n_leaves = 0
+    for f in SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        if n_leaves < 4:
+            tree_1.add_node(leaf)
+        else:
+            tree_2.add_node(leaf)
+        n_leaves += 1
+
+    tree_1.combine(tree_2)
+
+    t1_leaves = {str(l) for l in tree_1.leaves()}
+    t_leaves = {str(l) for l in tree.leaves()}
+
+    assert len(t1_leaves) == n_leaves
+    assert len(t_leaves) == len(t1_leaves)
+    assert t1_leaves == t_leaves

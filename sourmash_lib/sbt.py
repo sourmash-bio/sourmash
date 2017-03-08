@@ -342,6 +342,16 @@ class SBT(object):
     def leaves(self):
         return [c for c in self.nodes.values() if isinstance(c, Leaf)]
 
+    def combine(self, other):
+        # TODO: first pass, the dumb way:
+        # 1) find all leaves in other
+        # 2) add all leaves in other to self
+        # Why is is dumb? Because we already have all the internal nodes
+        # ready in other, so instead we can reuse them.
+        for leaf in other.leaves():
+            self.add_node(leaf)
+
+
 class Node(object):
     "Internal node of SBT."
 
