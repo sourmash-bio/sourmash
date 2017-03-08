@@ -4,3 +4,4 @@ recursive-include sourmash_lib *
 recursive-include third-party *.cc *.h
 global-exclude *.orig
 global-exclude *.pyc
+global-exclude *.so
