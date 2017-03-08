@@ -185,12 +185,16 @@ def test_binary_nary_tree():
     trees[5] = SBT(factory, d=5)
     trees[10] = SBT(factory, d=10)
 
+    n_leaves = 0
     for f in SIG_FILES:
         sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
             tree.add_node(leaf)
         to_search = leaf
+        n_leaves += 1
+
+    assert all([len(t.leaves()) == n_leaves for t in trees.values()])
 
     results = {}
     print('*' * 60)
