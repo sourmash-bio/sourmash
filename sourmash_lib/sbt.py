@@ -80,12 +80,13 @@ class SBT(object):
         self.factory = factory
         self.nodes = defaultdict(lambda: None)
         self.d = d
+        self.max_node = 0
 
     def new_node_pos(self, node):
-        if self.nodes:
-            return max(self.nodes) + 1
-        else:
-            return 0
+        while self.nodes[self.max_node] is not None:
+            self.max_node += 1
+        next_node = self.max_node
+        return next_node
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
