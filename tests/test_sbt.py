@@ -15,9 +15,9 @@ SIG_FILES = [os.path.join('demo', f) for f in (
 ]
 
 
-def test_simple():
+def test_simple(n_children):
     factory = GraphFactory(5, 100, 3)
-    root = SBT(factory)
+    root = SBT(factory, d=n_children)
 
     leaf1 = Leaf("a", factory())
     leaf1.data.count('AAAAA')
@@ -75,10 +75,10 @@ def test_simple():
     print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
 
 
-def test_longer_search():
+def test_longer_search(n_children):
     ksize = 5
     factory = GraphFactory(ksize, 100, 3)
-    root = SBT(factory)
+    root = SBT(factory, d=n_children)
 
     leaf1 = Leaf("a", factory())
     leaf1.data.count('AAAAA')
@@ -150,9 +150,9 @@ def test_tree_v1_load():
     assert len(results_v1) == 4
 
 
-def test_tree_save_load():
+def test_tree_save_load(n_children):
     factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory)
+    tree = SBT(factory, d=n_children)
 
     for f in SIG_FILES:
         sig = next(signature.load_signatures(utils.get_test_data(f)))
@@ -208,11 +208,11 @@ def test_binary_nary_tree():
     assert set(results[5]) == set(results[10])
 
 
-def test_sbt_combine():
+def test_sbt_combine(n_children):
     factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory)
-    tree_1 = SBT(factory)
-    tree_2 = SBT(factory)
+    tree = SBT(factory, d=n_children)
+    tree_1 = SBT(factory, d=n_children)
+    tree_2 = SBT(factory, d=n_children)
 
     n_leaves = 0
     for f in SIG_FILES:
@@ -233,3 +233,12 @@ def test_sbt_combine():
     assert len(t1_leaves) == n_leaves
     assert len(t_leaves) == len(t1_leaves)
     assert t1_leaves == t_leaves
+
+    to_search = next(signature.load_signatures(utils.get_test_data(SIG_FILES[0])))
+    t1_result = [str(s) for s in tree_1.find(search_minhashes,
+                                             to_search, 0.1)]
+    tree_result = [str(s) for s in tree.find(search_minhashes,
+                                             to_search, 0.1)]
+    assert t1_result == tree_result
+
+    # TODO: save and load both trees

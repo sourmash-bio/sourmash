@@ -48,16 +48,12 @@ then define a search function, ::
 from __future__ import print_function, unicode_literals, division
 
 from collections import namedtuple, Mapping, defaultdict
-import hashlib
+from copy import copy
 import json
 import math
 import os
-import random
-import shutil
-from tempfile import NamedTemporaryFile
 
 import khmer
-from khmer import khmer_args
 from random import randint
 from numpy import array
 
@@ -343,13 +339,33 @@ class SBT(object):
         return [c for c in self.nodes.values() if isinstance(c, Leaf)]
 
     def combine(self, other):
-        # TODO: first pass, the dumb way:
-        # 1) find all leaves in other
-        # 2) add all leaves in other to self
-        # Why is is dumb? Because we already have all the internal nodes
-        # ready in other, so instead we can reuse them.
-        for leaf in other.leaves():
-            self.add_node(leaf)
+        larger, smaller = self, other
+        if len(other.nodes) > len(self.nodes):
+            larger, smaller = other, self
+
+        n = Node(self.factory, name="internal.0")
+        larger.nodes[0].update(n)
+        smaller.nodes[0].update(n)
+        new_nodes = defaultdict(lambda: None)
+        new_nodes[0] = n
+
+        levels = int(math.ceil(math.log(len(larger.nodes), self.d))) + 1
+        current_pos = 1
+        for level in range(1, levels):
+            for tree in (larger, smaller):
+                for pos in range(int(self.d ** (level - 1)),
+                                 int(self.d ** level)):
+                    if tree.nodes[pos - 1] is not None:
+                        new_node = copy(tree.nodes[pos - 1])
+                        if isinstance(new_node, Node):
+                            # An internal node, we need to update the name
+                            new_node.name = "internal.{}".format(current_pos)
+                        new_nodes[current_pos] = new_node
+                    current_pos += 1
+
+        # TODO: do we want to return a new tree, or merge into this one?
+        self.nodes = new_nodes
+        return self
 
 
 class Node(object):
@@ -387,6 +403,9 @@ class Node(object):
         filename = os.path.join(dirname, info['filename'])
         new_node = Node(info['factory'], name=info['name'], fullpath=filename)
         return new_node
+
+    def update(self, parent):
+        parent.data.update(self.data)
 
 
 class Leaf(object):
