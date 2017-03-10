@@ -340,8 +340,8 @@ class SBT(object):
             larger, smaller = other, self
 
         n = Node(self.factory, name="internal.0")
-        larger.nodes[0].update(n)
-        smaller.nodes[0].update(n)
+        larger.nodes[0].do_load().update(n)
+        smaller.nodes[0].do_load().update(n)
         new_nodes = defaultdict(lambda: None)
         new_nodes[0] = n
 
