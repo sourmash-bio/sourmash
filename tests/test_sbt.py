@@ -243,3 +243,15 @@ def test_sbt_combine(n_children):
     assert t1_result == tree_result
 
     # TODO: save and load both trees
+
+    # check if adding a new node will use the next empty position
+    next_empty = 0
+    for n, d in tree_1.nodes.items():
+        if d is None:
+            next_empty = n
+            break
+    if not next_empty:
+        next_empty = n + 1
+
+    tree_1.add_node(leaf)
+    assert tree_1.max_node == next_empty

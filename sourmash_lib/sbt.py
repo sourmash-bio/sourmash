@@ -81,8 +81,7 @@ class SBT(object):
     def new_node_pos(self, node):
         while self.nodes[self.max_node] is not None:
             self.max_node += 1
-        next_node = self.max_node
-        return next_node
+        return self.max_node
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
@@ -359,10 +358,16 @@ class SBT(object):
                             # An internal node, we need to update the name
                             new_node.name = "internal.{}".format(current_pos)
                         new_nodes[current_pos] = new_node
+                    if tree.nodes[pos] is None:
+                        del tree.nodes[pos]
                     current_pos += 1
             n_previous = n_next
             n_next = n_previous + int(self.d ** level)
             current_pos = n_next
+
+        # reset max_node, next time we add a node it will find the next
+        # empty position
+        self.max_node = 2
 
         # TODO: do we want to return a new tree, or merge into this one?
         self.nodes = new_nodes
