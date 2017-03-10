@@ -362,6 +362,7 @@ class SBT(object):
                     current_pos += 1
             n_previous = n_next
             n_next = n_previous + int(self.d ** level)
+            current_pos = n_next
 
         # TODO: do we want to return a new tree, or merge into this one?
         self.nodes = new_nodes
