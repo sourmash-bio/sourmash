@@ -183,6 +183,7 @@ class SBT(object):
                 structure[i] = None
                 continue
 
+            node = node.do_load()
             basename = os.path.basename(node.name)
             data = {
                 'filename': os.path.join('.sbt.' + basetag,
