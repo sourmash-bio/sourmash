@@ -348,17 +348,20 @@ class SBT(object):
 
         levels = int(math.ceil(math.log(len(larger.nodes), self.d))) + 1
         current_pos = 1
-        for level in range(1, levels):
+        n_previous = 0
+        n_next = 1
+        for level in range(1, levels + 1):
             for tree in (larger, smaller):
-                for pos in range(int(self.d ** (level - 1)),
-                                 int(self.d ** level)):
-                    if tree.nodes[pos - 1] is not None:
-                        new_node = copy(tree.nodes[pos - 1])
+                for pos in range(n_previous, n_next):
+                    if tree.nodes[pos] is not None:
+                        new_node = copy(tree.nodes[pos])
                         if isinstance(new_node, Node):
                             # An internal node, we need to update the name
                             new_node.name = "internal.{}".format(current_pos)
                         new_nodes[current_pos] = new_node
                     current_pos += 1
+            n_previous = n_next
+            n_next = n_previous + int(self.d ** level)
 
         # TODO: do we want to return a new tree, or merge into this one?
         self.nodes = new_nodes
