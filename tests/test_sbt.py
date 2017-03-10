@@ -162,7 +162,8 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
+    old_result = {str(s) for s in tree.find(search_minhashes,
+                                            to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -172,8 +173,8 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = [str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)]
+        new_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -201,11 +202,11 @@ def test_binary_nary_tree():
     print('*' * 60)
     print("{}:".format(to_search.metadata))
     for d, tree in trees.items():
-        results[d] = [str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)]
+        results[d] = {str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)}
     print(*results[2], sep='\n')
 
-    assert set(results[2]) == set(results[5])
-    assert set(results[5]) == set(results[10])
+    assert results[2] == results[5]
+    assert results[5] == results[10]
 
 
 def test_sbt_combine(n_children):
@@ -235,10 +236,10 @@ def test_sbt_combine(n_children):
     assert t1_leaves == t_leaves
 
     to_search = next(signature.load_signatures(utils.get_test_data(SIG_FILES[0])))
-    t1_result = [str(s) for s in tree_1.find(search_minhashes,
-                                             to_search, 0.1)]
-    tree_result = [str(s) for s in tree.find(search_minhashes,
-                                             to_search, 0.1)]
+    t1_result = {str(s) for s in tree_1.find(search_minhashes,
+                                             to_search, 0.1)}
+    tree_result = {str(s) for s in tree.find(search_minhashes,
+                                             to_search, 0.1)}
     assert t1_result == tree_result
 
     # TODO: save and load both trees

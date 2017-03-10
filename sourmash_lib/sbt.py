@@ -306,16 +306,13 @@ class SBT(object):
         edge [arrowsize=0.8];
         """)
 
-        for i, node in iter(self):
-            if node is None:
-                continue
-
-            p = self.parent(i)
-            if p is not None:
-                if isinstance(node, Leaf):
-                    print('"', p.pos, '"', '->', '"', node.name, '";')
-                else:
-                    print('"', p.pos, '"', '->', '"', i, '";')
+        for i, node in list(self.nodes.items()):
+            if isinstance(node, Node):
+                print('"{}" [shape=box fillcolor=gray style=filled]'.format(
+                      node.name))
+                for j, child in self.children(i):
+                    if child is not None:
+                        print('"{}" -> "{}"'.format(node.name, child.name))
         print("}")
 
     def print(self):
