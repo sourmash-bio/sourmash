@@ -789,7 +789,7 @@ def sbt_gather(args):
         # print interim result & save in a list for later use
         notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
                best_leaf.name())
-        found.append((f_genome, best_leaf, f_orig_query))
+        found.append((f_genome, best_leaf, f_query))
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
@@ -810,25 +810,27 @@ def sbt_gather(args):
 
     notify('Composition:')
     for (frac, leaf_sketch, genome_fraction) in found:
-        notify('{:.2f} {}', genome_fraction, leaf_sketch.name())
+        notify('{:.2f} {:.2f} {}', frac, genome_fraction, leaf_sketch.name())
 
     if args.output:
         print('Composition:', file=args.output)
         for (frac, leaf_sketch, genome_fraction) in found:
-            print('{:.2f} {}'.format(genome_fraction, leaf_sketch.name()),
+            print('{:.2f} {:.f} {}'.format(frac, genome_fraction,
+                                        leaf_sketch.name()),
                   file=args.output)
 
     if args.csv:
-        fieldnames = ['fraction', 'name', 'sketch_kmers']
+        fieldnames = ['fraction', 'name', 'sketch_kmers', 'genome_fraction']
         w = csv.DictWriter(args.csv, fieldnames=fieldnames)
 
         w.writeheader()
-        for (genome_fraction, leaf_sketch, genome_fraction) in found:
+        for (frac, leaf_sketch, genome_fraction) in found:
             cardinality = 0
             if leaf_sketch.estimator.hll:
                 cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
             w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
-                            sketch_kmers=cardinality))
+                            sketch_kmers=cardinality,
+                            genome_fraction=genome_fraction))
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
