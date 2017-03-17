@@ -824,7 +824,9 @@ def sbt_gather(args):
 
         w.writeheader()
         for (genome_fraction, leaf_sketch, genome_fraction) in found:
-            cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+            cardinality = 0
+            if leaf_sketch.estimator.hll:
+                cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
             w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                             sketch_kmers=cardinality))
     if args.save_matches:

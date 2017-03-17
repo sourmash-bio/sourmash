@@ -855,7 +855,8 @@ def test_sbt_gather():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
-                                            'query.fa.sig'],
+                                            'query.fa.sig', '--csv',
+                                            'foo.csv'],
                                            in_directory=location)
 
         print(out)
