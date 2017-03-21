@@ -167,7 +167,7 @@ public:
         return aa;
     }
 
-    bool _checkdna(std::string seq) const {
+    bool _checkdna(const std::string seq) const {
 
         for (size_t i=0; i < seq.length(); ++i) {
             switch(seq[i]) {

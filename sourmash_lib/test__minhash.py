@@ -164,7 +164,7 @@ def test_basic_dna_bad(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
-        mh.add_sequence('ATGR') 
+        mh.add_sequence('ATGR')
 
 
 def test_basic_dna_bad_2(track_abundance):
@@ -176,7 +176,7 @@ def test_basic_dna_bad_2(track_abundance):
 
 
 def test_basic_dna_bad_force(track_abundance):
-    # test behavior on bad DNA
+    # test behavior on bad DNA; use 100 so multiple hashes get added.
     mh = MinHash(100, 4, track_abundance=track_abundance)
     assert len(mh.get_mins()) == 0
     mh.add_sequence('ATGN', True)     # ambiguous kmer skipped.
