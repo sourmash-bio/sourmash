@@ -51,7 +51,8 @@ Suppose we want to create MinHash sketches from genomes --
 
 We have to read them in (here using screed), but then they can be fed
 into 'add_sequence' directly; here we set 'force=True' in ``add_sequence``
-to ignore non-ACTGN characters.
+to skip over k-mers containing characters other than ACTG, rather than
+raising an exception.
 
 (Note, just for speed reasons, we'll truncate the sequences to 50kb in length.)
   
