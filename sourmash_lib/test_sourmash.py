@@ -7,6 +7,8 @@ import gzip
 import shutil
 import time
 import screed
+import time
+import glob
 
 from . import sourmash_tst_utils as utils
 from . import Estimators
@@ -853,7 +855,8 @@ def test_sbt_gather():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
-                                            'query.fa.sig'],
+                                            'query.fa.sig', '--csv',
+                                            'foo.csv'],
                                            in_directory=location)
 
         print(out)
@@ -894,6 +897,33 @@ def test_sbt_gather_2():
         print(err)
 
         assert 'found: 1.00 1.00 ' in err
+
+
+def test_sbt_gather_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        
+        cmd = ['sbt_index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+        
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'gcf_all',
+                                            query_sig, '-k', '21'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 11 matches total' in err
+        assert 'the recovered matches hit 100.0% of the query' in err
 
 
 def test_sbt_gather_error_no_cardinality_query():
@@ -1153,10 +1183,13 @@ def test_mash_yaml_to_json():
         assert status == 1
 
         timestamp = os.path.getmtime(test_sig + ".json")
+
         # briefly sleep to make sure the clock ticks at least once
         # between the two timestamps
         time.sleep(1)
+
         # try again: will not fail when .json already found because of --force
+        time.sleep(1)
         status, out, err = utils.runscript('sourmash', ['convert',
                                                         '--force',
                                                         test_sig],
@@ -1164,7 +1197,7 @@ def test_mash_yaml_to_json():
                                            fail_ok=True)
         assert status == 0
         # check that --force overwrote the file
-        assert timestamp != os.path.getmtime(test_sig + ".json")
+        assert int(timestamp) != int(os.path.getmtime(test_sig + ".json"))
         # check that the file can be read (as JSON)
         with open(test_sig + ".json") as fh:
             sig = signature.signature_json.load_signatures_json(fh)
