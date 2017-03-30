@@ -46,6 +46,68 @@ def test_do_sourmash_compute():
         assert sig.name().endswith('short.fa')
 
 
+def test_do_sourmash_compute_output_valid_file():
+    """ Trigger bug #123 """
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        sigfile = os.path.join(location, 'short.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-o', sigfile,
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(sigfile)
+
+        # is it valid json?
+        import json
+        with open(sigfile, 'r') as f:
+            data = json.load(f)
+
+        filesigs = [sig['filename'] for sig in data]
+        assert all(testdata in filesigs
+                   for testdata in (testdata1, testdata2, testdata3))
+
+
+def test_do_sourmash_compute_output_and_name_valid_file():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        sigfile = os.path.join(location, 'short.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-o', sigfile,
+                                            '--merge', '"name"',
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(sigfile)
+
+        # is it valid json?
+        import json
+        with open(sigfile, 'r') as f:
+            data = json.load(f)
+
+        assert len(data) == 1
+
+        all_testdata = " ".join([testdata1, testdata2, testdata3])
+        sigfile_merged = os.path.join(location, 'short.all.fa.sig')
+        #cmd = "cat {} | {}/sourmash compute -o {} -".format(
+        cmd = "cat {} | {}/sourmash compute -o {} -".format(
+                all_testdata, utils.scriptpath(), sigfile_merged)
+        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+
+        with open(sigfile_merged, 'r') as f:
+            data_merged = json.load(f)
+
+        assert data[0]['signatures'][0]['mins'] == data_merged[0]['signatures'][0]['mins']
+
+
 def test_do_sourmash_compute_singleton():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -65,7 +127,7 @@ def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name', 'foo',
+                                           ['compute', '--merge', 'foo',
                                             testdata1, '-o', 'foo.sig'],
                                            in_directory=location)
 
@@ -75,10 +137,40 @@ def test_do_sourmash_compute_name():
         sig = next(signature.load_signatures(sigfile))
         assert sig.name() == 'foo'
 
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1, '-o', 'foo2.sig'],
+                                           in_directory=location)
+
+        sigfile2 = os.path.join(location, 'foo2.sig')
+        assert os.path.exists(sigfile)
+
+        sig2 = next(signature.load_signatures(sigfile))
+        assert sig2.name() == 'foo'
+        assert sig.name() == sig2.name()
+
 
 def test_do_sourmash_compute_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
+
+def test_do_sourmash_compute_merge_fail_no_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--name', 'foo',
                                             testdata1],

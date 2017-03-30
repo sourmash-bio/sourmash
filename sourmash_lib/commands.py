@@ -90,7 +90,12 @@ def compute(args):
     Use cases:
         sourmash compute multiseq.fa              => multiseq.fa.sig, etc.
         sourmash compute genome.fa --singleton    => genome.fa.sig
-        sourmash compute file1.fa file2.fa --name => specify w/-o
+        sourmash compute file1.fa file2.fa -o file.sig
+            => creates one output file file.sig, with one signature for each
+               input file.
+        sourmash compute file1.fa file2.fa --merge merged -o file.sig
+            => creates one output file file.sig, with all sequences from
+               file1.fa and file2.fa combined into one signature.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+',
@@ -110,7 +115,8 @@ def compute(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--email', type=str, default='')
     parser.add_argument('--singleton', action='store_true')
-    parser.add_argument('--name', type=str, default='')
+    parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
+                        help="merge all input files into one signature named %(metavar)s")
     parser.add_argument('--name-from-first', action='store_true')
     parser.add_argument('--with-cardinality', action='store_true',
                         help='calculate # of k-mers in input sequences')
@@ -173,8 +179,8 @@ def compute(args):
         error('...nothing to calculate!? Exiting!')
         sys.exit(-1)
 
-    if args.name and not args.output:
-        error("must specify -o with --name")
+    if args.merge and not args.output:
+        error("must specify -o with --merge")
         sys.exit(-1)
 
     def make_estimators():
@@ -234,7 +240,10 @@ def compute(args):
         print('Tracking abundance of input k-mers.',
               file=sys.stderr)
 
-    if not args.name:
+    if not args.merge:
+        if args.output:
+            siglist = []
+
         for filename in args.filenames:
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
@@ -274,10 +283,18 @@ def compute(args):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
-                siglist = build_siglist(args.email, Elist, filename, name)
+                sigs = build_siglist(args.email, Elist, filename, name)
+                if args.output:
+                    siglist += sigs
+                else:
+                    siglist = sigs
                 print('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
-            # at end, save!
+
+            if not args.output:
+                save_siglist(siglist, args.output, sigfile)
+
+        if args.output:
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make estimators for the whole file
@@ -295,7 +312,7 @@ def compute(args):
                         args.input_is_protein, args.check_sequence)
 
         siglist = build_siglist(args.email, Elist, filename,
-                                name=args.name)
+                                name=args.merge)
         print('calculated {} signatures for {} sequences taken from {}'.\
                format(len(siglist), n + 1, " ".join(args.filenames)))
         # at end, save!
