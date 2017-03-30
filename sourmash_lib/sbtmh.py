@@ -6,6 +6,9 @@ from .sbt import Leaf
 from . import Estimators
 
 
+cache = {}
+
+
 class SigLeaf(Leaf):
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
@@ -25,9 +28,15 @@ class SigLeaf(Leaf):
         from sourmash_lib import signature
 
         filename = os.path.join(dirname, info['filename'])
+
+        if filename in cache:
+            return cache[filename]
+
         it = signature.load_signatures(filename)
         data, = list(it)              # should only be one signature
-        return SigLeaf(info['metadata'], data, name=info['name'])
+        x = SigLeaf(info['metadata'], data, name=info['name'])
+        cache[filename] = x
+        return x
 
 
 def search_minhashes(node, sig, threshold, results=None):
