@@ -32,11 +32,9 @@ Grab three bacterial genomes from NCBI::
 
 Compute signatures for each::
 
-   sourmash compute -f *.fna.gz
+   sourmash compute *.fna.gz
 
-This will produce three ``.sig`` files containing MinHash signatures at k=31;
-the ``-f`` bypasses an error where the last of the genomes has some non-ATCGN
-characters in it.
+This will produce three ``.sig`` files containing MinHash signatures at k=31.
 
 Next, compare all the signatures to each other::
 

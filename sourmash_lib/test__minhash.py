@@ -162,6 +162,7 @@ def test_max_hash_with_limit(track_abundance):
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
+
     with pytest.raises(ValueError):
         mh.add_sequence('ATGR')
 
@@ -175,15 +176,28 @@ def test_basic_dna_bad_2(track_abundance):
 
 
 def test_basic_dna_bad_force(track_abundance):
-    # test behavior on bad DNA
-    mh = MinHash(1, 4, track_abundance=track_abundance)
+    # test behavior on bad DNA; use 100 so multiple hashes get added.
+    mh = MinHash(100, 4, track_abundance=track_abundance)
     assert len(mh.get_mins()) == 0
-    mh.add_sequence('ATGR', True)
+    mh.add_sequence('ATGN', True)     # ambiguous kmer skipped.
+    assert len(mh.get_mins()) == 0
+    mh.add_sequence('AATGN', True)    # but good k-mers still used.
     assert len(mh.get_mins()) == 1
-    mh.add_sequence('ATGN', True)         # R --> N w/force
-    assert len(mh.get_mins()) == 1
-    mh.add_sequence('NCAT', True)         # reverse complement of N -> N
-    assert len(mh.get_mins()) == 1
+    mh.add_sequence('AATG', True)     # checking that right kmer was added
+    assert len(mh.get_mins()) == 1    # (only 1 hash <- this is a dup)
+
+
+def test_basic_dna_bad_force_2(track_abundance):
+    # test behavior on bad DNA
+    mh = MinHash(100, 4, track_abundance=track_abundance)
+    assert len(mh.get_mins()) == 0
+    mh.add_sequence('AAGNCGG', True)     # ambiguous kmers skipped.
+    assert len(mh.get_mins()) == 0
+    mh.add_sequence('AATGNGCGG', True)  # ambiguous kmers skipped.
+    assert len(mh.get_mins()) == 2
+    mh.add_sequence('AATG', True)        # checking that right kmers were added
+    mh.add_sequence('GCGG', True)
+    assert len(mh.get_mins()) == 2       # (only 2 hashes should be there)
 
 
 def test_compare_1(track_abundance):

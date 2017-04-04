@@ -4,7 +4,7 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION="1.1"
+VERSION="2.0-alpha"
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]
