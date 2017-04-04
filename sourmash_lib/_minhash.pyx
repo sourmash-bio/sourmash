@@ -103,15 +103,31 @@ cdef class MinHash(object):
 
     def compare(self, MinHash other):
         n = self.count_common(other)
+        cdef KmerMinAbundance *mh = NULL;
+        cdef KmerMinAbundance *other_mh = NULL;
+        cdef KmerMinAbundance *cmh = NULL;
 
-        combined_mh = new KmerMinHash(deref(self._this).num,
-                                      deref(self._this).ksize,
-                                      deref(self._this).is_protein,
-                                      deref(self._this).seed,
-                                      deref(self._this).max_hash)
+        if self.track_abundance and other.track_abundance:
+            combined_mh = new KmerMinAbundance(0,
+                                          deref(self._this).ksize,
+                                          deref(self._this).is_protein,
+                                          deref(self._this).seed,
+                                          deref(self._this).max_hash)
 
-        combined_mh.merge(deref(self._this))
-        combined_mh.merge(deref(other._this))
+            mh = <KmerMinAbundance*>address(deref(self._this))
+            other_mh = <KmerMinAbundance*>address(deref(other._this))
+            cmh = <KmerMinAbundance*>combined_mh
+
+            cmh.merge_abund(deref(mh))
+            cmh.merge_abund(deref(other_mh))
+        else:
+            combined_mh = new KmerMinHash(0,
+                                          deref(self._this).ksize,
+                                          deref(self._this).is_protein,
+                                          deref(self._this).seed,
+                                          deref(self._this).max_hash)
+            combined_mh.merge(deref(self._this))
+            combined_mh.merge(deref(other._this))
 
         size = max(combined_mh.size(), 1)
         return n / size
@@ -120,7 +136,7 @@ cdef class MinHash(object):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
         if self.track_abundance:
-             mh.merge(deref(other_mh))
+             deref(mh).merge_abund(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
 

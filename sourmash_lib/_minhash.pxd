@@ -46,7 +46,7 @@ cdef extern from "kmer_min_hash.hh":
         void add_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
         void add_sequence(const char *, bool) except +ValueError
-        void merge(const KmerMinAbundance&) except +ValueError
+        void merge_abund(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
         unsigned long size()

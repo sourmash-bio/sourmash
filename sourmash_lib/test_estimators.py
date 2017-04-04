@@ -16,8 +16,8 @@ def test_jaccard_1(track_abundance):
     for i in [1, 2, 3, 4, 6]:
         E2.mh.add_hash(i)
 
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 5.0
+    assert round(E1.jaccard(E2), 2) == round(4 / 6.0, 2)
+    assert round(E2.jaccard(E1), 2) == round(4 / 6.0, 2)
 
 
 def test_jaccard_2_difflen(track_abundance):
@@ -29,8 +29,9 @@ def test_jaccard_2_difflen(track_abundance):
     for i in [1, 2, 3, 4]:
         E2.mh.add_hash(i)
 
+    print(E1.jaccard(E2))
     assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 4.0
+    assert round(E2.jaccard(E1), 2) == 4 / 5.0
 
 
 def test_common_1(track_abundance):
@@ -148,7 +149,7 @@ def test_abund_similarity():
     assert round(E1.similarity(E2), 2) == 0.5
 
     assert round(E1.similarity(E1, ignore_abundance=True)) == 1.0
-    assert round(E1.similarity(E2, ignore_abundance=True), 2) == 1.0
+    assert round(E1.similarity(E2, ignore_abundance=True), 2) == 0.5
 
 
 def test_abund_similarity_zero():
