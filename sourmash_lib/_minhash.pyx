@@ -114,7 +114,6 @@ cdef class MinHash(object):
         combined_mh.merge(deref(other._this))
 
         size = max(combined_mh.size(), 1)
-#        size = max(deref(self._this).size(), 1)
         return n / size
 
     def __iadd__(self, MinHash other):
