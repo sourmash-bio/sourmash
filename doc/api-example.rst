@@ -19,10 +19,10 @@ Create two estimators using 3-mers, and add the sequences:
 >>> E2 = sourmash_lib.Estimators(n=20, ksize=3)
 >>> E2.add_sequence(seq2)
 
-One of the 3-mers (out of 4) overlaps, so Jaccard index is 1/4:
+One of the 3-mers (out of 7) overlaps, so Jaccard index is 1/7:
 
->>> E1.jaccard(E2)
-0.25
+>>> round(E1.jaccard(E2), 2)
+0.14
 
 and of course the estimators match themselves:
 
