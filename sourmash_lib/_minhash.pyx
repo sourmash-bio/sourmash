@@ -104,13 +104,16 @@ cdef class MinHash(object):
     def compare(self, MinHash other):
         n = self.count_common(other)
 
-        combined = MinHash(deref(self._this).num, deref(self._this).ksize,
-                           deref(self._this).is_protein, self.track_abundance,
-                           deref(self._this).seed, deref(self._this).max_hash)
-        combined += self
-        combined += other
+        combined_mh = new KmerMinHash(deref(self._this).num,
+                                      deref(self._this).ksize,
+                                      deref(self._this).is_protein,
+                                      deref(self._this).seed,
+                                      deref(self._this).max_hash)
 
-        size = max(deref(combined._this).size(), 1)
+        combined_mh.merge(deref(self._this))
+        combined_mh.merge(deref(other._this))
+
+        size = max(combined_mh.size(), 1)
 #        size = max(deref(self._this).size(), 1)
         return n / size
 
