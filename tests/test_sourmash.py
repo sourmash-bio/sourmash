@@ -807,6 +807,44 @@ def test_do_sourmash_sbt_index_traverse():
         assert testdata2 in out
 
 
+def test_do_sourmash_sbt_combine():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_combine', 'joined',
+                                            'zzz.sbt.json', 'zzz.sbt.json'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'joined.sbt.json'))
+
+        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz'] + [files[0]],
+                                           in_directory=location)
+        print(out)
+
+        assert out.count(filename) == 1
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'joined'] + [files[0]],
+                                           in_directory=location)
+        print(out)
+
+        # TODO: signature is loaded more than once,
+        # so checking if we get two results.
+        # If we ever start reporting only one match (even if appears repeated),
+        # change this test too!
+        assert out.count(filename) == 2
+
+
 def test_do_sourmash_sbt_search_otherdir():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

@@ -359,7 +359,7 @@ class SBT(object):
                             # An internal node, we need to update the name
                             new_node.name = "internal.{}".format(current_pos)
                         new_nodes[current_pos] = new_node
-                    if tree.nodes[pos] is None:
+                    else:
                         del tree.nodes[pos]
                     current_pos += 1
             n_previous = n_next

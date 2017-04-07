@@ -9,12 +9,6 @@ from sourmash_lib.sbt import SBT, GraphFactory, Leaf
 from sourmash_lib.sbtmh import SigLeaf, search_minhashes
 
 
-SIG_FILES = [os.path.join('demo', f) for f in (
-  "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
-  "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
-]
-
-
 def test_simple(n_children):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
@@ -138,7 +132,7 @@ def test_tree_v1_load():
     tree_v2 = SBT.load(utils.get_test_data('v2.sbt.json'),
                        leaf_loader=SigLeaf.load)
 
-    testdata1 = utils.get_test_data(SIG_FILES[0])
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
     results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
@@ -154,7 +148,7 @@ def test_tree_save_load(n_children):
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=n_children)
 
-    for f in SIG_FILES:
+    for f in utils.SIG_FILES:
         sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
@@ -188,7 +182,7 @@ def test_binary_nary_tree():
     trees[10] = SBT(factory, d=10)
 
     n_leaves = 0
-    for f in SIG_FILES:
+    for f in utils.SIG_FILES:
         sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
@@ -216,7 +210,7 @@ def test_sbt_combine(n_children):
     tree_2 = SBT(factory, d=n_children)
 
     n_leaves = 0
-    for f in SIG_FILES:
+    for f in utils.SIG_FILES:
         sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
@@ -235,7 +229,8 @@ def test_sbt_combine(n_children):
     assert len(t_leaves) == len(t1_leaves)
     assert t1_leaves == t_leaves
 
-    to_search = next(signature.load_signatures(utils.get_test_data(SIG_FILES[0])))
+    to_search = next(signature.load_signatures(
+                        utils.get_test_data(utils.SIG_FILES[0])))
     t1_result = {str(s) for s in tree_1.find(search_minhashes,
                                              to_search, 0.1)}
     tree_result = {str(s) for s in tree.find(search_minhashes,
