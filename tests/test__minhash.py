@@ -38,7 +38,7 @@ from __future__ import absolute_import, unicode_literals
 
 import pytest
 
-from ._minhash import MinHash, hash_murmur
+from sourmash_lib._minhash import MinHash, hash_murmur
 
 # add:
 # * get default params from Python

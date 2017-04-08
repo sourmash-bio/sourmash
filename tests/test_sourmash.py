@@ -11,7 +11,7 @@ import time
 import glob
 
 from . import sourmash_tst_utils as utils
-from . import Estimators
+from sourmash_lib import Estimators
 try:
     import matplotlib
     matplotlib.use('Agg')

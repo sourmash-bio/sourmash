@@ -1,7 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import pytest
-from . import Estimators
+from sourmash_lib import Estimators
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
 # see conftest.py.

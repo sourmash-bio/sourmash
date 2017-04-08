@@ -3,10 +3,10 @@ from __future__ import print_function, unicode_literals
 from glob import glob
 import os
 
-from . import signature
 from . import sourmash_tst_utils as utils
-from .sbt import SBT, GraphFactory, Leaf
-from .sbtmh import SigLeaf, search_minhashes
+from sourmash_lib import signature
+from sourmash_lib.sbt import SBT, GraphFactory, Leaf
+from sourmash_lib.sbtmh import SigLeaf, search_minhashes
 
 
 SIG_FILES = [os.path.join('demo', f) for f in (
