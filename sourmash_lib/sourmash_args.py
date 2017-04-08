@@ -19,9 +19,9 @@ def add_moltype_args(parser, default_dna=None):
 
 
 def get_moltype(sig, require=False):
-    if sig.estimator.is_molecule_type('dna'):
+    if sig.minhash.is_molecule_type('dna'):
         moltype = 'DNA'
-    elif sig.estimator.is_molecule_type('protein'):
+    elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
@@ -88,7 +88,7 @@ class LoadSingleSignatures(object):
 
             for query in sl:
                 query_moltype = get_moltype(query)
-                query_ksize = query.estimator.ksize
+                query_ksize = query.minhash.ksize
 
                 self.ksizes.add(query_ksize)
                 self.moltypes.add(query_moltype)

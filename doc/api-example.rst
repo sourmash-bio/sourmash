@@ -10,7 +10,7 @@ Define two sequences:
 >>> seq1 = "ATGGCA"
 >>> seq2 = "AGAGCA"
 
-Create two estimators using 3-mers, and add the sequences:
+Create two minhashes using 3-mers, and add the sequences:
 
 >>> import sourmash_lib
 >>> E1 = sourmash_lib.MinHash(n=20, ksize=3)
@@ -24,7 +24,7 @@ One of the 3-mers (out of 4) overlaps, so Jaccard index is 1/4:
 >>> E1.jaccard(E2)
 0.25
 
-and of course the estimators match themselves:
+and of course the minhashes match themselves:
 
 >>> E1.jaccard(E1)
 1.0
@@ -57,20 +57,20 @@ raising an exception.
 (Note, just for speed reasons, we'll truncate the sequences to 50kb in length.)
   
 >>> import screed
->>> estimators = []
+>>> minhashes = []
 >>> for g in genomes:
 ...     E = sourmash_lib.MinHash(n=500, ksize=31)
 ...     for record in screed.open(g):
 ...         E.add_sequence(record.sequence[:50000], True)
-...     estimators.append(E)
+...     minhashes.append(E)
 
-And now the estimators can be compared against each other:
+And now the minhashes can be compared against each other:
 
 >>> import sys
->>> for i, e in enumerate(estimators):
+>>> for i, e in enumerate(minhashes):
 ...    _ = sys.stdout.write(genomes[i][:20] + ' ')
-...    for j, e2 in enumerate(estimators):
-...       x = e.jaccard(estimators[j])
+...    for j, e2 in enumerate(minhashes):
+...       x = e.jaccard(minhashes[j])
 ...       _ = sys.stdout.write(str(round(x, 3)) + ' ')
 ...    _= sys.stdout.write('\n')
 data/GCF_000005845.2 1.0 0.0 0.0 
@@ -78,13 +78,13 @@ data/GCF_000006945.1 0.0 1.0 0.0
 data/GCF_000783305.1 0.0 0.0 1.0 
 
 Note that the comparisons are quite quick; most of the time is spent in
-making the estimators, which can be saved and loaded easily.
+making the minhashes, which can be saved and loaded easily.
 
 Saving and loading signature files
 ----------------------------------
 
 >>> from sourmash_lib import signature
->>> sig1 = signature.SourmashSignature('titus@idyll.org', estimators[0],
+>>> sig1 = signature.SourmashSignature('titus@idyll.org', minhashes[0],
 ...                                    name=genomes[0][:20])
 >>> with open('/tmp/genome1.sig', 'wt') as fp:
 ...   signature.save_signatures([sig1], fp)
@@ -98,7 +98,7 @@ compared -- first, load:
 
 then compare:
 
->>> loaded_sig.estimator.jaccard(sig1.estimator)
+>>> loaded_sig.minhash.jaccard(sig1.minhash)
 1.0
->>> sig1.estimator.jaccard(loaded_sig.estimator)
+>>> sig1.minhash.jaccard(loaded_sig.minhash)
 1.0

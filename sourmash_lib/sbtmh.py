@@ -17,7 +17,7 @@ class SigLeaf(Leaf):
             signature.save_signatures([self.data], fp)
 
     def update(self, parent):
-        for v in self.data.estimator.get_mins():
+        for v in self.data.minhash.get_mins():
             parent.data.count(v)
 
     @staticmethod
@@ -31,10 +31,10 @@ class SigLeaf(Leaf):
 
 
 def search_minhashes(node, sig, threshold, results=None):
-    mins = sig.estimator.get_mins()
+    mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        matches = node.data.estimator.count_common(sig.estimator)
+        matches = node.data.minhash.count_common(sig.minhash)
     else:  # Node or Leaf, Nodegraph by minhash comparison
         matches = sum(1 for value in mins if node.data.get(value))
 
@@ -51,10 +51,10 @@ class SearchMinHashesFindBest(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
-        mins = sig.estimator.get_mins()
+        mins = sig.minhash.get_mins()
 
         if isinstance(node, SigLeaf):
-            matches = node.data.estimator.count_common(sig.estimator)
+            matches = node.data.minhash.count_common(sig.minhash)
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 
@@ -81,15 +81,15 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
-        mins = sig.estimator.get_mins()
+        mins = sig.minhash.get_mins()
 
         if isinstance(node, SigLeaf):
-            old_est = node.data.estimator
+            old_est = node.data.minhash
             E = MinHash(ksize=old_est.ksize, n=old_est.num)
             for m in old_est.get_mins():
                 E.add_hash(m)
 
-            matches = E.count_common(sig.estimator)
+            matches = E.count_common(sig.minhash)
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 
