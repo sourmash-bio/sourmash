@@ -258,10 +258,10 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
                                 max_hash=max_hash, seed=seed)
     if track_abundance:
         abundances = list(map(int, sketch['abundances']))
-        e.mh.set_abundances(dict(zip(mins, abundances)))
+        e.set_abundances(dict(zip(mins, abundances)))
     else:
         for m in mins:
-            e.mh.add_hash(m)
+            e.add_hash(m)
 
     if 'cardinality' in sketch:
         e.hll = FakeHLL(int(sketch['cardinality']))

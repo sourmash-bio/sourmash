@@ -63,6 +63,7 @@ cdef class MinHash(object):
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0):
         self.track_abundance = track_abundance
+        self.hll = None
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -162,7 +163,10 @@ cdef class MinHash(object):
 
     @property
     def max_hash(self):
-        return deref(self._this).max_hash
+        mm = deref(self._this).max_hash
+        if mm == 18446744073709551615:
+            return 0
+        return mm
 
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
