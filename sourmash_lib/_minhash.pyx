@@ -80,6 +80,7 @@ cdef class MinHash(object):
         a.merge(self)
         return a
 
+
     def __getstate__(self):             # enable pickling
         with_abundance = False
         if self.track_abundance:
@@ -113,6 +114,12 @@ cdef class MinHash(object):
         if op == 2:
             return self.__getstate__() == other.__getstate__()
         raise Exception("undefined comparison")
+
+    def copy_and_clear(self):
+        a = MinHash(deref(self._this).num, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, deref(self._this).max_hash)
+        return a
 
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
