@@ -720,3 +720,16 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
     assert len(b.get_mins()) == 0
+
+
+def test_mh_subtract(track_abundance):
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.subtract_mins(b) == set(range(2, 40, 4))

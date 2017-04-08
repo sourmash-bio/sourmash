@@ -152,6 +152,11 @@ cdef class MinHash(object):
     def get_hashes(self):
         return self.get_mins()
 
+    def subtract_mins(self, other):
+        a = set(self.get_mins())
+        b = set(other.get_mins())
+        return a - b
+
     @property
     def seed(self):
         return deref(self._this).seed
