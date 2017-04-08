@@ -75,7 +75,7 @@ import sourmash_lib.signature
 record = next(iter(screed.open(sys.argv[1])))
 print('loaded', record.name, file=sys.stderr)
 
-E = sourmash_lib.Estimators(ksize=K, n=500, protein=True)
+E = sourmash_lib.MinHash(ksize=K, n=500, protein=True)
 prot_ksize = int(K / 3)
 mh = E.mh
 

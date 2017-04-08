@@ -43,7 +43,7 @@ record = next(iter(screed.open(sys.argv[1])))
 print('loaded', record.name, file=sys.stderr)
 revcomp = reverse(complement((record.sequence)))
 
-E = sourmash_lib.Estimators(ksize=K, n=500, protein=False)
+E = sourmash_lib.MinHash(ksize=K, n=500, protein=False)
 mh = E.mh
 
 for fwd_kmer in kmers(record.sequence, K):

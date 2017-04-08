@@ -252,7 +252,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     seed = int(sketch.get('seed', sourmash_lib.DEFAULT_SEED))
 
     track_abundance = 'abundances' in sketch
-    e = sourmash_lib.Estimators(ksize=ksize, n=n,
+    e = sourmash_lib.MinHash(ksize=ksize, n=n,
                                 is_protein=is_protein,
                                 track_abundance=track_abundance,
                                 max_hash=max_hash, seed=seed)

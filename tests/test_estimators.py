@@ -1,15 +1,20 @@
+"""
+Legacy tests from when there were Estimator objects and not just MinHash
+objects.
+"""
+
 from __future__ import print_function, unicode_literals
 
 import pytest
-from sourmash_lib import Estimators
+from sourmash_lib import MinHash
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
 # see conftest.py.
 
 
 def test_jaccard_1(track_abundance):
-    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
-    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
+    E1 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
+    E2 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
 
     for i in [1, 2, 3, 4, 5]:
         E1.add_hash(i)
@@ -21,8 +26,8 @@ def test_jaccard_1(track_abundance):
 
 
 def test_jaccard_2_difflen(track_abundance):
-    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
-    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
+    E1 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
+    E2 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
 
     for i in [1, 2, 3, 4, 5]:
         E1.add_hash(i)
@@ -34,8 +39,8 @@ def test_jaccard_2_difflen(track_abundance):
 
 
 def test_common_1(track_abundance):
-    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
-    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance)
+    E1 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
+    E2 = MinHash(n=5, ksize=20, track_abundance=track_abundance)
 
     for i in [1, 2, 3, 4, 5]:
         E1.add_hash(i)
@@ -47,8 +52,8 @@ def test_common_1(track_abundance):
 
 
 def test_diff_seed(track_abundance):
-    E1 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=1)
-    E2 = Estimators(n=5, ksize=20, track_abundance=track_abundance, seed=2)
+    E1 = MinHash(n=5, ksize=20, track_abundance=track_abundance, seed=1)
+    E2 = MinHash(n=5, ksize=20, track_abundance=track_abundance, seed=2)
 
     for i in [1, 2, 3, 4, 5]:
         E1.add_hash(i)
@@ -60,8 +65,8 @@ def test_diff_seed(track_abundance):
 
 
 def test_dna_mh(track_abundance):
-    e1 = Estimators(n=5, ksize=4, track_abundance=track_abundance)
-    e2 = Estimators(n=5, ksize=4, track_abundance=track_abundance)
+    e1 = MinHash(n=5, ksize=4, track_abundance=track_abundance)
+    e2 = MinHash(n=5, ksize=4, track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCAG'
     e1.add_sequence(seq)
@@ -75,9 +80,9 @@ def test_dna_mh(track_abundance):
 
 
 def test_protein_mh(track_abundance):
-    e1 = Estimators(n=5, ksize=6, is_protein=True,
+    e1 = MinHash(n=5, ksize=6, is_protein=True,
                     track_abundance=track_abundance)
-    e2 = Estimators(n=5, ksize=6, is_protein=True,
+    e2 = MinHash(n=5, ksize=6, is_protein=True,
                     track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
@@ -95,7 +100,7 @@ def test_pickle(track_abundance):
     import pickle
     from io import BytesIO
 
-    e1 = Estimators(n=5, ksize=6, is_protein=False,
+    e1 = MinHash(n=5, ksize=6, is_protein=False,
                     track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
@@ -119,7 +124,7 @@ def test_pickle(track_abundance):
 
 def test_bad_construct_1(track_abundance):
     try:
-        e1 = Estimators(ksize=6, is_protein=False,
+        e1 = MinHash(ksize=6, is_protein=False,
                         track_abundance=track_abundance)
         assert 0, "require n in constructor"
     except TypeError:
@@ -128,7 +133,7 @@ def test_bad_construct_1(track_abundance):
 
 def test_bad_construct_2(track_abundance):
     try:
-        e1 = Estimators(n=100, is_protein=False,
+        e1 = MinHash(n=100, is_protein=False,
                         track_abundance=track_abundance)
         assert 0, "require ksize in constructor"
     except TypeError:
@@ -136,8 +141,8 @@ def test_bad_construct_2(track_abundance):
 
 
 def test_abund_similarity():
-    E1 = Estimators(n=5, ksize=20, track_abundance=True)
-    E2 = Estimators(n=5, ksize=20, track_abundance=True)
+    E1 = MinHash(n=5, ksize=20, track_abundance=True)
+    E2 = MinHash(n=5, ksize=20, track_abundance=True)
 
     for i in [1]:
         E1.add_hash(i)
@@ -152,8 +157,8 @@ def test_abund_similarity():
 
 
 def test_abund_similarity_zero():
-    E1 = Estimators(n=5, ksize=20, track_abundance=True)
-    E2 = Estimators(n=5, ksize=20, track_abundance=True)
+    E1 = MinHash(n=5, ksize=20, track_abundance=True)
+    E2 = MinHash(n=5, ksize=20, track_abundance=True)
 
     for i in [1]:
         E1.add_hash(i)

@@ -85,7 +85,7 @@ def _json_next_signature(iterable,
     if 'abundances' in d:
         track_abundance = True
 
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, is_protein=is_protein,
+    e = sourmash_lib.MinHash(ksize=ksize, n=n, is_protein=is_protein,
                                 track_abundance=track_abundance,
                                 max_hash=max_hash, seed=seed)
 
