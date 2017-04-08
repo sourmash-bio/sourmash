@@ -320,25 +320,6 @@ def test_do_sourmash_compute_multik_outfile():
         assert 31 in ksizes
 
 
-def test_do_sourmash_compute_with_cardinality():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        outfile = os.path.join(location, 'FOO.xxx')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--with-cardinality',
-                                            testdata1, '-o', outfile],
-                                            in_directory=location)
-        assert os.path.exists(outfile)
-
-        siglist = list(signature.load_signatures(outfile))
-        assert len(siglist) == 2
-
-        cards = [ x.estimator.hll.estimate_cardinality() for x in siglist ]
-        assert len(cards) == 2
-        assert set(cards) == set([ 966, 986 ])
-
-
 def test_do_sourmash_compute_with_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -949,40 +930,6 @@ def test_sbt_gather():
                                            ['sbt_gather', 'zzz',
                                             'query.fa.sig', '--csv',
                                             'foo.csv'],
-                                           in_directory=location)
-
-        print(out)
-        print(err)
-
-        assert 'found: 1.00 1.00 ' in err
-
-
-def test_sbt_gather_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
-                                            '--with-cardinality'],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_gather', 'zzz',
-                                            'query.fa.sig'],
                                            in_directory=location)
 
         print(out)
