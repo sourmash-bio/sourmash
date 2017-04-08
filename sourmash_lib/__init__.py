@@ -7,13 +7,6 @@ import re
 import math
 from ._minhash import MinHash, dotproduct
 
-khmer_available = False
-try:
-    import khmer
-    khmer_available = True
-except ImportError:
-    pass
-
 DEFAULT_SEED=MinHash(1,1).seed
 
 class Estimators(object):
@@ -31,13 +24,11 @@ class Estimators(object):
     """
 
     def __init__(self, n=None, ksize=None, is_protein=False,
-                 with_cardinality=False, track_abundance=False,
-                 max_hash=0, seed=DEFAULT_SEED):
+                 track_abundance=False, max_hash=0, seed=DEFAULT_SEED):
         """\
         Create a new MinHash estimator with size n and k-mer size ksize.
 
         is_protein - compute hashes from amino acid translation (False)
-        with_cardinality - count total unique k-mers (False)
         track_abundance - track abundance of k-mers as well as presence (False)
         max_hash - only admit hash values under this number (not set)
         seed - hash function seed
@@ -56,13 +47,6 @@ class Estimators(object):
             self.is_protein = True
 
         self.hll = None
-        if with_cardinality:
-            if is_protein:
-                raise Exception("Cannot do cardinality counting with protein")
-            if not khmer_available:
-                raise Exception("Error: to do cardinality counting, " + \
-                                "we require the khmer package.")
-            self.hll = khmer.HLLCounter(.01, ksize)
         self.track_abundance = track_abundance
 
         # initialize sketch to size n

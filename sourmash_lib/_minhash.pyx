@@ -79,6 +79,36 @@ cdef class MinHash(object):
         a.merge(self)
         return a
 
+    def __getstate__(self):             # enable pickling
+        with_abundance = False
+        if self.track_abundance:
+            with_abundance = True
+
+        return (deref(self._this).num,
+                deref(self._this).ksize,
+                deref(self._this).is_protein,
+                self.get_mins(with_abundance=with_abundance),
+                self.hll, self.track_abundance, deref(self._this).max_hash,
+                deref(self._this).seed)
+
+    def __setstate__(self, tup):
+        (n, ksize, is_protein, mins, hll, track_abundance, max_hash, seed) =\
+          tup
+
+        self.track_abundance = track_abundance
+        self.hll = hll
+
+        cdef KmerMinHash *mh = NULL
+        if track_abundance:
+            mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
+            self._this.reset(mh)
+            self.set_abundances(mins)
+        else:
+            mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+            self._this.reset(mh)
+            self.add_many(mins)
+
+
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
 
