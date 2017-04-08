@@ -108,6 +108,10 @@ cdef class MinHash(object):
             self._this.reset(mh)
             self.add_many(mins)
 
+    def __richcmp__(self, other, op):
+        if op == 2:
+            return self.__getstate__() == other.__getstate__()
+        raise Exception("undefined comparison")
 
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
@@ -137,12 +141,28 @@ cdef class MinHash(object):
         else:
             return [it for it in deref(self._this).mins]
 
+    def get_hashes(self):
+        return self.get_mins()
+
     @property
     def seed(self):
         return deref(self._this).seed
 
+    @property
+    def num(self):
+        return deref(self._this).num
+
+    @property
     def is_protein(self):
         return deref(self._this).is_protein
+
+    @property
+    def ksize(self):
+        return deref(self._this).ksize
+
+    @property
+    def max_hash(self):
+        return deref(self._this).max_hash
 
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
@@ -243,8 +263,8 @@ cdef class MinHash(object):
             deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
 
     def is_molecule_type(self, molecule):
-        if molecule == 'dna' and not self.is_protein():
+        if molecule == 'dna' and not self.is_protein:
             return True
-        if molecule == 'protein' and self.is_protein():
+        if molecule == 'protein' and self.is_protein:
             return True
         return False

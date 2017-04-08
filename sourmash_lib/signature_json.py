@@ -91,10 +91,10 @@ def _json_next_signature(iterable,
 
     if not track_abundance:
         for m in mins:
-            e.mh.add_hash(m)
+            e.add_hash(m)
     else:
         abundances = list(map(int, d['abundances']))
-        e.mh.set_abundances(dict(zip(mins, abundances)))
+        e.set_abundances(dict(zip(mins, abundances)))
 
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])

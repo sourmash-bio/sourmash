@@ -50,7 +50,7 @@ class SourmashSignature(object):
         "Calculate md5 hash of the bottom sketch, specifically."
         m = hashlib.md5()
         m.update(str(self.estimator.ksize).encode('ascii'))
-        for k in self.estimator.mh.get_mins():
+        for k in self.estimator.get_mins():
             m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
@@ -77,18 +77,18 @@ class SourmashSignature(object):
 
         sketch = {}
         sketch['ksize'] = int(estimator.ksize)
-        sketch['num'] = len(estimator.mh)
+        sketch['num'] = len(estimator)
         sketch['max_hash'] = int(estimator.max_hash)
         sketch['seed'] = int(estimator.seed)
         if self.estimator.track_abundance:
-            values = estimator.mh.get_mins(with_abundance=True)
+            values = estimator.get_mins(with_abundance=True)
             sketch['mins'] = list(map(int, values.keys()))
             sketch['abundances'] = list(map(int, values.values()))
         else:
-            sketch['mins'] = list(map(int, estimator.mh.get_mins()))
+            sketch['mins'] = list(map(int, estimator.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
-        if estimator.mh.is_protein():
+        if estimator.is_protein:
             sketch['molecule'] = 'protein'
         else:
             sketch['molecule'] = 'dna'

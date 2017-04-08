@@ -828,8 +828,8 @@ def test_compare_with_abundance_1():
         E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
-        E1.mh.add_sequence('ATGGA')
-        E2.mh.add_sequence('ATGGA')
+        E1.add_sequence('ATGGA')
+        E2.add_sequence('ATGGA')
 
         s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
         s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
@@ -854,10 +854,10 @@ def test_compare_with_abundance_2():
         E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
-        E1.mh.add_sequence('ATGGA')
+        E1.add_sequence('ATGGA')
 
-        E1.mh.add_sequence('ATGGA')
-        E2.mh.add_sequence('ATGGA')
+        E1.add_sequence('ATGGA')
+        E2.add_sequence('ATGGA')
 
         s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
         s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
@@ -882,11 +882,11 @@ def test_compare_with_abundance_3():
         E2 = Estimators(ksize=5, n=5, is_protein=False,
                         track_abundance=True)
 
-        E1.mh.add_sequence('ATGGA')
-        E1.mh.add_sequence('GGACA')
+        E1.add_sequence('ATGGA')
+        E1.add_sequence('GGACA')
 
-        E1.mh.add_sequence('ATGGA')
-        E2.mh.add_sequence('ATGGA')
+        E1.add_sequence('ATGGA')
+        E2.add_sequence('ATGGA')
 
         s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
         s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')

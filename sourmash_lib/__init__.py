@@ -9,7 +9,9 @@ from ._minhash import MinHash, dotproduct
 
 DEFAULT_SEED=MinHash(1,1).seed
 
-class Estimators(object):
+Estimators = MinHash
+
+class OldEstimators(object):
     """
     A simple bottom n-sketch MinHash implementation.
 

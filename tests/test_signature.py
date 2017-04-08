@@ -35,7 +35,7 @@ def test_roundtrip_empty(track_abundance):
 def test_roundtrip_max_hash(track_abundance):
     e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance,
                                 max_hash=10)
-    e.mh.add_hash(5)
+    e.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
@@ -51,7 +51,7 @@ def test_roundtrip_max_hash(track_abundance):
 def test_roundtrip_seed(track_abundance):
     e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance,
                                 seed=10)
-    e.mh.add_hash(5)
+    e.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
@@ -80,7 +80,7 @@ def test_roundtrip_empty_email(track_abundance):
 
 def test_md5(track_abundance):
     e = sourmash_lib.Estimators(n=1, ksize=20, track_abundance=track_abundance)
-    e.mh.add_hash(5)
+    e.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     print(sig._save())
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
