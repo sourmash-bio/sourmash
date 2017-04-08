@@ -5,7 +5,7 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 from __future__ import print_function
 import re
 import math
-from ._minhash import MinHash
+from ._minhash import MinHash, dotproduct
 
 khmer_available = False
 try:
@@ -73,11 +73,7 @@ class Estimators(object):
                           seed=seed)
 
     def is_molecule_type(self, molecule):
-        if molecule == 'dna' and not self.mh.is_protein():
-            return True
-        if molecule == 'protein' and self.mh.is_protein():
-            return True
-        return False
+        return self.mh.is_molecule_type(molecule)
 
     def __getstate__(self):             # enable pickling
         with_abundance = False
@@ -109,17 +105,14 @@ class Estimators(object):
         return self.__getstate__() == other.__getstate__()
 
     def add(self, kmer):
-        "Add kmer into sketch."
         self.mh.add_sequence(kmer)
 
     def add_many(self, hashes):
-        "Add many hashes in at once."
-        for hash in hashes:
-            self.mh.add_hash(hash)
+        self.mh.add_many(hashes)
 
     def update(self, other):
         "Update this estimator from all the hashes from the other."
-        self.add_many(other.mh.get_mins())
+        self.mh.update(other.mh)
 
     def get_hashes(self):
         "Get the list of hashes."
@@ -128,78 +121,20 @@ class Estimators(object):
     def add_sequence(self, seq, force=False):
         "Sanitize and add a sequence to the sketch."
         self.mh.add_sequence(seq, force)
-        if self.hll is not None:
-            # @CTB hack to deal with HLL behavior around non-ACGTN.
-            if force:
-                seq = re.sub('[^ACGT]', 'A', seq)
-            self.hll.consume_string(seq)
 
     def jaccard(self, other):
         "Calculate Jaccard index of two sketches."
         return self.mh.compare(other.mh)
 
     def similarity_ignore_maxhash(self, other):
-        a = set(self.mh.get_mins())
-        b = set(other.mh.get_mins())
-
-        overlap = a.intersection(b)
-        return float(len(overlap)) / float(len(a))
-
+        return self.mh.similarity_ignore_maxhash(other.mh)
 
     def similarity(self, other, ignore_abundance=False):
-        """\
-        Calculate similarity of two sketches.
-
-        If the sketches are not abundance weighted, or ignore_abundance=True,
-        compute Jaccard similarity.
-
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
-
-        Note, because the term frequencies (tf-idf weights) cannot be negative,
-        the angle will never be < 0deg or > 90deg.
-
-        See https://en.wikipedia.org/wiki/Cosine_similarity
-        """
-
-        if not self.track_abundance or ignore_abundance:
-            return self.jaccard(other)
-        else:
-            a = self.mh.get_mins(with_abundance=True)
-            b = other.mh.get_mins(with_abundance=True)
-
-            prod = dotproduct(a, b)
-            prod = min(1.0, prod)
-
-            distance = 2*math.acos(prod) / math.pi
-            return 1.0 - distance
+        return self.mh.similarity(other.mh, ignore_abundance)
 
     def count_common(self, other):
         "Calculate number of common k-mers between two sketches."
         return self.mh.count_common(other.mh)
-
-
-def dotproduct(a, b, normalize=True):
-    """
-    Compute the dot product of two dictionaries {k: v} where v is
-    abundance.
-    """
-
-    if normalize:
-        norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
-        norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
-
-        if norm_a == 0.0 or norm_b == 0.0:
-            return 0.0
-    else:
-        norm_a = 1.0
-        norm_b = 1.0
-
-    prod = 0.
-    for k, abundance in a.items():
-        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
-
-    return prod
 
 
 def test_dotproduct_1():

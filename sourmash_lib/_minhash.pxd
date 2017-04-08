@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 from libcpp cimport bool
 from libcpp.map cimport map
 from libcpp.memory cimport unique_ptr
-from libcpp.set cimport set
+from libcpp.set cimport set as cppset
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.vector cimport vector

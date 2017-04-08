@@ -9,6 +9,7 @@ from libcpp cimport bool
 from libc.stdint cimport uint32_t
 
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
+import math
 
 
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
@@ -29,6 +30,29 @@ def hash_murmur(kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
     "The current default seed is returned by hash_seed()."
 
     return _hash_murmur(to_bytes(kmer), seed)
+
+
+def dotproduct(a, b, normalize=True):
+    """
+    Compute the dot product of two dictionaries {k: v} where v is
+    abundance.
+    """
+
+    if normalize:
+        norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
+        norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
+
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
+    else:
+        norm_a = 1.0
+        norm_b = 1.0
+
+    prod = 0.
+    for k, abundance in a.items():
+        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
+
+    return prod
 
 
 cdef class MinHash(object):
@@ -57,6 +81,19 @@ cdef class MinHash(object):
 
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
+
+    def add(self, kmer):
+        "Add kmer into sketch."
+        self.add_sequence(kmer)
+
+    def add_many(self, hashes):
+        "Add many hashes in at once."
+        for hash in hashes:
+            self.add_hash(hash)
+
+    def update(self, other):
+        "Update this estimator from all the hashes from the other."
+        self.add_many(other.get_mins())
 
     def __len__(self):
         return deref(self._this).num
@@ -106,6 +143,45 @@ cdef class MinHash(object):
         size = max(deref(self._this).size(), 1)
         return n / size
 
+    def jaccard(self, MinHash other):
+        return self.compare(other)
+
+    def similarity(self, other, ignore_abundance=False):
+        """\
+        Calculate similarity of two sketches.
+
+        If the sketches are not abundance weighted, or ignore_abundance=True,
+        compute Jaccard similarity.
+
+        If the sketches are abundance weighted, calculate a distance metric
+        based on the cosine similarity.
+
+        Note, because the term frequencies (tf-idf weights) cannot be negative,
+        the angle will never be < 0deg or > 90deg.
+
+        See https://en.wikipedia.org/wiki/Cosine_similarity
+        """
+
+        if not self.track_abundance or ignore_abundance:
+            return self.jaccard(other)
+        else:
+            a = self.get_mins(with_abundance=True)
+            b = other.get_mins(with_abundance=True)
+
+            prod = dotproduct(a, b)
+            prod = min(1.0, prod)
+
+            distance = 2*math.acos(prod) / math.pi
+            return 1.0 - distance
+
+    def similarity_ignore_maxhash(self, MinHash other):
+        a = set(self.get_mins())
+
+        b = set(other.get_mins())
+
+        overlap = a.intersection(b)
+        return float(len(overlap)) / float(len(a))
+
     def __iadd__(self, MinHash other):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
@@ -135,3 +211,10 @@ cdef class MinHash(object):
 
         for i in range(0, len(sequence) - ksize + 1):
             deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
+
+    def is_molecule_type(self, molecule):
+        if molecule == 'dna' and not self.is_protein():
+            return True
+        if molecule == 'protein' and self.is_protein():
+            return True
+        return False
