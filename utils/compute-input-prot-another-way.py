@@ -75,13 +75,17 @@ import sourmash_lib.signature
 record = next(iter(screed.open(sys.argv[1])))
 print('loaded', record.name, file=sys.stderr)
 
-E = sourmash_lib.MinHash(ksize=K, n=500, protein=True)
+mh = sourmash_lib.MinHash(ksize=K, n=500, is_protein=True)
 prot_ksize = int(K / 3)
-mh = E.mh
 
 for kmer in kmers(record.sequence, prot_ksize):
-    hash = mmh3.hash128(kmer, seed=42)
+    hash = mmh3.hash64(kmer, seed=42)[0]
+
+    # convert to unsigned int if negative
+    if hash < 0:
+        hash += 2**64
+
     mh.add_hash(hash)
 
-s = sourmash_lib.signature.SourmashSignature('', E, name=record.name)
+s = sourmash_lib.signature.SourmashSignature('', mh, name=record.name)
 print(sourmash_lib.signature.save_signatures([s]))
