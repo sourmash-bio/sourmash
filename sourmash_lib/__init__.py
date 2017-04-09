@@ -5,7 +5,7 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 from __future__ import print_function
 import re
 import math
-from ._minhash import MinHash
+from ._minhash import MinHash, get_minhash_default_seed, get_minhash_max_hash
 
 khmer_available = False
 try:
@@ -14,7 +14,8 @@ try:
 except ImportError:
     pass
 
-DEFAULT_SEED=MinHash(1,1).seed
+DEFAULT_SEED = get_minhash_default_seed()
+MAX_HASH = get_minhash_max_hash()
 
 class Estimators(object):
     """

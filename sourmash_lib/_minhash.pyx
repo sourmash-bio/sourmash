@@ -11,7 +11,20 @@ from libc.stdint cimport uint32_t
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 
 
+# default MurmurHash seed
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
+
+
+def get_minhash_default_seed():
+    return MINHASH_DEFAULT_SEED
+
+
+# we use the 64-bit hash space of MurmurHash only
+cdef uint64_t MINHASH_MAX_HASH = 2**64 - 1
+
+
+def get_minhash_max_hash():
+    return MINHASH_MAX_HASH
 
 
 cdef bytes to_bytes(s):
