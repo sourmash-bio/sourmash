@@ -179,8 +179,8 @@ def compute(args):
     def make_estimators():
         seed = args.seed
         max_hash = 0
-        if args.scaled:
-            max_hash = 2**64 / float(args.scaled)
+        if args.scaled and args.scaled > 1:
+            max_hash = int(round(2**64 / float(args.scaled), 0))
 
         # one estimator for each ksize
         Elist = []
