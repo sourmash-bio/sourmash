@@ -9,6 +9,12 @@ from .sbt import SBT, GraphFactory, Leaf
 from .sbtmh import SigLeaf, search_minhashes
 
 
+SIG_FILES = [os.path.join('demo', f) for f in (
+  "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
+  "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
+]
+
+
 def test_simple():
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory)
@@ -124,11 +130,31 @@ def test_longer_search():
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
+def test_tree_v1_load():
+    tree_v1 = SBT.load(utils.get_test_data('v1.sbt.json'),
+                       leaf_loader=SigLeaf.load)
+
+    tree_v2 = SBT.load(utils.get_test_data('v2.sbt.json'),
+                       leaf_loader=SigLeaf.load)
+
+    testdata1 = utils.get_test_data(SIG_FILES[0])
+    to_search = next(signature.load_signatures(testdata1))
+
+    results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
+                                               to_search, 0.1)}
+    results_v2 = {str(s) for s in tree_v2.find(search_minhashes,
+                                               to_search, 0.1)}
+
+    assert results_v1 == results_v2
+    assert len(results_v1) == 4
+
+
 def test_tree_save_load():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
-    for f in glob("demo/*.sig"):
-        sig = next(signature.load_signatures(f))
+
+    for f in SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
@@ -159,8 +185,8 @@ def test_binary_nary_tree():
     trees[5] = SBT(factory, d=5)
     trees[10] = SBT(factory, d=10)
 
-    for f in glob("demo/*.sig"):
-        sig = next(signature.load_signatures(f))
+    for f in SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
             tree.add_node(leaf)

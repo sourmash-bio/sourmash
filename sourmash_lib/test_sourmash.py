@@ -3,10 +3,12 @@ Tests for the 'sourmash' command line.
 """
 from __future__ import print_function, unicode_literals
 import os
-import glob
 import gzip
 import shutil
+import time
 import screed
+import time
+import glob
 
 from . import sourmash_tst_utils as utils
 from . import Estimators
@@ -17,6 +19,7 @@ except ImportError:
     pass
 
 from sourmash_lib import signature
+
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -43,6 +46,68 @@ def test_do_sourmash_compute():
         assert sig.name().endswith('short.fa')
 
 
+def test_do_sourmash_compute_output_valid_file():
+    """ Trigger bug #123 """
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        sigfile = os.path.join(location, 'short.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-o', sigfile,
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(sigfile)
+
+        # is it valid json?
+        import json
+        with open(sigfile, 'r') as f:
+            data = json.load(f)
+
+        filesigs = [sig['filename'] for sig in data]
+        assert all(testdata in filesigs
+                   for testdata in (testdata1, testdata2, testdata3))
+
+
+def test_do_sourmash_compute_output_and_name_valid_file():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        sigfile = os.path.join(location, 'short.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-o', sigfile,
+                                            '--merge', '"name"',
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(sigfile)
+
+        # is it valid json?
+        import json
+        with open(sigfile, 'r') as f:
+            data = json.load(f)
+
+        assert len(data) == 1
+
+        all_testdata = " ".join([testdata1, testdata2, testdata3])
+        sigfile_merged = os.path.join(location, 'short.all.fa.sig')
+        #cmd = "cat {} | {}/sourmash compute -o {} -".format(
+        cmd = "cat {} | {}/sourmash compute -o {} -".format(
+                all_testdata, utils.scriptpath(), sigfile_merged)
+        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+
+        with open(sigfile_merged, 'r') as f:
+            data_merged = json.load(f)
+
+        assert data[0]['signatures'][0]['mins'] == data_merged[0]['signatures'][0]['mins']
+
+
 def test_do_sourmash_compute_singleton():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -62,7 +127,7 @@ def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name', 'foo',
+                                           ['compute', '--merge', 'foo',
                                             testdata1, '-o', 'foo.sig'],
                                            in_directory=location)
 
@@ -72,10 +137,40 @@ def test_do_sourmash_compute_name():
         sig = next(signature.load_signatures(sigfile))
         assert sig.name() == 'foo'
 
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--name', 'foo',
+                                            testdata1, '-o', 'foo2.sig'],
+                                           in_directory=location)
+
+        sigfile2 = os.path.join(location, 'foo2.sig')
+        assert os.path.exists(sigfile)
+
+        sig2 = next(signature.load_signatures(sigfile))
+        assert sig2.name() == 'foo'
+        assert sig.name() == sig2.name()
+
 
 def test_do_sourmash_compute_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
+
+def test_do_sourmash_compute_merge_fail_no_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--merge', 'foo',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == -1
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--name', 'foo',
                                             testdata1],
@@ -852,7 +947,8 @@ def test_sbt_gather():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
-                                            'query.fa.sig'],
+                                            'query.fa.sig', '--csv',
+                                            'foo.csv'],
                                            in_directory=location)
 
         print(out)
@@ -893,6 +989,33 @@ def test_sbt_gather_2():
         print(err)
 
         assert 'found: 1.00 1.00 ' in err
+
+
+def test_sbt_gather_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        
+        cmd = ['sbt_index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+        
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'gcf_all',
+                                            query_sig, '-k', '21'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 11 matches total' in err
+        assert 'the recovered matches hit 100.0% of the query' in err
 
 
 def test_sbt_gather_error_no_cardinality_query():
@@ -1114,3 +1237,59 @@ def test_watch_coverage():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+
+
+def test_mash_yaml_to_json():
+    with utils.TempDirectory() as location:
+        orig_sig = utils.get_test_data('genome-s10.fa.gz.sig')
+        shutil.copy(orig_sig, location)
+        test_sig = os.path.join(location, os.path.basename(orig_sig))
+
+        # create directory
+        os.mkdir(os.path.join(location, "foo"))
+        shutil.copy(orig_sig, os.path.join(location, "foo"))
+
+        assert not os.path.exists(test_sig + ".json")
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        test_sig,
+                                                        os.path.join(location, "foo")],
+                                           in_directory=location)
+        # check success
+        assert status == 0
+        # check existence of JSON files
+        assert os.path.exists(test_sig + ".json")
+        assert os.path.exists(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json")
+
+        # check that the files can be read (as JSON)
+        with open(test_sig + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)
+        with open(os.path.join(location, "foo", os.path.basename(orig_sig)) + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)
+
+        # try again: will fail because .json already found
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        test_sig],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == 1
+
+        timestamp = os.path.getmtime(test_sig + ".json")
+
+        # briefly sleep to make sure the clock ticks at least once
+        # between the two timestamps
+        time.sleep(1)
+
+        # try again: will not fail when .json already found because of --force
+        time.sleep(1)
+        status, out, err = utils.runscript('sourmash', ['convert',
+                                                        '--force',
+                                                        test_sig],
+                                           in_directory=location,
+                                           fail_ok=True)
+        assert status == 0
+        # check that --force overwrote the file
+        assert int(timestamp) != int(os.path.getmtime(test_sig + ".json"))
+        # check that the file can be read (as JSON)
+        with open(test_sig + ".json") as fh:
+            sig = signature.signature_json.load_signatures_json(fh)

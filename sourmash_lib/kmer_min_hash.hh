@@ -112,11 +112,22 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
-        const std::string seq = _checkdna(sequence, force);
+        const std::string seq = sequence;
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
+                if (! _checkdna(kmer)) {
+                    if (force) {
+                        continue;
+                    } else {
+                        std::string msg = "invalid DNA character in input: ";
+                        msg += seq[i];
+                        throw minhash_exception(msg);
+                    }
+                }
+
                 const std::string rc = _revcomp(kmer);
+
                 if (kmer < rc) {
                     add_word(kmer);
                 } else {
@@ -156,11 +167,9 @@ public:
         return aa;
     }
 
-    std::string _checkdna(const char * s, bool force=false) const {
-        std::string seq = s;
-        const size_t seqsize = strlen(s);
+    bool _checkdna(const std::string seq) const {
 
-        for (size_t i=0; i < seqsize; ++i) {
+        for (size_t i=0; i < seq.length(); ++i) {
             switch(seq[i]) {
             case 'A':
             case 'C':
@@ -168,17 +177,10 @@ public:
             case 'T':
                 break;
             default:
-                if (force) {
-                    seq[i] = 'N';
-                } else {
-                    std::string msg = "invalid DNA character in sequence: ";
-                    msg += seq[i];
-                    throw minhash_exception(msg);
-                }
-                break;
+                return false;
             }
         }
-        return seq;
+	return true;
     }
 
     std::string _revcomp(const std::string& kmer) const {
@@ -200,9 +202,6 @@ public:
                 break;
             case 'T':
                 complement = 'A';
-                break;
-            case 'N':
-                complement = 'N';
                 break;
             default:
                 std::string msg = "invalid DNA character in sequence: ";
