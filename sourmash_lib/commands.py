@@ -180,7 +180,8 @@ def compute(args):
         seed = args.seed
         max_hash = 0
         if args.scaled and args.scaled > 1:
-            max_hash = int(round(2**64 / float(args.scaled), 0))
+            max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
+            max_hash = int(round(max_hash, 0))
 
         # one estimator for each ksize
         Elist = []
@@ -705,7 +706,7 @@ def sbt_gather(args):
     orig_mins = orig_query.estimator.get_hashes()
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = 2**64 / float(orig_query.estimator.max_hash)
+    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.estimator.max_hash)
 
     # define a function to do a 'best' search and get only top match.
     def find_best(tree, query):
@@ -752,7 +753,8 @@ def sbt_gather(args):
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
         if best_leaf.estimator.max_hash:
-            R_genome = 2**64 / float(best_leaf.estimator.max_hash)
+            R_genome = sourmash_lib.MAX_HASH / \
+              float(best_leaf.estimator.max_hash)
         elif best_leaf.estimator.hll:
             genome_size = best_leaf.estimator.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
@@ -765,7 +767,7 @@ def sbt_gather(args):
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
-        new_max_hash = 2**64 / float(R_comparison)
+        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
