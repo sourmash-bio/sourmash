@@ -566,6 +566,8 @@ def sbt_search(args):
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--best-only', action='store_true')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+    parser.add_argument('--csv', type=argparse.FileType('wt'))
 
     sourmash_args.add_moltype_args(parser)
     args = parser.parse_args(args)
@@ -593,6 +595,20 @@ def sbt_search(args):
     results.sort(key=lambda x: -x[0])   # reverse sort on similarity
     for (similarity, query) in results:
         print('{:.2f} {}'.format(similarity, query.name()))
+
+    if args.output:
+        for (similarity, query) in results:
+            print('{:.2f} {}'.format(similarity, query.name()), file=args.output)
+
+    if args.csv:
+        fieldnames = ['fraction', 'name', 'sketch_kmers']
+        w = csv.DictWriter(args.csv, fieldnames=fieldnames)
+
+        w.writeheader()
+        for (frac, leaf_sketch) in found:
+            cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
+                            sketch_kmers=cardinality))
 
     if args.save_matches:
         outname = args.save_matches.name
