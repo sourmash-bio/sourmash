@@ -8,6 +8,11 @@ In addition to `mash <https://github.com/marbl/Mash>`__, also see
 `RKMH: Read Classification by Kmers
 <https://github.com/edawson/rkmh>`__.
 
+If you are interested in exactly how these MinHash approaches
+calculate the hashes of DNA sequences, please see some simple Python
+code in sourmash, `utils/compute-dna-mh-another-way.py
+<https://github.com/dib-lab/sourmash/blob/master/utils/compute-dna-mh-another-way.py>`__.
+
 Blog posts
 ----------
 
