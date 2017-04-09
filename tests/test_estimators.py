@@ -101,7 +101,7 @@ def test_pickle(track_abundance):
     from io import BytesIO
 
     e1 = MinHash(n=5, ksize=6, is_protein=False,
-                    track_abundance=track_abundance)
+                 track_abundance=track_abundance)
 
     seq = 'ATGGCAGTGACGATGCCG'
     e1.add_sequence(seq)

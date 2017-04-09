@@ -61,7 +61,8 @@ cdef class MinHash(object):
                        bool is_protein=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
-                       HashIntoType max_hash=0):
+                       HashIntoType max_hash=0,
+                       mins=None):
         self.track_abundance = track_abundance
         self.hll = None
 
@@ -72,6 +73,13 @@ cdef class MinHash(object):
             mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
 
         self._this.reset(mh)
+
+        if mins:
+            if track_abundance:
+                self.set_abundances(mins)
+            else:
+                self.add_many(mins)
+
 
     def __copy__(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
@@ -109,6 +117,16 @@ cdef class MinHash(object):
             mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
             self._this.reset(mh)
             self.add_many(mins)
+
+    def __reduce__(self):
+        return (MinHash,
+               (deref(self._this).num,
+                deref(self._this).ksize,
+                deref(self._this).is_protein,
+                self.track_abundance,
+                deref(self._this).seed,
+                deref(self._this).max_hash,
+                self.get_mins(with_abundance=self.track_abundance)))
 
     def __richcmp__(self, other, op):
         if op == 2:
