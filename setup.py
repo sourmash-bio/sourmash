@@ -4,9 +4,10 @@ from setuptools import setup
 from setuptools import Extension
 import os
 
-VERSION='undefined'
-with open('sourmash_lib/version.py') as f:
-    exec(f.read())
+# retrieve VERSION from sourmash_lib/VERSION.
+thisdir = os.path.dirname(__file__)
+version_file = open(os.path.join(thisdir, 'sourmash_lib', 'VERSION'))
+VERSION = version_file.read().strip()
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
 EXTRA_LINK_ARGS=[]

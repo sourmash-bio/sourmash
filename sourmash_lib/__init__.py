@@ -3,10 +3,15 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
-from .version import VERSION as __version__
 import re
 import math
 from ._minhash import MinHash
+import os
+
+# retrieve VERSION from sourmash_lib/VERSION.
+thisdir = os.path.dirname(__file__)
+version_file = open(os.path.join(thisdir, 'VERSION'))
+VERSION = version_file.read().strip()
 
 khmer_available = False
 try:
