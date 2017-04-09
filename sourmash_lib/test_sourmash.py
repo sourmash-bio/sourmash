@@ -355,7 +355,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.estimator.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == set(0)
+        assert set(max_hashes) == { 0 }
 
 
 def test_do_sourmash_compute_with_scaled_2():

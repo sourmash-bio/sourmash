@@ -186,8 +186,8 @@ def compute(args):
     def make_estimators():
         seed = args.seed
         max_hash = 0
-        if args.scaled:
-            max_hash = 2**64 / float(args.scaled)
+        if args.scaled and args.scaled > 1:
+            max_hash = int(round(2**64 / float(args.scaled), 0))
 
         # one estimator for each ksize
         Elist = []
@@ -229,8 +229,6 @@ def compute(args):
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
                 sig.save_signatures(siglist, fp)
-
-    notify('Computing signature for ksizes: {}', str(ksizes))
 
     if args.with_cardinality:
         print('Calculating k-mer cardinality of input sequences.',
