@@ -339,6 +339,44 @@ def test_do_sourmash_compute_with_cardinality():
         assert set(cards) == set([ 966, 986 ])
 
 
+def test_do_sourmash_compute_with_scaled_1():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set(0)
+
+
+def test_do_sourmash_compute_with_scaled_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '2',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set([ int(2**64 /2.) ])
+
+
 def test_do_sourmash_compute_with_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
