@@ -156,7 +156,7 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
     Note, the order is not necessarily the same as what is in the source file.
     """
     if not data:
-        return []
+        return
 
     is_fp = False
     if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
