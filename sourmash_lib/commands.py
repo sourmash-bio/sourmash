@@ -480,6 +480,35 @@ def dump(args):
         fp.close()
 
 
+def sbt_combine(args):
+    from sourmash_lib.sbt import SBT, GraphFactory
+    from sourmash_lib.sbtmh import SigLeaf
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name to save SBT into')
+    parser.add_argument('sbts', nargs='+',
+                        help='SBTs to combine to a new SBT')
+    parser.add_argument('-x', '--bf-size', type=float, default=1e5)
+
+    sourmash_args.add_moltype_args(parser)
+
+    args = parser.parse_args(args)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    inp_files = list(args.sbts)
+    notify('combining {} SBTs', len(inp_files))
+
+    tree = SBT.load(inp_files.pop(0), leaf_loader=SigLeaf.load)
+
+    for f in inp_files:
+        new_tree = SBT.load(f, leaf_loader=SigLeaf.load)
+        # TODO: check if parameters are the same for both trees!
+        tree.combine(new_tree)
+
+    notify('saving SBT under "{}"', args.sbt_name)
+    tree.save(args.sbt_name)
+
+
 def sbt_index(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
