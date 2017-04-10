@@ -118,8 +118,6 @@ def compute(args):
     parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
                         help="merge all input files into one signature named %(metavar)s")
     parser.add_argument('--name-from-first', action='store_true')
-    parser.add_argument('--with-cardinality', action='store_true',
-                        help='calculate # of k-mers in input sequences')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances')
     parser.add_argument('--scaled', type=float,
@@ -132,11 +130,6 @@ def compute(args):
         notify('WARNING: input is protein, turning off DNA hashing')
         args.dna = False
         args.protein = True
-
-    if not args.dna and args.protein:
-        if args.with_cardinality:
-            error('Cannot compute cardinality for protein sequences.')
-            sys.exit(-1)
 
     if args.scaled:
         if args.num_hashes != 0:
@@ -193,16 +186,15 @@ def compute(args):
         Elist = []
         for k in ksizes:
             if args.protein:
-                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
                                             is_protein=True,
                                     track_abundance=args.track_abundance,
                                             max_hash=max_hash,
                                             seed=seed)
                 Elist.append(E)
             if args.dna:
-                E = sourmash_lib.Estimators(ksize=k, n=args.num_hashes,
+                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
                                             is_protein=False,
-                                    with_cardinality=args.with_cardinality,
                                     track_abundance=args.track_abundance,
                                             max_hash=max_hash,
                                             seed=seed)
@@ -212,7 +204,7 @@ def compute(args):
     def add_seq(Elist, seq, input_is_protein, check_sequence):
         for E in Elist:
             if input_is_protein:
-                E.mh.add_protein(seq)
+                E.add_protein(seq)
             else:
                 E.add_sequence(seq, not check_sequence)
 
@@ -231,10 +223,6 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
 
     notify('Computing signature for ksizes: {}', str(ksizes))
-
-    if args.with_cardinality:
-        print('Calculating k-mer cardinality of input sequences.',
-              file=sys.stderr)
 
     if args.track_abundance:
         print('Tracking abundance of input k-mers.',
@@ -464,7 +452,7 @@ def import_csv(args):
             hashes = hashes.strip()
             hashes = list(map(int, hashes.split(' ' )))
 
-            e = sourmash_lib.Estimators(len(hashes), ksize)
+            e = sourmash_lib.MinHash(len(hashes), ksize)
             e.add_many(hashes)
             s = sig.SourmashSignature(args.email, e, filename=name)
             siglist.append(s)
@@ -710,7 +698,6 @@ def sbt_gather(args):
     # verify signature was computed right.
     if query.estimator.max_hash == 0:
         error('query signature needs to be created with --scaled')
-        error('or using --with-cardinality.')
         sys.exit(-1)
 
     notify('query signature has max_hash: {}', query.estimator.max_hash)
@@ -742,7 +729,7 @@ def sbt_gather(args):
 
     # define a function to build new signature object from set of mins
     def build_new_signature(mins):
-        e = sourmash_lib.Estimators(ksize=args.ksize, n=len(mins))
+        e = sourmash_lib.MinHash(ksize=args.ksize, n=len(mins))
         e.add_many(mins)
         return sig.SourmashSignature('', e)
 
@@ -762,8 +749,8 @@ def sbt_gather(args):
         found_mins = best_leaf.estimator.get_hashes()
 
         # figure out what the resolution of the banding on the genome is,
-        # based either on an explicit --scaled parameter, or by calculating
-        # using genome size est --with-cardinality.
+        # based either on an explicit --scaled parameter, or on genome
+        # cardinality (deprecated)
         if best_leaf.estimator.max_hash:
             R_genome = 2**64 / float(best_leaf.estimator.max_hash)
         elif best_leaf.estimator.hll:
@@ -773,7 +760,6 @@ def sbt_gather(args):
         else:
             error('Best hash match in sbt_gather has no cardinality')
             error('Please prepare database of sequences with --scaled')
-            error('...or with --with-cardinality')
             sys.exit(-1)
 
         # pick the highest R / lowest resolution
@@ -890,7 +876,7 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    E = sourmash_lib.Estimators(ksize=args.ksize, n=args.num_hashes,
+    E = sourmash_lib.MinHash(ksize=args.ksize, n=args.num_hashes,
                                 is_protein=is_protein)
     streamsig = sig.SourmashSignature('', E, filename='stdin',
                                       name=args.name)
@@ -927,7 +913,7 @@ def watch(args):
                 break
 
         if args.input_is_protein:
-            E.mh.add_protein(record.sequence)
+            E.add_protein(record.sequence)
         else:
             E.add_sequence(record.sequence, False)
 
