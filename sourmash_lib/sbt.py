@@ -183,7 +183,6 @@ class SBT(object):
                 structure[i] = None
                 continue
 
-            node = node.do_load()
             basename = os.path.basename(node.name)
             data = {
                 'filename': os.path.join('.sbt.' + basetag,
@@ -341,8 +340,8 @@ class SBT(object):
             larger, smaller = other, self
 
         n = Node(self.factory, name="internal.0")
-        larger.nodes[0].do_load().update(n)
-        smaller.nodes[0].do_load().update(n)
+        larger.nodes[0].update(n)
+        smaller.nodes[0].update(n)
         new_nodes = defaultdict(lambda: None)
         new_nodes[0] = n
 
