@@ -116,10 +116,10 @@ def test_load_signaturesset_json_iter():
 
 
 def test_save_load_multisig_json():
-    e1 = sourmash_lib.Estimators(n=1, ksize=20)
+    e1 = sourmash_lib.MinHash(n=1, ksize=20)
     sig1 = SourmashSignature('lalala@land.org', e1)
 
-    e2 = sourmash_lib.Estimators(n=1, ksize=20)
+    e2 = sourmash_lib.MinHash(n=1, ksize=20)
     sig2 = SourmashSignature('lalala2@land.org', e2)
 
     x = save_signatures_json([sig1, sig2])

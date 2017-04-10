@@ -9,8 +9,8 @@ underlying C++ code, but for now this is undocumented.)
 .. contents::
    :depth: 2
 
-``Estimators``: basic MinHash sketch functionality
-==================================================
+``MinHash``: basic MinHash sketch functionality
+===============================================
 
 .. automodule:: sourmash_lib
    :members:
