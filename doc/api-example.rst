@@ -13,10 +13,10 @@ Define two sequences:
 Create two estimators using 3-mers, and add the sequences:
 
 >>> import sourmash_lib
->>> E1 = sourmash_lib.Estimators(n=20, ksize=3)
+>>> E1 = sourmash_lib.MinHash(n=20, ksize=3)
 >>> E1.add_sequence(seq1)
 
->>> E2 = sourmash_lib.Estimators(n=20, ksize=3)
+>>> E2 = sourmash_lib.MinHash(n=20, ksize=3)
 >>> E2.add_sequence(seq2)
 
 One of the 3-mers (out of 4) overlaps, so Jaccard index is 1/4:
@@ -59,7 +59,7 @@ raising an exception.
 >>> import screed
 >>> estimators = []
 >>> for g in genomes:
-...     E = sourmash_lib.Estimators(n=500, ksize=31)
+...     E = sourmash_lib.MinHash(n=500, ksize=31)
 ...     for record in screed.open(g):
 ...         E.add_sequence(record.sequence[:50000], True)
 ...     estimators.append(E)

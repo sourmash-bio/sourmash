@@ -85,16 +85,16 @@ def _json_next_signature(iterable,
     if 'abundances' in d:
         track_abundance = True
 
-    e = sourmash_lib.Estimators(ksize=ksize, n=n, is_protein=is_protein,
+    e = sourmash_lib.MinHash(ksize=ksize, n=n, is_protein=is_protein,
                                 track_abundance=track_abundance,
                                 max_hash=max_hash, seed=seed)
 
     if not track_abundance:
         for m in mins:
-            e.mh.add_hash(m)
+            e.add_hash(m)
     else:
         abundances = list(map(int, d['abundances']))
-        e.mh.set_abundances(dict(zip(mins, abundances)))
+        e.set_abundances(dict(zip(mins, abundances)))
 
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])
