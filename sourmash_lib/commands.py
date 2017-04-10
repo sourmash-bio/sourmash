@@ -223,8 +223,6 @@ def compute(args):
             with open(filename, 'w') as fp:
                 sig.save_signatures(siglist, fp)
 
-    notify('Computing signature for ksizes: {}', str(ksizes))
-
     if args.track_abundance:
         print('Tracking abundance of input k-mers.',
               file=sys.stderr)
