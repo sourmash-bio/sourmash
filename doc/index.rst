@@ -61,6 +61,7 @@ Contents:
    api-example
    requirements
    more-info
+   support
 
 
 Indices and tables

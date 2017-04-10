@@ -46,6 +46,16 @@ revcomp = reverse(complement((record.sequence)))
 
 mh = sourmash_lib.MinHash(ksize=K, n=500, is_protein=False)
 
+#
+# compute the actual hashes to insert by breaking down the sequence
+# into k-mers and applying MurmurHash to each one; here, the only
+# interesting thing that is done by add_hash is to keep only the
+# (numerically) lowest n=500 hashes.
+#
+# this method of hash computation is exactly how sourmash does it
+# internally, and should be approximately the same as what mash does.
+#
+
 for fwd_kmer in kmers(record.sequence, K):
     rev_kmer = reverse(complement(fwd_kmer))
     if fwd_kmer < rev_kmer:
