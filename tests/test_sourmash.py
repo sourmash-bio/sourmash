@@ -982,10 +982,10 @@ def test_sbt_gather_metagenome():
         testdata_sigs = glob.glob(testdata_glob)
 
         query_sig = utils.get_test_data('gather/combined.sig')
-        
+
         cmd = ['sbt_index', 'gcf_all', '-k', '21']
         cmd.extend(testdata_sigs)
-        
+
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
