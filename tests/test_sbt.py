@@ -4,9 +4,9 @@ from glob import glob
 import os
 
 from . import sourmash_tst_utils as utils
-from sourmash_lib import signature
-from sourmash_lib.sbt import SBT, GraphFactory, Leaf
-from sourmash_lib.sbtmh import SigLeaf, search_minhashes
+from sourmash import signature
+from sourmash.sbt import SBT, GraphFactory, Leaf
+from sourmash.sbtmh import SigLeaf, search_minhashes
 
 
 def test_simple(n_children):

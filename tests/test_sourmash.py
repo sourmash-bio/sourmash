@@ -11,14 +11,14 @@ import time
 import glob
 
 from . import sourmash_tst_utils as utils
-from sourmash_lib import MinHash
+from sourmash import MinHash
 try:
     import matplotlib
     matplotlib.use('Agg')
 except ImportError:
     pass
 
-from sourmash_lib import signature
+from sourmash import signature
 
 
 def test_run_sourmash():

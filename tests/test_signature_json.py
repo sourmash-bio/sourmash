@@ -1,17 +1,19 @@
+from collections import OrderedDict
 import sys
 import io
 import json
 import ijson
-import sourmash_lib
-from sourmash_lib.signature import SourmashSignature
-from sourmash_lib.signature_json import (_json_next_atomic_array,
-                                         _json_next_signature,
-                                         load_signature_json,
-                                         load_signatures_json,
-                                         load_signatureset_json_iter,
-                                         save_signatures_json)
-from collections import OrderedDict
-    
+
+import sourmash
+from sourmash.signature import SourmashSignature
+from sourmash.signature_json import (_json_next_atomic_array,
+                                     _json_next_signature,
+                                     load_signature_json,
+                                     load_signatures_json,
+                                     load_signatureset_json_iter,
+                                     save_signatures_json)
+
+
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
     s = json.dumps(t)
@@ -116,10 +118,10 @@ def test_load_signaturesset_json_iter():
 
 
 def test_save_load_multisig_json():
-    e1 = sourmash_lib.MinHash(n=1, ksize=20)
+    e1 = sourmash.MinHash(n=1, ksize=20)
     sig1 = SourmashSignature('lalala@land.org', e1)
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=20)
+    e2 = sourmash.MinHash(n=1, ksize=20)
     sig2 = SourmashSignature('lalala2@land.org', e2)
 
     x = save_signatures_json([sig1, sig2])

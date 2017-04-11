@@ -38,7 +38,7 @@ from __future__ import absolute_import, unicode_literals
 
 import pytest
 
-from sourmash_lib._minhash import MinHash, hash_murmur, dotproduct
+from sourmash._minhash import MinHash, hash_murmur, dotproduct
 import math
 
 # add:

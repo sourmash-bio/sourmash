@@ -125,8 +125,8 @@ def get_test_data(filename):
     filepath = None
     try:
         filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash_lib/test-data/"\
-                + filename)
+            Requirement.parse("sourmash"),
+            "sourmash/tests/test-data/" + filename)
     except ResolutionError:
         pass
     if not filepath or not os.path.isfile(filepath):
