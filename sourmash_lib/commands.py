@@ -179,8 +179,9 @@ def compute(args):
     def make_minhashes():
         seed = args.seed
         max_hash = 0
-        if args.scaled:
-            max_hash = 2**64 / float(args.scaled)
+        if args.scaled and args.scaled > 1:
+            max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
+            max_hash = int(round(max_hash, 0))
 
         # one minhash for each ksize
         Elist = []
@@ -221,8 +222,6 @@ def compute(args):
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
                 sig.save_signatures(siglist, fp)
-
-    notify('Computing signature for ksizes: {}', str(ksizes))
 
     if args.track_abundance:
         print('Tracking abundance of input k-mers.',
@@ -481,6 +480,35 @@ def dump(args):
         fp.close()
 
 
+def sbt_combine(args):
+    from sourmash_lib.sbt import SBT, GraphFactory
+    from sourmash_lib.sbtmh import SigLeaf
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name to save SBT into')
+    parser.add_argument('sbts', nargs='+',
+                        help='SBTs to combine to a new SBT')
+    parser.add_argument('-x', '--bf-size', type=float, default=1e5)
+
+    sourmash_args.add_moltype_args(parser)
+
+    args = parser.parse_args(args)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    inp_files = list(args.sbts)
+    notify('combining {} SBTs', len(inp_files))
+
+    tree = SBT.load(inp_files.pop(0), leaf_loader=SigLeaf.load)
+
+    for f in inp_files:
+        new_tree = SBT.load(f, leaf_loader=SigLeaf.load)
+        # TODO: check if parameters are the same for both trees!
+        tree.combine(new_tree)
+
+    notify('saving SBT under "{}"', args.sbt_name)
+    tree.save(args.sbt_name)
+
+
 def sbt_index(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
@@ -705,7 +733,7 @@ def sbt_gather(args):
     orig_mins = orig_query.minhash.get_hashes()
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = 2**64 / float(orig_query.minhash.max_hash)
+    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
 
     # define a function to do a 'best' search and get only top match.
     def find_best(tree, query):
@@ -752,7 +780,8 @@ def sbt_gather(args):
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
         if best_leaf.minhash.max_hash:
-            R_genome = 2**64 / float(best_leaf.minhash.max_hash)
+            R_genome = sourmash_lib.MAX_HASH / \
+              float(best_leaf.minhash.max_hash)
         elif best_leaf.minhash.hll:
             genome_size = best_leaf.minhash.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
@@ -765,7 +794,7 @@ def sbt_gather(args):
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
-        new_max_hash = 2**64 / float(R_comparison)
+        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])

@@ -5,3 +5,5 @@ numpy
 matplotlib
 scipy
 Cython
+https://github.com/dib-lab/khmer/archive/master.zip
+

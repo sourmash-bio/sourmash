@@ -320,6 +320,44 @@ def test_do_sourmash_compute_multik_outfile():
         assert 31 in ksizes
 
 
+def test_do_sourmash_compute_with_scaled_1():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == { 0 }
+
+
+def test_do_sourmash_compute_with_scaled_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '2',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+        assert os.path.exists(outfile)
+
+        siglist = list(signature.load_signatures(outfile))
+        assert len(siglist) == 2
+
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        assert len(max_hashes) == 2
+        assert set(max_hashes) == set([ int(2**64 /2.) ])
+
+
 def test_do_sourmash_compute_with_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -769,6 +807,44 @@ def test_do_sourmash_sbt_index_traverse():
         assert testdata2 in out
 
 
+def test_do_sourmash_sbt_combine():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_combine', 'joined',
+                                            'zzz.sbt.json', 'zzz.sbt.json'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'joined.sbt.json'))
+
+        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz'] + [files[0]],
+                                           in_directory=location)
+        print(out)
+
+        assert out.count(filename) == 1
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'joined'] + [files[0]],
+                                           in_directory=location)
+        print(out)
+
+        # TODO: signature is loaded more than once,
+        # so checking if we get two results.
+        # If we ever start reporting only one match (even if appears repeated),
+        # change this test too!
+        assert out.count(filename) == 2
+
+
 def test_do_sourmash_sbt_search_otherdir():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -944,10 +1020,10 @@ def test_sbt_gather_metagenome():
         testdata_sigs = glob.glob(testdata_glob)
 
         query_sig = utils.get_test_data('gather/combined.sig')
-        
+
         cmd = ['sbt_index', 'gcf_all', '-k', '21']
         cmd.extend(testdata_sigs)
-        
+
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
@@ -993,37 +1069,6 @@ def test_sbt_gather_error_no_cardinality_query():
                                            fail_ok=True)
         assert status == -1
         assert "query signature needs to be created with --scaled" in err
-
-
-def test_sbt_gather_error_no_cardinality():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata2,
-                                            '--scaled', '10',
-                                            '-o', 'query.fa.sig'],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_index', 'zzz',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['sbt_gather', 'zzz',
-                                            'query.fa.sig'],
-                                           in_directory=location,
-                                           fail_ok=True)
-        assert status == -1, (status, out, err)
-        assert "Best hash match in sbt_gather has no cardinality" in err
 
 
 def test_sbt_categorize():

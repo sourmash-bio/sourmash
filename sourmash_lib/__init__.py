@@ -5,6 +5,13 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 from __future__ import print_function
 import re
 import math
-from ._minhash import MinHash, dotproduct
+from ._minhash import (MinHash, get_minhash_default_seed, get_minhash_max_hash)
+import os
 
-DEFAULT_SEED=MinHash(1,1).seed
+# retrieve VERSION from sourmash_lib/VERSION.
+thisdir = os.path.dirname(__file__)
+version_file = open(os.path.join(thisdir, 'VERSION'))
+VERSION = version_file.read().strip()
+
+DEFAULT_SEED = get_minhash_default_seed()
+MAX_HASH = get_minhash_max_hash()

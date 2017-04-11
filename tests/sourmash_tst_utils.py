@@ -17,6 +17,12 @@ except ImportError:
     from io import StringIO
 
 
+SIG_FILES = [os.path.join('demo', f) for f in (
+  "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
+  "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
+]
+
+
 def scriptpath(scriptname='sourmash'):
     """Return the path to the scripts, in both dev and install situations."""
     # note - it doesn't matter what the scriptname is here, as long as
