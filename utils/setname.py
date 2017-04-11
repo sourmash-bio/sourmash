@@ -5,9 +5,9 @@ import os, os.path
 import argparse
 import csv
 
-import sourmash_lib
-from sourmash_lib import signature as sig
-from sourmash_lib import fig as sourmash_fig
+import sourmash
+from sourmash import signature as sig
+from sourmash import fig as sourmash_fig
 
 
 def main():

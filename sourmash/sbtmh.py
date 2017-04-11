@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from .sbt import Leaf
-from . import MinHash
+from . import MinHash, signature
 
 
 class SigLeaf(Leaf):
@@ -11,8 +11,6 @@ class SigLeaf(Leaf):
                 name=self.name, metadata=self.metadata)
 
     def save(self, filename):
-        from sourmash_lib import signature
-
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
@@ -28,7 +26,6 @@ class SigLeaf(Leaf):
     @property
     def data(self):
         if self._data is None:
-            from sourmash_lib import signature
             it = signature.load_signatures(self._filename)
             self._data, = list(it)              # should only be one signature
         return self._data

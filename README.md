@@ -60,7 +60,7 @@ Development happens on github at
 
 `sourmash` is the main command-line entry point; run it for help.
 
-`sourmash_lib/` contains the library code.
+`sourmash/` contains the library code.
 
 Tests require py.test and can be run with `make test`.
 

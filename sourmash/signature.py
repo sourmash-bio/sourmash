@@ -6,7 +6,7 @@ from __future__ import print_function
 import sys
 import yaml
 import hashlib
-import sourmash_lib
+import sourmash
 from . import signature_json
 from .logging import notify, error
 
@@ -58,7 +58,7 @@ class SourmashSignature(object):
         for k in self.d:
             if self.d[k] != other.d[k]:
                 return False
-            
+
         return self.estimator == other.estimator
 
     def name(self):
@@ -240,7 +240,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     mins = list(map(int, sketch['mins']))
     n = int(sketch['num'])
     molecule = sketch.get('molecule', 'dna')
-    seed = sketch.get('seed', sourmash_lib.DEFAULT_SEED)
+    seed = sketch.get('seed', sourmash.DEFAULT_SEED)
     if molecule == 'protein':
         is_protein = True
     elif molecule == 'dna':
@@ -249,13 +249,13 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
         raise Exception("unknown molecule type: {}".format(molecule))
 
     max_hash = int(sketch.get('max_hash', 0))
-    seed = int(sketch.get('seed', sourmash_lib.DEFAULT_SEED))
+    seed = int(sketch.get('seed', sourmash.DEFAULT_SEED))
 
     track_abundance = 'abundances' in sketch
-    e = sourmash_lib.MinHash(ksize=ksize, n=n,
-                                is_protein=is_protein,
-                                track_abundance=track_abundance,
-                                max_hash=max_hash, seed=seed)
+    e = sourmash.MinHash(ksize=ksize, n=n,
+                         is_protein=is_protein,
+                         track_abundance=track_abundance,
+                         max_hash=max_hash, seed=seed)
     if track_abundance:
         abundances = list(map(int, sketch['abundances']))
         e.set_abundances(dict(zip(mins, abundances)))

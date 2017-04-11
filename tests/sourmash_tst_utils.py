@@ -47,6 +47,15 @@ def _runscript(scriptname):
     namespace['sys'] = globals()['sys']
 
     try:
+        # First try: load entry_points defined in setup.py
+        pkg_resources.load_entry_point(
+            'sourmash', 'console_scripts', scriptname)()
+        return 0
+    except pkg_resources.ResolutionError:
+        pass
+
+    try:
+        # Second try: load from other scripts defined in setup.py
         pkg_resources.get_distribution("sourmash").run_script(
             scriptname, namespace)
         return 0
@@ -125,8 +134,8 @@ def get_test_data(filename):
     filepath = None
     try:
         filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash_lib/test-data/"\
-                + filename)
+            Requirement.parse("sourmash"),
+            "sourmash/tests/test-data/" + filename)
     except ResolutionError:
         pass
     if not filepath or not os.path.isfile(filepath):

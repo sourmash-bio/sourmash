@@ -8,7 +8,7 @@ import math
 from ._minhash import (MinHash, get_minhash_default_seed, get_minhash_max_hash)
 import os
 
-# retrieve VERSION from sourmash_lib/VERSION.
+# retrieve VERSION from sourmash/VERSION.
 thisdir = os.path.dirname(__file__)
 version_file = open(os.path.join(thisdir, 'VERSION'))
 VERSION = version_file.read().strip()

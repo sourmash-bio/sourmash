@@ -7,7 +7,7 @@ import os.path
 import sys
 
 import screed
-import sourmash_lib
+import sourmash
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error
@@ -123,7 +123,7 @@ def compute(args):
     parser.add_argument('--scaled', type=float,
                         help='set resolution of signature size')
     parser.add_argument('--seed', type=int, help='hash seed',
-                        default=sourmash_lib.DEFAULT_SEED)
+                        default=sourmash.DEFAULT_SEED)
     args = parser.parse_args(args)
 
     if args.input_is_protein and args.dna:
@@ -180,25 +180,25 @@ def compute(args):
         seed = args.seed
         max_hash = 0
         if args.scaled and args.scaled > 1:
-            max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
+            max_hash = sourmash.MAX_HASH / float(args.scaled)
             max_hash = int(round(max_hash, 0))
 
         # one estimator for each ksize
         Elist = []
         for k in ksizes:
             if args.protein:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=True,
-                                    track_abundance=args.track_abundance,
-                                            max_hash=max_hash,
-                                            seed=seed)
+                E = sourmash.MinHash(ksize=k, n=args.num_hashes,
+                                     is_protein=True,
+                                     track_abundance=args.track_abundance,
+                                     max_hash=max_hash,
+                                     seed=seed)
                 Elist.append(E)
             if args.dna:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=False,
-                                    track_abundance=args.track_abundance,
-                                            max_hash=max_hash,
-                                            seed=seed)
+                E = sourmash.MinHash(ksize=k, n=args.num_hashes,
+                                      is_protein=False,
+                                      track_abundance=args.track_abundance,
+                                      max_hash=max_hash,
+                                      seed=seed)
                 Elist.append(E)
         return Elist
 
@@ -451,7 +451,7 @@ def import_csv(args):
             hashes = hashes.strip()
             hashes = list(map(int, hashes.split(' ' )))
 
-            e = sourmash_lib.MinHash(len(hashes), ksize)
+            e = sourmash.MinHash(len(hashes), ksize)
             e.add_many(hashes)
             s = sig.SourmashSignature(args.email, e, filename=name)
             siglist.append(s)
@@ -481,8 +481,8 @@ def dump(args):
 
 
 def sbt_combine(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import SigLeaf
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import SigLeaf
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
@@ -510,8 +510,8 @@ def sbt_combine(args):
 
 
 def sbt_index(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import search_minhashes, SigLeaf
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
@@ -571,9 +571,9 @@ def sbt_index(args):
 
 
 def sbt_search(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import search_minhashes, SigLeaf
+    from sourmash.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to load')
@@ -618,9 +618,9 @@ def sbt_search(args):
 
 
 def categorize(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import search_minhashes, SigLeaf
+    from sourmash.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to load')
@@ -692,9 +692,9 @@ def categorize(args):
         notify('skipped/nosig: {}', loader.skipped_nosig)
 
 def sbt_gather(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import search_minhashes, SigLeaf
+    from sourmash.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
@@ -733,7 +733,7 @@ def sbt_gather(args):
     orig_mins = orig_query.estimator.get_hashes()
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.estimator.max_hash)
+    R_metagenome = sourmash.MAX_HASH / float(orig_query.estimator.max_hash)
 
     # define a function to do a 'best' search and get only top match.
     def find_best(tree, query):
@@ -757,7 +757,7 @@ def sbt_gather(args):
 
     # define a function to build new signature object from set of mins
     def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=args.ksize, n=len(mins))
+        e = sourmash.MinHash(ksize=args.ksize, n=len(mins))
         e.add_many(mins)
         return sig.SourmashSignature('', e)
 
@@ -780,8 +780,7 @@ def sbt_gather(args):
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
         if best_leaf.estimator.max_hash:
-            R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.estimator.max_hash)
+            R_genome = sourmash.MAX_HASH / float(best_leaf.estimator.max_hash)
         elif best_leaf.estimator.hll:
             genome_size = best_leaf.estimator.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
@@ -794,7 +793,7 @@ def sbt_gather(args):
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
-        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
+        new_max_hash = sourmash.MAX_HASH / float(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
@@ -872,9 +871,9 @@ def sbt_gather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash.sbt import SBT, GraphFactory
+    from sourmash.sbtmh import search_minhashes, SigLeaf
+    from sourmash.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
@@ -905,7 +904,7 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    E = sourmash_lib.MinHash(ksize=args.ksize, n=args.num_hashes,
+    E = sourmash.MinHash(ksize=args.ksize, n=args.num_hashes,
                                 is_protein=is_protein)
     streamsig = sig.SourmashSignature('', E, filename='stdin',
                                       name=args.name)
@@ -962,7 +961,7 @@ def watch(args):
 def convert(args):
     "Convert YAML to JSON"
 
-    import sourmash_lib.signature
+    import sourmash.signature
 
     parser = argparse.ArgumentParser("""
 Ensure that signature files in YAML (old format) are converted to signature files in JSON (new format).
@@ -1018,9 +1017,9 @@ the extension ".json".
     for i, path in enumerate(filenames, 1):
         notify("\rConverting file %i/%i" % (i, len(filenames)), end="", flush=True)
         with open(path) as fh:
-            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
+            signatures = tuple(sourmash.signature.load_signatures(fh))
 
         out_fn = path + ".json"
         with open(out_fn, 'w') as fh:
-            sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
+            sourmash.signature.save_signatures(signatures, fp=fh, **kwargs)
     notify("\rConverting file %i/%i" % (i, len(filenames)))
