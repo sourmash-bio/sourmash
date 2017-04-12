@@ -4,7 +4,7 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 """
 
 # This was written for Python 3, may be there is a chance it will work with Python 2...
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import sys
 import sourmash_lib
@@ -258,9 +258,12 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
         records.append(record)
 
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys)
     if fp:
-        s = json.dump(records, fp, indent=indent, sort_keys=sort_keys)
-    else:
-        s = json.dumps(records, indent=indent, sort_keys=sort_keys)
+        try:
+            fp.write(s)
+        except TypeError:
+            fp.write(unicode(s))
+        return None
 
     return s
