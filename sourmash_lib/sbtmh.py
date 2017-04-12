@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from .sbt import Leaf, SBT, GraphFactory
-from . import _minhash, MinHash
+from . import signature
 
 
 def load_sbt_index(filename):
@@ -37,16 +37,18 @@ class SigLeaf(Leaf):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
 
-    def save(self, filename):
-        from sourmash_lib import signature
-
+    def save(self, path, storage=None):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
         self.data
 
-        with open(filename, 'w') as fp:
-            signature.save_signatures([self.data], fp)
+        if storage is None:
+            # TODO: how to reproduce this in FSStorage?
+            with open(path, 'w') as fp:
+                signature.save_signatures([self.data], fp)
+        else:
+            storage.save(path, self.data)
 
     def update(self, parent):
         for v in self.data.minhash.get_mins():
@@ -55,7 +57,6 @@ class SigLeaf(Leaf):
     @property
     def data(self):
         if self._data is None:
-            from sourmash_lib import signature
             it = signature.load_signatures(self._filename)
             self._data, = list(it)              # should only be one signature
         return self._data

@@ -52,9 +52,11 @@ from copy import copy
 import json
 import math
 import os
+from random import randint
 
 import khmer
-from random import randint
+
+from .sbt_storage import FSStorage
 
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
@@ -71,11 +73,16 @@ def GraphFactory(ksize, starting_size, n_tables):
 
 class SBT(object):
 
-    def __init__(self, factory, d=2):
+    def __init__(self, factory, d=2, storage=None):
         self.factory = factory
         self.nodes = defaultdict(lambda: None)
         self.d = d
         self.max_node = 0
+
+        self.storage = storage
+        if storage is None:
+            # default storage: filesystem
+            self.storage = FSStorage()
 
     def new_node_pos(self, node):
         while self.nodes[self.max_node] is not None:
@@ -86,7 +93,8 @@ class SBT(object):
         pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
-            n = Node(self.factory, name="internal." + str(pos))
+            n = Node(self.factory, name="internal." + str(pos),
+                     storage=self.storage)
             self.nodes[0] = n
             pos = self.new_node_pos(node)
 
@@ -102,7 +110,8 @@ class SBT(object):
         if isinstance(p.node, Leaf):
             # Create a new internal node
             # node and parent are children of new internal node
-            n = Node(self.factory, name="internal." + str(p.pos))
+            n = Node(self.factory, name="internal." + str(p.pos),
+                     storage=self.storage)
             self.nodes[p.pos] = n
 
             c1, c2 = self.children(p.pos)[:2]
@@ -116,7 +125,8 @@ class SBT(object):
             self.nodes[pos] = node
             node.update(p.node)
         elif p.node is None:
-            n = Node(self.factory, name="internal." + str(p.pos))
+            n = Node(self.factory, name="internal." + str(p.pos),
+                     storage=self.storage)
             self.nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
             self.nodes[c1.pos] = node
@@ -164,7 +174,7 @@ class SBT(object):
         return NodePos(cd, self.nodes[cd])
 
     def save(self, tag):
-        version = 2
+        version = 3
         basetag = os.path.basename(tag)
         dirprefix = os.path.dirname(tag)
         dirname = os.path.join(dirprefix, '.sbt.' + basetag)
@@ -209,6 +219,7 @@ class SBT(object):
         loaders = {
             1: cls._load_v1,
             2: cls._load_v2,
+            3: cls._load_v3,
         }
 
         # @CTB hack: check to make sure khmer Nodegraph supports the
@@ -251,11 +262,13 @@ class SBT(object):
             if jnode is None:
                 continue
 
+            jnode['filename'] = os.path.join(dirname, jnode['filename'])
+
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
-                sbt_node = Node.load(jnode, dirname)
+                sbt_node = Node.load(jnode)
             else:
-                sbt_node = leaf_loader(jnode, dirname)
+                sbt_node = leaf_loader(jnode)
 
             sbt_nodes[i] = sbt_node
 
@@ -281,15 +294,52 @@ class SBT(object):
             if node is None:
                 continue
 
+            node['filename'] = os.path.join(dirname, node['filename'])
+
             if 'internal' in node['filename']:
                 node['factory'] = factory
-                sbt_node = Node.load(node, dirname)
+                sbt_node = Node.load(node)
             else:
-                sbt_node = leaf_loader(node, dirname)
+                sbt_node = leaf_loader(node)
 
             sbt_nodes[k] = sbt_node
 
         tree = cls(factory, d=info['d'])
+        tree.nodes = sbt_nodes
+
+        return tree
+
+    @classmethod
+    def _load_v3(cls, info, leaf_loader, dirname):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
+        if nodes[0] is None:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = defaultdict(lambda: None)
+
+        sample_bf = os.path.join(dirname, nodes[0]['filename'])
+        k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        factory = GraphFactory(k, size, ntables)
+
+        # TODO: check what backend is used (based on info)
+        storage = FSStorage()
+
+        for k, node in nodes.items():
+            if node is None:
+                continue
+
+            node['filename'] = os.path.join(dirname, node['filename'])
+
+            if 'internal' in node['filename']:
+                node['factory'] = factory
+                sbt_node = Node.load(node, storage)
+            else:
+                sbt_node = leaf_loader(node, storage)
+
+            sbt_nodes[k] = sbt_node
+
+        tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
 
         return tree
@@ -338,7 +388,7 @@ class SBT(object):
         if len(other.nodes) > len(self.nodes):
             larger, smaller = other, self
 
-        n = Node(self.factory, name="internal.0")
+        n = Node(self.factory, name="internal.0", storage=self.storage)
         larger.nodes[0].update(n)
         smaller.nodes[0].update(n)
         new_nodes = defaultdict(lambda: None)
@@ -376,27 +426,30 @@ class SBT(object):
 class Node(object):
     "Internal node of SBT."
 
-    def __init__(self, factory, name=None, fullpath=None):
+    def __init__(self, factory, name=None, path=None, storage=None):
         self.name = name
+        if storage is None:
+            storage = FSStorage()
+        self.storage = storage
         self._factory = factory
         self._data = None
-        self._filename = fullpath
+        self._path = path
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
                 name=self.name, nb=self.data.n_occupied(),
                 fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
 
-    def save(self, filename):
-        self.data.save(filename)
+    def save(self, path):
+        self.storage.save(path, self.data)
 
     @property
     def data(self):
         if self._data is None:
-            if self._filename is None:
+            if self._path is None:
                 self._data = self._factory()
             else:
-                self._data = khmer.load_nodegraph(self._filename)
+                self._data = self.storage.load(self._path)
         return self._data
 
     @data.setter
@@ -404,9 +457,11 @@ class Node(object):
         self._data = new_data
 
     @staticmethod
-    def load(info, dirname):
-        filename = os.path.join(dirname, info['filename'])
-        new_node = Node(info['factory'], name=info['name'], fullpath=filename)
+    def load(info, storage=None):
+        new_node = Node(info['factory'],
+                        name=info['name'],
+                        path=info['filename'],
+                        storage=storage)
         return new_node
 
     def update(self, parent):
@@ -414,13 +469,16 @@ class Node(object):
 
 
 class Leaf(object):
-    def __init__(self, metadata, data=None, name=None, fullpath=None):
+    def __init__(self, metadata, data=None, name=None, storage=None, path=None):
         self.metadata = metadata
         if name is None:
             name = metadata
         self.name = name
+        if storage is None:
+            storage = FSStorage()
+        self.storage = storage
         self._data = data
-        self._filename = fullpath
+        self._filename = path
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
@@ -439,16 +497,18 @@ class Leaf(object):
     def data(self, new_data):
         self._data = new_data
 
-    def save(self, filename):
-        self.data.save(filename)
+    def save(self, path, storage=None):
+        self.storage.save(path, self.data)
 
     def update(self, parent):
         parent.data.update(self.data)
 
     @classmethod
-    def load(cls, info, dirname):
-        filename = os.path.join(dirname, info['filename'])
-        return cls(info['metadata'], name=info['name'], fullpath=filename)
+    def load(cls, info, storage=None):
+        return cls(info['metadata'],
+                   name=info['name'],
+                   path=info['filename'],
+                   storage=storage)
 
 
 def filter_distance( filter_a, filter_b, n=1000 ) :
