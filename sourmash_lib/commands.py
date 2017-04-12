@@ -52,7 +52,7 @@ def search(args):
             continue
 
         sl = sig.load_signatures(filename,
-                                 select_ksize=args.ksize,
+                                 select_ksize=query_ksize,
                                  select_moltype=moltype)
 
         for x in sl:

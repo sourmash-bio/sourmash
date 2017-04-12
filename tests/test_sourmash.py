@@ -637,6 +637,24 @@ def test_compare_deduce_molecule():
         assert 'min similarity in matrix: 0.944' in err
 
 
+def test_compare_deduce_ksize():
+    # deduce ksize, if it is unique
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '29',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.96' in err
+
+
 def test_search_deduce_molecule():
     # deduce DNA vs protein from query, if it is unique
     with utils.TempDirectory() as location:
@@ -674,6 +692,30 @@ def test_search_deduce_ksize():
         print(status, out, err)
         assert '1 matches' in err
         assert 'k=23' in err
+
+
+def test_search_deduce_ksize_and_select_appropriate():
+    # deduce ksize from query and select correct signature from DB
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '24',
+                                            testdata1],
+                                           in_directory=location)
+        # The DB contains signatres for multiple ksizes
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '23,24',
+                                            testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert 'k=24' in err
 
 
 def test_search_deduce_ksize_not_unique():
@@ -1464,10 +1506,10 @@ def test_watch_deduce_ksize():
     with utils.TempDirectory() as location:
         testdata0 = utils.get_test_data('genome-s10.fa.gz')
         utils.runscript('sourmash',
-                        ['compute', testdata0, '-k', '31', '-o', '1.sig'],
+                        ['compute', testdata0, '-k', '29', '-o', '1.sig'],
                         in_directory=location)
 
-        args = ['sbt_index', '--dna', '-k', '31', 'zzz', '1.sig']
+        args = ['sbt_index', '--dna', '-k', '29', 'zzz', '1.sig']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
@@ -1480,7 +1522,7 @@ def test_watch_deduce_ksize():
 
         print(out)
         print(err)
-        assert 'Computing signature for k=31' in err
+        assert 'Computing signature for k=29' in err
         assert 'genome-s10.fa.gz, at 1.000' in err
 
 
