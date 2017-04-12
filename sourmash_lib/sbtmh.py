@@ -1,6 +1,8 @@
 from __future__ import print_function
 from __future__ import division
 
+from io import BytesIO, TextIOWrapper
+
 from .sbt import Leaf, SBT, GraphFactory
 from . import signature
 
@@ -37,18 +39,17 @@ class SigLeaf(Leaf):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
 
-    def save(self, path, storage=None):
+    def save(self, path):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
         self.data
 
-        if storage is None:
-            # TODO: how to reproduce this in FSStorage?
-            with open(path, 'w') as fp:
-                signature.save_signatures([self.data], fp)
-        else:
-            storage.save(path, self.data)
+        buf = BytesIO()
+        with TextIOWrapper(buf) as out:
+            signature.save_signatures([self.data], out)
+            out.flush()
+            self.storage.save(path, buf.getvalue())
 
     def update(self, parent):
         for v in self.data.minhash.get_mins():
@@ -57,8 +58,10 @@ class SigLeaf(Leaf):
     @property
     def data(self):
         if self._data is None:
-            it = signature.load_signatures(self._filename)
-            self._data, = list(it)              # should only be one signature
+            buf = BytesIO(self.storage.load(self._path))
+            with TextIOWrapper(buf) as data:
+                it = signature.load_signatures(data)
+                self._data, = list(it)              # should only be one signature
         return self._data
 
     @data.setter

@@ -53,6 +53,7 @@ import json
 import math
 import os
 from random import randint
+from tempfile import NamedTemporaryFile
 
 import khmer
 
@@ -441,7 +442,13 @@ class Node(object):
                 fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        self.storage.save(path, self.data)
+        # We need to do this tempfile dance because khmer only load
+        # data from files.
+        with NamedTemporaryFile() as f:
+            self.data.save(f.name)
+            f.file.flush()
+            f.file.seek(0)
+            self.storage.save(path, f.read())
 
     @property
     def data(self):
@@ -449,7 +456,13 @@ class Node(object):
             if self._path is None:
                 self._data = self._factory()
             else:
-                self._data = self.storage.load(self._path)
+                data = self.storage.load(self._path)
+                # We need to do this tempfile dance because khmer only load
+                # data from files.
+                with NamedTemporaryFile() as f:
+                    f.write(data)
+                    f.file.flush()
+                    self._data = khmer.load_nodegraph(f.name)
         return self._data
 
     @data.setter
@@ -471,14 +484,17 @@ class Node(object):
 class Leaf(object):
     def __init__(self, metadata, data=None, name=None, storage=None, path=None):
         self.metadata = metadata
+
         if name is None:
             name = metadata
         self.name = name
+
         if storage is None:
             storage = FSStorage()
         self.storage = storage
+
         self._data = data
-        self._filename = path
+        self._path = path
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
@@ -489,8 +505,13 @@ class Leaf(object):
     @property
     def data(self):
         if self._data is None:
-            # TODO: what if self._filename is None?
-            self._data = khmer.load_nodegraph(self._filename)
+            data = self.storage.load(self._path)
+            # We need to do this tempfile dance because khmer only load
+            # data from files.
+            with NamedTemporaryFile() as f:
+                f.write(data)
+                f.file.flush()
+                self._data = khmer.load_nodegraph(f.name)
         return self._data
 
     @data.setter
@@ -498,7 +519,13 @@ class Leaf(object):
         self._data = new_data
 
     def save(self, path, storage=None):
-        self.storage.save(path, self.data)
+        # We need to do this tempfile dance because khmer only load
+        # data from files.
+        with NamedTemporaryFile() as f:
+            self.data.save(f.name)
+            f.file.flush()
+            f.file.seek(0)
+            self.storage.save(path, f.read())
 
     def update(self, parent):
         parent.data.update(self.data)
