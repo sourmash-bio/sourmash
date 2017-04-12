@@ -915,8 +915,7 @@ def watch(args):
 
     def get_ksize(tree):
         """Walk nodes in `tree` to find out ksize"""
-        for node in tree.nodes:
-            node = node.do_load()
+        for node in tree.nodes.values():
             if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
                 return node.data.estimator.ksize
 
@@ -925,8 +924,8 @@ def watch(args):
     if ksize is None:
         ksize = get_ksize(tree)
 
-    E = sourmash_lib.Estimators(ksize=ksize, n=args.num_hashes,
-                                is_protein=is_protein)
+    E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
+                             is_protein=is_protein)
     streamsig = sig.SourmashSignature('', E, filename='stdin',
                                       name=args.name)
 
