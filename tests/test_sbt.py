@@ -2,11 +2,13 @@ from __future__ import print_function, unicode_literals
 
 from glob import glob
 import os
+from tempfile import NamedTemporaryFile
 
 from . import sourmash_tst_utils as utils
 from sourmash_lib import signature
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf
 from sourmash_lib.sbtmh import SigLeaf, search_minhashes
+from sourmash_lib.sbt_storage import TarStorage
 
 
 def test_simple(n_children):
@@ -250,3 +252,37 @@ def test_sbt_combine(n_children):
 
     tree_1.add_node(leaf)
     assert tree_1.max_node == next_empty
+
+
+def test_sbt_storage():
+    factory = GraphFactory(31, 1e5, 4)
+    with utils.TempDirectory() as location:
+        tree = SBT(factory)
+
+        for f in utils.SIG_FILES:
+            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            leaf = SigLeaf(os.path.basename(f), sig)
+            tree.add_node(leaf)
+            to_search = leaf
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        old_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*old_result, sep='\n')
+
+        with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
+            tree.save(os.path.join(location, 'tree'), storage=storage)
+
+        with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
+            tree = SBT.load(os.path.join(location, 'tree'),
+                            leaf_loader=SigLeaf.load,
+                            storage=storage)
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*new_result, sep='\n')
+
+        assert old_result == new_result
