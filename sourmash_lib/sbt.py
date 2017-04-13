@@ -57,9 +57,13 @@ from tempfile import NamedTemporaryFile
 
 import khmer
 
-from .sbt_storage import FSStorage
+from .sbt_storage import FSStorage, TarStorage
 
 
+STORAGES = {
+    'TarStorage': TarStorage,
+    'FSStorage': FSStorage,
+}
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
@@ -79,11 +83,7 @@ class SBT(object):
         self.nodes = defaultdict(lambda: None)
         self.d = d
         self.max_node = 0
-
         self.storage = storage
-        if storage is None:
-            # default storage: filesystem
-            self.storage = FSStorage()
 
     def new_node_pos(self, node):
         while self.nodes[self.max_node] is not None:
@@ -94,8 +94,7 @@ class SBT(object):
         pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
-            n = Node(self.factory, name="internal." + str(pos),
-                     storage=self.storage)
+            n = Node(self.factory, name="internal." + str(pos))
             self.nodes[0] = n
             pos = self.new_node_pos(node)
 
@@ -111,8 +110,7 @@ class SBT(object):
         if isinstance(p.node, Leaf):
             # Create a new internal node
             # node and parent are children of new internal node
-            n = Node(self.factory, name="internal." + str(p.pos),
-                     storage=self.storage)
+            n = Node(self.factory, name="internal." + str(p.pos))
             self.nodes[p.pos] = n
 
             c1, c2 = self.children(p.pos)[:2]
@@ -126,8 +124,7 @@ class SBT(object):
             self.nodes[pos] = node
             node.update(p.node)
         elif p.node is None:
-            n = Node(self.factory, name="internal." + str(p.pos),
-                     storage=self.storage)
+            n = Node(self.factory, name="internal." + str(p.pos))
             self.nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
             self.nodes[c1.pos] = node
@@ -174,35 +171,39 @@ class SBT(object):
         cd = self.d * parent + pos + 1
         return NodePos(cd, self.nodes[cd])
 
-    def save(self, tag):
+    def save(self, tag, storage=None):
         version = 3
-        basetag = os.path.basename(tag)
-        dirprefix = os.path.dirname(tag)
-        dirname = os.path.join(dirprefix, '.sbt.' + basetag)
 
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        if storage is None:
+            # default storage
+            storage = FSStorage('.')
+
+        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
 
         info = {}
         info['d'] = self.d
         info['version'] = version
+        info['storage'] = {
+            'backend': backend,
+            'args': storage.init_args()
+        }
 
         structure = {}
         for i, node in iter(self):
             if node is None:
-                structure[i] = None
                 continue
 
-            basename = os.path.basename(node.name)
             data = {
-                'filename': os.path.join('.sbt.' + basetag,
-                                         '.'.join([basetag, basename, 'sbt'])),
+                # TODO: start using md5sum instead?
+                'filename': os.path.basename(node.name),
                 'name': node.name
             }
             if isinstance(node, Leaf):
                 data['metadata'] = node.metadata
 
-            node.save(os.path.join(dirprefix, data['filename']))
+            node.storage = storage
+
+            node.save(data['filename'])
             structure[i] = data
 
         fn = tag + '.sbt.json'
@@ -213,7 +214,7 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, sbt_name, leaf_loader=None):
+    def load(cls, sbt_name, leaf_loader=None, storage=None):
         dirname = os.path.dirname(sbt_name)
         sbt_name = os.path.basename(sbt_name)
 
@@ -244,10 +245,13 @@ class SBT(object):
         if isinstance(jnodes, Mapping):
             version = jnodes['version']
 
-        return loaders[version](jnodes, leaf_loader, dirname)
+        if storage is None:
+            storage = FSStorage('.')
+
+        return loaders[version](jnodes, leaf_loader, dirname, storage)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname):
+    def _load_v1(jnodes, leaf_loader, dirname, storage):
 
         if jnodes[0] is None:
             # TODO error!
@@ -267,9 +271,9 @@ class SBT(object):
 
             if 'internal' in jnode['filename']:
                 jnode['factory'] = factory
-                sbt_node = Node.load(jnode)
+                sbt_node = Node.load(jnode, storage)
             else:
-                sbt_node = leaf_loader(jnode)
+                sbt_node = leaf_loader(jnode, storage)
 
             sbt_nodes[i] = sbt_node
 
@@ -279,7 +283,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname):
+    def _load_v2(cls, info, leaf_loader, dirname, storage):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -299,9 +303,9 @@ class SBT(object):
 
             if 'internal' in node['filename']:
                 node['factory'] = factory
-                sbt_node = Node.load(node)
+                sbt_node = Node.load(node, storage)
             else:
-                sbt_node = leaf_loader(node)
+                sbt_node = leaf_loader(node, storage)
 
             sbt_nodes[k] = sbt_node
 
@@ -311,7 +315,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname):
+    def _load_v3(cls, info, leaf_loader, dirname, storage):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -319,18 +323,19 @@ class SBT(object):
 
         sbt_nodes = defaultdict(lambda: None)
 
-        sample_bf = os.path.join(dirname, nodes[0]['filename'])
-        k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
-        factory = GraphFactory(k, size, ntables)
+        klass = STORAGES[info['storage']['backend']]
+        storage = klass(**info['storage']['args'])
 
-        # TODO: check what backend is used (based on info)
-        storage = FSStorage()
+        with NamedTemporaryFile() as sample_bf:
+            sample_bf.write(storage.load(nodes[0]['filename']))
+            sample_bf.file.flush()
+            k, size, ntables = khmer.extract_nodegraph_info(sample_bf.name)[:3]
+
+        factory = GraphFactory(k, size, ntables)
 
         for k, node in nodes.items():
             if node is None:
                 continue
-
-            node['filename'] = os.path.join(dirname, node['filename'])
 
             if 'internal' in node['filename']:
                 node['factory'] = factory
@@ -429,8 +434,6 @@ class Node(object):
 
     def __init__(self, factory, name=None, path=None, storage=None):
         self.name = name
-        if storage is None:
-            storage = FSStorage()
         self.storage = storage
         self._factory = factory
         self._data = None
@@ -489,8 +492,6 @@ class Leaf(object):
             name = metadata
         self.name = name
 
-        if storage is None:
-            storage = FSStorage()
         self.storage = storage
 
         self._data = data
@@ -518,7 +519,7 @@ class Leaf(object):
     def data(self, new_data):
         self._data = new_data
 
-    def save(self, path, storage=None):
+    def save(self, path):
         # We need to do this tempfile dance because khmer only load
         # data from files.
         with NamedTemporaryFile() as f:
