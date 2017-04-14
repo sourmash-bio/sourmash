@@ -49,7 +49,7 @@ class SigLeaf(Leaf):
         with TextIOWrapper(buf) as out:
             signature.save_signatures([self.data], out)
             out.flush()
-            self.storage.save(path, buf.getvalue())
+            return self.storage.save(path, buf.getvalue())
 
     def update(self, parent):
         for v in self.data.minhash.get_mins():
