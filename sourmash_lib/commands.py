@@ -101,7 +101,7 @@ def compute(args):
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
 
     parser.add_argument('--input-is-protein', action='store_true')
     parser.add_argument('-k', '--ksizes',
@@ -128,7 +128,7 @@ def compute(args):
                         help='track k-mer abundances (default: False)')
     parser.add_argument('--scaled', type=float, metavar="FRACTION",
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
-    parser.add_argument('--seed', type=int, help='hash seed',
+    parser.add_argument('--seed', type=int,
                         default=sourmash_lib.DEFAULT_SEED,
                         help='seed used by MurmurHash (default: 42)')
     args = parser.parse_args(args)
@@ -890,7 +890,7 @@ def watch(args):
     parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('--input-is-protein', action='store_true')
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
