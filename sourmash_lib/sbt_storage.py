@@ -86,3 +86,38 @@ class TarStorage(Storage):
 
     def __exit__(self, type, value, traceback):
         self.tarfile.close()
+
+
+class IPFSStorage(Storage):
+
+    def __init__(self, gateway='127.0.0.1', port=5001):
+        import ipfsapi
+        self.gateway = gateway
+        self.port = port
+        self.api = ipfsapi.connect('127.0.0.1', 5001)
+
+    def save(self, path, content):
+        # api.add_bytes(b"Mary had a little lamb")
+        return self.api.add_bytes(content)
+
+        # TODO: the above solution is quick and dirty.
+        # we actually want something more organized,
+        # like putting all the generated objects inside the same dir.
+        # Check this call using the files API for an example.
+        # api.files_write("/test/file", io.BytesIO(b"hi"), create=True)
+
+    def load(self, path):
+        return self.api.cat(path)
+
+    def init_args(self):
+        return {'gateway': self.gateway,
+                'port': self.port}
+
+    def __exit__(self, type, value, traceback):
+        # TODO: do nothing for now,
+        # but we actually want something more organized,
+        # like putting all the generated objects inside the same dir.
+        # Use the files API,
+        # add files without flush(),
+        # and then flush it here?
+        pass

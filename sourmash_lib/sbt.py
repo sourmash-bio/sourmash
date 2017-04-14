@@ -53,12 +53,13 @@ from tempfile import NamedTemporaryFile
 
 import khmer
 
-from .sbt_storage import FSStorage, TarStorage
+from .sbt_storage import FSStorage, TarStorage, IPFSStorage
 
 
 STORAGES = {
     'TarStorage': TarStorage,
     'FSStorage': FSStorage,
+    'IPFSStorage': IPFSStorage,
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
@@ -201,7 +202,7 @@ class SBT(object):
 
             node.storage = storage
 
-            node.save(data['filename'])
+            data['filename'] = node.save(data['filename'])
             structure[i] = data
 
         info['nodes'] = structure
@@ -266,7 +267,7 @@ class SBT(object):
 
             jnode['filename'] = os.path.join(dirname, jnode['filename'])
 
-            if 'internal' in jnode['filename']:
+            if 'internal' in jnode['name']:
                 jnode['factory'] = factory
                 sbt_node = Node.load(jnode, storage)
             else:
@@ -298,7 +299,7 @@ class SBT(object):
 
             node['filename'] = os.path.join(dirname, node['filename'])
 
-            if 'internal' in node['filename']:
+            if 'internal' in node['name']:
                 node['factory'] = factory
                 sbt_node = Node.load(node, storage)
             else:
@@ -334,7 +335,7 @@ class SBT(object):
             if node is None:
                 continue
 
-            if 'internal' in node['filename']:
+            if 'internal' in node['name']:
                 node['factory'] = factory
                 sbt_node = Node.load(node, storage)
             else:
@@ -449,7 +450,7 @@ class Node(object):
             self.data.save(f.name)
             f.file.flush()
             f.file.seek(0)
-            self.storage.save(path, f.read())
+            return self.storage.save(path, f.read())
 
     @property
     def data(self):
@@ -528,7 +529,7 @@ class Leaf(object):
             self.data.save(f.name)
             f.file.flush()
             f.file.seek(0)
-            self.storage.save(path, f.read())
+            return self.storage.save(path, f.read())
 
     def update(self, parent):
         parent.data.update(self.data)
