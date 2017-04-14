@@ -174,9 +174,12 @@ class SBT(object):
     def save(self, tag, storage=None):
         version = 3
 
+        fn = tag + '.sbt.json'
+
         if storage is None:
             # default storage
-            storage = FSStorage('.')
+            dirname = os.path.abspath(os.path.dirname(fn))
+            storage = FSStorage(dirname)
 
         backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
 
@@ -206,7 +209,6 @@ class SBT(object):
             node.save(data['filename'])
             structure[i] = data
 
-        fn = tag + '.sbt.json'
         info['nodes'] = structure
         with open(fn, 'w') as fp:
             json.dump(info, fp)

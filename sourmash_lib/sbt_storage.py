@@ -27,19 +27,21 @@ class FSStorage(Storage):
 
     def __init__(self, path):
         self.path = path
+        if not os.path.exists(path):
+            os.makedirs(path)
 
     def init_args(self):
         return {'path': self.path}
 
     def save(self, path, content):
-        with open(path, 'wb') as f:
+        with open(os.path.join(self.path, path), 'wb') as f:
             f.write(content)
 
         return path
 
     def load(self, path):
         out = BytesIO()
-        with open(path, 'rb') as f:
+        with open(os.path.join(self.path, path), 'rb') as f:
             out.write(f.read())
 
         return out.getvalue()

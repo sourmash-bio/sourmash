@@ -254,7 +254,7 @@ def test_sbt_combine(n_children):
     assert tree_1.max_node == next_empty
 
 
-def test_sbt_storage():
+def test_sbt_tarstorage():
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:
         tree = SBT(factory)
@@ -279,10 +279,10 @@ def test_sbt_storage():
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
-        print(*new_result, sep='\n')
+            print('*' * 60)
+            print("{}:".format(to_search.metadata))
+            new_result = {str(s) for s in tree.find(search_minhashes,
+                                                    to_search.data, 0.1)}
+            print(*new_result, sep='\n')
 
-        assert old_result == new_result
+            assert old_result == new_result
