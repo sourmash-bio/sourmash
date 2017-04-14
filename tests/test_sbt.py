@@ -4,11 +4,13 @@ from glob import glob
 import os
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 from . import sourmash_tst_utils as utils
 from sourmash_lib import signature
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf
 from sourmash_lib.sbtmh import SigLeaf, search_minhashes
-from sourmash_lib.sbt_storage import TarStorage
+from sourmash_lib.sbt_storage import TarStorage, IPFSStorage
 
 
 def test_simple(n_children):
@@ -275,6 +277,41 @@ def test_sbt_tarstorage():
             tree.save(os.path.join(location, 'tree'), storage=storage)
 
         with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
+            tree = SBT.load(os.path.join(location, 'tree'),
+                            leaf_loader=SigLeaf.load,
+                            storage=storage)
+
+            print('*' * 60)
+            print("{}:".format(to_search.metadata))
+            new_result = {str(s) for s in tree.find(search_minhashes,
+                                                    to_search.data, 0.1)}
+            print(*new_result, sep='\n')
+
+            assert old_result == new_result
+
+
+def test_sbt_ipfsstorage():
+    pytest.importorskip('ipfsapi')
+    factory = GraphFactory(31, 1e5, 4)
+    with utils.TempDirectory() as location:
+        tree = SBT(factory)
+
+        for f in utils.SIG_FILES:
+            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            leaf = SigLeaf(os.path.basename(f), sig)
+            tree.add_node(leaf)
+            to_search = leaf
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        old_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*old_result, sep='\n')
+
+        with IPFSStorage() as storage:
+            tree.save(os.path.join(location, 'tree'), storage=storage)
+
+        with IPFSStorage() as storage:
             tree = SBT.load(os.path.join(location, 'tree'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
