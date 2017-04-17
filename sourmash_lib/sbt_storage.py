@@ -90,11 +90,10 @@ class TarStorage(Storage):
 
 class IPFSStorage(Storage):
 
-    def __init__(self, gateway='127.0.0.1', port=5001):
+    def __init__(self, **kwargs):
         import ipfsapi
-        self.gateway = gateway
-        self.port = port
-        self.api = ipfsapi.connect('127.0.0.1', 5001)
+        self.ipfs_args = kwargs
+        self.api = ipfsapi.connect(**self.ipfs_args)
 
     def save(self, path, content):
         # api.add_bytes(b"Mary had a little lamb")
@@ -110,8 +109,7 @@ class IPFSStorage(Storage):
         return self.api.cat(path)
 
     def init_args(self):
-        return {'gateway': self.gateway,
-                'port': self.port}
+        return self.ipfs_args
 
     def __exit__(self, type, value, traceback):
         # TODO: do nothing for now,
@@ -120,4 +118,26 @@ class IPFSStorage(Storage):
         # Use the files API,
         # add files without flush(),
         # and then flush it here?
+        pass
+
+
+class RedisStorage(Storage):
+
+    def __init__(self, **kwargs):
+        import redis
+        self.redis_args = kwargs
+        self.conn = redis.Redis(**self.redis_args)
+
+    def save(self, path, content):
+        self.conn.set(path, content)
+        return path
+
+    def load(self, path):
+        return self.conn.get(path)
+
+    def init_args(self):
+        # TODO: do we want to remove stuff like password from here?
+        return self.redis_args
+
+    def __exit__(self, type, value, traceback):
         pass
