@@ -4,6 +4,9 @@ python: 3.6
 sudo: required
 dist: trusty
 
+services:
+  - redis-server
+
 branches:
   only:
     - master
