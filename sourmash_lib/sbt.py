@@ -57,13 +57,14 @@ from tempfile import NamedTemporaryFile
 
 import khmer
 
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage
+from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
 
 
 STORAGES = {
     'TarStorage': TarStorage,
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
+    'RedisStorage': RedisStorage,
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
