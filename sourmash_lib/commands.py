@@ -744,7 +744,7 @@ def sbt_gather(args):
             leaf_e = leaf.data.estimator
             similarity = query.estimator.similarity_ignore_maxhash(leaf_e)
             if similarity > 0.0:
-                results.append((similarity, leaf))
+                results.append((similarity, leaf.data))
 
         if not results:
             return None, None
@@ -774,16 +774,16 @@ def sbt_gather(args):
 
         # subtract found hashes from search hashes, construct new search
         query_mins = set(query.estimator.get_hashes())
-        found_mins = best_leaf.data.estimator.get_hashes()
+        found_mins = best_leaf.estimator.get_hashes()
 
         # figure out what the resolution of the banding on the genome is,
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
-        if best_leaf.data.estimator.max_hash:
+        if best_leaf.estimator.max_hash:
             R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.data.estimator.max_hash)
-        elif best_leaf.data.estimator.hll:
-            genome_size = best_leaf.data.estimator.hll.estimate_cardinality()
+              float(best_leaf.estimator.max_hash)
+        elif best_leaf.estimator.hll:
+            genome_size = best_leaf.estimator.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
             R_genome = float(genome_size) / float(genome_max_hash)
         else:
@@ -825,7 +825,7 @@ def sbt_gather(args):
 
         # print interim result & save in a list for later use
         notify('found: {:.2f} {:.3f} {}', f_genome, f_orig_query,
-               best_leaf.data.name())
+               best_leaf.name())
         found.append((f_genome, best_leaf, f_query))
 
         # construct a new query, minus the previous one.
@@ -848,20 +848,20 @@ def sbt_gather(args):
     notify('Final composition (sorted by fraction of original query):\n')
     notify('f_orig_query f_found_genome')
     for (f_genome, leaf, f_orig_query) in found:
-        notify('{:.2f} {:.2f} {}', f_orig_query, f_genome, leaf.data.name())
+        notify('{:.2f} {:.2f} {}', f_orig_query, f_genome, leaf.name())
 
     if args.output:
         fieldnames = ['f_orig_query', 'f_found_genome', 'name']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for (f_genome, leaf, f_orig_query) in found:
-            w.writerow(dict(f_orig_query=f_orig_query, name=leaf.data.name(),
+            w.writerow(dict(f_orig_query=f_orig_query, name=leaf.name(),
                             f_found_genome=f_genome,))
 
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ ss.data for (_, ss, _) in found ],
+        sig.save_signatures([ ss for (_, ss, _) in found ],
                               args.save_matches)
 
 
