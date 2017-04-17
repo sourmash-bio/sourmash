@@ -691,6 +691,7 @@ def categorize(args):
     if loader.skipped_nosig:
         notify('skipped/nosig: {}', loader.skipped_nosig)
 
+
 def sbt_gather(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
@@ -702,7 +703,6 @@ def sbt_gather(args):
     parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('--csv', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
 
     sourmash_args.add_moltype_args(parser)
@@ -744,7 +744,7 @@ def sbt_gather(args):
             leaf_e = leaf.data.estimator
             similarity = query.estimator.similarity_ignore_maxhash(leaf_e)
             if similarity > 0.0:
-                results.append((similarity, leaf.data))
+                results.append((similarity, leaf))
 
         if not results:
             return None, None
@@ -774,16 +774,16 @@ def sbt_gather(args):
 
         # subtract found hashes from search hashes, construct new search
         query_mins = set(query.estimator.get_hashes())
-        found_mins = best_leaf.estimator.get_hashes()
+        found_mins = best_leaf.data.estimator.get_hashes()
 
         # figure out what the resolution of the banding on the genome is,
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
-        if best_leaf.estimator.max_hash:
+        if best_leaf.data.estimator.max_hash:
             R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.estimator.max_hash)
-        elif best_leaf.estimator.hll:
-            genome_size = best_leaf.estimator.hll.estimate_cardinality()
+              float(best_leaf.data.estimator.max_hash)
+        elif best_leaf.data.estimator.hll:
+            genome_size = best_leaf.data.estimator.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
             R_genome = float(genome_size) / float(genome_max_hash)
         else:
@@ -818,9 +818,14 @@ def sbt_gather(args):
         query_n_mins = len(orig_query.estimator.get_hashes())
         f_query = len(intersect_mins) / float(query_n_mins)
 
+        if not len(found):                # first result? print header.
+            notify("")
+            notify("(column 1: fraction of query / " + \
+                    "column 2: fraction of discovered genome)")
+
         # print interim result & save in a list for later use
-        notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
-               best_leaf.name())
+        notify('found: {:.2f} {:.3f} {}', f_genome, f_orig_query,
+               best_leaf.data.name())
         found.append((f_genome, best_leaf, f_query))
 
         # construct a new query, minus the previous one.
@@ -828,7 +833,7 @@ def sbt_gather(args):
         query = build_new_signature(query_mins)
 
     # basic reporting
-    notify('found {} matches total', len(found))
+    notify('\nfound {} matches total;', len(found))
     notify('the recovered matches hit {:.1f}% of the query',
            100. * sum_found / len(orig_query.estimator.get_hashes()))
     notify('')
@@ -840,34 +845,24 @@ def sbt_gather(args):
     found.sort(key=lambda x: x[0])
     found.reverse()
 
-    notify('Composition:')
-    for (frac, leaf_sketch, genome_fraction) in found:
-        notify('{:.2f} {:.2f} {}', frac, genome_fraction, leaf_sketch.name())
+    notify('Final composition (sorted by fraction of original query):\n')
+    notify('f_orig_query f_found_genome')
+    for (f_genome, leaf, f_orig_query) in found:
+        notify('{:.2f} {:.2f} {}', f_orig_query, f_genome, leaf.data.name())
 
     if args.output:
-        print('Composition:', file=args.output)
-        for (frac, leaf_sketch, genome_fraction) in found:
-            print('{:.2f} {:.f} {}'.format(frac, genome_fraction,
-                                        leaf_sketch.name()),
-                  file=args.output)
-
-    if args.csv:
-        fieldnames = ['fraction', 'name', 'sketch_kmers', 'genome_fraction']
-        w = csv.DictWriter(args.csv, fieldnames=fieldnames)
-
+        fieldnames = ['f_orig_query', 'f_found_genome', 'name']
+        w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
-        for (frac, leaf_sketch, genome_fraction) in found:
-            cardinality = 0
-            if leaf_sketch.estimator.hll:
-                cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
-            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
-                            sketch_kmers=cardinality,
-                            genome_fraction=genome_fraction))
+        for (f_genome, leaf, f_orig_query) in found:
+            w.writerow(dict(f_orig_query=f_orig_query, name=leaf.data.name(),
+                            f_found_genome=f_genome,))
+
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ ss for (f, ss) in found ],
-                            args.save_matches)
+        sig.save_signatures([ ss.data for (_, ss, _) in found ],
+                              args.save_matches)
 
 
 def watch(args):
