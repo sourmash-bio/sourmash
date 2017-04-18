@@ -8,7 +8,8 @@ import argparse
 from .logging import notify, error
 
 from .commands import (categorize, compare, compute, convert, dump, import_csv,
-                       sbt_gather, sbt_index, sbt_search, search, plot, watch)
+                       sbt_gather, sbt_index, sbt_combine, sbt_search, search,
+                       plot, watch)
 
 
 def main():
@@ -17,7 +18,8 @@ def main():
                 'import_csv': import_csv, 'dump': dump,
                 'sbt_index': sbt_index, 'sbt_search': sbt_search,
                 'categorize': categorize, 'sbt_gather': sbt_gather,
-                'watch': watch, 'convert': convert}
+                'watch': watch, 'convert': convert,
+                'sbt_combine': sbt_combine}
     parser = argparse.ArgumentParser(
         description='work with RNAseq signatures',
         usage='''sourmash <command> [<args>]
@@ -33,6 +35,7 @@ import_csv                  Import signatures from a CSV file.
 convert                     Convert signatures from YAML to JSON.
 
 sbt_index                   Index signatures with a Sequence Bloom Tree.
+sbt_combine                 Combine multiple Sequence Bloom Trees into a new one.
 sbt_search                  Search a Sequence Bloom Tree.
 categorize                  Categorize signatures with a SBT.
 sbt_gather                  Search a signature for multiple matches.

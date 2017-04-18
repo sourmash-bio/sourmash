@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from screed.fasta import fasta_iter
 from sourmash_lib._minhash import MinHash
-from sourmash_lib.sourmash_tst_utils import get_test_data
+from tests.sourmash_tst_utils import get_test_data
 
 
 def load_sequences(filepath):

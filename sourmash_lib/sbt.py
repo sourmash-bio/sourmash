@@ -47,17 +47,13 @@ then define a search function, ::
 
 from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple, Mapping
-import hashlib
+from collections import namedtuple, Mapping, defaultdict
+from copy import copy
 import json
 import math
 import os
-import random
-import shutil
-from tempfile import NamedTemporaryFile
 
 import khmer
-from khmer import khmer_args
 from random import randint
 from numpy import array
 
@@ -78,19 +74,14 @@ class SBT(object):
 
     def __init__(self, factory, d=2):
         self.factory = factory
-        self.nodes = [None]
+        self.nodes = defaultdict(lambda: None)
         self.d = d
+        self.max_node = 0
 
     def new_node_pos(self, node):
-        try:
-            pos = self.nodes.index(None)
-        except ValueError:
-            # There aren't any empty positions left.
-            # Extend array
-            height = math.floor(math.log(len(self.nodes), self.d)) + 1
-            self.nodes += [None] * int(self.d ** height)
-            pos = self.nodes.index(None)
-        return pos
+        while self.nodes[self.max_node] is not None:
+            self.max_node += 1
+        return self.max_node
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
@@ -106,6 +97,8 @@ class SBT(object):
         #    - add Leaf, update parent
         # 3) parent is a Node (no position available)
         #    - this is covered by case 1
+        # 4) parent is None
+        #    this can happen with d != 2, in this case create the parent node
         p = self.parent(pos)
         if isinstance(p.node, Leaf):
             # Create a new internal node
@@ -123,6 +116,12 @@ class SBT(object):
         elif isinstance(p.node, Node):
             self.nodes[pos] = node
             node.update(p.node)
+        elif p.node is None:
+            n = Node(self.factory, name="internal." + str(p.pos))
+            self.nodes[p.pos] = n
+            c1 = self.children(p.pos)[0]
+            self.nodes[c1.pos] = node
+            node.update(n)
 
         # update all parents!
         p = self.parent(p.pos)
@@ -243,15 +242,14 @@ class SBT(object):
             # TODO error!
             raise ValueError("Empty tree!")
 
-        sbt_nodes = []
+        sbt_nodes = defaultdict(lambda: None)
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
         ksize, tablesize, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(ksize, tablesize, ntables)
 
-        for jnode in jnodes:
+        for i, jnode in enumerate(jnodes):
             if jnode is None:
-                sbt_nodes.append(None)
                 continue
 
             if 'internal' in jnode['filename']:
@@ -260,7 +258,7 @@ class SBT(object):
             else:
                 sbt_node = leaf_loader(jnode, dirname)
 
-            sbt_nodes.append(sbt_node)
+            sbt_nodes[i] = sbt_node
 
         tree = SBT(factory)
         tree.nodes = sbt_nodes
@@ -274,15 +272,14 @@ class SBT(object):
         if nodes[0] is None:
             raise ValueError("Empty tree!")
 
-        sbt_nodes = []
+        sbt_nodes = defaultdict(lambda: None)
 
         sample_bf = os.path.join(dirname, nodes[0]['filename'])
         k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(k, size, ntables)
 
-        for i, node in sorted(nodes.items()):
+        for k, node in nodes.items():
             if node is None:
-                sbt_nodes.append(None)
                 continue
 
             if 'internal' in node['filename']:
@@ -291,7 +288,7 @@ class SBT(object):
             else:
                 sbt_node = leaf_loader(node, dirname)
 
-            sbt_nodes.append(sbt_node)
+            sbt_nodes[k] = sbt_node
 
         tree = cls(factory, d=info['d'])
         tree.nodes = sbt_nodes
@@ -308,16 +305,13 @@ class SBT(object):
         edge [arrowsize=0.8];
         """)
 
-        for i, node in iter(self):
-            if node is None:
-                continue
-
-            p = self.parent(i)
-            if p is not None:
-                if isinstance(node, Leaf):
-                    print('"', p.pos, '"', '->', '"', node.name, '";')
-                else:
-                    print('"', p.pos, '"', '->', '"', i, '";')
+        for i, node in list(self.nodes.items()):
+            if isinstance(node, Node):
+                print('"{}" [shape=box fillcolor=gray style=filled]'.format(
+                      node.name))
+                for j, child in self.children(i):
+                    if child is not None:
+                        print('"{}" -> "{}"'.format(node.name, child.name))
         print("}")
 
     def print(self):
@@ -334,8 +328,50 @@ class SBT(object):
                                        if c.pos not in visited)
 
     def __iter__(self):
-        for i, node in enumerate(self.nodes):
+        for i, node in self.nodes.items():
             yield (i, node)
+
+    def leaves(self):
+        return [c for c in self.nodes.values() if isinstance(c, Leaf)]
+
+    def combine(self, other):
+        larger, smaller = self, other
+        if len(other.nodes) > len(self.nodes):
+            larger, smaller = other, self
+
+        n = Node(self.factory, name="internal.0")
+        larger.nodes[0].update(n)
+        smaller.nodes[0].update(n)
+        new_nodes = defaultdict(lambda: None)
+        new_nodes[0] = n
+
+        levels = int(math.ceil(math.log(len(larger.nodes), self.d))) + 1
+        current_pos = 1
+        n_previous = 0
+        n_next = 1
+        for level in range(1, levels + 1):
+            for tree in (larger, smaller):
+                for pos in range(n_previous, n_next):
+                    if tree.nodes[pos] is not None:
+                        new_node = copy(tree.nodes[pos])
+                        if isinstance(new_node, Node):
+                            # An internal node, we need to update the name
+                            new_node.name = "internal.{}".format(current_pos)
+                        new_nodes[current_pos] = new_node
+                    else:
+                        del tree.nodes[pos]
+                    current_pos += 1
+            n_previous = n_next
+            n_next = n_previous + int(self.d ** level)
+            current_pos = n_next
+
+        # reset max_node, next time we add a node it will find the next
+        # empty position
+        self.max_node = 2
+
+        # TODO: do we want to return a new tree, or merge into this one?
+        self.nodes = new_nodes
+        return self
 
 
 class Node(object):
@@ -373,6 +409,9 @@ class Node(object):
         filename = os.path.join(dirname, info['filename'])
         new_node = Node(info['factory'], name=info['name'], fullpath=filename)
         return new_node
+
+    def update(self, parent):
+        parent.data.update(self.data)
 
 
 class Leaf(object):

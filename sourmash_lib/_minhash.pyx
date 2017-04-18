@@ -9,9 +9,23 @@ from libcpp cimport bool
 from libc.stdint cimport uint32_t
 
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
+import math
 
 
+# default MurmurHash seed
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
+
+
+def get_minhash_default_seed():
+    return MINHASH_DEFAULT_SEED
+
+
+# we use the 64-bit hash space of MurmurHash only
+cdef uint64_t MINHASH_MAX_HASH = 2**64 - 1
+
+
+def get_minhash_max_hash():
+    return MINHASH_MAX_HASH
 
 
 cdef bytes to_bytes(s):
@@ -31,14 +45,39 @@ def hash_murmur(kmer, uint32_t seed=MINHASH_DEFAULT_SEED):
     return _hash_murmur(to_bytes(kmer), seed)
 
 
+def dotproduct(a, b, normalize=True):
+    """
+    Compute the dot product of two dictionaries {k: v} where v is
+    abundance.
+    """
+
+    if normalize:
+        norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
+        norm_b = math.sqrt(sum([ x*x for x in b.values() ]))
+
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
+    else:
+        norm_a = 1.0
+        norm_b = 1.0
+
+    prod = 0.
+    for k, abundance in a.items():
+        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
+
+    return prod
+
+
 cdef class MinHash(object):
 
     def __init__(self, unsigned int n, unsigned int ksize,
                        bool is_protein=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
-                       HashIntoType max_hash=0):
+                       HashIntoType max_hash=0,
+                       mins=None):
         self.track_abundance = track_abundance
+        self.hll = None
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -48,6 +87,13 @@ cdef class MinHash(object):
 
         self._this.reset(mh)
 
+        if mins:
+            if track_abundance:
+                self.set_abundances(mins)
+            else:
+                self.add_many(mins)
+
+
     def __copy__(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
                     deref(self._this).is_protein, self.track_abundance,
@@ -55,8 +101,65 @@ cdef class MinHash(object):
         a.merge(self)
         return a
 
+    def __getstate__(self):             # enable pickling
+        with_abundance = False
+        if self.track_abundance:
+            with_abundance = True
+
+        return (deref(self._this).num,
+                deref(self._this).ksize,
+                deref(self._this).is_protein,
+                self.get_mins(with_abundance=with_abundance),
+                self.hll, self.track_abundance, deref(self._this).max_hash,
+                deref(self._this).seed)
+
+    def __setstate__(self, tup):
+        (n, ksize, is_protein, mins, hll, track_abundance, max_hash, seed) =\
+          tup
+
+        self.track_abundance = track_abundance
+        self.hll = hll
+
+        cdef KmerMinHash *mh = NULL
+        if track_abundance:
+            mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
+            self._this.reset(mh)
+            self.set_abundances(mins)
+        else:
+            mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+            self._this.reset(mh)
+            self.add_many(mins)
+
+    def __reduce__(self):
+        return (MinHash,
+               (deref(self._this).num,
+                deref(self._this).ksize,
+                deref(self._this).is_protein,
+                self.track_abundance,
+                deref(self._this).seed,
+                deref(self._this).max_hash,
+                self.get_mins(with_abundance=self.track_abundance)))
+
+    def __richcmp__(self, other, op):
+        if op == 2:
+            return self.__getstate__() == other.__getstate__()
+        raise Exception("undefined comparison")
+
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
+
+    def add(self, kmer):
+        "Add kmer into sketch."
+        self.add_sequence(kmer)
+
+    def add_many(self, hashes):
+        "Add many hashes in at once."
+        for hash in hashes:
+            self.add_hash(hash)
+
+    def update(self, other):
+        "Update this estimator from all the hashes from the other."
+        self.add_many(other.get_mins())
 
     def __len__(self):
         return deref(self._this).num
@@ -70,12 +173,31 @@ cdef class MinHash(object):
         else:
             return [it for it in deref(self._this).mins]
 
+    def get_hashes(self):
+        return self.get_mins()
+
     @property
     def seed(self):
         return deref(self._this).seed
 
+    @property
+    def num(self):
+        return deref(self._this).num
+
+    @property
     def is_protein(self):
         return deref(self._this).is_protein
+
+    @property
+    def ksize(self):
+        return deref(self._this).ksize
+
+    @property
+    def max_hash(self):
+        mm = deref(self._this).max_hash
+        if mm == 18446744073709551615:
+            return 0
+        return mm
 
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
@@ -132,6 +254,45 @@ cdef class MinHash(object):
         size = max(combined_mh.size(), 1)
         return n / size
 
+    def jaccard(self, MinHash other):
+        return self.compare(other)
+
+    def similarity(self, other, ignore_abundance=False):
+        """\
+        Calculate similarity of two sketches.
+
+        If the sketches are not abundance weighted, or ignore_abundance=True,
+        compute Jaccard similarity.
+
+        If the sketches are abundance weighted, calculate a distance metric
+        based on the cosine similarity.
+
+        Note, because the term frequencies (tf-idf weights) cannot be negative,
+        the angle will never be < 0deg or > 90deg.
+
+        See https://en.wikipedia.org/wiki/Cosine_similarity
+        """
+
+        if not self.track_abundance or ignore_abundance:
+            return self.jaccard(other)
+        else:
+            a = self.get_mins(with_abundance=True)
+            b = other.get_mins(with_abundance=True)
+
+            prod = dotproduct(a, b)
+            prod = min(1.0, prod)
+
+            distance = 2*math.acos(prod) / math.pi
+            return 1.0 - distance
+
+    def similarity_ignore_maxhash(self, MinHash other):
+        a = set(self.get_mins())
+
+        b = set(other.get_mins())
+
+        overlap = a.intersection(b)
+        return float(len(overlap)) / float(len(a))
+
     def __iadd__(self, MinHash other):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
@@ -161,3 +322,10 @@ cdef class MinHash(object):
 
         for i in range(0, len(sequence) - ksize + 1):
             deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
+
+    def is_molecule_type(self, molecule):
+        if molecule == 'dna' and not self.is_protein:
+            return True
+        if molecule == 'protein' and self.is_protein:
+            return True
+        return False

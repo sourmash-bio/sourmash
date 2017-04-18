@@ -4,9 +4,18 @@ Additional information on sourmash
 Other MinHash implementations for DNA
 -------------------------------------
 
-In addition to `mash <https://github.com/marbl/Mash>`__, also see
-`RKMH: Read Classification by Kmers
-<https://github.com/edawson/rkmh>`__.
+In addition to `mash <https://github.com/marbl/Mash>`__, also see:
+
+* `RKMH: Read Classification by Kmers <https://github.com/edawson/rkmh>`__.
+* `mashtree <https://github.com/lskatz/mashtree/blob/master/README.md>`__ for building trees using Mash distances.
+* `Finch: a Mash implementation in Rust
+  <https://github.com/onecodex/finch-rs>`__. Quote, "Fast sketches,
+  count histograms, better filtering."
+
+If you are interested in exactly how these MinHash approaches
+calculate the hashes of DNA sequences, please see some simple Python
+code in sourmash, `utils/compute-dna-mh-another-way.py
+<https://github.com/dib-lab/sourmash/blob/master/utils/compute-dna-mh-another-way.py>`__.
 
 Blog posts
 ----------
