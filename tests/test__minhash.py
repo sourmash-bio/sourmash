@@ -311,13 +311,18 @@ def test_mh_asymmetric(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(10, 10, track_abundance=track_abundance)                   # different size: 10
+    # different size: 10
+    b = MinHash(10, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
     assert a.count_common(b) == 10
     assert b.count_common(a) == 10
 
+    with pytest.raises(TypeError):
+        a.compare(b)
+
+    a = a.downsample_n(10)
     assert a.compare(b) == 0.5
     assert b.compare(a) == 0.5
 
@@ -376,7 +381,8 @@ def test_mh_asymmetric_merge(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(10, 10, track_abundance=track_abundance)                   # different size: 10
+    # different size: 10
+    b = MinHash(10, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
@@ -388,8 +394,17 @@ def test_mh_asymmetric_merge(track_abundance):
     assert len(c) == len(a)
     assert len(d) == len(b)
 
-    assert d.compare(a) == 0.5
-    assert c.compare(b) == 0.5
+    # can't compare different sizes without downsampling
+    with pytest.raises(TypeError):
+        d.compare(a)
+
+    a = a.downsample_n(d.num)
+    print(a.get_mins())
+    print(d.get_mins())
+    assert d.compare(a) == 1.0
+
+    c = c.downsample_n(b.num)
+    assert c.compare(b) == 1.0
 
 
 def test_mh_inplace_concat_asymmetric(track_abundance):
@@ -414,7 +429,15 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     assert len(c) == len(a)
     assert len(d) == len(b)
 
-    assert d.compare(a) == 0.5
+    try:
+        d.compare(a)
+    except TypeError as exc:
+        assert 'must have same num' in str(exc)
+
+    a = a.downsample_n(d.num)
+    assert d.compare(a) == 1.0 # see: d += a, above.
+
+    c = c.downsample_n(b.num)
     assert c.compare(b) == 0.5
 
 

@@ -21,8 +21,11 @@ def test_jaccard_1(track_abundance):
     for i in [1, 2, 3, 4, 6]:
         E2.add_hash(i)
 
-    assert round(E1.jaccard(E2), 2) == round(4 / 6.0, 2)
-    assert round(E2.jaccard(E1), 2) == round(4 / 6.0, 2)
+    # here the union is [1, 2, 3, 4, 5]
+    # and the intesection is [1, 2, 3, 4] => 4/5.
+
+    assert round(E1.jaccard(E2), 2) == round(4 / 5.0, 2)
+    assert round(E2.jaccard(E1), 2) == round(4 / 5.0, 2)
 
 
 def test_jaccard_2_difflen(track_abundance):
