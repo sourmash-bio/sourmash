@@ -1098,6 +1098,8 @@ def test_sbt_categorize():
         print(out)
         print(err)
 
+        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
+        # yields 521/1000 ==> ~0.5
         assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
