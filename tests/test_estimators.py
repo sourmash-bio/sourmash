@@ -179,12 +179,12 @@ def test_jaccard_on_real_data():
     afile = 'n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
-    mh1 = sig1.estimator
+    mh1 = sig1.minhash
 
     bfile = 'n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
     b = utils.get_test_data(bfile)
     sig2 = list(load_signatures(b))[0]
-    mh2 = sig2.estimator
+    mh2 = sig2.minhash
 
     assert mh1.compare(mh2) == 0.0183
     assert mh2.compare(mh1) == 0.0183
