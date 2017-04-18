@@ -223,9 +223,61 @@ cdef class MinHash(object):
 
         return n
 
+    def downsample_n(self, new_num):
+        if self.num < new_num:
+            raise ValueError('new sample n is higher than current sample n')
+
+        a = MinHash(new_num, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, deref(self._this).max_hash)
+        a.merge(self)
+        return a
+
     def compare(self, MinHash other):
-        n = self.count_common(other)
-        size = max(deref(self._this).size(), 1)
+        cdef KmerMinAbundance *mh = NULL;
+        cdef KmerMinAbundance *other_mh = NULL;
+        cdef KmerMinAbundance *cmh = NULL;
+
+        if self.num != other.num:
+            err = 'must have same num: {} != {}'.format(self.num,
+                                                            other.num)
+            raise TypeError(err)
+        else:
+            num = self.num
+
+        if self.track_abundance and other.track_abundance:
+            combined_mh = new KmerMinAbundance(num,
+                                          deref(self._this).ksize,
+                                          deref(self._this).is_protein,
+                                          deref(self._this).seed,
+                                          deref(self._this).max_hash)
+
+            mh = <KmerMinAbundance*>address(deref(self._this))
+            other_mh = <KmerMinAbundance*>address(deref(other._this))
+            cmh = <KmerMinAbundance*>combined_mh
+
+            cmh.merge_abund(deref(mh))
+            cmh.merge_abund(deref(other_mh))
+
+            common = set(self.get_mins())
+            common.intersection_update(other.get_mins())
+            common.intersection_update([it.first for it in cmh.mins])
+            n = len(common)
+        else:
+            combined_mh = new KmerMinHash(num,
+                                          deref(self._this).ksize,
+                                          deref(self._this).is_protein,
+                                          deref(self._this).seed,
+                                          deref(self._this).max_hash)
+            combined_mh.merge(deref(self._this))
+            combined_mh.merge(deref(other._this))
+
+            common = set(self.get_mins())
+            common.intersection_update(other.get_mins())
+            common.intersection_update(combined_mh.mins)
+            n = len(common)
+
+        size = max(combined_mh.size(), 1)
         return n / size
 
     def jaccard(self, MinHash other):
@@ -271,7 +323,7 @@ cdef class MinHash(object):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
         if self.track_abundance:
-             mh.merge(deref(other_mh))
+            deref(mh).merge_abund(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
 
