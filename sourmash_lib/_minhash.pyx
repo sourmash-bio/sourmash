@@ -242,7 +242,7 @@ cdef class MinHash(object):
                     deref(self._this).is_protein, self.track_abundance,
                     deref(self._this).seed, 0)
         if self.track_abundance:
-            a.set_abundances(self.get_mins())
+            a.set_abundances(self.get_mins(with_abundance=True))
         else:
             a.add_many(self.get_mins())
 
@@ -261,7 +261,7 @@ cdef class MinHash(object):
                     deref(self._this).is_protein, self.track_abundance,
                     deref(self._this).seed, new_max_hash)
         if self.track_abundance:
-            a.set_abundances(self.get_mins())
+            a.set_abundances(self.get_mins(with_abundance=True))
         else:
             a.add_many(self.get_mins())
 
