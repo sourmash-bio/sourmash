@@ -277,9 +277,6 @@ cdef class MinHash(object):
             common.intersection_update(combined_mh.mins)
             n = len(common)
 
-#        print('common={}, this={}, other={}, combined={}'.\
-#                  format(n, len(self.get_mins()), len(other.get_mins()),
-#                         combined_mh.size()))
         size = max(combined_mh.size(), 1)
         return n / size
 
