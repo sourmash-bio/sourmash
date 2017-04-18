@@ -229,8 +229,12 @@ cdef class MinHash(object):
         cdef KmerMinAbundance *other_mh = NULL;
         cdef KmerMinAbundance *cmh = NULL;
 
+        if self.num != other.num:
+            raise TypeError('must have same num: {} != {}'.format(self.num,
+                                                                  other.num))
+
         if self.track_abundance and other.track_abundance:
-            combined_mh = new KmerMinAbundance(0,
+            combined_mh = new KmerMinAbundance(self.num,
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
                                           deref(self._this).seed,
@@ -243,7 +247,7 @@ cdef class MinHash(object):
             cmh.merge_abund(deref(mh))
             cmh.merge_abund(deref(other_mh))
         else:
-            combined_mh = new KmerMinHash(0,
+            combined_mh = new KmerMinHash(self.num,
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
                                           deref(self._this).seed,
