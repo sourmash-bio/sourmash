@@ -7,6 +7,7 @@ from __future__ import print_function, unicode_literals
 
 import pytest
 from sourmash_lib import MinHash
+from . import sourmash_tst_utils as utils
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
 # see conftest.py.
@@ -168,3 +169,37 @@ def test_abund_similarity_zero():
         E1.add_hash(i)
 
     assert E1.similarity(E2) == 0.0
+
+
+####
+
+def test_jaccard_on_real_data():
+    from sourmash_lib.signature import load_signatures
+
+    afile = 'n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.estimator
+
+    bfile = 'n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    b = utils.get_test_data(bfile)
+    sig2 = list(load_signatures(b))[0]
+    mh2 = sig2.estimator
+
+    assert mh1.compare(mh2) == 0.0183
+    assert mh2.compare(mh1) == 0.0183
+
+    mh1 = mh1.downsample_n(1000)
+    mh2 = mh2.downsample_n(1000)
+    assert mh1.compare(mh2) == 0.011
+    assert mh2.compare(mh1) == 0.011
+
+    mh1 = mh1.downsample_n(100)
+    mh2 = mh2.downsample_n(100)
+    assert mh1.compare(mh2) == 0.01
+    assert mh2.compare(mh1) == 0.01
+
+    mh1 = mh1.downsample_n(10)
+    mh2 = mh2.downsample_n(10)
+    assert mh1.compare(mh2) == 0.0
+    assert mh2.compare(mh1) == 0.0
