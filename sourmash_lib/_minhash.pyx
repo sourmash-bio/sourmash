@@ -245,8 +245,6 @@ cdef class MinHash(object):
         else:
             num = self.num
 
-        n = self.count_common(other)
-
         if self.track_abundance and other.track_abundance:
             combined_mh = new KmerMinAbundance(num,
                                           deref(self._this).ksize,
@@ -260,6 +258,11 @@ cdef class MinHash(object):
 
             cmh.merge_abund(deref(mh))
             cmh.merge_abund(deref(other_mh))
+
+            common = set(self.get_mins())
+            common.intersection_update(other.get_mins())
+            common.intersection_update([it.first for it in cmh.mins])
+            n = len(common)
         else:
             combined_mh = new KmerMinHash(num,
                                           deref(self._this).ksize,
@@ -269,6 +272,14 @@ cdef class MinHash(object):
             combined_mh.merge(deref(self._this))
             combined_mh.merge(deref(other._this))
 
+            common = set(self.get_mins())
+            common.intersection_update(other.get_mins())
+            common.intersection_update(combined_mh.mins)
+            n = len(common)
+
+#        print('common={}, this={}, other={}, combined={}'.\
+#                  format(n, len(self.get_mins()), len(other.get_mins()),
+#                         combined_mh.size()))
         size = max(combined_mh.size(), 1)
         return n / size
 

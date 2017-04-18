@@ -594,7 +594,7 @@ def test_search():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
 
 
 def test_search_gzip():
@@ -619,7 +619,7 @@ def test_search_gzip():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
 
 
 def test_search_2():
@@ -640,7 +640,8 @@ def test_search_2():
                                            in_directory=location)
         print(status, out, err)
         assert '2 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
+        assert '0.896' in out
 
 
 def test_mash_csv_to_sig():
