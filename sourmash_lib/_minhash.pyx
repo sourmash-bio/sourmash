@@ -240,8 +240,31 @@ cdef class MinHash(object):
 
         a = MinHash(new_num, deref(self._this).ksize,
                     deref(self._this).is_protein, self.track_abundance,
-                    deref(self._this).seed, deref(self._this).max_hash)
-        a.merge(self)
+                    deref(self._this).seed, 0)
+        if self.track_abundance:
+            a.set_abundances(self.get_mins())
+        else:
+            a.add_many(self.get_mins())
+
+        return a
+
+    def downsample_scaled(self, new_num):
+        old_scaled = int(get_minhash_max_hash() / self.max_hash)
+
+        if old_scaled > new_num:
+            raise ValueError('new scaled is lower than current sample scaled')
+
+        new_max_hash = get_minhash_max_hash() / float(new_num)
+        new_max_hash = int(round(new_max_hash, 0))
+
+        a = MinHash(0, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, new_max_hash)
+        if self.track_abundance:
+            a.set_abundances(self.get_mins())
+        else:
+            a.add_many(self.get_mins())
+
         return a
 
     def compare(self, MinHash other):
