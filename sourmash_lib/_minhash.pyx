@@ -255,6 +255,13 @@ cdef class MinHash(object):
 
         return a
 
+    def downsample_max_hash(self, *others):
+        max_hashes = [ x.max_hash for x in others ]
+        new_max_hash = min(self.max_hash, *max_hashes)
+        new_scaled = int(get_minhash_max_hash() / new_max_hash)
+
+        return self.downsample_scaled(new_scaled)
+
     def downsample_scaled(self, new_num):
         max_hash = self.max_hash
 

@@ -603,7 +603,8 @@ def sbt_search(args):
 
     results = []
     for leaf in tree.find(search_fn, query, args.threshold):
-        results.append((query.similarity(leaf.data), leaf.data))
+        results.append((query.similarity(leaf.data, downsample=True),
+                        leaf.data))
         #results.append((leaf.data.similarity(ss), leaf.data))
 
     results.sort(key=lambda x: -x[0])   # reverse sort on similarity
