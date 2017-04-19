@@ -9,7 +9,7 @@ from .logging import notify, error
 
 from .commands import (categorize, compare, compute, convert, dump, import_csv,
                        sbt_gather, sbt_index, sbt_combine, sbt_search, search,
-                       plot, watch)
+                       plot, watch, info)
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
                 'sbt_index': sbt_index, 'sbt_search': sbt_search,
                 'categorize': categorize, 'sbt_gather': sbt_gather,
                 'watch': watch, 'convert': convert,
-                'sbt_combine': sbt_combine}
+                'sbt_combine': sbt_combine, 'info': info}
     parser = argparse.ArgumentParser(
         description='work with RNAseq signatures',
         usage='''sourmash <command> [<args>]
@@ -41,6 +41,8 @@ categorize                  Categorize signatures with a SBT.
 sbt_gather                  Search a signature for multiple matches.
 watch                       Classify a stream of sequences using a SBT.
 
+info                        Sourmash version and other information.
+
 Use '-h' to get subcommand-specific help, e.g.
 
 sourmash compute -h
@@ -54,6 +56,4 @@ sourmash compute -h
         sys.exit(1)
 
     cmd = commands.get(args.command)
-    notify('# running sourmash subcommand: %s' % args.command,
-           file=sys.stderr)
     cmd(sys.argv[2:])
