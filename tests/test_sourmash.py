@@ -206,7 +206,7 @@ def test_do_sourmash_compute_multik():
 
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
+        ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 21 in ksizes
         assert 31 in ksizes
 
@@ -226,7 +226,7 @@ def test_do_sourmash_compute_multik_with_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 4
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
@@ -273,7 +273,7 @@ def test_do_sourmash_compute_multik_only_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
@@ -293,11 +293,11 @@ def test_do_sourmash_compute_multik_input_is_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
-            moltype = set([ x.estimator.is_molecule_type('protein')
+            moltype = set([ x.minhash.is_molecule_type('protein')
                             for x in siglist ])
             assert len(moltype) == 1
             assert True in moltype
@@ -315,7 +315,7 @@ def test_do_sourmash_compute_multik_outfile():
 
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
+        ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 21 in ksizes
         assert 31 in ksizes
 
@@ -334,7 +334,7 @@ def test_do_sourmash_compute_with_scaled_1():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == { 0 }
 
@@ -353,7 +353,7 @@ def test_do_sourmash_compute_with_scaled_2():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
@@ -372,7 +372,7 @@ def test_do_sourmash_compute_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 
@@ -391,7 +391,7 @@ def test_do_sourmash_compute_with_seed():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        seeds = [ x.estimator.seed for x in siglist ]
+        seeds = [ x.minhash.seed for x in siglist ]
         assert len(seeds) == 2
         assert set(seeds) == set([ 43 ])
 
@@ -441,7 +441,7 @@ def test_do_sourmash_check_protein_comparisons():
         print(name2, name4, round(sig2_aa.similarity(sig2_trans), 3))
 
         assert round(sig1_aa.similarity(sig1_trans), 3) == 0.0
-        assert round(sig2_aa.similarity(sig1_trans), 3) == 0.273
+        assert round(sig2_aa.similarity(sig1_trans), 3) == 0.166
         assert round(sig1_aa.similarity(sig2_trans), 3) == 0.174
         assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
 
@@ -594,7 +594,7 @@ def test_search():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
 
 
 def test_search_gzip():
@@ -619,7 +619,7 @@ def test_search_gzip():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
 
 
 def test_search_2():
@@ -640,7 +640,8 @@ def test_search_2():
                                            in_directory=location)
         print(status, out, err)
         assert '2 matches' in err
-        assert '0.958' in out
+        assert '0.930' in out
+        assert '0.896' in out
 
 
 def test_mash_csv_to_sig():
@@ -654,7 +655,8 @@ def test_mash_csv_to_sig():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata2],
+                                           ['compute', '-k', '31',
+                                            '-n', '970', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -663,6 +665,7 @@ def test_mash_csv_to_sig():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches; showing 3:' in err
+        assert 'short.fa \t 1.000 \t xxx.sig' in out
 
 
 def test_do_sourmash_sbt_index_bad_args():
@@ -1123,6 +1126,12 @@ def test_sbt_categorize():
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
+
+        print(out)
+        print(err)
+
+        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
+        # yields 521/1000 ==> ~0.5
         assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()

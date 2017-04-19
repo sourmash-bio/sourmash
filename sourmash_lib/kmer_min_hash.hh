@@ -355,7 +355,7 @@ class KmerMinAbundance: public KmerMinHash {
         }
     }
 
-    virtual void merge(const KmerMinAbundance& other) {
+    virtual void merge_abund(const KmerMinAbundance& other) {
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be merged");
         }

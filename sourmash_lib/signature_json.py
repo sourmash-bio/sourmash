@@ -104,7 +104,7 @@ def _json_next_signature(iterable,
     if not ignore_md5sum:
         md5sum = d['md5sum']
         if md5sum != sig.md5sum():
-            raise Exception('error loading - md5 of estimator does not match')
+            raise Exception('error loading - md5 of minhash does not match')
 
     if name:
         sig.d['name'] = name
@@ -184,7 +184,7 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
                                       prefix_item = 'item.signatures.item.mins.item',
                                       ignore_md5sum=ignore_md5sum,
                                       ijson=ijson)
-            if not select_ksize or select_ksize == sig.estimator.ksize:
+            if not select_ksize or select_ksize == sig.minhash.ksize:
                 yield sig
         except ValueError:
             # possible end of the array of signatures
@@ -238,6 +238,9 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         x = top_records.get(k, [])
         x.append(sketch)
         top_records[k] = x
+
+    if not top_records:
+        return ""
 
     records = []
     for (email, name, filename), sketches in top_records.items():
