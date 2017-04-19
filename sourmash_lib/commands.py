@@ -27,6 +27,7 @@ def search(args):
     parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
     parser.add_argument('-f', '--force', action='store_true')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+    parser.add_argument('--containment', action='store_true')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -62,7 +63,10 @@ def search(args):
     # compute query x db
     distances = []
     for (x, filename) in against:
-        distance = query.similarity(x)
+        if args.containment:
+            distance = query.containment(x)
+        else:
+            distance = query.similarity(x)
         if distance >= args.threshold:
             distances.append((distance, x, filename))
 

@@ -117,6 +117,10 @@ class SourmashSignature(object):
         "Compute Jaccard similarity with the other MinHash signature."
         return self.minhash.similarity(other.minhash, True)
 
+    def containment(self, other):
+        "Compute containment by the other signature. Note: ignores abundance."
+        return self.minhash.containment(other.minhash)
+
 
 def _guess_open(filename):
     """

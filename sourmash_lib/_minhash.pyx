@@ -363,6 +363,12 @@ cdef class MinHash(object):
             distance = 2*math.acos(prod) / math.pi
             return 1.0 - distance
 
+    def containment(self, other):
+        """\
+        Calculate containment of self by other.
+        """
+        return self.count_common(other) / len(self.get_mins())
+
     def similarity_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
 
