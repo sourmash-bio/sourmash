@@ -712,3 +712,48 @@ def test_dotproduct_zeroes():
 
     assert dotproduct(a, b) == 0.0
     assert dotproduct(b, a) == 0.0
+
+
+def test_mh_copy_and_clear(track_abundance):
+    # test basic creation of new, empty MinHash
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = a.copy_and_clear()
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b.max_hash == 0
+    assert not b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.get_mins()) == 0
+
+
+def test_mh_copy_and_clear_with_max_hash(track_abundance):
+    # test basic creation of new, empty MinHash w/max_hash param set
+    a = MinHash(20, 10, track_abundance=track_abundance, max_hash=20)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = a.copy_and_clear()
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b.max_hash == 20
+    assert not b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.get_mins()) == 0
+
+
+def test_mh_subtract(track_abundance):
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.subtract_mins(b) == set(range(2, 40, 4))

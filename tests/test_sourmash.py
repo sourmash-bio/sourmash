@@ -206,7 +206,7 @@ def test_do_sourmash_compute_multik():
 
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
+        ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 21 in ksizes
         assert 31 in ksizes
 
@@ -226,7 +226,7 @@ def test_do_sourmash_compute_multik_with_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 4
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
@@ -273,7 +273,7 @@ def test_do_sourmash_compute_multik_only_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
@@ -293,11 +293,11 @@ def test_do_sourmash_compute_multik_input_is_protein():
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
-            ksizes = set([ x.estimator.ksize for x in siglist ])
+            ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
-            moltype = set([ x.estimator.is_molecule_type('protein')
+            moltype = set([ x.minhash.is_molecule_type('protein')
                             for x in siglist ])
             assert len(moltype) == 1
             assert True in moltype
@@ -315,7 +315,7 @@ def test_do_sourmash_compute_multik_outfile():
 
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
-        ksizes = set([ x.estimator.ksize for x in siglist ])
+        ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 21 in ksizes
         assert 31 in ksizes
 
@@ -334,7 +334,7 @@ def test_do_sourmash_compute_with_scaled_1():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == { 0 }
 
@@ -353,7 +353,7 @@ def test_do_sourmash_compute_with_scaled_2():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
@@ -372,7 +372,7 @@ def test_do_sourmash_compute_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.estimator.max_hash for x in siglist ]
+        max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 
@@ -391,7 +391,7 @@ def test_do_sourmash_compute_with_seed():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        seeds = [ x.estimator.seed for x in siglist ]
+        seeds = [ x.minhash.seed for x in siglist ]
         assert len(seeds) == 2
         assert set(seeds) == set([ 43 ])
 

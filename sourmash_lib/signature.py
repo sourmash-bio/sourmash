@@ -34,7 +34,7 @@ class FakeHLL(object):
 class SourmashSignature(object):
     "Main class for signature information."
 
-    def __init__(self, email, estimator, name='', filename=''):
+    def __init__(self, email, minhash, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
         self.d['type'] = 'mrnaseq'
@@ -44,13 +44,13 @@ class SourmashSignature(object):
         if filename:
             self.d['filename'] = filename
 
-        self.estimator = estimator
+        self.minhash = minhash
 
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
         m = hashlib.md5()
-        m.update(str(self.estimator.ksize).encode('ascii'))
-        for k in self.estimator.get_mins():
+        m.update(str(self.minhash.ksize).encode('ascii'))
+        for k in self.minhash.get_mins():
             m.update(str(k).encode('utf-8'))
         return m.hexdigest()
 
@@ -59,7 +59,7 @@ class SourmashSignature(object):
             if self.d[k] != other.d[k]:
                 return False
             
-        return self.estimator == other.estimator
+        return self.minhash == other.minhash
 
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
@@ -73,28 +73,28 @@ class SourmashSignature(object):
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)
-        estimator = self.estimator
+        minhash = self.minhash
 
         sketch = {}
-        sketch['ksize'] = int(estimator.ksize)
-        sketch['num'] = len(estimator)
-        sketch['max_hash'] = int(estimator.max_hash)
-        sketch['seed'] = int(estimator.seed)
-        if self.estimator.track_abundance:
-            values = estimator.get_mins(with_abundance=True)
+        sketch['ksize'] = int(minhash.ksize)
+        sketch['num'] = len(minhash)
+        sketch['max_hash'] = int(minhash.max_hash)
+        sketch['seed'] = int(minhash.seed)
+        if self.minhash.track_abundance:
+            values = minhash.get_mins(with_abundance=True)
             sketch['mins'] = list(map(int, values.keys()))
             sketch['abundances'] = list(map(int, values.values()))
         else:
-            sketch['mins'] = list(map(int, estimator.get_mins()))
+            sketch['mins'] = list(map(int, minhash.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
-        if estimator.is_protein:
+        if minhash.is_protein:
             sketch['molecule'] = 'protein'
         else:
             sketch['molecule'] = 'dna'
 
-        if estimator.hll is not None:
-            sketch['cardinality'] = estimator.hll.estimate_cardinality()
+        if minhash.hll is not None:
+            sketch['cardinality'] = minhash.hll.estimate_cardinality()
 
         e['signature'] = sketch
 
@@ -103,11 +103,11 @@ class SourmashSignature(object):
 
     def similarity(self, other, ignore_abundance=False):
         "Compute similarity with the other MinHash signature."
-        return self.estimator.similarity(other.estimator, ignore_abundance)
+        return self.minhash.similarity(other.minhash, ignore_abundance)
 
     def jaccard(self, other):
         "Compute Jaccard similarity with the other MinHash signature."
-        return self.estimator.similarity(other.estimator, True)
+        return self.minhash.similarity(other.minhash, True)
 
 
 def _guess_open(filename):
@@ -155,6 +155,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
+    if not data:
+        return
+
     is_fp = False
     if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
         try:                                  # is it a file handle?
@@ -180,9 +183,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
         # JSON format
         for sig in signature_json.load_signatures_json(data,
                                                      ignore_md5sum=ignore_md5sum):
-            if not select_ksize or select_ksize == sig.estimator.ksize:
+            if not select_ksize or select_ksize == sig.minhash.ksize:
                 if not select_moltype or \
-                     sig.estimator.is_molecule_type(select_moltype):
+                     sig.minhash.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
         error("Error in parsing signature; quitting.")
@@ -190,6 +193,25 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
     finally:
         if is_fp:
             data.close()
+
+
+def load_one_signature(data, select_ksize=None, select_moltype=None,
+                       ignore_md5sum=False):
+    sigiter = load_signatures(data, select_ksize=select_ksize,
+                              select_moltype=select_moltype,
+                              ignore_md5sum=ignore_md5sum)
+
+    try:
+        first_sig = next(sigiter)
+    except StopIteration:
+        raise ValueError("no signatures to load")
+
+    try:
+        next_sig = next(sigiter)
+    except StopIteration:
+        return first_sig
+
+    raise ValueError("expected to load exactly one signature")
 
 
 def save_signatures(siglist, fp=None):
@@ -228,9 +250,9 @@ def yaml_load(data, select_ksize=None, select_moltype=None,
         for sketch in d['signatures']:
             sig = _load_one_signature(sketch, email, name, filename,
                                           ignore_md5sum)
-            if not select_ksize or select_ksize == sig.estimator.ksize:
+            if not select_ksize or select_ksize == sig.minhash.ksize:
                 if not select_moltype or \
-                     sig.estimator.is_molecule_type(select_moltype):
+                     sig.minhash.is_molecule_type(select_moltype):
                     yield sig
 
 
@@ -271,7 +293,7 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     if not ignore_md5sum:
         md5sum = sketch['md5sum']
         if md5sum != sig.md5sum():
-            raise Exception('error loading - md5 of estimator does not match')
+            raise Exception('error loading - md5 of minhash does not match')
 
     if name:
         sig.d['name'] = name

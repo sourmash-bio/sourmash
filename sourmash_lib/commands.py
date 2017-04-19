@@ -38,7 +38,7 @@ def search(args):
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.estimator.ksize
+    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query_ksize,
                                              query_moltype)
@@ -176,14 +176,14 @@ def compute(args):
         error("must specify -o with --merge")
         sys.exit(-1)
 
-    def make_estimators():
+    def make_minhashes():
         seed = args.seed
         max_hash = 0
         if args.scaled and args.scaled > 1:
             max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
             max_hash = int(round(max_hash, 0))
 
-        # one estimator for each ksize
+        # one minhash for each ksize
         Elist = []
         for k in ksizes:
             if args.protein:
@@ -242,8 +242,8 @@ def compute(args):
             if args.singleton:
                 siglist = []
                 for n, record in enumerate(screed.open(filename)):
-                    # make estimators for each sequence
-                    Elist = make_estimators()
+                    # make minhashes for each sequence
+                    Elist = make_minhashes()
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
@@ -252,8 +252,8 @@ def compute(args):
                 print('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
             else:
-                # make estimators for the whole file
-                Elist = make_estimators()
+                # make minhashes for the whole file
+                Elist = make_minhashes()
 
                 # consume & calculate signatures
                 print('... reading sequences from', filename,
@@ -284,8 +284,8 @@ def compute(args):
         if args.output:
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
-        # make estimators for the whole file
-        Elist = make_estimators()
+        # make minhashes for the whole file
+        Elist = make_minhashes()
 
         for filename in args.filenames:
             # consume & calculate signatures
@@ -476,7 +476,7 @@ def dump(args):
         s = siglist[0]
 
         fp = open(filename + '.dump.txt', 'w')
-        fp.write(" ".join((map(str, s.estimator.get_hashes()))))
+        fp.write(" ".join((map(str, s.minhash.get_hashes()))))
         fp.close()
 
 
@@ -546,7 +546,7 @@ def sbt_index(args):
 
         # load all matching signatures in this file
         for ss in siglist:
-            ksizes.add(ss.estimator.ksize)
+            ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
 
             leaf = SigLeaf(ss.md5sum(), ss)
@@ -596,7 +596,7 @@ def sbt_search(args):
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.estimator.ksize
+    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query_ksize,
                                              query_moltype)
@@ -718,22 +718,22 @@ def sbt_gather(args):
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.estimator.ksize
+    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query_ksize,
                                              query_moltype)
 
     # verify signature was computed right.
-    if query.estimator.max_hash == 0:
+    if query.minhash.max_hash == 0:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    notify('query signature has max_hash: {}', query.estimator.max_hash)
+    notify('query signature has max_hash: {}', query.minhash.max_hash)
     orig_query = query
-    orig_mins = orig_query.estimator.get_hashes()
+    orig_mins = orig_query.minhash.get_hashes()
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.estimator.max_hash)
+    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
 
     # define a function to do a 'best' search and get only top match.
     def find_best(tree, query):
@@ -741,8 +741,8 @@ def sbt_gather(args):
 
         results = []
         for leaf in tree.find(search_fn, query, 0.0):
-            leaf_e = leaf.data.estimator
-            similarity = query.estimator.similarity_ignore_maxhash(leaf_e)
+            leaf_e = leaf.data.minhash
+            similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
             if similarity > 0.0:
                 results.append((similarity, leaf.data))
 
@@ -762,7 +762,7 @@ def sbt_gather(args):
         return sig.SourmashSignature('', e)
 
     # construct a new query that doesn't have the max_hash attribute set.
-    new_mins = query.estimator.get_hashes()
+    new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins)
 
     sum_found = 0.
@@ -773,17 +773,17 @@ def sbt_gather(args):
             break
 
         # subtract found hashes from search hashes, construct new search
-        query_mins = set(query.estimator.get_hashes())
-        found_mins = best_leaf.estimator.get_hashes()
+        query_mins = set(query.minhash.get_hashes())
+        found_mins = best_leaf.minhash.get_hashes()
 
         # figure out what the resolution of the banding on the genome is,
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
-        if best_leaf.estimator.max_hash:
+        if best_leaf.minhash.max_hash:
             R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.estimator.max_hash)
-        elif best_leaf.estimator.hll:
-            genome_size = best_leaf.estimator.hll.estimate_cardinality()
+              float(best_leaf.minhash.max_hash)
+        elif best_leaf.minhash.hll:
+            genome_size = best_leaf.minhash.hll.estimate_cardinality()
             genome_max_hash = max(found_mins)
             R_genome = float(genome_size) / float(genome_max_hash)
         else:
@@ -815,7 +815,7 @@ def sbt_gather(args):
         f_orig_query = len(intersect_orig_mins) / float(genome_n_mins)
 
         # calculate fractions wrt second denominator - metagenome size
-        query_n_mins = len(orig_query.estimator.get_hashes())
+        query_n_mins = len(orig_query.minhash.get_hashes())
         f_query = len(intersect_mins) / float(query_n_mins)
 
         # print interim result & save in a list for later use
@@ -830,7 +830,7 @@ def sbt_gather(args):
     # basic reporting
     notify('found {} matches total', len(found))
     notify('the recovered matches hit {:.1f}% of the query',
-           100. * sum_found / len(orig_query.estimator.get_hashes()))
+           100. * sum_found / len(orig_query.minhash.get_hashes()))
     notify('')
 
     if not found:
@@ -858,8 +858,8 @@ def sbt_gather(args):
         w.writeheader()
         for (frac, leaf_sketch, genome_fraction) in found:
             cardinality = 0
-            if leaf_sketch.estimator.hll:
-                cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+            if leaf_sketch.minhash.hll:
+                cardinality = leaf_sketch.minhash.hll.estimate_cardinality()
             w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
                             sketch_kmers=cardinality,
                             genome_fraction=genome_fraction))

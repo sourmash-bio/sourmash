@@ -1,8 +1,10 @@
 from __future__ import print_function, unicode_literals
 
+import pytest
+
 import sourmash_lib
 from sourmash_lib.signature import SourmashSignature, save_signatures, \
-    load_signatures
+    load_signatures, load_one_signature
 
 
 def test_roundtrip(track_abundance):
@@ -12,21 +14,21 @@ def test_roundtrip(track_abundance):
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
-    e2 = sig2.estimator
+    e2 = sig2.minhash
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
 
 
 def test_roundtrip_empty(track_abundance):
-    # edge case, but: empty estimator? :)
+    # edge case, but: empty minhash? :)
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
 
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
-    e2 = sig2.estimator
+    e2 = sig2.minhash
 
     assert sig.similarity(sig2) == 0
     assert sig2.similarity(sig) == 0
@@ -40,7 +42,7 @@ def test_roundtrip_max_hash(track_abundance):
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
-    e2 = sig2.estimator
+    e2 = sig2.minhash
 
     assert e.max_hash == e2.max_hash
 
@@ -56,7 +58,7 @@ def test_roundtrip_seed(track_abundance):
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
-    e2 = sig2.estimator
+    e2 = sig2.minhash
 
     assert e.seed == e2.seed
 
@@ -72,7 +74,7 @@ def test_roundtrip_empty_email(track_abundance):
     print(s)
     siglist = list(load_signatures(s))
     sig2 = siglist[0]
-    e2 = sig2.estimator
+    e2 = sig2.minhash
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
@@ -127,3 +129,33 @@ def test_save_load_multisig(track_abundance):
     assert sig1 in y                      # order not guaranteed, note.
     assert sig2 in y
     assert sig1 != sig2
+
+
+def test_load_one_fail_nosig(track_abundance):
+    x = save_signatures([])
+    print((x,))
+    with pytest.raises(ValueError):
+        y = load_one_signature(x)
+
+
+def test_load_one_succeed(track_abundance):
+    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    sig1 = SourmashSignature('titus@idyll.org', e1)
+
+    x = save_signatures([sig1])
+
+    y = load_one_signature(x)
+    assert sig1 == y
+
+
+def test_load_one_fail_multisig(track_abundance):
+    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    sig1 = SourmashSignature('titus@idyll.org', e1)
+
+    e2 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    sig2 = SourmashSignature('titus2@idyll.org', e2)
+
+    x = save_signatures([sig1, sig2])
+
+    with pytest.raises(ValueError):
+        y = load_one_signature(x)

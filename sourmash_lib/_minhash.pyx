@@ -145,6 +145,12 @@ cdef class MinHash(object):
             return self.__getstate__() == other.__getstate__()
         raise Exception("undefined comparison")
 
+    def copy_and_clear(self):
+        a = MinHash(deref(self._this).num, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, deref(self._this).max_hash)
+        return a
+
     def add_sequence(self, sequence, bool force=False):
         deref(self._this).add_sequence(to_bytes(sequence), force)
 
@@ -175,6 +181,11 @@ cdef class MinHash(object):
 
     def get_hashes(self):
         return self.get_mins()
+
+    def subtract_mins(self, other):
+        a = set(self.get_mins())
+        b = set(other.get_mins())
+        return a - b
 
     @property
     def seed(self):
@@ -229,8 +240,31 @@ cdef class MinHash(object):
 
         a = MinHash(new_num, deref(self._this).ksize,
                     deref(self._this).is_protein, self.track_abundance,
-                    deref(self._this).seed, deref(self._this).max_hash)
-        a.merge(self)
+                    deref(self._this).seed, 0)
+        if self.track_abundance:
+            a.set_abundances(self.get_mins(with_abundance=True))
+        else:
+            a.add_many(self.get_mins())
+
+        return a
+
+    def downsample_scaled(self, new_num):
+        old_scaled = int(get_minhash_max_hash() / self.max_hash)
+
+        if old_scaled > new_num:
+            raise ValueError('new scaled is lower than current sample scaled')
+
+        new_max_hash = get_minhash_max_hash() / float(new_num)
+        new_max_hash = int(round(new_max_hash, 0))
+
+        a = MinHash(0, deref(self._this).ksize,
+                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).seed, new_max_hash)
+        if self.track_abundance:
+            a.set_abundances(self.get_mins(with_abundance=True))
+        else:
+            a.add_many(self.get_mins())
+
         return a
 
     def compare(self, MinHash other):
