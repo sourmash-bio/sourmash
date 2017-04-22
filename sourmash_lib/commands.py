@@ -812,7 +812,7 @@ def sbt_gather(args):
         # calculate fractions wrt first denominator - genome size
         genome_n_mins = len(found_mins)
         f_genome = len(intersect_mins) / float(genome_n_mins)
-        f_orig_query = len(intersect_orig_mins) / float(genome_n_mins)
+        f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.minhash.get_hashes())
@@ -820,13 +820,13 @@ def sbt_gather(args):
 
         if not len(found):                # first result? print header.
             notify("")
-            notify("(column 1: fraction of query / " + \
-                    "column 2: fraction of discovered genome)")
+            notify("(column 1: percent of query sig / " + \
+                    "column 2: percent of discovered genome)")
 
         # print interim result & save in a list for later use
-        notify('found: {:.2f} {:.3f} {}', f_genome, f_orig_query,
-               best_leaf.name())
-        found.append((f_genome, best_leaf, f_query))
+        notify('found: {:-5.1f}   {:-5.1f}      {}', f_orig_query*100,
+               f_genome*100, best_leaf.name()[:40])
+        found.append((f_orig_query, best_leaf, f_genome))
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
@@ -834,8 +834,9 @@ def sbt_gather(args):
 
     # basic reporting
     notify('\nfound {} matches total;', len(found))
-    notify('the recovered matches hit {:.1f}% of the query',
-           100. * sum_found / len(orig_query.minhash.get_hashes()))
+
+    sum_found /= len(orig_query.minhash.get_hashes())
+    notify('the recovered matches hit {:.1f}% of the query', sum_found * 100)
     notify('')
 
     if not found:
@@ -845,10 +846,13 @@ def sbt_gather(args):
     found.sort(key=lambda x: x[0])
     found.reverse()
 
-    notify('Final composition (sorted by fraction of original query):\n')
-    notify('f_orig_query f_found_genome')
-    for (f_genome, leaf, f_orig_query) in found:
-        notify('{:.2f} {:.2f} {}', f_orig_query, f_genome, leaf.name())
+    notify('Final composition (sorted by percent of original query):\n')
+    notify('p_query p_genome')
+
+    for (f_orig_query, leaf, f_genome) in found:
+        notify('{:-5.1f}   {:-5.1f}   {}', f_orig_query*100, f_genome*100,
+               leaf.name())
+    print('{:-5.1f}%          (percent of query identified)'.format(sum_found*100))
 
     if args.output:
         fieldnames = ['f_orig_query', 'f_found_genome', 'name']

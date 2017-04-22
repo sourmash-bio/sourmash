@@ -1014,7 +1014,7 @@ def test_sbt_gather():
         print(out)
         print(err)
 
-        assert 'found: 1.00 1.000 ' in err
+        assert 'found: 100.0   100.0' in err
 
 
 def test_sbt_gather_metagenome():
