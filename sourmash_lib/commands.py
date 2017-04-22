@@ -362,6 +362,8 @@ def compare(args):
 
 def plot(args):
     "Produce a clustering and plot."
+    import matplotlib as mpl
+    mpl.use('Agg')
     import numpy
     import scipy
     import pylab
