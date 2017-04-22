@@ -224,8 +224,7 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
 
     if args.track_abundance:
-        print('Tracking abundance of input k-mers.',
-              file=sys.stderr)
+        notify('Tracking abundance of input k-mers.')
 
     if not args.merge:
         if args.output:
@@ -235,8 +234,7 @@ def compute(args):
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
-                print('skipping', filename, '- already done',
-                      file=sys.stderr)
+                notify('skipping', filename, '- already done')
                 continue
 
             if args.singleton:
@@ -249,20 +247,19 @@ def compute(args):
 
                     siglist += build_siglist(args.email, Elist, filename,
                                              name=record.name)
-                print('calculated {} signatures for {} sequences in {}'.\
+                notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
 
                 # consume & calculate signatures
-                print('... reading sequences from', filename,
-                      file=sys.stderr)
+                notify('... reading sequences from', filename)
                 name = None
                 for n, record in enumerate(screed.open(filename)):
                     if n % 10000 == 0:
                         if n:
-                            print('...', filename, n, file=sys.stderr)
+                            notify('...', filename, n)
                         elif args.name_from_first:
                             name = record.name
 
@@ -275,7 +272,7 @@ def compute(args):
                     siglist += sigs
                 else:
                     siglist = sigs
-                print('calculated {} signatures for {} sequences in {}'.\
+                notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
 
             if not args.output:
@@ -289,18 +286,17 @@ def compute(args):
 
         for filename in args.filenames:
             # consume & calculate signatures
-            print('... reading sequences from', filename,
-                  file=sys.stderr)
+            notify('... reading sequences from', filename)
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
-                    print('...', filename, n, file=sys.stderr)
+                    notify('...', filename, n)
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
         siglist = build_siglist(args.email, Elist, filename,
                                 name=args.merge)
-        print('calculated {} signatures for {} sequences taken from {}'.\
+        notify('calculated {} signatures for {} sequences taken from {}'.\
                format(len(siglist), n + 1, " ".join(args.filenames)))
         # at end, save!
         save_siglist(siglist, args.output)
@@ -321,7 +317,7 @@ def compare(args):
     # load in the various signatures
     siglist = []
     for filename in args.signatures:
-        print('loading', filename, file=sys.stderr)
+        notify('loading', filename)
         loaded = sig.load_signatures(filename, select_ksize=args.ksize)
         loaded = list(loaded)
         if not loaded:
@@ -728,7 +724,6 @@ def sbt_gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    notify('query signature has max_hash: {}', query.minhash.max_hash)
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
 
@@ -852,7 +847,7 @@ def sbt_gather(args):
     for (f_orig_query, leaf, f_genome) in found:
         notify('{:-5.1f}   {:-5.1f}   {}', f_orig_query*100, f_genome*100,
                leaf.name())
-    print('{:-5.1f}%          (percent of query identified)'.format(sum_found*100))
+    notify('{:-5.1f}%          (percent of query identified)'.format(sum_found*100))
 
     if args.output:
         fieldnames = ['f_orig_query', 'f_found_genome', 'name']
