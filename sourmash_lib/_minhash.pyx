@@ -213,7 +213,7 @@ cdef class MinHash(object):
         if mm == 0:
             if self.hll:
                 genome_size = self.hll.estimate_cardinality()
-                genome_max_hash = max(self.get_mins())
+                mm = max(self.get_mins())
 
         return mm
 
