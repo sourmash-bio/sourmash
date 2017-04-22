@@ -238,7 +238,7 @@ def compute(args):
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
-                notify('skipping', filename, '- already done')
+                notify('skipping {} - already done', filename)
                 continue
 
             if args.singleton:
@@ -258,12 +258,12 @@ def compute(args):
                 Elist = make_minhashes()
 
                 # consume & calculate signatures
-                notify('... reading sequences from', filename)
+                notify('... reading sequences from {}', filename)
                 name = None
                 for n, record in enumerate(screed.open(filename)):
                     if n % 10000 == 0:
                         if n:
-                            notify('...', filename, n)
+                            notify('...{} {}', filename, n)
                         elif args.name_from_first:
                             name = record.name
 
@@ -321,7 +321,7 @@ def compare(args):
     # load in the various signatures
     siglist = []
     for filename in args.signatures:
-        notify('loading', filename)
+        notify('loading {}', filename)
         loaded = sig.load_signatures(filename, select_ksize=args.ksize)
         loaded = list(loaded)
         if not loaded:
