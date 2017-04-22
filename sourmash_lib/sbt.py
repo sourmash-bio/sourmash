@@ -451,7 +451,7 @@ class Node(object):
     def save(self, path):
         # We need to do this tempfile dance because khmer only load
         # data from files.
-        with NamedTemporaryFile() as f:
+        with NamedTemporaryFile(suffix=".gz") as f:
             self.data.save(f.name)
             f.file.flush()
             f.file.seek(0)
@@ -466,7 +466,7 @@ class Node(object):
                 data = self.storage.load(self._path)
                 # We need to do this tempfile dance because khmer only load
                 # data from files.
-                with NamedTemporaryFile() as f:
+                with NamedTemporaryFile(suffix=".gz") as f:
                     f.write(data)
                     f.file.flush()
                     self._data = khmer.load_nodegraph(f.name)
@@ -513,7 +513,7 @@ class Leaf(object):
             data = self.storage.load(self._path)
             # We need to do this tempfile dance because khmer only load
             # data from files.
-            with NamedTemporaryFile() as f:
+            with NamedTemporaryFile(suffix=".gz") as f:
                 f.write(data)
                 f.file.flush()
                 self._data = khmer.load_nodegraph(f.name)
@@ -526,7 +526,7 @@ class Leaf(object):
     def save(self, path):
         # We need to do this tempfile dance because khmer only load
         # data from files.
-        with NamedTemporaryFile() as f:
+        with NamedTemporaryFile(suffix=".gz") as f:
             self.data.save(f.name)
             f.file.flush()
             f.file.seek(0)

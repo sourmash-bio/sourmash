@@ -518,6 +518,8 @@ def sbt_index(args):
     parser.add_argument('signatures', nargs='+',
                         help='signatures to load into SBT')
     parser.add_argument('-k', '--ksize', type=int, default=None)
+    parser.add_argument('-d', '--n_children', type=int, default=2,
+                        help='Number of children for internal nodes')
     parser.add_argument('--traverse-directory', action='store_true')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5)
 
@@ -527,7 +529,7 @@ def sbt_index(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     factory = GraphFactory(1, args.bf_size, 4)
-    tree = SBT(factory)
+    tree = SBT(factory, d=args.n_children)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
