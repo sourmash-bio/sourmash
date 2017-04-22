@@ -12,10 +12,10 @@ def load_sbt_index(filename):
     return SBT.load(filename, leaf_loader=SigLeaf.load)
 
 
-def create_sbt_index(bloom_filter_size=1e5):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
-    tree = SBT(factory)
+    tree = SBT(factory, d=n_children)
     return tree
 
 
