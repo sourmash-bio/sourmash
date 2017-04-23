@@ -339,7 +339,8 @@ def compare(args):
         for j, E2 in enumerate(siglist):
             D[i][j] = E.similarity(E2, args.ignore_abundance)
 
-        print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
+        if len(siglist) < 30:
+            print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
         labeltext.append(E.name())
 
     notify('min similarity in matrix: {}', numpy.min(D))
