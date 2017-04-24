@@ -708,6 +708,7 @@ def sbt_gather(args):
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+    parser.add_argument('--threshold-bp', type=float, default=5e4)
 
     sourmash_args.add_moltype_args(parser)
 
@@ -764,6 +765,19 @@ def sbt_gather(args):
         e.add_many(mins)
         return sig.SourmashSignature('', e)
 
+    # xxx
+    def format_bp(bp):
+        bp = float(bp)
+        if bp < 500:
+            return '{:d} bp '.format(bp)
+        elif bp <= 500e3:
+            return '{:.1f} kbp'.format(round(bp / 1e3, 1))
+        elif bp < 500e6:
+            return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
+        elif bp < 500e9:
+            return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
+        return '???'
+
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins)
@@ -801,11 +815,12 @@ def sbt_gather(args):
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
+        intersect_bp = R_comparison * len(intersect_orig_mins)
         sum_found += len(intersect_mins)
 
-        if len(intersect_mins) < 5:   # hard cutoff for now
-            notify('found only {} hashes in common.', len(intersect_mins))
-            notify('this is below a sane threshold => exiting.')
+        if intersect_bp < args.threshold_bp:   # hard cutoff for now
+            notify('found less than {} in common. => exiting',
+                   format_bp(intersect_bp))
             break
 
         # calculate fractions wrt first denominator - genome size
@@ -819,13 +834,14 @@ def sbt_gather(args):
 
         if not len(found):                # first result? print header.
             notify("")
-            notify("(column 1: percent of query sig / " + \
-                    "column 2: percent of discovered genome)")
+            notify("overlap    p_query p_genome")
+            notify("-------    ------- --------")
 
         # print interim result & save in a list for later use
-        notify('found: {:-5.1f}   {:-5.1f}      {}', f_orig_query*100,
+        notify('{:8s} {:-5.1f}%    {:-5.1f}%      {}',
+               format_bp(intersect_bp), f_orig_query*100,
                f_genome*100, best_leaf.name()[:40])
-        found.append((f_orig_query, best_leaf, f_genome))
+        found.append((intersect_bp, f_orig_query, best_leaf, f_genome))
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
@@ -841,30 +857,19 @@ def sbt_gather(args):
     if not found:
         sys.exit(0)
 
-    # sort by fraction of genome (first key) - change this?
-    found.sort(key=lambda x: x[0])
-    found.reverse()
-
-    notify('Final composition (sorted by percent of original query):\n')
-    notify('p_query p_genome')
-
-    for (f_orig_query, leaf, f_genome) in found:
-        notify('{:-5.1f}   {:-5.1f}   {}', f_orig_query*100, f_genome*100,
-               leaf.name())
-    notify('{:-5.1f}%          (percent of query identified)'.format(sum_found*100))
-
     if args.output:
-        fieldnames = ['f_orig_query', 'f_found_genome', 'name']
+        fieldnames = ['intersect_bp', 'f_orig_query', 'f_found_genome', 'name']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
-        for (f_genome, leaf, f_orig_query) in found:
-            w.writerow(dict(f_orig_query=f_orig_query, name=leaf.name(),
+        for (intersect_bp, f_genome, leaf, f_orig_query) in found:
+            w.writerow(dict(intersect_bp=intersect_bp,
+                            f_orig_query=f_orig_query, name=leaf.name(),
                             f_found_genome=f_genome,))
 
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ ss for (_, ss, _) in found ],
+        sig.save_signatures([ ss for (_, _, ss, _) in found ],
                               args.save_matches)
 
 

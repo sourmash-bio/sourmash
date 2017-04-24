@@ -1008,13 +1008,13 @@ def test_sbt_gather():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
                                             'query.fa.sig', '-o',
-                                            'foo.csv'],
+                                            'foo.csv', '--threshold-bp=1'],
                                            in_directory=location)
 
         print(out)
         print(err)
 
-        assert 'found: 100.0   100.0' in err
+        assert '0.9 kbp  100.0%    100.0%' in err
 
 
 def test_sbt_gather_metagenome():
@@ -1040,7 +1040,7 @@ def test_sbt_gather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in err
+        assert 'found 12 matches total' in err
         assert 'the recovered matches hit 100.0% of the query' in err
 
 
@@ -1070,7 +1070,7 @@ def test_sbt_gather_save_matches():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in err
+        assert 'found 12 matches total' in err
         assert 'the recovered matches hit 100.0% of the query' in err
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
