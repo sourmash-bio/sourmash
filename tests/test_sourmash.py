@@ -1017,6 +1017,41 @@ def test_sbt_gather():
         assert 'found: 1.00 1.00 ' in err
 
 
+def test_sbt_gather_file_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'zzz',
+                                            'query.fa.sig',
+                                            '-o', 'foo.out'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'foo.out')) as f:
+            output = f.read()
+            print(output)
+            assert '1.00 1.00 ' in output
+
+
 def test_sbt_gather_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
