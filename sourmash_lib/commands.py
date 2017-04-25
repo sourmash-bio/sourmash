@@ -847,8 +847,8 @@ def sbt_gather(args):
     if args.output:
         print('Composition:', file=args.output)
         for (frac, leaf_sketch, genome_fraction) in found:
-            print('{:.2f} {:.f} {}'.format(frac, genome_fraction,
-                                        leaf_sketch.name()),
+            print('{:.2f} {:.2f} {}'.format(frac, genome_fraction,
+                                            leaf_sketch.name()),
                   file=args.output)
 
     if args.csv:
