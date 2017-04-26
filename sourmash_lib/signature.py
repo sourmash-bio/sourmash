@@ -101,13 +101,25 @@ class SourmashSignature(object):
         return self.d.get('email'), self.d.get('name'), \
             self.d.get('filename'), sketch
 
-    def similarity(self, other, ignore_abundance=False):
+    def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."
-        return self.minhash.similarity(other.minhash, ignore_abundance)
+        try:
+            return self.minhash.similarity(other.minhash, ignore_abundance)
+        except Exception as e:
+            if 'mismatch in max_hash' in str(e) and downsample:
+                xx = self.minhash.downsample_max_hash(other.minhash)
+                yy = other.minhash.downsample_max_hash(self.minhash)
+                return xx.similarity(yy, ignore_abundance)
+            else:
+                raise
 
     def jaccard(self, other):
         "Compute Jaccard similarity with the other MinHash signature."
         return self.minhash.similarity(other.minhash, True)
+
+    def containment(self, other):
+        "Compute containment by the other signature. Note: ignores abundance."
+        return self.minhash.containment(other.minhash)
 
 
 def _guess_open(filename):

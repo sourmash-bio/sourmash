@@ -27,6 +27,7 @@ def search(args):
     parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
     parser.add_argument('-f', '--force', action='store_true')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+    parser.add_argument('--containment', action='store_true')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -62,7 +63,10 @@ def search(args):
     # compute query x db
     distances = []
     for (x, filename) in against:
-        distance = query.similarity(x)
+        if args.containment:
+            distance = query.containment(x)
+        else:
+            distance = query.similarity(x)
         if distance >= args.threshold:
             distances.append((distance, x, filename))
 
@@ -602,7 +606,8 @@ def sbt_search(args):
 
     results = []
     for leaf in tree.find(search_fn, query, args.threshold):
-        results.append((query.similarity(leaf.data), leaf.data))
+        results.append((query.similarity(leaf.data, downsample=True),
+                        leaf.data))
         #results.append((leaf.data.similarity(ss), leaf.data))
 
     results.sort(key=lambda x: -x[0])   # reverse sort on similarity
@@ -791,21 +796,17 @@ def sbt_gather(args):
         # figure out what the resolution of the banding on the genome is,
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
-        if best_leaf.minhash.max_hash:
-            R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.minhash.max_hash)
-        elif best_leaf.minhash.hll:
-            genome_size = best_leaf.minhash.hll.estimate_cardinality()
-            genome_max_hash = max(found_mins)
-            R_genome = float(genome_size) / float(genome_max_hash)
-        else:
+        if not best_leaf.minhash.max_hash:
             error('Best hash match in sbt_gather has no cardinality')
             error('Please prepare database of sequences with --scaled')
             sys.exit(-1)
 
+        R_genome = sourmash_lib.MAX_HASH / float(best_leaf.minhash.max_hash)
+
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
+        # CTB: these could probably be replaced by minhash.downsample_scaled.
         new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
