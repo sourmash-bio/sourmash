@@ -764,7 +764,7 @@ def sbt_gather(args):
     def format_bp(bp):
         bp = float(bp)
         if bp < 500:
-            return '{:d} bp '.format(bp)
+            return '{:.0f} bp '.format(bp)
         elif bp <= 500e3:
             return '{:.1f} kbp'.format(round(bp / 1e3, 1))
         elif bp < 500e6:
@@ -833,7 +833,7 @@ def sbt_gather(args):
 
         if not len(found):                # first result? print header.
             notify("")
-            notify("overlap    p_query p_genome")
+            notify("overlap    p_query p_match ")
             notify("-------    ------- --------")
 
         # print interim result & save in a list for later use
