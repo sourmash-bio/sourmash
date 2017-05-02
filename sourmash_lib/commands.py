@@ -609,11 +609,16 @@ def sbt_search(args):
     for leaf in tree.find(search_fn, query, args.threshold):
         results.append((query.similarity(leaf.data, downsample=True),
                         leaf.data))
-        #results.append((leaf.data.similarity(ss), leaf.data))
 
     results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+
+    if args.best_only:
+        notify("(truncated search because of --best-only; only trust top result")
+
+    notify("similarity   match")
+    notify("----------   -----")
     for (similarity, query) in results:
-        print('{:.2f} {}'.format(similarity, query.name()))
+        print('{:2.1f}%        {}'.format(similarity*100, query.name()))
 
     if args.save_matches:
         outname = args.save_matches.name
