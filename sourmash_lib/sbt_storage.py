@@ -1,17 +1,27 @@
 from __future__ import print_function, unicode_literals, division
 
 from io import BytesIO
+import operator
 import os
 import tarfile
+
+from cachetools import LFUCache, cachedmethod
+
+
+DEFAULT_CACHESIZE = 256
 
 
 class Storage(object):
 
-    def save(self, path, content):
-        raise NotImplemented
+    def __init__(self, cachesize=DEFAULT_CACHESIZE):
+        self._cache = LFUCache(maxsize=cachesize)
 
+    def save(self, path, content):
+        raise NotImplementedError
+
+    @cachedmethod(operator.attrgetter('_cache'))
     def load(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def init_args(self):
         return {}
@@ -19,13 +29,15 @@ class Storage(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, typ, value, traceback):
         pass
 
 
 class FSStorage(Storage):
 
-    def __init__(self, path):
+    def __init__(self, path, cachesize=DEFAULT_CACHESIZE):
+        super(FSStorage, self).__init__(cachesize=cachesize)
+
         self.path = path
         if not os.path.exists(path):
             os.makedirs(path)
@@ -39,6 +51,7 @@ class FSStorage(Storage):
 
         return path
 
+    @cachedmethod(operator.attrgetter('_cache'))
     def load(self, path):
         out = BytesIO()
         with open(os.path.join(self.path, path), 'rb') as f:
@@ -49,7 +62,9 @@ class FSStorage(Storage):
 
 class TarStorage(Storage):
 
-    def __init__(self, path=None):
+    def __init__(self, path=None, cachesize=DEFAULT_CACHESIZE):
+        super(TarStorage, self).__init__(cachesize=cachesize)
+
         # TODO: leave it open, or close/open every time?
 
         if path is None:
@@ -76,6 +91,7 @@ class TarStorage(Storage):
 
         return path
 
+    @cachedmethod(operator.attrgetter('_cache'))
     def load(self, path):
         content = self.tarfile.getmember(path)
         f = self.tarfile.extractfile(content)
@@ -90,7 +106,9 @@ class TarStorage(Storage):
 
 class IPFSStorage(Storage):
 
-    def __init__(self, **kwargs):
+    def __init__(self, cachesize=DEFAULT_CACHESIZE, **kwargs):
+        super(IPFSStorage, self).__init__(cachesize=cachesize)
+
         import ipfsapi
         self.ipfs_args = kwargs
         self.api = ipfsapi.connect(**self.ipfs_args)
@@ -105,6 +123,7 @@ class IPFSStorage(Storage):
         # Check this call using the files API for an example.
         # api.files_write("/test/file", io.BytesIO(b"hi"), create=True)
 
+    @cachedmethod(operator.attrgetter('_cache'))
     def load(self, path):
         return self.api.cat(path)
 

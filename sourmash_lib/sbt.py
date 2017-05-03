@@ -176,6 +176,9 @@ class SBT(object):
     def save(self, tag, storage=None):
         version = 3
 
+        if not tag.endswith('.sbt.json'):
+            tag + '.sbt.json'
+
         fn = tag + '.sbt.json'
 
         if storage is None:
