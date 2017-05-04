@@ -746,6 +746,13 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     assert len(b.get_mins()) == 0
 
 
+def test_scaled_property(track_abundance):
+    scaled = 10000
+    a = MinHash(20, 10, track_abundance=track_abundance,
+                max_hash=round(2**64 / scaled))
+    assert a.scaled == scaled
+
+
 def test_mh_subtract(track_abundance):
     # test merging two identically configured minhashes
     a = MinHash(20, 10, track_abundance=track_abundance)

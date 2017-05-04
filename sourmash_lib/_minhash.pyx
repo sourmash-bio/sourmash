@@ -196,6 +196,10 @@ cdef class MinHash(object):
         return deref(self._this).num
 
     @property
+    def scaled(self):
+        return int(get_minhash_max_hash() / self.max_hash)
+
+    @property
     def is_protein(self):
         return deref(self._this).is_protein
 
