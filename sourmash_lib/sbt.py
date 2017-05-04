@@ -176,11 +176,12 @@ class SBT(object):
     def save(self, tag, storage=None):
         version = 3
 
-        fn = tag + '.sbt.json'
+        tag = tag.rstrip('.sbt.json')
+        fn = os.path.abspath(tag + '.sbt.json')
 
         if storage is None:
             # default storage
-            dirname = os.path.abspath(os.path.dirname(fn))
+            dirname = os.path.join(os.path.dirname(fn), '.sbt.{}'.format(os.path.basename(tag)))
             storage = FSStorage(dirname)
 
         backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
@@ -206,6 +207,9 @@ class SBT(object):
             if isinstance(node, Leaf):
                 data['metadata'] = node.metadata
 
+            # trigger data loading before saving to the new place
+            node.data
+
             node.storage = storage
 
             data['filename'] = node.save(data['filename'])
@@ -219,8 +223,8 @@ class SBT(object):
 
     @classmethod
     def load(cls, sbt_name, leaf_loader=None, storage=None):
-        dirname = os.path.dirname(sbt_name)
-        sbt_name = os.path.basename(sbt_name)
+        dirname = os.path.dirname(os.path.abspath(sbt_name))
+        sbt_name = os.path.basename(sbt_name).rstrip('.sbt.json')
 
         loaders = {
             1: cls._load_v1,
@@ -239,10 +243,10 @@ class SBT(object):
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
-        sbt_fn = sbt_name
+        sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith('.sbt.json'):
-            sbt_fn = sbt_fn + '.sbt.json'
-        with open(os.path.join(dirname, sbt_fn)) as fp:
+            sbt_fn += '.sbt.json'
+        with open(sbt_fn) as fp:
             jnodes = json.load(fp)
 
         version = 1
@@ -250,7 +254,7 @@ class SBT(object):
             version = jnodes['version']
 
         if storage is None:
-            storage = FSStorage('.')
+            storage = FSStorage(os.path.join(dirname, '.sbt.{}'.format(sbt_name)))
 
         return loaders[version](jnodes, leaf_loader, dirname, storage)
 
