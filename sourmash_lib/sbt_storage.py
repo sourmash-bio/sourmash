@@ -142,7 +142,9 @@ class IPFSStorage(Storage):
 
 class RedisStorage(Storage):
 
-    def __init__(self, **kwargs):
+    def __init__(self, cachesize=DEFAULT_CACHESIZE, **kwargs):
+        super(RedisStorage, self).__init__(cachesize=cachesize)
+
         import redis
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
@@ -151,6 +153,7 @@ class RedisStorage(Storage):
         self.conn.set(path, content)
         return path
 
+    @cachedmethod(operator.attrgetter('_cache'))
     def load(self, path):
         return self.conn.get(path)
 

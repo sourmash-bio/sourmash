@@ -34,7 +34,11 @@ class SigLeaf(Leaf):
             buf = BytesIO(self.storage.load(self._path))
             with TextIOWrapper(buf) as data:
                 it = signature.load_signatures(data)
-                self._data, = list(it)              # should only be one signature
+                data, = list(it)              # should only be one signature
+                if self._cache_results:
+                    self._data = data
+                else:
+                    return data
         return self._data
 
     @data.setter

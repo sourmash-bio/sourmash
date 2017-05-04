@@ -221,7 +221,7 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, sbt_name, leaf_loader=None, storage=None):
+    def load(cls, sbt_name, leaf_loader=None, storage=None, cache_results=True):
         dirname = os.path.dirname(sbt_name)
         sbt_name = os.path.basename(sbt_name)
 
@@ -255,10 +255,10 @@ class SBT(object):
         if storage is None:
             storage = FSStorage('.')
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage)
+        return loaders[version](jnodes, leaf_loader, dirname, storage, cache_results)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, cache_results):
 
         if jnodes[0] is None:
             # TODO error!
@@ -278,9 +278,9 @@ class SBT(object):
 
             if 'internal' in jnode['name']:
                 jnode['factory'] = factory
-                sbt_node = Node.load(jnode, storage)
+                sbt_node = Node.load(jnode, storage, cache_results=cache_results)
             else:
-                sbt_node = leaf_loader(jnode, storage)
+                sbt_node = leaf_loader(jnode, storage, cache_results=cache_results)
 
             sbt_nodes[i] = sbt_node
 
@@ -290,7 +290,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, cache_results):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -310,9 +310,9 @@ class SBT(object):
 
             if 'internal' in node['name']:
                 node['factory'] = factory
-                sbt_node = Node.load(node, storage)
+                sbt_node = Node.load(node, storage, cache_results=cache_results)
             else:
-                sbt_node = leaf_loader(node, storage)
+                sbt_node = leaf_loader(node, storage, cache_results=cache_results)
 
             sbt_nodes[k] = sbt_node
 
@@ -322,7 +322,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, cache_results):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -346,9 +346,9 @@ class SBT(object):
 
             if 'internal' in node['name']:
                 node['factory'] = factory
-                sbt_node = Node.load(node, storage)
+                sbt_node = Node.load(node, storage, cache_results=cache_results)
             else:
-                sbt_node = leaf_loader(node, storage)
+                sbt_node = leaf_loader(node, storage, cache_results=cache_results)
 
             sbt_nodes[k] = sbt_node
 
@@ -439,12 +439,15 @@ class SBT(object):
 class Node(object):
     "Internal node of SBT."
 
-    def __init__(self, factory, name=None, path=None, storage=None):
+    def __init__(self, factory, name=None, path=None, storage=None, cache_results=True):
         self.name = name
         self.storage = storage
         self._factory = factory
+
         self._data = None
         self._path = path
+
+        self._cache_results = cache_results
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
@@ -472,7 +475,12 @@ class Node(object):
                 with NamedTemporaryFile(suffix=".gz") as f:
                     f.write(data)
                     f.file.flush()
-                    self._data = khmer.load_nodegraph(f.name)
+                    data = khmer.load_nodegraph(f.name)
+                    if self._cache_results:
+                        self._data = data
+                    else:
+                        return data
+
         return self._data
 
     @data.setter
@@ -480,11 +488,12 @@ class Node(object):
         self._data = new_data
 
     @staticmethod
-    def load(info, storage=None):
+    def load(info, storage=None, cache_results=True):
         new_node = Node(info['factory'],
                         name=info['name'],
                         path=info['filename'],
-                        storage=storage)
+                        storage=storage,
+                        cache_results=cache_results)
         return new_node
 
     def update(self, parent):
@@ -492,7 +501,8 @@ class Node(object):
 
 
 class Leaf(object):
-    def __init__(self, metadata, data=None, name=None, storage=None, path=None):
+    def __init__(self, metadata, data=None, name=None, storage=None,
+                 path=None, cache_results=True):
         self.metadata = metadata
 
         if name is None:
@@ -503,6 +513,8 @@ class Leaf(object):
 
         self._data = data
         self._path = path
+
+        self._cache_results = cache_results
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
@@ -519,7 +531,11 @@ class Leaf(object):
             with NamedTemporaryFile(suffix=".gz") as f:
                 f.write(data)
                 f.file.flush()
-                self._data = khmer.load_nodegraph(f.name)
+                data = khmer.load_nodegraph(f.name)
+                if self._cache_results:
+                    self._data = data
+                else:
+                    return data
         return self._data
 
     @data.setter
@@ -539,11 +555,12 @@ class Leaf(object):
         parent.data.update(self.data)
 
     @classmethod
-    def load(cls, info, storage=None):
+    def load(cls, info, storage=None, cache_results=True):
         return cls(info['metadata'],
                    name=info['name'],
                    path=info['filename'],
-                   storage=storage)
+                   storage=storage,
+                   cache_results=cache_results)
 
 
 def filter_distance( filter_a, filter_b, n=1000 ) :
