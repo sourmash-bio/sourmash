@@ -64,7 +64,7 @@ def search(args):
     distances = []
     for (x, filename) in against:
         if args.containment:
-            distance = query.containment(x)
+            distance = query.contained_by(x)
         else:
             distance = query.similarity(x)
         if distance >= args.threshold:
