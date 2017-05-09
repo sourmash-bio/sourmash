@@ -67,6 +67,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
 class SearchMinHashesFindBest(object):
     def __init__(self, downsample=True):
         self.best_match = 0.
+        self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
@@ -75,7 +76,7 @@ class SearchMinHashesFindBest(object):
             try:
                 matches = node.data.minhash.count_common(sig.minhash)
             except Exception as e:
-                if 'mismatch in max_hash' in str(e) and downsample:
+                if 'mismatch in max_hash' in str(e) and self.downsample:
                     xx = sig.minhash.downsample_max_hash(node.data.minhash)
                     yy = node.data.minhash.downsample_max_hash(sig.minhash)
 
