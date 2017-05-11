@@ -664,7 +664,7 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches; showing 3:' in err
+        assert '1 matches:' in err
         assert 'short.fa \t 1.000 \t xxx.sig' in out
 
 
