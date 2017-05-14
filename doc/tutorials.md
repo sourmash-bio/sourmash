@@ -29,7 +29,7 @@ pip install -U Cython
 pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn
 
 pip install https://github.com/dib-lab/khmer/archive/master.zip
-pip install https://github.com/dib-lab/sourmash/archive/master.zip
+pip install https://github.com/dib-lab/sourmash/archive/spacegraphcats.zip
 
 ```
 
@@ -77,8 +77,8 @@ and you should see:
 loaded query: /home/ubuntu/data/ecoli_ref-5m... (k=31, DNA)
 loading db of signatures from 1 files
 loaded 1 signatures total.
-1 matches; showing 3:
-         /home/ubuntu/assembly/ecoli/final.contigs.fa    0.466   ecoli-genome.sig
+1 matches:
+         /home/ubuntu/data/ecoliMG1655.fa.gz     0.466   ecoli-genome.sig
 ```
 
 
@@ -100,7 +100,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/ngs-docs/2017-lapaz-assembly/raw/master/_static/eschericia-sigs.tar.gz
+curl -O -L https://github.com/dib-lab/sourmash/raw/update/doc_sbts/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 
