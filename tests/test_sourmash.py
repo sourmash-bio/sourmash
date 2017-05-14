@@ -907,6 +907,7 @@ def test_do_sourmash_sbt_combine():
                                            in_directory=location)
         print(err)
 
+        # we get notification of signature loading, too - so notify + result.
         assert err.count(filename) == 2
 
         status, out, err = utils.runscript('sourmash',
@@ -915,7 +916,7 @@ def test_do_sourmash_sbt_combine():
         print(err)
 
         # TODO: signature is loaded more than once,
-        # so checking if we get two results.
+        # so checking if we get three counts (notification + 2 results)
         # If we ever start reporting only one match (even if appears repeated),
         # change this test too!
         assert err.count(filename) == 3
