@@ -597,6 +597,25 @@ def test_search():
         assert '0.930' in out
 
 
+def test_search_containment():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig', '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert '0.958' in out
+
+
 def test_search_gzip():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
