@@ -214,7 +214,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/update/doc_sbts/_static/shakya-unaligned-contigs.sig
+wget https://github.com/dib-lab/sourmash/raw/update/doc_sbts/doc/_static/shakya-unaligned-contigs.sig
 sourmash sbt_gather -k 31 genbank-k31.sbt.json shakya-unaligned-contigs.sig
 ```
 
@@ -223,37 +223,40 @@ This should yield:
 # running sourmash subcommand: sbt_gather
 loaded query: mqc500.QC.AMBIGUOUS.99.unalign... (k=31, DNA)
 
-overlap    p_query p_genome
--------    ------- --------
-1.4 Mbp   11.0%     58.0%      JANA01000001.1 Fusobacterium sp. OBRC1 c
-1.0 Mbp    7.7%     25.9%      CP001957.1 Haloferax volcanii DS2 plasmi
-0.9 Mbp    7.5%     11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, comp
-0.7 Mbp    5.9%     23.0%      FOVK01000036.1 Proteiniclasticum ruminis
-0.7 Mbp    5.3%     17.6%      AE017285.1 Desulfovibrio vulgaris subsp.
-0.6 Mbp    4.9%     11.1%      CP001252.1 Shewanella baltica OS223, com
-0.6 Mbp    4.8%     27.3%      AP008226.1 Thermus thermophilus HB8 geno
-0.6 Mbp    4.4%     11.2%      CP000031.2 Ruegeria pomeroyi DSS-3, comp
-480.0 kbp   3.8%      7.6%      CP000875.1 Herpetosiphon aurantiacus DSM
-410.0 kbp   3.3%     10.5%      CH959317.1 Sulfitobacter sp. NAS-14.1 sc
-1.4 Mbp   10.9%     11.8%      LN831027.1 Fusobacterium nucleatum subsp
-0.5 Mbp    4.1%      5.3%      CP000753.1 Shewanella baltica OS185, com
-420.0 kbp   3.3%      7.7%      FNDZ01000023.1 Proteiniclasticum ruminis
-150.0 kbp   1.2%      4.5%      CP015081.1 Deinococcus radiodurans R1 ch
-150.0 kbp   1.2%      8.2%      CP000969.1 Thermotoga sp. RQ2, complete
-290.0 kbp   2.3%      4.1%      CH959311.1 Sulfitobacter sp. EE-36 scf_1
-1.2 Mbp    9.4%      5.0%      CP013328.1 Fusobacterium nucleatum subsp
-110.0 kbp   0.9%      3.5%      FREL01000833.1 Enterococcus faecalis iso
-0.6 Mbp    5.0%      2.8%      CP000527.1 Desulfovibrio vulgaris DP4, c
-340.0 kbp   2.7%      3.3%      KQ235732.1 Fusobacterium nucleatum subsp
-70.0 kbp   0.6%      1.2%      CP000850.1 Salinispora arenicola CNS-205
-60.0 kbp   0.5%      0.7%      CP000270.1 Burkholderia xenovorans LB400
-50.0 kbp   0.4%      2.6%      CP001080.1 Sulfurihydrogenibium sp. YO3A
-50.0 kbp   0.4%      3.2%      L77117.1 Methanocaldococcus jannaschii D
+overlap     p_query p_match
+---------   ------- --------
+1.4 Mbp      11.0%   58.0%      JANA01000001.1 Fusobacterium sp. OBRC1 c
+1.0 Mbp       7.7%   25.9%      CP001957.1 Haloferax volcanii DS2 plasmi
+0.9 Mbp       7.5%   11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, comp
+0.7 Mbp       5.9%   23.0%      FOVK01000036.1 Proteiniclasticum ruminis
+0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris subsp.
+0.6 Mbp       4.9%   11.1%      CP001252.1 Shewanella baltica OS223, com
+0.6 Mbp       4.8%   27.3%      AP008226.1 Thermus thermophilus HB8 geno
+0.6 Mbp       4.4%   11.2%      CP000031.2 Ruegeria pomeroyi DSS-3, comp
+480.0 kbp     3.8%    7.6%      CP000875.1 Herpetosiphon aurantiacus DSM
+410.0 kbp     3.3%   10.5%      CH959317.1 Sulfitobacter sp. NAS-14.1 sc
+1.4 Mbp      10.9%   11.8%      LN831027.1 Fusobacterium nucleatum subsp
+0.5 Mbp       4.1%    5.3%      CP000753.1 Shewanella baltica OS185, com
+420.0 kbp     3.3%    7.7%      FNDZ01000023.1 Proteiniclasticum ruminis
+150.0 kbp     1.2%    4.5%      CP015081.1 Deinococcus radiodurans R1 ch
+150.0 kbp     1.2%    8.2%      CP000969.1 Thermotoga sp. RQ2, complete
+290.0 kbp     2.3%    4.1%      CH959311.1 Sulfitobacter sp. EE-36 scf_1
+1.2 Mbp       9.4%    5.0%      CP013328.1 Fusobacterium nucleatum subsp
+110.0 kbp     0.9%    3.5%      FREL01000833.1 Enterococcus faecalis iso
+0.6 Mbp       5.0%    2.8%      CP000527.1 Desulfovibrio vulgaris DP4, c
+340.0 kbp     2.7%    3.3%      KQ235732.1 Fusobacterium nucleatum subsp
+70.0 kbp      0.6%    1.2%      CP000850.1 Salinispora arenicola CNS-205
+60.0 kbp      0.5%    0.7%      CP000270.1 Burkholderia xenovorans LB400
+50.0 kbp      0.4%    2.6%      CP001080.1 Sulfurihydrogenibium sp. YO3A
+50.0 kbp      0.4%    3.2%      L77117.1 Methanocaldococcus jannaschii D
 found less than 40.0 kbp in common. => exiting
 
 found 24 matches total;
 the recovered matches hit 73.4% of the query
 
 ```
+
+It is straightforward to build your own databases for use with `sbt_search`
+and `sbt_gather`; ping us if you want us to write that up.
 
 [Return to index](index.html)
