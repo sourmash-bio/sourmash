@@ -105,7 +105,7 @@ class SourmashSignature(object):
         "Compute similarity with the other MinHash signature."
         try:
             return self.minhash.similarity(other.minhash, ignore_abundance)
-        except Exception as e:
+        except ValueError as e:
             if 'mismatch in max_hash' in str(e) and downsample:
                 xx = self.minhash.downsample_max_hash(other.minhash)
                 yy = other.minhash.downsample_max_hash(self.minhash)
