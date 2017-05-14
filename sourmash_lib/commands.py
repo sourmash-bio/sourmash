@@ -72,8 +72,13 @@ def search(args):
 
     # any matches? sort, show.
     if distances:
-        distances.sort(reverse=True, key = lambda x: x[0])
-        notify('{} matches; showing {}:', len(distances), args.num_results)
+        distances.sort(reverse=True, key=lambda x: x[0])
+        n_matches = len(distances)
+        if n_matches <= args.num_results:
+            notify('{} matches:'.format(n_matches))
+        else:
+            notify('{} matches; showing first {}:',
+                   len(distances), args.num_results)
         for distance, match, filename in distances[:args.num_results]:
 
             print('\t', match.name(), '\t', "%.3f" % distance,
@@ -839,13 +844,16 @@ def sbt_gather(args):
 
         if not len(found):                # first result? print header.
             notify("")
-            notify("overlap    p_query p_match ")
-            notify("-------    ------- --------")
+            notify("overlap     p_query p_match ")
+            notify("---------   ------- --------")
 
         # print interim result & save in a list for later use
-        notify('{:8s} {:-5.1f}%    {:-5.1f}%      {}',
-               format_bp(intersect_bp), f_orig_query*100,
-               f_genome*100, best_leaf.name()[:40])
+        pct_query = '{:.1f}%'.format(f_orig_query*100)
+        pct_genome = '{:.1f}%'.format(f_genome*100)
+
+        notify('{:9}   {:>6}  {:>6}      {}',
+               format_bp(intersect_bp), pct_query, pct_genome,
+               best_leaf.name()[:40])
         found.append((intersect_bp, f_orig_query, best_leaf, f_genome))
 
         # construct a new query, minus the previous one.
