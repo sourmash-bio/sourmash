@@ -63,6 +63,7 @@ Contents:
    :maxdepth: 2
 
    command-line
+   tutorials
    databases
    api
    api-example
