@@ -3,7 +3,9 @@
 This tutorial should run without modification on Ubuntu 15.10 ("wily");
 it was developed on AWS ami-05384865 (us-west region).
 
-You'll need about 15 GB of free disk space to download the database.
+You'll need about 15 GB of free disk space to download the database, and
+about 1-2 GB of RAM.  The tutorial should take about 20 minutes total to
+run.
 
 ## Installing sourmash
 
@@ -103,6 +105,7 @@ cd ecoli_many_sigs
 curl -O -L https://github.com/dib-lab/sourmash/raw/update/doc_sbts/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
+rm eschericia-sigs.tar.gz
 
 cd ../
 
@@ -124,6 +127,19 @@ and now we can search!
 
 ```
 sourmash sbt_search ecolidb.sbt.json ecoli-genome.sig | head
+```
+
+You should see output like this:
+
+```
+# running sourmash subcommand: sbt_search
+loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
+
+similarity   match
+----------   -----
+ 88.4%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole genome shotgun sequence
+ 87.8%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605S4C2.contig.0_1, whole genome shotgun sequence
+ 86.6%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108S3C2.contig.0_1, whole genome shotgun sequence
 ```
 
 ## Compare many signatures and build a tree.
@@ -151,12 +167,15 @@ computer.
 
 Here's a PNG version:
 
-![E. coli comparison plot](_images/ecoli_cmp.matrix.png)
+![E. coli comparison plot](_static/ecoli_cmp.matrix.png)
 
 ## What's in my metagenome?
 
-Download and unpack a newer version of the k=31 RefSeq index described in
-[CTB's blog post](http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html):
+Download and unpack a newer version of the k=31 RefSeq index described
+in
+[CTB's blog post](http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html)
+-- this one contains sketches of all 100k Genbank microbes. (See
+[available databases](databases.html) for more information.)
 
 ```
 curl -O https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k31-2017.05.09.tar.gz
@@ -164,10 +183,9 @@ tar xzf microbe-genbank-sbt-k31-2017.05.09.tar.gz
 ```
 
 This produces a file `genbank-k31.sbt.json` and a whole bunch of hidden
-files in the directory `.sbt.genbank-k31`.  This is an index of about 100,000
-microbial genomes from RefSeq.
+files in the directory `.sbt.genbank-k31`.
 
-Next, run the 'gather' command to see what's in there --
+Next, run the 'gather' command to see what's in your ecoli genome --
 ```
 sourmash sbt_gather -k 31 genbank-k31.sbt.json ecoli-genome.sig
 ```
@@ -176,19 +194,19 @@ and you should get:
 
 ```
 # running sourmash subcommand: sbt_gather
-loaded query: /home/ubuntu/assembly/ecoli/fi... (k=31, DNA)
+loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
 
-overlap    p_query p_genome
--------    ------- --------
-4.9 Mbp   99.8%     99.8%      APIN01000001.1 Escherichia coli str. K-1
-found less than 10.0 kbp in common. => exiting
+overlap     p_query p_match 
+---------   ------- --------
+4.9 Mbp     100.0%   99.8%      CP011320.1 Escherichia coli strain SQ37,
 
 found 1 matches total;
 the recovered matches hit 100.0% of the query
 ```
 
-You can use this on metagenomes (assembled and unassembled) as well; you've
-just got to make the signature files.
+In this case, the output is kind of boring because this is a single
+genome.  But! You can use this on metagenomes (assembled and
+unassembled) as well; you've just got to make the signature files.
 
 To see this in action, here is gather running on a signature generated
 from some sequences that assemble (but don't align to known genomes)
@@ -196,7 +214,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
 
 ```
-curl -O -L https://github.com/ngs-docs/2017-lapaz-assembly/raw/master/_images/shakya-unaligned-contigs.sig
+wget https://github.com/dib-lab/sourmash/raw/update/doc_sbts/_static/shakya-unaligned-contigs.sig
 sourmash sbt_gather -k 31 genbank-k31.sbt.json shakya-unaligned-contigs.sig
 ```
 
