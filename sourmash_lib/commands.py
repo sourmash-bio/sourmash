@@ -91,8 +91,13 @@ def search(args):
 
     # any matches? sort, show.
     if distances:
-        distances.sort(reverse=True, key = lambda x: x[0])
-        notify('{} matches; showing {}:', len(distances), args.num_results)
+        distances.sort(reverse=True, key=lambda x: x[0])
+        n_matches = len(distances)
+        if n_matches <= args.num_results:
+            notify('{} matches:'.format(n_matches))
+        else:
+            notify('{} matches; showing first {}:',
+                   len(distances), args.num_results)
         for distance, match, filename in distances[:args.num_results]:
 
             print('\t', match.name(), '\t', "%.3f" % distance,
@@ -870,8 +875,8 @@ def sbt_gather(args):
     if args.output:
         print('Composition:', file=args.output)
         for (frac, leaf_sketch, genome_fraction) in found:
-            print('{:.2f} {:.f} {}'.format(frac, genome_fraction,
-                                        leaf_sketch.name()),
+            print('{:.2f} {:.2f} {}'.format(frac, genome_fraction,
+                                            leaf_sketch.name()),
                   file=args.output)
 
     if args.csv:
