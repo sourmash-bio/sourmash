@@ -10,6 +10,7 @@ from libc.stdint cimport uint32_t
 
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 import math
+import copy
 
 
 # default MurmurHash seed
@@ -358,6 +359,10 @@ cdef class MinHash(object):
         if not self.track_abundance or ignore_abundance:
             return self.jaccard(other)
         else:
+            # can we merge? if not, raise exception.
+            aa = copy.copy(self)
+            aa.merge(other)
+
             a = self.get_mins(with_abundance=True)
             b = other.get_mins(with_abundance=True)
 
@@ -395,7 +400,8 @@ cdef class MinHash(object):
     cpdef set_abundances(self, dict values):
         if self.track_abundance:
             for k, v in values.items():
-                (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
+                if not self.max_hash or k < self.max_hash:
+                    (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")

@@ -36,7 +36,7 @@ def test_roundtrip_empty(track_abundance):
 
 def test_roundtrip_max_hash(track_abundance):
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance,
-                                max_hash=10)
+                             max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
@@ -52,7 +52,7 @@ def test_roundtrip_max_hash(track_abundance):
 
 def test_roundtrip_seed(track_abundance):
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance,
-                                seed=10)
+                             seed=10)
     e.add_hash(5)
     sig = SourmashSignature('titus@idyll.org', e)
     s = save_signatures([sig])
@@ -78,6 +78,30 @@ def test_roundtrip_empty_email(track_abundance):
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
+
+
+def test_similarity_downsample(track_abundance):
+    e = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
+                             max_hash=2**63)
+    f = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
+                             max_hash=2**2)
+
+    e.add_hash(1)
+    e.add_hash(5)
+    assert len(e.get_mins()) == 2
+
+    f.add_hash(1)
+    f.add_hash(5)                 # should be discarded due to max_hash
+    assert len(f.get_mins()) == 1
+
+    ee = SourmashSignature('', e)
+    ff = SourmashSignature('', f)
+
+    with pytest.raises(ValueError):       # mismatch in max_hash
+        ee.similarity(ff)
+
+    x = ee.similarity(ff, downsample=True)
+    assert round(x, 1) == 1.0
 
 
 def test_md5(track_abundance):

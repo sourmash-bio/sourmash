@@ -622,7 +622,8 @@ def sbt_search(args):
     notify("similarity   match")
     notify("----------   -----")
     for (similarity, query) in results:
-        print('{:2.1f}%        {}'.format(similarity*100, query.name()))
+        pct = '{:.1f}%'.format(similarity*100)
+        notify('{:>6}       {}', pct, query.name())
 
     if args.save_matches:
         outname = args.save_matches.name
