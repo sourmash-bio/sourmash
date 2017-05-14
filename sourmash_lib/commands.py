@@ -68,8 +68,13 @@ def search(args):
 
     # any matches? sort, show.
     if distances:
-        distances.sort(reverse=True, key = lambda x: x[0])
-        notify('{} matches; showing {}:', len(distances), args.num_results)
+        distances.sort(reverse=True, key=lambda x: x[0])
+        n_matches = len(distances)
+        if n_matches <= args.num_results:
+            notify('{} matches:'.format(n_matches))
+        else:
+            notify('{} matches; showing first {}:',
+                   len(distances), args.num_results)
         for distance, match, filename in distances[:args.num_results]:
 
             print('\t', match.name(), '\t', "%.3f" % distance,
