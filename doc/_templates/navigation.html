@@ -1,11 +1,2 @@
 <h3>{{ _('Table Of Contents') }}</h3>
-{{ toctree(maxdepth=2, collapse=False) }}
-
-{% if theme_extra_nav_links %}
-<hr />
-<ul>
-    {% for text, uri in theme_extra_nav_links.items() %}
-    <li class="toctree-l1"><a href="{{ uri }}">{{ text }}</a></li>
-    {% endfor %}
-</ul>
-{% endif %}
+{{ toctree(maxdepth=1, collapse=False) }}
