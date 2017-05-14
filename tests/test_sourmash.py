@@ -1035,7 +1035,7 @@ def test_sbt_gather():
         print(out)
         print(err)
 
-        assert '0.9 kbp  100.0%    100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in err
 
 
 def test_sbt_gather_file_output():
@@ -1064,13 +1064,17 @@ def test_sbt_gather_file_output():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
                                             'query.fa.sig',
+                                            '--threshold-bp=500',
                                             '-o', 'foo.out'],
                                            in_directory=location)
 
+        print(out)
+        print(err)
+        assert '0.9 kbp     100.0%  100.0%' in err
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
-            print(output)
-            assert '1.00 1.00 ' in output
+            print((output,))
+            assert '910.0,1.0,1.0' in output
 
 
 def test_sbt_gather_metagenome():
@@ -1098,8 +1102,8 @@ def test_sbt_gather_metagenome():
 
         assert 'found 12 matches total' in err
         assert 'the recovered matches hit 100.0% of the query' in err
-
-
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in err
 
 
 def test_sbt_gather_save_matches():
