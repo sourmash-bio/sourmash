@@ -2,7 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from .sbt import Leaf
-from . import MinHash
+from . import _minhash, MinHash
 
 
 class SigLeaf(Leaf):
@@ -38,11 +38,21 @@ class SigLeaf(Leaf):
         self._data = new_data
 
 
-def search_minhashes(node, sig, threshold, results=None):
+def search_minhashes(node, sig, threshold, results=None, downsample=True):
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        matches = node.data.minhash.count_common(sig.minhash)
+        try:
+            matches = node.data.minhash.count_common(sig.minhash)
+        except Exception as e:
+            if 'mismatch in max_hash' in str(e) and downsample:
+                xx = sig.minhash.downsample_max_hash(node.data.minhash)
+                yy = node.data.minhash.downsample_max_hash(sig.minhash)
+
+                matches = yy.count_common(xx)
+            else:
+                raise
+
     else:  # Node or Leaf, Nodegraph by minhash comparison
         matches = sum(1 for value in mins if node.data.get(value))
 
@@ -55,14 +65,24 @@ def search_minhashes(node, sig, threshold, results=None):
 
 
 class SearchMinHashesFindBest(object):
-    def __init__(self):
+    def __init__(self, downsample=True):
         self.best_match = 0.
+        self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
 
         if isinstance(node, SigLeaf):
-            matches = node.data.minhash.count_common(sig.minhash)
+            try:
+                matches = node.data.minhash.count_common(sig.minhash)
+            except Exception as e:
+                if 'mismatch in max_hash' in str(e) and self.downsample:
+                    xx = sig.minhash.downsample_max_hash(node.data.minhash)
+                    yy = node.data.minhash.downsample_max_hash(sig.minhash)
+
+                    matches = yy.count_common(xx)
+                else:
+                    raise
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 
