@@ -322,6 +322,8 @@ def compare(args):
     parser.add_argument('--ignore-abundance', action='store_true',
                         help='do NOT use k-mer abundances if present')
     sourmash_args.add_ksize_arg(parser, DEFAULT_K)
+    parser.add_argument('--csv', type=argparse.FileType('w'),
+                        help='save matrix in CSV format (with column headers)')
     args = parser.parse_args(args)
 
     # load in the various signatures
@@ -352,7 +354,7 @@ def compare(args):
         print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
         labeltext.append(E.name())
 
-    notify('min similarity in matrix: {}', numpy.min(D))
+    notify('min similarity in matrix: {:.3f}', numpy.min(D))
 
     # shall we output a matrix?
     if args.output:
@@ -364,6 +366,17 @@ def compare(args):
         notify('saving distance matrix to: {}', args.output)
         with open(args.output, 'wb') as fp:
             numpy.save(fp, D)
+
+    # output CSV?
+    if args.csv:
+        w = csv.writer(args.csv)
+        w.writerow(labeltext)
+
+        for i in range(len(labeltext)):
+            y = []
+            for j in range(len(labeltext)):
+                y.append('{}'.format(D[i][j]))
+            args.csv.write(','.join(y) + '\n')
 
 
 def plot(args):
