@@ -535,6 +535,26 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_compare_output_csv():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'xxx')) as fp:
+            lines = fp.readlines()
+            assert len(lines) == 3
+            assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -616,6 +636,25 @@ def test_search():
         print(status, out, err)
         assert '1 matches' in err
         assert '0.930' in out
+
+
+def test_search_containment():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig', '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert '0.958' in out
 
 
 def test_search_gzip():
@@ -749,10 +788,43 @@ def test_do_sourmash_sbt_search():
                                            ['sbt_search', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
-        print(out)
+        print(err)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert testdata1 in err
+        assert testdata2 in err
+
+
+def test_do_sourmash_sbt_search_downsample():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled=10'],
+                                           in_directory=location)
+
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1,
+                                            '--scaled=5', '-o', 'query.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'zzz',
+                                            'query.sig'],
+                                           in_directory=location)
+        print(err)
+
+        assert testdata1 in err
+        assert testdata2 in err
 
 
 def test_do_sourmash_sbt_index_single():
@@ -774,9 +846,9 @@ def test_do_sourmash_sbt_index_single():
                                            ['sbt_search', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
-        print(out)
+        print(err)
 
-        assert testdata1 in out
+        assert testdata1 in err
 
 
 def test_do_sourmash_sbt_search_selectprot():
@@ -846,10 +918,10 @@ def test_do_sourmash_sbt_index_traverse():
                                            ['sbt_search', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
-        print(out)
+        print(err)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert testdata1 in err
+        assert testdata2 in err
 
 
 def test_do_sourmash_sbt_combine():
@@ -874,20 +946,21 @@ def test_do_sourmash_sbt_combine():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', 'zzz'] + [files[0]],
                                            in_directory=location)
-        print(out)
+        print(err)
 
-        assert out.count(filename) == 1
+        # we get notification of signature loading, too - so notify + result.
+        assert err.count(filename) == 2
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', 'joined'] + [files[0]],
                                            in_directory=location)
-        print(out)
+        print(err)
 
         # TODO: signature is loaded more than once,
-        # so checking if we get two results.
+        # so checking if we get three counts (notification + 2 results)
         # If we ever start reporting only one match (even if appears repeated),
         # change this test too!
-        assert out.count(filename) == 2
+        assert err.count(filename) == 3
 
 
 def test_do_sourmash_sbt_search_otherdir():
@@ -910,10 +983,10 @@ def test_do_sourmash_sbt_search_otherdir():
         sig_loc = os.path.join(location, 'short.fa.sig')
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', sbt_name, sig_loc])
-        print(out)
+        print(err)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert testdata1 in err
+        assert testdata2 in err
 
 
 def test_do_sourmash_sbt_search_bestonly():
@@ -936,9 +1009,9 @@ def test_do_sourmash_sbt_search_bestonly():
                                            ['sbt_search', '--best-only', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
-        print(out)
+        print(err)
 
-        assert testdata1 in out
+        assert testdata1 in err
 
 
 def test_compare_with_abundance_1():
@@ -1049,14 +1122,14 @@ def test_sbt_gather():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
-                                            'query.fa.sig', '--csv',
-                                            'foo.csv'],
+                                            'query.fa.sig', '-o',
+                                            'foo.csv', '--threshold-bp=1'],
                                            in_directory=location)
 
         print(out)
         print(err)
 
-        assert 'found: 1.00 1.00 ' in err
+        assert '0.9 kbp     100.0%  100.0%' in err
 
 
 def test_sbt_gather_file_output():
@@ -1085,13 +1158,17 @@ def test_sbt_gather_file_output():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_gather', 'zzz',
                                             'query.fa.sig',
+                                            '--threshold-bp=500',
                                             '-o', 'foo.out'],
                                            in_directory=location)
 
+        print(out)
+        print(err)
+        assert '0.9 kbp     100.0%  100.0%' in err
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
-            print(output)
-            assert '1.00 1.00 ' in output
+            print((output,))
+            assert '910.0,1.0,1.0' in output
 
 
 def test_sbt_gather_metagenome():
@@ -1117,8 +1194,39 @@ def test_sbt_gather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in err
+        assert 'found 12 matches total' in err
         assert 'the recovered matches hit 100.0% of the query' in err
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in err
+
+
+def test_sbt_gather_save_matches():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['sbt_index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_gather', 'gcf_all',
+                                            query_sig, '-k', '21',
+                                            '--save-matches', 'save.sigs'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in err
+        assert 'the recovered matches hit 100.0% of the query' in err
+        assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
 def test_sbt_gather_error_no_cardinality_query():
