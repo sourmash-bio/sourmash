@@ -9,10 +9,7 @@ import time
 import screed
 import time
 import glob
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+import json
 
 from . import sourmash_tst_utils as utils
 from sourmash_lib import MinHash
@@ -68,7 +65,6 @@ def test_do_sourmash_compute_output_valid_file():
         assert not out # stdout should be empty
 
         # is it valid json?
-        import json
         with open(sigfile, 'r') as f:
             data = json.load(f)
 
@@ -90,9 +86,7 @@ def test_do_sourmash_compute_output_stdout_valid():
                                            in_directory=location)
 
         # is it valid json?
-        import json
-        fp = StringIO(out)
-        data = json.load(fp)
+        data = json.loads(out)
 
         filesigs = [sig['filename'] for sig in data]
         assert all(testdata in filesigs
