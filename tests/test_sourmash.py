@@ -9,6 +9,7 @@ import time
 import screed
 import time
 import glob
+import json
 
 from . import sourmash_tst_utils as utils
 from sourmash_lib import MinHash
@@ -61,11 +62,31 @@ def test_do_sourmash_compute_output_valid_file():
                                            in_directory=location)
 
         assert os.path.exists(sigfile)
+        assert not out # stdout should be empty
 
         # is it valid json?
-        import json
         with open(sigfile, 'r') as f:
             data = json.load(f)
+
+        filesigs = [sig['filename'] for sig in data]
+        assert all(testdata in filesigs
+                   for testdata in (testdata1, testdata2, testdata3))
+
+
+def test_do_sourmash_compute_output_stdout_valid():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-o', '-',
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        # is it valid json?
+        data = json.loads(out)
 
         filesigs = [sig['filename'] for sig in data]
         assert all(testdata in filesigs
