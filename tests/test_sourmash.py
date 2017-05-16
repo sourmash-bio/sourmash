@@ -634,7 +634,7 @@ def test_compare_deduce_molecule():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert 'min similarity in matrix: 0.944' in err
+        assert 'min similarity in matrix: 0.91' in err
 
 
 def test_compare_deduce_ksize():
@@ -652,7 +652,7 @@ def test_compare_deduce_ksize():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert 'min similarity in matrix: 0.96' in err
+        assert 'min similarity in matrix: 0.938' in err
 
 
 def test_search_deduce_molecule():

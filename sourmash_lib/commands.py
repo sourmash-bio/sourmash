@@ -917,7 +917,7 @@ def watch(args):
         """Walk nodes in `tree` to find out ksize"""
         for node in tree.nodes.values():
             if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
-                return node.data.estimator.ksize
+                return node.data.minhash.ksize
 
     # deduce ksize from the SBT we are loading
     ksize = args.ksize
