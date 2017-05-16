@@ -256,6 +256,7 @@ def compute(args):
 
                     siglist += build_siglist(args.email, Elist, filename,
                                              name=record.name)
+
                 notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
             else:
@@ -281,6 +282,7 @@ def compute(args):
                     siglist += sigs
                 else:
                     siglist = sigs
+
                 notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
 
