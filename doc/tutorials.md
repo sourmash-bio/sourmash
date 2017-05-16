@@ -35,7 +35,7 @@ pip install https://github.com/dib-lab/sourmash/archive/spacegraphcats.zip
 
 ```
 
-## Fingerprint reads
+## Generate a signature for Illumina reads
 
 Download some reads and a reference genome:
 
@@ -46,7 +46,7 @@ wget http://public.ged.msu.edu.s3.amazonaws.com/ecoli_ref-5m-trim.pe.fq.gz
 wget https://s3.amazonaws.com/public.ged.msu.edu/ecoliMG1655.fa.gz
 ```
 
-Compute a scaled MinHash fingerprint from our reads:
+Compute a scaled MinHash signature from our reads:
 
 ```
 mkdir ~/sourmash
@@ -59,7 +59,7 @@ sourmash compute --scaled 10000 ~/data/ecoli_ref*pe*.fq.gz -o ecoli-reads.sig -k
 
 Use case: how much of the read content is contained in the reference genome?
 
-Fingerprint an E. coli genome:
+Build a signature for an E. coli genome:
 
 ```
 sourmash compute --scaled 10000 -k 31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
