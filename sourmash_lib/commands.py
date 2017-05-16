@@ -278,7 +278,7 @@ def compute(args):
                     siglist += build_siglist(args.email, Elist, filename,
                                              name=record.name)
                 print('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                      format(len(siglist), n + 1, filename), file=sys.stderr)
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -304,7 +304,8 @@ def compute(args):
                 else:
                     siglist = sigs
                 print('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                      format(len(siglist), n + 1, filename),
+                      file=sys.stderr)
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
