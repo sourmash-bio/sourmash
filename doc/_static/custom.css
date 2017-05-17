@@ -1,0 +1,10 @@
+div.sphinxsidebar ul {
+    list-style-type: disc;
+    list-style: disc;
+    margin-left: 10px;
+}
+
+div.sphinxsidebar ul li.toctree-l1 > a {
+    font-size: 100%;
+}
+

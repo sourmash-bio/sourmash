@@ -10,6 +10,7 @@ from libc.stdint cimport uint32_t
 
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 import math
+import copy
 
 
 # default MurmurHash seed
@@ -207,7 +208,14 @@ cdef class MinHash(object):
     def max_hash(self):
         mm = deref(self._this).max_hash
         if mm == 18446744073709551615:
-            return 0
+            mm = 0
+
+        # legacy - check cardinality => estimate
+        if mm == 0:
+            if self.hll:
+                genome_size = self.hll.estimate_cardinality()
+                mm = max(self.get_mins())
+
         return mm
 
     def add_hash(self, uint64_t h):
@@ -248,9 +256,20 @@ cdef class MinHash(object):
 
         return a
 
-    def downsample_scaled(self, new_num):
-        old_scaled = int(get_minhash_max_hash() / self.max_hash)
+    def downsample_max_hash(self, *others):
+        max_hashes = [ x.max_hash for x in others ]
+        new_max_hash = min(self.max_hash, *max_hashes)
+        new_scaled = int(get_minhash_max_hash() / new_max_hash)
 
+        return self.downsample_scaled(new_scaled)
+
+    def downsample_scaled(self, new_num):
+        max_hash = self.max_hash
+
+        if max_hash is None:
+            raise ValueError('no max_hash available - cannot downsample')
+
+        old_scaled = int(get_minhash_max_hash() / self.max_hash)
         if old_scaled > new_num:
             raise ValueError('new scaled is lower than current sample scaled')
 
@@ -336,6 +355,10 @@ cdef class MinHash(object):
         if not self.track_abundance or ignore_abundance:
             return self.jaccard(other)
         else:
+            # can we merge? if not, raise exception.
+            aa = copy.copy(self)
+            aa.merge(other)
+
             a = self.get_mins(with_abundance=True)
             b = other.get_mins(with_abundance=True)
 
@@ -344,6 +367,12 @@ cdef class MinHash(object):
 
             distance = 2*math.acos(prod) / math.pi
             return 1.0 - distance
+
+    def containment(self, other):
+        """\
+        Calculate containment of self by other.
+        """
+        return self.count_common(other) / len(self.get_mins())
 
     def similarity_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
@@ -367,7 +396,8 @@ cdef class MinHash(object):
     cpdef set_abundances(self, dict values):
         if self.track_abundance:
             for k, v in values.items():
-                (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
+                if not self.max_hash or k < self.max_hash:
+                    (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")
