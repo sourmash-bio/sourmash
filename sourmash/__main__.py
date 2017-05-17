@@ -66,6 +66,8 @@ def main():
                 'storage': storage,
                 'lca': lca_main,
                 'migrate': migrate}
+    loadable_cmds = {'compute'}
+
     if UTILS_AVAILABLE:
         commands['utils'] = utils_main
 
@@ -83,8 +85,18 @@ def main():
         print(usage)
         sys.exit(1)
 
-    cmd = commands.get(args.command)
-    return cmd(sys.argv[2:])
+    if args.command in loadable_cmds:
+        parser = argparse.ArgumentParser(
+            description='work with compressed sequence representations')
+        subparsers = parser.add_subparsers()
+        subp = subparsers.add_parser(args.command)
+        commands[args.command].add_args(subp)
+        subp.set_defaults(cmd=commands[args.command])
+        args = parser.parse_args()
+        return args.cmd(**vars(args))
+    else:
+        cmd = commands.get(args.command)
+        return cmd(sys.argv[2:])
 
 
 if __name__ == '__main__':
