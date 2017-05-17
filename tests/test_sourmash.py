@@ -985,9 +985,9 @@ def test_do_sourmash_sbt_index_append():
                                            ['sbt_search', sbt_name, sig_loc])
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
-        assert testdata3 not in out
+        assert testdata1 in err
+        assert testdata2 in err
+        assert testdata3 not in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_index', '--append',
@@ -1004,9 +1004,9 @@ def test_do_sourmash_sbt_index_append():
                                             sbt_name, sig_loc])
         print(out)
 
-        assert testdata1 not in out
-        assert testdata2 in out
-        assert testdata3 in out
+        assert testdata1 not in err
+        assert testdata2 in err
+        assert testdata3 in err
 
 
 def test_do_sourmash_sbt_search_otherdir():
