@@ -113,6 +113,9 @@ def runscript(scriptname, args, in_directory=None,
 
         os.chdir(cwd)
 
+    if status is None:
+        status = 0
+
     if status != 0 and not fail_ok:
         print(out)
         print(err)

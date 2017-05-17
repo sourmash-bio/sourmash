@@ -12,6 +12,13 @@ from .commands import (categorize, compare, compute, dump, import_csv,
                        plot, watch, info, storage, migrate)
 from .lca import main as lca_main
 
+try:
+    from sourmash_utils.__main__ import main as utils_main
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+
+
 usage='''
 sourmash <command> [<args>]
 
@@ -59,6 +66,9 @@ def main():
                 'storage': storage,
                 'lca': lca_main,
                 'migrate': migrate}
+    if UTILS_AVAILABLE:
+        commands['utils'] = utils_main
+
     parser = argparse.ArgumentParser(
         description='work with compressed sequence representations')
     parser.add_argument('command', nargs='?')
@@ -74,7 +84,8 @@ def main():
         sys.exit(1)
 
     cmd = commands.get(args.command)
-    cmd(sys.argv[2:])
+    return cmd(sys.argv[2:])
+
 
 if __name__ == '__main__':
     main()
