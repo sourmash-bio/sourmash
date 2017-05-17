@@ -542,7 +542,8 @@ def sbt_index(args):
                         help='signatures to load into SBT')
     parser.add_argument('-k', '--ksize', type=int, default=None)
     parser.add_argument('--traverse-directory', action='store_true')
-    parser.add_argument('--append', action='store_true', default=False)
+    parser.add_argument('--append', action='store_true', default=False,
+                        help='add signatures to an existing SBT')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5)
 
     sourmash_args.add_moltype_args(parser)
