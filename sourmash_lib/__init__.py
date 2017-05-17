@@ -15,11 +15,3 @@ VERSION = version_file.read().strip()
 
 DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()
-
-def scaled_to_max_hash(scaled):
-    if scaled > 1:
-        max_hash = MAX_HASH / float(scaled)
-        max_hash = int(round(max_hash, 0))
-        return max_hash
-    else:
-        return 0
