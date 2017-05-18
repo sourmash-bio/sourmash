@@ -542,6 +542,8 @@ def sbt_index(args):
                         help='signatures to load into SBT')
     parser.add_argument('-k', '--ksize', type=int, default=None)
     parser.add_argument('--traverse-directory', action='store_true')
+    parser.add_argument('--append', action='store_true', default=False,
+                        help='add signatures to an existing SBT')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5)
 
     sourmash_args.add_moltype_args(parser)
@@ -549,8 +551,11 @@ def sbt_index(args):
     args = parser.parse_args(args)
     moltype = sourmash_args.calculate_moltype(args)
 
-    factory = GraphFactory(1, args.bf_size, 4)
-    tree = SBT(factory)
+    if args.append:
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    else:
+        factory = GraphFactory(1, args.bf_size, 4)
+        tree = SBT(factory)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
