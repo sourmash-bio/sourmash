@@ -24,11 +24,11 @@ def search(args):
     parser.add_argument('against', nargs='+', help='list of signatures')
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('-n', '--num-results', default=3, type=int)
-    parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
     parser.add_argument('-f', '--force', action='store_true')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--containment', action='store_true')
 
+    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
@@ -53,7 +53,7 @@ def search(args):
             continue
 
         sl = sig.load_signatures(filename,
-                                 select_ksize=args.ksize,
+                                 select_ksize=query_ksize,
                                  select_moltype=moltype)
 
         for x in sl:
@@ -319,10 +319,10 @@ def compare(args):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('signatures', nargs='+', help='list of signatures')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
     parser.add_argument('-o', '--output')
     parser.add_argument('--ignore-abundance', action='store_true',
                         help='do NOT use k-mer abundances if present')
+    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     args = parser.parse_args(args)
@@ -735,12 +735,12 @@ def sbt_gather(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('query', help='query signature')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--threshold-bp', type=float, default=5e4)
 
+    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
@@ -792,7 +792,7 @@ def sbt_gather(args):
 
     # define a function to build new signature object from set of mins
     def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=args.ksize, n=len(mins))
+        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
         e.add_many(mins)
         return sig.SourmashSignature('', e)
 
@@ -917,7 +917,6 @@ def watch(args):
     parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('--input-is-protein', action='store_true')
     sourmash_args.add_moltype_args(parser, default_dna=True)
@@ -925,6 +924,7 @@ def watch(args):
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
     parser.add_argument('--name', type=str, default='stdin')
+    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     args = parser.parse_args(args)
 
     if args.input_is_protein and args.dna:
@@ -942,16 +942,26 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    E = sourmash_lib.MinHash(ksize=args.ksize, n=args.num_hashes,
-                                is_protein=is_protein)
+    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+
+    def get_ksize(tree):
+        """Walk nodes in `tree` to find out ksize"""
+        for node in tree.nodes.values():
+            if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
+                return node.data.minhash.ksize
+
+    # deduce ksize from the SBT we are loading
+    ksize = args.ksize
+    if ksize is None:
+        ksize = get_ksize(tree)
+
+    E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
+                             is_protein=is_protein)
     streamsig = sig.SourmashSignature('', E, filename='stdin',
                                       name=args.name)
 
     notify('Computing signature for k={}, {} from stdin',
-           args.ksize, moltype)
-
-
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+           ksize, moltype)
 
     def do_search():
         search_fn = SearchMinHashesFindBest().search

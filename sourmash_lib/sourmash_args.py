@@ -4,7 +4,8 @@ Utility functions for dealing with input args to the sourmash command line.
 import sys
 import os
 from . import signature
-from .logging import error, notify
+from .logging import error
+
 
 def add_moltype_args(parser, default_dna=None):
     parser.add_argument('--protein', dest='protein', action='store_true')
@@ -16,6 +17,11 @@ def add_moltype_args(parser, default_dna=None):
                         action='store_true')
     parser.add_argument('--no-dna', dest='dna', action='store_false')
     parser.set_defaults(dna=default_dna)
+
+
+def add_ksize_arg(parser, default):
+    parser.add_argument('-k', '--ksize', default=None, type=int,
+                        help='k-mer size (default: {d})'.format(d=default))
 
 
 def get_moltype(sig, require=False):
@@ -43,6 +49,7 @@ def calculate_moltype(args, default=None):
         moltype = 'dna'
 
     return moltype
+
 
 def load_query_signature(filename, select_ksize, select_moltype):
     sl = signature.load_signatures(filename,
