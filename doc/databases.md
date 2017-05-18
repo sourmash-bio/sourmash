@@ -11,6 +11,7 @@ from NCBI RefSeq.
 [RefSeq k=21, 2017.05.09](https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k21-2017.05.09.tar.gz) - 3.5 GB
 [RefSeq k=31, 2017.05.09](https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k31-2017.05.09.tar.gz) - 3.5 GB
 [RefSeq k=51, 2017.05.09](https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k51-2017.05.09.tar.gz) - 3.5 GB
+
 ## Genbank microbial genomes
 
 These database are formatted for use with `sourmash sbt_search` and
