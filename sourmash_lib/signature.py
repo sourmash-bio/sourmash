@@ -16,20 +16,6 @@ import bz2file
 SIGNATURE_VERSION=0.4
 
 
-class FakeHLL(object):
-    def __init__(self, cardinality):
-        self.cardinality = int(cardinality)
-
-    def estimate_cardinality(self):
-        return self.cardinality
-
-    def consume_string(self):
-        raise Exception("cannot add to this HLL")
-
-    def __eq__(self, other):
-        return self.cardinality == other.cardinality
-
-
 class SourmashSignature(object):
     "Main class for signature information."
 
@@ -91,9 +77,6 @@ class SourmashSignature(object):
             sketch['molecule'] = 'protein'
         else:
             sketch['molecule'] = 'DNA'
-
-        if minhash.hll is not None:
-            sketch['cardinality'] = minhash.hll.estimate_cardinality()
 
         e['signature'] = sketch
 

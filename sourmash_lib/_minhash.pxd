@@ -56,7 +56,6 @@ cdef class MinHash(object):
     cdef unique_ptr[KmerMinHash] _this
     #cdef unique_ptr[KmerMinAbundance] _this
     cdef public bool track_abundance
-    cdef public object hll
 
     cpdef get_mins(self, bool with_abundance=*)
     cpdef set_abundances(self, dict)
