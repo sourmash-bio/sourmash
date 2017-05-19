@@ -934,6 +934,38 @@ def test_do_sourmash_sbt_search():
         assert testdata2 in err
 
 
+def test_do_sourmash_sbt_search_multiple():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz2',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz2.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_search', 'short.fa.sig',
+                                            'zzz', 'zzz2'],
+                                           in_directory=location)
+        print(err)
+
+        assert testdata1 in err
+        assert testdata2 in err
+
+
 def test_do_sourmash_sbt_search_downsample():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
