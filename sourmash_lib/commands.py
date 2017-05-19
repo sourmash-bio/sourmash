@@ -555,6 +555,11 @@ def search(args):
     # set up the search function(s)
     search_fn = search_minhashes
 
+    # similarity vs containment
+    query_similarity = lambda x: query.similarity(x, downsample=True)
+    if args.containment:
+        query_similarity = lambda x: query.containment(x)
+
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.sbt_names,
                                                  query_ksize, query_moltype)
@@ -573,11 +578,12 @@ def search(args):
             tree = sbt_or_siglist
             notify('Searching SBT {}', str(tree))
             for leaf in tree.find(search_fn, query, args.threshold):
-                results.append((query.similarity(leaf.data, downsample=True),
-                                leaf.data))
+                similarity = query_similarity(leaf.data)
+                if similarity >= args.threshold:
+                    results.append((similarity, leaf.data))
         else: # list of signatures
             for ss in sbt_or_siglist:
-                similarity = query.similarity(ss, downsample=True)
+                similarity = query_similarity(ss)
                 if similarity >= args.threshold:
                     results.append((similarity, ss))
 

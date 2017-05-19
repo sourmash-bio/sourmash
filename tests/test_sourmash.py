@@ -779,6 +779,7 @@ def test_search_deduce_ksize_vs_user_specified():
 
 
 def test_search_containment():
+    # search with --containment in signatures
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -791,6 +792,33 @@ def test_search_containment():
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig', '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in err
+        assert '95.8%' in out
+
+
+def test_search_containment_sbt():
+    # search with --containment in an SBT
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz', '--containment'],
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
