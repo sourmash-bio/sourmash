@@ -120,11 +120,24 @@ def traverse_find_sigs(dirnames):
                     yield fullname
 
 
+def get_ksize(tree):
+    """Walk nodes in `tree` to find out ksize"""
+    for node in tree.nodes.values():
+        if isinstance(node, SigLeaf):
+            return node.data.minhash.ksize
+
+
 def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
     databases = []
     for sbt_or_sigfile in filenames:
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
+            ksize = get_ksize(tree)
+            if ksize != query_ksize:
+                error("ksize on tree '{}' is {};", sbt_or_sigfile, ksize)
+                error('this is different from query ksize of {}.', query_ksize)
+                sys.exit(-1)
+
             databases.append((tree, True))
             notify('loaded SBT {}', sbt_or_sigfile)
         except (ValueError, FileNotFoundError):
@@ -138,7 +151,8 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 databases.append((list(siglist), False))
                 notify('loaded {} signatures from {}', len(siglist),
                        sbt_or_sigfile)
-            except:
-                raise
+            except FileNotFoundError:
+                error("file '{}' does not exist", sbt_or_sigfile)
+                sys.exit(-1)
 
     return databases

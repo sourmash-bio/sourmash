@@ -619,6 +619,25 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
+def test_search_sig_does_not_exist():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'does not exist' in err
+
+
 def test_search():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -960,6 +979,33 @@ def test_do_sourmash_sbt_search():
 
         assert testdata1 in out
         assert testdata2 in out
+
+
+def test_do_sourmash_sbt_search_wrong_ksize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '-k', '31,51'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', '-k', '31', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '-k', '51',
+                                            'short.fa.sig', 'zzz'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'this is different from' in err
 
 
 def test_do_sourmash_sbt_search_multiple():
