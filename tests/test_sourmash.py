@@ -928,10 +928,10 @@ def test_do_sourmash_sbt_search():
                                            ['sbt_search', 'short.fa.sig',
                                             'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
+        assert testdata1 in out
+        assert testdata2 in out
 
 
 def test_do_sourmash_sbt_search_multiple():
@@ -960,10 +960,10 @@ def test_do_sourmash_sbt_search_multiple():
                                            ['sbt_search', 'short.fa.sig',
                                             'zzz', 'zzz2'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
+        assert testdata1 in out
+        assert testdata2 in out
 
 
 def test_do_sourmash_sbt_search_downsample():
@@ -992,10 +992,10 @@ def test_do_sourmash_sbt_search_downsample():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', 'query.sig', 'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
+        assert testdata1 in out
+        assert testdata2 in out
 
 
 def test_do_sourmash_sbt_index_single():
@@ -1017,9 +1017,9 @@ def test_do_sourmash_sbt_index_single():
                                            ['sbt_search', 'short.fa.sig',
                                             'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
+        assert testdata1 in out
 
 
 def test_do_sourmash_sbt_search_selectprot():
@@ -1089,10 +1089,10 @@ def test_do_sourmash_sbt_index_traverse():
                                            ['sbt_search', 'short.fa.sig',
                                             'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
+        assert testdata1 in out
+        assert testdata2 in out
 
 
 def test_do_sourmash_sbt_combine():
@@ -1117,21 +1117,21 @@ def test_do_sourmash_sbt_combine():
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', files[0], 'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
         # we get notification of signature loading, too - so notify + result.
-        assert err.count(filename) == 2
+        assert out.count(filename) == 1
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', files[0], 'joined'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
         # TODO: signature is loaded more than once,
         # so checking if we get three counts (notification + 2 results)
         # If we ever start reporting only one match (even if appears repeated),
         # change this test too!
-        assert err.count(filename) == 3
+        assert out.count(filename) == 2
 
 
 def test_do_sourmash_sbt_index_append():
@@ -1156,9 +1156,9 @@ def test_do_sourmash_sbt_index_append():
                                            ['sbt_search', sig_loc, sbt_name])
         print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
-        assert testdata3 not in err
+        assert testdata1 in out
+        assert testdata2 in out
+        assert testdata3 not in out
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_index', '--append',
@@ -1176,9 +1176,9 @@ def test_do_sourmash_sbt_index_append():
                                             sig_loc, sbt_name])
         print(out)
 
-        assert testdata1 not in err
-        assert testdata2 in err
-        assert testdata3 in err
+        assert testdata1 not in out
+        assert testdata2 in out
+        assert testdata3 in out
 
 
 def test_do_sourmash_sbt_search_otherdir():
@@ -1201,10 +1201,10 @@ def test_do_sourmash_sbt_search_otherdir():
         sig_loc = os.path.join(location, 'short.fa.sig')
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_search', sig_loc, sbt_name])
-        print(err)
+        print(out)
 
-        assert testdata1 in err
-        assert testdata2 in err
+        assert testdata1 in out
+        assert testdata2 in out
 
 
 def test_do_sourmash_sbt_search_bestonly():
@@ -1227,9 +1227,9 @@ def test_do_sourmash_sbt_search_bestonly():
                                            ['sbt_search', '--best-only',
                                             'short.fa.sig', 'zzz'],
                                            in_directory=location)
-        print(err)
+        print(out)
 
-        assert testdata1 in err
+        assert testdata1 in out
 
 
 def test_compare_with_abundance_1():
@@ -1255,7 +1255,7 @@ def test_compare_with_abundance_1():
                                            ['search', 'e1.sig', 'e2.sig',
                                             '-k' ,'5'],
                                            in_directory=location)
-        assert '1.000' in out
+        assert '100.0%' in out
 
 
 def test_compare_with_abundance_2():
@@ -1283,7 +1283,7 @@ def test_compare_with_abundance_2():
                                            ['search', 'e1.sig', 'e2.sig',
                                             '-k' ,'5'],
                                            in_directory=location)
-        assert '1.0' in out
+        assert '100.0%' in out
 
 
 def test_compare_with_abundance_3():
@@ -1312,7 +1312,7 @@ def test_compare_with_abundance_3():
                                            ['search', 'e1.sig', 'e2.sig',
                                             '-k' ,'5'],
                                            in_directory=location)
-        assert '0.705' in out
+        assert '70.5%' in out
 
 
 def test_sbt_gather():

@@ -4,7 +4,11 @@ Utility functions for dealing with input args to the sourmash command line.
 import sys
 import os
 from . import signature
-from .logging import error
+from .logging import notify, error
+
+from . import signature as sig
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
 
 
 def add_moltype_args(parser, default_dna=None):
@@ -113,3 +117,27 @@ def traverse_find_sigs(dirnames):
                 if name.endswith('.sig'):
                     fullname = os.path.join(root, name)
                     yield fullname
+
+
+def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
+    databases = []
+    for sbt_or_sigfile in filenames:
+        try:
+            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
+            databases.append((tree, True))
+            notify('loaded SBT {}', sbt_or_sigfile)
+        except (ValueError, FileNotFoundError):
+            # not an SBT - try as a .sig
+
+            try:
+                siglist = sig.load_signatures(sbt_or_sigfile,
+                                              select_ksize=query_ksize,
+                                              select_moltype=query_moltype)
+                siglist = list(siglist)
+                databases.append((list(siglist), False))
+                notify('loaded {} signatures from {}', len(siglist),
+                       sbt_or_sigfile)
+            except:
+                raise
+
+    return databases

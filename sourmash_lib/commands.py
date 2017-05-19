@@ -10,14 +10,14 @@ import screed
 import sourmash_lib
 from . import signature as sig
 from . import sourmash_args
-from .logging import notify, error
+from .logging import notify, error, print_results
 
 DEFAULT_K = 31
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 
-def search(args):
+def XXXsearch(args):
     "Search a query sig against one or more signatures; report up to the 3 top matches."
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -629,25 +629,9 @@ def sbt_search(args):
     # set up the search function(s)
     search_fn = search_minhashes
 
-    databases = []
-    for sbt_or_sigfile in args.sbt_names:
-        try:
-            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
-            databases.append((tree, True))
-            notify('loaded SBT {}', sbt_or_sigfile)
-        except (ValueError, FileNotFoundError):
-            # not an SBT - try as a .sig
-
-            try:
-                siglist = sig.load_signatures(sbt_or_sigfile,
-                                              select_ksize=query_ksize,
-                                              select_moltype=query_moltype)
-                siglist = list(siglist)
-                databases.append((list(siglist), False))
-                notify('loaded {} signatures from {}', len(siglist),
-                       sbt_or_sigfile)
-            except:
-                raise
+    # set up the search databases
+    databases = sourmash_args.load_sbts_and_sigs(args.sbt_names,
+                                                 query_ksize, query_moltype)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -678,11 +662,11 @@ def sbt_search(args):
         notify("(truncated search because of --best-only; only trust top result")
 
     # output!
-    notify("similarity   match")
-    notify("----------   -----")
+    print_results("similarity   match")
+    print_results("----------   -----")
     for (similarity, query) in results:
         pct = '{:.1f}%'.format(similarity*100)
-        notify('{:>6}       {}', pct, query.name())
+        print_results('{:>6}       {}', pct, query.name())
 
     # save matching signatures upon request
     if args.save_matches:
@@ -690,6 +674,7 @@ def sbt_search(args):
         notify('saving all matches to "{}"', outname)
         sig.save_signatures([ m for (sim, m) in results ], args.save_matches)
 
+search = sbt_search
 
 def categorize(args):
     from sourmash_lib.sbt import SBT, GraphFactory

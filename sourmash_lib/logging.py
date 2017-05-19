@@ -2,6 +2,11 @@ from __future__ import print_function
 import sys
 from io import StringIO
 
+def print_results(s, *args, **kwargs):
+    print(s.format(*args, **kwargs), file=sys.stdout)
+    sys.stdout.flush()
+
+
 _quiet = False
 def notify(s, *args, **kwargs):
     "A simple logging function => stderr."
