@@ -110,7 +110,7 @@ def compute(args):
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
 
     parser.add_argument('--input-is-protein', action='store_true')
     parser.add_argument('-k', '--ksizes',
@@ -119,20 +119,27 @@ def compute(args):
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--check-sequence', action='store_true')
-    parser.add_argument('-f', '--force', action='store_true')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('--email', type=str, default='')
-    parser.add_argument('--singleton', action='store_true')
-    parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
-                        help="merge all input files into one signature named %(metavar)s")
-    parser.add_argument('--name-from-first', action='store_true')
+    parser.add_argument('--check-sequence', action='store_true',
+                        help="complain if input sequence is not DNA (default: False)")
+    parser.add_argument('-f', '--force', action='store_true',
+                        help="force output/overwriting of existing signatures.")
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help="place signature in this file.")
+    parser.add_argument('--email', type=str, default='',
+                        help="set the e-mail address of the signature creator.")
+    parser.add_argument('--singleton', action='store_true',
+                        help="compute a signature for each sequence record in the input")
+    parser.add_argument('--merge', '--name', type=str, default='', metavar="NAME",
+                        help="merge all input files into one signature named NAME")
+    parser.add_argument('--name-from-first', action='store_true',
+                        help="name each signature for the first sequence in the input file")
     parser.add_argument('--track-abundance', action='store_true',
-                        help='track k-mer abundances')
-    parser.add_argument('--scaled', type=float,
-                        help='set resolution of signature size')
-    parser.add_argument('--seed', type=int, help='hash seed',
-                        default=sourmash_lib.DEFAULT_SEED)
+                        help='track k-mer abundances (default: False)')
+    parser.add_argument('--scaled', type=float, metavar="FRACTION",
+                        help='choose number of hashes as 1 in FRACTION of input k-mers')
+    parser.add_argument('--seed', type=int,
+                        default=sourmash_lib.DEFAULT_SEED,
+                        help='seed used by MurmurHash (default: 42)')
     args = parser.parse_args(args)
 
     if args.input_is_protein and args.dna:
@@ -919,7 +926,7 @@ def watch(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('--input-is-protein', action='store_true')
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')

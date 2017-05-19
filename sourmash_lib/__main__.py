@@ -26,19 +26,20 @@ def main():
 
 Commands can be:
 
-compute <filenames>         Compute signatures for sequences in these files.
-compare <filenames.sig>     Compute distance matrix for given signatures.
-search <query> <against>    Search for matching signatures.
+compute <filenames>         Compute MinHash signatures for sequences in files.
+compare <filenames.sig>     Compute similarity matrix for multiple signatures.
+search <query> <against>    Search a signature against a list of signatures.
 plot <matrix>               Plot a distance matrix made by 'compare'.
 
-import_csv                  Import signatures from a CSV file.
-convert                     Convert signatures from YAML to JSON.
+Sequence Bloom Tree (SBT) utilities:
 
-sbt_index                   Index signatures with a Sequence Bloom Tree.
-sbt_combine                 Combine multiple Sequence Bloom Trees into a new one.
-sbt_search                  Search a Sequence Bloom Tree.
-categorize                  Categorize signatures with a SBT.
-sbt_gather                  Search a signature for multiple matches.
+sbt_index                   Index a collection of signatures with an SBT.
+sbt_combine                 Combine multiple SBTs into a new one.
+sbt_search                  Search a signature against a SBT.
+categorize                  Identify best matches for many signatures using
+                              an SBT.
+sbt_gather                  Search a metagenome signature for multiple
+                              non-overlapping matches in the SBT.
 watch                       Classify a stream of sequences using a SBT.
 
 Use '-h' to get subcommand-specific help, e.g.
