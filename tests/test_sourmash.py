@@ -994,6 +994,32 @@ def test_do_sourmash_sbt_search_multiple():
         assert testdata2 in out
 
 
+def test_do_sourmash_sbt_search_and_sigs():
+    # search an SBT and a signature at same time.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sbt_index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz', 'short2.fa.sig'],
+                                           in_directory=location)
+        print(out)
+
+        assert testdata1 in out
+        assert testdata2 in out
+
+
 def test_do_sourmash_sbt_search_downsample():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
