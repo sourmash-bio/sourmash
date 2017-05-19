@@ -607,11 +607,13 @@ def sbt_search(args):
     parser.add_argument('query', help='query signature')
     parser.add_argument('sbt_names', help='signatures/SBTs to search',
                         nargs='+')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--best-only', action='store_true')
+    parser.add_argument('-n', '--num-results', default=3, type=int)
+    parser.add_argument('--containment', action='store_true')
 
+    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
     args = parser.parse_args(args)
     moltype = sourmash_args.calculate_moltype(args)
@@ -660,6 +662,13 @@ def sbt_search(args):
 
     if args.best_only:
         notify("(truncated search because of --best-only; only trust top result")
+
+    n_matches = len(results)
+    if n_matches <= args.num_results:
+        notify('{} matches:'.format(len(results)))
+    else:
+        notify('{} matches; showing first {}:',
+               len(results), args.num_results)
 
     # output!
     print_results("similarity   match")

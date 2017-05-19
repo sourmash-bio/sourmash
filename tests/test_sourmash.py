@@ -635,7 +635,7 @@ def test_search():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.930' in out
+        assert '93.0%' in out
 
 
 def test_compare_deduce_molecule():
@@ -794,7 +794,7 @@ def test_search_containment():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.958' in out
+        assert '95.8%' in out
 
 
 def test_search_gzip():
@@ -819,7 +819,7 @@ def test_search_gzip():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in err
-        assert '0.930' in out
+        assert '93.0%' in out
 
 
 def test_search_2():
@@ -840,8 +840,8 @@ def test_search_2():
                                            in_directory=location)
         print(status, out, err)
         assert '2 matches' in err
-        assert '0.930' in out
-        assert '0.896' in out
+        assert '93.0%' in out
+        assert '89.6%' in out
 
 
 def test_search_3():
@@ -886,7 +886,7 @@ def test_mash_csv_to_sig():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches:' in err
-        assert 'short.fa \t 1.000 \t xxx.sig' in out
+        assert '100.0%       short.fa' in out
 
 
 def test_do_sourmash_sbt_index_bad_args():

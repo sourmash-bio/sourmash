@@ -56,6 +56,7 @@ def calculate_moltype(args, default=None):
 
 
 def load_query_signature(filename, select_ksize, select_moltype):
+    print(select_ksize, select_moltype)
     sl = signature.load_signatures(filename,
                                    select_ksize=select_ksize,
                                    select_moltype=select_moltype)
