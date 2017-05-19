@@ -702,6 +702,9 @@ def gather(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
     parser.add_argument('--threshold-bp', type=float, default=5e4)
+    parser.add_argument('--output-unassigned', type=argparse.FileType('wt'))
+    parser.add_argument('--scaled', type=float,
+                        help='downsample query to this scaled factor')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
@@ -723,6 +726,10 @@ def gather(args):
     if query.minhash.max_hash == 0:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
+
+    # downsample if requested
+    if args.scaled:
+        query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
@@ -882,6 +889,14 @@ def gather(args):
         notify('saving all matches to "{}"', outname)
         sig.save_signatures([ ss for (_, _, ss, _) in found ],
                               args.save_matches)
+
+    if args.output_unassigned:
+        if not query.minhash.get_mins():
+            notify('no unassigned hashes! not saving.')
+        else:
+            outname = args.output_unassigned.name
+            notify('saving unassigned hashes to "{}"', outname)
+            sig.save_signatures([ query ], args.output_unassigned)
 
 
 def watch(args):
