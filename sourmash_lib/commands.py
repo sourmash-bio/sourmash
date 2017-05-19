@@ -729,7 +729,15 @@ def gather(args):
 
     # downsample if requested
     if args.scaled:
+        old_scaled = int(sourmash_lib.MAX_HASH / query.minhash.max_hash)
+        notify('downsampling query from scaled={} to {}',
+               old_scaled, args.scaled)
         query.minhash = query.minhash.downsample_scaled(args.scaled)
+
+    # empty?
+    if not query.minhash.get_mins():
+        error('no query hashes!? exiting.')
+        sys.exit(-1)
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
