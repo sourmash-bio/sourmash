@@ -604,8 +604,9 @@ def sbt_search(args):
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to load')
-    parser.add_argument('query', help='signature to query')
+    parser.add_argument('query', help='query signature')
+    parser.add_argument('sbt_names', help='signatures/SBTs to search',
+                        nargs='+')
     parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
@@ -615,11 +616,7 @@ def sbt_search(args):
     args = parser.parse_args(args)
     moltype = sourmash_args.calculate_moltype(args)
 
-    search_fn = search_minhashes
-    if args.best_only:
-        search_fn = SearchMinHashesFindBest().search
-
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    # set up the query.
     query = sourmash_args.load_query_signature(args.query,
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
@@ -629,27 +626,50 @@ def sbt_search(args):
                                              query_ksize,
                                              query_moltype)
 
-    results = []
-    for leaf in tree.find(search_fn, query, args.threshold):
-        results.append((query.similarity(leaf.data, downsample=True),
-                        leaf.data))
+    # set up the search function(s)
+    search_fn = search_minhashes
 
-    results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+    databases = []
+    for sbt_or_sig in args.sbt_names:
+        try:
+            tree = SBT.load(sbt_or_sig, leaf_loader=SigLeaf.load)
+        except:
+            raise
+
+        databases.append((tree, True))
+
+    # collect results across all the trees
+    results = []
+    for (sbt_or_sig, is_sbt) in databases:
+        if args.best_only:
+            search_fn = SearchMinHashesFindBest().search
+
+        assert is_sbt
+        tree = sbt_or_sig
+
+        notify('Searching SBT {}', str(tree))
+        for leaf in tree.find(search_fn, query, args.threshold):
+            results.append((query.similarity(leaf.data, downsample=True),
+                            leaf.data))
+
+    # sort results on similarity (reverse)
+    results.sort(key=lambda x: -x[0])
 
     if args.best_only:
         notify("(truncated search because of --best-only; only trust top result")
 
+    # output!
     notify("similarity   match")
     notify("----------   -----")
     for (similarity, query) in results:
         pct = '{:.1f}%'.format(similarity*100)
         notify('{:>6}       {}', pct, query.name())
 
+    # save matching signatures upon request
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ m for (sim, m) in results ],
-                            args.save_matches)
+        sig.save_signatures([ m for (sim, m) in results ], args.save_matches)
 
 
 def categorize(args):
