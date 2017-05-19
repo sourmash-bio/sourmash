@@ -8,7 +8,7 @@ import argparse
 from .logging import notify, error
 
 from .commands import (categorize, compare, compute, dump, import_csv,
-                       sbt_gather, sbt_index, sbt_combine, search,
+                       gather, index, sbt_combine, search,
                        plot, watch)
 
 
@@ -16,8 +16,8 @@ def main():
     commands = {'search': search, 'compute': compute,
                 'compare': compare, 'plot': plot,
                 'import_csv': import_csv, 'dump': dump,
-                'sbt_index': sbt_index,
-                'categorize': categorize, 'sbt_gather': sbt_gather,
+                'index': index,
+                'categorize': categorize, 'gather': gather,
                 'watch': watch,
                 'sbt_combine': sbt_combine}
     parser = argparse.ArgumentParser(
@@ -26,19 +26,18 @@ def main():
 
 Commands can be:
 
-compute <filenames>         Compute signatures for sequences in these files.
-compare <filenames.sig>     Compute distance matrix for given signatures.
-search <query> <against>    Search for matching signatures.
-plot <matrix>               Plot a distance matrix made by 'compare'.
+compute <filenames>       Compute signatures for sequences in these files.
+compare <filenames.sig>   Compute distance matrix for given signatures.
+search <query> <against>  Search for matching signatures.
+plot <matrix>             Plot a distance matrix made by 'compare'.
 
-import_csv                  Import signatures from a CSV file.
+import_csv                Import signatures from a CSV file.
 
-sbt_index                   Index signatures with a Sequence Bloom Tree.
-sbt_combine                 Combine multiple Sequence Bloom Trees into a new one.
-sbt_search                  Search a Sequence Bloom Tree.
-categorize                  Categorize signatures with a SBT.
-sbt_gather                  Search a signature for multiple matches.
-watch                       Classify a stream of sequences using a SBT.
+index                     Index signatures with a Sequence Bloom Tree.
+sbt_combine               Combine multiple Sequence Bloom Trees into a new one.
+categorize                Categorize signatures with a SBT.
+gather                    Search a signature for multiple matches.
+watch                     Classify a stream of sequences using a SBT.
 
 Use '-h' to get subcommand-specific help, e.g.
 

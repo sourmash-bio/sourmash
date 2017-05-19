@@ -456,7 +456,7 @@ def sbt_combine(args):
     tree.save(args.sbt_name)
 
 
-def sbt_index(args):
+def index(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
 
@@ -689,7 +689,7 @@ def categorize(args):
         notify('skipped/nosig: {}', loader.skipped_nosig)
 
 
-def sbt_gather(args):
+def gather(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
@@ -790,7 +790,7 @@ def sbt_gather(args):
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
         if not best_leaf.minhash.max_hash:
-            error('Best hash match in sbt_gather has no cardinality')
+            error('Best hash match in sbt_gather has no max_hash')
             error('Please prepare database of sequences with --scaled')
             sys.exit(-1)
 
