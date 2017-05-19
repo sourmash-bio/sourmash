@@ -4,7 +4,6 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 from __future__ import print_function
 import sys
-import yaml
 import hashlib
 import sourmash_lib
 from . import signature_json
