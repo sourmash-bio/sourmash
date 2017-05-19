@@ -368,6 +368,8 @@ cdef class MinHash(object):
 
     def similarity_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
+        if not a:
+            return 0.0
 
         b = set(other.get_mins())
 

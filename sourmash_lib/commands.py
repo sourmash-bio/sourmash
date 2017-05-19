@@ -529,7 +529,7 @@ def search(args):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
-    parser.add_argument('sbt_names', help='signatures/SBTs to search',
+    parser.add_argument('databases', help='signatures/SBTs to search',
                         nargs='+')
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
@@ -561,7 +561,7 @@ def search(args):
         query_similarity = lambda x: query.containment(x)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.sbt_names,
+    databases = sourmash_args.load_sbts_and_sigs(args.databases,
                                                  query_ksize, query_moltype)
 
     if not len(databases):
@@ -696,7 +696,8 @@ def gather(args):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
-    parser.add_argument('sbt_name', help='name of SBT to search')
+    parser.add_argument('databases', help='signatures/SBTs to search',
+                        nargs='+')
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))
@@ -707,9 +708,6 @@ def gather(args):
 
     args = parser.parse_args(args)
     moltype = sourmash_args.calculate_moltype(args)
-
-    # load in the SBT
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -726,6 +724,14 @@ def gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
+    # set up the search databases
+    databases = sourmash_args.load_sbts_and_sigs(args.databases,
+                                                 query_ksize, query_moltype)
+
+    if not len(databases):
+        error('Nothing found to search!')
+        sys.exit(-1)
+
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
 
@@ -733,15 +739,24 @@ def gather(args):
     R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
 
     # define a function to do a 'best' search and get only top match.
-    def find_best(tree, query):
-        search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
+    def find_best(dblist, query):
         results = []
-        for leaf in tree.find(search_fn, query, 0.0):
-            leaf_e = leaf.data.minhash
-            similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
-            if similarity > 0.0:
-                results.append((similarity, leaf.data))
+        for (sbt_or_siglist, is_sbt) in dblist:
+            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+
+            if is_sbt:
+                tree = sbt_or_siglist
+
+                for leaf in tree.find(search_fn, query, 0.0):
+                    leaf_e = leaf.data.minhash
+                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
+                    if similarity > 0.0:
+                        results.append((similarity, leaf.data))
+            else:
+                for ss in sbt_or_siglist:
+                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
+                    if similarity >= args.threshold:
+                        results.append((similarity, ss))
 
         if not results:
             return None, None
@@ -778,7 +793,7 @@ def gather(args):
     sum_found = 0.
     found = []
     while 1:
-        best_similarity, best_leaf = find_best(tree, query)
+        best_similarity, best_leaf = find_best(databases, query)
         if not best_leaf:          # no matches at all!
             break
 

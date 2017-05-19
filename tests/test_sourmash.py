@@ -1450,6 +1450,83 @@ def test_gather():
         assert '0.9 kbp     100.0%  100.0%' in err
 
 
+def test_gather_multiple_sbts():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz2',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz', 'zzz2',
+                                            '-o', 'foo.csv',
+                                            '--threshold-bp=1'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert '0.9 kbp     100.0%  100.0%' in err
+
+
+def test_gather_sbt_and_sigs():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz', 'short2.fa.sig',
+                                            '-o', 'foo.csv',
+                                            '--threshold-bp=1'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert '0.9 kbp     100.0%  100.0%' in err
+
+
 def test_gather_file_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
