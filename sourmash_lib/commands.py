@@ -1101,9 +1101,10 @@ the extension ".json".
         filenames.append(path)
 
 
+    i = 0
     for i, path in enumerate(filenames, 1):
         notify("\rConverting file %i/%i" % (i, len(filenames)), end="", flush=True)
-        with open(path) as fh:
+        with open(path, 'rb') as fh:
             signatures = tuple(sourmash_lib.signature.load_signatures(fh))
 
         out_fn = path + ".json"
