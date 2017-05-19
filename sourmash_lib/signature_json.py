@@ -73,10 +73,10 @@ def _json_next_signature(iterable,
     max_hash = d.get('max_hash', 0)
     seed = d.get('seed', sourmash_lib.DEFAULT_SEED)
 
-    molecule = d.get('molecule', 'dna')
+    molecule = d.get('molecule', 'DNA')
     if molecule == 'protein':
         is_protein = True
-    elif molecule == 'dna':
+    elif molecule.upper() == 'DNA':
         is_protein = False
     else:
         raise Exception("unknown molecule type: {}".format(molecule))

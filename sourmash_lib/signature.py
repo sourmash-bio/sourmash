@@ -91,7 +91,7 @@ class SourmashSignature(object):
         if minhash.is_protein:
             sketch['molecule'] = 'protein'
         else:
-            sketch['molecule'] = 'dna'
+            sketch['molecule'] = 'DNA'
 
         if minhash.hll is not None:
             sketch['cardinality'] = minhash.hll.estimate_cardinality()
@@ -273,11 +273,11 @@ def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
     ksize = sketch['ksize']
     mins = list(map(int, sketch['mins']))
     n = int(sketch['num'])
-    molecule = sketch.get('molecule', 'dna')
+    molecule = sketch.get('molecule', 'DNA')
     seed = sketch.get('seed', sourmash_lib.DEFAULT_SEED)
     if molecule == 'protein':
         is_protein = True
-    elif molecule == 'dna':
+    elif molecule.upper() == 'DNA':
         is_protein = False
     else:
         raise Exception("unknown molecule type: {}".format(molecule))

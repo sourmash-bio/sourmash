@@ -414,7 +414,7 @@ cdef class MinHash(object):
             deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
 
     def is_molecule_type(self, molecule):
-        if molecule == 'dna' and not self.is_protein:
+        if molecule.upper() == 'DNA' and not self.is_protein:
             return True
         if molecule == 'protein' and self.is_protein:
             return True

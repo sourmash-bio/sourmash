@@ -630,27 +630,46 @@ def sbt_search(args):
     search_fn = search_minhashes
 
     databases = []
-    for sbt_or_sig in args.sbt_names:
+    for sbt_or_sigfile in args.sbt_names:
         try:
-            tree = SBT.load(sbt_or_sig, leaf_loader=SigLeaf.load)
-        except:
-            raise
+            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
+            databases.append((tree, True))
+            notify('loaded SBT {}', sbt_or_sigfile)
+        except (ValueError, FileNotFoundError):
+            # not an SBT - try as a .sig
 
-        databases.append((tree, True))
+            try:
+                siglist = sig.load_signatures(sbt_or_sigfile,
+                                              select_ksize=query_ksize,
+                                              select_moltype=query_moltype)
+                siglist = list(siglist)
+                databases.append((list(siglist), False))
+                notify('loaded {} signatures from {}', len(siglist),
+                       sbt_or_sigfile)
+            except:
+                raise
+
+    if not len(databases):
+        error('Nothing found to search!')
+        sys.exit(-1)
 
     # collect results across all the trees
     results = []
-    for (sbt_or_sig, is_sbt) in databases:
+    for (sbt_or_siglist, is_sbt) in databases:
         if args.best_only:
             search_fn = SearchMinHashesFindBest().search
 
-        assert is_sbt
-        tree = sbt_or_sig
-
-        notify('Searching SBT {}', str(tree))
-        for leaf in tree.find(search_fn, query, args.threshold):
-            results.append((query.similarity(leaf.data, downsample=True),
-                            leaf.data))
+        if is_sbt:
+            tree = sbt_or_siglist
+            notify('Searching SBT {}', str(tree))
+            for leaf in tree.find(search_fn, query, args.threshold):
+                results.append((query.similarity(leaf.data, downsample=True),
+                                leaf.data))
+        else: # list of signatures
+            for ss in sbt_or_siglist:
+                similarity = query.similarity(ss, downsample=True)
+                if similarity >= args.threshold:
+                    results.append((similarity, ss))
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])

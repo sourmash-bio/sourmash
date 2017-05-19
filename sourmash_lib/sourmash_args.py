@@ -25,7 +25,7 @@ def add_ksize_arg(parser, default):
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('dna'):
+    if sig.minhash.is_molecule_type('DNA'):
         moltype = 'DNA'
     elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
@@ -46,7 +46,7 @@ def calculate_moltype(args, default=None):
     if args.protein:
         moltype = 'protein'
     elif args.dna:
-        moltype = 'dna'
+        moltype = 'DNA'
 
     return moltype
 
