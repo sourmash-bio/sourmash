@@ -8,7 +8,7 @@ import argparse
 from .logging import notify, error
 
 from .commands import (categorize, compare, compute, dump, import_csv,
-                       sbt_gather, sbt_index, sbt_combine, sbt_search, search,
+                       sbt_gather, sbt_index, sbt_combine, search,
                        plot, watch)
 
 
@@ -16,7 +16,7 @@ def main():
     commands = {'search': search, 'compute': compute,
                 'compare': compare, 'plot': plot,
                 'import_csv': import_csv, 'dump': dump,
-                'sbt_index': sbt_index, 'sbt_search': sbt_search,
+                'sbt_index': sbt_index,
                 'categorize': categorize, 'sbt_gather': sbt_gather,
                 'watch': watch,
                 'sbt_combine': sbt_combine}

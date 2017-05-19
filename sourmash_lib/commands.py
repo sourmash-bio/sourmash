@@ -17,82 +17,6 @@ DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 
-def XXXsearch(args):
-    "Search a query sig against one or more signatures; report up to the 3 top matches."
-    parser = argparse.ArgumentParser()
-    parser.add_argument('query', help='query signature')
-    parser.add_argument('against', nargs='+', help='list of signatures')
-    parser.add_argument('--threshold', default=0.08, type=float)
-    parser.add_argument('-n', '--num-results', default=3, type=int)
-    parser.add_argument('-f', '--force', action='store_true')
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'))
-    parser.add_argument('--containment', action='store_true')
-
-    sourmash_args.add_ksize_arg(parser, DEFAULT_K)
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
-    moltype = sourmash_args.calculate_moltype(args)
-
-    # get the query signature
-    query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
-                                               select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
-    notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
-
-    # get the signatures to query
-    notify('loading db of signatures from {} files', len(args.against))
-    against = []
-    for filename in args.against:
-        if filename == args.query and not args.force:
-            notify('excluding query from database (file {})', filename)
-            continue
-
-        sl = sig.load_signatures(filename,
-                                 select_ksize=query_ksize,
-                                 select_moltype=moltype)
-
-        for x in sl:
-            against.append((x, filename))
-    notify('loaded {} signatures total.', len(against))
-
-    # compute query x db
-    distances = []
-    for (x, filename) in against:
-        if args.containment:
-            distance = query.containment(x)
-        else:
-            distance = query.similarity(x)
-        if distance >= args.threshold:
-            distances.append((distance, x, filename))
-
-    # any matches? sort, show.
-    if distances:
-        distances.sort(reverse=True, key=lambda x: x[0])
-        n_matches = len(distances)
-        if n_matches <= args.num_results:
-            notify('{} matches:'.format(n_matches))
-        else:
-            notify('{} matches; showing first {}:',
-                   len(distances), args.num_results)
-        for distance, match, filename in distances[:args.num_results]:
-
-            print('\t', match.name(), '\t', "%.3f" % distance,
-                  '\t', filename)
-
-        if args.save_matches:
-            outname = args.save_matches.name
-            notify('saving all matches to "{}"', outname)
-            sig.save_signatures([ m for (d, m, f) in distances ],
-                                args.save_matches)
-    else:
-        notify('** no matches in {} signatures', len(against))
-
-
 def compute(args):
     """Compute the signature for one or more files.
 
@@ -598,7 +522,7 @@ def sbt_index(args):
     tree.save(args.sbt_name)
 
 
-def sbt_search(args):
+def search(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
@@ -683,7 +607,6 @@ def sbt_search(args):
         notify('saving all matches to "{}"', outname)
         sig.save_signatures([ m for (sim, m) in results ], args.save_matches)
 
-search = sbt_search
 
 def categorize(args):
     from sourmash_lib.sbt import SBT, GraphFactory
