@@ -695,8 +695,8 @@ def gather(args):
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('query', help='query signature')
+    parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--save-matches', type=argparse.FileType('wt'))

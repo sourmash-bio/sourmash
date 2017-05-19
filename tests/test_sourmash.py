@@ -1439,8 +1439,8 @@ def test_gather():
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'zzz',
-                                            'query.fa.sig', '-o',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz', '-o',
                                             'foo.csv', '--threshold-bp=1'],
                                            in_directory=location)
 
@@ -1474,8 +1474,8 @@ def test_gather_file_output():
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'zzz',
-                                            'query.fa.sig',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz',
                                             '--threshold-bp=500',
                                             '-o', 'foo.out'],
                                            in_directory=location)
@@ -1505,8 +1505,8 @@ def test_gather_metagenome():
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'gcf_all',
-                                            query_sig, '-k', '21'],
+                                           ['gather', query_sig, 'gcf_all',
+                                            '-k', '21'],
                                            in_directory=location)
 
         print(out)
@@ -1534,8 +1534,8 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'gcf_all',
-                                            query_sig, '-k', '21',
+                                           ['gather', query_sig, 'gcf_all',
+                                            '-k', '21',
                                             '--save-matches', 'save.sigs'],
                                            in_directory=location)
 
@@ -1569,8 +1569,8 @@ def test_gather_error_no_cardinality_query():
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'zzz',
-                                            'short3.fa.sig'],
+                                           ['gather',
+                                            'short3.fa.sig', 'zzz'],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
@@ -1601,8 +1601,8 @@ def test_gather_deduce_ksize():
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'zzz',
-                                            'query.fa.sig', '--threshold-bp=1'],
+                                           ['gather', 'query.fa.sig', 'zzz',
+                                            '--threshold-bp=1'],
                                            in_directory=location)
 
         print(out)
@@ -1637,8 +1637,7 @@ def test_gather_deduce_moltype():
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', 'zzz',
-                                            'query.fa.sig',
+                                           ['gather', 'query.fa.sig', 'zzz',
                                             '--threshold-bp=1'],
                                            in_directory=location)
 
