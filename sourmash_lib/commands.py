@@ -539,6 +539,8 @@ def search(args):
     parser.add_argument('--containment', action='store_true')
     parser.add_argument('--scaled', type=float,
                         help='downsample query to this scaled factor')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
+    parser.add_argument('--csv', type=argparse.FileType('wt'))
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
@@ -621,6 +623,20 @@ def search(args):
         print_results('{:>6}       {}', pct, query.name())
 
     # save matching signatures upon request
+    if args.output:
+        for (similarity, query) in results:
+            print('{:.2f} {}'.format(similarity, query.name()), file=args.output)
+
+    if args.csv:
+        fieldnames = ['fraction', 'name', 'sketch_kmers']
+        w = csv.DictWriter(args.csv, fieldnames=fieldnames)
+
+        w.writeheader()
+        for (frac, leaf_sketch) in found:
+            cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
+            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
+                            sketch_kmers=cardinality))
+
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)

@@ -733,6 +733,33 @@ def test_search_deduce_ksize():
         assert 'k=23' in err
 
 
+def test_do_sourmash_sbt_search_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz', '-o', 'foo'],
+                                           in_directory=location)
+        outfile = open(os.path.join(location, 'foo'))
+        output = outfile.read()
+        print(output)
+        assert testdata1 in output
+        assert testdata2 in output
+
+
 def test_search_deduce_ksize_and_select_appropriate():
     # deduce ksize from query and select correct signature from DB
     with utils.TempDirectory() as location:
