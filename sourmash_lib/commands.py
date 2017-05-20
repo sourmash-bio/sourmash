@@ -584,7 +584,10 @@ def search(args):
         sys.exit(-1)
 
     # collect results across all the trees
+    SearchResult = namedtuple('SearchResult',
+                              'similarity, match_sig, md5, filename, name')
     results = []
+    found_md5 = set()
     for (sbt_or_siglist, filename, is_sbt) in databases:
         if args.best_only:
             search_fn = SearchMinHashesFindBest().search
@@ -594,16 +597,31 @@ def search(args):
             notify('Searching SBT {}', filename)
             for leaf in tree.find(search_fn, query, args.threshold):
                 similarity = query_similarity(leaf.data)
-                if similarity >= args.threshold:
-                    results.append((similarity, leaf.data))
+                if similarity >= args.threshold and \
+                       leaf.data.md5sum() not in found_md5:
+                    sr = SearchResult(similarity=similarity,
+                                      match_sig=leaf.data,
+                                      md5=leaf.data.md5sum(),
+                                      filename=filename,
+                                      name=leaf.data.name())
+                    found_md5.add(sr.md5)
+                    results.append(sr)
+
         else: # list of signatures
             for ss in sbt_or_siglist:
                 similarity = query_similarity(ss)
-                if similarity >= args.threshold:
-                    results.append((similarity, ss))
+                if similarity >= args.threshold and \
+                       ss.md5sum() not in found_md5:
+                    sr = SearchResult(similarity=similarity,
+                                      match_sig=ss,
+                                      md5=ss.md5sum(),
+                                      filename=filename,
+                                      name=ss.name())
+                    found_md5.add(sr.md5)
+                    results.append(sr)
 
     # sort results on similarity (reverse)
-    results.sort(key=lambda x: -x[0])
+    results.sort(key=lambda x: -x.similarity)
 
     if args.best_only:
         notify("(truncated search because of --best-only; only trust top result")
@@ -618,14 +636,14 @@ def search(args):
     # output!
     print_results("similarity   match")
     print_results("----------   -----")
-    for (similarity, query) in results:
-        pct = '{:.1f}%'.format(similarity*100)
-        print_results('{:>6}       {}', pct, query.name())
+    for sr in results:
+        pct = '{:.1f}%'.format(sr.similarity*100)
+        print_results('{:>6}       {}', pct, sr.name)
 
     # save matching signatures upon request
     if args.output:
-        for (similarity, query) in results:
-            print('{:.2f} {}'.format(similarity, query.name()), file=args.output)
+        for sr in results:
+            print('{:.2f} {}'.format(sr.similarity, sr.name), file=args.output)
 
     if args.csv:
         fieldnames = ['fraction', 'name', 'sketch_kmers']
@@ -634,13 +652,13 @@ def search(args):
         w.writeheader()
         for (frac, leaf_sketch) in found:
             cardinality = leaf_sketch.estimator.hll.estimate_cardinality()
-            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
-                            sketch_kmers=cardinality))
+            w.writerow(sr._asdict())
 
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ m for (sim, m) in results ], args.save_matches)
+        sig.save_signatures([ sr.match_sig for sr in results ],
+                            args.save_matches)
 
 
 def categorize(args):

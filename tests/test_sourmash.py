@@ -1254,11 +1254,7 @@ def test_do_sourmash_sbt_combine():
                                            in_directory=location)
         print(out)
 
-        # TODO: signature is loaded more than once,
-        # so checking if we get three counts (notification + 2 results)
-        # If we ever start reporting only one match (even if appears repeated),
-        # change this test too!
-        assert out.count(filename) == 2
+        assert out.count(filename) == 1
 
 
 def test_do_sourmash_index_append():
