@@ -137,7 +137,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 error('this is different from query ksize of {}.', query_ksize)
                 sys.exit(-1)
 
-            databases.append((tree, True))
+            databases.append((tree, sbt_or_sigfile, True))
             notify('loaded SBT {}', sbt_or_sigfile)
         except (ValueError, FileNotFoundError):
             # not an SBT - try as a .sig
@@ -147,7 +147,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                                               select_ksize=query_ksize,
                                               select_moltype=query_moltype)
                 siglist = list(siglist)
-                databases.append((list(siglist), False))
+                databases.append((list(siglist), sbt_or_sigfile, False))
                 notify('loaded {} signatures from {}', len(siglist),
                        sbt_or_sigfile)
             except FileNotFoundError:

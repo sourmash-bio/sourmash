@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+from collections import namedtuple
 
 import screed
 import sourmash_lib
@@ -582,13 +583,13 @@ def search(args):
 
     # collect results across all the trees
     results = []
-    for (sbt_or_siglist, is_sbt) in databases:
+    for (sbt_or_siglist, filename, is_sbt) in databases:
         if args.best_only:
             search_fn = SearchMinHashesFindBest().search
 
         if is_sbt:
             tree = sbt_or_siglist
-            notify('Searching SBT {}', str(tree))
+            notify('Searching SBT {}', filename)
             for leaf in tree.find(search_fn, query, args.threshold):
                 similarity = query_similarity(leaf.data)
                 if similarity >= args.threshold:
@@ -767,7 +768,7 @@ def gather(args):
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
         results = []
-        for (sbt_or_siglist, is_sbt) in dblist:
+        for (sbt_or_siglist, filename, is_sbt) in dblist:
             search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
 
             if is_sbt:
@@ -785,12 +786,12 @@ def gather(args):
                         results.append((similarity, ss))
 
         if not results:
-            return None, None
+            return None, None, None
 
         # take the best result
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
         best_similarity, best_leaf = results[0]
-        return best_similarity, best_leaf
+        return best_similarity, best_leaf, filename
 
 
     # define a function to build new signature object from set of mins
@@ -818,8 +819,10 @@ def gather(args):
 
     sum_found = 0.
     found = []
+    GatherResult = namedtuple('GatherResult',
+                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
     while 1:
-        best_similarity, best_leaf = find_best(databases, query)
+        best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
             break
 
@@ -835,7 +838,7 @@ def gather(args):
             error('Please prepare database of sequences with --scaled')
             sys.exit(-1)
 
-        R_genome = sourmash_lib.MAX_HASH / float(best_leaf.minhash.max_hash)
+        R_genome = best_leaf.minhash.scaled
 
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
@@ -859,26 +862,35 @@ def gather(args):
 
         # calculate fractions wrt first denominator - genome size
         genome_n_mins = len(found_mins)
-        f_genome = len(intersect_mins) / float(genome_n_mins)
+        f_match = len(intersect_mins) / float(genome_n_mins)
         f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.minhash.get_hashes())
-        f_query = len(intersect_mins) / float(query_n_mins)
+        f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         if not len(found):                # first result? print header.
             notify("")
             notify("overlap     p_query p_match ")
             notify("---------   ------- --------")
 
+        result = GatherResult(intersect_bp=intersect_bp,
+                              f_orig_query=f_orig_query,
+                              f_match=f_match,
+                              f_unique_to_query=f_unique_to_query,
+                              filename=filename,
+                              md5=best_leaf.md5sum(),
+                              name=best_leaf.name(),
+                              leaf=best_leaf)
+
         # print interim result & save in a list for later use
-        pct_query = '{:.1f}%'.format(f_orig_query*100)
-        pct_genome = '{:.1f}%'.format(f_genome*100)
+        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         notify('{:9}   {:>6}  {:>6}      {}',
-               format_bp(intersect_bp), pct_query, pct_genome,
-               best_leaf.name()[:40])
-        found.append((intersect_bp, f_orig_query, best_leaf, f_genome))
+               format_bp(result.intersect_bp), pct_query, pct_genome,
+                         result.name[:40])
+        found.append(result)
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
@@ -895,19 +907,19 @@ def gather(args):
         sys.exit(0)
 
     if args.output:
-        fieldnames = ['intersect_bp', 'f_orig_query', 'f_found_genome', 'name']
+        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
+                      'f_unique_to_query', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
-        for (intersect_bp, f_genome, leaf, f_orig_query) in found:
-            w.writerow(dict(intersect_bp=intersect_bp,
-                            f_orig_query=f_orig_query, name=leaf.name(),
-                            f_found_genome=f_genome,))
+        for result in found:
+            d = dict(result._asdict())
+            del d['leaf']                 # actual signature not in CSV.
+            w.writerow(d)
 
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ ss for (_, _, ss, _) in found ],
-                              args.save_matches)
+        sig.save_signatures([ r.leaf for r in found ], args.save_matches)
 
     if args.output_unassigned:
         if not query.minhash.get_mins():
