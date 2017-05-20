@@ -1550,7 +1550,7 @@ def test_gather():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in out
 
 
 def test_gather_csv():
@@ -1639,7 +1639,7 @@ def test_gather_multiple_sbts():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in out
 
 
 def test_gather_sbt_and_sigs():
@@ -1674,7 +1674,7 @@ def test_gather_sbt_and_sigs():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in out
 
 
 def test_gather_file_output():
@@ -1709,7 +1709,7 @@ def test_gather_file_output():
 
         print(out)
         print(err)
-        assert '0.9 kbp     100.0%  100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in out
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
@@ -1739,9 +1739,41 @@ def test_gather_metagenome():
         print(err)
 
         assert 'found 12 matches total' in err
-        assert 'the recovered matches hit 100.0% of the query' in err
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
-        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in err
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in out
+
+
+def test_gather_metagenome_output_unassigned():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
+        testdata_sigs = glob.glob(testdata_glob)[0]
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} -k 21'.format(query_sig, testdata_sigs)
+        cmd += ' --output-unassigned=unassigned.sig'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 1 matches total' in err
+        assert 'the recovered matches hit 33.2% of the query' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
+
+        # now examine unassigned
+        testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
+        testdata2_sigs = glob.glob(testdata2_glob)[0]
+
+        cmd = 'gather {} {} -k 21'.format('unassigned.sig', testdata2_sigs)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp. e' in out
 
 
 def test_gather_metagenome_downsample():
@@ -1768,9 +1800,9 @@ def test_gather_metagenome_downsample():
         print(err)
 
         assert 'found 11 matches total' in err
-        assert 'the recovered matches hit 100.0% of the query' in err
-        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
-        assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp. e' in err
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
+        assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp. e' in out
 
 
 def test_gather_save_matches():
@@ -1798,7 +1830,7 @@ def test_gather_save_matches():
         print(err)
 
         assert 'found 12 matches total' in err
-        assert 'the recovered matches hit 100.0% of the query' in err
+        assert 'the recovered matches hit 100.0% of the query' in out
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
@@ -1863,7 +1895,7 @@ def test_gather_deduce_ksize():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in err
+        assert '0.9 kbp     100.0%  100.0%' in out
 
 
 def test_gather_deduce_moltype():
@@ -1899,7 +1931,7 @@ def test_gather_deduce_moltype():
         print(out)
         print(err)
 
-        assert '1.9 kbp     100.0%  100.0%' in err
+        assert '1.9 kbp     100.0%  100.0%' in out
 
 
 def test_sbt_categorize():

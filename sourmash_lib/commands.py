@@ -902,8 +902,8 @@ def gather(args):
 
         if not len(found):                # first result? print header.
             notify("")
-            notify("overlap     p_query p_match ")
-            notify("---------   ------- --------")
+            print_results("overlap     p_query p_match ")
+            print_results("---------   ------- --------")
 
         result = GatherResult(intersect_bp=intersect_bp,
                               f_orig_query=f_orig_query,
@@ -918,7 +918,7 @@ def gather(args):
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
-        notify('{:9}   {:>6}  {:>6}      {}',
+        print_results('{:9}   {:>6}  {:>6}      {}',
                format_bp(result.intersect_bp), pct_query, pct_genome,
                          result.name[:40])
         found.append(result)
@@ -931,7 +931,8 @@ def gather(args):
     notify('\nfound {} matches total;', len(found))
 
     sum_found /= len(orig_query.minhash.get_hashes())
-    notify('the recovered matches hit {:.1f}% of the query', sum_found * 100)
+    print_results('the recovered matches hit {:.1f}% of the query',
+           sum_found * 100)
     notify('')
 
     if not found:
@@ -960,8 +961,12 @@ def gather(args):
         else:
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
-            query.minhash.max_hash = new_max_hash
-            sig.save_signatures([ query ], args.output_unassigned)
+
+            e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
+                                     max_hash=new_max_hash)
+            e.add_many(query.minhash.get_mins())
+            sig.save_signatures([ sig.SourmashSignature('', e) ],
+                                args.output_unassigned)
 
 
 def watch(args):
