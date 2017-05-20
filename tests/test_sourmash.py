@@ -967,6 +967,58 @@ def test_search_3():
         assert '2 matches; showing first 1' in err
 
 
+def test_search_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'search {} gcf_all -k 21'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
+        assert '12 matches; showing first 3:' in err
+
+
+def test_search_metagenome_downsample():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
+        assert '12 matches; showing first 3:' in err
+
+
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
@@ -1679,9 +1731,8 @@ def test_gather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query_sig, 'gcf_all',
-                                            '-k', '21'],
+        cmd = 'gather {} gcf_all -k 21'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
@@ -1691,6 +1742,35 @@ def test_gather_metagenome():
         assert 'the recovered matches hit 100.0% of the query' in err
         assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
         assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in err
+
+
+def test_gather_metagenome_downsample():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query_sig, 'gcf_all',
+                                            '-k', '21', '--scaled', '100000'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 11 matches total' in err
+        assert 'the recovered matches hit 100.0% of the query' in err
+        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp.' in err
+        assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp. e' in err
 
 
 def test_gather_save_matches():

@@ -631,13 +631,14 @@ def search(args):
     else:
         notify('{} matches; showing first {}:',
                len(results), args.num_results)
+        n_matches = args.num_results
 
     # output!
     print_results("similarity   match")
     print_results("----------   -----")
-    for sr in results:
+    for sr in results[:n_matches]:
         pct = '{:.1f}%'.format(sr.similarity*100)
-        print_results('{:>6}       {}', pct, sr.name)
+        print_results('{:>6}       {}', pct, sr.name[:60])
 
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']
