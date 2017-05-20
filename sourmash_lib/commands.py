@@ -560,9 +560,8 @@ def search(args):
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
 
-        old_scaled = int(sourmash_lib.MAX_HASH / query.minhash.max_hash)
         notify('downsampling query from scaled={} to {}',
-               old_scaled, int(args.scaled))
+               query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search function(s)
@@ -742,9 +741,8 @@ def gather(args):
 
     # downsample if requested
     if args.scaled:
-        old_scaled = int(sourmash_lib.MAX_HASH / query.minhash.max_hash)
         notify('downsampling query from scaled={} to {}',
-               old_scaled, int(args.scaled))
+               query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # empty?
