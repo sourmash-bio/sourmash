@@ -1200,6 +1200,58 @@ def test_do_sourmash_sbt_search_bestonly():
         assert testdata1 in err
 
 
+def test_sbt_search_order_dependence():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz')
+        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+
+        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'sbt_index -k 21 134 genome-s10+s11.fa.gz.sig genome-s11.fa.gz.sig genome-s12.fa.gz.sig'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'sbt_search -k 21 134 genome-s11.fa.gz.sig --best-only -k 21 --dna'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '100.0%' in err
+
+
+def test_sbt_search_order_dependence_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz')
+        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+
+        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'sbt_index -k 21 314 genome-s11.fa.gz.sig genome-s10+s11.fa.gz.sig genome-s12.fa.gz.sig'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'sbt_search -k 21 314 genome-s11.fa.gz.sig --best-only -k 21 --dna'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '100.0%' in err
+
+
 def test_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
