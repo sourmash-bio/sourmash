@@ -922,11 +922,14 @@ def gather(args):
         sig.save_signatures([ r.leaf for r in found ], args.save_matches)
 
     if args.output_unassigned:
+        if not found:
+            notify('nothing found - entire query signature unassigned.')
         if not query.minhash.get_mins():
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
+            query.minhash.max_hash = new_max_hash
             sig.save_signatures([ query ], args.output_unassigned)
 
 
