@@ -536,6 +536,8 @@ def search(args):
     parser.add_argument('--best-only', action='store_true')
     parser.add_argument('-n', '--num-results', default=3, type=int)
     parser.add_argument('--containment', action='store_true')
+    parser.add_argument('--scaled', type=float,
+                        help='downsample query to this scaled factor')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_K)
     sourmash_args.add_moltype_args(parser)
@@ -551,6 +553,17 @@ def search(args):
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query_ksize,
                                              query_moltype)
+
+    # downsample if requested
+    if args.scaled:
+        if query.minhash.max_hash == 0:
+            error('cannot downsample a signature not created with --scaled')
+            sys.exit(-1)
+
+        old_scaled = int(sourmash_lib.MAX_HASH / query.minhash.max_hash)
+        notify('downsampling query from scaled={} to {}',
+               old_scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search function(s)
     search_fn = search_minhashes
@@ -731,7 +744,7 @@ def gather(args):
     if args.scaled:
         old_scaled = int(sourmash_lib.MAX_HASH / query.minhash.max_hash)
         notify('downsampling query from scaled={} to {}',
-               old_scaled, args.scaled)
+               old_scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # empty?
