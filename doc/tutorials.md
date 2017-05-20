@@ -77,10 +77,11 @@ and you should see:
 ```
 # running sourmash subcommand: search
 loaded query: /home/ubuntu/data/ecoli_ref-5m... (k=31, DNA)
-loading db of signatures from 1 files
-loaded 1 signatures total.
+loaded 1 signatures from ecoli-genome.sig
 1 matches:
-         /home/ubuntu/data/ecoliMG1655.fa.gz     0.466   ecoli-genome.sig
+similarity   match
+----------   -----
+ 46.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
 ```
 
 
@@ -126,7 +127,7 @@ sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
 and now we can search!
 
 ```
-sourmash search ecoli-genome.sig ecolidb.sbt.json | head
+sourmash search ecoli-genome.sig ecolidb.sbt.json -n 20
 ```
 
 You should see output like this:
@@ -134,12 +135,31 @@ You should see output like this:
 ```
 # running sourmash subcommand: search
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
-
+loaded SBT ecolidb.sbt.json
+Searching SBT ecolidb.sbt.json
+49 matches; showing first 20:
 similarity   match
 ----------   -----
- 88.4%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole genome shotgun sequence
- 87.8%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605S4C2.contig.0_1, whole genome shotgun sequence
- 86.6%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108S3C2.contig.0_1, whole genome shotgun sequence
+ 88.4%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole gen
+ 87.8%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605S4C
+ 86.6%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108S3C
+ 86.6%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole geno
+ 81.3%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1, w
+ 78.9%       NZ_JHDG01000001.1 Escherichia coli 1-176-05_S3_C1 e117605S3C
+ 78.3%       NZ_MOJK01000001.1 Escherichia coli strain 469 Cleandata-BN4_
+ 78.1%       NZ_JNLZ01000001.1 Escherichia coli 3-105-05_S1_C1 e310505S1C
+ 78.1%       NZ_MOGK01000001.1 Escherichia coli strain 676 BN4_676_1_(pai
+ 78.1%       NZ_MIWF01000001.1 Escherichia coli strain AF7759-1 contig_00
+ 70.6%       NZ_KE700241.1 Escherichia coli HVH 147 (4-5893887) acYxy-sup
+ 69.2%       NZ_CP011331.1 Escherichia coli O104:H4 str. C227-11, complet
+ 69.0%       NZ_JHGJ01000001.1 Escherichia coli O45:H2 str. 2009C-4780 co
+ 69.0%       NZ_MIWP01000001.1 Escherichia coli strain K6412 contig_0001,
+ 68.6%       NZ_JHHE01000001.1 Escherichia coli O103:H2 str. 2009C-3279 c
+ 68.0%       NZ_LVOV01000001.1 Escherichia coli strain swine72 swine72_co
+ 67.5%       NZ_LQWB01000001.1 Escherichia coli strain GN03624 GCID_ECOLI
+ 67.1%       NZ_JHGS01000001.1 Escherichia coli O111:NM str. 2009C-4052 c
+ 67.1%       NZ_JHMG01000001.1 Escherichia coli O121:H19 str. 2010EL1058
+ 66.7%       NZ_AIGC01000068.1 Escherichia coli DEC7C gecDEC7C.contig.67_
 ```
 
 ## Compare many signatures and build a tree.
