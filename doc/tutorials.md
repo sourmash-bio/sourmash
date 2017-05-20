@@ -31,7 +31,7 @@ pip install -U Cython
 pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn
 
 pip install https://github.com/dib-lab/khmer/archive/master.zip
-pip install https://github.com/dib-lab/sourmash/archive/spacegraphcats.zip
+pip install https://github.com/dib-lab/sourmash/archive/master.zip
 
 ```
 
@@ -102,7 +102,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/dib-lab/sourmash/raw/update/doc_sbts/data/eschericia-sigs.tar.gz
+curl -O -L https://github.com/dib-lab/sourmash/raw/master/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 rm eschericia-sigs.tar.gz
@@ -120,19 +120,19 @@ ls ecoli_many_sigs
 Let's turn this into an easily-searchable database with `sourmash sbt_index` --
 
 ```
-sourmash sbt_index -k 31 ecolidb ecoli_many_sigs/*.sig
+sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
 ```
 
 and now we can search!
 
 ```
-sourmash sbt_search ecolidb.sbt.json ecoli-genome.sig | head
+sourmash search ecoli-genome.sig ecolidb.sbt.json | head
 ```
 
 You should see output like this:
 
 ```
-# running sourmash subcommand: sbt_search
+# running sourmash subcommand: search
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
 
 similarity   match
@@ -187,7 +187,7 @@ files in the directory `.sbt.genbank-k31`.
 
 Next, run the 'gather' command to see what's in your ecoli genome --
 ```
-sourmash sbt_gather -k 31 genbank-k31.sbt.json ecoli-genome.sig
+sourmash gather -k 31 ecoli-genome.sig genbank-k31.sbt.json
 ```
 
 and you should get:
@@ -214,7 +214,7 @@ from the
 [Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/update/doc_sbts/doc/_static/shakya-unaligned-contigs.sig
+wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
 sourmash sbt_gather -k 31 genbank-k31.sbt.json shakya-unaligned-contigs.sig
 ```
 
