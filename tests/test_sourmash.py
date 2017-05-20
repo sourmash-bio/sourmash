@@ -10,6 +10,7 @@ import screed
 import time
 import glob
 import json
+import csv
 
 from . import sourmash_tst_utils as utils
 from sourmash_lib import MinHash
@@ -655,6 +656,33 @@ def test_search():
         print(status, out, err)
         assert '1 matches' in err
         assert '93.0%' in out
+
+
+def test_search_csv():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'xxx.csv'],
+                                           in_directory=location)
+        print(status, out, err)
+
+        csv_file = os.path.join(location, 'xxx.csv')
+
+        with open(csv_file) as fp:
+            reader = csv.DictReader(fp)
+            row = next(reader)
+            assert float(row['similarity']) == 0.93
+            assert row['name'].endswith('short2.fa')
+            assert row['filename'].endswith('short2.fa.sig')
+            assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
 
 def test_compare_deduce_molecule():
@@ -1471,6 +1499,53 @@ def test_gather():
         print(err)
 
         assert '0.9 kbp     100.0%  100.0%' in err
+
+
+def test_gather_csv():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz', '-o',
+                                            'foo.csv', '--threshold-bp=1'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        csv_file = os.path.join(location, 'foo.csv')
+
+        with open(csv_file) as fp:
+            reader = csv.DictReader(fp)
+            row = next(reader)
+            print(row)
+            assert float(row['intersect_bp']) == 910
+            assert float(row['f_orig_query']) == 1.0
+            assert float(row['f_unique_to_query']) == 1.0
+            assert float(row['f_match']) == 1.0
+            assert row['name'].endswith('short2.fa')
+            assert row['filename'] == 'zzz'
+            assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
 
 
 def test_gather_multiple_sbts():
