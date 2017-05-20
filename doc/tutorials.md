@@ -3,9 +3,9 @@
 This tutorial should run without modification on Ubuntu 15.10 ("wily");
 it was developed on AWS ami-05384865 (us-west region).
 
-You'll need about 15 GB of free disk space to download the database, and
-about 1-2 GB of RAM.  The tutorial should take about 20 minutes total to
-run.
+You'll need about 30 GB of free disk space to download the database,
+and about 1-2 GB of RAM to search it.  The tutorial should take about
+20 minutes total to run.
 
 ## Installing sourmash
 
@@ -235,13 +235,14 @@ from the
 
 ```
 wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
-sourmash sbt_gather -k 31 genbank-k31.sbt.json shakya-unaligned-contigs.sig
+sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-k31.sbt.json
 ```
 
 This should yield:
 ```
-# running sourmash subcommand: sbt_gather
+# running sourmash subcommand: gather
 loaded query: mqc500.QC.AMBIGUOUS.99.unalign... (k=31, DNA)
+loaded SBT genbank-k31.sbt.json
 
 overlap     p_query p_match
 ---------   ------- --------
@@ -276,7 +277,7 @@ the recovered matches hit 73.4% of the query
 
 ```
 
-It is straightforward to build your own databases for use with `sbt_search`
-and `sbt_gather`; ping us if you want us to write that up.
+It is straightforward to build your own databases for use with `search`
+and `gather`; ping us if you want us to write that up.
 
 [Return to index](index.html)
