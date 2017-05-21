@@ -1021,16 +1021,23 @@ def watch(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('--threshold', default=0.05, type=float)
-    parser.add_argument('--input-is-protein', action='store_true')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='save signature generated from data here')
+    parser.add_argument('--threshold', default=0.05, type=float,
+                        help='minimum threshold for matches')
+    parser.add_argument('--input-is-protein', action='store_true',
+                        help='Consume protein sequences - no translation needed')
     sourmash_args.add_construct_moltype_args(parser)
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--name', type=str, default='stdin')
+    parser.add_argument('--name', type=str, default='stdin',
+                        help='name to use for generated signature')
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:
         notify('WARNING: input is protein, turning off DNA hashing.')
@@ -1104,8 +1111,9 @@ def watch(args):
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
-        notify('FOUND: {}, at {:.3f}', found_sig.name(),
+        print_results('FOUND: {}, at {:.3f}', found_sig.name(),
                similarity)
 
     if args.output:
+        notify('saving signature to {}', args.output.name)
         sig.save_signatures([streamsig], args.output)

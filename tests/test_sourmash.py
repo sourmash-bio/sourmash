@@ -2071,7 +2071,7 @@ def test_watch():
 
         print(out)
         print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
 
 
 def test_watch_deduce_ksize():
@@ -2095,7 +2095,7 @@ def test_watch_deduce_ksize():
         print(out)
         print(err)
         assert 'Computing signature for k=29' in err
-        assert 'genome-s10.fa.gz, at 1.000' in err
+        assert 'genome-s10.fa.gz, at 1.000' in out
 
 
 def test_watch_coverage():
@@ -2120,4 +2120,4 @@ def test_watch_coverage():
 
         print(out)
         print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in err
+        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
