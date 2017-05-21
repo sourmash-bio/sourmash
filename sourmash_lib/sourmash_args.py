@@ -12,16 +12,37 @@ from sourmash_lib.sbtmh import SigLeaf
 
 DEFAULT_LOAD_K=31
 
-def add_moltype_args(parser, default_dna=None):
-    parser.add_argument('--protein', dest='protein', action='store_true')
+
+def add_moltype_args(parser):
+    parser.add_argument('--protein', dest='protein', action='store_true',
+                        help='choose a protein signature (default: False)')
     parser.add_argument('--no-protein', dest='protein',
-                        action='store_false')
+                        action='store_false',
+                        help='do not choose a protein signature')
     parser.set_defaults(protein=False)
 
     parser.add_argument('--dna', dest='dna', default=None,
-                        action='store_true')
-    parser.add_argument('--no-dna', dest='dna', action='store_false')
-    parser.set_defaults(dna=default_dna)
+                        action='store_true',
+                        help='choose a DNA signature (default: True)')
+    parser.add_argument('--no-dna', dest='dna', action='store_false',
+                        help='do not choose a DNA signature')
+    parser.set_defaults(dna=None)
+
+
+def add_construct_moltype_args(parser):
+    parser.add_argument('--protein', dest='protein', action='store_true',
+                        help='build protein signatures (default: False)')
+    parser.add_argument('--no-protein', dest='protein',
+                        action='store_false',
+                        help='do not build protein signatures')
+    parser.set_defaults(protein=False)
+
+    parser.add_argument('--dna', dest='dna', default=None,
+                        action='store_true',
+                        help='build DNA signatures (default: True)')
+    parser.add_argument('--no-dna', dest='dna', action='store_false',
+                        help='do not build DNA signatures')
+    parser.set_defaults(dna=True)
 
 
 def add_ksize_arg(parser, default):

@@ -37,7 +37,7 @@ def compute(args):
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
 
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
@@ -56,7 +56,7 @@ def compute(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='output computed signatures to this file')
     parser.add_argument('--email', type=str, default='',
-                        help='set e-mail address associated with signature (default: empty)')
+                        help='set e-mail address of the signature creator (default: empty)')
     parser.add_argument('--singleton', action='store_true',
                         help='compute a signature for each sequence record individually (default: False)')
     parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
@@ -66,9 +66,11 @@ def compute(args):
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float,
-                        help='set resolution of signature size')
-    parser.add_argument('--seed', type=int, help='hash seed (default: 42)',
+                        help='choose number of hashes as 1 in FRACTION of input k-mers')
+    parser.add_argument('--seed', type=int,
+                        help='seed used by MurmurHash (default: 42)',
                         default=sourmash_lib.DEFAULT_SEED)
+
     args = parser.parse_args(args)
     set_quiet(args.quiet)
 
@@ -1018,7 +1020,7 @@ def watch(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
     parser.add_argument('--threshold', default=0.05, type=float)
     parser.add_argument('--input-is-protein', action='store_true')
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
