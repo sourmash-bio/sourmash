@@ -61,7 +61,7 @@ There are three main subcommands: ``compute``, ``compare``, and ``plot``.
 The ``compute`` subcommand computes and saves MinHash sketches for
 each sequence in one or more sequence files.  It takes as input FASTA
 or FASTQ files, and these files can be uncompressed or compressed with
-gzip or bzip2.  The output will be one or more YAML signature files
+gzip or bzip2.  The output will be one or more JSON signature files
 that can be used with ``sourmash compare``.
 
 Usage::

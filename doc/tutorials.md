@@ -3,9 +3,9 @@
 This tutorial should run without modification on Ubuntu 15.10 ("wily");
 it was developed on AWS ami-05384865 (us-west region).
 
-You'll need about 15 GB of free disk space to download the database, and
-about 1-2 GB of RAM.  The tutorial should take about 20 minutes total to
-run.
+You'll need about 30 GB of free disk space to download the database,
+and about 1-2 GB of RAM to search it.  The tutorial should take about
+20 minutes total to run.
 
 ## Installing sourmash
 
@@ -31,7 +31,7 @@ pip install -U Cython
 pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn
 
 pip install https://github.com/dib-lab/khmer/archive/master.zip
-pip install https://github.com/dib-lab/sourmash/archive/spacegraphcats.zip
+pip install https://github.com/dib-lab/sourmash/archive/master.zip
 
 ```
 
@@ -77,10 +77,11 @@ and you should see:
 ```
 # running sourmash subcommand: search
 loaded query: /home/ubuntu/data/ecoli_ref-5m... (k=31, DNA)
-loading db of signatures from 1 files
-loaded 1 signatures total.
+loaded 1 signatures from ecoli-genome.sig
 1 matches:
-         /home/ubuntu/data/ecoliMG1655.fa.gz     0.466   ecoli-genome.sig
+similarity   match
+----------   -----
+ 46.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
 ```
 
 
@@ -102,7 +103,7 @@ Let's grab a sample collection of 50 E. coli genomes and unpack it --
 mkdir ecoli_many_sigs
 cd ecoli_many_sigs
 
-curl -O -L https://github.com/dib-lab/sourmash/raw/update/doc_sbts/data/eschericia-sigs.tar.gz
+curl -O -L https://github.com/dib-lab/sourmash/raw/master/data/eschericia-sigs.tar.gz
 
 tar xzf eschericia-sigs.tar.gz
 rm eschericia-sigs.tar.gz
@@ -120,26 +121,45 @@ ls ecoli_many_sigs
 Let's turn this into an easily-searchable database with `sourmash sbt_index` --
 
 ```
-sourmash sbt_index -k 31 ecolidb ecoli_many_sigs/*.sig
+sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
 ```
 
 and now we can search!
 
 ```
-sourmash sbt_search ecolidb.sbt.json ecoli-genome.sig | head
+sourmash search ecoli-genome.sig ecolidb.sbt.json -n 20
 ```
 
 You should see output like this:
 
 ```
-# running sourmash subcommand: sbt_search
+# running sourmash subcommand: search
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
-
+loaded SBT ecolidb.sbt.json
+Searching SBT ecolidb.sbt.json
+49 matches; showing first 20:
 similarity   match
 ----------   -----
- 88.4%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole genome shotgun sequence
- 87.8%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605S4C2.contig.0_1, whole genome shotgun sequence
- 86.6%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108S3C2.contig.0_1, whole genome shotgun sequence
+ 88.4%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole gen
+ 87.8%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605S4C
+ 86.6%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108S3C
+ 86.6%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole geno
+ 81.3%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1, w
+ 78.9%       NZ_JHDG01000001.1 Escherichia coli 1-176-05_S3_C1 e117605S3C
+ 78.3%       NZ_MOJK01000001.1 Escherichia coli strain 469 Cleandata-BN4_
+ 78.1%       NZ_JNLZ01000001.1 Escherichia coli 3-105-05_S1_C1 e310505S1C
+ 78.1%       NZ_MOGK01000001.1 Escherichia coli strain 676 BN4_676_1_(pai
+ 78.1%       NZ_MIWF01000001.1 Escherichia coli strain AF7759-1 contig_00
+ 70.6%       NZ_KE700241.1 Escherichia coli HVH 147 (4-5893887) acYxy-sup
+ 69.2%       NZ_CP011331.1 Escherichia coli O104:H4 str. C227-11, complet
+ 69.0%       NZ_JHGJ01000001.1 Escherichia coli O45:H2 str. 2009C-4780 co
+ 69.0%       NZ_MIWP01000001.1 Escherichia coli strain K6412 contig_0001,
+ 68.6%       NZ_JHHE01000001.1 Escherichia coli O103:H2 str. 2009C-3279 c
+ 68.0%       NZ_LVOV01000001.1 Escherichia coli strain swine72 swine72_co
+ 67.5%       NZ_LQWB01000001.1 Escherichia coli strain GN03624 GCID_ECOLI
+ 67.1%       NZ_JHGS01000001.1 Escherichia coli O111:NM str. 2009C-4052 c
+ 67.1%       NZ_JHMG01000001.1 Escherichia coli O121:H19 str. 2010EL1058
+ 66.7%       NZ_AIGC01000068.1 Escherichia coli DEC7C gecDEC7C.contig.67_
 ```
 
 ## Compare many signatures and build a tree.
@@ -187,7 +207,7 @@ files in the directory `.sbt.genbank-k31`.
 
 Next, run the 'gather' command to see what's in your ecoli genome --
 ```
-sourmash sbt_gather -k 31 genbank-k31.sbt.json ecoli-genome.sig
+sourmash gather -k 31 ecoli-genome.sig genbank-k31.sbt.json
 ```
 
 and you should get:
@@ -214,14 +234,15 @@ from the
 [Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
 
 ```
-wget https://github.com/dib-lab/sourmash/raw/update/doc_sbts/doc/_static/shakya-unaligned-contigs.sig
-sourmash sbt_gather -k 31 genbank-k31.sbt.json shakya-unaligned-contigs.sig
+wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
+sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-k31.sbt.json
 ```
 
 This should yield:
 ```
-# running sourmash subcommand: sbt_gather
+# running sourmash subcommand: gather
 loaded query: mqc500.QC.AMBIGUOUS.99.unalign... (k=31, DNA)
+loaded SBT genbank-k31.sbt.json
 
 overlap     p_query p_match
 ---------   ------- --------
@@ -256,7 +277,7 @@ the recovered matches hit 73.4% of the query
 
 ```
 
-It is straightforward to build your own databases for use with `sbt_search`
-and `sbt_gather`; ping us if you want us to write that up.
+It is straightforward to build your own databases for use with `search`
+and `gather`; ping us if you want us to write that up.
 
 [Return to index](index.html)

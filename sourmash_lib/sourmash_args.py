@@ -4,22 +4,54 @@ Utility functions for dealing with input args to the sourmash command line.
 import sys
 import os
 from . import signature
-from .logging import error, notify
+from .logging import notify, error
 
-def add_moltype_args(parser, default_dna=None):
-    parser.add_argument('--protein', dest='protein', action='store_true')
+from . import signature as sig
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
+
+DEFAULT_LOAD_K=31
+
+
+def add_moltype_args(parser):
+    parser.add_argument('--protein', dest='protein', action='store_true',
+                        help='choose a protein signature (default: False)')
     parser.add_argument('--no-protein', dest='protein',
-                        action='store_false')
+                        action='store_false',
+                        help='do not choose a protein signature')
     parser.set_defaults(protein=False)
 
     parser.add_argument('--dna', dest='dna', default=None,
-                        action='store_true')
-    parser.add_argument('--no-dna', dest='dna', action='store_false')
-    parser.set_defaults(dna=default_dna)
+                        action='store_true',
+                        help='choose a DNA signature (default: True)')
+    parser.add_argument('--no-dna', dest='dna', action='store_false',
+                        help='do not choose a DNA signature')
+    parser.set_defaults(dna=None)
+
+
+def add_construct_moltype_args(parser):
+    parser.add_argument('--protein', dest='protein', action='store_true',
+                        help='build protein signatures (default: False)')
+    parser.add_argument('--no-protein', dest='protein',
+                        action='store_false',
+                        help='do not build protein signatures')
+    parser.set_defaults(protein=False)
+
+    parser.add_argument('--dna', dest='dna', default=None,
+                        action='store_true',
+                        help='build DNA signatures (default: True)')
+    parser.add_argument('--no-dna', dest='dna', action='store_false',
+                        help='do not build DNA signatures')
+    parser.set_defaults(dna=True)
+
+
+def add_ksize_arg(parser, default):
+    parser.add_argument('-k', '--ksize', default=None, type=int,
+                        help='k-mer size (default: {d})'.format(d=default))
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('dna'):
+    if sig.minhash.is_molecule_type('DNA'):
         moltype = 'DNA'
     elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
@@ -40,15 +72,28 @@ def calculate_moltype(args, default=None):
     if args.protein:
         moltype = 'protein'
     elif args.dna:
-        moltype = 'dna'
+        moltype = 'DNA'
 
     return moltype
+
 
 def load_query_signature(filename, select_ksize, select_moltype):
     sl = signature.load_signatures(filename,
                                    select_ksize=select_ksize,
                                    select_moltype=select_moltype)
     sl = list(sl)
+
+    if len(sl) and select_ksize is None:
+        ksizes = set([ ss.minhash.ksize for ss in sl ])
+        if len(ksizes) == 1:
+            ksize = ksizes.pop()
+            sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
+            notify('select query k={} automatically.', ksize)
+        elif DEFAULT_LOAD_K in ksizes:
+            sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
+            notify('selecting default query k={}.', DEFAULT_LOAD_K)
+        elif select_ksize:
+            notify('selecting specified query k={}', select_ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -106,3 +151,41 @@ def traverse_find_sigs(dirnames):
                 if name.endswith('.sig'):
                     fullname = os.path.join(root, name)
                     yield fullname
+
+
+def get_ksize(tree):
+    """Walk nodes in `tree` to find out ksize"""
+    for node in tree.nodes.values():
+        if isinstance(node, SigLeaf):
+            return node.data.minhash.ksize
+
+
+def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
+    databases = []
+    for sbt_or_sigfile in filenames:
+        try:
+            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
+            ksize = get_ksize(tree)
+            if ksize != query_ksize:
+                error("ksize on tree '{}' is {};", sbt_or_sigfile, ksize)
+                error('this is different from query ksize of {}.', query_ksize)
+                sys.exit(-1)
+
+            databases.append((tree, sbt_or_sigfile, True))
+            notify('loaded SBT {}', sbt_or_sigfile)
+        except (ValueError, EnvironmentError):
+            # not an SBT - try as a .sig
+
+            try:
+                siglist = sig.load_signatures(sbt_or_sigfile,
+                                              select_ksize=query_ksize,
+                                              select_moltype=query_moltype)
+                siglist = list(siglist)
+                databases.append((list(siglist), sbt_or_sigfile, False))
+                notify('loaded {} signatures from {}', len(siglist),
+                       sbt_or_sigfile)
+            except EnvironmentError:
+                error("file '{}' does not exist", sbt_or_sigfile)
+                sys.exit(-1)
+
+    return databases
