@@ -1360,7 +1360,7 @@ def test_do_sourmash_index_append():
 
         assert 'short.fa' in out
         assert 'short2.fa' in out
-        assert testdata3 not in out
+        assert 'short3.fa' not in out
 
         status, out, err = utils.runscript('sourmash',
                                            ['index', '-k', '31', '--append',
@@ -1378,9 +1378,9 @@ def test_do_sourmash_index_append():
                                             sig_loc, sbt_name])
         print(out)
 
-        assert testdata1 not in out
+        assert 'short.fa' not in out
         assert 'short2.fa' in out
-        assert testdata3 in out
+        assert 'short3.fa' in out
 
 
 def test_do_sourmash_sbt_search_otherdir():
