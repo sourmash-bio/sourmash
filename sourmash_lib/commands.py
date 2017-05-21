@@ -957,6 +957,10 @@ def gather(args):
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
+        name = result.name
+        if len(name) > 40 and name == best_leaf.d.get('filename'): # path?
+            name = '...' + name[-37:]
+
         print_results('{:9}   {:>6}  {:>6}      {}',
                format_bp(result.intersect_bp), pct_query, pct_genome,
                          result.name[:40])
