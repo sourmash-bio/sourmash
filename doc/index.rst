@@ -12,10 +12,16 @@ sequences, comparing them to each other, and plotting the results.
 This allows you to estimate sequence similarity between even very
 large data sets quickly and accurately.
 
+sourmash can also be used to quickly search large databases of genomes
+for matches to query genomes and metagenomes; see `our list of available
+databases <databases.html>`__.
+
 Please see the `mash <http://mash.readthedocs.io/en/latest/>`__
 software and the `mash paper (Ondov et al., 2016)
 <http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
 information on how and why MinHash sketches work.
+
+----
 
 To use sourmash, you must be comfortable with the UNIX command line;
 programmers may find the Python library and API useful as well.
@@ -57,6 +63,8 @@ Contents:
    :maxdepth: 2
 
    command-line
+   tutorials
+   databases
    api
    api-example
    requirements
@@ -70,4 +78,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

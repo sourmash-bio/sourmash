@@ -76,6 +76,7 @@ def runscript(scriptname, args, in_directory=None,
 
     When using :attr:`fail_ok`=False in tests, specify the expected error.
     """
+    __tracebackhide__ = True
     sysargs = [scriptname]
     sysargs.extend(args)
 
