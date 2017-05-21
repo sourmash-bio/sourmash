@@ -377,6 +377,7 @@ class SBT(object):
 class Node(object):
     "Internal node of SBT."
 
+    # TODO: support node re-creation easily
     def __init__(self, factory, name=None, fullpath=None):
         self.name = name
         self._factory = factory
