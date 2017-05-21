@@ -668,7 +668,10 @@ def search(args):
     print_results("----------   -----")
     for sr in results[:n_matches]:
         pct = '{:.1f}%'.format(sr.similarity*100)
-        print_results('{:>6}       {}', pct, sr.name[:60])
+        name = sr.name
+        if len(name) > 60 and name == sr.match_sig.d.get('filename'): # path?
+            name = '...' + name[-57:]
+        print_results('{:>6}       {}', pct, name)
 
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']
