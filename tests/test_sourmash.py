@@ -38,7 +38,7 @@ def test_do_sourmash_compute():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['compute', '-k', '31', testdata1],
                                            in_directory=location)
 
         sigfile = os.path.join(location, 'short.fa.sig')
@@ -57,7 +57,7 @@ def test_do_sourmash_compute_output_valid_file():
         sigfile = os.path.join(location, 'short.fa.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-o', sigfile,
+                                           ['compute', '-k', '31', '-o', sigfile,
                                             testdata1,
                                             testdata2, testdata3],
                                            in_directory=location)
@@ -81,7 +81,7 @@ def test_do_sourmash_compute_output_stdout_valid():
         testdata3 = utils.get_test_data('short3.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-o', '-',
+                                           ['compute', '-k', '31', '-o', '-',
                                             testdata1,
                                             testdata2, testdata3],
                                            in_directory=location)
@@ -102,7 +102,7 @@ def test_do_sourmash_compute_output_and_name_valid_file():
         sigfile = os.path.join(location, 'short.fa.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-o', sigfile,
+                                           ['compute', '-k', '31', '-o', sigfile,
                                             '--merge', '"name"',
                                             testdata1,
                                             testdata2, testdata3],
@@ -119,8 +119,7 @@ def test_do_sourmash_compute_output_and_name_valid_file():
 
         all_testdata = " ".join([testdata1, testdata2, testdata3])
         sigfile_merged = os.path.join(location, 'short.all.fa.sig')
-        #cmd = "cat {} | {}/sourmash compute -o {} -".format(
-        cmd = "cat {} | {}/sourmash compute -o {} -".format(
+        cmd = "cat {} | {}/sourmash compute -k 31 -o {} -".format(
                 all_testdata, utils.scriptpath(), sigfile_merged)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
@@ -134,7 +133,7 @@ def test_do_sourmash_compute_singleton():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--singleton',
+                                           ['compute', '-k', '31', '--singleton',
                                             testdata1],
                                            in_directory=location)
 
@@ -149,7 +148,7 @@ def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--merge', 'foo',
+                                           ['compute', '-k', '31', '--merge', 'foo',
                                             testdata1, '-o', 'foo.sig'],
                                            in_directory=location)
 
@@ -160,7 +159,7 @@ def test_do_sourmash_compute_name():
         assert sig.name() == 'foo'
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name', 'foo',
+                                           ['compute', '-k', '31', '--name', 'foo',
                                             testdata1, '-o', 'foo2.sig'],
                                            in_directory=location)
 
@@ -176,7 +175,7 @@ def test_do_sourmash_compute_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--merge', 'foo',
+                                           ['compute', '-k', '31', '--merge', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
@@ -187,14 +186,14 @@ def test_do_sourmash_compute_merge_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--merge', 'foo',
+                                           ['compute', '-k', '31', '--merge', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name', 'foo',
+                                           ['compute', '-k', '31', '--name', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
@@ -205,7 +204,7 @@ def test_do_sourmash_compute_name_from_first():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--name-from-first',
+                                           ['compute', '-k', '31', '--name-from-first',
                                             testdata1],
                                            in_directory=location)
 
@@ -541,7 +540,7 @@ def test_do_compare_output_csv():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -561,7 +560,7 @@ def test_do_plot_comparison():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -582,7 +581,7 @@ def test_do_plot_comparison_2():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -603,7 +602,7 @@ def test_do_plot_comparison_3():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -624,7 +623,7 @@ def test_search_sig_does_not_exist():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1],
+                                           ['compute', '-k', '31', testdata1],
                                            in_directory=location)
 
 
@@ -644,7 +643,7 @@ def test_search():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -654,7 +653,7 @@ def test_search():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert '93.0%' in out
 
 
@@ -663,7 +662,7 @@ def test_search_csv():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
 
@@ -701,7 +700,7 @@ def test_compare_deduce_molecule():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert 'min similarity in matrix: 0.91' in err
+        assert 'min similarity in matrix: 0.91' in out
 
 
 def test_compare_deduce_ksize():
@@ -719,7 +718,7 @@ def test_compare_deduce_ksize():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert 'min similarity in matrix: 0.938' in err
+        assert 'min similarity in matrix: 0.938' in out
 
 
 def test_search_deduce_molecule():
@@ -738,7 +737,7 @@ def test_search_deduce_molecule():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert '(k=30, protein)' in err
 
 
@@ -757,7 +756,7 @@ def test_search_deduce_ksize():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert 'k=23' in err
 
 
@@ -770,7 +769,7 @@ def test_do_sourmash_sbt_search_output():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', 'zzz', '-k', '31',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -808,7 +807,7 @@ def test_search_deduce_ksize_and_select_appropriate():
                                             'short2.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert 'k=24' in err
 
 
@@ -868,7 +867,7 @@ def test_search_containment():
                                             'short2.fa.sig', '--containment'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert '95.8%' in out
 
 
@@ -884,7 +883,7 @@ def test_search_containment_sbt():
 
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short2.fa.sig'],
                                            in_directory=location)
 
@@ -895,7 +894,7 @@ def test_search_containment_sbt():
                                             'zzz', '--containment'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert '95.8%' in out
 
 
@@ -920,7 +919,7 @@ def test_search_gzip():
                                             'yyy.gz'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches' in err
+        assert '1 matches' in out
         assert '93.0%' in out
 
 
@@ -941,7 +940,7 @@ def test_search_2():
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '2 matches' in err
+        assert '2 matches' in out
         assert '93.0%' in out
         assert '89.6%' in out
 
@@ -964,7 +963,7 @@ def test_search_3():
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '2 matches; showing first 1' in err
+        assert '2 matches; showing first 1' in out
 
 
 def test_search_metagenome():
@@ -990,7 +989,7 @@ def test_search_metagenome():
         print(err)
 
         assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
-        assert '12 matches; showing first 3:' in err
+        assert '12 matches; showing first 3:' in out
 
 
 def test_search_metagenome_downsample():
@@ -1016,7 +1015,7 @@ def test_search_metagenome_downsample():
         print(err)
 
         assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
-        assert '12 matches; showing first 3:' in err
+        assert '12 matches; showing first 3:' in out
 
 
 def test_mash_csv_to_sig():
@@ -1039,7 +1038,7 @@ def test_mash_csv_to_sig():
                                             'short.fa.sig', 'xxx.sig'],
                                            in_directory=location)
         print(status, out, err)
-        assert '1 matches:' in err
+        assert '1 matches:' in out
         assert '100.0%       short.fa' in out
 
 
@@ -1052,7 +1051,7 @@ def test_do_sourmash_index_bad_args():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig',
                                             '--dna', '--protein'],
@@ -1071,7 +1070,7 @@ def test_do_sourmash_sbt_search():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1124,14 +1123,14 @@ def test_do_sourmash_sbt_search_multiple():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz2',
+                                           ['index', '-k', '31', 'zzz2',
                                             'short2.fa.sig'],
                                            in_directory=location)
 
@@ -1157,7 +1156,7 @@ def test_do_sourmash_sbt_search_and_sigs():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
 
@@ -1189,7 +1188,7 @@ def test_do_sourmash_sbt_search_downsample():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1214,7 +1213,7 @@ def test_do_sourmash_index_single():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
 
@@ -1240,7 +1239,7 @@ def test_do_sourmash_sbt_search_selectprot():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['index', 'zzz', 'short.fa.sig', 'short2.fa.sig']
+        args = ['index', '-k', '31', 'zzz', 'short.fa.sig', 'short2.fa.sig']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
 
@@ -1285,7 +1284,7 @@ def test_do_sourmash_index_traverse():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             '--traverse-dir', '.'],
                                            in_directory=location)
 
@@ -1307,7 +1306,7 @@ def test_do_sourmash_sbt_combine():
         files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz'] + files,
+                                           ['index', '-k', '31', 'zzz'] + files,
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1347,7 +1346,7 @@ def test_do_sourmash_index_append():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig', 'short2.fa.sig'],
                                            in_directory=location)
 
@@ -1364,7 +1363,7 @@ def test_do_sourmash_index_append():
         assert testdata3 not in out
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '--append',
+                                           ['index', '-k', '31', '--append',
                                             'zzz',
                                             'short3.fa.sig'],
                                            in_directory=location)
@@ -1393,7 +1392,7 @@ def test_do_sourmash_sbt_search_otherdir():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'xxx/zzz',
+                                           ['index', '-k', '31', 'xxx/zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1419,7 +1418,7 @@ def test_do_sourmash_sbt_search_bestonly():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1534,7 +1533,7 @@ def test_gather():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1569,7 +1568,7 @@ def test_gather_csv():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1616,14 +1615,14 @@ def test_gather_multiple_sbts():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', 'zzz', '-k', '31',
                                             'short.fa.sig'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz2',
+                                           ['index', 'zzz2', '-k', '31',
                                             'short2.fa.sig'],
                                            in_directory=location)
 
@@ -1647,7 +1646,7 @@ def test_gather_sbt_and_sigs():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2,
+                                           ['compute', '-k', '31', testdata1, testdata2,
                                             '--scaled', '10'],
                                            in_directory=location)
 
@@ -1658,7 +1657,7 @@ def test_gather_sbt_and_sigs():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig'],
                                            in_directory=location)
 
@@ -1693,7 +1692,7 @@ def test_gather_file_output():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location)
@@ -1738,7 +1737,7 @@ def test_gather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 12 matches total' in err
+        assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
         assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in out
@@ -1759,7 +1758,7 @@ def test_gather_metagenome_output_unassigned():
         print(out)
         print(err)
 
-        assert 'found 1 matches total' in err
+        assert 'found 1 matches total' in out
         assert 'the recovered matches hit 33.2% of the query' in out
         assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
 
@@ -1799,7 +1798,7 @@ def test_gather_metagenome_downsample():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in err
+        assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
         assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp. e' in out
@@ -1829,7 +1828,7 @@ def test_gather_save_matches():
         print(out)
         print(err)
 
-        assert 'found 12 matches total' in err
+        assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
@@ -1839,12 +1838,12 @@ def test_gather_error_no_cardinality_query():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', '-k', '31', testdata1, testdata2],
                                            in_directory=location)
 
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata3],
+                                           ['compute', '-k', '31', testdata3],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',

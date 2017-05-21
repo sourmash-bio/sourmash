@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import argparse
 
-from .logging import notify, error
+from .logging import notify, error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
@@ -13,6 +13,8 @@ from .commands import (categorize, compare, compute, dump, import_csv,
 
 
 def main():
+    set_quiet(False)
+
     commands = {'search': search, 'compute': compute,
                 'compare': compare, 'plot': plot,
                 'import_csv': import_csv, 'dump': dump,
@@ -52,6 +54,4 @@ sourmash compute -h
         sys.exit(1)
 
     cmd = commands.get(args.command)
-    notify('# running sourmash subcommand: %s' % args.command,
-           file=sys.stderr)
     cmd(sys.argv[2:])

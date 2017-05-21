@@ -10,6 +10,7 @@ from . import signature as sig
 from sourmash_lib.sbt import SBT
 from sourmash_lib.sbtmh import SigLeaf
 
+DEFAULT_LOAD_K=31
 
 def add_moltype_args(parser, default_dna=None):
     parser.add_argument('--protein', dest='protein', action='store_true')
@@ -60,6 +61,18 @@ def load_query_signature(filename, select_ksize, select_moltype):
                                    select_ksize=select_ksize,
                                    select_moltype=select_moltype)
     sl = list(sl)
+
+    if len(sl) and select_ksize is None:
+        ksizes = set([ ss.minhash.ksize for ss in sl ])
+        if len(ksizes) == 1:
+            ksize = ksizes.pop()
+            sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
+            notify('select query k={} automatically.', ksize)
+        elif DEFAULT_LOAD_K in ksizes:
+            sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
+            notify('selecting default query k={}.', DEFAULT_LOAD_K)
+        elif select_ksize:
+            notify('selecting specified query k={}', select_ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)

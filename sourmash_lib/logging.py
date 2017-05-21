@@ -8,6 +8,11 @@ def print_results(s, *args, **kwargs):
 
 
 _quiet = False
+def set_quiet(val):
+    global _quiet
+    _quiet = bool(val)
+
+
 def notify(s, *args, **kwargs):
     "A simple logging function => stderr."
     if not _quiet:
