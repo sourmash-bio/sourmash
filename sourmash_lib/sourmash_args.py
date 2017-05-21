@@ -152,7 +152,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
 
             databases.append((tree, sbt_or_sigfile, True))
             notify('loaded SBT {}', sbt_or_sigfile)
-        except (ValueError, FileNotFoundError):
+        except (ValueError, EnvironmentError):
             # not an SBT - try as a .sig
 
             try:
@@ -163,7 +163,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 databases.append((list(siglist), sbt_or_sigfile, False))
                 notify('loaded {} signatures from {}', len(siglist),
                        sbt_or_sigfile)
-            except FileNotFoundError:
+            except EnvironmentError:
                 error("file '{}' does not exist", sbt_or_sigfile)
                 sys.exit(-1)
 
