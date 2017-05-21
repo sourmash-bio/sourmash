@@ -98,7 +98,7 @@ Testing a release
         source bin/activate
         pip install -U setuptools==3.4.1
         # install as much as possible from non-test server!
-        pip install screed pytest numpy matplotlib scipy PyYAML
+        pip install screed pytest numpy matplotlib scipy
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
         py.test --pyargs sourmash_lib
 

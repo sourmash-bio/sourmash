@@ -78,7 +78,6 @@ cdef class MinHash(object):
                        HashIntoType max_hash=0,
                        mins=None):
         self.track_abundance = track_abundance
-        self.hll = None
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -111,15 +110,14 @@ cdef class MinHash(object):
                 deref(self._this).ksize,
                 deref(self._this).is_protein,
                 self.get_mins(with_abundance=with_abundance),
-                self.hll, self.track_abundance, deref(self._this).max_hash,
+                None, self.track_abundance, deref(self._this).max_hash,
                 deref(self._this).seed)
 
     def __setstate__(self, tup):
-        (n, ksize, is_protein, mins, hll, track_abundance, max_hash, seed) =\
+        (n, ksize, is_protein, mins, _, track_abundance, max_hash, seed) =\
           tup
 
         self.track_abundance = track_abundance
-        self.hll = hll
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -197,6 +195,10 @@ cdef class MinHash(object):
         return deref(self._this).num
 
     @property
+    def scaled(self):
+        return int(get_minhash_max_hash() / self.max_hash)
+
+    @property
     def is_protein(self):
         return deref(self._this).is_protein
 
@@ -209,12 +211,6 @@ cdef class MinHash(object):
         mm = deref(self._this).max_hash
         if mm == 18446744073709551615:
             mm = 0
-
-        # legacy - check cardinality => estimate
-        if mm == 0:
-            if self.hll:
-                genome_size = self.hll.estimate_cardinality()
-                mm = max(self.get_mins())
 
         return mm
 
@@ -376,6 +372,8 @@ cdef class MinHash(object):
 
     def similarity_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
+        if not a:
+            return 0.0
 
         b = set(other.get_mins())
 
@@ -414,7 +412,7 @@ cdef class MinHash(object):
             deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
 
     def is_molecule_type(self, molecule):
-        if molecule == 'dna' and not self.is_protein:
+        if molecule.upper() == 'DNA' and not self.is_protein:
             return True
         if molecule == 'protein' and self.is_protein:
             return True

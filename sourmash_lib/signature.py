@@ -4,7 +4,6 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 from __future__ import print_function
 import sys
-import yaml
 import hashlib
 import sourmash_lib
 from . import signature_json
@@ -15,20 +14,6 @@ import gzip
 import bz2file
 
 SIGNATURE_VERSION=0.4
-
-
-class FakeHLL(object):
-    def __init__(self, cardinality):
-        self.cardinality = int(cardinality)
-
-    def estimate_cardinality(self):
-        return self.cardinality
-
-    def consume_string(self):
-        raise Exception("cannot add to this HLL")
-
-    def __eq__(self, other):
-        return self.cardinality == other.cardinality
 
 
 class SourmashSignature(object):
@@ -70,6 +55,20 @@ class SourmashSignature(object):
         else:
             return self.md5sum()[:8]
 
+    def _display_name(self, max_length):
+        if 'name' in self.d:
+            name = self.d['name']
+            if len(name) > max_length:
+                name = name[:max_length - 3] + '...'
+        elif 'filename' in self.d:
+            name = self.d['filename']
+            if len(name) > max_length:
+                name = '...' + name[-max_length + 3:]
+        else:
+            name = self.md5sum()[:8]
+        assert len(name) <= max_length
+        return name
+
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)
@@ -91,10 +90,7 @@ class SourmashSignature(object):
         if minhash.is_protein:
             sketch['molecule'] = 'protein'
         else:
-            sketch['molecule'] = 'dna'
-
-        if minhash.hll is not None:
-            sketch['cardinality'] = minhash.hll.estimate_cardinality()
+            sketch['molecule'] = 'DNA'
 
         e['signature'] = sketch
 
@@ -180,18 +176,6 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
             is_fp = True
 
     try:
-        # support YAML until next major release
-        if hasattr(data, 'peek'):
-            p = data.peek(6)
-
-            if p[:6] == b'class:': # YAML - legacy format
-                for sig in yaml_load(data,
-                                     select_ksize=select_ksize,
-                                     select_moltype=select_moltype,
-                                     ignore_md5sum=ignore_md5sum):
-                    yield sig
-                return
-
         # JSON format
         for sig in signature_json.load_signatures_json(data,
                                                      ignore_md5sum=ignore_md5sum):
@@ -229,87 +213,3 @@ def load_one_signature(data, select_ksize=None, select_moltype=None,
 def save_signatures(siglist, fp=None):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     return signature_json.save_signatures_json(siglist, fp)
-
-
-def yaml_load(data, select_ksize=None, select_moltype=None,
-              ignore_md5sum=False):
-    # record header
-    x = yaml.load_all(data)
-    siglist = []
-    for n, d in enumerate(x): # allow empty records & concat of signatures
-        if n > 0 and n % 100 == 0:
-           notify('...sig loading {}', n)
-        if not d:
-            continue
-        if d.get('class') != 'sourmash_signature':
-            raise Exception("incorrect class: %s" % d.get('class'))
-        email = d['email']
-
-        name = ''
-        if 'name' in d:
-            name = d['name']
-
-        filename = ''
-        if 'filename' in d:
-            filename = d['filename']
-
-        if 'signatures' not in d:
-            raise Exception("invalid format")
-
-        if d['version'] != SIGNATURE_VERSION:
-            raise Exception("cannot load version %s" % (d['version']))
-
-        for sketch in d['signatures']:
-            sig = _load_one_signature(sketch, email, name, filename,
-                                          ignore_md5sum)
-            if not select_ksize or select_ksize == sig.minhash.ksize:
-                if not select_moltype or \
-                     sig.minhash.is_molecule_type(select_moltype):
-                    yield sig
-
-
-def _load_one_signature(sketch, email, name, filename, ignore_md5sum=False):
-    """Helper function to unpack and check one signature block only."""
-    ksize = sketch['ksize']
-    mins = list(map(int, sketch['mins']))
-    n = int(sketch['num'])
-    molecule = sketch.get('molecule', 'dna')
-    seed = sketch.get('seed', sourmash_lib.DEFAULT_SEED)
-    if molecule == 'protein':
-        is_protein = True
-    elif molecule == 'dna':
-        is_protein = False
-    else:
-        raise Exception("unknown molecule type: {}".format(molecule))
-
-    max_hash = int(sketch.get('max_hash', 0))
-    seed = int(sketch.get('seed', sourmash_lib.DEFAULT_SEED))
-
-    track_abundance = 'abundances' in sketch
-    e = sourmash_lib.MinHash(ksize=ksize, n=n,
-                                is_protein=is_protein,
-                                track_abundance=track_abundance,
-                                max_hash=max_hash, seed=seed)
-    if track_abundance:
-        abundances = list(map(int, sketch['abundances']))
-        e.set_abundances(dict(zip(mins, abundances)))
-    else:
-        for m in mins:
-            e.add_hash(m)
-
-    if 'cardinality' in sketch:
-        e.hll = FakeHLL(int(sketch['cardinality']))
-
-    sig = SourmashSignature(email, e)
-
-    if not ignore_md5sum:
-        md5sum = sketch['md5sum']
-        if md5sum != sig.md5sum():
-            raise Exception('error loading - md5 of minhash does not match')
-
-    if name:
-        sig.d['name'] = name
-    if filename:
-        sig.d['filename'] = filename
-
-    return sig
