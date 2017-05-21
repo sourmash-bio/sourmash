@@ -963,7 +963,7 @@ def gather(args):
 
         print_results('{:9}   {:>6}  {:>6}      {}',
                format_bp(result.intersect_bp), pct_query, pct_genome,
-                         result.name[:40])
+                         name[:40])
         found.append(result)
 
         # construct a new query, minus the previous one.
