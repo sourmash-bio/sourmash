@@ -55,6 +55,20 @@ class SourmashSignature(object):
         else:
             return self.md5sum()[:8]
 
+    def _display_name(self, max_length):
+        if 'name' in self.d:
+            name = self.d['name']
+            if len(name) > max_length:
+                name = name[:max_length - 3] + '...'
+        elif 'filename' in self.d:
+            name = self.d['filename']
+            if len(name) > max_length:
+                name = '...' + name[-max_length + 3:]
+        else:
+            name = self.md5sum()[:8]
+        assert len(name) <= max_length
+        return name
+
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
         e = dict(self.d)

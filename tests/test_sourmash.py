@@ -783,8 +783,8 @@ def test_do_sourmash_sbt_search_output():
         outfile = open(os.path.join(location, 'foo'))
         output = outfile.read()
         print(output)
-        assert testdata1 in output
-        assert testdata2 in output
+        assert 'short.fa' in output
+        assert 'short2.fa' in output
 
 
 def test_search_deduce_ksize_and_select_appropriate():
@@ -988,7 +988,7 @@ def test_search_metagenome():
         print(out)
         print(err)
 
-        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
         assert '12 matches; showing first 3:' in out
 
 
@@ -1014,7 +1014,7 @@ def test_search_metagenome_downsample():
         print(out)
         print(err)
 
-        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar Typh' in out
+        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
         assert '12 matches; showing first 3:' in out
 
 
@@ -1083,8 +1083,8 @@ def test_do_sourmash_sbt_search():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_search_wrong_ksize():
@@ -1142,8 +1142,8 @@ def test_do_sourmash_sbt_search_multiple():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_search_and_sigs():
@@ -1168,8 +1168,8 @@ def test_do_sourmash_sbt_search_and_sigs():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_search_downsample():
@@ -1200,8 +1200,8 @@ def test_do_sourmash_sbt_search_downsample():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_index_single():
@@ -1225,7 +1225,7 @@ def test_do_sourmash_index_single():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
+        assert 'short.fa' in out
 
 
 def test_do_sourmash_sbt_search_selectprot():
@@ -1297,8 +1297,8 @@ def test_do_sourmash_index_traverse():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_combine():
@@ -1358,8 +1358,8 @@ def test_do_sourmash_index_append():
                                            ['search', sig_loc, sbt_name])
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
         assert testdata3 not in out
 
         status, out, err = utils.runscript('sourmash',
@@ -1379,7 +1379,7 @@ def test_do_sourmash_index_append():
         print(out)
 
         assert testdata1 not in out
-        assert testdata2 in out
+        assert 'short2.fa' in out
         assert testdata3 in out
 
 
@@ -1405,8 +1405,8 @@ def test_do_sourmash_sbt_search_otherdir():
                                            ['search', sig_loc, sbt_name])
         print(out)
 
-        assert testdata1 in out
-        assert testdata2 in out
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_search_bestonly():
@@ -1431,7 +1431,7 @@ def test_do_sourmash_sbt_search_bestonly():
                                            in_directory=location)
         print(out)
 
-        assert testdata1 in out
+        assert 'short.fa' in out
 
 
 def test_compare_with_abundance_1():
@@ -1739,8 +1739,8 @@ def test_gather_metagenome():
 
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
-        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_output_unassigned():
@@ -1760,7 +1760,7 @@ def test_gather_metagenome_output_unassigned():
 
         assert 'found 1 matches total' in out
         assert 'the recovered matches hit 33.2% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
 
         # now examine unassigned
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
@@ -1772,7 +1772,7 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp. e' in out
+        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():
@@ -1800,8 +1800,8 @@ def test_gather_metagenome_downsample():
 
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp.' in out
-        assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp. e' in out
+        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_save_matches():

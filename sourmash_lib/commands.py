@@ -668,9 +668,7 @@ def search(args):
     print_results("----------   -----")
     for sr in results[:n_matches]:
         pct = '{:.1f}%'.format(sr.similarity*100)
-        name = sr.name
-        if len(name) > 60 and name == sr.match_sig.d.get('filename'): # path?
-            name = '...' + name[-57:]
+        name = sr.match_sig._display_name(60)
         print_results('{:>6}       {}', pct, name)
 
     if args.output:
@@ -960,13 +958,11 @@ def gather(args):
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
-        name = result.name
-        if len(name) > 40 and name == best_leaf.d.get('filename'): # path?
-            name = '...' + name[-37:]
+        name = result.leaf._display_name(40)
 
         print_results('{:9}   {:>6}  {:>6}      {}',
-               format_bp(result.intersect_bp), pct_query, pct_genome,
-                         name[:40])
+                      format_bp(result.intersect_bp), pct_query, pct_genome,
+                      name)
         found.append(result)
 
         # construct a new query, minus the previous one.
