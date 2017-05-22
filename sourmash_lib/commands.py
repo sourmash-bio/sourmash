@@ -236,10 +236,10 @@ def compute(args):
 
         for filename in args.filenames:
             # consume & calculate signatures
-            notify('... reading sequences from', filename)
+            notify('... reading sequences from {}', filename)
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
-                    notify('...', filename, n)
+                    notify('... {} {}', filename, n)
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
