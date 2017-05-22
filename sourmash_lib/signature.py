@@ -113,9 +113,17 @@ class SourmashSignature(object):
         "Compute Jaccard similarity with the other MinHash signature."
         return self.minhash.similarity(other.minhash, True)
 
-    def containment(self, other):
+    def containment(self, other, downsample=True):
         "Compute containment by the other signature. Note: ignores abundance."
-        return self.minhash.containment(other.minhash)
+        try:
+            return self.minhash.containment(other.minhash)
+        except ValueError as e:
+            if 'mismatch in max_hash' in str(e) and downsample:
+                xx = self.minhash.downsample_max_hash(other.minhash)
+                yy = other.minhash.downsample_max_hash(self.minhash)
+                return xx.containment(yy)
+            else:
+                raise
 
 
 def _guess_open(filename):
