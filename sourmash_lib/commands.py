@@ -602,7 +602,7 @@ def search(args):
     # similarity vs containment
     query_similarity = lambda x: query.similarity(x, downsample=True)
     if args.containment:
-        query_similarity = lambda x: query.containment(x)
+        query_similarity = lambda x: query.containment(x, downsample=True)
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
