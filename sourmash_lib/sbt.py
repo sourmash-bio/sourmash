@@ -55,7 +55,6 @@ import os
 
 import khmer
 from random import randint
-from numpy import array
 
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
@@ -461,6 +460,8 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
     filter_b : Second filter
     n        : Number of positions to compare (in groups of 8)
     """
+    from numpy import array
+
     A = filter_a.graph.get_raw_tables()
     B = filter_b.graph.get_raw_tables()
     distance = 0
