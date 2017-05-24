@@ -7,7 +7,6 @@ import gzip
 import shutil
 import time
 import screed
-import time
 import glob
 import json
 import csv
@@ -21,7 +20,7 @@ except ImportError:
     pass
 
 from sourmash_lib import signature
-
+from sourmash_lib import VERSION
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -32,6 +31,25 @@ def test_run_sourmash_badcmd():
     status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
     assert status != 0                    # bad arg!
     assert "Unrecognized command" in err
+
+def test_sourmash_info():
+    status, out, err = utils.runscript('sourmash', ['info'], fail_ok=False)
+
+    # no output to stdout
+    assert not out
+    assert "sourmash version" in err
+    assert "loaded from path" in err
+    assert VERSION in err
+
+
+def test_sourmash_info_verbose():
+    status, out, err = utils.runscript('sourmash', ['info', '-v'])
+
+    # no output to stdout
+    assert not out
+    assert "khmer version" in err
+    assert "screed version" in err
+    assert "loaded from path" in err
 
 
 def test_do_sourmash_compute():

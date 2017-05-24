@@ -9,7 +9,7 @@ from .logging import notify, error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
-                       plot, watch)
+                       plot, watch, info)
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
                 'index': index,
                 'categorize': categorize, 'gather': gather,
                 'watch': watch,
-                'sbt_combine': sbt_combine}
+                'sbt_combine': sbt_combine, 'info': info}
     parser = argparse.ArgumentParser(
         description='work with RNAseq signatures',
         usage='''sourmash <command> [<args>]
@@ -41,6 +41,8 @@ categorize              Identify best matches for many signatures using an SBT.
 gather                  Search a metagenome signature for multiple
                               non-overlapping matches in the SBT.
 watch                   Classify a stream of sequences.
+
+info                        Sourmash version and other information.
 
 Use '-h' to get subcommand-specific help, e.g.
 
