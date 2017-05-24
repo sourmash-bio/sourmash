@@ -20,6 +20,29 @@ DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 
+def info(args):
+    "Report sourmash version + version of installed dependencies."
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='report versions of khmer and screed')
+    args = parser.parse_args(args)
+
+    from . import VERSION
+    notify('sourmash version {}', VERSION)
+    notify('- loaded from path: {}', os.path.dirname(__file__))
+    notify('')
+
+    if args.verbose:
+        import khmer
+        notify('khmer version {}', khmer.__version__)
+        notify('- loaded from path: {}', os.path.dirname(khmer.__file__))
+        notify('')
+
+        import screed
+        notify('screed version {}', screed.__version__)
+        notify('- loaded from path: {}', os.path.dirname(screed.__file__))
+
+
 def compute(args):
     """Compute the signature for one or more files.
 
