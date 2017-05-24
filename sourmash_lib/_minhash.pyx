@@ -261,7 +261,6 @@ cdef class MinHash(object):
 
     def downsample_scaled(self, new_num):
         max_hash = self.max_hash
-
         if max_hash is None:
             raise ValueError('no max_hash available - cannot downsample')
 
@@ -364,9 +363,9 @@ cdef class MinHash(object):
             distance = 2*math.acos(prod) / math.pi
             return 1.0 - distance
 
-    def containment(self, other):
+    def contained_by(self, other):
         """\
-        Calculate containment of self by other.
+        Calculate how much of self is contained by other.
         """
         return self.count_common(other) / len(self.get_mins())
 
