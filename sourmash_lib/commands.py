@@ -231,7 +231,7 @@ def compute(args):
                 for n, record in enumerate(screed.open(filename)):
                     if n % 10000 == 0:
                         if n:
-                            notify('...{} {}', filename, n)
+                            notify('\r...{} {}', filename, n, end='')
                         elif args.name_from_first:
                             name = record.name
 
@@ -259,10 +259,10 @@ def compute(args):
 
         for filename in args.filenames:
             # consume & calculate signatures
-            notify('... reading sequences from', filename)
+            notify('... reading sequences from {}', filename)
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
-                    notify('...', filename, n)
+                    notify('\r... {} {}', filename, n, end='')
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
@@ -1116,7 +1116,7 @@ def watch(args):
     for n, record in enumerate(screed_iter):
         # at each watermark, print status & check cardinality
         if n >= watermark:
-            notify('... read {} sequences', n)
+            notify('\r... read {} sequences', n, end='')
             watermark += WATERMARK_SIZE
 
             if do_search():
