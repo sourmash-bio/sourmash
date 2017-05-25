@@ -28,9 +28,8 @@ python3.5 -m venv ~/py3
 . ~/py3/bin/activate
 pip install -U pip
 pip install -U Cython
-pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn
+pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn khmer
 
-pip install https://github.com/dib-lab/khmer/archive/master.zip
 pip install https://github.com/dib-lab/sourmash/archive/master.zip
 
 ```
