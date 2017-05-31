@@ -58,7 +58,7 @@ class SourmashSignature(object):
         for k in self.d:
             if self.d[k] != other.d[k]:
                 return False
-            
+
         return self.minhash == other.minhash
 
     def name(self):
@@ -95,6 +95,8 @@ class SourmashSignature(object):
 
         if minhash.hll is not None:
             sketch['cardinality'] = minhash.hll.estimate_cardinality()
+
+        sketch['n_kmers'] = minhash.n_kmers
 
         e['signature'] = sketch
 

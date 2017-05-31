@@ -757,3 +757,16 @@ def test_mh_subtract(track_abundance):
         b.add_hash(i)
 
     assert a.subtract_mins(b) == set(range(2, 40, 4))
+
+def test_mh_n_kmers(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.n_kmers == 20
+    assert b.n_kmers == 20
+

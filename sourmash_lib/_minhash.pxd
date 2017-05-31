@@ -33,7 +33,7 @@ cdef extern from "kmer_min_hash.hh":
         void _shrink()
         void add_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
-        void add_sequence(const char *, bool) except +ValueError
+        uint64_t add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinHash&) except +ValueError
         unsigned long size()
@@ -45,7 +45,7 @@ cdef extern from "kmer_min_hash.hh":
         KmerMinAbundance(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
-        void add_sequence(const char *, bool) except +ValueError
+        uint64_t add_sequence(const char *, bool) except +ValueError
         void merge_abund(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
@@ -57,6 +57,8 @@ cdef class MinHash(object):
     #cdef unique_ptr[KmerMinAbundance] _this
     cdef public bool track_abundance
     cdef public object hll
+    cdef public int n_kmers
 
     cpdef get_mins(self, bool with_abundance=*)
     cpdef set_abundances(self, dict)
+    cpdef uint64_t estimate_scale(self)

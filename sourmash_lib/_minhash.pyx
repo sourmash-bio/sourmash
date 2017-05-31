@@ -6,11 +6,13 @@ from __future__ import unicode_literals
 from cython.operator cimport dereference as deref, address
 
 from libcpp cimport bool
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, uint64_t
+from libc.math cimport ceil, log2, pow, floor
 
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 import math
 
+cdef extern int __builtin_clzll(unsigned long long x)
 
 # default MurmurHash seed
 cdef uint32_t MINHASH_DEFAULT_SEED = 42
@@ -50,6 +52,9 @@ def dotproduct(a, b, normalize=True):
     Compute the dot product of two dictionaries {k: v} where v is
     abundance.
     """
+    cdef double norm_a = 1.0
+    cdef double norm_b = 1.0
+    cdef double prod = 0
 
     if normalize:
         norm_a = math.sqrt(sum([ x*x for x in a.values() ]))
@@ -57,15 +62,22 @@ def dotproduct(a, b, normalize=True):
 
         if norm_a == 0.0 or norm_b == 0.0:
             return 0.0
-    else:
-        norm_a = 1.0
-        norm_b = 1.0
 
-    prod = 0.
     for k, abundance in a.items():
         prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
 
     return prod
+
+
+cdef double calc_alpha(uint64_t p):
+    if p == 4:
+        return 0.673
+    elif p == 5:
+        return 0.697
+    elif p == 6:
+        return 0.709
+    else:
+        return 0.7213 / (1.0 + 1.079 / (1 << p))
 
 
 cdef class MinHash(object):
@@ -78,6 +90,7 @@ cdef class MinHash(object):
                        mins=None):
         self.track_abundance = track_abundance
         self.hll = None
+        self.n_kmers = 0
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -111,11 +124,12 @@ cdef class MinHash(object):
                 deref(self._this).is_protein,
                 self.get_mins(with_abundance=with_abundance),
                 self.hll, self.track_abundance, deref(self._this).max_hash,
-                deref(self._this).seed)
+                deref(self._this).seed,
+                self.n_kmers)
 
     def __setstate__(self, tup):
-        (n, ksize, is_protein, mins, hll, track_abundance, max_hash, seed) =\
-          tup
+        (n, ksize, is_protein, mins, hll, track_abundance,
+         max_hash, seed, n_kmers) = tup
 
         self.track_abundance = track_abundance
         self.hll = hll
@@ -125,10 +139,12 @@ cdef class MinHash(object):
             mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
             self._this.reset(mh)
             self.set_abundances(mins)
+            self.n_kmers = n_kmers
         else:
             mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
             self._this.reset(mh)
             self.add_many(mins)
+            self.n_kmers = n_kmers
 
     def __reduce__(self):
         return (MinHash,
@@ -152,10 +168,11 @@ cdef class MinHash(object):
         return a
 
     def add_sequence(self, sequence, bool force=False):
-        deref(self._this).add_sequence(to_bytes(sequence), force)
+        self.n_kmers += deref(self._this).add_sequence(to_bytes(sequence), force)
 
     def add(self, kmer):
         "Add kmer into sketch."
+        self.n_kmers += 1
         self.add_sequence(kmer)
 
     def add_many(self, hashes):
@@ -168,6 +185,8 @@ cdef class MinHash(object):
         self.add_many(other.get_mins())
 
     def __len__(self):
+        #if self.max_hash == 0:
+        #    return deref(self._this).size()
         return deref(self._this).num
 
     cpdef get_mins(self, bool with_abundance=False):
@@ -211,6 +230,7 @@ cdef class MinHash(object):
         return mm
 
     def add_hash(self, uint64_t h):
+        self.n_kmers += 1
         deref(self._this).add_hash(h)
 
     def count_common(self, MinHash other):
@@ -389,3 +409,64 @@ cdef class MinHash(object):
         if molecule == 'protein' and self.is_protein:
             return True
         return False
+
+    cpdef uint64_t estimate_scale(self):
+        if self.max_hash == 0:  # not scaled
+            # TODO: how to do this based on max hash value and n?
+            return 1
+
+        # scaled!
+        return <uint64_t>(MINHASH_MAX_HASH / self.max_hash)
+
+    def F(self, k):
+        return sum(i ** k for i in self.get_mins(with_abundance=self.track_abundance).values())
+
+    def hll_estimator(self, error_rate=0.01):
+        cdef uint64_t index = 0
+        cdef uint64_t ncounters_log2 = <uint64_t>ceil(log2(pow(1.04 / error_rate, 2)))
+        cdef uint64_t ncounters = 1 << ncounters_log2
+        cdef uint64_t to_count
+        cdef double total = 0
+        cdef double alpha = calc_alpha(ncounters_log2)
+        cdef uint64_t new_value
+        cdef uint64_t scale = <uint64_t>log2(self.estimate_scale())
+
+        cdef vector[uint64_t] counters = vector[uint64_t](ncounters, 0)
+
+        for h in self.get_mins():
+            to_count = <uint64_t>h
+            index = to_count & (ncounters - 1)
+            to_count = to_count >> ncounters_log2
+
+            new_value = 64
+            if to_count > 0:
+                new_value = __builtin_clzll(to_count)
+            else:
+                print("ERROR!", to_count)
+
+            # in an 64 bits hash, we need to remove the indexing bits
+            # and the bits for scaled
+            new_value = new_value - (ncounters_log2 + scale) + 1
+
+            counters[index] = max(counters[index], new_value)
+
+        occupancy = deref(self._this).size() / deref(self._this).max_hash
+        print(ncounters_log2, alpha, total, sum(2 ** -v for v in counters), occupancy)
+        return alpha * pow(ncounters, 2.0) / sum(2 ** -v for v in counters), counters
+
+
+    def estimate_F0(self):
+        """ F0: number of unique kmers (cardinality) """
+        scale = self.estimate_scale()
+        return self.F(1) * scale
+
+    def F1(self):
+        """ F1: number of kmers (including repetition) """
+        # TODO: track this during add_sequence
+        return self.n_kmers
+
+    def estimate_F2(self):
+        """ Second moment, puts a higher weight on the number of k-mers
+            that have high abundance values."""
+        scale = self.estimate_scale()
+        return self.F(2) * scale

@@ -108,11 +108,12 @@ public:
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence, bool force=false) {
+    uint64_t add_sequence(const char * sequence, bool force=false) {
         if (strlen(sequence) < ksize) {
-            return;
+            return 0;
         }
         const std::string seq = sequence;
+        uint64_t n_added = 0;
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
@@ -133,6 +134,7 @@ public:
                 } else {
                     add_word(rc);
                 }
+                n_added += 1;
             }
         } else {                      // protein
             std::string rc = _revcomp(seq);
@@ -144,6 +146,7 @@ public:
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
                     add_word(kmer);
+                    n_added += 1;
                 }
 
                 aa = _dna_to_aa(rc.substr(i, rc.length() - i));
@@ -152,9 +155,11 @@ public:
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
                     add_word(kmer);
+                    n_added += 1;
                 }
             }
         }
+        return n_added;
     }
 
     std::string _dna_to_aa(const std::string& dna) {

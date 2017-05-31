@@ -99,6 +99,9 @@ def _json_next_signature(iterable,
     if 'cardinality' in d:
         e.hll = FakeHLL(d['cardinality'])
 
+    if 'n_kmers' in d:
+        e.n_kmers = d['n_kmers']
+
     sig = SourmashSignature(email, e)
 
     if not ignore_md5sum:
