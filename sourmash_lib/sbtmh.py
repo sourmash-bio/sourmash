@@ -22,7 +22,13 @@ class SigLeaf(Leaf):
             signature.save_signatures([self.data], fp)
 
     def update(self, parent):
+        # TODO: check if track_abundance is set!
         for v in self.data.minhash.get_mins():
+            # TODO: if tracking abundance, count up to
+            #     max(abundance, current_value_at_internal_node)
+            # if not tracking abundance,
+            #     behave like a nodegraph (only count if hash not at internal
+            #     node yet)
             parent.data.count(v)
 
     @property

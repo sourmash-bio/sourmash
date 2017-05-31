@@ -466,7 +466,7 @@ def dump(args):
 
 
 def sbt_combine(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
+    from sourmash_lib.sbt import SBT
     from sourmash_lib.sbtmh import SigLeaf
 
     parser = argparse.ArgumentParser()
@@ -495,8 +495,8 @@ def sbt_combine(args):
 
 
 def index(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbt import SBT, GraphFactory, CountgraphFactory
+    from sourmash_lib.sbtmh import SigLeaf
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
@@ -511,7 +511,9 @@ def index(args):
     parser.add_argument('--append', action='store_true', default=False,
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
-                        help='Bloom filter size used for internal nodes.')
+                        help='Size used for internal nodes.')
+    parser.add_argument('-c', '--countgraph', action='store_true',
+                        help='Use a Count-Min Sketch for internal nodes.')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -522,14 +524,16 @@ def index(args):
     if args.append:
         tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
     else:
-        factory = GraphFactory(1, args.bf_size, 4)
+        if args.countgraph:
+            factory = CountgraphFactory(1, args.bf_size, 4)
+        else:
+            factory = GraphFactory(1, args.bf_size, 4)
         tree = SBT(factory)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
     else:
         inp_files = list(args.signatures)
-
 
     notify('loading {} files into SBT', len(inp_files))
 
@@ -567,9 +571,7 @@ def index(args):
 
 
 def search(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash_lib.sbtmh import search_minhashes, SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -713,7 +715,7 @@ def search(args):
 
 
 def categorize(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
+    from sourmash_lib.sbt import SBT
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
@@ -791,8 +793,6 @@ def categorize(args):
 
 
 def gather(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     parser = argparse.ArgumentParser()
@@ -1036,7 +1036,7 @@ def gather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbt import SBT, GraphFactory
+    from sourmash_lib.sbt import SBT
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 

@@ -70,6 +70,15 @@ def GraphFactory(ksize, starting_size, n_tables):
     return create_nodegraph
 
 
+def CountgraphFactory(ksize, starting_size, n_tables):
+    "Build new countgraphs (Count-Min sketches) of a specific (fixed) size."
+
+    def create_graph():
+        return khmer.Countgraph(ksize, starting_size, n_tables)
+
+    return create_graph
+
+
 class SBT(object):
 
     def __init__(self, factory, d=2):
@@ -165,7 +174,7 @@ class SBT(object):
         return NodePos(cd, self.nodes[cd])
 
     def save(self, tag):
-        version = 2
+        version = 3
         basetag = os.path.basename(tag)
         dirprefix = os.path.dirname(tag)
         dirname = os.path.join(dirprefix, '.sbt.' + basetag)
@@ -176,6 +185,9 @@ class SBT(object):
         info = {}
         info['d'] = self.d
         info['version'] = version
+        info['factory'] = 'nodegraph'
+        if self.factory.__name__ == 'create_graph':
+            info['factory'] = 'countgraph'
 
         structure = {}
         for i, node in iter(self):
@@ -210,15 +222,8 @@ class SBT(object):
         loaders = {
             1: cls._load_v1,
             2: cls._load_v2,
+            3: cls._load_v3,
         }
-
-        # @CTB hack: check to make sure khmer Nodegraph supports the
-        # correct methods.
-        x = khmer.Nodegraph(1, 1, 1)
-        try:
-            x.count(10)
-        except TypeError:
-            raise Exception("khmer version is too old; need >= 2.1.")
 
         if leaf_loader is None:
             leaf_loader = Leaf.load
@@ -277,6 +282,41 @@ class SBT(object):
         sample_bf = os.path.join(dirname, nodes[0]['filename'])
         k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(k, size, ntables)
+
+        for k, node in nodes.items():
+            if node is None:
+                continue
+
+            if 'internal' in node['filename']:
+                node['factory'] = factory
+                sbt_node = Node.load(node, dirname)
+            else:
+                sbt_node = leaf_loader(node, dirname)
+
+            sbt_nodes[k] = sbt_node
+
+        tree = cls(factory, d=info['d'])
+        tree.nodes = sbt_nodes
+
+        return tree
+
+    @classmethod
+    def _load_v3(cls, info, leaf_loader, dirname):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
+        if nodes[0] is None:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = defaultdict(lambda: None)
+
+        if info['factory'] == 'countgraph':
+            sample_cg = os.path.join(dirname, nodes[0]['filename'])
+            k, size, ntables = khmer.extract_countgraph_info(sample_cg)[:3]
+            factory = CountgraphFactory(k, size, ntables)
+        else:  # Defaults to nodegraph
+            sample_bf = os.path.join(dirname, nodes[0]['filename'])
+            k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+            factory = GraphFactory(k, size, ntables)
 
         for k, node in nodes.items():
             if node is None:
@@ -397,7 +437,13 @@ class Node(object):
             if self._filename is None:
                 self._data = self._factory()
             else:
-                self._data = khmer.load_nodegraph(self._filename)
+                # TODO: add a khmer.load() method to khmer,
+                # detecting if the file is from a nodegraph or countgraph
+                # automatically...
+                if self._factory.__name__ == 'create_graph':
+                    self._data = khmer.load_countgraph(self._filename)
+                else:
+                    self._data = khmer.load_nodegraph(self._filename)
         return self._data
 
     @data.setter
@@ -433,7 +479,10 @@ class Leaf(object):
     def data(self):
         if self._data is None:
             # TODO: what if self._filename is None?
-            self._data = khmer.load_nodegraph(self._filename)
+            if self._factory.__name__ == 'create_graph':
+                self._data = khmer.load_countgraph(self._filename)
+            else:
+                self._data = khmer.load_nodegraph(self._filename)
         return self._data
 
     @data.setter

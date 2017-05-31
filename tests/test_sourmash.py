@@ -22,6 +22,7 @@ except ImportError:
 from sourmash_lib import signature
 from sourmash_lib import VERSION
 
+
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)
@@ -31,6 +32,7 @@ def test_run_sourmash_badcmd():
     status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
     assert status != 0                    # bad arg!
     assert "Unrecognized command" in err
+
 
 def test_sourmash_info():
     status, out, err = utils.runscript('sourmash', ['info'], fail_ok=False)
@@ -1104,6 +1106,34 @@ def test_do_sourmash_index_bad_args():
 
         assert "cannot specify both --dna and --protein!" in err
         assert status != 0
+
+
+def test_do_sourmash_scmst_search():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31',
+                                            '--countgraph',
+                                            'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_sbt_search():
