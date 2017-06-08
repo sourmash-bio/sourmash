@@ -281,7 +281,7 @@ cdef class MinHash(object):
 
         return a
 
-    def compare(self, MinHash other):
+    def intersection(self, MinHash other):
         cdef KmerMinAbundance *mh = NULL;
         cdef KmerMinAbundance *other_mh = NULL;
         cdef KmerMinAbundance *cmh = NULL;
@@ -310,7 +310,6 @@ cdef class MinHash(object):
             common = set(self.get_mins())
             common.intersection_update(other.get_mins())
             common.intersection_update([it.first for it in cmh.mins])
-            n = len(common)
         else:
             combined_mh = new KmerMinHash(num,
                                           deref(self._this).ksize,
@@ -323,9 +322,12 @@ cdef class MinHash(object):
             common = set(self.get_mins())
             common.intersection_update(other.get_mins())
             common.intersection_update(combined_mh.mins)
-            n = len(common)
 
-        size = max(combined_mh.size(), 1)
+        return common, max(combined_mh.size(), 1)
+
+    def compare(self, MinHash other):
+        common, size = self.intersection(other)
+        n = len(common)
         return n / size
 
     def jaccard(self, MinHash other):
