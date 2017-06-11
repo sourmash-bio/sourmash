@@ -20,7 +20,6 @@ uint64_t _hash_murmur(const std::string& kmer,
 
 typedef uint64_t HashIntoType;
 
-//typedef std::set<HashIntoType> CMinHashType;
 typedef std::vector<HashIntoType> CMinHashType;
 
 typedef std::map<HashIntoType, uint64_t> CMinAbundanceType;
@@ -80,6 +79,22 @@ public:
     virtual void _shrink() {
         // pass
     }
+
+    void check_compatible(const KmerMinHash& other) {
+        if (ksize != other.ksize) {
+            throw minhash_exception("different ksizes cannot be compared");
+        }
+        if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (max_hash != other.max_hash) {
+            throw minhash_exception("mismatch in max_hash; comparison fail");
+        }
+        if (seed != other.seed) {
+            throw minhash_exception("mismatch in seed; comparison fail");
+        }
+	}
+
     virtual void add_hash(const HashIntoType h) {
       if (h <= max_hash) {
         if (mins.size() == 0) {
@@ -215,18 +230,8 @@ public:
     }
 
     virtual void merge(const KmerMinHash& other) {
-        if (ksize != other.ksize) {
-            throw minhash_exception("different ksizes cannot be merged");
-        }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be merged");
-        }
-        if (max_hash != other.max_hash) {
-            throw minhash_exception("mismatch in max_hash; merge fail");
-        }
-        if (seed != other.seed) {
-            throw minhash_exception("mismatch in seed; merge fail");
-        }
+        check_compatible(other);
+
         CMinHashType merged;
         merged.reserve(other.mins.size() + mins.size());
         std::set_union(other.mins.begin(), other.mins.end(),
@@ -240,18 +245,7 @@ public:
         }
     }
     virtual unsigned int count_common(const KmerMinHash& other) {
-        if (ksize != other.ksize) {
-            throw minhash_exception("different ksizes cannot be compared");
-        }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be compared");
-        }
-        if (max_hash != other.max_hash) {
-            throw minhash_exception("mismatch in max_hash; comparison fail");
-        }
-        if (seed != other.seed) {
-            throw minhash_exception("mismatch in seed; comparison fail");
-        }
+        check_compatible(other);
 
         Counter counter;
         std::set_intersection(mins.begin(), mins.end(),
@@ -313,7 +307,7 @@ private:
 
 class KmerMinAbundance: public KmerMinHash {
  public:
-    CMinAbundanceType mins;
+    CMinAbundanceType mins_abund;
     HashIntoType max_mins;
 
     KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed,
@@ -325,8 +319,8 @@ class KmerMinAbundance: public KmerMinHash {
             return;
         }
 
-        if (!num || mins.size() < num) {
-            mins[h] += 1;
+        if (!num || mins_abund.size() < num) {
+            mins_abund[h] += 1;
             max_mins = std::max(max_mins, h);
             return;
         }
@@ -334,12 +328,13 @@ class KmerMinAbundance: public KmerMinHash {
         if (num && h > max_mins) {
             return;
         } else {
-            if (mins.find(h) != mins.end()) {
-                mins[h] += 1;
+            if (mins_abund.find(h) != mins_abund.end()) {
+                mins_abund[h] += 1;
             } else {
-                mins.emplace(h, 1);
-                mins.erase(max_mins);
-                max_mins = (*std::max_element(mins.begin(), mins.end())).first;
+                mins_abund.emplace(h, 1);
+                mins_abund.erase(max_mins);
+                max_mins = (*std::max_element(mins_abund.begin(),
+                                              mins_abund.end())).first;
             }
         }
         _shrink();
@@ -349,27 +344,18 @@ class KmerMinAbundance: public KmerMinHash {
         if (num == 0) {
             return;
         }
-        while (mins.size() > num) {
-            mins.erase(max_mins);
-            max_mins = (*std::max_element(mins.begin(), mins.end())).first;
+        while (mins_abund.size() > num) {
+            mins_abund.erase(max_mins);
+            max_mins = (*std::max_element(mins_abund.begin(),
+                                          mins_abund.end())).first;
         }
     }
 
-    virtual void merge_abund(const KmerMinAbundance& other) {
-        if (ksize != other.ksize) {
-            throw minhash_exception("different ksizes cannot be merged");
-        }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be merged");
-        }
-        if (max_hash != other.max_hash) {
-            throw minhash_exception("mismatch in max_hash; merge fail");
-        }
-        if (seed != other.seed) {
-            throw minhash_exception("mismatch in seed; merge fail");
-        }
-        for (auto mi: other.mins) {
-            mins[mi.first] += mi.second;
+    virtual void merge(const KmerMinAbundance& other) {
+        check_compatible(other);
+
+        for (auto mi: other.mins_abund) {
+            mins_abund[mi.first] += mi.second;
             max_mins = std::max(mi.first, max_mins);
         }
         _shrink();
@@ -378,55 +364,33 @@ class KmerMinAbundance: public KmerMinHash {
     virtual unsigned int count_common(const KmerMinAbundance& other) {
         std::set<HashIntoType> combined;
 
-        if (ksize != other.ksize) {
-            throw minhash_exception("different ksizes cannot be compared");
-        }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be compared");
-        }
-        if (max_hash != other.max_hash) {
-            throw minhash_exception("mismatch in max_hash; comparison fail");
-        }
-        if (seed != other.seed) {
-            throw minhash_exception("mismatch in seed; comparison fail");
-        }
+		check_compatible(other);
 
-        for (auto mi: mins) {
+        for (auto mi: mins_abund) {
             combined.insert(mi.first);
         }
-        for (auto mi: other.mins) {
+        for (auto mi: other.mins_abund) {
             combined.insert(mi.first);
         }
-        return mins.size() + other.mins.size() - combined.size();
+        return mins_abund.size() + other.mins_abund.size() - combined.size();
     }
 
     virtual unsigned int count_common(const KmerMinHash& other) {
         std::set<HashIntoType> combined;
 
-        if (ksize != other.ksize) {
-            throw minhash_exception("different ksizes cannot be compared");
-        }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be compared");
-        }
-        if (max_hash != other.max_hash) {
-            throw minhash_exception("mismatch in max_hash; comparison fail");
-        }
-        if (seed != other.seed) {
-            throw minhash_exception("mismatch in seed; comparison fail");
-        }
+		check_compatible(other);
 
-        for (auto mi: mins) {
+        for (auto mi: mins_abund) {
             combined.insert(mi.first);
         }
         for (auto mi: other.mins) {
             combined.insert(mi);
         }
-        return mins.size() + other.mins.size() - combined.size();
+        return mins_abund.size() + other.mins.size() - combined.size();
     }
 
     virtual size_t size() {
-        return mins.size();
+        return mins_abund.size();
     }
 
 };

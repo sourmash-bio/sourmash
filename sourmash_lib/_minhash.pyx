@@ -172,9 +172,9 @@ cdef class MinHash(object):
     cpdef get_mins(self, bool with_abundance=False):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         if with_abundance and self.track_abundance:
-            return mh.mins
+            return mh.mins_abund
         elif self.track_abundance:
-            return [it.first for it in mh.mins]
+            return [it.first for it in mh.mins_abund]
         else:
             return [it for it in deref(self._this).mins]
 
@@ -304,12 +304,12 @@ cdef class MinHash(object):
             other_mh = <KmerMinAbundance*>address(deref(other._this))
             cmh = <KmerMinAbundance*>combined_mh
 
-            cmh.merge_abund(deref(mh))
-            cmh.merge_abund(deref(other_mh))
+            cmh.merge(deref(mh))
+            cmh.merge(deref(other_mh))
 
             common = set(self.get_mins())
             common.intersection_update(other.get_mins())
-            common.intersection_update([it.first for it in cmh.mins])
+            common.intersection_update([it.first for it in cmh.mins_abund])
         else:
             combined_mh = new KmerMinHash(num,
                                           deref(self._this).ksize,
@@ -385,7 +385,7 @@ cdef class MinHash(object):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
         if self.track_abundance:
-            deref(mh).merge_abund(deref(other_mh))
+            deref(mh).merge(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
 
@@ -396,7 +396,7 @@ cdef class MinHash(object):
         if self.track_abundance:
             for k, v in values.items():
                 if not self.max_hash or k < self.max_hash:
-                    (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
+                    (<KmerMinAbundance*>address(deref(self._this))).mins_abund[k] = v
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")
