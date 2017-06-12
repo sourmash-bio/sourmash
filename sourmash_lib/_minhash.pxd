@@ -15,7 +15,6 @@ from libcpp.vector cimport vector
 cdef extern from "kmer_min_hash.hh":
     ctypedef uint64_t HashIntoType;
     ctypedef vector[HashIntoType] CMinHashType;
-    ctypedef map[HashIntoType, uint64_t] CMinAbundanceType;
 
 
     cdef uint64_t _hash_murmur(const string, uint32_t seed)
@@ -30,7 +29,6 @@ cdef extern from "kmer_min_hash.hh":
         CMinHashType mins;
 
         KmerMinHash(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
-        void _shrink()
         void add_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
         void add_sequence(const char *, bool) except +ValueError
@@ -40,7 +38,7 @@ cdef extern from "kmer_min_hash.hh":
 
 
     cdef cppclass KmerMinAbundance(KmerMinHash):
-        CMinAbundanceType mins_abund;
+        CMinHashType abunds;
 
         KmerMinAbundance(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
