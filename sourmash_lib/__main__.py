@@ -9,7 +9,7 @@ from .logging import notify, error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
-                       plot, watch, info)
+                       plot, watch, info, storage)
 
 
 def main():
@@ -21,7 +21,8 @@ def main():
                 'index': index,
                 'categorize': categorize, 'gather': gather,
                 'watch': watch,
-                'sbt_combine': sbt_combine, 'info': info}
+                'sbt_combine': sbt_combine, 'info': info,
+                'storage': storage}
     parser = argparse.ArgumentParser(
         description='work with RNAseq signatures',
         usage='''sourmash <command> [<args>]
