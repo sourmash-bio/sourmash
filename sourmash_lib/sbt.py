@@ -577,19 +577,28 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
 def convert_cmd(name, backend):
     from .sbtmh import SigLeaf
 
-    # TODO: how to pass backend options?
-    backend = backend.lower()
-    if backend.lower() in ('ipfs', 'ipfsstorage'):
-        backend = IPFSStorage()
-    elif backend.lower() in ('redis', 'redisstorage'):
-        backend = RedisStorage()
-    elif backend.lower() in ('tar', 'tarstorage'):
-        backend = TarStorage()
-    elif backend.lower() in ('fs', 'fsstorage'):
-        backend = FSStorage()
-    else:
-        error('backend not recognized')
+    backend, *options = backend.split('(')
+    backend = backend.lower().strip("'")
 
-    sbt = SBT.load(name, leaf_loader=SigLeaf.load)
-    old_storage = sbt.storage
-    sbt.save(name, storage=backend)
+    if options:
+      print(options)
+      options, *_ = options[0].split(')')
+      options = [options]
+      #options = {}
+    else:
+      options = []
+
+    if backend.lower() in ('ipfs', 'ipfsstorage'):
+        backend = IPFSStorage
+    elif backend.lower() in ('redis', 'redisstorage'):
+        backend = RedisStorage
+    elif backend.lower() in ('tar', 'tarstorage'):
+        backend = TarStorage
+    elif backend.lower() in ('fs', 'fsstorage'):
+        backend = FSStorage
+    else:
+        error('backend not recognized: {}'.format(backend))
+
+    with backend(*options) as storage:
+        sbt = SBT.load(name, leaf_loader=SigLeaf.load)
+        sbt.save(name, storage=storage)
