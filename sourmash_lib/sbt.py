@@ -58,6 +58,7 @@ from tempfile import NamedTemporaryFile
 import khmer
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
+from .logging import error
 
 
 STORAGES = {
@@ -176,7 +177,8 @@ class SBT(object):
     def save(self, tag, storage=None):
         version = 3
 
-        tag = tag.rstrip('.sbt.json')
+        if tag.endswith('.sbt.json'):
+            tag = tag[:-9]
         fn = os.path.abspath(tag + '.sbt.json')
 
         if storage is None:
@@ -222,9 +224,11 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, sbt_name, leaf_loader=None, storage=None):
-        dirname = os.path.dirname(os.path.abspath(sbt_name))
-        sbt_name = os.path.basename(sbt_name).rstrip('.sbt.json')
+    def load(cls, location, leaf_loader=None, storage=None):
+        dirname = os.path.dirname(os.path.abspath(location))
+        sbt_name = os.path.basename(location)
+        if sbt_name.endswith('.sbt.json'):
+            sbt_name = sbt_name[:-9]
 
         loaders = {
             1: cls._load_v1,
@@ -569,3 +573,23 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
                                            ^ bool((b[i]>>j)&1)
                                          for j in range(8) ] ) )
     return distance / ( 8.0 * len(A) * n )
+
+def convert_cmd(name, backend):
+    from .sbtmh import SigLeaf
+
+    # TODO: how to pass backend options?
+    backend = backend.lower()
+    if backend.lower() in ('ipfs', 'ipfsstorage'):
+        backend = IPFSStorage()
+    elif backend.lower() in ('redis', 'redisstorage'):
+        backend = RedisStorage()
+    elif backend.lower() in ('tar', 'tarstorage'):
+        backend = TarStorage()
+    elif backend.lower() in ('fs', 'fsstorage'):
+        backend = FSStorage()
+    else:
+        error('backend not recognized')
+
+    sbt = SBT.load(name, leaf_loader=SigLeaf.load)
+    old_storage = sbt.storage
+    sbt.save(name, storage=backend)

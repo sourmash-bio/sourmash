@@ -14,6 +14,8 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -2408,3 +2410,25 @@ def test_watch_coverage():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+
+
+def test_storage_convert():
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        new = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(new.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(new.nodes.items())))
