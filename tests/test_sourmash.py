@@ -2426,9 +2426,22 @@ def test_storage_convert():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        new = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(new.nodes)
+        assert len(original.nodes) == len(ipfs.nodes)
         assert all(n1[1].name == n2[1].name
                    for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(new.nodes.items())))
+                                       sorted(ipfs.nodes.items())))
+
+        args = ['storage', 'convert',
+                '-b', """'TarStorage("{}")'""".format(
+                    os.path.join(location, 'v2.sbt.tar.gz')),
+                testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(tar.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(tar.nodes.items())))
