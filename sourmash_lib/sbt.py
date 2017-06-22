@@ -58,7 +58,7 @@ from tempfile import NamedTemporaryFile
 import khmer
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
-from .logging import error
+from .logging import error, notify
 
 
 STORAGES = {
@@ -197,7 +197,8 @@ class SBT(object):
         }
 
         structure = {}
-        for i, node in iter(self):
+        total_nodes = len(self.nodes)
+        for n, (i, node) in enumerate(self):
             if node is None:
                 continue
 
@@ -217,6 +218,9 @@ class SBT(object):
             data['filename'] = node.save(data['filename'])
             structure[i] = data
 
+            notify("{} of {} nodes saved".format(n, total_nodes), end='\r')
+
+        notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = structure
         with open(fn, 'w') as fp:
             json.dump(info, fp)
