@@ -90,14 +90,18 @@ class TarStorage(Storage):
 
 class IPFSStorage(Storage):
 
-    def __init__(self, **kwargs):
+    def __init__(self, pin_on_add=True, **kwargs):
         import ipfsapi
         self.ipfs_args = kwargs
+        self.pin_on_add = pin_on_add
         self.api = ipfsapi.connect(**self.ipfs_args)
 
     def save(self, path, content):
         # api.add_bytes(b"Mary had a little lamb")
-        return self.api.add_bytes(content)
+        new_obj = self.api.add_bytes(content)
+        if self.pin_on_add:
+            self.api.pin_add(new_obj)
+        return new_obj
 
         # TODO: the above solution is quick and dirty.
         # we actually want something more organized,
