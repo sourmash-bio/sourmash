@@ -26,12 +26,26 @@ def reverse(s):
 
 
 def kmers(seq, k):
-    for start in range(len(seq) - k + 1):
-        yield seq[start:start + k]
+    m = 2
+    n = 3
+    assert k % m == 0
+
+    span = n * (k/m - 1) + m
+    assert int(span) == span
+    span = int(span)
+
+    skipmer = ""
+    for start in range(len(seq) - span + 1):
+        i = 0
+        while i < span:
+            skipmer += seq[start + i:start + i + m]
+            i += n
+
+        yield skipmer
 
 ###
 
-K = 21
+K = 24
 
 import sys, screed
 import mmh3
@@ -39,10 +53,6 @@ import sourmash_lib
 print('imported sourmash:', sourmash_lib, file=sys.stderr)
 from sourmash_lib import MinHash
 import sourmash_lib.signature
-
-record = next(iter(screed.open(sys.argv[1])))
-print('loaded', record.name, file=sys.stderr)
-revcomp = reverse(complement((record.sequence)))
 
 mh = sourmash_lib.MinHash(ksize=K, n=500, is_protein=False)
 
@@ -56,20 +66,24 @@ mh = sourmash_lib.MinHash(ksize=K, n=500, is_protein=False)
 # internally, and should be approximately the same as what mash does.
 #
 
-for fwd_kmer in kmers(record.sequence, K):
-    rev_kmer = reverse(complement(fwd_kmer))
-    if fwd_kmer < rev_kmer:
-        kmer = fwd_kmer
-    else:
-        kmer = rev_kmer
+for record in screed.open(sys.argv[1]):
+    print('loaded', record.name, file=sys.stderr)
+    revcomp = reverse(complement((record.sequence)))
 
-    hash = mmh3.hash64(kmer, seed=42)[0]
+    for fwd_kmer in kmers(record.sequence, K):
+        rev_kmer = reverse(complement(fwd_kmer))
+        if fwd_kmer < rev_kmer:
+            kmer = fwd_kmer
+        else:
+            kmer = rev_kmer
 
-    # convert to unsigned int if negative
-    if hash < 0:
-        hash += 2**64
+        hash = mmh3.hash64(kmer, seed=42)[0]
 
-    mh.add_hash(hash)
+        # convert to unsigned int if negative
+        if hash < 0:
+            hash += 2**64
+
+        mh.add_hash(hash)
 
 s = sourmash_lib.signature.SourmashSignature('', mh, name=record.name)
 print(sourmash_lib.signature.save_signatures([s]))
