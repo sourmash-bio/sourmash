@@ -114,8 +114,11 @@ public:
         }
         const std::string seq = sequence;
         if (!is_protein) {
-            for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-                const std::string kmer = seq.substr(i, ksize);
+            unsigned int n = 3, m = 2;
+            unsigned int span = n * (ksize / m - 1) + m;
+            
+            for (unsigned int i = 0; i < seq.length() - span + 1; i++) {
+                const std::string kmer = seq.substr(i, span);
                 if (! _checkdna(kmer)) {
                     if (force) {
                         continue;
@@ -126,10 +129,18 @@ public:
                     }
                 }
 
-                const std::string rc = _revcomp(kmer);
+                std::string skipmer = "";
+
+                unsigned int ii = 0;
+                while (ii < kmer.length()) {
+                    skipmer += kmer.substr(ii, m);
+                    ii += n;
+                }
+
+                const std::string rc = _revcomp(skipmer);
 
                 if (kmer < rc) {
-                    add_word(kmer);
+                    add_word(skipmer);
                 } else {
                     add_word(rc);
                 }
