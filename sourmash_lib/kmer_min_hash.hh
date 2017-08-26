@@ -7,6 +7,7 @@
 #include <queue>
 #include <exception>
 #include <string>
+#include <iostream>
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
@@ -112,6 +113,7 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
+        std::cout << "SKIPMER\n";
         const std::string seq = sequence;
         if (!is_protein) {
             unsigned int n = 3, m = 2;
