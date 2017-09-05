@@ -581,13 +581,14 @@ def filter_distance( filter_a, filter_b, n=1000 ) :
 def convert_cmd(name, backend):
     from .sbtmh import SigLeaf
 
-    backend, *options = backend.split('(')
+    options = backend.split('(')
+    backend = options.pop(0)
     backend = backend.lower().strip("'")
 
     if options:
       print(options)
-      options, *_ = options[0].split(')')
-      options = [options]
+      options = options[0].split(')')
+      options = [options.pop(0)]
       #options = {}
     else:
       options = []

@@ -2413,6 +2413,9 @@ def test_watch_coverage():
 
 
 def test_storage_convert():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
     with utils.TempDirectory() as location:
         testdata = utils.get_test_data('v2.sbt.json')
         shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
