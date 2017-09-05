@@ -42,5 +42,5 @@ install:
 - sudo snap install ipfs
 
 script:
-  - ipfs daemon --init --offline &
+  - /snap/bin/ipfs daemon --init --offline &
   - tox -e $TOX_ENV
