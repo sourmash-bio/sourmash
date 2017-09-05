@@ -38,6 +38,9 @@ matrix:
 
 install:
 - pip install tox
+- sudo apt-get --yes install snapd
+- sudo snap install ipfs
 
 script:
-    tox -e $TOX_ENV
+  - ipfs daemon --init --offline &
+  - tox -e $TOX_ENV
