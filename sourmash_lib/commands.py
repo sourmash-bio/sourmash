@@ -238,7 +238,7 @@ def compute(args):
                     s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
-                print('')
+                notify('')
 
                 sigs = build_siglist(args.email, Elist, filename, name)
                 if args.output:
