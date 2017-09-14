@@ -6,7 +6,9 @@ import os
 import tarfile
 
 
-class Storage(abc.ABC):
+class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
+    # this weird baseclass is compatible with Python 2 *and* 3,
+    # we can remove once we support only py3.4+
 
     @abc.abstractmethod
     def save(self, path, content):
