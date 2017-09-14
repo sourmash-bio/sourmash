@@ -2448,3 +2448,54 @@ def test_storage_convert():
         assert all(n1[1].name == n2[1].name
                    for (n1, n2) in zip(sorted(original.nodes.items()),
                                        sorted(tar.nodes.items())))
+
+def test_storage_convert_identity():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+
+def test_storage_convert_fsstorage_newpath():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert',
+                           '-b', 'fsstorage({})'.format(os.path.join(location, 'v3')),
+                           testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
