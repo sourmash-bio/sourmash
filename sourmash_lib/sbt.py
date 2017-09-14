@@ -601,6 +601,14 @@ def convert_cmd(name, backend):
         backend = TarStorage
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
+        if not options:
+            # this is the default for SBT v2
+            tag = '.sbt.' + os.path.basename(name)
+            if tag.endswith('.sbt.json'):
+                tag = tag[:-9]
+            path = os.path.dirname(name)
+            options = [os.path.join(path, tag)]
+
     else:
         error('backend not recognized: {}'.format(backend))
 

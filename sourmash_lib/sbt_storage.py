@@ -1,17 +1,20 @@
 from __future__ import print_function, unicode_literals, division
 
+import abc
 from io import BytesIO
 import os
 import tarfile
 
 
-class Storage(object):
+class Storage(abc.ABC):
 
+    @abc.abstractmethod
     def save(self, path, content):
-        raise NotImplemented
+        pass
 
+    @abc.abstractmethod
     def load(self, path):
-        raise NotImplemented
+        pass
 
     def init_args(self):
         return {}
