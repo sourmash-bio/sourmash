@@ -573,6 +573,47 @@ def test_do_compare_output_csv():
             assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
 
 
+def test_do_compare_output_multiple_k():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location)
+
+        print(status, out, err)
+
+
+def test_do_compare_output_multiple_moltype():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dna', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--protein', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'xxx')) as fp:
+            lines = fp.readlines()
+            assert len(lines) == 3
+            assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
