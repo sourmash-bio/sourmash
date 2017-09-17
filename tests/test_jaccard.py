@@ -7,6 +7,7 @@ from __future__ import print_function, unicode_literals
 
 import pytest
 from sourmash_lib import MinHash
+from . import sourmash_tst_utils as utils
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
 # see conftest.py.
@@ -21,8 +22,11 @@ def test_jaccard_1(track_abundance):
     for i in [1, 2, 3, 4, 6]:
         E2.add_hash(i)
 
-    assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 5.0
+    # here the union is [1, 2, 3, 4, 5]
+    # and the intesection is [1, 2, 3, 4] => 4/5.
+
+    assert round(E1.jaccard(E2), 2) == round(4 / 5.0, 2)
+    assert round(E2.jaccard(E1), 2) == round(4 / 5.0, 2)
 
 
 def test_jaccard_2_difflen(track_abundance):
@@ -34,8 +38,9 @@ def test_jaccard_2_difflen(track_abundance):
     for i in [1, 2, 3, 4]:
         E2.add_hash(i)
 
+    print(E1.jaccard(E2))
     assert round(E1.jaccard(E2), 2) == 4 / 5.0
-    assert round(E2.jaccard(E1), 2) == 4 / 4.0
+    assert round(E2.jaccard(E1), 2) == 4 / 5.0
 
 
 def test_common_1(track_abundance):
@@ -153,7 +158,7 @@ def test_abund_similarity():
     assert round(E1.similarity(E2), 2) == 0.5
 
     assert round(E1.similarity(E1, ignore_abundance=True)) == 1.0
-    assert round(E1.similarity(E2, ignore_abundance=True), 2) == 1.0
+    assert round(E1.similarity(E2, ignore_abundance=True), 2) == 0.5
 
 
 def test_abund_similarity_zero():
@@ -164,3 +169,108 @@ def test_abund_similarity_zero():
         E1.add_hash(i)
 
     assert E1.similarity(E2) == 0.0
+
+
+####
+
+def test_jaccard_on_real_data():
+    from sourmash_lib.signature import load_signatures
+
+    afile = 'n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.minhash
+
+    bfile = 'n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    b = utils.get_test_data(bfile)
+    sig2 = list(load_signatures(b))[0]
+    mh2 = sig2.minhash
+
+    assert mh1.compare(mh2) == 0.0183
+    assert mh2.compare(mh1) == 0.0183
+
+    mh1 = mh1.downsample_n(1000)
+    mh2 = mh2.downsample_n(1000)
+    assert mh1.compare(mh2) == 0.011
+    assert mh2.compare(mh1) == 0.011
+
+    mh1 = mh1.downsample_n(100)
+    mh2 = mh2.downsample_n(100)
+    assert mh1.compare(mh2) == 0.01
+    assert mh2.compare(mh1) == 0.01
+
+    mh1 = mh1.downsample_n(10)
+    mh2 = mh2.downsample_n(10)
+    assert mh1.compare(mh2) == 0.0
+    assert mh2.compare(mh1) == 0.0
+
+
+def test_scaled_on_real_data():
+    from sourmash_lib.signature import load_signatures
+
+    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.minhash
+
+    bfile = 'scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    b = utils.get_test_data(bfile)
+    sig2 = list(load_signatures(b))[0]
+    mh2 = sig2.minhash
+
+    assert round(mh1.compare(mh2), 5) == 0.01644
+    assert round(mh2.compare(mh1), 5) == 0.01644
+
+    mh1 = mh1.downsample_n(10000)
+    mh2 = mh2.downsample_n(10000)
+
+    assert mh1.compare(mh2) == 0.0183
+    assert mh2.compare(mh1) == 0.0183
+
+    mh1 = mh1.downsample_n(1000)
+    mh2 = mh2.downsample_n(1000)
+    assert mh1.compare(mh2) == 0.011
+    assert mh2.compare(mh1) == 0.011
+
+    mh1 = mh1.downsample_n(100)
+    mh2 = mh2.downsample_n(100)
+    assert mh1.compare(mh2) == 0.01
+    assert mh2.compare(mh1) == 0.01
+
+    mh1 = mh1.downsample_n(10)
+    mh2 = mh2.downsample_n(10)
+    assert mh1.compare(mh2) == 0.0
+    assert mh2.compare(mh1) == 0.0
+
+
+def test_scaled_on_real_data_2():
+    from sourmash_lib.signature import load_signatures
+
+    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.minhash
+
+    bfile = 'scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    b = utils.get_test_data(bfile)
+    sig2 = list(load_signatures(b))[0]
+    mh2 = sig2.minhash
+
+    assert round(mh1.compare(mh2), 5) == 0.01644
+    assert round(mh2.compare(mh1), 5) == 0.01644
+
+    mh1 = mh1.downsample_scaled(1000)
+    mh2 = mh2.downsample_scaled(1000)
+
+    assert round(mh1.compare(mh2), 4) == 0.0187
+    assert round(mh2.compare(mh1), 4) == 0.0187
+
+    mh1 = mh1.downsample_scaled(10000)
+    mh2 = mh2.downsample_scaled(10000)
+    assert round(mh1.compare(mh2), 3) == 0.01
+    assert round(mh2.compare(mh1), 3) == 0.01
+
+    mh1 = mh1.downsample_scaled(100000)
+    mh2 = mh2.downsample_scaled(100000)
+    assert round(mh1.compare(mh2), 2) == 0.01
+    assert round(mh2.compare(mh1), 2) == 0.01

@@ -5,83 +5,42 @@ import csv
 import os
 import os.path
 import sys
+from collections import namedtuple
 
 import screed
 import sourmash_lib
 from . import signature as sig
 from . import sourmash_args
-from .logging import notify, error
+from .logging import notify, error, print_results, set_quiet
 
-DEFAULT_K = 31
+from .sourmash_args import DEFAULT_LOAD_K
+DEFAULT_COMPUTE_K = '21,31,51'
+
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 
-def search(args):
-    "Search a query sig against one or more signatures; report up to the 3 top matches."
+def info(args):
+    "Report sourmash version + version of installed dependencies."
     parser = argparse.ArgumentParser()
-    parser.add_argument('query', help='query signature')
-    parser.add_argument('against', nargs='+', help='list of signatures')
-    parser.add_argument('--threshold', default=0.08, type=float)
-    parser.add_argument('-n', '--num-results', default=3, type=int)
-    parser.add_argument('-k', '--ksize', default=DEFAULT_K, type=int)
-    parser.add_argument('-f', '--force', action='store_true')
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'))
-
-    sourmash_args.add_moltype_args(parser)
-
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='report versions of khmer and screed')
     args = parser.parse_args(args)
-    moltype = sourmash_args.calculate_moltype(args)
 
-    # get the query signature
-    query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
-                                               select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
-    notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
+    from . import VERSION
+    notify('sourmash version {}', VERSION)
+    notify('- loaded from path: {}', os.path.dirname(__file__))
+    notify('')
 
-    # get the signatures to query
-    notify('loading db of signatures from {} files', len(args.against))
-    against = []
-    for filename in args.against:
-        if filename == args.query and not args.force:
-            notify('excluding query from database (file {})', filename)
-            continue
+    if args.verbose:
+        import khmer
+        notify('khmer version {}', khmer.__version__)
+        notify('- loaded from path: {}', os.path.dirname(khmer.__file__))
+        notify('')
 
-        sl = sig.load_signatures(filename,
-                                 select_ksize=args.ksize,
-                                 select_moltype=moltype)
-
-        for x in sl:
-            against.append((x, filename))
-    notify('loaded {} signatures total.', len(against))
-
-    # compute query x db
-    distances = []
-    for (x, filename) in against:
-        distance = query.similarity(x)
-        if distance >= args.threshold:
-            distances.append((distance, x, filename))
-
-    # any matches? sort, show.
-    if distances:
-        distances.sort(reverse=True, key = lambda x: x[0])
-        notify('{} matches; showing {}:', len(distances), args.num_results)
-        for distance, match, filename in distances[:args.num_results]:
-
-            print('\t', match.name(), '\t', "%.3f" % distance,
-                  '\t', filename)
-
-        if args.save_matches:
-            outname = args.save_matches.name
-            notify('saving all matches to "{}"', outname)
-            sig.save_signatures([ m for (d, m, f) in distances ],
-                                args.save_matches)
-    else:
-        notify('** no matches in {} signatures', len(against))
+        import screed
+        notify('screed version {}', screed.__version__)
+        notify('- loaded from path: {}', os.path.dirname(screed.__file__))
 
 
 def compute(args):
@@ -101,30 +60,42 @@ def compute(args):
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    sourmash_args.add_construct_moltype_args(parser)
 
-    parser.add_argument('--input-is-protein', action='store_true')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('--input-is-protein', action='store_true',
+                        help='Consume protein sequences - no translation needed.')
     parser.add_argument('-k', '--ksizes',
-                        default=str(DEFAULT_K),
+                        default=DEFAULT_COMPUTE_K,
                         help='comma-separated list of k-mer sizes (default: %(default)s)')
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--check-sequence', action='store_true')
-    parser.add_argument('-f', '--force', action='store_true')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('--email', type=str, default='')
-    parser.add_argument('--singleton', action='store_true')
+    parser.add_argument('--check-sequence', action='store_true',
+                        help='complain if input sequence is invalid (default: False)')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='recompute signatures even if the file exists (default: False)')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output computed signatures to this file')
+    parser.add_argument('--email', type=str, default='',
+                        help='set e-mail address of the signature creator (default: empty)')
+    parser.add_argument('--singleton', action='store_true',
+                        help='compute a signature for each sequence record individually (default: False)')
     parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
-                        help="merge all input files into one signature named %(metavar)s")
-    parser.add_argument('--name-from-first', action='store_true')
+                        help="merge all input files into one signature named this")
+    parser.add_argument('--name-from-first', action='store_true',
+                        help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--track-abundance', action='store_true',
-                        help='track k-mer abundances')
+                        help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float,
-                        help='set resolution of signature size')
-    parser.add_argument('--seed', type=int, help='hash seed',
+                        help='choose number of hashes as 1 in FRACTION of input k-mers')
+    parser.add_argument('--seed', type=int,
+                        help='seed used by MurmurHash (default: 42)',
                         default=sourmash_lib.DEFAULT_SEED)
+
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:
         notify('WARNING: input is protein, turning off DNA hashing')
@@ -224,8 +195,7 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
 
     if args.track_abundance:
-        print('Tracking abundance of input k-mers.',
-              file=sys.stderr)
+        notify('Tracking abundance of input k-mers.')
 
     if not args.merge:
         if args.output:
@@ -235,8 +205,7 @@ def compute(args):
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
-                print('skipping', filename, '- already done',
-                      file=sys.stderr)
+                notify('skipping {} - already done', filename)
                 continue
 
             if args.singleton:
@@ -249,32 +218,34 @@ def compute(args):
 
                     siglist += build_siglist(args.email, Elist, filename,
                                              name=record.name)
-                print('calculated {} signatures for {} sequences in {}'.\
+
+                notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
 
                 # consume & calculate signatures
-                print('... reading sequences from', filename,
-                      file=sys.stderr)
+                notify('... reading sequences from {}', filename)
                 name = None
                 for n, record in enumerate(screed.open(filename)):
                     if n % 10000 == 0:
                         if n:
-                            print('...', filename, n, file=sys.stderr)
+                            notify('\r...{} {}', filename, n, end='')
                         elif args.name_from_first:
                             name = record.name
 
                     s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
+                notify('')
 
                 sigs = build_siglist(args.email, Elist, filename, name)
                 if args.output:
                     siglist += sigs
                 else:
                     siglist = sigs
+
                 print('calculated {} signatures for {} sequences in {}'.\
                           format(len(sigs), n + 1, filename))
 
@@ -289,18 +260,17 @@ def compute(args):
 
         for filename in args.filenames:
             # consume & calculate signatures
-            print('... reading sequences from', filename,
-                  file=sys.stderr)
+            notify('... reading sequences from {}', filename)
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
-                    print('...', filename, n, file=sys.stderr)
+                    notify('\r... {} {}', filename, n, end='')
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
         siglist = build_siglist(args.email, Elist, filename,
                                 name=args.merge)
-        print('calculated {} signatures for {} sequences taken from {}'.\
+        notify('calculated {} signatures for {} sequences taken from {}'.\
                format(len(siglist), n + 1, " ".join(args.filenames)))
         # at end, save!
         save_siglist(siglist, args.output)
@@ -312,16 +282,18 @@ def compare(args):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('signatures', nargs='+', help='list of signatures')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)s)')
     parser.add_argument('-o', '--output')
     parser.add_argument('--ignore-abundance', action='store_true',
                         help='do NOT use k-mer abundances if present')
+    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
+    parser.add_argument('--csv', type=argparse.FileType('w'),
+                        help='save matrix in CSV format (with column headers)')
     args = parser.parse_args(args)
 
     # load in the various signatures
     siglist = []
     for filename in args.signatures:
-        print('loading', filename, file=sys.stderr)
+        notify('loading {}', filename)
         loaded = sig.load_signatures(filename, select_ksize=args.ksize)
         loaded = list(loaded)
         if not loaded:
@@ -343,10 +315,11 @@ def compare(args):
         for j, E2 in enumerate(siglist):
             D[i][j] = E.similarity(E2, args.ignore_abundance)
 
-        print('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
+        if len(siglist) < 30:
+            print_results('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
         labeltext.append(E.name())
 
-    notify('min similarity in matrix: {}', numpy.min(D))
+    print_results('min similarity in matrix: {:.3f}', numpy.min(D))
 
     # shall we output a matrix?
     if args.output:
@@ -359,9 +332,22 @@ def compare(args):
         with open(args.output, 'wb') as fp:
             numpy.save(fp, D)
 
+    # output CSV?
+    if args.csv:
+        w = csv.writer(args.csv)
+        w.writerow(labeltext)
+
+        for i in range(len(labeltext)):
+            y = []
+            for j in range(len(labeltext)):
+                y.append('{}'.format(D[i][j]))
+            args.csv.write(','.join(y) + '\n')
+
 
 def plot(args):
     "Produce a clustering and plot."
+    import matplotlib as mpl
+    mpl.use('Agg')
     import numpy
     import scipy
     import pylab
@@ -409,7 +395,7 @@ def plot(args):
     Y = sch.linkage(D, method='single') # cluster!
     Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
     fig.savefig(dendrogram_out)
-    notify('wrote {}', dendrogram_out)
+    notify('wrote dendrogram to: {}', dendrogram_out)
 
     ### make the dendrogram+matrix:
     fig = sourmash_fig.plot_composite_matrix(D, labeltext,
@@ -418,11 +404,11 @@ def plot(args):
                                              vmin=args.vmin,
                                              vmax=args.vmax)
     fig.savefig(matrix_out)
-    notify('wrote {}', matrix_out)
+    notify('wrote numpy distance matrix to: {}', matrix_out)
 
     # print out sample numbering for FYI.
     for i, name in enumerate(labeltext):
-        print(i, '\t', name)
+        print_results('{}\t{}', i, name)
 
 
 def import_csv(args):
@@ -464,7 +450,7 @@ def import_csv(args):
 def dump(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K, help='k-mer size (default: %(default)i)')
+    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_LOAD_K, help='k-mer size (default: %(default)i)')
     args = parser.parse_args(args)
 
     for filename in args.filenames:
@@ -505,11 +491,11 @@ def sbt_combine(args):
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
-    notify('saving SBT under "{}"', args.sbt_name)
+    notify('saving SBT under "{}".', args.sbt_name)
     tree.save(args.sbt_name)
 
 
-def sbt_index(args):
+def index(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
 
@@ -517,17 +503,28 @@ def sbt_index(args):
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('signatures', nargs='+',
                         help='signatures to load into SBT')
-    parser.add_argument('-k', '--ksize', type=int, default=None)
-    parser.add_argument('--traverse-directory', action='store_true')
-    parser.add_argument('-x', '--bf-size', type=float, default=1e5)
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('-k', '--ksize', type=int, default=None,
+                        help='k-mer size for which to build the SBT.')
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='load all signatures underneath this directory.')
+    parser.add_argument('--append', action='store_true', default=False,
+                        help='add signatures to an existing SBT.')
+    parser.add_argument('-x', '--bf-size', type=float, default=1e5,
+                        help='Bloom filter size used for internal nodes.')
 
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    factory = GraphFactory(1, args.bf_size, 4)
-    tree = SBT(factory)
+    if args.append:
+        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    else:
+        factory = GraphFactory(1, args.bf_size, 4)
+        tree = SBT(factory)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
@@ -570,28 +567,40 @@ def sbt_index(args):
     tree.save(args.sbt_name)
 
 
-def sbt_search(args):
+def search(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to load')
-    parser.add_argument('query', help='signature to query')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-    parser.add_argument('--threshold', default=0.08, type=float)
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'))
-    parser.add_argument('--best-only', action='store_true')
+    parser.add_argument('query', help='query signature')
+    parser.add_argument('databases', help='signatures/SBTs to search',
+                        nargs='+')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('--threshold', default=0.08, type=float,
+                        help='minimum threshold for reporting matches')
+    parser.add_argument('--save-matches', type=argparse.FileType('wt'),
+                        help='output matching signatures to this file.')
+    parser.add_argument('--best-only', action='store_true',
+                        help='report only the best match (with greater speed).')
+    parser.add_argument('-n', '--num-results', default=3, type=int,
+                        help='number of results to report')
+    parser.add_argument('--containment', action='store_true',
+                        help='evaluate containment rather than similarity')
+    parser.add_argument('--scaled', type=float,
+                        help='downsample query to this scaled factor (yields greater speed)')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output CSV containing matches to this file')
 
+    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
+
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    search_fn = search_minhashes
-    if args.best_only:
-        search_fn = SearchMinHashesFindBest().search
-
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    # set up the query.
     query = sourmash_args.load_query_signature(args.query,
                                                select_ksize=args.ksize,
                                                select_moltype=moltype)
@@ -601,19 +610,106 @@ def sbt_search(args):
                                              query_ksize,
                                              query_moltype)
 
+    # downsample if requested
+    if args.scaled:
+        if query.minhash.max_hash == 0:
+            error('cannot downsample a signature not created with --scaled')
+            sys.exit(-1)
+
+        notify('downsampling query from scaled={} to {}',
+               query.minhash.scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample_scaled(args.scaled)
+
+    # set up the search function(s)
+    search_fn = search_minhashes
+
+    # similarity vs containment
+    query_similarity = lambda x: query.similarity(x, downsample=True)
+    if args.containment:
+        query_similarity = lambda x: query.contained_by(x, downsample=True)
+
+    # set up the search databases
+    databases = sourmash_args.load_sbts_and_sigs(args.databases,
+                                                 query_ksize, query_moltype)
+
+    if not len(databases):
+        error('Nothing found to search!')
+        sys.exit(-1)
+
+    # collect results across all the trees
+    SearchResult = namedtuple('SearchResult',
+                              'similarity, match_sig, md5, filename, name')
     results = []
-    for leaf in tree.find(search_fn, query, args.threshold):
-        results.append((query.similarity(leaf.data), leaf.data))
-        #results.append((leaf.data.similarity(ss), leaf.data))
+    found_md5 = set()
+    for (sbt_or_siglist, filename, is_sbt) in databases:
+        if args.best_only:
+            search_fn = SearchMinHashesFindBest().search
 
-    results.sort(key=lambda x: -x[0])   # reverse sort on similarity
-    for (similarity, query) in results:
-        print('{:.2f} {}'.format(similarity, query.name()))
+        if is_sbt:
+            tree = sbt_or_siglist
+            notify('Searching SBT {}', filename)
+            for leaf in tree.find(search_fn, query, args.threshold):
+                similarity = query_similarity(leaf.data)
+                if similarity >= args.threshold and \
+                       leaf.data.md5sum() not in found_md5:
+                    sr = SearchResult(similarity=similarity,
+                                      match_sig=leaf.data,
+                                      md5=leaf.data.md5sum(),
+                                      filename=filename,
+                                      name=leaf.data.name())
+                    found_md5.add(sr.md5)
+                    results.append(sr)
 
+        else: # list of signatures
+            for ss in sbt_or_siglist:
+                similarity = query_similarity(ss)
+                if similarity >= args.threshold and \
+                       ss.md5sum() not in found_md5:
+                    sr = SearchResult(similarity=similarity,
+                                      match_sig=ss,
+                                      md5=ss.md5sum(),
+                                      filename=filename,
+                                      name=ss.name())
+                    found_md5.add(sr.md5)
+                    results.append(sr)
+
+    # sort results on similarity (reverse)
+    results.sort(key=lambda x: -x.similarity)
+
+    if args.best_only:
+        notify("(truncated search because of --best-only; only trust top result")
+
+    n_matches = len(results)
+    if n_matches <= args.num_results:
+        print_results('{} matches:'.format(len(results)))
+    else:
+        print_results('{} matches; showing first {}:',
+               len(results), args.num_results)
+        n_matches = args.num_results
+
+    # output!
+    print_results("similarity   match")
+    print_results("----------   -----")
+    for sr in results[:n_matches]:
+        pct = '{:.1f}%'.format(sr.similarity*100)
+        name = sr.match_sig._display_name(60)
+        print_results('{:>6}       {}', pct, name)
+
+    if args.output:
+        fieldnames = ['similarity', 'name', 'filename', 'md5']
+        w = csv.DictWriter(args.output, fieldnames=fieldnames)
+
+        w.writeheader()
+        for sr in results:
+            d = dict(sr._asdict())
+            del d['match_sig']
+            w.writerow(d)
+
+    # save matching signatures upon request
     if args.save_matches:
         outname = args.save_matches.name
-        notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ m for (sim, m) in results ],
+        notify('saving all matched signatures to "{}"', outname)
+        sig.save_signatures([ sr.match_sig for sr in results ],
                             args.save_matches)
 
 
@@ -626,6 +722,8 @@ def categorize(args):
     parser.add_argument('sbt_name', help='name of SBT to load')
     parser.add_argument('queries', nargs='+',
                         help='list of signatures to categorize')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
     parser.add_argument('-k', '--ksize', type=int, default=None)
     parser.add_argument('--threshold', default=0.08, type=float)
     parser.add_argument('--traverse-directory', action="store_true")
@@ -636,6 +734,7 @@ def categorize(args):
     parser.add_argument('--load-csv', default=None)
 
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
     already_names = set()
@@ -691,27 +790,35 @@ def categorize(args):
     if loader.skipped_nosig:
         notify('skipped/nosig: {}', loader.skipped_nosig)
 
-def sbt_gather(args):
+
+def gather(args):
     from sourmash_lib.sbt import SBT, GraphFactory
     from sourmash_lib.sbtmh import search_minhashes, SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('query', help='query signature')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-    parser.add_argument('--threshold', default=0.05, type=float)
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('--csv', type=argparse.FileType('wt'))
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'))
+    parser.add_argument('databases', help='signatures/SBTs to search',
+                        nargs='+')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output CSV containing matches to this file')
+    parser.add_argument('--save-matches', type=argparse.FileType('wt'),
+                        help='save the matched signatures from the database to this file.')
+    parser.add_argument('--threshold-bp', type=float, default=5e4,
+                        help='threshold (in bp) for reporting results')
+    parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
+                        help='output unassigned portions of the query as a signature to this file')
+    parser.add_argument('--scaled', type=float,
+                        help='downsample query to this scaled factor')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
 
+    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
-
-    # load in the SBT
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
@@ -728,7 +835,25 @@ def sbt_gather(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    notify('query signature has max_hash: {}', query.minhash.max_hash)
+    # downsample if requested
+    if args.scaled:
+        notify('downsampling query from scaled={} to {}',
+               query.minhash.scaled, int(args.scaled))
+        query.minhash = query.minhash.downsample_scaled(args.scaled)
+
+    # empty?
+    if not query.minhash.get_mins():
+        error('no query hashes!? exiting.')
+        sys.exit(-1)
+
+    # set up the search databases
+    databases = sourmash_args.load_sbts_and_sigs(args.databases,
+                                                 query_ksize, query_moltype)
+
+    if not len(databases):
+        error('Nothing found to search!')
+        sys.exit(-1)
+
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
 
@@ -736,30 +861,52 @@ def sbt_gather(args):
     R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
 
     # define a function to do a 'best' search and get only top match.
-    def find_best(tree, query):
-        search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
+    def find_best(dblist, query):
         results = []
-        for leaf in tree.find(search_fn, query, 0.0):
-            leaf_e = leaf.data.minhash
-            similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
-            if similarity > 0.0:
-                results.append((similarity, leaf.data))
+        for (sbt_or_siglist, filename, is_sbt) in dblist:
+            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+
+            if is_sbt:
+                tree = sbt_or_siglist
+
+                for leaf in tree.find(search_fn, query, 0.0):
+                    leaf_e = leaf.data.minhash
+                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
+                    if similarity > 0.0:
+                        results.append((similarity, leaf.data))
+            else:
+                for ss in sbt_or_siglist:
+                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
+                    if similarity > 0.0:
+                        results.append((similarity, ss))
 
         if not results:
-            return None, None
+            return None, None, None
 
         # take the best result
         results.sort(key=lambda x: -x[0])   # reverse sort on similarity
         best_similarity, best_leaf = results[0]
-        return best_similarity, best_leaf
+        return best_similarity, best_leaf, filename
 
 
     # define a function to build new signature object from set of mins
     def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=args.ksize, n=len(mins))
+        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
         e.add_many(mins)
         return sig.SourmashSignature('', e)
+
+    # xxx
+    def format_bp(bp):
+        bp = float(bp)
+        if bp < 500:
+            return '{:.0f} bp '.format(bp)
+        elif bp <= 500e3:
+            return '{:.1f} kbp'.format(round(bp / 1e3, 1))
+        elif bp < 500e6:
+            return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
+        elif bp < 500e9:
+            return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
+        return '???'
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
@@ -767,8 +914,10 @@ def sbt_gather(args):
 
     sum_found = 0.
     found = []
+    GatherResult = namedtuple('GatherResult',
+                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
     while 1:
-        best_similarity, best_leaf = find_best(tree, query)
+        best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
             break
 
@@ -779,21 +928,17 @@ def sbt_gather(args):
         # figure out what the resolution of the banding on the genome is,
         # based either on an explicit --scaled parameter, or on genome
         # cardinality (deprecated)
-        if best_leaf.minhash.max_hash:
-            R_genome = sourmash_lib.MAX_HASH / \
-              float(best_leaf.minhash.max_hash)
-        elif best_leaf.minhash.hll:
-            genome_size = best_leaf.minhash.hll.estimate_cardinality()
-            genome_max_hash = max(found_mins)
-            R_genome = float(genome_size) / float(genome_max_hash)
-        else:
-            error('Best hash match in sbt_gather has no cardinality')
+        if not best_leaf.minhash.max_hash:
+            error('Best hash match in sbt_gather has no max_hash')
             error('Please prepare database of sequences with --scaled')
             sys.exit(-1)
+
+        R_genome = best_leaf.minhash.scaled
 
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
+        # CTB: these could probably be replaced by minhash.downsample_scaled.
         new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
@@ -802,72 +947,92 @@ def sbt_gather(args):
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
+        intersect_bp = R_comparison * len(intersect_orig_mins)
         sum_found += len(intersect_mins)
 
-        if len(intersect_mins) < 5:   # hard cutoff for now
-            notify('found only {} hashes in common.', len(intersect_mins))
-            notify('this is below a sane threshold => exiting.')
+        if intersect_bp < args.threshold_bp:   # hard cutoff for now
+            notify('found less than {} in common. => exiting',
+                   format_bp(intersect_bp))
             break
 
         # calculate fractions wrt first denominator - genome size
         genome_n_mins = len(found_mins)
-        f_genome = len(intersect_mins) / float(genome_n_mins)
-        f_orig_query = len(intersect_orig_mins) / float(genome_n_mins)
+        f_match = len(intersect_mins) / float(genome_n_mins)
+        f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.minhash.get_hashes())
-        f_query = len(intersect_mins) / float(query_n_mins)
+        f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+
+        if not len(found):                # first result? print header.
+            print_results("")
+            print_results("overlap     p_query p_match ")
+            print_results("---------   ------- --------")
+
+        result = GatherResult(intersect_bp=intersect_bp,
+                              f_orig_query=f_orig_query,
+                              f_match=f_match,
+                              f_unique_to_query=f_unique_to_query,
+                              filename=filename,
+                              md5=best_leaf.md5sum(),
+                              name=best_leaf.name(),
+                              leaf=best_leaf)
 
         # print interim result & save in a list for later use
-        notify('found: {:.2f} {:.2f} {}', f_genome, f_query,
-               best_leaf.name())
-        found.append((f_genome, best_leaf, f_query))
+        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_genome = '{:.1f}%'.format(result.f_match*100)
+
+        name = result.leaf._display_name(40)
+
+        print_results('{:9}   {:>6}  {:>6}      {}',
+                      format_bp(result.intersect_bp), pct_query, pct_genome,
+                      name)
+        found.append(result)
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
         query = build_new_signature(query_mins)
 
     # basic reporting
-    notify('found {} matches total', len(found))
-    notify('the recovered matches hit {:.1f}% of the query',
-           100. * sum_found / len(orig_query.minhash.get_hashes()))
-    notify('')
+    print_results('\nfound {} matches total;', len(found))
+
+    sum_found /= len(orig_query.minhash.get_hashes())
+    print_results('the recovered matches hit {:.1f}% of the query',
+           sum_found * 100)
+    print_results('')
 
     if not found:
         sys.exit(0)
 
-    # sort by fraction of genome (first key) - change this?
-    found.sort(key=lambda x: x[0])
-    found.reverse()
-
-    notify('Composition:')
-    for (frac, leaf_sketch, genome_fraction) in found:
-        notify('{:.2f} {:.2f} {}', frac, genome_fraction, leaf_sketch.name())
-
     if args.output:
-        print('Composition:', file=args.output)
-        for (frac, leaf_sketch, genome_fraction) in found:
-            print('{:.2f} {:.f} {}'.format(frac, genome_fraction,
-                                        leaf_sketch.name()),
-                  file=args.output)
-
-    if args.csv:
-        fieldnames = ['fraction', 'name', 'sketch_kmers', 'genome_fraction']
-        w = csv.DictWriter(args.csv, fieldnames=fieldnames)
-
+        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
+                      'f_unique_to_query', 'name', 'filename', 'md5']
+        w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
-        for (frac, leaf_sketch, genome_fraction) in found:
-            cardinality = 0
-            if leaf_sketch.minhash.hll:
-                cardinality = leaf_sketch.minhash.hll.estimate_cardinality()
-            w.writerow(dict(fraction=frac, name=leaf_sketch.name(),
-                            sketch_kmers=cardinality,
-                            genome_fraction=genome_fraction))
+        for result in found:
+            d = dict(result._asdict())
+            del d['leaf']                 # actual signature not in CSV.
+            w.writerow(d)
+
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ ss for (f, ss) in found ],
-                            args.save_matches)
+        sig.save_signatures([ r.leaf for r in found ], args.save_matches)
+
+    if args.output_unassigned:
+        if not found:
+            notify('nothing found - entire query signature unassigned.')
+        if not query.minhash.get_mins():
+            notify('no unassigned hashes! not saving.')
+        else:
+            outname = args.output_unassigned.name
+            notify('saving unassigned hashes to "{}"', outname)
+
+            e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
+                                     max_hash=new_max_hash)
+            e.add_many(query.minhash.get_mins())
+            sig.save_signatures([ sig.SourmashSignature('', e) ],
+                                args.output_unassigned)
 
 
 def watch(args):
@@ -879,16 +1044,23 @@ def watch(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'))
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_K)
-    parser.add_argument('--threshold', default=0.05, type=float)
-    parser.add_argument('--input-is-protein', action='store_true')
-    sourmash_args.add_moltype_args(parser, default_dna=True)
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='save signature generated from data here')
+    parser.add_argument('--threshold', default=0.05, type=float,
+                        help='minimum threshold for matches')
+    parser.add_argument('--input-is-protein', action='store_true',
+                        help='Consume protein sequences - no translation needed')
+    sourmash_args.add_construct_moltype_args(parser)
     parser.add_argument('-n', '--num-hashes', type=int,
                         default=DEFAULT_N,
                         help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--name', type=str, default='stdin')
+    parser.add_argument('--name', type=str, default='stdin',
+                        help='name to use for generated signature')
+    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:
         notify('WARNING: input is protein, turning off DNA hashing.')
@@ -905,16 +1077,26 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    E = sourmash_lib.MinHash(ksize=args.ksize, n=args.num_hashes,
-                                is_protein=is_protein)
+    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+
+    def get_ksize(tree):
+        """Walk nodes in `tree` to find out ksize"""
+        for node in tree.nodes.values():
+            if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
+                return node.data.minhash.ksize
+
+    # deduce ksize from the SBT we are loading
+    ksize = args.ksize
+    if ksize is None:
+        ksize = get_ksize(tree)
+
+    E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
+                             is_protein=is_protein)
     streamsig = sig.SourmashSignature('', E, filename='stdin',
                                       name=args.name)
 
     notify('Computing signature for k={}, {} from stdin',
-           args.ksize, moltype)
-
-
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+           ksize, moltype)
 
     def do_search():
         search_fn = SearchMinHashesFindBest().search
@@ -935,7 +1117,7 @@ def watch(args):
     for n, record in enumerate(screed_iter):
         # at each watermark, print status & check cardinality
         if n >= watermark:
-            notify('... read {} sequences', n)
+            notify('\r... read {} sequences', n, end='')
             watermark += WATERMARK_SIZE
 
             if do_search():
@@ -952,75 +1134,9 @@ def watch(args):
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
-        notify('FOUND: {}, at {:.3f}', found_sig.name(),
+        print_results('FOUND: {}, at {:.3f}', found_sig.name(),
                similarity)
 
     if args.output:
+        notify('saving signature to {}', args.output.name)
         sig.save_signatures([streamsig], args.output)
-
-
-def convert(args):
-    "Convert YAML to JSON"
-
-    import sourmash_lib.signature
-
-    parser = argparse.ArgumentParser("""
-Ensure that signature files in YAML (old format) are converted to signature files in JSON (new format).
-The JSON-for-sure signature files are created in the same directory as the YAML-may-be files and are added
-the extension ".json".
-""")
-    parser.add_argument('--minified', action="store_true",
-                        help='Store the JSON minified (uses less space but is less human-readable) or not.')
-    parser.add_argument('-f', '--force',
-                        action="store_true",
-                        help="Overwrite existing files.")
-    parser.add_argument('path', nargs='*',
-                        help='Path to YAML file with signatures, or directory containing signature files.')
-
-    args = parser.parse_args(args)
-
-    if args.minified:
-        kwargs = {'indent': None,
-                  'sort_keys': False}
-    else:
-        kwargs = {}
-
-
-    filenames = list()
-
-    while len(args.path) > 0:
-        path = args.path.pop()
-
-        if not os.path.exists(path):
-            notify("The path name %s does not exist" % path)
-            sys.exit(1)
-
-        if os.path.isdir(path):
-            notify("The path %s is a directory (and we will search signatures in it)." % path)
-            args.path.extend(os.path.join(path, x) for x in os.listdir(path))
-            continue
-
-        # "path" is a file (not a directory) past this point
-        if not path.endswith(".sig"):
-            notify("The file name %s does not end with '.sig'. Skipping." % path)
-            continue
-
-        # fail early if output already existing
-        out_fn = path + ".json"
-        if not args.force and os.path.exists(out_fn):
-            notify("The output file %s is already present. Use --force to force overwriting." % out_fn)
-            sys.exit(1)
-
-        # path is a file and should be converted
-        filenames.append(path)
-
-
-    for i, path in enumerate(filenames, 1):
-        notify("\rConverting file %i/%i" % (i, len(filenames)), end="", flush=True)
-        with open(path) as fh:
-            signatures = tuple(sourmash_lib.signature.load_signatures(fh))
-
-        out_fn = path + ".json"
-        with open(out_fn, 'w') as fh:
-            sourmash_lib.signature.save_signatures(signatures, fp=fh, **kwargs)
-    notify("\rConverting file %i/%i" % (i, len(filenames)))

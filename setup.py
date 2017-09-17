@@ -22,9 +22,8 @@ CLASSIFIERS = [
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: C++",
     "Programming Language :: Python :: 2.7",
-    "Programming Language :: Python :: 3.3",
-    "Programming Language :: Python :: 3.4",
     "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -66,7 +65,7 @@ SETUP_METADATA = \
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
                                extra_link_args=EXTRA_LINK_ARGS)],
-    "install_requires": ["screed>=0.9", "PyYAML>=3.11", "ijson"],
+    "install_requires": ["screed>=0.9", "ijson", "khmer>2.0<3.0"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],

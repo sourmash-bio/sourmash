@@ -1,5 +1,5 @@
 language: python
-python: 3.5
+python: 3.6
 
 sudo: required
 dist: trusty
@@ -8,9 +8,30 @@ branches:
   only:
     - master
 
-env:
-  - TOX_ENV=py27
-  - TOX_ENV=py35
+matrix:
+  fast_finish: true
+  include:
+
+    - os: linux
+      python: "2.7"
+      sudo: required
+      dist: trusty
+      env:
+        - TOX_ENV=py27
+
+    - os: linux
+      python: "3.5"
+      sudo: required
+      dist: trusty
+      env:
+        - TOX_ENV=py35
+
+    - os: linux
+      python: "3.6"
+      sudo: required
+      dist: trusty
+      env:
+        - TOX_ENV=py36
 
 install:
 - pip install tox

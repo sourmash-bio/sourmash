@@ -231,6 +231,72 @@ def test_compare_1(track_abundance):
     assert b.compare(b) == 1.0
 
 
+def test_intersection_1(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(20, 10, track_abundance=track_abundance)
+
+    a.add_sequence('TGCCGCCCAGCA')
+    b.add_sequence('TGCCGCCCAGCA')
+
+    common = set(a.get_mins())
+    combined_size = 3
+
+    intersection, size = a.intersection(b)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = b.intersection(b)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = b.intersection(a)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = a.intersection(a)
+    assert intersection == common
+    assert combined_size == size
+
+    # add same sequence again
+    b.add_sequence('TGCCGCCCAGCA')
+
+    intersection, size = a.intersection(b)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = b.intersection(b)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = b.intersection(a)
+    assert intersection == common
+    assert combined_size == size
+
+    intersection, size = a.intersection(a)
+    assert intersection == common
+    assert combined_size == size
+
+    a.add_sequence('GTCCGCCCAGTGA')
+    b.add_sequence('GTCCGCCCAGTGG')
+
+    new_in_common = set(a.get_mins()).intersection(set(b.get_mins()))
+    new_combined_size = 8
+
+    intersection, size = a.intersection(b)
+    assert intersection == new_in_common
+    assert size == new_combined_size
+
+    intersection, size = b.intersection(a)
+    assert intersection == new_in_common
+    assert size == new_combined_size
+
+    intersection, size = a.intersection(a)
+    assert intersection == set(a.get_mins())
+
+    intersection, size = b.intersection(b)
+    assert intersection == set(b.get_mins())
+
+
 def test_mh_copy(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
@@ -311,15 +377,20 @@ def test_mh_asymmetric(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(10, 10, track_abundance=track_abundance)                   # different size: 10
+    # different size: 10
+    b = MinHash(10, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
     assert a.count_common(b) == 10
     assert b.count_common(a) == 10
 
+    with pytest.raises(TypeError):
+        a.compare(b)
+
+    a = a.downsample_n(10)
     assert a.compare(b) == 0.5
-    assert b.compare(a) == 1.0
+    assert b.compare(a) == 0.5
 
 
 def test_mh_merge(track_abundance):
@@ -376,7 +447,8 @@ def test_mh_asymmetric_merge(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(10, 10, track_abundance=track_abundance)                   # different size: 10
+    # different size: 10
+    b = MinHash(10, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
@@ -388,8 +460,17 @@ def test_mh_asymmetric_merge(track_abundance):
     assert len(c) == len(a)
     assert len(d) == len(b)
 
+    # can't compare different sizes without downsampling
+    with pytest.raises(TypeError):
+        d.compare(a)
+
+    a = a.downsample_n(d.num)
+    print(a.get_mins())
+    print(d.get_mins())
     assert d.compare(a) == 1.0
-    assert c.compare(b) == 0.5
+
+    c = c.downsample_n(b.num)
+    assert c.compare(b) == 1.0
 
 
 def test_mh_inplace_concat_asymmetric(track_abundance):
@@ -398,7 +479,8 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(10, 10, track_abundance=track_abundance)                   # different size: 10
+    # different size: 10
+    b = MinHash(10, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
@@ -413,7 +495,15 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     assert len(c) == len(a)
     assert len(d) == len(b)
 
-    assert d.compare(a) == 1.0
+    try:
+        d.compare(a)
+    except TypeError as exc:
+        assert 'must have same num' in str(exc)
+
+    a = a.downsample_n(d.num)
+    assert d.compare(a) == 1.0 # see: d += a, above.
+
+    c = c.downsample_n(b.num)
     assert c.compare(b) == 0.5
 
 
@@ -720,6 +810,13 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
     assert len(b.get_mins()) == 0
+
+
+def test_scaled_property(track_abundance):
+    scaled = 10000
+    a = MinHash(20, 10, track_abundance=track_abundance,
+                max_hash=round(2**64 / scaled))
+    assert a.scaled == scaled
 
 
 def test_mh_subtract(track_abundance):
