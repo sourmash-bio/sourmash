@@ -91,8 +91,7 @@ cdef class MinHash(object):
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0,
-                       HashIntoType scaled=0,
-                       mins=None):
+                       mins=None, HashIntoType scaled=0):
         self.track_abundance = track_abundance
 
         if max_hash and scaled:
@@ -159,8 +158,8 @@ cdef class MinHash(object):
                 self.track_abundance,
                 deref(self._this).seed,
                 deref(self._this).max_hash,
-                0,
-                self.get_mins(with_abundance=self.track_abundance)))
+                self.get_mins(with_abundance=self.track_abundance),
+                0))
 
     def __richcmp__(self, other, op):
         if op == 2:
