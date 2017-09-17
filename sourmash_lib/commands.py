@@ -304,6 +304,19 @@ def compare(args):
     notify(' '*79, end='\r')
     notify('loaded {} signatures total.'.format(len(siglist)))
 
+    # check ksizes and type
+    ksizes = set([s.minhash.ksize for s in siglist])
+    if len(ksizes) > 1:
+        error('multiple k-mer sizes loaded; please specify one with -k.')
+        ksizes = sorted(ksizes)
+        error('(saw k-mer sizes {})'.format(', '.join(map(str, ksizes))))
+        sys.exit(-1)
+
+    moltypes = set([sourmash_args.get_moltype(x) for x in siglist])
+    if len(moltypes) > 1:
+        error('multiple molecule types loaded; please specify --dna, --protein')
+        sys.exit(-1)
+
     # check to make sure they're potentially compatible - either using
     # max_hash/scaled, or not.
     scaled_sigs = [s.minhash.max_hash for s in siglist]
@@ -337,7 +350,7 @@ def compare(args):
             name_num = '{}-{}'.format(i, E.name())
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
-            print_results('{}\t{}'.format(name_num, D[i, :, ],))
+            print_results('{:20s}\t{}'.format(name_num, D[i, :, ],))
 
         labeltext.append(E.name())
 
