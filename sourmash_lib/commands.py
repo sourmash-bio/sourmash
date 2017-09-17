@@ -246,8 +246,8 @@ def compute(args):
                 else:
                     siglist = sigs
 
-                print('calculated {} signatures for {} sequences in {}'.\
-                          format(len(sigs), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}'.\
+                       format(len(sigs), n + 1, filename))
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
