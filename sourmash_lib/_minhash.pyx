@@ -29,6 +29,18 @@ def get_minhash_max_hash():
     return MINHASH_MAX_HASH
 
 
+def get_max_hash_for_scaled(scaled):
+    if scaled == 0:
+        return 0
+    return int(round(get_minhash_max_hash() / scaled, 0))
+
+
+def get_scaled_for_max_hash(max_hash):
+    if max_hash == 0:
+        return 0
+    return int(get_minhash_max_hash() / max_hash)
+
+
 cdef bytes to_bytes(s):
     if not isinstance(s, (basestring, bytes)):
         raise TypeError("Requires a string-like sequence")
@@ -75,9 +87,15 @@ cdef class MinHash(object):
                        bool is_protein=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
-                       HashIntoType max_hash=0,
+                       HashIntoType max_hash=0, HashIntoType scaled=0,
                        mins=None):
         self.track_abundance = track_abundance
+
+        if max_hash and scaled:
+            raise ValueError('cannot set both max_hash and scaled')
+        elif scaled:
+            max_hash = get_max_hash_for_scaled(scaled)
+
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -137,6 +155,7 @@ cdef class MinHash(object):
                 self.track_abundance,
                 deref(self._this).seed,
                 deref(self._this).max_hash,
+                0,
                 self.get_mins(with_abundance=self.track_abundance)))
 
     def __richcmp__(self, other, op):
@@ -194,7 +213,9 @@ cdef class MinHash(object):
 
     @property
     def scaled(self):
-        return int(get_minhash_max_hash() / self.max_hash)
+        if self.max_hash:
+            return get_scaled_for_max_hash(self.max_hash)
+        return 0
 
     @property
     def is_protein(self):
@@ -235,7 +256,7 @@ cdef class MinHash(object):
     def downsample_max_hash(self, *others):
         max_hashes = [ x.max_hash for x in others ]
         new_max_hash = min(self.max_hash, *max_hashes)
-        new_scaled = int(get_minhash_max_hash() / new_max_hash)
+        new_scaled = get_scaled_for_max_hash(new_max_hash)
 
         return self.downsample_scaled(new_scaled)
 
@@ -244,12 +265,11 @@ cdef class MinHash(object):
         if max_hash is None:
             raise ValueError('no max_hash available - cannot downsample')
 
-        old_scaled = int(get_minhash_max_hash() / self.max_hash)
+        old_scaled = get_scaled_for_max_hash(self.max_hash)
         if old_scaled > new_num:
             raise ValueError('new scaled is lower than current sample scaled')
 
-        new_max_hash = get_minhash_max_hash() / float(new_num)
-        new_max_hash = int(round(new_max_hash, 0))
+        new_max_hash = get_max_hash_for_scaled(new_num)
 
         a = MinHash(0, deref(self._this).ksize,
                     deref(self._this).is_protein, self.track_abundance,

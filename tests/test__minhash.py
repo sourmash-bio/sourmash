@@ -38,7 +38,9 @@ from __future__ import absolute_import, unicode_literals
 
 import pytest
 
-from sourmash_lib._minhash import MinHash, hash_murmur, dotproduct
+from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
+                                   get_scaled_for_max_hash,
+                                   get_max_hash_for_scaled)
 import math
 
 # add:
@@ -140,6 +142,30 @@ def test_max_hash(track_abundance):
     assert mh.get_mins() == [10, 20, 30]
     mh.add_hash(36)
     assert mh.get_mins() == [10, 20, 30]
+
+
+def test_scaled(track_abundance):
+    # test behavior with scaled (alt to max_hash)
+    scaled = get_scaled_for_max_hash(35)
+    print('XX', scaled, get_max_hash_for_scaled(scaled))
+    mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
+    assert mh.max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(40)
+    assert mh.get_mins() == [10, 20, 30]
+    mh.add_hash(36)
+    assert mh.get_mins() == [10, 20, 30]
+
+
+def test_max_hash_and_scaled_error(track_abundance):
+    # test behavior when supplying both max_hash and scaled
+    with pytest.raises(ValueError):
+        mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35,
+                     scaled=5)
 
 
 def test_max_hash_with_limit(track_abundance):
