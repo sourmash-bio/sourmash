@@ -588,6 +588,19 @@ def test_do_compare_downsample():
                                             '-k', '31', testdata2],
                                            in_directory=location)
 
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location)
+
+        print(status, out, err)
+        assert 'downsampling to scaled value of 200' in err
+        with open(os.path.join(location, 'xxx')) as fp:
+            lines = fp.readlines()
+            assert len(lines) == 3
+            assert lines[1].startswith('1.0,0.6666')
+            assert lines[2].startswith('0.6666')
+
 
 def test_do_compare_output_multiple_k():
     with utils.TempDirectory() as location:
