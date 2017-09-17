@@ -161,6 +161,8 @@ def get_ksize(tree):
 
 
 def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
+    n_signatures = 0
+    n_databases = 0
     databases = []
     for sbt_or_sigfile in filenames:
         try:
@@ -172,7 +174,8 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 sys.exit(-1)
 
             databases.append((tree, sbt_or_sigfile, True))
-            notify('loaded SBT {}', sbt_or_sigfile)
+            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
+            n_databases += 1
         except (ValueError, EnvironmentError):
             # not an SBT - try as a .sig
 
@@ -183,9 +186,13 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 siglist = list(siglist)
                 databases.append((list(siglist), sbt_or_sigfile, False))
                 notify('loaded {} signatures from {}', len(siglist),
-                       sbt_or_sigfile)
+                       sbt_or_sigfile, end='\r')
+                n_signatures += len(siglist)
             except EnvironmentError:
                 error("file '{}' does not exist", sbt_or_sigfile)
                 sys.exit(-1)
+    notify(' '*79, end='\r')
+    notify('loaded {} signatures and {} databases total.'.format(n_signatures,
+                                                                 n_databases))
 
     return databases

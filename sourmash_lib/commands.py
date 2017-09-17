@@ -293,17 +293,34 @@ def compare(args):
     # load in the various signatures
     siglist = []
     for filename in args.signatures:
-        notify('loading {}', filename)
+        notify('loading {}', filename, end='\r')
         loaded = sig.load_signatures(filename, select_ksize=args.ksize)
         loaded = list(loaded)
         if not loaded:
-            notify('warning: no signatures loaded at given ksize from {}',
+            notify('\nwarning: no signatures loaded at given ksize from {}',
                    filename)
         siglist.extend(loaded)
+
+    notify(' '*79, end='\r')
+    notify('loaded {} signatures total.'.format(len(siglist)))
+
+    # check to make sure they're potentially compatible - either using
+    # max_hash/scaled, or not.
+    scaled_sigs = [s.minhash.max_hash for s in siglist]
+    is_scaled = all(scaled_sigs)
+
+    # if using --scaled, downsample appropriately
+    if is_scaled:
+        max_scaled = max(s.minhash.scaled for s in siglist)
+        notify('downsampling to scaled value of {}'.format(max_scaled))
+        for s in siglist:
+            s.minhash = s.minhash.downsample_scaled(max_scaled)
 
     if len(siglist) == 0:
         error('no signatures!')
         sys.exit(-1)
+
+    notify('')
 
     # build the distance matrix
     D = numpy.zeros([len(siglist), len(siglist)])
@@ -316,7 +333,12 @@ def compare(args):
             D[i][j] = E.similarity(E2, args.ignore_abundance)
 
         if len(siglist) < 30:
-            print_results('%d-%20s\t%s' % (i, E.name(), D[i, :, ],))
+            # for small matrices, pretty-print some output
+            name_num = '{}-{}'.format(i, E.name())
+            if len(name_num) > 20:
+                name_num = name_num[:17] + '...'
+            print_results('{}\t{}'.format(name_num, D[i, :, ],))
+
         labeltext.append(E.name())
 
     print_results('min similarity in matrix: {:.3f}', numpy.min(D))
