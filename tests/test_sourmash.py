@@ -589,16 +589,49 @@ def test_do_compare_downsample():
                                            in_directory=location)
 
 
+def test_do_compare_output_multiple_k():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata2],
+                                           in_directory=location)
+
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(status, out, err)
+
+        assert status == -1
+        assert 'multiple k-mer sizes loaded; please specify one' in err
+        assert '(saw k-mer sizes 21, 31)' in err
+
+
+def test_do_compare_output_multiple_moltype():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dna', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--protein', testdata2],
                                            in_directory=location)
 
-        with open(os.path.join(location, 'xxx')) as fp:
-            lines = fp.readlines()
-            assert len(lines) == 3
-            assert lines[1].startswith('1.0,0.6666')
-            assert lines[2].startswith('0.6666')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'multiple molecule types loaded;' in err
 
 
 def test_do_plot_comparison():
