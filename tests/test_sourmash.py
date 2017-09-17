@@ -1757,7 +1757,7 @@ def test_gather_file_output():
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
-            assert '910.0,1.0,1.0' in output
+            assert '910,1.0,1.0' in output
 
 
 def test_gather_metagenome():

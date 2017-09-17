@@ -32,6 +32,9 @@ def get_minhash_max_hash():
 def get_max_hash_for_scaled(scaled):
     if scaled == 0:
         return 0
+    elif scaled == 1:
+        return get_minhash_max_hash()
+
     return int(round(get_minhash_max_hash() / scaled, 0))
 
 
@@ -87,7 +90,8 @@ cdef class MinHash(object):
                        bool is_protein=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
-                       HashIntoType max_hash=0, HashIntoType scaled=0,
+                       HashIntoType max_hash=0,
+                       HashIntoType scaled=0,
                        mins=None):
         self.track_abundance = track_abundance
 

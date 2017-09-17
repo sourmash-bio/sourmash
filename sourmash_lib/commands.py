@@ -88,7 +88,7 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
-    parser.add_argument('--scaled', type=float,
+    parser.add_argument('--scaled', type=float, default=0,
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
@@ -149,10 +149,8 @@ def compute(args):
 
     def make_minhashes():
         seed = args.seed
-        max_hash = 0
-        if args.scaled and args.scaled > 1:
-            max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
-            max_hash = int(round(max_hash, 0))
+        if args.scaled and args.scaled < 1:
+            raise ValueError('invalid value for scaled: {}'.format(args.scaled))
 
         # one minhash for each ksize
         Elist = []
@@ -161,14 +159,14 @@ def compute(args):
                 E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
                                             is_protein=True,
                                     track_abundance=args.track_abundance,
-                                            max_hash=max_hash,
+                                            scaled=args.scaled,
                                             seed=seed)
                 Elist.append(E)
             if args.dna:
                 E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
                                             is_protein=False,
                                     track_abundance=args.track_abundance,
-                                            max_hash=max_hash,
+                                            scaled=args.scaled,
                                             seed=seed)
                 Elist.append(E)
         return Elist
@@ -587,7 +585,7 @@ def search(args):
                         help='number of results to report')
     parser.add_argument('--containment', action='store_true',
                         help='evaluate containment rather than similarity')
-    parser.add_argument('--scaled', type=float,
+    parser.add_argument('--scaled', type=float, default=0,
                         help='downsample query to this scaled factor (yields greater speed)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='output CSV containing matches to this file')
@@ -807,7 +805,7 @@ def gather(args):
                         help='threshold (in bp) for reporting results')
     parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
                         help='output unassigned portions of the query as a signature to this file')
-    parser.add_argument('--scaled', type=float,
+    parser.add_argument('--scaled', type=float, default=0,
                         help='downsample query to this scaled factor')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
@@ -857,7 +855,7 @@ def gather(args):
     orig_mins = orig_query.minhash.get_hashes()
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
+    R_metagenome = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
