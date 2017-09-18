@@ -50,8 +50,7 @@ these.
 ## Support
 
 Please ask questions and files issues
-[on Github](https://github.com/dib-lab/sourmash/issues).  The developers
-sometimes hang out [on gitter](https://gitter.im/dib-lab/khmer).
+[on Github](https://github.com/dib-lab/sourmash/issues).
 
 ## Development
 
