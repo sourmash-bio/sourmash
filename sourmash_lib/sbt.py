@@ -2,10 +2,6 @@
 """
 A trial implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
-This is a simple in-memory version where all of the graphs are in
-memory at once; to move it onto disk, the graphs would need to be
-dynamically loaded for each query.
-
 To try it out, do::
 
     factory = GraphFactory(ksize, tablesizes, n_tables)

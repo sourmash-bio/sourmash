@@ -1492,20 +1492,22 @@ def test_sbt_search_order_dependence():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
-        cmd = 'sbt_index -k 21 134 genome-s10+s11.fa.gz.sig genome-s11.fa.gz.sig genome-s12.fa.gz.sig'
+        cmd = 'index -k 21 134 genome-s10+s11.fa.gz.sig genome-s11.fa.gz.sig genome-s12.fa.gz.sig'
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
-        cmd = 'sbt_search -k 21 134 genome-s11.fa.gz.sig --best-only -k 21 --dna'
+        cmd = 'search -k 21 genome-s11.fa.gz.sig 134 --best-only -k 21 --dna'
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
-        assert '100.0%' in err
+        assert '100.0%' in out
 
 
 def test_sbt_search_order_dependence_2():
+    # *should* return the same result as test_sbt_search_order_dependence,
+    # but does not due to a bug.
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz')
         testdata2 = utils.get_test_data('genome-s11.fa.gz')
@@ -1518,17 +1520,17 @@ def test_sbt_search_order_dependence_2():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
-        cmd = 'sbt_index -k 21 314 genome-s11.fa.gz.sig genome-s10+s11.fa.gz.sig genome-s12.fa.gz.sig'
+        cmd = 'index -k 21 314 genome-s11.fa.gz.sig genome-s10+s11.fa.gz.sig genome-s12.fa.gz.sig'
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
-        cmd = 'sbt_search -k 21 314 genome-s11.fa.gz.sig --best-only -k 21 --dna'
+        cmd = 'search -k 21 genome-s11.fa.gz.sig 314 --best-only --dna'
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
-        assert '100.0%' in err
+        assert '100.0%' in out
 
 
 def test_compare_with_abundance_1():

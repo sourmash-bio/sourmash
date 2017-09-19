@@ -29,8 +29,7 @@ class SigLeaf(Leaf):
     def data(self):
         if self._data is None:
             from sourmash_lib import signature
-            it = signature.load_signatures(self._filename)
-            self._data, = list(it)              # should only be one signature
+            self._data = signature.load_one_signature(self._filename)
         return self._data
 
     @data.setter
