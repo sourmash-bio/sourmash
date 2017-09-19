@@ -48,7 +48,7 @@ def _json_next_signature(iterable,
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
-    from .signature import FakeHLL, SourmashSignature
+    from .signature import SourmashSignature
 
     d = dict()
     prefix, event, value = next(iterable)
@@ -73,10 +73,10 @@ def _json_next_signature(iterable,
     max_hash = d.get('max_hash', 0)
     seed = d.get('seed', sourmash_lib.DEFAULT_SEED)
 
-    molecule = d.get('molecule', 'dna')
+    molecule = d.get('molecule', 'DNA')
     if molecule == 'protein':
         is_protein = True
-    elif molecule == 'dna':
+    elif molecule.upper() == 'DNA':
         is_protein = False
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
@@ -95,9 +95,6 @@ def _json_next_signature(iterable,
     else:
         abundances = list(map(int, d['abundances']))
         e.set_abundances(dict(zip(mins, abundances)))
-
-    if 'cardinality' in d:
-        e.hll = FakeHLL(d['cardinality'])
 
     sig = SourmashSignature(email, e)
 

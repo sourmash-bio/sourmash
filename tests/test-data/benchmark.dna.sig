@@ -7,6 +7,7 @@
         "signatures": [
             {
                 "ksize": 21,
+                "max_hash": 0,
                 "md5sum": "3b3f65dba0dad5429f45e7023e269d7c",
                 "mins": [
                     4519324738618364,
@@ -511,7 +512,8 @@
                     3550178620588827665
                 ],
                 "molecule": "dna",
-                "num": 500
+                "num": 500,
+                "seed": 42
             }
         ],
         "type": "mrnaseq",
