@@ -86,7 +86,7 @@ public:
     }
 
     virtual void add_hash(const HashIntoType h) {
-      if ((max_hash and h <= max_hash) or !max_hash) {
+      if ((max_hash and h <= max_hash) or not max_hash) {
         if (mins.size() == 0) {
           mins.push_back(h);
           return;
@@ -305,7 +305,7 @@ class KmerMinAbundance: public KmerMinHash {
         KmerMinHash(n, k, prot, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
-      if ((max_hash and h <= max_hash) or !max_hash) {
+      if ((max_hash and h <= max_hash) or not max_hash) {
         if (mins.size() == 0) {
           mins.push_back(h);
           abunds.push_back(1);
