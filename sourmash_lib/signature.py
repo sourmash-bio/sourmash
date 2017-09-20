@@ -171,6 +171,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
+    if select_ksize:
+        select_ksize = int(select_ksize)
+
     if not data:
         return
 
