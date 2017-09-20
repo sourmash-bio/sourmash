@@ -167,7 +167,7 @@ cdef class MinHash(object):
         self.add_many(other.get_mins())
 
     def __len__(self):
-        return deref(self._this).num
+        return deref(self._this).mins.size()
 
     cpdef get_mins(self, bool with_abundance=False):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
