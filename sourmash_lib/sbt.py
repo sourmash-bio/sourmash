@@ -261,7 +261,7 @@ class SBT(object):
         if isinstance(jnodes, Mapping):
             version = jnodes['version']
 
-        if storage is None:
+        if version < 3 and storage is None:
             storage = FSStorage(os.path.join(dirname, '.sbt.{}'.format(sbt_name)))
 
         return loaders[version](jnodes, leaf_loader, dirname, storage)
@@ -340,7 +340,10 @@ class SBT(object):
         sbt_nodes = defaultdict(lambda: None)
 
         klass = STORAGES[info['storage']['backend']]
-        storage = klass(**info['storage']['args'])
+        if info['storage']['backend'] == "FSStorage":
+            storage = FSStorage(os.path.join(dirname, info['storage']['args']['path']))
+        elif storage is None:
+            storage = klass(**info['storage']['args'])
 
         with NamedTemporaryFile() as sample_bf:
             sample_bf.write(storage.load(nodes[0]['filename']))
