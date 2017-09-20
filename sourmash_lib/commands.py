@@ -676,10 +676,10 @@ def search(args):
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x.similarity)
 
-    if args.best_only:
-        notify("(truncated search because of --best-only; only trust top result")
-
     n_matches = len(results)
+    if args.best_only:
+        args.num_results = 1
+
     if n_matches <= args.num_results:
         print_results('{} matches:'.format(len(results)))
     else:
@@ -694,6 +694,9 @@ def search(args):
         pct = '{:.1f}%'.format(sr.similarity*100)
         name = sr.match_sig._display_name(60)
         print_results('{:>6}       {}', pct, name)
+
+    if args.best_only:
+        notify("** reporting only one match because --best-only was set")
 
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']

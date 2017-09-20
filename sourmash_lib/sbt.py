@@ -184,8 +184,7 @@ class SBT(object):
                                          '.'.join([basetag, basename, 'sbt'])),
                 'name': node.name
             }
-            if isinstance(node, Leaf):
-                data['metadata'] = node.metadata
+            data['metadata'] = node.metadata
 
             node.save(os.path.join(dirprefix, data['filename']))
             structure[i] = data
@@ -377,6 +376,7 @@ class Node(object):
         self._factory = factory
         self._data = None
         self._filename = fullpath
+        self.metadata = dict()
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
@@ -403,10 +403,14 @@ class Node(object):
     def load(info, dirname):
         filename = os.path.join(dirname, info['filename'])
         new_node = Node(info['factory'], name=info['name'], fullpath=filename)
+        new_node.metadata = info.get('metadata', {})
         return new_node
 
     def update(self, parent):
         parent.data.update(self.data)
+        max_n_below = max(parent.metadata.get('max_n_below', 0),
+                          self.metadata.get('max_n_below'))
+        parent.metadata['max_n_below'] = max_n_below
 
 
 class Leaf(object):
