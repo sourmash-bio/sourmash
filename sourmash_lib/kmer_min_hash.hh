@@ -91,7 +91,7 @@ public:
           mins.push_back(h);
           return;
         }
-        else if (h < max_hash or mins.back() > h or mins.size() < num) {
+        else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
           // must still be growing, we know the list won't get too long
@@ -310,7 +310,7 @@ class KmerMinAbundance: public KmerMinHash {
           mins.push_back(h);
           abunds.push_back(1);
           return;
-        } else if (h < max_hash or mins.back() > h or mins.size() < num) {
+        } else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
           // must still be growing, we know the list won't get too long
