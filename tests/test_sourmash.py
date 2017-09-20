@@ -417,6 +417,40 @@ def test_do_sourmash_compute_with_scaled():
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 
 
+def test_do_sourmash_compute_with_bad_scaled():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '-1',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert '--scaled value must be >= 1' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1000.5',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert '--scaled value must be integer value' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1e9',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+
+        assert status == 0
+        assert 'WARNING: scaled value is nonsensical!?' in err
+
+
 def test_do_sourmash_compute_with_seed():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

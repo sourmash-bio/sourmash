@@ -103,6 +103,15 @@ def compute(args):
         args.protein = True
 
     if args.scaled:
+        if args.scaled < 1:
+            error('ERROR: --scaled value must be >= 1')
+            sys.exit(-1)
+        if args.scaled != round(args.scaled, 0):
+            error('ERROR: --scaled value must be integer value')
+            sys.exit(-1)
+        if args.scaled >= 1e9:
+            notify('WARNING: scaled value is nonsensical!? Continuing anyway.')
+
         if args.num_hashes != 0:
             notify('setting num_hashes to 0 because --scaled is set')
             args.num_hashes = 0
