@@ -120,17 +120,6 @@ def test_size_limit(track_abundance):
     assert mh.get_mins() == [5, 10, 20]
 
 
-def test_size_limit_none(track_abundance):
-    # test behavior with size limit of 0 (=> no size limit)
-    mh = MinHash(0, 4, track_abundance=track_abundance)
-    mh.add_hash(10)
-    mh.add_hash(20)
-    mh.add_hash(30)
-    assert mh.get_mins() == [10, 20, 30]
-    mh.add_hash(5) # -> should retain all, b/c size limit is 0
-    assert mh.get_mins() == [5, 10, 20, 30]
-
-
 def test_max_hash(track_abundance):
     # test behavior with max_hash
     mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35)

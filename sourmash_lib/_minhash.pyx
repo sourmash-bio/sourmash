@@ -189,7 +189,7 @@ cdef class MinHash(object):
         self.add_many(other.get_mins())
 
     def __len__(self):
-        return deref(self._this).num
+        return deref(self._this).mins.size()
 
     cpdef get_mins(self, bool with_abundance=False):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
@@ -243,7 +243,7 @@ cdef class MinHash(object):
         return deref(self._this).count_common(deref(other._this))
 
     def downsample_n(self, new_num):
-        if self.num < new_num:
+        if self.num and self.num < new_num:
             raise ValueError('new sample n is higher than current sample n')
 
         a = MinHash(new_num, deref(self._this).ksize,
