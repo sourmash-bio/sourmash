@@ -6,6 +6,7 @@ import os
 import os.path
 import sys
 from collections import namedtuple
+import random
 
 import screed
 import sourmash_lib
@@ -93,6 +94,8 @@ def compute(args):
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
                         default=sourmash_lib.DEFAULT_SEED)
+    parser.add_argument('--randomize', action='store_true',
+                        help='shuffle the list of input filenames randomly')
 
     args = parser.parse_args(args)
     set_quiet(args.quiet)
@@ -117,6 +120,10 @@ def compute(args):
             args.num_hashes = 0
 
     notify('computing signatures for files: {}', ", ".join(args.filenames))
+
+    if args.randomize:
+        notify('randomizing file list because of --randomize')
+        random.shuffle(args.filenames)
 
     # get list of k-mer sizes for which to compute sketches
     ksizes = args.ksizes
