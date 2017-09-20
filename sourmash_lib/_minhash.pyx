@@ -387,7 +387,7 @@ cdef class MinHash(object):
             added = 0
 
             for k, v in sorted(values.items()):
-                if not self.max_hash or k < self.max_hash:
+                if not self.max_hash or k <= self.max_hash:
                     deref(self._this).mins.push_back(k)
                     (<KmerMinAbundance*>address(deref(self._this))).abunds.push_back(v)
                     added += 1
