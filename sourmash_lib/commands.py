@@ -497,7 +497,7 @@ def sbt_combine(args):
 
 def index(args):
     from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbtmh import SigLeaf
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
@@ -569,7 +569,8 @@ def index(args):
 
 def search(args):
     from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbtmh import (search_minhashes,
+                                    search_minhashes_containment, SigLeaf)
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
@@ -620,13 +621,12 @@ def search(args):
                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
-    # set up the search function(s)
+    # set up the search & score function(s) - similarity vs containment
     search_fn = search_minhashes
-
-    # similarity vs containment
-    query_similarity = lambda x: query.similarity(x, downsample=True)
+    query_match = lambda x: query.similarity(x, downsample=True)
     if args.containment:
-        query_similarity = lambda x: query.contained_by(x, downsample=True)
+        search_fn = search_minhashes_containment
+        query_match = lambda x: query.contained_by(x, downsample=True)
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
@@ -642,14 +642,14 @@ def search(args):
     results = []
     found_md5 = set()
     for (sbt_or_siglist, filename, is_sbt) in databases:
-        if args.best_only:
-            search_fn = SearchMinHashesFindBest().search
-
         if is_sbt:
+            if args.best_only:            # this needs to be reset for each SBT
+                search_fn = SearchMinHashesFindBest().search
+
             tree = sbt_or_siglist
             notify('Searching SBT {}', filename)
             for leaf in tree.find(search_fn, query, args.threshold):
-                similarity = query_similarity(leaf.data)
+                similarity = query_match(leaf.data)
                 if similarity >= args.threshold and \
                        leaf.data.md5sum() not in found_md5:
                     sr = SearchResult(similarity=similarity,
@@ -662,7 +662,7 @@ def search(args):
 
         else: # list of signatures
             for ss in sbt_or_siglist:
-                similarity = query_similarity(ss)
+                similarity = query_match(ss)
                 if similarity >= args.threshold and \
                        ss.md5sum() not in found_md5:
                     sr = SearchResult(similarity=similarity,
@@ -715,7 +715,7 @@ def search(args):
 
 def categorize(args):
     from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbtmh import SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
@@ -793,7 +793,7 @@ def categorize(args):
 
 def gather(args):
     from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbtmh import SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     parser = argparse.ArgumentParser()
@@ -1038,7 +1038,7 @@ def gather(args):
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
     from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
+    from sourmash_lib.sbtmh import SigLeaf
     from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
