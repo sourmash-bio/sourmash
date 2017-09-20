@@ -376,7 +376,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash_lib.MAX_HASH - 1 }
+        assert set(max_hashes) == { sourmash_lib.MAX_HASH }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -2016,7 +2016,7 @@ def test_gather_file_output():
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
-            assert '910.0,1.0,1.0' in output
+            assert '910,1.0,1.0' in output
 
 
 def test_gather_metagenome():

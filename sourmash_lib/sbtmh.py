@@ -1,8 +1,35 @@
 from __future__ import print_function
 from __future__ import division
 
-from .sbt import Leaf
+from .sbt import Leaf, SBT, GraphFactory
 from . import _minhash, MinHash
+
+
+def load_sbt_index(filename):
+    "Load and return an SBT index."
+    return SBT.load(filename, leaf_loader=SigLeaf.load)
+
+
+def create_sbt_index(bloom_filter_size=1e5):
+    "Create an empty SBT index."
+    factory = GraphFactory(1, bloom_filter_size, 4)
+    tree = SBT(factory)
+    return tree
+
+
+def search_sbt_index(tree, query, threshold):
+    """\
+    Search an SBT index `tree` with signature `query` for matches above
+    `threshold`.
+
+    Usage:
+
+        for match_sig, similarity in search_sbt_index(tree, query, threshold):
+           ...
+    """
+    for leaf in tree.find(search_minhashes, query, threshold):
+        similarity = query.similarity(leaf.data)
+        yield leaf.data, similarity
 
 
 class SigLeaf(Leaf):
