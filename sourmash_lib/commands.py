@@ -825,7 +825,7 @@ def gather(args):
 
     found = []
     sum_found = 0
-    for result, n_intersect_mins, new_max_hash in gather_databases(query, databases,
+    for result, n_intersect_mins, new_max_hash, next_query in gather_databases(query, databases,
                                                      args.threshold_bp):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
@@ -887,7 +887,7 @@ def gather(args):
 
             e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
                                      max_hash=new_max_hash)
-            e.add_many(query.minhash.get_mins())
+            e.add_many(next_query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature('', e) ],
                                 args.output_unassigned)
 

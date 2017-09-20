@@ -166,8 +166,8 @@ def gather_databases(query, databases, threshold_bp):
                               name=best_leaf.name(),
                               leaf=best_leaf)
 
-        yield result, len(intersect_mins), new_max_hash
-
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
         query = build_new_signature(query_mins)
+
+        yield result, len(intersect_mins), new_max_hash, query
