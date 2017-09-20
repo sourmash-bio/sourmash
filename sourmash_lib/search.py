@@ -98,14 +98,14 @@ def gather_databases(query, databases, threshold_bp):
 
 
     # define a function to build new signature object from set of mins
-    def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
+    def build_new_signature(mins, template_sig):
+        e = template_sig.minhash.copy_and_clear()
         e.add_many(mins)
         return SourmashSignature('', e)
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
-    query = build_new_signature(new_mins)
+    query = build_new_signature(new_mins, orig_query)
 
     sum_found = 0.
     GatherResult = namedtuple('GatherResult',
@@ -168,6 +168,6 @@ def gather_databases(query, databases, threshold_bp):
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins)
+        query = build_new_signature(query_mins, orig_query)
 
         yield result, len(intersect_mins), new_max_hash, query

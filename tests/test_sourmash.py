@@ -12,6 +12,7 @@ import json
 import csv
 
 from . import sourmash_tst_utils as utils
+import sourmash_lib
 from sourmash_lib import MinHash
 try:
     import matplotlib
@@ -375,7 +376,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { 0 }
+        assert set(max_hashes) == { sourmash_lib.MAX_HASH - 1 }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -414,6 +415,40 @@ def test_do_sourmash_compute_with_scaled():
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
+
+
+def test_do_sourmash_compute_with_bad_scaled():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        outfile = os.path.join(location, 'FOO.xxx')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '-1',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert '--scaled value must be >= 1' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1000.5',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location,
+                                            fail_ok=True)
+
+        assert status != 0
+        assert '--scaled value must be integer value' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,31',
+                                            '--scaled', '1e9',
+                                            testdata1, '-o', outfile],
+                                            in_directory=location)
+
+        assert status == 0
+        assert 'WARNING: scaled value is nonsensical!?' in err
 
 
 def test_do_sourmash_compute_with_seed():
@@ -553,6 +588,25 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_compare_quiet():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx',
+                                            '-q'],
+                                           in_directory=location)
+        assert not out
+        assert not err
+
+
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -571,6 +625,80 @@ def test_do_compare_output_csv():
             lines = fp.readlines()
             assert len(lines) == 3
             assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
+
+
+def test_do_compare_downsample():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '200',
+                                            '-k', '31', testdata1],
+                                           in_directory=location)
+
+
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '100',
+                                            '-k', '31', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location)
+
+        print(status, out, err)
+        assert 'downsampling to scaled value of 200' in err
+        with open(os.path.join(location, 'xxx')) as fp:
+            lines = fp.readlines()
+            assert len(lines) == 3
+            assert lines[1].startswith('1.0,0.6666')
+            assert lines[2].startswith('0.6666')
+
+
+def test_do_compare_output_multiple_k():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(status, out, err)
+
+        assert status == -1
+        assert 'multiple k-mer sizes loaded; please specify one' in err
+        assert '(saw k-mer sizes 21, 31)' in err
+
+
+def test_do_compare_output_multiple_moltype():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dna', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--protein', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'multiple molecule types loaded;' in err
 
 
 def test_do_plot_comparison():
@@ -719,6 +847,65 @@ def test_compare_deduce_molecule():
                                            in_directory=location)
         print(status, out, err)
         assert 'min similarity in matrix: 0.91' in out
+
+
+def test_compare_choose_molecule_dna():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--dna', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.938' in out
+
+
+def test_compare_choose_molecule_protein():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--protein', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.91' in out
+
+
+def test_compare_no_choose_molecule_fail():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert 'multiple molecule types loaded; please specify' in err
+        assert status != 0
 
 
 def test_compare_deduce_ksize():

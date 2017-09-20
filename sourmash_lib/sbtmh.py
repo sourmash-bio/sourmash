@@ -145,12 +145,11 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
         mins = sig.minhash.get_mins()
 
         if isinstance(node, SigLeaf):
-            old_est = node.data.minhash
-            E = MinHash(ksize=old_est.ksize, n=old_est.num)
-            for m in old_est.get_mins():
-                E.add_hash(m)
+            max_scaled = max(node.data.minhash.scaled, sig.minhash.scaled)
 
-            matches = E.count_common(sig.minhash)
+            mh1 = node.data.minhash.downsample_scaled(max_scaled)
+            mh2 = sig.minhash.downsample_scaled(max_scaled)
+            matches = mh1.count_common(mh2)
         else:  # Node or Leaf, Nodegraph by minhash comparison
             matches = sum(1 for value in mins if node.data.get(value))
 

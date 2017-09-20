@@ -76,7 +76,7 @@ class SourmashSignature(object):
 
         sketch = {}
         sketch['ksize'] = int(minhash.ksize)
-        sketch['num'] = len(minhash)
+        sketch['num'] = minhash.num
         sketch['max_hash'] = int(minhash.max_hash)
         sketch['seed'] = int(minhash.seed)
         if self.minhash.track_abundance:
@@ -171,6 +171,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
+    if select_ksize:
+        select_ksize = int(select_ksize)
+
     if not data:
         return
 
