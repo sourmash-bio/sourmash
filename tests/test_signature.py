@@ -20,6 +20,19 @@ def test_roundtrip(track_abundance):
     assert sig2.similarity(sig) == 1.0
 
 
+def test_load_signature_select_ksize_nonint(track_abundance):
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+    sig = SourmashSignature('titus@idyll.org', e)
+    s = save_signatures([sig])
+    siglist = list(load_signatures(s, select_ksize='20'))
+    sig2 = siglist[0]
+    e2 = sig2.minhash
+
+    assert sig.similarity(sig2) == 1.0
+    assert sig2.similarity(sig) == 1.0
+
+
 def test_roundtrip_empty(track_abundance):
     # edge case, but: empty minhash? :)
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
