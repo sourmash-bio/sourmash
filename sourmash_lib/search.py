@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+import sourmash_lib
+from .signature import SourmashSignature
 from .sbtmh import (search_minhashes,
                                 search_minhashes_containment)
 from .sbtmh import SearchMinHashesFindBest
@@ -54,3 +56,118 @@ def search_databases(query, databases, threshold, do_containment, best_only):
     results.sort(key=lambda x: -x.similarity)
 
     return results
+
+
+def gather_databases(query, databases, threshold_bp):
+    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
+
+    orig_query = query
+    orig_mins = orig_query.minhash.get_hashes()
+    query_ksize = query.minhash.ksize
+
+    # calculate the band size/resolution R for the genome
+    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
+
+    # define a function to do a 'best' search and get only top match.
+    def find_best(dblist, query):
+        results = []
+        for (sbt_or_siglist, filename, is_sbt) in dblist:
+            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+
+            if is_sbt:
+                tree = sbt_or_siglist
+
+                for leaf in tree.find(search_fn, query, 0.0):
+                    leaf_e = leaf.data.minhash
+                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
+                    if similarity > 0.0:
+                        results.append((similarity, leaf.data))
+            else:
+                for ss in sbt_or_siglist:
+                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
+                    if similarity > 0.0:
+                        results.append((similarity, ss))
+
+        if not results:
+            return None, None, None
+
+        # take the best result
+        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+        best_similarity, best_leaf = results[0]
+        return best_similarity, best_leaf, filename
+
+
+    # define a function to build new signature object from set of mins
+    def build_new_signature(mins):
+        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
+        e.add_many(mins)
+        return SourmashSignature('', e)
+
+    # construct a new query that doesn't have the max_hash attribute set.
+    new_mins = query.minhash.get_hashes()
+    query = build_new_signature(new_mins)
+
+    sum_found = 0.
+    GatherResult = namedtuple('GatherResult',
+                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
+    while 1:
+        best_similarity, best_leaf, filename = find_best(databases, query)
+        if not best_leaf:          # no matches at all!
+            break
+
+        # subtract found hashes from search hashes, construct new search
+        query_mins = set(query.minhash.get_hashes())
+        found_mins = best_leaf.minhash.get_hashes()
+
+        # figure out what the resolution of the banding on the genome is,
+        # based either on an explicit --scaled parameter, or on genome
+        # cardinality (deprecated)
+        if not best_leaf.minhash.max_hash:
+            error('Best hash match in sbt_gather has no max_hash')
+            error('Please prepare database of sequences with --scaled')
+            sys.exit(-1)
+
+        R_genome = best_leaf.minhash.scaled
+
+        # pick the highest R / lowest resolution
+        R_comparison = max(R_metagenome, R_genome)
+
+        # CTB: these could probably be replaced by minhash.downsample_scaled.
+        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
+        query_mins = set([ i for i in query_mins if i < new_max_hash ])
+        found_mins = set([ i for i in found_mins if i < new_max_hash ])
+        orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
+
+        # calculate intersection:
+        intersect_mins = query_mins.intersection(found_mins)
+        intersect_orig_mins = orig_mins.intersection(found_mins)
+        intersect_bp = R_comparison * len(intersect_orig_mins)
+
+        if intersect_bp < threshold_bp:   # hard cutoff for now
+            notify('found less than {} in common. => exiting',
+                   format_bp(intersect_bp))
+            break
+
+        # calculate fractions wrt first denominator - genome size
+        genome_n_mins = len(found_mins)
+        f_match = len(intersect_mins) / float(genome_n_mins)
+        f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
+
+        # calculate fractions wrt second denominator - metagenome size
+        query_n_mins = len(orig_query.minhash.get_hashes())
+        f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+
+        result = GatherResult(intersect_bp=intersect_bp,
+                              f_orig_query=f_orig_query,
+                              f_match=f_match,
+                              f_unique_to_query=f_unique_to_query,
+                              filename=filename,
+                              md5=best_leaf.md5sum(),
+                              name=best_leaf.name(),
+                              leaf=best_leaf)
+
+        yield result, len(intersect_mins), new_max_hash
+
+        # construct a new query, minus the previous one.
+        query_mins -= set(found_mins)
+        query = build_new_signature(query_mins)

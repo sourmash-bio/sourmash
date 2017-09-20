@@ -750,9 +750,7 @@ def categorize(args):
 
 
 def gather(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
+    from .search import gather_databases
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -812,48 +810,7 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    orig_query = query
-    orig_mins = orig_query.minhash.get_hashes()
-
-    # calculate the band size/resolution R for the genome
-    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
-
-    # define a function to do a 'best' search and get only top match.
-    def find_best(dblist, query):
-        results = []
-        for (sbt_or_siglist, filename, is_sbt) in dblist:
-            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
-            if is_sbt:
-                tree = sbt_or_siglist
-
-                for leaf in tree.find(search_fn, query, 0.0):
-                    leaf_e = leaf.data.minhash
-                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
-                    if similarity > 0.0:
-                        results.append((similarity, leaf.data))
-            else:
-                for ss in sbt_or_siglist:
-                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
-                    if similarity > 0.0:
-                        results.append((similarity, ss))
-
-        if not results:
-            return None, None, None
-
-        # take the best result
-        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
-        best_similarity, best_leaf = results[0]
-        return best_similarity, best_leaf, filename
-
-
-    # define a function to build new signature object from set of mins
-    def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
-        e.add_many(mins)
-        return sig.SourmashSignature('', e)
-
-    # xxx
+    # pretty-printing code.
     def format_bp(bp):
         bp = float(bp)
         if bp < 500:
@@ -866,75 +823,20 @@ def gather(args):
             return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
         return '???'
 
-    # construct a new query that doesn't have the max_hash attribute set.
-    new_mins = query.minhash.get_hashes()
-    query = build_new_signature(new_mins)
-
-    sum_found = 0.
     found = []
-    GatherResult = namedtuple('GatherResult',
-                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
-    while 1:
-        best_similarity, best_leaf, filename = find_best(databases, query)
-        if not best_leaf:          # no matches at all!
-            break
+    sum_found = 0
+    for result, n_intersect_mins, new_max_hash in gather_databases(query, databases,
+                                                     args.threshold_bp):
+        # print interim result & save in a list for later use
+        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_genome = '{:.1f}%'.format(result.f_match*100)
 
-        # subtract found hashes from search hashes, construct new search
-        query_mins = set(query.minhash.get_hashes())
-        found_mins = best_leaf.minhash.get_hashes()
-
-        # figure out what the resolution of the banding on the genome is,
-        # based either on an explicit --scaled parameter, or on genome
-        # cardinality (deprecated)
-        if not best_leaf.minhash.max_hash:
-            error('Best hash match in sbt_gather has no max_hash')
-            error('Please prepare database of sequences with --scaled')
-            sys.exit(-1)
-
-        R_genome = best_leaf.minhash.scaled
-
-        # pick the highest R / lowest resolution
-        R_comparison = max(R_metagenome, R_genome)
-
-        # CTB: these could probably be replaced by minhash.downsample_scaled.
-        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
-        query_mins = set([ i for i in query_mins if i < new_max_hash ])
-        found_mins = set([ i for i in found_mins if i < new_max_hash ])
-        orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
-
-        # calculate intersection:
-        intersect_mins = query_mins.intersection(found_mins)
-        intersect_orig_mins = orig_mins.intersection(found_mins)
-        intersect_bp = R_comparison * len(intersect_orig_mins)
-        sum_found += len(intersect_mins)
-
-        if intersect_bp < args.threshold_bp:   # hard cutoff for now
-            notify('found less than {} in common. => exiting',
-                   format_bp(intersect_bp))
-            break
-
-        # calculate fractions wrt first denominator - genome size
-        genome_n_mins = len(found_mins)
-        f_match = len(intersect_mins) / float(genome_n_mins)
-        f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
-
-        # calculate fractions wrt second denominator - metagenome size
-        query_n_mins = len(orig_query.minhash.get_hashes())
-        f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+        name = result.leaf._display_name(40)
 
         if not len(found):                # first result? print header.
             print_results("")
             print_results("overlap     p_query p_match ")
             print_results("---------   ------- --------")
-
-        result = GatherResult(intersect_bp=intersect_bp,
-                              f_orig_query=f_orig_query,
-                              f_match=f_match,
-                              f_unique_to_query=f_unique_to_query,
-                              filename=filename,
-                              md5=best_leaf.md5sum(),
-                              name=best_leaf.name(),
-                              leaf=best_leaf)
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
@@ -945,16 +847,13 @@ def gather(args):
         print_results('{:9}   {:>6}  {:>6}      {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
+        sum_found += n_intersect_mins
         found.append(result)
-
-        # construct a new query, minus the previous one.
-        query_mins -= set(found_mins)
-        query = build_new_signature(query_mins)
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
 
-    sum_found /= len(orig_query.minhash.get_hashes())
+    sum_found /= len(query.minhash.get_hashes())
     print_results('the recovered matches hit {:.1f}% of the query',
            sum_found * 100)
     print_results('')
