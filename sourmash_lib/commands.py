@@ -481,9 +481,6 @@ def dump(args):
 
 
 def sbt_combine(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import SigLeaf
-
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('sbts', nargs='+',
@@ -498,10 +495,10 @@ def sbt_combine(args):
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
 
-    tree = SBT.load(inp_files.pop(0), leaf_loader=SigLeaf.load)
+    tree = sourmash_lib.load_sbt_index(inp_files.pop(0))
 
     for f in inp_files:
-        new_tree = SBT.load(f, leaf_loader=SigLeaf.load)
+        new_tree = sourmash_lib.load_sbt_index(f)
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
@@ -510,9 +507,7 @@ def sbt_combine(args):
 
 
 def index(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-
+    import sourmash_lib.sbt
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('signatures', nargs='+',
@@ -535,10 +530,9 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     if args.append:
-        tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+        tree = sourmash_lib.load_sbt_index(args.sbt_name)
     else:
-        factory = GraphFactory(1, args.bf_size, 4)
-        tree = SBT(factory)
+        tree = sourmash_lib.create_sbt_index(args.bf_size)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
@@ -560,7 +554,7 @@ def index(args):
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
 
-            leaf = SigLeaf(ss.md5sum(), ss)
+            leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
             n += 1
 
@@ -582,9 +576,7 @@ def index(args):
 
 
 def search(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash_lib.sbtmh import search_minhashes, SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -657,7 +649,7 @@ def search(args):
     found_md5 = set()
     for (sbt_or_siglist, filename, is_sbt) in databases:
         if args.best_only:
-            search_fn = SearchMinHashesFindBest().search
+            search_fn = sourmash_lib.sbtmh.SearchMinHashesFindBest().search
 
         if is_sbt:
             tree = sbt_or_siglist
@@ -728,10 +720,6 @@ def search(args):
 
 
 def categorize(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
-
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to load')
     parser.add_argument('queries', nargs='+',
@@ -758,7 +746,7 @@ def categorize(args):
             for row in r:
                 already_names.add(row[0])
 
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    tree = sourmash_lib.load_sbt_index(args.sbt_name)
 
     if args.traverse_directory:
         inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
@@ -777,7 +765,7 @@ def categorize(args):
                query_ksize, query_moltype)
 
         results = []
-        search_fn = SearchMinHashesFindBest().search
+        search_fn = sourmash_lib.sbtmh.SearchMinHashesFindBest().search
 
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
@@ -806,10 +794,6 @@ def categorize(args):
 
 
 def gather(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
-
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
     parser.add_argument('databases', help='signatures/SBTs to search',
@@ -878,7 +862,7 @@ def gather(args):
     def find_best(dblist, query):
         results = []
         for (sbt_or_siglist, filename, is_sbt) in dblist:
-            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+            search_fn = sourmash_lib.sbtmh.SearchMinHashesFindBestIgnoreMaxHash().search
 
             if is_sbt:
                 tree = sbt_or_siglist
@@ -1051,9 +1035,7 @@ def gather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import search_minhashes, SigLeaf
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash_lib.sbtmh import search_minhashes, SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
@@ -1091,7 +1073,7 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    tree = SBT.load(args.sbt_name, leaf_loader=SigLeaf.load)
+    tree = sourmash_lib.load_sbt_index(args.sbt_name)
 
     def get_ksize(tree):
         """Walk nodes in `tree` to find out ksize"""
