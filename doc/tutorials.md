@@ -30,7 +30,7 @@ pip install -U pip
 pip install -U Cython
 pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn khmer
 
-pip install https://github.com/dib-lab/sourmash/archive/master.zip
+pip install -U https://github.com/dib-lab/sourmash/archive/master.zip
 
 ```
 
