@@ -97,6 +97,7 @@ def compute(args):
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
 
+
     args = parser.parse_args(args)
     set_quiet(args.quiet)
 
@@ -165,12 +166,6 @@ def compute(args):
 
     def make_minhashes():
         seed = args.seed
-        max_hash = 0
-        if args.scaled and args.scaled == 1:
-            max_hash = sourmash_lib.MAX_HASH - 1
-        elif args.scaled and args.scaled > 1:
-            max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
-            max_hash = round(max_hash, 0)
 
         # one minhash for each ksize
         Elist = []

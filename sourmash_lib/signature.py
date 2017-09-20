@@ -77,7 +77,7 @@ class SourmashSignature(object):
         sketch = {}
         sketch['ksize'] = int(minhash.ksize)
         sketch['num'] = minhash.num
-        sketch['max_hash'] = int(minhash.max_hash)
+        sketch['max_hash'] = minhash.max_hash
         sketch['seed'] = int(minhash.seed)
         if self.minhash.track_abundance:
             values = minhash.get_mins(with_abundance=True)

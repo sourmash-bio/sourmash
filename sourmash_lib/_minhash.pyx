@@ -99,7 +99,6 @@ cdef class MinHash(object):
         elif scaled:
             max_hash = get_max_hash_for_scaled(scaled)
 
-
         cdef KmerMinHash *mh = NULL
         if track_abundance:
             mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
@@ -231,8 +230,6 @@ cdef class MinHash(object):
     @property
     def max_hash(self):
         mm = deref(self._this).max_hash
-        if mm == 18446744073709551615:
-            mm = 0
 
         return mm
 
