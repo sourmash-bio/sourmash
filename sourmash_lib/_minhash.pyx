@@ -219,7 +219,7 @@ cdef class MinHash(object):
         return deref(self._this).count_common(deref(other._this))
 
     def downsample_n(self, new_num):
-        if self.num < new_num:
+        if self.num and self.num < new_num:
             raise ValueError('new sample n is higher than current sample n')
 
         a = MinHash(new_num, deref(self._this).ksize,

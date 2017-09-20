@@ -12,6 +12,7 @@ import json
 import csv
 
 from . import sourmash_tst_utils as utils
+import sourmash_lib
 from sourmash_lib import MinHash
 try:
     import matplotlib
@@ -375,7 +376,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { 0 }
+        assert set(max_hashes) == { sourmash_lib.MAX_HASH - 1 }
 
 
 def test_do_sourmash_compute_with_scaled_2():
