@@ -117,7 +117,7 @@ This will produce 50 files named `ecoli-N.sig` in the `ecoli_many_sigs` --
 ls ecoli_many_sigs
 ```
 
-Let's turn this into an easily-searchable database with `sourmash sbt_index` --
+Let's turn this into an easily-searchable database with `sourmash index` --
 
 ```
 sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
@@ -212,7 +212,7 @@ sourmash gather -k 31 ecoli-genome.sig genbank-k31.sbt.json
 and you should get:
 
 ```
-# running sourmash subcommand: sbt_gather
+# running sourmash subcommand: gather
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
 
 overlap     p_query p_match 

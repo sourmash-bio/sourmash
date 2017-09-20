@@ -70,6 +70,8 @@ def _json_next_signature(iterable,
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
+    if n == 0xffffffff:               # load legacy signatures where n == -1
+        n = 0
     max_hash = d.get('max_hash', 0)
     seed = d.get('seed', sourmash_lib.DEFAULT_SEED)
 

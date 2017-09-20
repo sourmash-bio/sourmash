@@ -60,12 +60,7 @@ public:
 
     KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
                 HashIntoType mx)
-        : // overflow num to represent "no maximum"
-          num(n > 0 ? n : -1),
-          ksize(k), is_protein(prot), seed(s),
-          // overflow max_hash to represent "no maximum", this simplifies
-          // the comparison in add_hash()
-          max_hash(mx > 0 ? mx : -1) {
+        : num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -91,12 +86,12 @@ public:
     }
 
     virtual void add_hash(const HashIntoType h) {
-      if (h <= max_hash) {
+      if ((max_hash and h <= max_hash) or not max_hash) {
         if (mins.size() == 0) {
           mins.push_back(h);
           return;
         }
-        else if (mins.back() > h or mins.size() < num) {
+        else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
           // must still be growing, we know the list won't get too long
@@ -107,7 +102,7 @@ public:
           // in mins store it and shrink list if needed
           else if (*pos != h) {
             mins.insert(pos, h);
-            if (mins.size() > num) {
+            if (num and mins.size() > num) {
               mins.pop_back();
             }
           }
@@ -232,7 +227,7 @@ public:
         std::set_union(other.mins.begin(), other.mins.end(),
                        mins.begin(), mins.end(),
                        std::back_inserter(merged));
-        if (merged.size() < num) {
+        if (merged.size() < num or !num) {
           mins = merged;
         }
         else {
@@ -310,12 +305,12 @@ class KmerMinAbundance: public KmerMinHash {
         KmerMinHash(n, k, prot, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
-      if (h <= max_hash) {
+      if ((max_hash and h <= max_hash) or not max_hash) {
         if (mins.size() == 0) {
           mins.push_back(h);
           abunds.push_back(1);
           return;
-        } else if (mins.back() > h or mins.size() < num) {
+        } else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
           // must still be growing, we know the list won't get too long
