@@ -2,24 +2,29 @@ from __future__ import print_function
 import sys
 from io import StringIO
 
-def print_results(s, *args, **kwargs):
-    print(s.format(*args, **kwargs), file=sys.stdout)
-    sys.stdout.flush()
-
-
 _quiet = False
 def set_quiet(val):
     global _quiet
     _quiet = bool(val)
 
 
+def print_results(s, *args, **kwargs):
+    if _quiet:
+        return
+
+    print(s.format(*args, **kwargs), file=sys.stdout)
+    sys.stdout.flush()
+
+
 def notify(s, *args, **kwargs):
     "A simple logging function => stderr."
-    if not _quiet:
-        print(s.format(*args, **kwargs), file=sys.stderr,
-              end=kwargs.get('end', u'\n'))
-        if kwargs.get('flush'):
-            sys.stderr.flush()
+    if _quiet:
+        return
+
+    print(s.format(*args, **kwargs), file=sys.stderr,
+          end=kwargs.get('end', u'\n'))
+    if kwargs.get('flush'):
+        sys.stderr.flush()
 
 
 def error(s, *args, **kwargs):

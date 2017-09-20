@@ -553,6 +553,25 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_compare_quiet():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--csv', 'xxx',
+                                            '-q'],
+                                           in_directory=location)
+        assert not out
+        assert not err
+
+
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -793,6 +812,65 @@ def test_compare_deduce_molecule():
                                            in_directory=location)
         print(status, out, err)
         assert 'min similarity in matrix: 0.91' in out
+
+
+def test_compare_choose_molecule_dna():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--dna', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.938' in out
+
+
+def test_compare_choose_molecule_protein():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--protein', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert 'min similarity in matrix: 0.91' in out
+
+
+def test_compare_no_choose_molecule_fail():
+    # choose molecule type
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '30',
+                                            '--dna', '--protein',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert 'multiple molecule types loaded; please specify' in err
+        assert status != 0
 
 
 def test_compare_deduce_ksize():
