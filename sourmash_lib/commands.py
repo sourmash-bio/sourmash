@@ -159,9 +159,11 @@ def compute(args):
     def make_minhashes():
         seed = args.seed
         max_hash = 0
-        if args.scaled and args.scaled > 1:
+        if args.scaled and args.scaled == 1:
+            max_hash = sourmash_lib.MAX_HASH - 1
+        elif args.scaled and args.scaled > 1:
             max_hash = sourmash_lib.MAX_HASH / float(args.scaled)
-            max_hash = int(round(max_hash, 0))
+            max_hash = round(max_hash, 0)
 
         # one minhash for each ksize
         Elist = []
@@ -899,8 +901,8 @@ def gather(args):
 
 
     # define a function to build new signature object from set of mins
-    def build_new_signature(mins):
-        e = sourmash_lib.MinHash(ksize=query_ksize, n=len(mins))
+    def build_new_signature(mins, template_sig):
+        e = template_sig.minhash.copy_and_clear()
         e.add_many(mins)
         return sig.SourmashSignature('', e)
 
@@ -919,7 +921,7 @@ def gather(args):
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
-    query = build_new_signature(new_mins)
+    query = build_new_signature(new_mins, orig_query)
 
     sum_found = 0.
     found = []
@@ -1000,7 +1002,7 @@ def gather(args):
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins)
+        query = build_new_signature(query_mins, orig_query)
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
