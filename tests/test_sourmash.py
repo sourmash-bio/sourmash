@@ -1010,6 +1010,24 @@ def test_search_metagenome():
         assert '12 matches; showing first 3:' in out
 
 
+def test_search_metagenome_traverse():
+    with utils.TempDirectory() as location:
+        testdata_dir = utils.get_test_data('gather')
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} {} -k 21 --traverse-directory'
+        cmd = cmd.format(query_sig, testdata_dir)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+        assert '13 matches; showing first 3:' in out
+
+
 def test_search_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1830,6 +1848,33 @@ def test_gather_metagenome():
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
         cmd = 'gather {} gcf_all -k 21'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+
+
+def test_gather_metagenome_traverse():
+    with utils.TempDirectory() as location:
+        # set up a directory $location/gather that contains
+        # everything in the 'tests/test-data/gather' directory
+        # *except* the query sequence, which is 'combined.sig'.
+        testdata_dir = utils.get_test_data('gather')
+        copy_testdata = os.path.join(location, 'somesigs')
+        shutil.copytree(testdata_dir, copy_testdata)
+        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        # now, feed in the new directory --
+        cmd = 'gather {} {} -k 21 --traverse-directory'
+        cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 

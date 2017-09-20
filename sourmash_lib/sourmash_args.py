@@ -160,9 +160,22 @@ def get_ksize(tree):
             return node.data.minhash.ksize
 
 
-def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
+def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
     databases = []
     for sbt_or_sigfile in filenames:
+        if traverse and os.path.isdir(sbt_or_sigfile):
+            for sigfile in traverse_find_sigs([sbt_or_sigfile]):
+                try:
+                    siglist = sig.load_signatures(sigfile,
+                                                  select_ksize=query_ksize,
+                                                  select_moltype=query_moltype)
+                    siglist = list(siglist)
+                    databases.append((list(siglist), sbt_or_sigfile, False))
+                    notify('loaded {} signatures from {}', len(siglist),
+                           sigfile, end='\r')
+                except:                       # ignore errors with traverse
+                    continue
+            continue
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
             ksize = get_ksize(tree)
@@ -172,7 +185,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 sys.exit(-1)
 
             databases.append((tree, sbt_or_sigfile, True))
-            notify('loaded SBT {}', sbt_or_sigfile)
+            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
         except (ValueError, EnvironmentError):
             # not an SBT - try as a .sig
 
@@ -183,9 +196,12 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
                 siglist = list(siglist)
                 databases.append((list(siglist), sbt_or_sigfile, False))
                 notify('loaded {} signatures from {}', len(siglist),
-                       sbt_or_sigfile)
+                       sbt_or_sigfile, end='\r')
             except EnvironmentError:
-                error("file '{}' does not exist", sbt_or_sigfile)
+                error("\nfile '{}' does not exist", sbt_or_sigfile)
                 sys.exit(-1)
+
+    if databases:
+        print('')
 
     return databases

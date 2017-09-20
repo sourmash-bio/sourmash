@@ -574,6 +574,8 @@ def search(args):
     parser.add_argument('query', help='query signature')
     parser.add_argument('databases', help='signatures/SBTs to search',
                         nargs='+')
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='search all signatures underneath directories.')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('--threshold', default=0.08, type=float,
@@ -620,7 +622,8 @@ def search(args):
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype)
+                                                 query_ksize, query_moltype,
+                                                 args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -756,6 +759,8 @@ def gather(args):
     parser.add_argument('query', help='query signature')
     parser.add_argument('databases', help='signatures/SBTs to search',
                         nargs='+')
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='search all signatures underneath directories.')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='output CSV containing matches to this file')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
@@ -804,7 +809,8 @@ def gather(args):
 
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype)
+                                                 query_ksize, query_moltype,
+                                                 args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
