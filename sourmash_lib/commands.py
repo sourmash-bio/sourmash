@@ -568,10 +568,7 @@ def index(args):
 
 
 def search(args):
-    from sourmash_lib.sbt import SBT, GraphFactory
-    from sourmash_lib.sbtmh import (search_minhashes,
-                                    search_minhashes_containment, SigLeaf)
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from .search import search_databases
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -621,13 +618,6 @@ def search(args):
                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
-    # set up the search & score function(s) - similarity vs containment
-    search_fn = search_minhashes
-    query_match = lambda x: query.similarity(x, downsample=True)
-    if args.containment:
-        search_fn = search_minhashes_containment
-        query_match = lambda x: query.contained_by(x, downsample=True)
-
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases,
                                                  query_ksize, query_moltype)
@@ -636,45 +626,10 @@ def search(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    # collect results across all the trees
-    SearchResult = namedtuple('SearchResult',
-                              'similarity, match_sig, md5, filename, name')
-    results = []
-    found_md5 = set()
-    for (sbt_or_siglist, filename, is_sbt) in databases:
-        if is_sbt:
-            if args.best_only:            # this needs to be reset for each SBT
-                search_fn = SearchMinHashesFindBest().search
-
-            tree = sbt_or_siglist
-            notify('Searching SBT {}', filename)
-            for leaf in tree.find(search_fn, query, args.threshold):
-                similarity = query_match(leaf.data)
-                if similarity >= args.threshold and \
-                       leaf.data.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=leaf.data,
-                                      md5=leaf.data.md5sum(),
-                                      filename=filename,
-                                      name=leaf.data.name())
-                    found_md5.add(sr.md5)
-                    results.append(sr)
-
-        else: # list of signatures
-            for ss in sbt_or_siglist:
-                similarity = query_match(ss)
-                if similarity >= args.threshold and \
-                       ss.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=ss,
-                                      md5=ss.md5sum(),
-                                      filename=filename,
-                                      name=ss.name())
-                    found_md5.add(sr.md5)
-                    results.append(sr)
-
-    # sort results on similarity (reverse)
-    results.sort(key=lambda x: -x.similarity)
+    # do the actual search
+    results = search_databases(query, databases,
+                               args.threshold, args.containment,
+                               args.best_only)
 
     n_matches = len(results)
     if args.best_only:
