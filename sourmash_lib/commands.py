@@ -286,19 +286,24 @@ def compare(args):
     parser.add_argument('--ignore-abundance', action='store_true',
                         help='do NOT use k-mer abundances if present')
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(parser)
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
     args = parser.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
     # load in the various signatures
     siglist = []
     for filename in args.signatures:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, select_ksize=args.ksize)
+        loaded = sig.load_signatures(filename, select_ksize=args.ksize,
+                                     select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
-            notify('\nwarning: no signatures loaded at given ksize from {}',
-                   filename)
+            notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
         siglist.extend(loaded)
 
     notify(' '*79, end='\r')
