@@ -36,6 +36,8 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import pickle
+
 import pytest
 
 from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
@@ -809,6 +811,8 @@ def test_mh_copy_and_clear(track_abundance):
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
     assert len(b.get_mins()) == 0
+    assert a.scaled == b.scaled
+    assert b.scaled == 0
 
 
 def test_mh_copy_and_clear_with_max_hash(track_abundance):
@@ -825,6 +829,8 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
     assert len(b.get_mins()) == 0
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
 
 
 def test_scaled_property(track_abundance):
@@ -845,3 +851,41 @@ def test_mh_subtract(track_abundance):
         b.add_hash(i)
 
     assert a.subtract_mins(b) == set(range(2, 40, 4))
+
+
+def test_pickle_max_hash(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance, max_hash=20)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b.max_hash == a.max_hash
+    assert b.max_hash == 20
+    assert not b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.get_mins()) == len(a.get_mins())
+    assert len(b.get_mins()) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
+
+
+def test_pickle_scaled(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance, scaled=922337203685477632)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = pickle.loads(pickle.dumps(a))
+    assert a.ksize == b.ksize
+    assert b.num == a.num
+    assert b.max_hash == a.max_hash
+    assert b.max_hash == 20
+    assert not b.is_protein
+    assert b.track_abundance == track_abundance
+    assert b.seed == a.seed
+    assert len(b.get_mins()) == len(a.get_mins())
+    assert len(b.get_mins()) == 11
+    assert a.scaled == b.scaled
+    assert b.scaled != 0
