@@ -10,6 +10,11 @@
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
+#define tbl \
+  "                                                                "\
+  /*ABCDEFGHIJKLMNOPQRSTUVWXYZ      abcdefghijklmnopqrstuvwxyz    */\
+  " TVGH FCD  M KN   YSAABW R       TVGH FCD  M KN   YSAABW R"
+
 uint64_t _hash_murmur(const std::string& kmer,
                       const uint32_t seed) {
     uint64_t out[2];
@@ -190,32 +195,17 @@ public:
 
     std::string _revcomp(const std::string& kmer) const {
         std::string out = kmer;
-        size_t ksize = out.size();
 
-        for (size_t i=0; i < ksize; ++i) {
-            char complement;
+        auto from = out.begin();
+        auto to = out.end();
 
-            switch(kmer[i]) {
-            case 'A':
-                complement = 'T';
-                break;
-            case 'C':
-                complement = 'G';
-                break;
-            case 'G':
-                complement = 'C';
-                break;
-            case 'T':
-                complement = 'A';
-                break;
-            default:
-                std::string msg = "invalid DNA character in sequence: ";
-                msg += kmer[i];
-
-                throw minhash_exception(msg);
-            }
-            out[ksize - i - 1] = complement;
+        char c;
+        for (to--; from <= to; from++, to--) {
+            c = tbl[(int)*from];
+            *from = tbl[(int)*to];
+            *to = c;
         }
+
         return out;
     }
 
