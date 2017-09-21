@@ -547,6 +547,7 @@ def sbt_combine(args):
 
 def index(args):
     import sourmash_lib.sbtmh
+
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('signatures', nargs='+',
