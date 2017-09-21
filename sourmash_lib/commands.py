@@ -260,7 +260,7 @@ def compute(args):
                     siglist = sigs
 
                 notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                       format(len(sigs), n + 1, filename))
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
