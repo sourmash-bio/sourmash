@@ -31,6 +31,17 @@ class SourmashSignature(object):
 
         self.minhash = minhash
 
+    def __hash__(self):
+        return hash(self.md5sum())
+
+    def __str__(self):
+        name = self.name()
+        md5pref = self.md5sum()[:8]
+        if name != md5pref:
+            return "SourmashSignature('{}', {})".format(name, md5pref)
+        return "SourmashSignature({})".format(md5pref)
+    __repr__ = __str__
+
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
         m = hashlib.md5()
