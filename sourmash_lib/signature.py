@@ -19,11 +19,9 @@ SIGNATURE_VERSION=0.4
 class SourmashSignature(object):
     "Main class for signature information."
 
-    def __init__(self, email, minhash, name='', filename=''):
+    def __init__(self, minhash, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
-        self.d['type'] = 'mrnaseq'
-        self.d['email'] = email
         if name:
             self.d['name'] = name
         if filename:
@@ -94,8 +92,7 @@ class SourmashSignature(object):
 
         e['signature'] = sketch
 
-        return self.d.get('email'), self.d.get('name'), \
-            self.d.get('filename'), sketch
+        return self.d.get('name'), self.d.get('filename'), sketch
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."

@@ -1677,8 +1677,8 @@ def test_compare_with_abundance_1():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
@@ -1705,8 +1705,8 @@ def test_compare_with_abundance_2():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
@@ -1734,8 +1734,8 @@ def test_compare_with_abundance_3():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
