@@ -38,8 +38,9 @@ class SourmashSignature(object):
         return m.hexdigest()
 
     def __eq__(self, other):
-        for k in self.d:
-            if self.d[k] != other.d[k]:
+        allkeys = set(self.d.keys()).union(set(other.d.keys()))
+        for k in allkeys:
+            if self.d.get(k) != other.d.get(k):
                 return False
             
         return self.minhash == other.minhash

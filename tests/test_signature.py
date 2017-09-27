@@ -7,6 +7,60 @@ from sourmash_lib.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
 
 
+def test_compare(track_abundance):
+    # same content, same name -> equal
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+
+    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f.add("AT" * 10)
+    sig2 = SourmashSignature(f, name='foo')
+
+    assert e == f
+
+
+def test_compare_ne(track_abundance):
+    # same content, different names -> different
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+
+    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f.add("AT" * 10)
+    sig2 = SourmashSignature(f, name='bar')
+
+    assert sig1 != sig2
+
+
+def test_compare_ne2(track_abundance):
+    # same content, different filename -> different
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo', filename='a')
+
+    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f.add("AT" * 10)
+    sig2 = SourmashSignature(f, name='foo', filename='b')
+
+    assert sig1 != sig2
+    assert sig2 != sig1
+
+
+def test_compare_ne2_reverse(track_abundance):
+    # same content, different filename -> different
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+
+    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f.add("AT" * 10)
+    sig2 = SourmashSignature(f, name='foo', filename='b')
+
+    assert sig2 != sig1
+    assert sig1 != sig2
+
+
 def test_roundtrip(track_abundance):
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
