@@ -883,3 +883,32 @@ def test_pickle_scaled(track_abundance):
     assert len(b.get_mins()) == 11
     assert a.scaled == b.scaled
     assert b.scaled != 0
+
+
+def test_minhash_abund_add():
+    # this targets part of bug #319, a segfault caused by invalidation of
+    # std::vector iterators upon vector resizing - in this case, there
+    # was also a bug in inserting into the middle of mins when scaled was set.
+
+    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+
+    n = 0
+    for i in range(10, 0, -1):
+        a.add_hash(i)
+        n += 1
+        assert len(a.get_mins()) == n
+        print(len(a.get_mins()))
+
+
+def test_minhash_abund_capacity_increase():
+    return
+    # this targets bug #319, a segfault caused by invalidation of
+    # std::vector iterators upon vector resizing.
+
+    # this should set capacity to 1000 - see KmerMinHash constructor call
+    # to 'reserve' when n > 0 for specific parameter.
+    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+
+    # 1001 is dependent on the value passed to reserve (currently 1000).
+    for i in range(1001, 0, -1):
+        a.add_hash(i)
