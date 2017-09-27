@@ -901,7 +901,6 @@ def test_minhash_abund_add():
 
 
 def test_minhash_abund_capacity_increase():
-    return
     # this targets bug #319, a segfault caused by invalidation of
     # std::vector iterators upon vector resizing.
 
