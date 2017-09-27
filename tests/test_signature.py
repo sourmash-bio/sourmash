@@ -48,7 +48,7 @@ def test_roundtrip_empty(track_abundance):
 
 
 def test_roundtrip_max_hash(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance,
+    e = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
                              max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
