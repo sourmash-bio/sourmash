@@ -7,6 +7,7 @@
 #include <queue>
 #include <exception>
 #include <string>
+#include <iostream>
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
@@ -306,27 +307,37 @@ class KmerMinAbundance: public KmerMinHash {
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {
+        // empty? add it, if within range / no range specified.
         if (mins.size() == 0) {
           mins.push_back(h);
           abunds.push_back(1);
           return;
         } else if (h <= max_hash or mins.back() > h or mins.size() < num) {
+          // "good" hash - within range, smaller than current entry, or
+          // still space.
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
-          // must still be growing, we know the list won't get too long
+          // at end -- must still be growing, we know the list won't get too
+          // long
           if (pos == mins.cend()) {
             mins.push_back(h);
             abunds.push_back(1);
           } else if (*pos != h) {
-          // inserting somewhere in the middle, if this value isn't already
-          // in mins store it and shrink list if needed
+          // didn't find hash already in mins, so
+          // inserting somewhere in the middle; shrink list if needed.
+
+            // calculate distance for use w/abunds *before* insert, as
+            // 'mins.insert' may invalidate 'pos'.
+            size_t dist = std::distance(begin(mins), pos);
             mins.insert(pos, h);
-            abunds.insert(begin(abunds) + std::distance(begin(mins), pos), 1);
-            if (mins.size() > num) {
+            abunds.insert(begin(abunds) + dist, 1);
+
+            // now too big? if so, continue.
+            if (mins.size() > num and not max_hash) {
               mins.pop_back();
               abunds.pop_back();
             }
-          } else { // *pos == h
+          } else { // *pos == h - hash value already there, increment count.
             auto p = std::distance(begin(mins), pos);
             abunds[p] += 1;
           }
