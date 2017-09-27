@@ -7,7 +7,6 @@
 #include <queue>
 #include <exception>
 #include <string>
-#include <iostream>
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
