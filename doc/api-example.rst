@@ -84,8 +84,7 @@ Saving and loading signature files
 ----------------------------------
 
 >>> from sourmash_lib import signature
->>> sig1 = signature.SourmashSignature('titus@idyll.org', minhashes[0],
-...                                    name=genomes[0][:20])
+>>> sig1 = signature.SourmashSignature(minhashes[0], name=genomes[0][:20])
 >>> with open('/tmp/genome1.sig', 'wt') as fp:
 ...   signature.save_signatures([sig1], fp)
 
