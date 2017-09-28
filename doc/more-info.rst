@@ -11,6 +11,7 @@ In addition to `mash <https://github.com/marbl/Mash>`__, also see:
 * `Finch: a Mash implementation in Rust
   <https://github.com/onecodex/finch-rs>`__. Quote, "Fast sketches,
   count histograms, better filtering."
+* `BBMap and SendSketch <http://seqanswers.com/forums/showthread.php?t=74019>`__ - part of Brian Bushnell's tool collection.
 
 If you are interested in exactly how these MinHash approaches
 calculate the hashes of DNA sequences, please see some simple Python
