@@ -930,3 +930,21 @@ def test_minhash_abund_merge_flat():
     # these crashed, previously.
     assert a.similarity(b) == 0.2
     assert b.similarity(a) == 0.2
+
+
+def test_minhash_abund_merge_flat_2():
+    return # currently crashes.
+
+    # this targets a segfault caused by trying to merge
+    # a signature with abundance and a signature without abundance.
+
+    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+    b = MinHash(0, 10, max_hash=5000)
+
+    for i in range(0, 10, 2):
+        a.add_hash(i)
+
+    for j in range(0, 10, 3):
+        b.add_hash(i)
+
+    a.merge(b)
