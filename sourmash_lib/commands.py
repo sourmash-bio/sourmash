@@ -94,10 +94,15 @@ def compute(args):
                         default=sourmash_lib.DEFAULT_SEED)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
-
+    parser.add_argument('--license', default='CC0', type=str,
+                        help='signature license. Currently only CC0 is supported.')
 
     args = parser.parse_args(args)
     set_quiet(args.quiet)
+
+    if args.license != 'CC0':
+        error('error: sourmash only supports CC0-licensed signatures. sorry!')
+        sys.exit(-1)
 
     if args.input_is_protein and args.dna:
         notify('WARNING: input is protein, turning off DNA hashing')
@@ -204,6 +209,7 @@ def compute(args):
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
                 sig.save_signatures(siglist, fp)
+        notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
