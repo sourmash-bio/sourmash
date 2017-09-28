@@ -29,6 +29,11 @@ Papers and references
 
 `Improving MinHash via the Containment Index with Applications to Metagenomic Analysis <https://www.biorxiv.org/content/early/2017/09/04/184150>`__, Koslicki and Zabeti, 2017.
 
+Presentations and posters
+-------------------------
+
+`Taxonomic classification of microbial metagenomes using MinHash signatures <https://osf.io/mu4gk/>`__, Brooks et al., 2017. Presented at ASM.
+
 Blog posts
 ----------
 
