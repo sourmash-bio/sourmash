@@ -765,6 +765,58 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
+def test_plot_subsample_1():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--subsample', '3'],
+                                           in_directory=location)
+
+        expected = """\
+0\ts10+s11
+1\tgenome-s10.fa.gz
+2\tgenome-s12.fa.gz"""
+        assert expected in out
+
+
+def test_plot_subsample_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--subsample', '3',
+                                            '--subsample-seed=2'],
+                                           in_directory=location)
+
+        print(out)
+        expected = """\
+0\tgenome-s11.fa.gz
+1\tgenome-s12.fa.gz
+2\ts10+s11"""
+        assert expected in out
+
+
 def test_search_sig_does_not_exist():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
