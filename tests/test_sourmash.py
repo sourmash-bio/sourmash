@@ -783,9 +783,11 @@ def test_plot_subsample_1():
                                             '--subsample', '3'],
                                            in_directory=location)
 
+        print(out)
+
         expected = """\
 0\ts10+s11
-1\tgenome-s10.fa.gz
+1\tgenome-s11.fa.gz
 2\tgenome-s12.fa.gz"""
         assert expected in out
 
@@ -812,8 +814,8 @@ def test_plot_subsample_2():
         print(out)
         expected = """\
 0\tgenome-s11.fa.gz
-1\tgenome-s12.fa.gz
-2\ts10+s11"""
+1\tgenome-s10.fa.gz
+2\tgenome-s12.fa.gz"""
         assert expected in out
 
 
