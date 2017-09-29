@@ -899,6 +899,8 @@ def gather(args):
     if orig_query.minhash.track_abundance and not args.ignore_abundance:
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
     else:
+        if orig_query.minhash.track_abundance and args.ignore_abundance:
+            notify('** ignoring abundance')
         orig_abunds = { k: 1 for k in orig_mins }
     sum_abunds = sum(orig_abunds.values())
 
