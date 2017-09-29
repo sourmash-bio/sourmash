@@ -376,7 +376,8 @@ cdef class MinHash(object):
     def __iadd__(self, MinHash other):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
-        if self.track_abundance:
+
+        if self.track_abundance and other.track_abundance:
             deref(mh).merge(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
