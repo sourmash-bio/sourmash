@@ -849,6 +849,8 @@ def gather(args):
                         help='downsample query to this scaled factor')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
+    parser.add_argument('--ignore-abundance',  action='store_true',
+                        help='do NOT use k-mer abundances if present')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
@@ -893,6 +895,12 @@ def gather(args):
 
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
+
+    if orig_query.minhash.track_abundance and not args.ignore_abundance:
+        orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
+    else:
+        orig_abunds = { k: 1 for k in orig_mins }
+    sum_abunds = sum(orig_abunds.values())
 
     # calculate the band size/resolution R for the genome
     R_metagenome = orig_query.minhash.scaled
@@ -952,7 +960,7 @@ def gather(args):
     sum_found = 0.
     found = []
     GatherResult = namedtuple('GatherResult',
-                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
+                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, filename, name, md5, leaf')
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -1000,6 +1008,8 @@ def gather(args):
         # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.minhash.get_hashes())
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+        f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
+               / sum_abunds
 
         if not len(found):                # first result? print header.
             print_results("")
@@ -1010,13 +1020,14 @@ def gather(args):
                               f_orig_query=f_orig_query,
                               f_match=f_match,
                               f_unique_to_query=f_unique_to_query,
+                              f_unique_weighted=f_unique_weighted,
                               filename=filename,
                               md5=best_leaf.md5sum(),
                               name=best_leaf.name(),
                               leaf=best_leaf)
 
         # print interim result & save in a list for later use
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         name = result.leaf._display_name(40)
@@ -1033,39 +1044,19 @@ def gather(args):
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
 
-    sum_found /= len(orig_query.minhash.get_hashes())
+    weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
+         / sum_abunds
     print_results('the recovered matches hit {:.1f}% of the query',
-           sum_found * 100)
+           (1 - weighted_missed) * 100)
     print_results('')
 
     if not found:
         sys.exit(0)
 
-    ###
-
-    if orig_query.minhash.track_abundance:
-        # first, calculate the sum of the abundances
-        query_abunds = orig_query.minhash.get_mins(with_abundance=True)
-        sum_abunds = sum(query_abunds.values())
-        query_mins = set(orig_query.minhash.get_mins(with_abundance=False))
-
-        for result in found:
-            match_sig = result.leaf
-            match_mins = match_sig.minhash.get_mins(with_abundance=False)
-            match_mins = set(match_mins)
-
-            shared_mins = query_mins.intersection(match_mins)
-            query_mins -= shared_mins
-
-            sum_shared_abunds = sum((query_abunds[k] for k in shared_mins))
-            print(result.name, result.f_unique_to_query, sum_shared_abunds / sum_abunds)
-
-        sum_leftover = sum((query_abunds[k] for k in query_mins))
-        print('leftover:', len(query_mins), sum_leftover)
-
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'name', 'filename', 'md5']
+                      'f_unique_to_query', 'f_unique_weighted', 'name',
+                       'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
