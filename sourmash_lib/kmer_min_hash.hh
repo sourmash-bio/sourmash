@@ -364,27 +364,38 @@ class KmerMinAbundance: public KmerMinHash {
 
         for (; it1_m != mins.end(); ++out_m, ++out_a) {
             if (it2_m == other.mins.end()) {
+                /* we reached the end of other.mins,
+                   so just copy the remainder of mins to the output */
                 std::copy(it1_m, mins.end(), out_m);
                 std::copy(it1_a, abunds.end(), out_a);
                 break;
             }
             if (*it2_m < *it1_m) {
+                /* other.mins is smaller than mins,
+                   so copy it to output and advance other.mins iterators */
                 *out_m = *it2_m;
                 *out_a = *it2_a;
                 ++it2_m;
                 ++it2_a;
             } else if (*it2_m == *it1_m) {
+                /* same value in both mins, so sums the abundances
+                   on the output and advances all iterators */
                 *out_m = *it1_m;
                 *out_a = *it1_a + *it2_a;
                 ++it1_m; ++it1_a;
                 ++it2_m; ++it2_a;
             } else {
+                /* mins is smaller than other.mins,
+                   so copy it to output and advance the mins iterators */
                 *out_m = *it1_m;
                 *out_a = *it1_a;
                 ++it1_m;
                 ++it1_a;
             }
         }
+        /* we reached the end of mins,
+           so just copy the remainder of other.mins to the output
+           (other.mins might be empty, so this won't do anything */
         std::copy(it2_m, other.mins.end(), out_m);
         std::copy(it2_a, other.abunds.end(), out_a);
 
