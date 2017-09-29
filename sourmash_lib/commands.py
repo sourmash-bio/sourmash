@@ -1041,6 +1041,28 @@ def gather(args):
     if not found:
         sys.exit(0)
 
+    ###
+
+    if orig_query.minhash.track_abundance:
+        # first, calculate the sum of the abundances
+        query_abunds = orig_query.minhash.get_mins(with_abundance=True)
+        sum_abunds = sum(query_abunds.values())
+        query_mins = set(orig_query.minhash.get_mins(with_abundance=False))
+
+        for result in found:
+            match_sig = result.leaf
+            match_mins = match_sig.minhash.get_mins(with_abundance=False)
+            match_mins = set(match_mins)
+
+            shared_mins = query_mins.intersection(match_mins)
+            query_mins -= shared_mins
+
+            sum_shared_abunds = sum((query_abunds[k] for k in shared_mins))
+            print(result.name, result.f_unique_to_query, sum_shared_abunds / sum_abunds)
+
+        sum_leftover = sum((query_abunds[k] for k in query_mins))
+        print('leftover:', len(query_mins), sum_leftover)
+
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'name', 'filename', 'md5']
