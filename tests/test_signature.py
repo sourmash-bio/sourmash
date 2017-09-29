@@ -60,6 +60,32 @@ def test_compare_ne2_reverse(track_abundance):
     assert sig2 != sig1
     assert sig1 != sig2
 
+def test_hashable(track_abundance):
+    # check: can we use signatures as keys in dictionaries and sets?
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+
+    sig = SourmashSignature(e)
+
+    x = set()
+    x.add(sig)
+
+
+def test_str(track_abundance):
+    # signatures should be printable
+    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+
+    sig = SourmashSignature(e)
+
+    print(sig)
+    assert str(sig) == 'SourmashSignature(59502a74)'
+    assert repr(sig) == 'SourmashSignature(59502a74)'
+
+    sig.d['name'] = 'fizbar'
+    assert str(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
+    assert repr(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
+
 
 def test_roundtrip(track_abundance):
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)

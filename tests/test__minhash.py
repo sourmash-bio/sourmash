@@ -911,3 +911,40 @@ def test_minhash_abund_capacity_increase():
     # 1001 is dependent on the value passed to reserve (currently 1000).
     for i in range(1001, 0, -1):
         a.add_hash(i)
+
+
+def test_minhash_abund_merge_flat():
+    # this targets a segfault caused by trying to compute similarity
+    # of a signature with abundance and a signature without abundance.
+    # the correct behavior for now is to calculate simple Jaccard,
+    # i.e. 'flatten' both of them.
+    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+    b = MinHash(0, 10, max_hash=5000)
+
+    for i in range(0, 10, 2):
+        a.add_hash(i)
+
+    for j in range(0, 10, 3):
+        b.add_hash(i)
+
+    # these crashed, previously.
+    assert a.similarity(b) == 0.2
+    assert b.similarity(a) == 0.2
+
+
+def test_minhash_abund_merge_flat_2():
+    return # currently crashes.
+
+    # this targets a segfault caused by trying to merge
+    # a signature with abundance and a signature without abundance.
+
+    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+    b = MinHash(0, 10, max_hash=5000)
+
+    for i in range(0, 10, 2):
+        a.add_hash(i)
+
+    for j in range(0, 10, 3):
+        b.add_hash(i)
+
+    a.merge(b)

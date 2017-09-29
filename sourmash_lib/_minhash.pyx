@@ -339,7 +339,9 @@ cdef class MinHash(object):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
-        if not self.track_abundance or ignore_abundance:
+        # if either signature is flat, calculate Jaccard only.
+        if not (self.track_abundance and other.track_abundance) or \
+          ignore_abundance:
             return self.jaccard(other)
         else:
             # can we merge? if not, raise exception.
