@@ -393,9 +393,9 @@ class KmerMinAbundance: public KmerMinHash {
                 ++it1_a;
             }
         }
-        /* we reached the end of mins,
-           so just copy the remainder of other.mins to the output
-           (other.mins might be empty, so this won't do anything */
+        /* we reached the end of mins/abunds,
+           so just copy the remainder of other to the output
+           (other might already be at the end, in this case nothing happens) */
         std::copy(it2_m, other.mins.end(), out_m);
         std::copy(it2_a, other.abunds.end(), out_a);
 
