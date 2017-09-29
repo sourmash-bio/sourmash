@@ -469,7 +469,7 @@ def plot(args):
 
     # subsample?
     if args.subsample:
-        random.seed(args.subsample_seed)
+        random.seed(args.subsample_seed, version=1)
         sample_idx = list(range(len(labeltext)))
         random.shuffle(sample_idx)        # shuffle sample indices
         sample_idx = sample_idx[:args.subsample] # select --subsample n
