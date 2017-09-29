@@ -249,6 +249,7 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         record['version'] = SIGNATURE_VERSION
         record['class'] = 'sourmash_signature'
         record['hash_function'] = '0.murmur64'
+        record['email'] = ''
 
         records.append(record)
 
