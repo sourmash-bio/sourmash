@@ -112,6 +112,8 @@ Options::
   --indices -- turn off index display on the plot.
   --vmax -- maximum value (default 1.0) for heatmap.
   --vmin -- minimum value (deafult 0.0) for heatmap.
+  --subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
+  --subsample-seed=<seed> -- seed for pseudorandom number generator.
 
 Example figures:
 
