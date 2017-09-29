@@ -2033,7 +2033,7 @@ def test_gather_metagenome_downsample():
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert any(('4.1 Mbp       0.6%    2.4%      NC_011294.1 Salmonella enterica subsp...' in out,
+        assert all(('4.1 Mbp       0.6%    2.4%      NC_011294.1 Salmonella enterica subsp...' in out,
                     '4.1 Mbp       4.4%   17.1%      NC_011274.1 Salmonella enterica subsp...' in out))
 
 
