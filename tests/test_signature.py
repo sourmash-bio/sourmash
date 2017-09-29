@@ -48,14 +48,14 @@ def test_compare_ne2(track_abundance):
 
 
 def test_compare_ne2_reverse(track_abundance):
-    # same content, different filename -> different
+    # same content, one has filename, other does not -> different
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
     f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     f.add("AT" * 10)
-    sig2 = SourmashSignature(f, name='foo', filename='b')
+    sig2 = SourmashSignature(f, filename='b')
 
     assert sig2 != sig1
     assert sig1 != sig2
