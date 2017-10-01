@@ -10,6 +10,11 @@
 
 #include "../third-party/smhasher/MurmurHash3.h"
 
+#define tbl \
+  "                                                                "\
+  /*ABCDEFGHIJKLMNOPQRSTUVWXYZ      abcdefghijklmnopqrstuvwxyz    */\
+  " TVGH FCD  M KN   YSAABW R       TVGH FCD  M KN   YSAABW R"
+
 uint64_t _hash_murmur(const std::string& kmer,
                       const uint32_t seed) {
     uint64_t out[2];
@@ -190,32 +195,17 @@ public:
 
     std::string _revcomp(const std::string& kmer) const {
         std::string out = kmer;
-        size_t ksize = out.size();
 
-        for (size_t i=0; i < ksize; ++i) {
-            char complement;
+        auto from = out.begin();
+        auto to = out.end();
 
-            switch(kmer[i]) {
-            case 'A':
-                complement = 'T';
-                break;
-            case 'C':
-                complement = 'G';
-                break;
-            case 'G':
-                complement = 'C';
-                break;
-            case 'T':
-                complement = 'A';
-                break;
-            default:
-                std::string msg = "invalid DNA character in sequence: ";
-                msg += kmer[i];
-
-                throw minhash_exception(msg);
-            }
-            out[ksize - i - 1] = complement;
+        char c;
+        for (to--; from <= to; from++, to--) {
+            c = tbl[(int)*from];
+            *from = tbl[(int)*to];
+            *to = c;
         }
+
         return out;
     }
 
@@ -306,27 +296,37 @@ class KmerMinAbundance: public KmerMinHash {
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {
+        // empty? add it, if within range / no range specified.
         if (mins.size() == 0) {
           mins.push_back(h);
           abunds.push_back(1);
           return;
         } else if (h <= max_hash or mins.back() > h or mins.size() < num) {
+          // "good" hash - within range, smaller than current entry, or
+          // still space.
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
 
-          // must still be growing, we know the list won't get too long
+          // at end -- must still be growing, we know the list won't get too
+          // long
           if (pos == mins.cend()) {
             mins.push_back(h);
             abunds.push_back(1);
           } else if (*pos != h) {
-          // inserting somewhere in the middle, if this value isn't already
-          // in mins store it and shrink list if needed
+          // didn't find hash already in mins, so
+          // inserting somewhere in the middle; shrink list if needed.
+
+            // calculate distance for use w/abunds *before* insert, as
+            // 'mins.insert' may invalidate 'pos'.
+            size_t dist = std::distance(begin(mins), pos);
             mins.insert(pos, h);
-            abunds.insert(begin(abunds) + std::distance(begin(mins), pos), 1);
-            if (mins.size() > num) {
+            abunds.insert(begin(abunds) + dist, 1);
+
+            // now too big? if so, continue.
+            if (mins.size() > num and not max_hash) {
               mins.pop_back();
               abunds.pop_back();
             }
-          } else { // *pos == h
+          } else { // *pos == h - hash value already there, increment count.
             auto p = std::distance(begin(mins), pos);
             abunds[p] += 1;
           }
@@ -354,27 +354,38 @@ class KmerMinAbundance: public KmerMinHash {
 
         for (; it1_m != mins.end(); ++out_m, ++out_a) {
             if (it2_m == other.mins.end()) {
+                /* we reached the end of other.mins,
+                   so just copy the remainder of mins to the output */
                 std::copy(it1_m, mins.end(), out_m);
                 std::copy(it1_a, abunds.end(), out_a);
                 break;
             }
             if (*it2_m < *it1_m) {
+                /* other.mins is smaller than mins,
+                   so copy it to output and advance other.mins iterators */
                 *out_m = *it2_m;
                 *out_a = *it2_a;
                 ++it2_m;
                 ++it2_a;
             } else if (*it2_m == *it1_m) {
+                /* same value in both mins, so sums the abundances
+                   on the output and advances all iterators */
                 *out_m = *it1_m;
                 *out_a = *it1_a + *it2_a;
                 ++it1_m; ++it1_a;
                 ++it2_m; ++it2_a;
             } else {
+                /* mins is smaller than other.mins,
+                   so copy it to output and advance the mins iterators */
                 *out_m = *it1_m;
                 *out_a = *it1_a;
                 ++it1_m;
                 ++it1_a;
             }
         }
+        /* we reached the end of mins/abunds,
+           so just copy the remainder of other to the output
+           (other might already be at the end, in this case nothing happens) */
         std::copy(it2_m, other.mins.end(), out_m);
         std::copy(it2_a, other.abunds.end(), out_a);
 
