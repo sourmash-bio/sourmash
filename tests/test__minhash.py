@@ -933,8 +933,6 @@ def test_minhash_abund_merge_flat():
 
 
 def test_minhash_abund_merge_flat_2():
-    return # currently crashes.
-
     # this targets a segfault caused by trying to merge
     # a signature with abundance and a signature without abundance.
 
