@@ -2166,6 +2166,85 @@ def test_gather_deduce_moltype():
         assert '1.9 kbp     100.0%  100.0%' in out
 
 
+def test_gather_abund_1_1():
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query] + against_list,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert '49.6%   78.5%      tests/test-data/genome-s10.fa.gz' in out
+        assert '50.4%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert 'genome-s12.fa.gz' not in out
+
+
+def test_gather_abund_10_1():
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query, '-o', 'xxx.csv'] \
+                                            + against_list,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '91.0%  100.0%      tests/test-data/genome-s10.fa.gz' in out
+        assert '9.0%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert 'genome-s12.fa.gz' not in out
+
+        # check the calculations behind the above output by looking into
+        # the CSV.
+        with open('xxx.csv', 'rt') as fp:
+            r = csv.DictReader(fp)
+
+            overlaps = []
+            f_weighted_list = []
+            average_abunds = []
+
+            for row in r:
+                overlap = float(row['intersect_bp'])
+                f_weighted = float(row['f_unique_weighted'])
+                average_abund = float(row['average_abund'])
+
+                overlaps.append(overlap)
+                f_weighted_list.append(f_weighted)
+                average_abunds.append(average_abund)
+
+            weighted_calc = []
+            for (overlap, average_abund) in zip(overlaps, average_abunds):
+                prod = overlap*average_abund
+                weighted_calc.append(prod)
+
+            total_weighted = sum(weighted_calc)
+            for prod, f_weighted in zip(weighted_calc, f_weighted_list):
+                assert prod / total_weighted == f_weighted, (prod, f_weighted)
+
+
 def test_sbt_categorize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')

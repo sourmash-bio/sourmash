@@ -962,7 +962,7 @@ def gather(args):
     sum_found = 0.
     found = []
     GatherResult = namedtuple('GatherResult',
-                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, filename, name, md5, leaf')
+                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, filename, name, md5, leaf, average_abund')
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -1010,8 +1010,12 @@ def gather(args):
         # calculate fractions wrt second denominator - metagenome size
         query_n_mins = len(orig_query.minhash.get_hashes())
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+
+        # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
                / sum_abunds
+        average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
+               / len(intersect_mins)
 
         if not len(found):                # first result? print header.
             print_results("")
@@ -1026,7 +1030,8 @@ def gather(args):
                               filename=filename,
                               md5=best_leaf.md5sum(),
                               name=best_leaf.name(),
-                              leaf=best_leaf)
+                              leaf=best_leaf,
+                              average_abund=average_abund)
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
@@ -1057,8 +1062,8 @@ def gather(args):
 
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'f_unique_weighted', 'name',
-                       'filename', 'md5']
+                      'f_unique_to_query', 'f_unique_weighted',
+                      'average_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
