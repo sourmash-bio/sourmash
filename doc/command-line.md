@@ -115,14 +115,12 @@ Options:
 ```
 Example figures:
 
-![][matrix]
+<img src="https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.matrix.png?raw=true" style="width:60%" />
+
+<img src="https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.dendro.png?raw=true" style="width:60%" />
 
 
-
-![][dendro]
 [0]:https://en.wikipedia.org/wiki/MinHash   
 [1]:http://mash.readthedocs.io/en/latest/__
 [2]:http://biorxiv.org/content/early/2015/10/26/029827
 [3]:https://en.wikipedia.org/wiki/Jaccard_index
-[matrix]:https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.matrix.png?raw=true
-[dendro]:https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.dendro.png?raw=true 
