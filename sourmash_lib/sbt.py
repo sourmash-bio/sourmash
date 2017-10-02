@@ -173,22 +173,17 @@ class SBT(object):
         return matches
 
     def rebuild_node(self, pos):
-        visited, queue = set(), [pos]
-        while queue:
-            pos = queue.pop(0)
-            node = self.nodes[pos]
-            if node is not None:
-                # this node was already build, go to the next one
-                continue
+        node = self.nodes[pos]
+        if node is not None:
+            # this node was already build, skip
+            return
 
-            if pos not in visited:
-                visited.add(pos)
-                n = Node(self.factory, name="internal.{}".format(pos))
-                self.nodes[pos] = n
-                for c in self.children(pos):
-                    if c.node is None:
-                        self.rebuild_node(c.pos)
-                    self.nodes[c.pos].update(n)
+        node = Node(self.factory, name="internal.{}".format(pos))
+        self.nodes[pos] = node
+        for c in self.children(pos):
+            if c.node is None:
+                self.rebuild_node(c.pos)
+            self.nodes[c.pos].update(node)
 
 
     def parent(self, pos):
