@@ -232,8 +232,8 @@ def compute(args):
                     siglist += build_siglist(args.email, Elist, filename,
                                              name=record.name)
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(siglist), n + 1, filename)
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -251,7 +251,8 @@ def compute(args):
                     s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
-                notify('')
+
+                notify('...{} {} sequences', filename, n, end='')
 
                 sigs = build_siglist(args.email, Elist, filename, name)
                 if args.output:
@@ -259,8 +260,8 @@ def compute(args):
                 else:
                     siglist = sigs
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(sigs), n + 1, filename)
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
@@ -281,7 +282,7 @@ def compute(args):
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
-            notify('\r... {} {} sequences', filename, n + 1)
+            notify('... {} {} sequences', filename, n + 1)
 
             total_seq += n + 1
 
