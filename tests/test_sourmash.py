@@ -2273,7 +2273,7 @@ def test_gather_abund_10_1():
 
         # check the calculations behind the above output by looking into
         # the CSV.
-        with open('xxx.csv', 'rt') as fp:
+        with open(os.path.join(location, 'xxx.csv'), 'rt') as fp:
             r = csv.DictReader(fp)
 
             overlaps = []
@@ -2314,7 +2314,7 @@ def test_gather_abund_10_1_ignore_abundance():
         against_list = [ utils.get_test_data(i) for i in against_list ]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', query, '-o', 'xxx.csv'] \
+                                           ['gather', query] \
                                             + ['--ignore-abundance'] + \
                                             against_list,
                                            in_directory=location)
