@@ -410,3 +410,22 @@ def test_sbt_redisstorage():
             print(*new_result, sep='\n')
 
             assert old_result == new_result
+
+
+def test_tree_repair():
+    tree_repair = SBT.load(utils.get_test_data('leaves.sbt.json'),
+                           leaf_loader=SigLeaf.load)
+
+    tree_cur = SBT.load(utils.get_test_data('v3.sbt.json'),
+                        leaf_loader=SigLeaf.load)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = next(signature.load_signatures(testdata1))
+
+    results_repair = {str(s) for s in tree_repair.find(search_minhashes,
+                                                       to_search, 0.1)}
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+                                                 to_search, 0.1)}
+
+    assert results_repair == results_cur
+    assert len(results_repair) == 4

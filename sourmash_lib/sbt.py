@@ -70,13 +70,19 @@ STORAGES = {
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
-def GraphFactory(ksize, starting_size, n_tables):
+class GraphFactory(object):
     "Build new nodegraphs (Bloom filters) of a specific (fixed) size."
 
-    def create_nodegraph():
-        return khmer.Nodegraph(ksize, starting_size, n_tables)
+    def __init__(self, ksize, starting_size, n_tables):
+        self.ksize = ksize
+        self.starting_size = starting_size
+        self.n_tables = n_tables
 
-    return create_nodegraph
+    def __call__(self):
+        return khmer.Nodegraph(self.ksize, self.starting_size, self.n_tables)
+
+    def init_args(self):
+        return (self.ksize, self.starting_size, self.n_tables)
 
 
 class SBT(object):
@@ -194,6 +200,10 @@ class SBT(object):
         info['storage'] = {
             'backend': backend,
             'args': storage.init_args()
+        }
+        info['factory'] = {
+            'class': GraphFactory.__name__,
+            'args': self.factory.init_args()
         }
 
         structure = {}
@@ -334,7 +344,7 @@ class SBT(object):
     def _load_v3(cls, info, leaf_loader, dirname, storage):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
-        if nodes[0] is None:
+        if not nodes:
             raise ValueError("Empty tree!")
 
         sbt_nodes = defaultdict(lambda: None)
@@ -345,12 +355,7 @@ class SBT(object):
         elif storage is None:
             storage = klass(**info['storage']['args'])
 
-        with NamedTemporaryFile() as sample_bf:
-            sample_bf.write(storage.load(nodes[0]['filename']))
-            sample_bf.file.flush()
-            k, size, ntables = khmer.extract_nodegraph_info(sample_bf.name)[:3]
-
-        factory = GraphFactory(k, size, ntables)
+        factory = GraphFactory(*info['factory']['args'])
 
         for k, node in nodes.items():
             if node is None:
