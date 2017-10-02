@@ -162,10 +162,10 @@ def load_signature_json(iterable,
     return d
 
 
-def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ijson=ijson):
+def load_signatureset_json_iter(data, ksize=None, ignore_md5sum=False, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
-    - select_ksize:
+    - ksize:
     - ignore_md5sum:
     - ijson: ijson backend
     """
@@ -183,7 +183,7 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
                                       prefix_item = 'item.signatures.item.mins.item',
                                       ignore_md5sum=ignore_md5sum,
                                       ijson=ijson)
-            if not select_ksize or select_ksize == sig.minhash.ksize:
+            if not ksize or ksize == sig.minhash.ksize:
                 yield sig
         except ValueError:
             # possible end of the array of signatures
@@ -192,10 +192,10 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
             break
         n += 1
 
-def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijson):
+def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
-    - select_ksize:
+    - ksize:
     - ignore_md5sum:
     - ijson: ijson backend
     """
@@ -207,7 +207,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             data = unicode(data)
         data = io.StringIO(data)
 
-    it = load_signatureset_json_iter(data, select_ksize=select_ksize,
+    it = load_signatureset_json_iter(data, ksize=ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
 

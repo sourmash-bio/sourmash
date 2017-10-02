@@ -43,7 +43,7 @@ class SourmashSignature(object):
         for k in self.d:
             if self.d[k] != other.d[k]:
                 return False
-            
+
         return self.minhash == other.minhash
 
     def name(self):
@@ -163,7 +163,7 @@ def _guess_open(filename):
     return sigfile
 
 
-def load_signatures(data, select_ksize=None, select_moltype=None,
+def load_signatures(data, ksize=None, select_moltype=None,
                     ignore_md5sum=False):
     """Load a JSON string with signatures into classes.
 
@@ -171,8 +171,8 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
 
     Note, the order is not necessarily the same as what is in the source file.
     """
-    if select_ksize:
-        select_ksize = int(select_ksize)
+    if ksize:
+        ksize = int(ksize)
 
     if not data:
         return
@@ -190,7 +190,7 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
         # JSON format
         for sig in signature_json.load_signatures_json(data,
                                                      ignore_md5sum=ignore_md5sum):
-            if not select_ksize or select_ksize == sig.minhash.ksize:
+            if not ksize or ksize == sig.minhash.ksize:
                 if not select_moltype or \
                      sig.minhash.is_molecule_type(select_moltype):
                     yield sig
@@ -202,9 +202,9 @@ def load_signatures(data, select_ksize=None, select_moltype=None,
             data.close()
 
 
-def load_one_signature(data, select_ksize=None, select_moltype=None,
+def load_one_signature(data, ksize=None, select_moltype=None,
                        ignore_md5sum=False):
-    sigiter = load_signatures(data, select_ksize=select_ksize,
+    sigiter = load_signatures(data, ksize=ksize,
                               select_moltype=select_moltype,
                               ignore_md5sum=ignore_md5sum)
 

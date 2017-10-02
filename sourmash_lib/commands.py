@@ -312,7 +312,7 @@ def compare(args):
     siglist = []
     for filename in args.signatures:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, select_ksize=args.ksize,
+        loaded = sig.load_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
@@ -508,7 +508,7 @@ def dump(args):
 
     for filename in args.filenames:
         notify('loading {}', filename)
-        siglist = sig.load_signatures(filename, select_ksize=args.ksize)
+        siglist = sig.load_signatures(filename, ksize=args.ksize)
         siglist = list(siglist)
         assert len(siglist) == 1
 
@@ -585,7 +585,7 @@ def index(args):
     ksizes = set()
     moltypes = set()
     for f in inp_files:
-        siglist = sig.load_signatures(f, select_ksize=args.ksize,
+        siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
         # load all matching signatures in this file
@@ -647,7 +647,7 @@ def search(args):
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
+                                               ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
     query_ksize = query.minhash.ksize
@@ -859,7 +859,7 @@ def gather(args):
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
+                                               ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
     query_ksize = query.minhash.ksize
