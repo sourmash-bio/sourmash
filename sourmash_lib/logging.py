@@ -21,7 +21,7 @@ def notify(s, *args, **kwargs):
     if _quiet:
         return
 
-    print(u'\r\033[K', end='', file=sys.stderr)
+    print(u'\r\033[K', end=u'', file=sys.stderr)
     print(s.format(*args, **kwargs), file=sys.stderr,
           end=kwargs.get('end', u'\n'))
     if kwargs.get('flush'):
@@ -30,7 +30,7 @@ def notify(s, *args, **kwargs):
 
 def error(s, *args, **kwargs):
     "A simple error logging function => stderr."
-    print(u'\r\033[K', end='', file=sys.stderr)
+    print(u'\r\033[K', end=u'', file=sys.stderr)
     print(s.format(*args, **kwargs), file=sys.stderr)
     if kwargs.get('flush'):
         sys.stderr.flush()
