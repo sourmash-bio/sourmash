@@ -175,8 +175,11 @@ def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as e:
         mh.add_sequence('ATGR')
+    print(e)
+
+    assert 'invalid DNA character in input: R' in str(e)
 
 
 def test_basic_dna_bad_2(track_abundance):
