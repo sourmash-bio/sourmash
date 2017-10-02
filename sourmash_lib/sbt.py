@@ -86,6 +86,7 @@ class SBT(object):
     def __init__(self, factory, d=2, storage=None):
         self.factory = factory
         self.nodes = defaultdict(lambda: None)
+        self.missing_nodes = set()
         self.d = d
         self.max_node = 0
         self.storage = storage
@@ -148,7 +149,11 @@ class SBT(object):
             node_p = queue.pop(0)
             node_g = self.nodes[node_p]
             if node_g is None:
-                continue
+                if node_p in self.missing_nodes:
+                    self.rebuild_node(node_p)
+                    node_g = self.nodes[node_p]
+                else:
+                    continue
 
             if node_p not in visited:
                 visited.add(node_p)
@@ -162,6 +167,25 @@ class SBT(object):
                         else: # bfs
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
+
+    def rebuild_node(self, pos):
+        visited, queue = set(), [pos]
+        while queue:
+            pos = queue.pop(0)
+            node = self.nodes[pos]
+            if node is not None:
+                # this node was already build, go to the next one
+                continue
+
+            if pos not in visited:
+                visited.add(pos)
+                n = Node(self.factory, name="internal.{}".format(pos))
+                self.nodes[pos] = n
+                for c in self.children(pos):
+                    if c.node is None:
+                        self.rebuild_node(c.pos)
+                    self.nodes[c.pos].update(n)
+
 
     def parent(self, pos):
         if pos == 0:
@@ -352,6 +376,7 @@ class SBT(object):
 
         factory = GraphFactory(*info['factory']['args'])
 
+        max_node = 0
         for k, node in nodes.items():
             if node is None:
                 continue
@@ -363,9 +388,12 @@ class SBT(object):
                 sbt_node = leaf_loader(node, storage)
 
             sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
 
         tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
+        tree.missing_nodes = {i for i in range(max_node)
+                                if i not in sbt_nodes}
 
         return tree
 
