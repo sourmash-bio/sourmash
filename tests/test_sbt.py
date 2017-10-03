@@ -430,6 +430,7 @@ def test_tree_repair():
     assert results_repair == results_cur
     assert len(results_repair) == 4
 
+
 def test_tree_repair_add_node():
     tree_repair = SBT.load(utils.get_test_data('leaves.sbt.json'),
                            leaf_loader=SigLeaf.load)
@@ -448,3 +449,44 @@ def test_tree_repair_add_node():
         # Leaf nodes can't have children
         if isinstance(node, Leaf):
             assert all(c.node is None for c in tree_repair.children(pos))
+
+
+def test_save_sparseness(n_children):
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=n_children)
+
+    for f in utils.SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    old_result = {str(s) for s in tree.find(search_minhashes,
+                                            to_search.data, 0.1)}
+    print(*old_result, sep='\n')
+
+    with utils.TempDirectory() as location:
+        tree.save(os.path.join(location, 'demo'), sparseness=1.0)
+        tree_loaded = SBT.load(os.path.join(location, 'demo'),
+                               leaf_loader=SigLeaf.load)
+        assert all(not isinstance(n, Node) for n in tree_loaded.nodes.values())
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = {str(s) for s in tree_loaded.find(search_minhashes,
+                                                       to_search.data, 0.1)}
+        print(*new_result, sep='\n')
+
+        assert old_result == new_result
+
+        for pos, node in list(tree_loaded.nodes.items()):
+            # Every parent of a node must be an internal node (and not a leaf),
+            # except for node 0 (the root), whose parent is None.
+            if pos != 0:
+                assert isinstance(tree_loaded.parent(pos).node, Node)
+
+            # Leaf nodes can't have children
+            if isinstance(node, Leaf):
+                assert all(c.node is None for c in tree_loaded.children(pos))
