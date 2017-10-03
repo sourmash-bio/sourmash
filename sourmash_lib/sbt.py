@@ -52,7 +52,7 @@ from copy import copy
 import json
 import math
 import os
-from random import randint
+from random import randint, random
 from tempfile import NamedTemporaryFile
 
 import khmer
@@ -182,9 +182,10 @@ class SBT(object):
         node = Node(self.factory, name="internal.{}".format(pos))
         self.nodes[pos] = node
         for c in self.children(pos):
-            if c.node is None:
-                self._rebuild_node(c.pos)
-            self.nodes[c.pos].update(node)
+            if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
+                if c.node is None:
+                    self._rebuild_node(c.pos)
+                self.nodes[c.pos].update(node)
         self.missing_nodes.remove(pos)
 
 
@@ -251,6 +252,10 @@ class SBT(object):
         for n, (i, node) in enumerate(self):
             if node is None:
                 continue
+
+            if isinstance(node, Node):
+                if random() - sparseness <= 0:
+                    continue
 
             data = {
                 # TODO: start using md5sum instead?
@@ -454,6 +459,22 @@ class SBT(object):
     def __iter__(self):
         for i, node in self.nodes.items():
             yield (i, node)
+
+    def _parents(self, pos=0):
+        if pos == 0:
+            yield None
+        else:
+            p = self.parent(pos)
+            while p is not None:
+                yield p.pos
+                p = self.parent(p.pos)
+
+
+    def _leaves(self, pos=0):
+        for i, node in self:
+            if isinstance(node, Leaf):
+                if pos in self._parents(i):
+                    yield (i, node)
 
     def leaves(self):
         return [c for c in self.nodes.values() if isinstance(c, Leaf)]
