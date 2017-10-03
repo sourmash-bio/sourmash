@@ -143,7 +143,7 @@ class SBT(object):
         # update all parents!
         p = self.parent(p.pos)
         while p:
-            self.rebuild_node(p.pos)
+            self._rebuild_node(p.pos)
             node.update(self.nodes[p.pos])
             p = self.parent(p.pos)
 
@@ -155,7 +155,7 @@ class SBT(object):
             node_g = self.nodes[node_p]
             if node_g is None:
                 if node_p in self.missing_nodes:
-                    self.rebuild_node(node_p)
+                    self._rebuild_node(node_p)
                     node_g = self.nodes[node_p]
                 else:
                     continue
@@ -173,7 +173,7 @@ class SBT(object):
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
 
-    def rebuild_node(self, pos):
+    def _rebuild_node(self, pos):
         node = self.nodes[pos]
         if node is not None:
             # this node was already build, skip
@@ -183,7 +183,7 @@ class SBT(object):
         self.nodes[pos] = node
         for c in self.children(pos):
             if c.node is None:
-                self.rebuild_node(c.pos)
+                self._rebuild_node(c.pos)
             self.nodes[c.pos].update(node)
         self.missing_nodes.remove(pos)
 
@@ -201,16 +201,35 @@ class SBT(object):
         cd = self.d * parent + pos + 1
         return NodePos(cd, self.nodes[cd])
 
-    def save(self, tag, storage=None):
+    def save(self, path, storage=None, sparseness=0.0):
+        """Saves an SBT description locally and node data to a storage.
+
+        Parameters
+        ----------
+        path : str
+            path to where the SBT description should be saved.
+        storage : Storage, optional
+            Storage to be used for saving node data.
+            Defaults to FSStorage (a hidden directory at the same level of path)
+        sparseness : float
+            How much of the internal nodes should be saved.
+            Defaults to 0.0 (save all internal nodes data),
+            can go up to 1.0 (don't save any internal nodes data)
+
+        Returns
+        -------
+        str
+            full path to the new SBT description
+        """
         version = 3
 
-        if tag.endswith('.sbt.json'):
-            tag = tag[:-9]
-        fn = os.path.abspath(tag + '.sbt.json')
+        if path.endswith('.sbt.json'):
+            path = path[:-9]
+        fn = os.path.abspath(path + '.sbt.json')
 
         if storage is None:
             # default storage
-            dirname = os.path.join(os.path.dirname(fn), '.sbt.{}'.format(os.path.basename(tag)))
+            dirname = os.path.join(os.path.dirname(fn), '.sbt.{}'.format(os.path.basename(path)))
             storage = FSStorage(dirname)
 
         backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
