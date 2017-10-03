@@ -143,7 +143,8 @@ class SBT(object):
         # update all parents!
         p = self.parent(p.pos)
         while p:
-            node.update(p.node)
+            self.rebuild_node(p.pos)
+            node.update(self.nodes[p.pos])
             p = self.parent(p.pos)
 
     def find(self, search_fn, *args, **kwargs):
@@ -184,6 +185,7 @@ class SBT(object):
             if c.node is None:
                 self.rebuild_node(c.pos)
             self.nodes[c.pos].update(node)
+        self.missing_nodes.remove(pos)
 
 
     def parent(self, pos):
@@ -394,6 +396,7 @@ class SBT(object):
         tree.nodes = sbt_nodes
         tree.missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
+        tree.max_node = max_node
 
         return tree
 

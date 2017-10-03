@@ -5,7 +5,7 @@ import os
 import pytest
 
 from sourmash_lib import signature
-from sourmash_lib.sbt import SBT, GraphFactory, Leaf
+from sourmash_lib.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash_lib.sbtmh import SigLeaf, search_minhashes
 from sourmash_lib.sbt_storage import (FSStorage, TarStorage,
                                       RedisStorage, IPFSStorage)
@@ -429,3 +429,22 @@ def test_tree_repair():
 
     assert results_repair == results_cur
     assert len(results_repair) == 4
+
+def test_tree_repair_add_node():
+    tree_repair = SBT.load(utils.get_test_data('leaves.sbt.json'),
+                           leaf_loader=SigLeaf.load)
+
+    for f in utils.SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree_repair.add_node(leaf)
+
+    for pos, node in list(tree_repair.nodes.items()):
+        # Every parent of a node must be an internal node (and not a leaf),
+        # except for node 0 (the root), whose parent is None.
+        if pos != 0:
+            assert isinstance(tree_repair.parent(pos).node, Node)
+
+        # Leaf nodes can't have children
+        if isinstance(node, Leaf):
+            assert all(c.node is None for c in tree_repair.children(pos))
