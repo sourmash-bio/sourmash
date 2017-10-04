@@ -1589,6 +1589,36 @@ def test_do_sourmash_index_traverse():
         assert 'short2.fa' in out
 
 
+def test_do_sourmash_index_sparseness():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            '--traverse-dir', '.',
+                                            '--sparseness', '1.0'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert 'loaded 2 sigs; saving SBT under' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 2
+        assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
 def test_do_sourmash_sbt_combine():
     with utils.TempDirectory() as location:
         files = [utils.get_test_data(f) for f in utils.SIG_FILES]
