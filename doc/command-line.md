@@ -18,8 +18,15 @@ sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
 taken.
 
-.. contents::
-   :depth: 3
+Contents
+
+* [An example](## An example)
+* [The `sourmash` command and its subcommands](## The sourmash command and its subcommands)
+  * [`sourmash compute`](### `sourmash compute`)
+
+  * [`sourmash compare`](### `sourmash compare`)
+
+  * [`sourmash plot`](### `sourmash plot`)
 
 ## An example
 
@@ -89,11 +96,13 @@ Usage:
 ```
   sourmash compare file1.sig [ file2.sig ... ]
 ```
+
 Options:
 ```
   --output -- save the distance matrix to this file (as a numpy binary matrix)
   --ksize -- do the comparisons at this k-mer size.
 ```
+
 ### `sourmash plot`
 
 
@@ -105,6 +114,7 @@ Usage:
 ```
   sourmash plot <matrix>
 ```
+
 Options:
 ```
   --pdf -- output PDF files.
@@ -112,6 +122,8 @@ Options:
   --indices -- turn off index display on the plot.
   --vmax -- maximum value (default 1.0) for heatmap.
   --vmin -- minimum value (deafult 0.0) for heatmap.
+  --subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
+  --subsample-seed=<seed> -- seed for pseudorandom number generator.
 ```
 Example figures:
 
