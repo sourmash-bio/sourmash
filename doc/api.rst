@@ -25,10 +25,8 @@ underlying C++ code, but for now this is undocumented.)
 =============================================================
 
 .. automodule:: sourmash_lib.sbt
-   :members:
-
-.. autoclass:: sourmash_lib.sbt.SBT
-   :members:
+   :members: GraphFactory, Node, NodePos, SBT, Leaf
+   :undoc-members:
 
 ``sourmash_lib.fig``: make plots and figures
 ============================================
