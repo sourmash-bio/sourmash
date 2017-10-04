@@ -59,13 +59,13 @@ we are still [working on ways to convert the file formats][11]
 
 
 Please see:
-
+```
 .. toctree::
    :maxdepth: 2
 
    developer
    release
-
+```
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md

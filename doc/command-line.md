@@ -1,5 +1,5 @@
 
-## Using sourmash from the command line
+# Using sourmash from the command line
 
 
 From the command line, sourmash can be used to compute [MinHash
@@ -21,7 +21,7 @@ taken.
 .. contents::
    :depth: 3
 
-# An example
+## An example
 
 
 Grab three bacterial genomes from NCBI:
@@ -48,14 +48,14 @@ This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
 similarity matrix and heatmap.
 
-# The `sourmash` command and its subcommands
+## The `sourmash` command and its subcommands
 
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
 There are three main subcommands: `compute`, `compare`, and `plot`.
 
-## `sourmash compute`
+### `sourmash compute`
 
 
 The `compute` subcommand computes and saves MinHash sketches for
@@ -74,7 +74,7 @@ Optional arguments:
   --force -- recompute existing signatures; convert non-DNA characters to N
   --output -- save all the signatures to this file; can be '-' for stdout.
 ```
-## `sourmash compare`
+### `sourmash compare`
 
 
 The `compare` subcommand compares one or more signature files
@@ -94,7 +94,7 @@ Options:
   --output -- save the distance matrix to this file (as a numpy binary matrix)
   --ksize -- do the comparisons at this k-mer size.
 ```
-## `sourmash plot`
+### `sourmash plot`
 
 
 The `plot` subcommand produces two plots -- a dendrogram and a
