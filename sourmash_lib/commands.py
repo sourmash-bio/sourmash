@@ -598,6 +598,9 @@ def index(args):
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
                         help='Bloom filter size used for internal nodes.')
+    parser.add_argument('-s', '--sparseness', type=float, default=.0,
+                        help='What percentage of internal nodes will not be saved. '
+                             'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -616,6 +619,8 @@ def index(args):
     else:
         inp_files = list(args.signatures)
 
+    if args.sparseness < 0 or args.sparseness > 1.0:
+        error('sparseness must be in range [0.0, 1.0].')
 
     notify('loading {} files into SBT', len(inp_files))
 
@@ -649,7 +654,7 @@ def index(args):
         sys.exit(-1)
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
-    tree.save(args.sbt_name)
+    tree.save(args.sbt_name, sparseness=args.sparseness)
 
 
 def search(args):
