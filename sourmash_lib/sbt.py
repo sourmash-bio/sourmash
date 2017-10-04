@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-A trial implementation of sequence bloom trees, Solomon & Kingsford, 2015.
+An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
 This is a simple in-memory version where all of the graphs are in
 memory at once; to move it onto disk, the graphs would need to be
@@ -173,7 +173,17 @@ class SBT(object):
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
 
-    def _rebuild_node(self, pos):
+    def _rebuild_node(self, pos=0):
+        """Recursively rebuilds an internal node (if it is not present).
+
+        Parameters
+        ----------
+        pos: int
+            node to be rebuild. Any internal node under it will be rebuild too.
+            If you want to rebuild all missing internal nodes you can use pos=0
+            (the default).
+        """
+
         node = self.nodes[pos]
         if node is not None:
             # this node was already build, skip
@@ -190,15 +200,60 @@ class SBT(object):
 
 
     def parent(self, pos):
+        """Return the parent of the node at position ``pos``.
+
+        If it is the root node (position 0), returns None.
+
+        Parameters
+        ----------
+        pos: int
+            Position of the node in the tree.
+
+        Returns
+        -------
+        NodePos :
+            A NodePos namedtuple with the position and content of the parent node.
+        """
+
         if pos == 0:
             return None
         p = int(math.floor((pos - 1) / self.d))
         return NodePos(p, self.nodes[p])
 
     def children(self, pos):
+        """Return all children nodes for node at position ``pos``.
+
+        Parameters
+        ----------
+        pos: int
+            Position of the node in the tree.
+
+        Returns
+        -------
+        list of NodePos
+            A list of NodePos namedtuples with the position and content of all
+            children nodes.
+        """
         return [self.child(pos, c) for c in range(self.d)]
 
     def child(self, parent, pos):
+        """Return a child node at position ``pos`` under the ``parent`` node.
+
+        Parameters
+        ----------
+        parent: int
+            Parent node position in the tree.
+        pos: int
+            Position of the child one under the parent. Ranges from
+            [0, arity - 1], where arity is the arity of the SBT
+            (usually it is 2, a binary tree).
+
+        Returns
+        -------
+        NodePos
+            A NodePos namedtuple with the position and content of the
+            child node.
+        """
         cd = self.d * parent + pos + 1
         return NodePos(cd, self.nodes[cd])
 
@@ -284,6 +339,23 @@ class SBT(object):
 
     @classmethod
     def load(cls, location, leaf_loader=None, storage=None):
+        """Load an SBT description from a file.
+
+        Parameters
+        ----------
+        location : str
+            path to the SBT description.
+        leaf_loader : function, optional
+            function to load leaf nodes. Defaults to ``Leaf.load``.
+        storage : Storage, optional
+            Storage to be used for saving node data.
+            Defaults to FSStorage (a hidden directory at the same level of path)
+
+        Returns
+        -------
+        SBT
+            the SBT tree built from the description.
+        """
         dirname = os.path.dirname(os.path.abspath(location))
         sbt_name = os.path.basename(location)
         if sbt_name.endswith('.sbt.json'):
@@ -325,7 +397,6 @@ class SBT(object):
     def _load_v1(jnodes, leaf_loader, dirname, storage):
 
         if jnodes[0] is None:
-            # TODO error!
             raise ValueError("Empty tree!")
 
         sbt_nodes = defaultdict(lambda: None)
