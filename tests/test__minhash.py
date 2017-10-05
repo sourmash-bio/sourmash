@@ -152,6 +152,13 @@ def test_scaled(track_abundance):
     assert mh.get_mins() == [10, 20, 30]
 
 
+def test_max_hash_conversion():
+    SCALED=100000
+    max_hash = get_max_hash_for_scaled(SCALED)
+    new_scaled = get_scaled_for_max_hash(max_hash)
+    assert new_scaled == SCALED
+
+
 def test_max_hash_and_scaled_error(track_abundance):
     # test behavior when supplying both max_hash and scaled
     with pytest.raises(ValueError):
