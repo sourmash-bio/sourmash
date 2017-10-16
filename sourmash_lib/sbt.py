@@ -67,7 +67,17 @@ NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
 class GraphFactory(object):
-    "Build new nodegraphs (Bloom filters) of a specific (fixed) size."
+    """Build new nodegraphs (Bloom filters) of a specific (fixed) size.
+
+    Parameters
+    ----------
+    ksize: int
+        k-mer size.
+    starting_size: int
+        size (in bytes) for each nodegraph table.
+    n_tables: int
+        number of nodegraph tables to be used.
+    """
 
     def __init__(self, ksize, starting_size, n_tables):
         self.ksize = ksize
@@ -82,6 +92,26 @@ class GraphFactory(object):
 
 
 class SBT(object):
+    """A Sequence Bloom Tree implementation allowing generic internal nodes and leaves.
+
+    The default node and leaf format is a Bloom Filter (like the original implementation),
+    but we also provide a MinHash leaf class (in the sourmash_lib.sbtmh.Leaf
+
+    Parameters
+    ----------
+    factory: Factory
+        Callable for generating new datastores for internal nodes.
+    d: int
+        Number of children for each internal node. Defaults to 2 (a binary tree)
+    n_tables: int
+        number of nodegraph tables to be used.
+
+
+    Notes
+    -----
+    We use a defaultdict to store the tree structure. Nodes are numbered
+    specific node they are numbered
+    """
 
     def __init__(self, factory, d=2, storage=None):
         self.factory = factory
@@ -700,28 +730,36 @@ class Leaf(object):
                    storage=storage)
 
 
-def filter_distance( filter_a, filter_b, n=1000 ) :
+def filter_distance(filter_a, filter_b, n=1000):
     """
-    Compute a heuristic distance per bit between two Bloom
-    filters.
+    Compute a heuristic distance per bit between two Bloom filters.
 
-    filter_a : First filter
-    filter_b : Second filter
-    n        : Number of positions to compare (in groups of 8)
+    Parameters
+    ----------
+    filter_a : Nodegraph
+    filter_b : Nodegraph
+    n        : int
+        Number of positions to compare (in groups of 8)
+
+    Returns
+    -------
+    float
+        The distance between both filters (from 0.0 to 1.0)
     """
     from numpy import array
 
     A = filter_a.graph.get_raw_tables()
     B = filter_b.graph.get_raw_tables()
     distance = 0
-    for q,p in zip( A, B ) :
-        a = array( q, copy=False )
-        b = array( p, copy=False )
-        for i in map( lambda x : randint( 0, len(a) ), range(n) ) :
-            distance += sum( map( int, [ not bool((a[i]>>j)&1)
-                                           ^ bool((b[i]>>j)&1)
-                                         for j in range(8) ] ) )
-    return distance / ( 8.0 * len(A) * n )
+    for q, p in zip(A, B):
+        a = array(q, copy=False)
+        b = array(p, copy=False)
+        for i in map(lambda x: randint(0, len(a)), range(n)):
+            distance += sum(map(int,
+                            [not bool((a[i] >> j) & 1) ^ bool((b[i] >> j) & 1)
+                             for j in range(8)]))
+    return distance / (8.0 * len(A) * n)
+
 
 def convert_cmd(name, backend):
     from .sbtmh import SigLeaf
