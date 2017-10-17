@@ -376,7 +376,11 @@ def compare(args):
     labeltext = []
     for i, E in enumerate(siglist):
         for j, E2 in enumerate(siglist):
-            D[i][j] = E.similarity(E2, args.ignore_abundance)
+            if i < j:
+                continue
+            similarity = E.similarity(E2, args.ignore_abundance)
+            D[i][j] = similarity
+            D[j][i] = similarity
 
         if len(siglist) < 30:
             # for small matrices, pretty-print some output
