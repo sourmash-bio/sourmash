@@ -77,13 +77,13 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_query_signature(filename, select_ksize, select_moltype):
+def load_query_signature(filename, ksize, select_moltype):
     sl = signature.load_signatures(filename,
-                                   select_ksize=select_ksize,
+                                   ksize=ksize,
                                    select_moltype=select_moltype)
     sl = list(sl)
 
-    if len(sl) and select_ksize is None:
+    if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
         if len(ksizes) == 1:
             ksize = ksizes.pop()
@@ -92,8 +92,8 @@ def load_query_signature(filename, select_ksize, select_moltype):
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
             notify('selecting default query k={}.', DEFAULT_LOAD_K)
-        elif select_ksize:
-            notify('selecting specified query k={}', select_ksize)
+        elif ksize:
+            notify('selecting specified query k={}', ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -105,10 +105,10 @@ def load_query_signature(filename, select_ksize, select_moltype):
 
 
 class LoadSingleSignatures(object):
-    def __init__(self, filelist,  select_ksize=None, select_moltype=None,
+    def __init__(self, filelist,  ksize=None, select_moltype=None,
                  ignore_files=set()):
         self.filelist = filelist
-        self.select_ksize = select_ksize
+        self.ksize = ksize
         self.select_moltype = select_moltype
         self.ignore_files = ignore_files
 
@@ -124,7 +124,7 @@ class LoadSingleSignatures(object):
                 continue
 
             sl = signature.load_signatures(filename,
-                                           select_ksize=self.select_ksize,
+                                           ksize=self.ksize,
                                            select_moltype=self.select_moltype)
             sl = list(sl)
             if len(sl) == 0:
@@ -181,7 +181,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
 
             try:
                 siglist = sig.load_signatures(sbt_or_sigfile,
-                                              select_ksize=query_ksize,
+                                              ksize=query_ksize,
                                               select_moltype=query_moltype)
                 siglist = list(siglist)
                 databases.append((list(siglist), sbt_or_sigfile, False))
