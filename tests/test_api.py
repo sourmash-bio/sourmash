@@ -5,7 +5,7 @@ import sourmash_lib as sourmash
 
 def test_sourmash_signature_api():
     e = sourmash.MinHash(n=1, ksize=20)
-    sig = sourmash.SourmashSignature('', e)
+    sig = sourmash.SourmashSignature(e)
 
     s = sourmash.save_signatures([sig])
     sig_x1 = sourmash.load_one_signature(s)
