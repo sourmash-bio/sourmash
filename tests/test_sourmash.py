@@ -588,6 +588,33 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert sig2_trans.similarity(good_trans) == 1.0
 
 
+def test_do_basic_compare():
+    import numpy
+    with utils.TempDirectory() as location:
+        testsigs = utils.get_test_data('genome-s1*.sig')
+        testsigs = glob.glob(testsigs)
+
+        args = ['compare', '-o', 'cmp', '-k', '21', '--dna'] + testsigs
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        cmp_outfile = os.path.join(location, 'cmp')
+        assert os.path.exists(cmp_outfile)
+        cmp_out = numpy.load(cmp_outfile)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash_lib.load_one_signature(fn, ksize=21,
+                                                        select_moltype='dna'))
+
+        cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+        for i, si in enumerate(sigs):
+            for j, sj in enumerate(sigs):
+                cmp_calc[i][j] = si.similarity(sj)
+
+        assert (cmp_out == cmp_calc).all()
+
+
 def test_do_compare_quiet():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

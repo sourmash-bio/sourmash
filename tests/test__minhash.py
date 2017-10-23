@@ -36,6 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import math
 import pickle
 
 import pytest
@@ -43,7 +44,8 @@ import pytest
 from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
-import math
+from . import sourmash_tst_utils as utils
+from sourmash_lib import signature
 
 # add:
 # * get default params from Python
@@ -956,3 +958,27 @@ def test_minhash_abund_merge_flat_2():
         b.add_hash(i)
 
     a.merge(b)
+
+
+def test_distance_matrix(track_abundance):
+    import numpy
+
+    siglist = [next(signature.load_signatures(utils.get_test_data(f)))
+               for f in utils.SIG_FILES]
+
+    D1 = numpy.zeros([len(siglist), len(siglist)])
+    D2 = numpy.zeros([len(siglist), len(siglist)])
+
+    for i, E in enumerate(siglist):
+        for j, E2 in enumerate(siglist):
+            if i < j:
+                continue
+            similarity = E.similarity(E2, track_abundance)
+            D2[i][j] = similarity
+            D2[j][i] = similarity
+
+    for i, E in enumerate(siglist):
+        for j, E2 in enumerate(siglist):
+            D1[i][j] = E.similarity(E2, track_abundance)
+
+    assert numpy.array_equal(D1, D2)
