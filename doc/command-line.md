@@ -1,13 +1,11 @@
-
 # Using sourmash from the command line
 
 
-From the command line, sourmash can be used to compute [MinHash
-sketches][0] from DNA
+From the command line, sourmash can be used to compute [MinHash sketches][0] from DNA
 sequences, compare them to each other, and plot the results.  This
 allows you to estimate sequence similarity quickly and accurately.
 
-Please see the [mash software][1] http://mash.readthedocs.io/en/latest/__
+Please see the [mash software][1]
  and the [mash paper (Ondov et al., 2016)][2]
 for background
 information on how and why MinHash sketches work.
@@ -17,16 +15,6 @@ ______
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
 taken.
-
-Contents
-
-* [An example](## An example)
-* [The `sourmash` command and its subcommands](## The sourmash command and its subcommands)
-  * [`sourmash compute`](### `sourmash compute`)
-
-  * [`sourmash compare`](### `sourmash compare`)
-
-  * [`sourmash plot`](### `sourmash plot`)
 
 ## An example
 

@@ -85,13 +85,10 @@ we are still [working on ways to convert the file formats][11]
 
 
 Please see:
-```
-.. toctree::
-   :maxdepth: 2
+ * [developer][24]
+ * [release][25]
 
-   developer
-   release
-```
+
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md
@@ -116,3 +113,5 @@ Please see:
 [21]:https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x
 [22]:http://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9
 [23]:https://www.biorxiv.org/content/early/2017/09/04/184150
+[24]:developer.html
+[25]:release.html
