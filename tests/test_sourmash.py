@@ -2097,7 +2097,7 @@ def test_gather_file_output():
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
-            assert '910.0,1.0,1.0' in output
+            assert '910,1.0,1.0' in output
 
 
 def test_gather_metagenome():
@@ -2146,6 +2146,7 @@ def test_gather_metagenome_traverse():
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
+        print(cmd)
         print(out)
         print(err)
 
@@ -2184,7 +2185,7 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp      32.1%  100.0%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():

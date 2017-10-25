@@ -63,10 +63,9 @@ def gather_databases(query, databases, threshold_bp):
 
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
-    query_ksize = query.minhash.ksize
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = sourmash_lib.MAX_HASH / float(orig_query.minhash.max_hash)
+    R_metagenome = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
@@ -101,7 +100,7 @@ def gather_databases(query, databases, threshold_bp):
     def build_new_signature(mins, template_sig):
         e = template_sig.minhash.copy_and_clear()
         e.add_many(mins)
-        return SourmashSignature('', e)
+        return SourmashSignature(e)
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()

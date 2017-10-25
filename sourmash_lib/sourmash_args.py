@@ -169,7 +169,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
             for sigfile in traverse_find_sigs([sbt_or_sigfile]):
                 try:
                     siglist = sig.load_signatures(sigfile,
-                                                  select_ksize=query_ksize,
+                                                  ksize=query_ksize,
                                                   select_moltype=query_moltype)
                     siglist = list(siglist)
                     databases.append((list(siglist), sbt_or_sigfile, False))
