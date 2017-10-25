@@ -21,9 +21,9 @@ taken.
 
 Grab three bacterial genomes from NCBI:
 ```
-   curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-   curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.1_ASM694v1/GCF_000006945.1_ASM694v1_genomic.fna.gz
-   curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Sphingobacteriaceae_bacterium_DW12/latest_assembly_versions/GCF_000783305.1_ASM78330v1/GCF_000783305.1_ASM78330v1_genomic.fna.gz
+curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
+curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.1_ASM694v1/GCF_000006945.1_ASM694v1_genomic.fna.gz
+curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Sphingobacteriaceae_bacterium_DW12/latest_assembly_versions/GCF_000783305.1_ASM78330v1/GCF_000783305.1_ASM78330v1_genomic.fna.gz
 ```
 Compute signatures for each:
 ```
@@ -33,11 +33,11 @@ This will produce three `.sig` files containing MinHash signatures at k=31.
 
 Next, compare all the signatures to each other:
 ```
-   sourmash compare *.sig -o cmp
+sourmash compare *.sig -o cmp
 ```
 Finally, plot a dendrogram:
 ```
-   sourmash plot cmp
+sourmash plot cmp
 ```
 This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
@@ -61,13 +61,13 @@ that can be used with `sourmash compare`.
 
 Usage:
 ```
-  sourmash compute filename [ filename2 ... ]
+sourmash compute filename [ filename2 ... ]
 ```
 Optional arguments:
 ```
-  --ksizes K1[,K2,K3] -- one or more k-mer sizes to use; default is 31
-  --force -- recompute existing signatures; convert non-DNA characters to N
-  --output -- save all the signatures to this file; can be '-' for stdout.
+--ksizes K1[,K2,K3] -- one or more k-mer sizes to use; default is 31
+--force -- recompute existing signatures; convert non-DNA characters to N
+--output -- save all the signatures to this file; can be '-' for stdout.
 ```
 ### `sourmash compare`
 
@@ -82,13 +82,13 @@ with `--output` and used with the `sourmash plot` subcommand.
 
 Usage:
 ```
-  sourmash compare file1.sig [ file2.sig ... ]
+sourmash compare file1.sig [ file2.sig ... ]
 ```
 
 Options:
 ```
-  --output -- save the distance matrix to this file (as a numpy binary matrix)
-  --ksize -- do the comparisons at this k-mer size.
+--output -- save the distance matrix to this file (as a numpy binary matrix)
+--ksize -- do the comparisons at this k-mer size.
 ```
 
 ### `sourmash plot`
@@ -100,18 +100,18 @@ dendrogram+matrix -- from a distance matrix computed by `sourmash compare
 
 Usage:
 ```
-  sourmash plot <matrix>
+sourmash plot <matrix>
 ```
 
 Options:
 ```
-  --pdf -- output PDF files.
-  --labels -- display the signature names (by default, the filenames) on the plot
-  --indices -- turn off index display on the plot.
-  --vmax -- maximum value (default 1.0) for heatmap.
-  --vmin -- minimum value (deafult 0.0) for heatmap.
-  --subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
-  --subsample-seed=<seed> -- seed for pseudorandom number generator.
+--pdf -- output PDF files.
+--labels -- display the signature names (by default, the filenames) on the plot
+--indices -- turn off index display on the plot.
+--vmax -- maximum value (default 1.0) for heatmap.
+--vmin -- minimum value (deafult 0.0) for heatmap.
+--subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
+--subsample-seed=<seed> -- seed for pseudorandom number generator.
 ```
 Example figures:
 

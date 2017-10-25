@@ -15,9 +15,9 @@ Remember to update release numbers/RC in:
 
  1\. The below should be done in a clean checkout:
 ```
-        cd $(mktemp -d)
-        git clone git@github.com:dib-lab/sourmash.git
-        cd sourmash
+cd $(mktemp -d)
+git clone git@github.com:dib-lab/sourmash.git
+cd sourmash
 ```
 2\. Set your new version number and release candidate:
 ```

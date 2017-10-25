@@ -6,11 +6,11 @@
 
 You can get the latest development master branch with:
 ```
-    git clone https://github.com/dib-lab/sourmash.git
+git clone https://github.com/dib-lab/sourmash.git
 ```
 To install all of the necessary dependencies, do:
 ```
-    pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 Briefly, we use `py.test` for testing, and `coverage` for code
 coverage analysis.
@@ -18,9 +18,9 @@ coverage analysis.
 We suggest working on sourmash in a virtualenv; e.g. from within the
 sourmash clone directory, you can do:
 ```
-    python -m virtualenv dev
-    . dev/bin/activate
-    make clean test
+python -m virtualenv dev
+. dev/bin/activate
+make clean test
 ```
 ## Automated tests and code coverage calculation
 
