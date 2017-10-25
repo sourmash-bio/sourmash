@@ -79,8 +79,6 @@ def compute(args):
                         help='recompute signatures even if the file exists (default: False)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='output computed signatures to this file')
-    parser.add_argument('--email', type=str, default='',
-                        help='set e-mail address of the signature creator (default: empty)')
     parser.add_argument('--singleton', action='store_true',
                         help='compute a signature for each sequence record individually (default: False)')
     parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
@@ -193,8 +191,8 @@ def compute(args):
             else:
                 E.add_sequence(seq, not check_sequence)
 
-    def build_siglist(email, Elist, filename, name=None):
-        return [ sig.SourmashSignature(email, E, filename=filename,
+    def build_siglist(Elist, filename, name=None):
+        return [ sig.SourmashSignature(E, filename=filename,
                                        name=name) for E in Elist ]
 
     def save_siglist(siglist, output_fp, filename=None):
@@ -229,8 +227,7 @@ def compute(args):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
-                    siglist += build_siglist(args.email, Elist, filename,
-                                             name=record.name)
+                    siglist += build_siglist(Elist, filename, name=record.name)
 
                 notify('calculated {} signatures for {} sequences in {}'.\
                           format(len(siglist), n + 1, filename))
@@ -253,7 +250,7 @@ def compute(args):
                             args.input_is_protein, args.check_sequence)
                 notify('')
 
-                sigs = build_siglist(args.email, Elist, filename, name)
+                sigs = build_siglist(Elist, filename, name)
                 if args.output:
                     siglist += sigs
                 else:
@@ -281,8 +278,7 @@ def compute(args):
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
-        siglist = build_siglist(args.email, Elist, filename,
-                                name=args.merge)
+        siglist = build_siglist(Elist, filename, name=args.merge)
         notify('calculated {} signatures for {} sequences taken from {}'.\
                format(len(siglist), n + 1, " ".join(args.filenames)))
         # at end, save!
@@ -314,7 +310,7 @@ def compare(args):
     moltypes = set()
     for filename in args.signatures:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, select_ksize=args.ksize,
+        loaded = sig.load_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
@@ -376,7 +372,11 @@ def compare(args):
     labeltext = []
     for i, E in enumerate(siglist):
         for j, E2 in enumerate(siglist):
-            D[i][j] = E.similarity(E2, args.ignore_abundance)
+            if i < j:
+                continue
+            similarity = E.similarity(E2, args.ignore_abundance)
+            D[i][j] = similarity
+            D[j][i] = similarity
 
         if len(siglist) < 30:
             # for small matrices, pretty-print some output
@@ -505,7 +505,6 @@ def import_csv(args):
     p.add_argument('mash_csvfile')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout, help='(default: stdout)')
-    p.add_argument('--email', type=str, default='', help='(default: %(default)s)')
     args = p.parse_args(args)
 
     with open(args.mash_csvfile, 'r') as fp:
@@ -527,7 +526,7 @@ def import_csv(args):
 
             e = sourmash_lib.MinHash(len(hashes), ksize)
             e.add_many(hashes)
-            s = sig.SourmashSignature(args.email, e, filename=name)
+            s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
             notify('loaded signature: {} {}', name, s.md5sum()[:8])
 
@@ -543,7 +542,7 @@ def dump(args):
 
     for filename in args.filenames:
         notify('loading {}', filename)
-        siglist = sig.load_signatures(filename, select_ksize=args.ksize)
+        siglist = sig.load_signatures(filename, ksize=args.ksize)
         siglist = list(siglist)
         assert len(siglist) == 1
 
@@ -621,7 +620,7 @@ def index(args):
     ksizes = set()
     moltypes = set()
     for f in inp_files:
-        siglist = sig.load_signatures(f, select_ksize=args.ksize,
+        siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
         # load all matching signatures in this file
@@ -685,7 +684,7 @@ def search(args):
 
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
+                                               ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
     query_ksize = query.minhash.ksize
@@ -862,7 +861,7 @@ def gather(args):
 
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
-                                               select_ksize=args.ksize,
+                                               ksize=args.ksize,
                                                select_moltype=moltype)
     query_moltype = sourmash_args.get_moltype(query)
     query_ksize = query.minhash.ksize
@@ -973,8 +972,8 @@ def gather(args):
 
             e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
                                      max_hash=new_max_hash)
-            e.add_many(next_query.minhash.get_mins())
-            sig.save_signatures([ sig.SourmashSignature('', e) ],
+            e.add_many(query.minhash.get_mins())
+            sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
 
 
@@ -1033,7 +1032,7 @@ def watch(args):
 
     E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
                              is_protein=is_protein)
-    streamsig = sig.SourmashSignature('', E, filename='stdin',
+    streamsig = sig.SourmashSignature(E, filename='stdin',
                                       name=args.name)
 
     notify('Computing signature for k={}, {} from stdin',
