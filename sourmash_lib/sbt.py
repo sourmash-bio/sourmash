@@ -2,10 +2,6 @@
 """
 A trial implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
-This is a simple in-memory version where all of the graphs are in
-memory at once; to move it onto disk, the graphs would need to be
-dynamically loaded for each query.
-
 To try it out, do::
 
     factory = GraphFactory(ksize, tablesizes, n_tables)
@@ -188,8 +184,7 @@ class SBT(object):
                                          '.'.join([basetag, basename, 'sbt'])),
                 'name': node.name
             }
-            if isinstance(node, Leaf):
-                data['metadata'] = node.metadata
+            data['metadata'] = node.metadata
 
             node.save(os.path.join(dirprefix, data['filename']))
             structure[i] = data
@@ -381,6 +376,7 @@ class Node(object):
         self._factory = factory
         self._data = None
         self._filename = fullpath
+        self.metadata = dict()
 
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
@@ -407,10 +403,14 @@ class Node(object):
     def load(info, dirname):
         filename = os.path.join(dirname, info['filename'])
         new_node = Node(info['factory'], name=info['name'], fullpath=filename)
+        new_node.metadata = info.get('metadata', {})
         return new_node
 
     def update(self, parent):
         parent.data.update(self.data)
+        max_n_below = max(parent.metadata.get('max_n_below', 0),
+                          self.metadata.get('max_n_below'))
+        parent.metadata['max_n_below'] = max_n_below
 
 
 class Leaf(object):
