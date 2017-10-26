@@ -25,7 +25,6 @@ def test__json_next_atomic_array():
 # integration test more than a unit test...
 def test__json_next_signature():
 
-    email = 'foo@bar.com'
     name = 'Foo Bar'
     filename = '/tmp/foobar'
 
@@ -40,7 +39,7 @@ def test__json_next_signature():
         s = unicode(s)
     it = ijson.parse(io.StringIO(s))
     # no MD5SUM
-    sig = _json_next_signature(it, email, name, filename,
+    sig = _json_next_signature(it, name, filename,
                                ignore_md5sum=True,
                                ijson=ijson)
 
@@ -55,19 +54,17 @@ def test__json_next_signature():
     if sys.version_info[0] < 3:
         s = unicode(s)
     it = ijson.parse(io.StringIO(s))
-    sig = _json_next_signature(it, email, name, filename,
+    sig = _json_next_signature(it, name, filename,
                                ignore_md5sum=False,
                                ijson=ijson)
 
 # integration test more than a unit test
 def test_load_signature_json():
-    email = 'foo@bar.com'
     name = 'Foo Bar'
     filename = '/tmp/foobar'
 
     minhash = (2,3,4,5,6)
-    t = OrderedDict((('email', email),
-                     ('name', name),
+    t = OrderedDict((('name', name),
                      ('filename', filename),
                      ('signatures',
                       (
@@ -88,12 +85,11 @@ def test_load_signature_json():
 def test_load_signaturesset_json_iter():
 
     t = list()
-    for email, name, filename in (('foo@foo.com', 'Foo', '/tmp/foo'),
-                                  ('bar@bar.com', 'Bar', '/tmp/bar')):
+    for name, filename in (('Foo', '/tmp/foo'),
+                           ('Bar', '/tmp/bar')):
         minhash = (2,3,4,5,6)
         t.append(OrderedDict((
             ('class', 'sourmash_signature'),
-            ('email', email),
             ('name', name),
             ('filename', filename),
             ('signatures',
@@ -117,10 +113,10 @@ def test_load_signaturesset_json_iter():
 
 def test_save_load_multisig_json():
     e1 = sourmash_lib.MinHash(n=1, ksize=20)
-    sig1 = SourmashSignature('lalala@land.org', e1)
+    sig1 = SourmashSignature(e1)
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=20)
-    sig2 = SourmashSignature('lalala2@land.org', e2)
+    e2 = sourmash_lib.MinHash(n=1, ksize=25)
+    sig2 = SourmashSignature(e2)
 
     x = save_signatures_json([sig1, sig2])
     y = list(load_signatures_json(x))

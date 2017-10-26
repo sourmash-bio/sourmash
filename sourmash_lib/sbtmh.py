@@ -51,13 +51,17 @@ class SigLeaf(Leaf):
     def update(self, parent):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
+        max_n_below = parent.metadata.get('max_n_below', 0)
+        max_n_below = max(len(self.data.minhash.get_mins()),
+                          max_n_below)
+        parent.metadata['max_n_below'] = max_n_below
+
 
     @property
     def data(self):
         if self._data is None:
             from sourmash_lib import signature
-            it = signature.load_signatures(self._filename)
-            self._data, = list(it)              # should only be one signature
+            self._data = signature.load_one_signature(self._filename)
         return self._data
 
     @data.setter
@@ -98,37 +102,66 @@ class SearchMinHashesFindBest(object):
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
+        score = 0
 
         if isinstance(node, SigLeaf):
             try:
-                matches = node.data.minhash.count_common(sig.minhash)
+                score = node.data.minhash.similarity(sig.minhash)
             except Exception as e:
                 if 'mismatch in max_hash' in str(e) and self.downsample:
                     xx = sig.minhash.downsample_max_hash(node.data.minhash)
                     yy = node.data.minhash.downsample_max_hash(sig.minhash)
 
-                    matches = yy.count_common(xx)
+                    score = yy.similarity(xx)
                 else:
                     raise
-        else:  # Node or Leaf, Nodegraph by minhash comparison
-            matches = sum(1 for value in mins if node.data.get(value))
-
-        score = 0
-        if len(mins):
-            score = float(matches) / len(mins)
+        else:  # internal object, not leaf.
+            if len(mins):
+                matches = sum(1 for value in mins if node.data.get(value))
+                max_mins = node.metadata.get('max_n_below', -1)
+                if max_mins == -1:
+                    raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+                score = float(matches) / max_mins
 
         if results is not None:
             results[node.name] = score
 
         if score >= threshold:
             # have we done better than this? if yes, truncate.
-            if float(matches) / len(mins) > self.best_match:
+            if score > self.best_match:
                 # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
-                    self.best_match = float(matches) / len(mins)
+                    self.best_match = score
                 return 1
 
         return 0
+
+
+def search_minhashes_containment(node, sig, threshold,
+                                 results=None, downsample=True):
+    mins = sig.minhash.get_mins()
+
+    if isinstance(node, SigLeaf):
+        try:
+            matches = node.data.minhash.count_common(sig.minhash)
+        except Exception as e:
+            if 'mismatch in max_hash' in str(e) and downsample:
+                xx = sig.minhash.downsample_max_hash(node.data.minhash)
+                yy = node.data.minhash.downsample_max_hash(sig.minhash)
+
+                matches = yy.count_common(xx)
+            else:
+                raise
+
+    else:  # Node or Leaf, Nodegraph by minhash comparison
+        matches = sum(1 for value in mins if node.data.get(value))
+
+    if results is not None:
+        results[node.name] = float(matches) / len(mins)
+
+    if len(mins) and float(matches) / len(mins) >= threshold:
+        return 1
+    return 0
 
 
 class SearchMinHashesFindBestIgnoreMaxHash(object):

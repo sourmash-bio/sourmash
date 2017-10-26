@@ -41,7 +41,7 @@ def get_max_hash_for_scaled(scaled):
 def get_scaled_for_max_hash(max_hash):
     if max_hash == 0:
         return 0
-    return int(get_minhash_max_hash() / max_hash)
+    return int(round(get_minhash_max_hash() / max_hash, 0))
 
 
 cdef bytes to_bytes(s):
