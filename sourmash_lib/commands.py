@@ -590,12 +590,17 @@ def index(args):
                         help='suppress non-error output')
     parser.add_argument('-k', '--ksize', type=int, default=None,
                         help='k-mer size for which to build the SBT.')
+    parser.add_argument('-d', '--n_children', type=int, default=2,
+                        help='Number of children for internal nodes')
     parser.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath this directory.')
     parser.add_argument('--append', action='store_true', default=False,
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
                         help='Bloom filter size used for internal nodes.')
+    parser.add_argument('-s', '--sparseness', type=float, default=.0,
+                        help='What percentage of internal nodes will not be saved. '
+                             'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -606,13 +611,16 @@ def index(args):
     if args.append:
         tree = sourmash_lib.load_sbt_index(args.sbt_name)
     else:
-        tree = sourmash_lib.create_sbt_index(args.bf_size)
+        tree = sourmash_lib.create_sbt_index(args.bf_size,
+                                             n_children=args.n_children)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
     else:
         inp_files = list(args.signatures)
 
+    if args.sparseness < 0 or args.sparseness > 1.0:
+        error('sparseness must be in range [0.0, 1.0].')
 
     notify('loading {} files into SBT', len(inp_files))
 
@@ -646,7 +654,7 @@ def index(args):
         sys.exit(-1)
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
-    tree.save(args.sbt_name)
+    tree.save(args.sbt_name, sparseness=args.sparseness)
 
 
 def search(args):
@@ -1080,3 +1088,23 @@ def watch(args):
     if args.output:
         notify('saving signature to {}', args.output.name)
         sig.save_signatures([streamsig], args.output)
+
+
+def storage(args):
+    from .sbt import convert_cmd
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+
+    subparsers = parser.add_subparsers()
+    convert_parser = subparsers.add_parser('convert')
+    convert_parser.add_argument('sbt', help='SBT to convert')
+    convert_parser.add_argument('-b', "--backend", type=str,
+                                help='Backend to convert to')
+    convert_parser.set_defaults(command='convert')
+
+    args = parser.parse_args(args)
+    set_quiet(args.quiet)
+    if args.command == 'convert':
+        convert_cmd(args.sbt, args.backend)

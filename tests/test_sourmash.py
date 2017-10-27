@@ -14,6 +14,8 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -1632,6 +1634,36 @@ def test_do_sourmash_index_traverse():
         assert 'short2.fa' in out
 
 
+def test_do_sourmash_index_sparseness():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            '--traverse-dir', '.',
+                                            '--sparseness', '1.0'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert 'loaded 2 sigs; saving SBT under' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 2
+        assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
 def test_do_sourmash_sbt_combine():
     with utils.TempDirectory() as location:
         files = [utils.get_test_data(f) for f in utils.SIG_FILES]
@@ -2535,3 +2567,92 @@ def test_watch_coverage():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+
+
+def test_storage_convert():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(ipfs.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(ipfs.nodes.items())))
+
+        args = ['storage', 'convert',
+                '-b', """'TarStorage("{}")'""".format(
+                    os.path.join(location, 'v2.sbt.tar.gz')),
+                testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(tar.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(tar.nodes.items())))
+
+def test_storage_convert_identity():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+
+def test_storage_convert_fsstorage_newpath():
+    import pytest
+    pytest.importorskip('ipfsapi')
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert',
+                           '-b', 'fsstorage({})'.format(os.path.join(location, 'v3')),
+                           testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))

@@ -1,8 +1,10 @@
 from __future__ import print_function
 from __future__ import division
 
+from io import BytesIO, TextIOWrapper
+
 from .sbt import Leaf, SBT, GraphFactory
-from . import _minhash, MinHash
+from . import signature
 
 
 def load_sbt_index(filename):
@@ -10,10 +12,10 @@ def load_sbt_index(filename):
     return SBT.load(filename, leaf_loader=SigLeaf.load)
 
 
-def create_sbt_index(bloom_filter_size=1e5):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
-    tree = SBT(factory)
+    tree = SBT(factory, d=n_children)
     return tree
 
 
@@ -37,16 +39,17 @@ class SigLeaf(Leaf):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
 
-    def save(self, filename):
-        from sourmash_lib import signature
-
+    def save(self, path):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
         self.data
 
-        with open(filename, 'w') as fp:
-            signature.save_signatures([self.data], fp)
+        buf = BytesIO()
+        with TextIOWrapper(buf) as out:
+            signature.save_signatures([self.data], out)
+            out.flush()
+            return self.storage.save(path, buf.getvalue())
 
     def update(self, parent):
         for v in self.data.minhash.get_mins():
@@ -56,12 +59,13 @@ class SigLeaf(Leaf):
                           max_n_below)
         parent.metadata['max_n_below'] = max_n_below
 
-
     @property
     def data(self):
         if self._data is None:
-            from sourmash_lib import signature
-            self._data = signature.load_one_signature(self._filename)
+            buf = BytesIO(self.storage.load(self._path))
+            with TextIOWrapper(buf) as data:
+                from sourmash_lib import signature
+                self._data = signature.load_one_signature(data)
         return self._data
 
     @data.setter
