@@ -1,6 +1,6 @@
-===================================
-Releasing a new version of sourmash
-===================================
+
+# Releasing a new version of sourmash
+
 
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
@@ -10,28 +10,28 @@ Remember to update release numbers/RC in:
 * this document
 * setup.py
 
-Testing a release
------------------
+## Testing a release
 
-#. The below should be done in a clean checkout::
 
-        cd $(mktemp -d)
-        git clone git@github.com:dib-lab/sourmash.git
-        cd sourmash
-
-#. Set your new version number and release candidate::
-
+ 1\. The below should be done in a clean checkout:
+```
+cd $(mktemp -d)
+git clone git@github.com:dib-lab/sourmash.git
+cd sourmash
+```
+2\. Set your new version number and release candidate:
+```
         new_version=1.0
         rc=rc1
-
-   and then tag the release candidate with the new version number prefixed by
-   the letter 'v'::
-
+```
+ and then tag the release candidate with the new version number prefixed by
+   the letter 'v':
+```
         git tag v${new_version}-${rc}
         git push --tags git@github.com:dib-lab/sourmash.git
-
-#. Test the release candidate. Bonus: repeat on Mac OS X::
-
+```
+3\. Test the release candidate. Bonus: repeat on Mac OS X:
+```
         cd ..
         virtualenv testenv1
         virtualenv testenv2
@@ -81,19 +81,19 @@ Testing a release
         pip uninstall -y sourmash; pip uninstall -y sourmash; make install
         mkdir ../not-sourmash
         pushd ../not-sourmash ; py.test  --pyargs sourmash_lib ; popd
-
-#. Publish the new release on the testing PyPI server.  You will need
+```
+4\. Publish the new release on the testing PyPI server.  You will need
    to change your PyPI credentials as documented here:
-   https://wiki.python.org/moin/TestPyPI.  You may need to re-register::
-
+   https://wiki.python.org/moin/TestPyPI.  You may need to re-register:
+```
         python setup.py register --repository test
-
-   Now, upload the new release::
-
+```
+  Now, upload the new release:
+```
         python setup.py sdist upload -r test
-
-   Test the PyPI release in a new virtualenv::
-
+```
+   Test the PyPI release in a new virtualenv:
+```
         cd ../../testenv4
         source bin/activate
         pip install -U setuptools==3.4.1
@@ -101,35 +101,35 @@ Testing a release
         pip install screed pytest numpy matplotlib scipy
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
         py.test --pyargs sourmash_lib
-
-#. Do any final testing:
+```
+5\. Do any final testing:
 
    * check that the binder demo notebook is up to date
 
-How to make a final release
----------------------------
+## How to make a final release
+
 
 When you've got a thoroughly tested release candidate, cut a release like
 so:
 
-#. Create the final tag and publish the new release on PyPI (requires an
-   authorized account).::
-
+1\.Create the final tag and publish the new release on PyPI (requires an
+   authorized account):
+```
         cd ../sourmash
         git tag v${new_version}
         python setup.py register sdist upload
-
-#. Delete the release candidate tag and push the tag updates to GitHub.::
-
+```
+2\. Delete the release candidate tag and push the tag updates to GitHub:
+```
         git tag -d v${new_version}-${rc}
         git push git@github.com:dib-lab/sourmash.git
         git push --tags git@github.com:dib-lab/sourmash.git
+```
+3\. Add the release on GitHub, using the tag you just pushed.  Name
+   it 'version X.Y.Z', and copy and paste in the release notes:
 
-#. Add the release on GitHub, using the tag you just pushed.  Name
-   it 'version X.Y.Z', and copy and paste in the release notes.
-
-#. Make a binary wheel on OS X.::
-
+4\. Make a binary wheel on OS X:
+```
         virtualenv build
         cd build
         source bin/activate
@@ -137,11 +137,12 @@ so:
         pip install --no-clean sourmash==${new_version}
         cd ../
         python ./setup.py bdist_wheel upload
+```
+## To test on a blank Ubuntu system
 
-To test on a blank Ubuntu system
---------------------------------
 
-::
+```
 
    apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
    pip install sourmash[test] && py.test --pyargs sourmash_lib
+```

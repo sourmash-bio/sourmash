@@ -26,4 +26,3 @@ underlying C++ code, but for now this is undocumented.)
 
 .. automodule:: sourmash_lib.fig
    :members:
-
