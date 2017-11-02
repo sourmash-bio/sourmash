@@ -41,7 +41,7 @@ def get_max_hash_for_scaled(scaled):
 def get_scaled_for_max_hash(max_hash):
     if max_hash == 0:
         return 0
-    return int(get_minhash_max_hash() / max_hash)
+    return int(round(get_minhash_max_hash() / max_hash, 0))
 
 
 cdef bytes to_bytes(s):
@@ -339,7 +339,9 @@ cdef class MinHash(object):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
-        if not self.track_abundance or ignore_abundance:
+        # if either signature is flat, calculate Jaccard only.
+        if not (self.track_abundance and other.track_abundance) or \
+          ignore_abundance:
             return self.jaccard(other)
         else:
             # can we merge? if not, raise exception.
@@ -374,7 +376,8 @@ cdef class MinHash(object):
     def __iadd__(self, MinHash other):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
-        if self.track_abundance:
+
+        if self.track_abundance and other.track_abundance:
             deref(mh).merge(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
