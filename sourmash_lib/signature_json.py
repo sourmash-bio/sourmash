@@ -253,7 +253,7 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
 
         records.append(record)
 
-    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(',', ':'))
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
         try:
             fp.write(s)
