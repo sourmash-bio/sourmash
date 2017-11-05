@@ -144,7 +144,7 @@ class LoadSingleSignatures(object):
                 raise ValueError('multiple k-mer sizes/molecule types present')
 
 
-def traverse_find_sigs(dirnames):
+def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
         if dirname.endswith('.sig') and os.path.isfile(dirname):
             yield dirname
@@ -152,7 +152,7 @@ def traverse_find_sigs(dirnames):
 
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                if name.endswith('.sig'):
+                if name.endswith('.sig') or yield_all_files:
                     fullname = os.path.join(root, name)
                     yield fullname
 

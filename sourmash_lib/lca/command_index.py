@@ -37,6 +37,8 @@ def index(args):
     p.add_argument('-d', '--debug', action='store_true')
     p.add_argument('-1', '--start-column', default=2, type=int,
                    help='column at which taxonomic assignments start')
+    p.add_argument('--split-identifiers', action='store_true',
+                   help='split names in signatures on whitspace and period')
     p.add_argument('-f', '--force', action='store_true')
     p.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath directories.')
@@ -117,7 +119,10 @@ def index(args):
     md5_to_lineage = {}
 
     if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+        if args.force:
+            yield_all_files = True
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
+                                                          yield_all_files=yield_all_files))
     else:
         inp_files = list(args.signatures)
 
@@ -127,11 +132,15 @@ def index(args):
         n += 1
         for sig in sourmash_lib.load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... loading signature {} (file {} of {})'.format(sig.name(), n, total_n), end='\r')
+            notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
             debug(filename, sig.name())
 
+            name = sig.name()
+            if args.split_identifiers:
+                name = name.split(' ')[0].split('.')[0]
+
             # is this one for which we have a lineage assigned?
-            lineage_idx = assignments_idx.get(sig.name())
+            lineage_idx = assignments_idx.get(name)
             if lineage_idx is not None:
                 # downsample to specified scaled; this has the side effect of
                 # making sure they're all at the same scaled value!
