@@ -82,6 +82,11 @@ sourmash lca classify --db delmont.lca.json \
     -o out.csv
 ```
 
+The `lca classify` command supports multiple databases as well as
+multiple queries; e.g. `sourmash lca classify --db delmont.lca.json
+other.lca.json` will classify based on the combination of taxonomies
+in the two databases.
+
 [Return to index][3]
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html

@@ -14,6 +14,7 @@ import json
 
 import sourmash_lib
 from ..logging import notify, error
+from .. import sourmash_args
 
 taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
            'species']
@@ -30,13 +31,15 @@ def index(args):
     p = argparse.ArgumentParser()
     p.add_argument('csv')
     p.add_argument('lca_db_out')
-    p.add_argument('genome_sigs', nargs='+')
+    p.add_argument('signatures', nargs='+')
     p.add_argument('--scaled', default=10000, type=float)
     p.add_argument('-k', '--ksize', default=31, type=int)
     p.add_argument('-d', '--debug', action='store_true')
     p.add_argument('-1', '--start-column', default=2, type=int,
                    help='column at which taxonomic assignments start')
     p.add_argument('-f', '--force', action='store_true')
+    p.add_argument('--traverse-directory', action='store_true',
+                        help='load all signatures underneath directories.')
     args = p.parse_args(args)
 
     if args.start_column < 2:
@@ -113,13 +116,19 @@ def index(args):
     hashval_to_lineage = defaultdict(list)
     md5_to_lineage = {}
 
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+    else:
+        inp_files = list(args.signatures)
+
     n = 0
-    total_n = len(args.genome_sigs)
-    for filename in args.genome_sigs:
+    total_n = len(inp_files)
+    for filename in inp_files:
         n += 1
         for sig in sourmash_lib.load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading signature {} (file {} of {})'.format(sig.name(), n, total_n), end='\r')
+            debug(filename, sig.name())
 
             # is this one for which we have a lineage assigned?
             lineage_idx = assignments_idx.get(sig.name())

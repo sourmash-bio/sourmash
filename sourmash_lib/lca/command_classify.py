@@ -20,6 +20,7 @@ except ImportError:
 
 import sourmash_lib
 from ..logging import notify, error
+from .. import sourmash_args
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -326,6 +327,8 @@ def classify(args):
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='output CSV to this file instead of stdout')
+    p.add_argument('--traverse-directory', action='store_true',
+                        help='load all signatures underneath directories.')
     #p.add_argument('-v', '--verbose', action='store_true')
     p.add_argument('-d', '--debug', action='store_true')
     args = p.parse_args(args)
@@ -373,8 +376,13 @@ def classify(args):
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
     notify('ksize={} scaled={}', ksize, scaled)
-        
-    # for each query, gather all the matches across databases, then
+
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
+    else:
+        inp_files = list(args.query)
+
+    # for each query, gather all the matches across databases
     csvfp = csv.writer(sys.stdout)
     if args.output:
         notify("outputting classifications to '{}'", args.output.name)
@@ -385,8 +393,8 @@ def classify(args):
 
     total_count = 0
     n = 0
-    total_n = len(args.query)
-    for query_filename in args.query:
+    total_n = len(inp_files)
+    for query_filename in inp_files:
         n += 1
         for query_sig in sourmash_lib.load_signatures(query_filename,
                                                       ksize=ksize):
