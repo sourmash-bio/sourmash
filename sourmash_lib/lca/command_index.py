@@ -5,6 +5,7 @@ Build a least-common-ancestor database with given taxonomy and genome sigs.
 TODO:
 * add --traverse
 """
+from __future__ import print_function
 import sys
 import argparse
 import csv
@@ -78,17 +79,18 @@ def index(args):
     # convert 
     assignments = {}
     for row in r:
-        lineage = list(zip(row_headers, row))
-        lineage = [ x for x in lineage if x[0] != '_skip_' ]
+        if row:
+            lineage = list(zip(row_headers, row))
+            lineage = [ x for x in lineage if x[0] != '_skip_' ]
 
-        ident = lineage[0][1]
-        lineage = lineage[1:]
+            ident = lineage[0][1]
+            lineage = lineage[1:]
 
-        # clean lineage of null names
-        lineage = [(a,b) for (a,b) in lineage if b not in null_names]
+            # clean lineage of null names
+            lineage = [(a,b) for (a,b) in lineage if b not in null_names]
 
-        # store lineage tuple
-        assignments[ident] = tuple(lineage)
+            # store lineage tuple
+            assignments[ident] = tuple(lineage)
 
     # clean up with some indirection: convert lineages to numbers.
     next_lineage_index = 0

@@ -47,7 +47,43 @@ def test_basic_index_and_classify():
         print(out)
         print(err)
 
-        assert 'ID,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 databases for LCA use.' in err
+
+
+def test_single_classify():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases for LCA use.' in err
+
+
+def test_multi_classify():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        db2 = utils.get_test_data('lca/delmont-2.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+        cmd = ['lca', 'classify', '--db', db1, db2, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 2 databases for LCA use.' in err

@@ -5,6 +5,7 @@
 TODO:
 * check if we've already seen this md5sum?
 """
+from __future__ import print_function
 import sys
 import argparse
 import csv
@@ -288,11 +289,17 @@ def classify_signature(query_sig, dblist, threshold):
     if n > 1:
         debug('XXX', n)
 
+    status = 'nomatch'
+    if not tree:
+        return [('', '')], status
+
     # now find LCA? or whatever.
     lca, reason = find_lca(tree)
     if reason == 0:               # leaf node
+        status = 'found'
         debug('END', lca)
     else:                         # internal node
+        status = 'disagree'
         debug('MULTI', lca)
 
     # backtrack to full lineage via parents
@@ -305,7 +312,7 @@ def classify_signature(query_sig, dblist, threshold):
     debug(parents)
     debug('lineage is:', lineage)
 
-    return lineage
+    return lineage, status
 
 
 def classify(args):
@@ -370,7 +377,7 @@ def classify(args):
         csvfp = csv.writer(args.output)
     else:
         notify("outputting classifications to stdout")
-    csvfp.writerow(['ID'] + taxlist)
+    csvfp.writerow(['ID','status'] + taxlist)
 
     total_count = 0
     n = 0
@@ -387,15 +394,17 @@ def classify(args):
             # make sure we're looking at the same scaled value as database
             query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
 
-            lineage = classify_signature(query_sig, dblist, args.threshold)
+            lineage, status = classify_signature(query_sig, dblist, args.threshold)
 
             # output!
-            row = [query_sig.name()]
+            row = [query_sig.name(), status]
             for taxrank, (rank, name) in itertools.zip_longest(taxlist, lineage, fillvalue=('', '')):
                 if rank:
                     assert taxrank == rank
                 row.append(name)
 
+            if not args.output:           # a bit of a hack to clear line
+                notify(u'\r\033[K', end=u'')
             csvfp.writerow(row)
 
     notify(u'\r\033[K', end=u'')
