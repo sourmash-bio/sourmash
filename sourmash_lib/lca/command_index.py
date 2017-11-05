@@ -83,8 +83,10 @@ def index(args):
 
     # convert 
     assignments = {}
+    num_rows = 0
     for row in r:
         if row:
+            num_rows += 1
             lineage = list(zip(row_headers, row))
             lineage = [ x for x in lineage if x[0] != '_skip_' ]
 
@@ -114,11 +116,15 @@ def index(args):
 
         assignments_idx[ident] = idx
 
+    notify('{} distinct lineages in spreadsheet out of {} rows',
+           len(lineage_dict), num_rows)
+
     # load signatures, construct index of hashvals to lineages
     hashval_to_lineage = defaultdict(list)
     md5_to_lineage = {}
 
     if args.traverse_directory:
+        yield_all_files = False           # only pick up *.sig files?
         if args.force:
             yield_all_files = True
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
@@ -126,6 +132,7 @@ def index(args):
     else:
         inp_files = list(args.signatures)
 
+    notify('loading signatures!')
     n = 0
     total_n = len(inp_files)
     for filename in inp_files:
