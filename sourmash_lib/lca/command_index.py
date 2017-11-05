@@ -123,6 +123,7 @@ def index(args):
     hashval_to_lineage = defaultdict(list)
     md5_to_lineage = {}
 
+    notify('finding signatures!')
     if args.traverse_directory:
         yield_all_files = False           # only pick up *.sig files?
         if args.force:
@@ -132,7 +133,6 @@ def index(args):
     else:
         inp_files = list(args.signatures)
 
-    notify('loading signatures!')
     n = 0
     total_n = len(inp_files)
     for filename in inp_files:
