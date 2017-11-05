@@ -13,6 +13,10 @@ from collections import defaultdict, Counter
 import itertools
 import pprint
 import json
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 import sourmash_lib
 from ..logging import notify, error
@@ -398,7 +402,7 @@ def classify(args):
 
             # output!
             row = [query_sig.name(), status]
-            for taxrank, (rank, name) in itertools.zip_longest(taxlist, lineage, fillvalue=('', '')):
+            for taxrank, (rank, name) in zip_longest(taxlist, lineage, fillvalue=('', '')):
                 if rank:
                     assert taxrank == rank
                 row.append(name)
