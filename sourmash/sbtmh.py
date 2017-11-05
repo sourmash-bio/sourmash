@@ -135,13 +135,13 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        to_query = select_signature(node, sig).minhash
+        node_mh = select_signature(node, sig).minhash
         try:
-            score = node.data.minhash.similarity(sig.minhash)
+            score = node_mh.similarity(sig.minhash)
         except Exception as e:
             if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(to_query)
-                yy = to_query.downsample_max_hash(sig.minhash)
+                xx = sig.minhash.downsample_max_hash(node_mh)
+                yy = node_mh.downsample_max_hash(sig.minhash)
 
                 score = yy.similarity(xx)
             else:
@@ -169,13 +169,13 @@ class SearchMinHashesFindBest(object):
         score = 0
 
         if isinstance(node, SigLeaf):
-            to_query = select_signature(node, sig).minhash
+            node_mh = select_signature(node, sig).minhash
             try:
-                score = to_query.similarity(sig.minhash)
+                score = node_mh.similarity(sig.minhash)
             except Exception as e:
                 if 'mismatch in max_hash' in str(e) and self.downsample:
-                    xx = sig.minhash.downsample_max_hash(to_query.minhash)
-                    yy = to_query.minhash.downsample_max_hash(sig.minhash)
+                    xx = sig.minhash.downsample_max_hash(node_mh)
+                    yy = node_mh.downsample_max_hash(sig.minhash)
 
                     score = yy.similarity(xx)
                 else:
@@ -202,13 +202,13 @@ def search_minhashes_containment(node, sig, threshold,
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        to_query = select_signature(node, sig).minhash
+        node_mh = select_signature(node, sig).minhash
         try:
-            matches = to_query.count_common(sig.minhash)
+            matches = node_mh.count_common(sig.minhash)
         except Exception as e:
             if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(to_query)
-                yy = to_query.downsample_max_hash(sig.minhash)
+                xx = sig.minhash.downsample_max_hash(node_mh)
+                yy = node_mh.downsample_max_hash(sig.minhash)
 
                 matches = yy.count_common(xx)
             else:
@@ -234,10 +234,10 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
         mins = sig.minhash.get_mins()
 
         if isinstance(node, SigLeaf):
-            to_query = select_signature(node, sig).minhash
-            max_scaled = max(to_query.scaled, sig.minhash.scaled)
+            node_mh = select_signature(node, sig).minhash
+            max_scaled = max(node_mh.scaled, sig.minhash.scaled)
 
-            mh1 = to_query.downsample_scaled(max_scaled)
+            mh1 = node_mh.downsample_scaled(max_scaled)
             mh2 = sig.minhash.downsample_scaled(max_scaled)
             matches = mh1.count_common(mh2)
         else:  # Node or Leaf, Nodegraph by minhash comparison
