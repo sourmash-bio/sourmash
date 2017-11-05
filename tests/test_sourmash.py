@@ -2584,7 +2584,9 @@ def test_storage_convert():
 
         args = ['storage', 'convert', '-b', 'ipfs', testsbt]
         status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+                                           in_directory=location, fail_ok=True)
+        if not status:
+            raise py.test.skip('ipfs probably not running')
 
         ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 

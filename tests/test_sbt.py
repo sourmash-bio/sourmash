@@ -344,6 +344,8 @@ def test_sbt_tarstorage():
 
 def test_sbt_ipfsstorage():
     pytest.importorskip('ipfsapi')
+    import ipfsapi
+
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:
         tree = SBT(factory)
@@ -360,8 +362,12 @@ def test_sbt_ipfsstorage():
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
-        with IPFSStorage() as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
+        try:
+            with IPFSStorage() as storage:
+                tree.save(os.path.join(location, 'tree'), storage=storage)
+        except ipfsapi.exceptions.ConnectionError:
+            # ipfs not installed/functioning probably
+            return
 
         with IPFSStorage() as storage:
             tree = SBT.load(os.path.join(location, 'tree'),
