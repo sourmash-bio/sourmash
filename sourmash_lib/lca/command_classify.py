@@ -1,9 +1,6 @@
 #! /usr/bin/env python
 """
-...
-
-TODO:
-* check if we've already seen this md5sum?
+Classify individual signature files down to deepest possible node.
 """
 from __future__ import print_function
 import sys
@@ -28,6 +25,26 @@ DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
 
 def classify_signature(query_sig, dblist, threshold):
+    """
+    Classify 'query_sig' using the given list of databases.
+
+    Insist on at least 'threshold' counts of a given lineage before taking
+    it seriously.
+
+    Return (lineage, status) where 'lineage' is a lineage tuple
+    [(rank, name), ...] and 'status' is either 'nomatch', 'found',
+    or 'disagree'.
+
+    This function proceeds in two stages:
+
+       * first, build a list of assignments for all the lineages for each
+         hashval.  (For e.g. kraken, this is done in the database preparation
+         step; here, we do it dynamically each time.
+       * then, across all the hashvals, count the number of times each linage
+         shows up, and filter out low-abundance ones (under threshold).
+         Then, determine the LCA of all of those.
+
+      """
     # gather assignments from across all the databases
     these_assignments = defaultdict(list)
     n_custom = 0
@@ -38,15 +55,6 @@ def classify_signature(query_sig, dblist, threshold):
                 assignment = lca_db.lineage_dict[lineage_id]
                 these_assignments[hashval].append(assignment)
                 n_custom += 1
-
-    # count number of assignments for each most-specific
-    check_counts = Counter()
-    for tuple_info in these_assignments.values():
-        last_tup = tuple(tuple_info[-1])
-        check_counts[last_tup] += 1
-
-    debug('n custom hashvals:', n_custom)
-    debug(pprint.pformat(check_counts.most_common()))
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
@@ -69,7 +77,7 @@ def classify_signature(query_sig, dblist, threshold):
 
     # ok, we now have the LCAs for each hashval, and their number
     # of counts. Now sum across "significant" LCAs - those above
-    # threshold.
+    # threshold - and build a tree.
 
     tree = {}
     tree_counts = defaultdict(int)
@@ -83,16 +91,17 @@ def classify_signature(query_sig, dblist, threshold):
 
         n += 1
 
-        xx = []
+        # construct [(rank, name), ...] lineage
+        lineage = []
         parent = lca
         while parent:
-            xx.insert(0, parent)
+            lineage.insert(0, parent)
             tree_counts[parent] += count
             parent = parents.get(parent)
-        debug(n, count, xx[1:])
+        debug(n, count, lineage[1:])
 
         # update tree with this set of assignments
-        lca_utils.build_tree([xx], tree)
+        lca_utils.build_tree([lineage], tree)
 
     if n > 1:
         debug('XXX', n)
@@ -101,12 +110,12 @@ def classify_signature(query_sig, dblist, threshold):
     if not tree:
         return [('', '')], status
 
-    # now find LCA? or whatever.
+    # now find least-common-ancestor of the resulting tree.
     lca, reason = lca_utils.find_lca(tree)
     if reason == 0:               # leaf node
         status = 'found'
         debug('END', lca)
-    else:                         # internal node
+    else:                         # internal node => disagreement
         status = 'disagree'
         debug('MULTI', lca)
 
@@ -124,6 +133,9 @@ def classify_signature(query_sig, dblist, threshold):
 
 
 def classify(args):
+    """
+    main single-genome classification function: 
+    """
     p = argparse.ArgumentParser()
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
@@ -132,7 +144,6 @@ def classify(args):
                    help='output CSV to this file instead of stdout')
     p.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath directories.')
-    #p.add_argument('-v', '--verbose', action='store_true')
     p.add_argument('-d', '--debug', action='store_true')
     args = p.parse_args(args)
 
@@ -154,7 +165,8 @@ def classify(args):
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-    
+
+    # load all the databases
     for db_name in args.db:
         notify(u'\r\033[K', end=u'', file=sys.stderr)
         notify('... loading database {}'.format(db_name), end='\r',
@@ -179,12 +191,14 @@ def classify(args):
     scaled = scaled_vals.pop()
     notify('ksize={} scaled={}', ksize, scaled)
 
+    # find all the queries
+    notify('finding query signatures...')
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.query))
     else:
         inp_files = list(args.query)
 
-    # for each query, gather all the matches across databases
+    # set up output
     csvfp = csv.writer(sys.stdout)
     if args.output:
         notify("outputting classifications to '{}'", args.output.name)
@@ -193,6 +207,7 @@ def classify(args):
         notify("outputting classifications to stdout")
     csvfp.writerow(['ID','status'] + lca_utils.taxlist)
 
+    # for each query, gather all the matches across databases
     total_count = 0
     n = 0
     total_n = len(inp_files)
@@ -208,9 +223,11 @@ def classify(args):
             # make sure we're looking at the same scaled value as database
             query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
 
-            lineage, status = classify_signature(query_sig, dblist, args.threshold)
+            # do the classification
+            lineage, status = classify_signature(query_sig, dblist,
+                                                 args.threshold)
 
-            # output!
+            # output each classification to the spreadsheet
             row = [query_sig.name(), status]
             for taxrank, (rank, name) in zip_longest(lca_utils.taxlist,
                                                      lineage,
@@ -219,7 +236,8 @@ def classify(args):
                     assert taxrank == rank
                 row.append(name)
 
-            if not args.output:           # a bit of a hack to clear line
+            # when outputting to stdout, make output intelligible
+            if not args.output:
                 notify(u'\r\033[K', end=u'')
             csvfp.writerow(row)
 

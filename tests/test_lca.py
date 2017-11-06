@@ -14,6 +14,97 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 
+from sourmash_lib.lca.lca_utils import (build_tree, find_lca,
+                                        build_reverse_tree)
+
+## lca_utils tests
+
+def test_build_tree():
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
+    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2') : {}} }
+
+
+def test_build_tree_2():
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+                       [('rank1', 'name1'), ('rank2', 'name2b')],
+                      ])
+
+    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
+                                           ('rank2', 'name2b') : {}} }
+
+
+def test_build_tree_3():                  # empty 'rank2' name
+    tree = build_tree([[('rank1', 'name1'), ('rank2', '')]])
+    assert tree == { ('rank1', 'name1'): {} }
+
+
+def test_build_tree_4():
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+                      ])
+
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
+                      ], tree)
+
+    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
+                                           ('rank2', 'name2b') : {}} }
+
+
+def test_find_lca():
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
+    lca = find_lca(tree)
+
+    assert lca == (('rank2', 'name2'), 0)
+
+
+def test_find_lca_2():
+    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+                       [('rank1', 'name1'), ('rank2', 'name2b')],
+                      ])
+    lca = find_lca(tree)
+
+    assert lca == (('rank1', 'name1'), 2)
+
+
+
+
+def test_build_reverse_tree():
+    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
+
+    print(parents)
+    assert parents == { ('rank2', 'name2'): ('rank1', 'name1'),
+                        ('rank1', 'name1'): ('root', 'root') }
+
+
+def test_build_reverse_tree_2():
+    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+                                 [('rank1', 'name1'), ('rank2', 'name2b')],
+                                 ])
+
+    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
+                        ('rank2', 'name2b'): ('rank1', 'name1'),
+                        ('rank1', 'name1'): ('root', 'root') }
+
+
+def test_build_reverse_tree_3():
+    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+                                 ])
+    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
+                                 ], parents)
+
+    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
+                        ('rank2', 'name2b'): ('rank1', 'name1'),
+                        ('rank1', 'name1'): ('root', 'root') }
+
+
+def test_build_reverse_tree_4():          # empty 'rank2' name
+    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', '')]])
+
+    print(parents)
+    assert parents == { ('rank1', 'name1'): ('root', 'root') }
+
+
+## command line tests
+
 
 def test_run_sourmash_lca():
     status, out, err = utils.runscript('sourmash', ['lca'], fail_ok=True)

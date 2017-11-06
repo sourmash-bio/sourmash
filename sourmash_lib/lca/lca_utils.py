@@ -1,4 +1,5 @@
 import json
+from collections import OrderedDict
 
 taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
            'species']
@@ -40,36 +41,6 @@ def build_tree(assignments, initial=None):
     return tree
 
 
-def test_build_tree():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2') : {}} }
-
-
-def test_build_tree_2():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                       [('rank1', 'name1'), ('rank2', 'name2b')],
-                      ])
-
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
-                                           ('rank2', 'name2b') : {}} }
-
-
-def test_build_tree_3():                  # empty 'rank2' name
-    tree = build_tree([[('rank1', 'name1'), ('rank2', '')]])
-    assert tree == { ('rank1', 'name1'): {} }
-
-
-def test_build_tree_4():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                      ])
-
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
-                      ], tree)
-
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
-                                           ('rank2', 'name2b') : {}} }
-
-
 def find_lca(tree):
     """
     Given a tree produced by 'find_tree', find the first node with multiple
@@ -88,22 +59,6 @@ def find_lca(tree):
             return cur, 0
         else:                             # len(node) > 1 => confusion!!
             return cur, len(node)
-
-
-def test_find_lca():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
-    lca = find_lca(tree)
-
-    assert lca == (('rank2', 'name2'), 0)
-
-
-def test_find_lca_2():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                       [('rank1', 'name1'), ('rank2', 'name2b')],
-                      ])
-    lca = find_lca(tree)
-
-    assert lca == (('rank1', 'name1'), 2)
 
 
 def build_reverse_tree(assignments, initial=None):
@@ -126,43 +81,16 @@ def build_reverse_tree(assignments, initial=None):
     return parents
 
 
-def test_build_reverse_tree():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
-
-    print(parents)
-    assert parents == { ('rank2', 'name2'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_2():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                                 [('rank1', 'name1'), ('rank2', 'name2b')],
-                                 ])
-
-    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
-                        ('rank2', 'name2b'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_3():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                                 ])
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
-                                 ], parents)
-
-    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
-                        ('rank2', 'name2b'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_4():          # empty 'rank2' name
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', '')]])
-
-    print(parents)
-    assert parents == { ('rank1', 'name1'): ('root', 'root') }
-
-
 class LCA_Database(object):
+    """
+    Wrapper class for taxonomic database.
+
+    obj.lineage_dict: key 'lineage_id' => lineage tuple [(name, rank), ...]
+    obj.hashval_to_lineage_id: key 'hashval' => 'lineage_id'
+    obj.ksize: k-mer size
+    obj.scaled: scaled value
+    obj.signatures_to_lineage: key 'md5sum' => 'lineage_id'
+    """
     def __init__(self):
         self.lineage_dict = None
         self.hashval_to_lineage_id = None
@@ -171,6 +99,7 @@ class LCA_Database(object):
         self.signatures_to_lineage = None
 
     def load(self, db_name):
+        "Load from a JSON file."
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -209,4 +138,27 @@ class LCA_Database(object):
         self.scaled = scaled
         self.signatures_to_lineage = signatures_to_lineage
 
+    def save(self, db_name):
+        "Save to a JSON file."
+        xopen = open
+        if db_name.endswith('.gz'):
+            xopen = gzip.open
 
+        with xopen(db_name, 'wt') as fp:
+            # use an OrderedDict to preserve output order
+            save_d = OrderedDict()
+            save_d['version'] = '1.0'
+            save_d['type'] = 'sourmash_lca'
+            save_d['license'] = 'CC0'
+            save_d['ksize'] = self.ksize
+            save_d['scaled'] = self.scaled
+
+            # convert lineage internals from tuples to dictionaries
+            save_d['lineages'] = OrderedDict([ (k, OrderedDict(v)) \
+                                     for k, v in self.lineage_dict.items() ])
+
+            # convert values from sets to lists, so that JSON knows how to save
+            save_d['hashval_assignments'] = \
+               dict((k, list(v)) for (k, v) in self.hashval_to_lineage_id.items())
+            save_d['signatures_to_lineage'] = self.signatures_to_lineage
+            json.dump(save_d, fp)

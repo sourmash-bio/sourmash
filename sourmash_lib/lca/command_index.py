@@ -17,6 +17,9 @@ from .lca_utils import debug, set_debug
 
 
 def index(args):
+    """
+    main function for building an LCA database.
+    """
     p = argparse.ArgumentParser()
     p.add_argument('csv')
     p.add_argument('lca_db_out')
@@ -169,25 +172,15 @@ def index(args):
 
     # now, save!
     notify('saving to LCA DB: {}'.format(args.lca_db_out))
-    xopen = open
-    if args.lca_db_out.endswith('.gz'):
-        xopen = gzip.open
-    with xopen(args.lca_db_out, 'wt') as fp:
-        save_d = OrderedDict()
-        save_d['version'] = '1.0'
-        save_d['type'] = 'sourmash_lca'
-        save_d['license'] = 'CC0'
-        save_d['ksize'] = ksize
-        save_d['scaled'] = scaled
-        # convert lineage internals from tuples to dictionaries
-        save_d['lineages'] = OrderedDict([ (k, OrderedDict(v)) \
-                                           for k, v in lineage_dict.items() ])
 
-        # convert values from sets to lists
-        save_d['hashval_assignments'] = dict((k, list(v)) for (k, v) in hashval_to_lineage.items())
-        save_d['signatures_to_lineage'] = md5_to_lineage
-        json.dump(save_d, fp)
+    db = lca_utils.LCA_Database()
+    db.lineage_dict = lineage_dict
+    db.hashval_to_lineage_id = hashval_to_lineage
+    db.ksize = args.ksize
+    db.scaled = args.scaled
+    db.signatures_to_lineage = md5_to_lineage
 
+    db.save(args.lca_db_out)
 
 if __name__ == '__main__':
     sys.exit(index(sys.argv[1:]))
