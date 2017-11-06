@@ -147,10 +147,10 @@ def index(args):
             if lineage_idx is not None:
                 # downsample to specified scaled; this has the side effect of
                 # making sure they're all at the same scaled value!
-                sig.minhash = sig.minhash.downsample_scaled(args.scaled)
+                minhash = sig.minhash.downsample_scaled(args.scaled)
 
                 # connect hashvals to lineage
-                for hashval in sig.minhash.get_mins():
+                for hashval in minhash.get_mins():
                     hashval_to_lineage[hashval].add(lineage_idx)
 
                 # store md5 -> lineage too
