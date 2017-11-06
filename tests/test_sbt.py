@@ -343,8 +343,7 @@ def test_sbt_tarstorage():
 
 
 def test_sbt_ipfsstorage():
-    pytest.importorskip('ipfsapi')
-    import ipfsapi
+    ipfsapi = pytest.importorskip('ipfsapi')
 
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:
@@ -366,8 +365,7 @@ def test_sbt_ipfsstorage():
             with IPFSStorage() as storage:
                 tree.save(os.path.join(location, 'tree'), storage=storage)
         except ipfsapi.exceptions.ConnectionError:
-            # ipfs not installed/functioning probably
-            return
+            pytest.xfail("ipfs not installed/functioning probably")
 
         with IPFSStorage() as storage:
             tree = SBT.load(os.path.join(location, 'tree'),
@@ -384,7 +382,7 @@ def test_sbt_ipfsstorage():
 
 
 def test_sbt_redisstorage():
-    pytest.importorskip('redis')
+    redis = pytest.importorskip('redis')
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:
         tree = SBT(factory)
@@ -401,8 +399,11 @@ def test_sbt_redisstorage():
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
-        with RedisStorage() as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
+        try:
+            with RedisStorage() as storage:
+                tree.save(os.path.join(location, 'tree'), storage=storage)
+        except redis.exceptions.ConnectionError:
+            pytest.xfail("Couldn't connect to redis server")
 
         with RedisStorage() as storage:
             tree = SBT.load(os.path.join(location, 'tree'),
