@@ -1,9 +1,6 @@
 #! /usr/bin/env python
 """
 Build a least-common-ancestor database with given taxonomy and genome sigs.
-
-TODO:
-* add --traverse
 """
 from __future__ import print_function
 import sys
@@ -13,18 +10,10 @@ from collections import defaultdict, OrderedDict
 import json
 
 import sourmash_lib
+from . import lca_utils
 from ..logging import notify, error
 from .. import sourmash_args
-
-taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
-           'species']
-null_names = set(['[Blank]', 'na', 'null'])
-
-
-_print_debug = False
-def debug(*args):
-    if _print_debug:
-        print(*args)
+from .lca_utils import debug, set_debug
 
 
 def index(args):
@@ -49,8 +38,7 @@ def index(args):
         sys.exit(-1)
 
     if args.debug:
-        global _print_debug
-        _print_debug = True
+        set_debug(args.debug)
 
     scaled = int(args.scaled)
     ksize = int(args.ksize)
@@ -59,7 +47,7 @@ def index(args):
     r = csv.reader(open(args.csv, 'rt'))
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(args.start_column - 2)
-    row_headers += taxlist
+    row_headers += lca_utils.taxlist
 
     # first check that headers are interpretable.
     notify('examining spreadsheet headers...')
@@ -94,7 +82,7 @@ def index(args):
             lineage = lineage[1:]
 
             # clean lineage of null names
-            lineage = [(a,b) for (a,b) in lineage if b not in null_names]
+            lineage = [(a,b) for (a,b) in lineage if b not in lca_utils.null_names]
 
             # store lineage tuple
             assignments[ident] = tuple(lineage)
