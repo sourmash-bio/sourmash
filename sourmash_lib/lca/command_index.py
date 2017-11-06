@@ -120,7 +120,7 @@ def index(args):
            len(lineage_dict), num_rows)
 
     # load signatures, construct index of hashvals to lineages
-    hashval_to_lineage = defaultdict(list)
+    hashval_to_lineage = defaultdict(set)
     md5_to_lineage = {}
 
     notify('finding signatures...')
@@ -160,7 +160,7 @@ def index(args):
 
                 # connect hashvals to lineage
                 for hashval in sig.minhash.get_mins():
-                    hashval_to_lineage[hashval].append(lineage_idx)
+                    hashval_to_lineage[hashval].add(lineage_idx)
 
                 # store md5 -> lineage too
                 md5_to_lineage[sig.md5sum()] = lineage_idx
@@ -181,7 +181,10 @@ def index(args):
 
     # now, save!
     notify('saving to LCA DB: {}'.format(args.lca_db_out))
-    with open(args.lca_db_out, 'wt') as fp:
+    xopen = open
+    if args.lca_db_out.endswith('.gz'):
+        xopen = gzip.open
+    with xopen(args.lca_db_out, 'wt') as fp:
         save_d = OrderedDict()
         save_d['version'] = '1.0'
         save_d['type'] = 'sourmash_lca'
@@ -191,7 +194,9 @@ def index(args):
         # convert lineage internals from tuples to dictionaries
         save_d['lineages'] = OrderedDict([ (k, OrderedDict(v)) \
                                            for k, v in lineage_dict.items() ])
-        save_d['hashval_assignments'] = hashval_to_lineage
+
+        # convert values from sets to lists
+        save_d['hashval_assignments'] = dict((k, list(v)) for (k, v) in hashval_to_lineage.items())
         save_d['signatures_to_lineage'] = md5_to_lineage
         json.dump(save_d, fp)
 

@@ -17,6 +17,7 @@ try:
     from itertools import zip_longest
 except ImportError:
     from itertools import izip_longest as zip_longest
+import gzip
 
 import sourmash_lib
 from ..logging import notify, error
@@ -189,7 +190,11 @@ class LCA_Database(object):
         self.signatures_to_lineage = None
 
     def load(self, db_name):
-        with open(db_name, 'rt') as fp:
+        xopen = open
+        if db_name.endswith('.gz'):
+            xopen = gzip.open
+
+        with xopen(db_name, 'rt') as fp:
             load_d = json.load(fp)
             version = load_d['version']
             assert version == '1.0'
