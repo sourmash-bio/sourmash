@@ -142,7 +142,7 @@ def index(args):
             notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
             debug(filename, sig.name())
 
-            if sig.md5sum() in md5_to_lineage or 1:
+            if sig.md5sum() in md5_to_lineage:
                 notify('\nin file {},', filename)
                 notify('duplicate md5sum: {}; skipping', sig.md5sum())
                 continue
