@@ -88,6 +88,10 @@ def index(args):
             # clean lineage of null names, replace with 'unassigned'
             lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
 
+            # remove end nulls
+            while lineage[-1][1] == 'unassigned':
+                lineage = lineage[:-1]
+
             # store lineage tuple
             assignments[ident] = tuple(lineage)
 
