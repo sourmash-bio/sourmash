@@ -27,7 +27,7 @@ def index(args):
     p.add_argument('--scaled', default=10000, type=float)
     p.add_argument('-k', '--ksize', default=31, type=int)
     p.add_argument('-d', '--debug', action='store_true')
-    p.add_argument('-1', '--start-column', default=2, type=int,
+    p.add_argument('-C', '--start-column', default=2, type=int,
                    help='column at which taxonomic assignments start')
     p.add_argument('--split-identifiers', action='store_true',
                    help='split names in signatures on whitspace and period')
