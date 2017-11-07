@@ -10,10 +10,10 @@ from collections import defaultdict, OrderedDict
 import json
 
 import sourmash_lib
-from . import lca_utils
-from ..logging import notify, error
-from .. import sourmash_args
-from .lca_utils import debug, set_debug
+from sourmash_lib import sourmash_args
+from sourmash_lib.logging import notify, error
+from sourmash_lib.lca import lca_utils
+from sourmash_lib.lca.lca_utils import debug, set_debug
 
 
 def index(args):
