@@ -27,7 +27,6 @@ def build_tree(assignments, initial=None):
     in 'assignments'.  This tree can then be used to find lowest common
     ancestor agreements/confusion.
     """
-    print(assignments)
     if initial is None:
         tree = {}
     else:

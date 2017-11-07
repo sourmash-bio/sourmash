@@ -89,11 +89,14 @@ def index(args):
             lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
 
             # remove end nulls
-            while lineage[-1][1] == 'unassigned':
+            if not lineage:
+                print(lineage)
+            while lineage and lineage[-1][1] == 'unassigned':
                 lineage = lineage[:-1]
 
             # store lineage tuple
-            assignments[ident] = tuple(lineage)
+            if lineage:
+                assignments[ident] = tuple(lineage)
 
     fp.close()
 
