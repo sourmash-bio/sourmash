@@ -47,7 +47,8 @@ def index(args):
     ksize = int(args.ksize)
 
     # parse spreadsheet!
-    r = csv.reader(open(args.csv, 'rt'))
+    fp = open(args.csv, 'rt')
+    r = csv.reader(fp)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(args.start_column - 2)
     row_headers += lca_utils.taxlist
@@ -90,7 +91,9 @@ def index(args):
             # store lineage tuple
             assignments[ident] = tuple(lineage)
 
-    # clean up with some indirection: convert lineages to numbers.
+    fp.close()
+
+    # convert lineages to numbers.
     next_lineage_index = 0
     lineage_dict = {}
 
