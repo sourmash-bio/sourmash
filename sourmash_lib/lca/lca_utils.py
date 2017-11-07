@@ -4,6 +4,10 @@ from collections import OrderedDict
 
 taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
            'species']
+
+# replace blank/na/null with 'unassigned'
+filter_null = lambda x: 'unassigned' if x.strip() in \
+  ('[Blank]', 'na', 'null', '') else x
 null_names = set(['[Blank]', 'na', 'null'])
 
 
