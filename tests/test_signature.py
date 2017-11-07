@@ -1,10 +1,13 @@
 from __future__ import print_function, unicode_literals
 
+import os
+
 import pytest
 
 import sourmash_lib
 from sourmash_lib.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
+from . import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):
@@ -279,3 +282,14 @@ def test_save_minified(track_abundance):
     assert len(y) == 2
     assert any(sig.name() == 'foo' for sig in y)
     assert any(sig.name() == 'bar baz' for sig in y)
+
+
+def test_load_minified(track_abundance):
+    sigfile = utils.get_test_data('genome-s10+s11.sig')
+    sigs = load_signatures(sigfile)
+
+    minified = save_signatures(sigs)
+    with open(sigfile, 'r') as f:
+        orig_file = f.read()
+    assert len(minified) < len(orig_file)
+    assert '\n' not in minified
