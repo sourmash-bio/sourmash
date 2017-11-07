@@ -287,3 +287,22 @@ def test_multi_db_classify():
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 2 databases for LCA use.' in err
+
+
+def test_single_summarize():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded signatures from 1 files total.' in err
+        assert '200 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out

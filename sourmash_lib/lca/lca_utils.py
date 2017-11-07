@@ -1,4 +1,5 @@
 import json
+import gzip
 from collections import OrderedDict
 
 taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',

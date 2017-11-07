@@ -1,19 +1,14 @@
 #! /usr/bin/env python
 """
-Classify individual signature files down to deepest possible node.
+Summarize the taxonomic content of the given signatures.
 """
 from __future__ import print_function
 import sys
 import argparse
 import csv
-from collections import defaultdict, Counter
-import itertools
+from collections import defaultdict, OrderedDict, Counter
+import json
 import pprint
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
-import gzip
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
@@ -21,34 +16,25 @@ from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
-DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
+
+DEFAULT_THRESHOLD=5
 
 
-def classify_signature(query_sig, dblist, threshold):
+def summarize(hashvals, dblist, threshold):
     """
-    Classify 'query_sig' using the given list of databases.
+    Classify 'hashvals' using the given list of databases.
 
     Insist on at least 'threshold' counts of a given lineage before taking
     it seriously.
 
-    Return (lineage, status) where 'lineage' is a lineage tuple
-    [(rank, name), ...] and 'status' is either 'nomatch', 'found',
-    or 'disagree'.
+    Return (lineage, counts) where 'lineage' is a lineage tuple
+    [(rank, name), ...].
+    """
 
-    This function proceeds in two stages:
-
-       * first, build a list of assignments for all the lineages for each
-         hashval.  (For e.g. kraken, this is done in the database preparation
-         step; here, we do it dynamically each time.
-       * then, across all the hashvals, count the number of times each linage
-         shows up, and filter out low-abundance ones (under threshold).
-         Then, determine the LCA of all of those.
-
-      """
     # gather assignments from across all the databases
     these_assignments = defaultdict(list)
     n_custom = 0
-    for hashval in query_sig.minhash.get_mins():
+    for hashval in hashvals:
         for lca_db in dblist:
             assignments = lca_db.hashval_to_lineage_id.get(hashval, [])
             for lineage_id in assignments:
@@ -77,7 +63,7 @@ def classify_signature(query_sig, dblist, threshold):
 
     # ok, we now have the LCAs for each hashval, and their number
     # of counts. Now sum across "significant" LCAs - those above
-    # threshold - and build a tree.
+    # threshold - and read out results.
 
     tree = {}
     tree_counts = defaultdict(int)
@@ -94,54 +80,50 @@ def classify_signature(query_sig, dblist, threshold):
         # construct [(rank, name), ...] lineage
         lineage = []
         parent = lca
-        while parent:
+        debug('lca is', lca)
+        while parent != ('root', 'root'):
+            debug('inserting', parent)
             lineage.insert(0, parent)
             tree_counts[parent] += count
             parent = parents.get(parent)
-        debug(n, count, lineage[1:])
+
+        debug(lineage)
 
         # update tree with this set of assignments
         lca_utils.build_tree([lineage], tree)
 
-    if n > 1:
-        debug('XXX', n)
+    def traverse_and_count(tree, count_d, lineage_so_far=()):
+        """
+        Convert tree into list of lineages, recursively.
+        """
+        if not lineage_so_far or lineage_so_far == (('root', 'root')):
+            for (rank, name), v in tree.items():
+                count_d[((rank, name),)] += tree_counts[(rank, name)]
+                lineage_tup = ( (rank, name,), )
+                traverse_and_count(v, count_d, lineage_tup)
+            return
 
-    status = 'nomatch'
-    if not tree:
-        return [('', '')], status
+        for (rank, name), v in tree.items():
+            sub_lineage = list(lineage_so_far)
+            sub_lineage.append((rank, name))
+            sub_lineage = tuple(sub_lineage)
+            count_d[sub_lineage] += tree_counts[(rank, name)]
+            traverse_and_count(v, count_d, sub_lineage)
 
-    # now find least-common-ancestor of the resulting tree.
-    lca, reason = lca_utils.find_lca(tree)
-    if reason == 0:               # leaf node
-        status = 'found'
-        debug('END', lca)
-    else:                         # internal node => disagreement
-        status = 'disagree'
-        debug('MULTI', lca)
-
-    # backtrack to full lineage via parents
-    lineage = []
-    parent = lca
-    while parent != ('root', 'root'):
-        lineage.insert(0, parent)
-        parent = parents.get(parent)
-
-    debug(parents)
-    debug('lineage is:', lineage)
-
-    return lineage, status
+    lineage_counts = defaultdict(int)
+    traverse_and_count(tree, lineage_counts)
+    debug(pprint.pformat(lineage_counts))
+    return lineage_counts
 
 
-def classify(args):
+def summarize_main(args):
     """
-    main single-genome classification function: 
+    main summarization function: 
     """
     p = argparse.ArgumentParser()
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='output CSV to this file instead of stdout')
     p.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath directories.')
     p.add_argument('-d', '--debug', action='store_true')
@@ -198,52 +180,27 @@ def classify(args):
     else:
         inp_files = list(args.query)
 
-    # set up output
-    csvfp = csv.writer(sys.stdout)
-    if args.output:
-        notify("outputting classifications to '{}'", args.output.name)
-        csvfp = csv.writer(args.output)
-    else:
-        notify("outputting classifications to stdout")
-    csvfp.writerow(['ID','status'] + lca_utils.taxlist)
-
-    # for each query, gather all the matches across databases
+    # for each query, gather all the hashvals across databases
     total_count = 0
     n = 0
     total_n = len(inp_files)
+    hashvals = defaultdict(int)
     for query_filename in inp_files:
         n += 1
         for query_sig in sourmash_lib.load_signatures(query_filename,
                                                       ksize=ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... classifying {} (file {} of {})', query_sig.name(), n, total_n, end='\r')
-            debug('classifying', query_sig.name())
-            total_count += 1
+            notify('... loading {} (file {} of {})', query_sig.name(), n, total_n, end='\r')
 
-            # make sure we're looking at the same scaled value as database
-            query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
-
-            # do the classification
-            lineage, status = classify_signature(query_sig, dblist,
-                                                 args.threshold)
-
-            # output each classification to the spreadsheet
-            row = [query_sig.name(), status]
-            for taxrank, (rank, name) in zip_longest(lca_utils.taxlist,
-                                                     lineage,
-                                                     fillvalue=('', '')):
-                if rank:
-                    assert taxrank == rank, (taxrank, rank)
-                row.append(name)
-
-            # when outputting to stdout, make output intelligible
-            if not args.output:
-                notify(u'\r\033[K', end=u'')
-            csvfp.writerow(row)
+            mh = query_sig.minhash.downsample_scaled(scaled)
+            for hashval in mh.get_mins():
+                hashvals[hashval] += 1
 
     notify(u'\r\033[K', end=u'')
-    notify('classified {} signatures total', total_count)
+    notify('loaded signatures from {} files total.', n)
 
+    lineage_counts = summarize(hashvals, dblist, args.threshold)
 
-if __name__ == '__main__':
-    sys.exit(classify(sys.argv[1:]))
+    for (lineage_tup, count) in lineage_counts.items():
+        lineage = ';'.join([ name for (rank, name) in lineage_tup ])
+        print(count, lineage)

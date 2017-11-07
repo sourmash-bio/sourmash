@@ -5,14 +5,15 @@ Command-line entry point for 'python -m sourmash_lib.lca'
 import sys
 import argparse
 
-from . import classify, index
+from . import classify, index, summarize_main
 from ..logging import set_quiet, error
 
 def main(sysv_args):
     set_quiet(False)
 
     commands = {'classify': classify,
-                'index': index}
+                'index': index,
+                'summarize': summarize_main}
 
     parser = argparse.ArgumentParser(
         description='least-common ancestor (LCA) utilities',
@@ -21,7 +22,8 @@ def main(sysv_args):
 Commands can be:
 
 index <taxonomy.csv> <output_db name> <signature [...]>
-classfiy <output_db_name> <signature [...]>
+classify --db <db_name [...]> --query <signature [...]>
+summarize --db <db_name [...]> --query <signature [...]>
 
 Use '-h' to get subcommand-specific help, e.g.
 
