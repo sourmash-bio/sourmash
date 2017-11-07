@@ -132,6 +132,27 @@ def test_basic_index():
         assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
 
 
+def test_basic_index_bad_spreadsheet():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/bad-spreadsheet.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+
+
 def test_basic_index_and_classify():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-1.csv')

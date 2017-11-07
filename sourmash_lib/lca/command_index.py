@@ -76,7 +76,7 @@ def index(args):
     assignments = {}
     num_rows = 0
     for row in r:
-        if row:
+        if row and row[0].strip():        # want non-empty row
             num_rows += 1
             lineage = list(zip(row_headers, row))
             lineage = [ x for x in lineage if x[0] != '_skip_' ]
