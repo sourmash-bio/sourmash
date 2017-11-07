@@ -62,7 +62,7 @@ def classify_signature(query_sig, dblist, threshold):
     for hashval in these_assignments:
 
         # for each list of tuple_info [(rank, name), ...] build
-        # a tree that lets us discover least-common-ancestor.
+        # a tree that lets us discover lowest-common-ancestor.
         tuple_info = these_assignments[hashval]
         tree = lca_utils.build_tree(tuple_info)
 
@@ -71,7 +71,7 @@ def classify_signature(query_sig, dblist, threshold):
         parents = lca_utils.build_reverse_tree(tuple_info, parents)
 
         # now find either a leaf or the first node with multiple
-        # children; that's our least-common-ancestor node.
+        # children; that's our lowest-common-ancestor node.
         lca, reason = lca_utils.find_lca(tree)
         counts[lca] += 1
 
@@ -110,7 +110,7 @@ def classify_signature(query_sig, dblist, threshold):
     if not tree:
         return [('', '')], status
 
-    # now find least-common-ancestor of the resulting tree.
+    # now find lowest-common-ancestor of the resulting tree.
     lca, reason = lca_utils.find_lca(tree)
     if reason == 0:               # leaf node
         status = 'found'

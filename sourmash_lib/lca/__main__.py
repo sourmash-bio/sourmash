@@ -16,7 +16,7 @@ def main(sysv_args):
                 'summarize': summarize_main}
 
     parser = argparse.ArgumentParser(
-        description='least-common ancestor (LCA) utilities',
+        description='lowest-common ancestor (LCA) utilities',
         usage='''sourmash lca <command> [<args>]
 
 Commands can be:

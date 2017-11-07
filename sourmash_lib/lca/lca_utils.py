@@ -20,7 +20,7 @@ def debug(*args):
 def build_tree(assignments, initial=None):
     """
     Builds a tree of dictionaries from lists of (rank, name) tuples
-    in 'assignments'.  This tree can then be used to find least common
+    in 'assignments'.  This tree can then be used to find lowest common
     ancestor agreements/confusion.
     """
     if initial is None:

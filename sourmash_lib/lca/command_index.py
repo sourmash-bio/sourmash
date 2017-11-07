@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-Build a least-common-ancestor database with given taxonomy and genome sigs.
+Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
 from __future__ import print_function
 import sys
