@@ -27,6 +27,7 @@ def build_tree(assignments, initial=None):
     in 'assignments'.  This tree can then be used to find lowest common
     ancestor agreements/confusion.
     """
+    print(assignments)
     if initial is None:
         tree = {}
     else:
@@ -56,34 +57,16 @@ def find_lca(tree):
 
     node = tree
     cur = ('root', 'root')
+    lineage = []
     while 1:
-        if len(node) == 1:                # descend to only child
-            cur = next(iter(node.keys()))
-            node = node[cur]
+        if len(node) == 1:                # descend to only child; track path
+            (name, rank) = next(iter(node.keys()))
+            lineage.append((name, rank))
+            node = node[(name, rank)]
         elif len(node) == 0:              # at leaf; end
-            return cur, 0
+            return tuple(lineage), 0
         else:                             # len(node) > 1 => confusion!!
-            return cur, len(node)
-
-
-def build_reverse_tree(assignments, initial=None):
-    """
-    Builds a child -> parent dictionary (a reverse DAG) from lists of
-    (rank, name) tuples in 'assignments'.
-    """
-    if initial is None:
-        parents = {}
-    else:
-        parents = initial
-
-    for assignment in assignments:
-        last_node = ('root', 'root')
-        for rank, name in assignment:
-            if name:
-                parents[(rank, name)] = last_node
-                last_node = (rank, name)
-
-    return parents
+            return tuple(lineage), len(node)
 
 
 class LCA_Database(object):

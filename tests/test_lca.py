@@ -14,8 +14,7 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 
-from sourmash_lib.lca.lca_utils import (build_tree, find_lca,
-                                        build_reverse_tree)
+from sourmash_lib.lca.lca_utils import (build_tree, find_lca)
 
 ## lca_utils tests
 
@@ -53,7 +52,7 @@ def test_find_lca():
     tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
     lca = find_lca(tree)
 
-    assert lca == (('rank2', 'name2'), 0)
+    assert lca == ((('rank1', 'name1'), ('rank2', 'name2'),), 0)
 
 
 def test_find_lca_2():
@@ -62,45 +61,7 @@ def test_find_lca_2():
                       ])
     lca = find_lca(tree)
 
-    assert lca == (('rank1', 'name1'), 2)
-
-
-
-
-def test_build_reverse_tree():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
-
-    print(parents)
-    assert parents == { ('rank2', 'name2'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_2():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                                 [('rank1', 'name1'), ('rank2', 'name2b')],
-                                 ])
-
-    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
-                        ('rank2', 'name2b'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_3():
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                                 ])
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
-                                 ], parents)
-
-    assert parents == { ('rank2', 'name2a'): ('rank1', 'name1'),
-                        ('rank2', 'name2b'): ('rank1', 'name1'),
-                        ('rank1', 'name1'): ('root', 'root') }
-
-
-def test_build_reverse_tree_4():          # empty 'rank2' name
-    parents = build_reverse_tree([[('rank1', 'name1'), ('rank2', '')]])
-
-    print(parents)
-    assert parents == { ('rank1', 'name1'): ('root', 'root') }
+    assert lca == ((('rank1', 'name1'),), 2)
 
 
 ## command line tests
@@ -336,6 +297,54 @@ def test_unassigned_last_index_and_classify():
         assert 'loaded 1 databases for LCA use.' in err
 
 
+def test_index_and_classify_internal_unassigned_multi():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 2 genomes with lineage assignments!!' in err
+        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        # classify input_sig1
+        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,\r\n' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases for LCA use.' in err
+
+        # classify input_sig2
+        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,\r\n' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases for LCA use.' in err
+
+
 def test_multi_db_classify():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
@@ -372,3 +381,44 @@ def test_single_summarize():
 
         assert 'loaded signatures from 1 files total.' in err
         assert '200 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+
+
+def test_multi_summarize_with_unassigned():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 2 genomes with lineage assignments!!' in err
+        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded signatures from 2 files total.' in err
+
+        out_lines = out.splitlines()
+        assert '1231 Eukaryota;Chlorophyta' in out_lines
+        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus' in out_lines
+        assert '1231 Eukaryota' in out_lines
+        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned' in out_lines
+        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned' in out_lines
+        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae' in out_lines
+        # WRONG: assert '200 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;Alteromonadaceae' in out_lines

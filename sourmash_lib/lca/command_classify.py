@@ -58,17 +58,12 @@ def classify_signature(query_sig, dblist, threshold):
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
-    parents = {}
     for hashval in these_assignments:
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
         tuple_info = these_assignments[hashval]
         tree = lca_utils.build_tree(tuple_info)
-
-        # also update a tree that we can ascend from leaves -> parents
-        # for all assignments for all hashvals
-        parents = lca_utils.build_reverse_tree(tuple_info, parents)
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
@@ -91,17 +86,8 @@ def classify_signature(query_sig, dblist, threshold):
 
         n += 1
 
-        # construct [(rank, name), ...] lineage
-        lineage = []
-        parent = lca
-        while parent:
-            lineage.insert(0, parent)
-            tree_counts[parent] += count
-            parent = parents.get(parent)
-        debug(n, count, lineage[1:])
-
         # update tree with this set of assignments
-        lca_utils.build_tree([lineage], tree)
+        lca_utils.build_tree([lca], tree)
 
     if n > 1:
         debug('XXX', n)
@@ -119,17 +105,9 @@ def classify_signature(query_sig, dblist, threshold):
         status = 'disagree'
         debug('MULTI', lca)
 
-    # backtrack to full lineage via parents
-    lineage = []
-    parent = lca
-    while parent != ('root', 'root'):
-        lineage.insert(0, parent)
-        parent = parents.get(parent)
+    debug('lineage is:', lca)
 
-    debug(parents)
-    debug('lineage is:', lineage)
-
-    return lineage, status
+    return lca, status
 
 
 def classify(args):
@@ -231,8 +209,8 @@ def classify(args):
             row = [query_sig.name(), status]
             for taxrank, (rank, name) in zip_longest(lca_utils.taxlist,
                                                      lineage,
-                                                     fillvalue=('', '')):
-                if rank:
+                                                     fillvalue=(None, '')):
+                if rank is not None:
                     assert taxrank == rank, (taxrank, rank)
                 row.append(name)
 

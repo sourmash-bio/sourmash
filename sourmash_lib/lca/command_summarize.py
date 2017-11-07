@@ -44,17 +44,12 @@ def summarize(hashvals, dblist, threshold):
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
-    parents = {}
     for hashval in these_assignments:
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
         tuple_info = these_assignments[hashval]
         tree = lca_utils.build_tree(tuple_info)
-
-        # also update a tree that we can ascend from leaves -> parents
-        # for all assignments for all hashvals
-        parents = lca_utils.build_reverse_tree(tuple_info, parents)
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
@@ -66,54 +61,21 @@ def summarize(hashvals, dblist, threshold):
     # threshold - and read out results.
 
     tree = {}
-    tree_counts = defaultdict(int)
 
     debug(pprint.pformat(counts.most_common()))
 
-    n = 0
+    aggregated_counts = defaultdict(int)
     for lca, count in counts.most_common():
         if count < threshold:
             break
 
-        n += 1
+        while lca:
+            aggregated_counts[lca] += count
+            lca = lca[:-1]
 
-        # construct [(rank, name), ...] lineage
-        lineage = []
-        parent = lca
-        debug('lca is', lca)
-        while parent != ('root', 'root'):
-            debug('inserting', parent)
-            lineage.insert(0, parent)
-            tree_counts[parent] += count
-            parent = parents.get(parent)
+    debug(pprint.pformat(aggregated_counts))
 
-        debug(lineage)
-
-        # update tree with this set of assignments
-        lca_utils.build_tree([lineage], tree)
-
-    def traverse_and_count(tree, count_d, lineage_so_far=()):
-        """
-        Convert tree into list of lineages, recursively.
-        """
-        if not lineage_so_far or lineage_so_far == (('root', 'root')):
-            for (rank, name), v in tree.items():
-                count_d[((rank, name),)] += tree_counts[(rank, name)]
-                lineage_tup = ( (rank, name,), )
-                traverse_and_count(v, count_d, lineage_tup)
-            return
-
-        for (rank, name), v in tree.items():
-            sub_lineage = list(lineage_so_far)
-            sub_lineage.append((rank, name))
-            sub_lineage = tuple(sub_lineage)
-            count_d[sub_lineage] += tree_counts[(rank, name)]
-            traverse_and_count(v, count_d, sub_lineage)
-
-    lineage_counts = defaultdict(int)
-    traverse_and_count(tree, lineage_counts)
-    debug(pprint.pformat(lineage_counts))
-    return lineage_counts
+    return aggregated_counts
 
 
 def summarize_main(args):
@@ -204,3 +166,8 @@ def summarize_main(args):
     for (lineage_tup, count) in lineage_counts.items():
         lineage = ';'.join([ name for (rank, name) in lineage_tup ])
         print(count, lineage)
+
+
+
+if __name__ == '__main__':
+    sys.exit(summarize_main(sys.argv[1:]))
