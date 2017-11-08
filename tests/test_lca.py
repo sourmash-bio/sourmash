@@ -429,7 +429,7 @@ def test_single_summarize():
         print(err)
 
         assert 'loaded signatures from 1 files total.' in err
-        assert '200 Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
 
 
 def test_multi_summarize_with_unassigned():
@@ -464,10 +464,15 @@ def test_multi_summarize_with_unassigned():
         assert 'loaded signatures from 2 files total.' in err
 
         out_lines = out.splitlines()
-        assert '1231 Eukaryota;Chlorophyta' in out_lines
-        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus' in out_lines
-        assert '1231 Eukaryota' in out_lines
-        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned' in out_lines
-        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned' in out_lines
-        assert '1231 Eukaryota;Chlorophyta;Prasinophyceae' in out_lines
-        # WRONG: assert '200 Eukaryota;Chlorophyta;Prasinophyceae;unassigned;Alteromonadaceae' in out_lines
+        out_lines.remove('14.0%   200   Bacteria')
+        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
+        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
+        out_lines.remove('86.0%  1231   Eukaryota')
+        out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
+        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
+        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
+        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
+        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
+        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
+        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
+        assert not out_lines
