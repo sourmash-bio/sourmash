@@ -231,6 +231,55 @@ def test_single_classify_traverse():
         assert 'loaded 1 databases for LCA use.' in err
 
 
+def test_multi_query_classify_traverse():
+    with utils.TempDirectory() as location:
+        # both.lca.json is built from both dir and dir2
+        db1 = utils.get_test_data('lca/both.lca.json')
+        dir1 = utils.get_test_data('lca/dir1')
+        dir2 = utils.get_test_data('lca/dir2')
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', dir1, dir2,
+               '--traverse-directory']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+            fp_lines = fp.readlines()
+            out_lines = out.splitlines()
+
+            assert len(fp_lines) == len(out_lines)
+            for line1, line2 in zip(fp_lines, out_lines):
+                assert line1.strip() == line2.strip(), (line1, line2)
+
+
+def test_multi_db_multi_query_classify_traverse():
+    with utils.TempDirectory() as location:
+        # two halves of both.lca.json, see above test.
+        db1 = utils.get_test_data('lca/dir1.lca.json')
+        db2 = utils.get_test_data('lca/dir2.lca.json')
+        dir1 = utils.get_test_data('lca/dir1')
+        dir2 = utils.get_test_data('lca/dir2')
+
+        cmd = ['lca', 'classify', '--db', db1, db2, '--query', dir1, dir2,
+               '--traverse-directory']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+            fp_lines = fp.readlines()
+            out_lines = out.splitlines()
+
+            assert len(fp_lines) == len(out_lines)
+            for line1, line2 in zip(fp_lines, out_lines):
+                assert line1.strip() == line2.strip(), (line1, line2)
+
+
 def test_unassigned_internal_index_and_classify():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-4.csv')
