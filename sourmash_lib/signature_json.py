@@ -159,6 +159,8 @@ def load_signature_json(iterable,
     if d.get('license', 'CC0') != 'CC0':
         raise Exception("sourmash only supports CC0-licensed signatures.")
 
+    sig.d['license'] = d.get('license', 'CC0')
+
     return d
 
 
