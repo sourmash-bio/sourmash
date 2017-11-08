@@ -217,7 +217,7 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
+def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp:
@@ -253,7 +253,7 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
         records.append(record)
 
-    s = json.dumps(records, indent=indent, sort_keys=sort_keys)
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
         try:
             fp.write(s)
