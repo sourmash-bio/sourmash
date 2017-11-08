@@ -28,6 +28,7 @@ class SourmashSignature(object):
             self.d['filename'] = filename
 
         self.minhash = minhash
+        self.d['license'] = 'CC0'
 
     def __hash__(self):
         return hash(self.md5sum())
@@ -173,7 +174,7 @@ def _guess_open(filename):
 
 
 def load_signatures(data, ksize=None, select_moltype=None,
-                    ignore_md5sum=False):
+                    ignore_md5sum=False, do_raise=False):
     """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
@@ -206,6 +207,8 @@ def load_signatures(data, ksize=None, select_moltype=None,
     except Exception as e:
         error("Error in parsing signature; quitting.")
         error("Exception: {}", str(e))
+        if do_raise:
+            raise
     finally:
         if is_fp:
             data.close()

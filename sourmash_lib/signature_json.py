@@ -155,6 +155,12 @@ def load_signature_json(iterable,
         if 'filename' in d:
             sig.d['filename'] = d['filename']
 
+    # hardcode in support only for CC0 going forward
+    if d.get('license', 'CC0') != 'CC0':
+        raise Exception("sourmash only supports CC0-licensed signatures.")
+
+    sig.d['license'] = d.get('license', 'CC0')
+
     return d
 
 
@@ -249,6 +255,7 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
         record['version'] = SIGNATURE_VERSION
         record['class'] = 'sourmash_signature'
         record['hash_function'] = '0.murmur64'
+        record['license'] = 'CC0'
         record['email'] = ''
 
         records.append(record)

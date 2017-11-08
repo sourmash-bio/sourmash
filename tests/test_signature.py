@@ -63,6 +63,7 @@ def test_compare_ne2_reverse(track_abundance):
     assert sig2 != sig1
     assert sig1 != sig2
 
+
 def test_hashable(track_abundance):
     # check: can we use signatures as keys in dictionaries and sets?
     e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
