@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import random
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
@@ -274,6 +275,10 @@ def test_multi_db_multi_query_classify_traverse():
         with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
             fp_lines = fp.readlines()
             out_lines = out.splitlines()
+            random.shuffle(out_lines)
+
+            fp_lines.sort()
+            out_lines.sort()
 
             assert len(fp_lines) == len(out_lines)
             for line1, line2 in zip(fp_lines, out_lines):
