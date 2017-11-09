@@ -13,7 +13,7 @@ import sourmash_lib
 from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 
 
 def index(args):
@@ -51,7 +51,7 @@ def index(args):
     r = csv.reader(fp)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(args.start_column - 2)
-    row_headers += lca_utils.taxlist
+    row_headers += list(lca_utils.taxlist())
 
     # first check that headers are interpretable.
     notify('examining spreadsheet headers...')
@@ -87,11 +87,10 @@ def index(args):
 
             # clean lineage of null names, replace with 'unassigned'
             lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+            lineage = [ LineagePair(a, b) for (a, b) in lineage ]
 
             # remove end nulls
-            if not lineage:
-                print(lineage)
-            while lineage and lineage[-1][1] == 'unassigned':
+            while lineage and lineage[-1].name == 'unassigned':
                 lineage = lineage[:-1]
 
             # store lineage tuple
@@ -106,14 +105,14 @@ def index(args):
 
     assignments_idx = {}
     lineage_to_idx = {}
-    for (ident, lineage_tuple) in assignments.items():
-        idx = lineage_to_idx.get(lineage_tuple)
+    for (ident, lineage) in assignments.items():
+        idx = lineage_to_idx.get(lineage)
         if idx is None:
             idx = next_lineage_index
             next_lineage_index += 1
 
-            lineage_dict[idx] = lineage_tuple
-            lineage_to_idx[lineage_tuple] = idx
+            lineage_dict[idx] = lineage
+            lineage_to_idx[lineage] = idx
 
         assignments_idx[ident] = idx
 

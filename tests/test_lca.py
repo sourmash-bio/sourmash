@@ -14,54 +14,56 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 
-from sourmash_lib.lca.lca_utils import (build_tree, find_lca)
+from sourmash_lib.lca.lca_utils import (build_tree, find_lca, LineagePair)
 
 ## lca_utils tests
 
 def test_build_tree():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2') : {}} }
+    tree = build_tree([[LineagePair('rank1', 'name1'),
+                        LineagePair('rank2', 'name2')]])
+    assert tree == { LineagePair('rank1', 'name1'):
+                         { LineagePair('rank2', 'name2') : {}} }
 
 
 def test_build_tree_2():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                       [('rank1', 'name1'), ('rank2', 'name2b')],
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                       [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
                       ])
 
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
-                                           ('rank2', 'name2b') : {}} }
+    assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
+                                           LineagePair('rank2', 'name2b') : {}} }
 
 
 def test_build_tree_3():                  # empty 'rank2' name
-    tree = build_tree([[('rank1', 'name1'), ('rank2', '')]])
-    assert tree == { ('rank1', 'name1'): {} }
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', '')]])
+    assert tree == { LineagePair('rank1', 'name1'): {} }
 
 
 def test_build_tree_4():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
                       ])
 
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2b')],
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
                       ], tree)
 
-    assert tree == { ('rank1', 'name1'): { ('rank2', 'name2a') : {},
-                                           ('rank2', 'name2b') : {}} }
+    assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
+                                           LineagePair('rank2', 'name2b') : {}} }
 
 
 def test_find_lca():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2')]])
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2')]])
     lca = find_lca(tree)
 
-    assert lca == ((('rank1', 'name1'), ('rank2', 'name2'),), 0)
+    assert lca == ((LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2'),), 0)
 
 
 def test_find_lca_2():
-    tree = build_tree([[('rank1', 'name1'), ('rank2', 'name2a')],
-                       [('rank1', 'name1'), ('rank2', 'name2b')],
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                       [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
                       ])
     lca = find_lca(tree)
 
-    assert lca == ((('rank1', 'name1'),), 2)
+    assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
 ## command line tests

@@ -19,7 +19,7 @@ import sourmash_lib
 from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -183,7 +183,7 @@ def classify(args):
         csvfp = csv.writer(args.output)
     else:
         notify("outputting classifications to stdout")
-    csvfp.writerow(['ID','status'] + lca_utils.taxlist)
+    csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
 
     # for each query, gather all the matches across databases
     total_count = 0
@@ -208,7 +208,7 @@ def classify(args):
             # output each classification to the spreadsheet
             row = [query_sig.name(), status]
             debug(lineage)
-            for taxrank, (rank, name) in zip_longest(lca_utils.taxlist,
+            for taxrank, (rank, name) in zip_longest(lca_utils.taxlist(),
                                                      lineage,
                                                      fillvalue=(None, '')):
                 if rank is not None and name:

@@ -94,16 +94,16 @@ def rankinfo_main(args):
     counts = make_lca_counts(dblist)
 
     counts_by_rank = defaultdict(int)
-    for lineage_tup, count in counts.items():
-        if lineage_tup:
-            rank = lineage_tup[-1][0]
-            counts_by_rank[rank] += count
+    for lineage, count in counts.items():
+        if lineage:
+            lineage_tup = lineage[-1]
+            counts_by_rank[lineage_tup.rank] += count
 
 #        p = '{:.1f}%'.format(p)
 
 #        print('{:5} {:>5}   {}'.format(p, count, lineage))
 
-    for rank in lca_utils.taxlist:
+    for rank in lca_utils.taxlist():
         count = counts_by_rank.get(rank, 0)
         print('{},{}'.format(rank, count))
 

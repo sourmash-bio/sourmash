@@ -1,10 +1,20 @@
+"""
+Utility functions for lowest-common-ancestor analysis tools.
+"""
 from __future__ import print_function
 import json
 import gzip
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
-taxlist = ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
-           'species']
+LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+
+def taxlist(include_strain=False):
+    for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
+              'species']:
+        yield k
+    if include_strain:
+        yield 'strain'
+
 
 # replace blank/na/null with 'unassigned'
 filter_null = lambda x: 'unassigned' if x.strip() in \
@@ -24,7 +34,7 @@ def debug(*args):
 
 def build_tree(assignments, initial=None):
     """
-    Builds a tree of dictionaries from lists of (rank, name) tuples
+    Builds a tree of dictionaries from lists of LineagePair objects
     in 'assignments'.  This tree can then be used to find lowest common
     ancestor agreements/confusion.
     """
@@ -36,10 +46,10 @@ def build_tree(assignments, initial=None):
     for assignment in assignments:
         node = tree
 
-        for rank, name in assignment:
-            if name:
-                child = node.get((rank, name), {})
-                node[(rank, name)] = child
+        for lineage_tup in assignment:
+            if lineage_tup.name:
+                child = node.get(lineage_tup, {})
+                node[lineage_tup] = child
 
                 # shift -> down in tree
                 node = child
@@ -50,19 +60,18 @@ def build_tree(assignments, initial=None):
 def find_lca(tree):
     """
     Given a tree produced by 'find_tree', find the first node with multiple
-    children, OR the only leaf in the tree.  Return ((rank, name), reason),
+    children, OR the only leaf in the tree.  Return (lineage_tup, reason),
     where 'reason' is the number of children of the returned node, i.e.e
     0 if it's a leaf and > 1 if it's an internal node.
     """
 
     node = tree
-    cur = ('root', 'root')
     lineage = []
     while 1:
         if len(node) == 1:                # descend to only child; track path
-            (name, rank) = next(iter(node.keys()))
-            lineage.append((name, rank))
-            node = node[(name, rank)]
+            lineage_tup = next(iter(node.keys()))
+            lineage.append(lineage_tup)
+            node = node[lineage_tup]
         elif len(node) == 0:              # at leaf; end
             return tuple(lineage), 0
         else:                             # len(node) > 1 => confusion!!
@@ -107,9 +116,9 @@ class LCA_Database(object):
             lineage_dict = {}
             for k, v in lineage_dict_2.items():
                 vv = []
-                for rank in taxlist:
+                for rank in taxlist():
                     name = v.get(rank, '')
-                    vv.append((rank, name))
+                    vv.append(LineagePair(rank, name))
 
                 lineage_dict[int(k)] = tuple(vv)
 
@@ -142,8 +151,14 @@ class LCA_Database(object):
             save_d['scaled'] = self.scaled
 
             # convert lineage internals from tuples to dictionaries
-            save_d['lineages'] = OrderedDict([ (k, OrderedDict(v)) \
-                                     for k, v in self.lineage_dict.items() ])
+            d = OrderedDict()
+            for k, v in self.lineage_dict.items():
+                new_v = OrderedDict()
+                for vv in v:
+                    new_v[vv.rank] = vv.name
+                d[k] = new_v
+
+            save_d['lineages'] = d
 
             # convert values from sets to lists, so that JSON knows how to save
             save_d['hashval_assignments'] = \
