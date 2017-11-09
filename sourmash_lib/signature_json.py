@@ -155,6 +155,12 @@ def load_signature_json(iterable,
         if 'filename' in d:
             sig.d['filename'] = d['filename']
 
+    # hardcode in support only for CC0 going forward
+    if d.get('license', 'CC0') != 'CC0':
+        raise Exception("sourmash only supports CC0-licensed signatures.")
+
+    sig.d['license'] = d.get('license', 'CC0')
+
     return d
 
 
@@ -217,7 +223,7 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
+def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp:
@@ -249,11 +255,12 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         record['version'] = SIGNATURE_VERSION
         record['class'] = 'sourmash_signature'
         record['hash_function'] = '0.murmur64'
+        record['license'] = 'CC0'
         record['email'] = ''
 
         records.append(record)
 
-    s = json.dumps(records, indent=indent, sort_keys=sort_keys)
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
         try:
             fp.write(s)

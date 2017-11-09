@@ -2658,3 +2658,43 @@ def test_storage_convert_fsstorage_newpath():
         assert all(n1[1].name == n2[1].name
                    for (n1, n2) in zip(sorted(original.nodes.items()),
                                        sorted(identity.nodes.items())))
+
+
+def test_license_cc0():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name().endswith('short.fa')
+
+        assert sig.d['license'] == 'CC0'
+
+
+def test_license_non_cc0():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            testdata1, '--license', 'GPL'],
+                                           in_directory=location, fail_ok=True)
+
+        assert status != 0
+        print(out)
+        print(err)
+        assert 'sourmash only supports CC0' in err
+
+
+def test_license_load_non_cc0():
+    with utils.TempDirectory() as location:
+        sigfile = utils.get_test_data('bad-license.sig')
+
+        try:
+            sig = next(signature.load_signatures(sigfile, do_raise=True))
+        except Exception as e:
+            assert "sourmash only supports CC0-licensed signatures" in str(e)

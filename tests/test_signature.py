@@ -1,10 +1,13 @@
 from __future__ import print_function, unicode_literals
 
+import os
+
 import pytest
 
 import sourmash_lib
 from sourmash_lib.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
+from . import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):
@@ -59,6 +62,7 @@ def test_compare_ne2_reverse(track_abundance):
 
     assert sig2 != sig1
     assert sig1 != sig2
+
 
 def test_hashable(track_abundance):
     # check: can we use signatures as keys in dictionaries and sets?
@@ -262,3 +266,31 @@ def test_load_one_fail_multisig(track_abundance):
 
     with pytest.raises(ValueError):
         y = load_one_signature(x)
+
+
+def test_save_minified(track_abundance):
+    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    sig1 = SourmashSignature(e1, name="foo")
+
+    e2 = sourmash_lib.MinHash(n=1, ksize=25, track_abundance=track_abundance)
+    sig2 = SourmashSignature(e2, name="bar baz")
+
+    x = save_signatures([sig1, sig2])
+    assert '\n' not in x
+    assert len(x.split('\n')) == 1
+
+    y = list(load_signatures(x))
+    assert len(y) == 2
+    assert any(sig.name() == 'foo' for sig in y)
+    assert any(sig.name() == 'bar baz' for sig in y)
+
+
+def test_load_minified(track_abundance):
+    sigfile = utils.get_test_data('genome-s10+s11.sig')
+    sigs = load_signatures(sigfile)
+
+    minified = save_signatures(sigs)
+    with open(sigfile, 'r') as f:
+        orig_file = f.read()
+    assert len(minified) < len(orig_file)
+    assert '\n' not in minified
