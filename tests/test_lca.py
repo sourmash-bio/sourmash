@@ -476,3 +476,50 @@ def test_multi_summarize_with_unassigned():
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
         assert not out_lines
+
+
+def test_rankinfo_on_multi():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/dir1.lca.json')
+        db2 = utils.get_test_data('lca/dir2.lca.json')
+
+        cmd = ['lca', 'rankinfo', db1, db2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        lines = out.splitlines()
+        lines.remove('superkingdom,0')
+        lines.remove('phylum,464')
+        lines.remove('class,533')
+        lines.remove('order,1050')
+        lines.remove('family,695')
+        lines.remove('genus,681')
+        lines.remove('species,200')
+
+        assert not lines
+
+
+def test_rankinfo_on_single():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/both.lca.json')
+
+        cmd = ['lca', 'rankinfo', db1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        lines = out.splitlines()
+        lines.remove('superkingdom,0')
+        lines.remove('phylum,464')
+        lines.remove('class,533')
+        lines.remove('order,1050')
+        lines.remove('family,695')
+        lines.remove('genus,681')
+        lines.remove('species,200')
+
+        assert not lines
