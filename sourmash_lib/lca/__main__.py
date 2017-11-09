@@ -22,9 +22,10 @@ def main(sysv_args):
 
 Commands can be:
 
-index <taxonomy.csv> <output_db name> <signature [...]>
-classify --db <db_name [...]> --query <signature [...]>
-summarize --db <db_name [...]> --query <signature [...]>
+index <taxonomy.csv> <output_db name> <signature [...]>  - create LCA database
+classify --db <db_name [...]> --query <signature [...]>  - classify genomes
+summarize --db <db_name [...]> --query <signature [...]> - summarize mixture
+rankinfo <db_name [...]>                                 - database rank info
 
 Use '-h' to get subcommand-specific help, e.g.
 
