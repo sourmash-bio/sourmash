@@ -5,15 +5,16 @@ Command-line entry point for 'python -m sourmash_lib.lca'
 import sys
 import argparse
 
-from . import classify, index, summarize_main
-from ..logging import set_quiet, error
+from . import classify, index, summarize_main, rankinfo_main
+from sourmash_lib.logging import set_quiet, error
 
 def main(sysv_args):
     set_quiet(False)
 
     commands = {'classify': classify,
                 'index': index,
-                'summarize': summarize_main}
+                'summarize': summarize_main,
+                'rankinfo': rankinfo_main}
 
     parser = argparse.ArgumentParser(
         description='lowest-common ancestor (LCA) utilities',
