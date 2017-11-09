@@ -211,6 +211,23 @@ def test_single_classify():
         assert 'loaded 1 databases for LCA use.' in err
 
 
+def test_single_classify_empty():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/both.lca.json')
+        input_sig = utils.get_test_data('GCF_000005845.2_ASM584v2_genomic.fna.gz.sig')
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases for LCA use.' in err
+
+
 def test_single_classify_traverse():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')

@@ -207,10 +207,11 @@ def classify(args):
 
             # output each classification to the spreadsheet
             row = [query_sig.name(), status]
+            debug(lineage)
             for taxrank, (rank, name) in zip_longest(lca_utils.taxlist,
                                                      lineage,
                                                      fillvalue=(None, '')):
-                if rank is not None:
+                if rank is not None and name:
                     assert taxrank == rank, (taxrank, rank)
                 row.append(name)
 
