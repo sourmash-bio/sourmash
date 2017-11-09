@@ -2571,7 +2571,6 @@ def test_watch_coverage():
 
 def test_storage_convert():
     import pytest
-    pytest.importorskip('ipfsapi')
 
     with utils.TempDirectory() as location:
         testdata = utils.get_test_data('v2.sbt.json')
@@ -2585,8 +2584,8 @@ def test_storage_convert():
         args = ['storage', 'convert', '-b', 'ipfs', testsbt]
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
-        if not status:
-            raise py.test.skip('ipfs probably not running')
+        if not status and "ipfs.exceptions.ConnectionError" in err:
+            raise pytest.xfail('ipfs probably not running')
 
         ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
@@ -2609,9 +2608,6 @@ def test_storage_convert():
                                        sorted(tar.nodes.items())))
 
 def test_storage_convert_identity():
-    import pytest
-    pytest.importorskip('ipfsapi')
-
     with utils.TempDirectory() as location:
         testdata = utils.get_test_data('v2.sbt.json')
         shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
@@ -2634,9 +2630,6 @@ def test_storage_convert_identity():
 
 
 def test_storage_convert_fsstorage_newpath():
-    import pytest
-    pytest.importorskip('ipfsapi')
-
     with utils.TempDirectory() as location:
         testdata = utils.get_test_data('v2.sbt.json')
         shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
