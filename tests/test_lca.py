@@ -457,6 +457,26 @@ def test_single_summarize():
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
 
 
+def test_single_summarize_scaled():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+               '--scaled', '100000']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
+
+
 def test_multi_summarize_with_unassigned():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-6.csv')
