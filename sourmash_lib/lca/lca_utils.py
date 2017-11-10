@@ -165,3 +165,16 @@ class LCA_Database(object):
                dict((k, list(v)) for (k, v) in self.hashval_to_lineage_id.items())
             save_d['signatures_to_lineage'] = self.signatures_to_lineage
             json.dump(save_d, fp)
+
+    def get_lineage_assignments(self, hashval):
+        """
+        Get a list of lineages for this hashval.
+        """
+        x = []
+
+        lineage_id_list = self.hashval_to_lineage_id.get(hashval, [])
+        for lineage_id in lineage_id_list:
+            lineage = self.lineage_dict[lineage_id]
+            x.append(lineage)
+
+        return x

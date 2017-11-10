@@ -32,23 +32,19 @@ def summarize(hashvals, dblist, threshold):
     """
 
     # gather assignments from across all the databases
-    these_assignments = defaultdict(list)
-    n_custom = 0
+    assignments = defaultdict(list)
     for hashval in hashvals:
         for lca_db in dblist:
-            assignments = lca_db.hashval_to_lineage_id.get(hashval, [])
-            for lineage_id in assignments:
-                assignment = lca_db.lineage_dict[lineage_id]
-                these_assignments[hashval].append(assignment)
-                n_custom += 1
+            lineages = lca_db.get_lineage_assignments(hashval)
+            assignments[hashval].extend(lineages)
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
-    for hashval in these_assignments:
+    for hashval in assignments:
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
-        tuple_info = these_assignments[hashval]
+        tuple_info = assignments[hashval]
         tree = lca_utils.build_tree(tuple_info)
 
         # now find either a leaf or the first node with multiple

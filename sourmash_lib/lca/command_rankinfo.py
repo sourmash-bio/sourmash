@@ -22,16 +22,15 @@ def make_lca_counts(dblist):
     """
 
     # gather all hashvalue assignments from across all the databases
-    these_assignments = defaultdict(set)
-    n_custom = 0
+    assignments = defaultdict(set)
     for lca_db in dblist:
         for hashval, lid_list in lca_db.hashval_to_lineage_id.items():
             lineages = [lca_db.lineage_dict[lid] for lid in lid_list]
-            these_assignments[hashval].update(lineages)
+            assignments[hashval].update(lineages)
 
     # now convert to trees -> do LCA & counts
     counts = defaultdict(int)
-    for hashval, lineages in these_assignments.items():
+    for hashval, lineages in assignments.items():
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
