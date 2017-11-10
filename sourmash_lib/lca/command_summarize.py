@@ -83,6 +83,7 @@ def summarize_main(args):
                         help='load all signatures underneath directories.')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='CSV output')
+    p.add_argument('--scaled', type=float)
     p.add_argument('-d', '--debug', action='store_true')
     args = p.parse_args(args)
 
@@ -97,12 +98,15 @@ def summarize_main(args):
     if args.debug:
         set_debug(args.debug)
 
+    if args.scaled:
+        args.scaled = int(args.scaled)
+
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
 
     # load all the databases
-    dblist, ksize, scaled = lca_utils.load_databases(args.db)
+    dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
     notify('ksize={} scaled={}', ksize, scaled)
 
     # find all the queries

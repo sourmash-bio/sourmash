@@ -12,7 +12,7 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 import pprint
 
-import sourmash_lib
+import sourmash_lib._minhash
 from sourmash_lib.logging import notify
 
 # type to store an element in a taxonomic lineage
@@ -202,7 +202,7 @@ class LCA_Database(object):
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
-        max_hash = sourmash_lib.get_max_hash_for_scaled(scaled)
+        max_hash = sourmash_lib._minhash.get_max_hash_for_scaled(scaled)
         new_hashvals = {}
         for k, v in self.hashval_to_lineage_id.items():
             if k < max_hash:
@@ -227,7 +227,7 @@ class LCA_Database(object):
         return x
 
 
-def load_databases(filenames):
+def load_databases(filenames, scaled=None):
     ksize_vals = set()
     scaled_vals = set()
     dblist = []
@@ -244,9 +244,10 @@ def load_databases(filenames):
         ksize_vals.add(lca_db.ksize)
         if len(ksize_vals) > 1:
             raise Exception('multiple ksizes, quitting')
+
+        if scaled and scaled > lca_db.scaled:
+            lca_db.downsample_scaled(scaled)
         scaled_vals.add(lca_db.scaled)
-        if len(scaled_vals) > 1:
-            raise Exception('multiple scaled vals, quitting')
 
         dblist.append(lca_db)
 

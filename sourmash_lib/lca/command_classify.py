@@ -104,6 +104,7 @@ def classify(args):
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='output CSV to this file instead of stdout')
+    p.add_argument('--scaled', type=float)
     p.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath directories.')
     p.add_argument('-d', '--debug', action='store_true')
@@ -120,37 +121,12 @@ def classify(args):
     if args.debug:
         set_debug(args.debug)
 
-    ksize_vals = set()
-    scaled_vals = set()
-    dblist = []
-
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
 
     # load all the databases
-    for db_name in args.db:
-        notify(u'\r\033[K', end=u'', file=sys.stderr)
-        notify('... loading database {}'.format(db_name), end='\r',
-              file=sys.stderr)
-
-        lca_db = lca_utils.LCA_Database()
-        lca_db.load(db_name)
-
-        ksize_vals.add(lca_db.ksize)
-        if len(ksize_vals) > 1:
-            raise Exception('multiple ksizes, quitting')
-        scaled_vals.add(lca_db.scaled)
-        if len(scaled_vals) > 1:
-            raise Exception('multiple scaled vals, quitting')
-
-        dblist.append(lca_db)
-
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} databases for LCA use.', len(dblist))
-
-    ksize = ksize_vals.pop()
-    scaled = scaled_vals.pop()
+    dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
     notify('ksize={} scaled={}', ksize, scaled)
 
     # find all the queries

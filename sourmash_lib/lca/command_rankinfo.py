@@ -49,6 +49,7 @@ def rankinfo_main(args):
     """
     p = argparse.ArgumentParser()
     p.add_argument('db', nargs='+')
+    p.add_argument('--scaled', type=float)
     p.add_argument('-d', '--debug', action='store_true')
     args = p.parse_args(args)
 
@@ -59,8 +60,11 @@ def rankinfo_main(args):
     if args.debug:
         set_debug(args.debug)
 
+    if args.scaled:
+        args.scaled = int(args.scaled)
+
     # load all the databases
-    dblist, ksize, scaled = lca_utils.load_databases(args.db)
+    dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
 
     # count all the LCAs across these databases
     counts = make_lca_counts(dblist)

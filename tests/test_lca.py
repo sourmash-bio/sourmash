@@ -167,7 +167,7 @@ def test_basic_index_and_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_index_traverse():
@@ -209,7 +209,7 @@ def test_single_classify():
 
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_single_classify_empty():
@@ -226,7 +226,7 @@ def test_single_classify_empty():
 
         assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_single_classify_traverse():
@@ -247,7 +247,7 @@ def test_single_classify_traverse():
 
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_multi_query_classify_traverse():
@@ -335,7 +335,7 @@ def test_unassigned_internal_index_and_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,unassigned,Alteromonadaceae,unassigned,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_unassigned_last_index_and_classify():
@@ -368,7 +368,7 @@ def test_unassigned_last_index_and_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_index_and_classify_internal_unassigned_multi():
@@ -403,7 +403,7 @@ def test_index_and_classify_internal_unassigned_multi():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
         # classify input_sig2
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
@@ -416,7 +416,7 @@ def test_index_and_classify_internal_unassigned_multi():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases for LCA use.' in err
+        assert 'loaded 1 databases' in err
 
 
 def test_multi_db_classify():
@@ -435,7 +435,7 @@ def test_multi_db_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 2 databases for LCA use.' in err
+        assert 'loaded 2 databases' in err
 
 
 def test_single_summarize():
