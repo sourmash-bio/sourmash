@@ -453,7 +453,7 @@ def test_single_summarize():
         print(out)
         print(err)
 
-        assert 'loaded signatures from 1 files total.' in err
+        assert 'loaded 1 signatures from 1 files total.' in err
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
 
 
@@ -486,7 +486,7 @@ def test_multi_summarize_with_unassigned():
         print(out)
         print(err)
 
-        assert 'loaded signatures from 2 files total.' in err
+        assert 'loaded 2 signatures from 2 files total.' in err
 
         out_lines = out.splitlines()
         out_lines.remove('14.0%   200   Bacteria')
@@ -516,13 +516,13 @@ def test_rankinfo_on_multi():
         print(err)
 
         lines = out.splitlines()
-        lines.remove('superkingdom,0')
-        lines.remove('phylum,464')
-        lines.remove('class,533')
-        lines.remove('order,1050')
-        lines.remove('family,695')
-        lines.remove('genus,681')
-        lines.remove('species,200')
+        lines.remove('superkingdom: 0 (0.0%)')
+        lines.remove('phylum: 464 (12.8%)')
+        lines.remove('class: 533 (14.7%)')
+        lines.remove('order: 1050 (29.0%)')
+        lines.remove('family: 695 (19.2%)')
+        lines.remove('genus: 681 (18.8%)')
+        lines.remove('species: 200 (5.5%)')
 
         assert not lines
 
@@ -539,12 +539,12 @@ def test_rankinfo_on_single():
         print(err)
 
         lines = out.splitlines()
-        lines.remove('superkingdom,0')
-        lines.remove('phylum,464')
-        lines.remove('class,533')
-        lines.remove('order,1050')
-        lines.remove('family,695')
-        lines.remove('genus,681')
-        lines.remove('species,200')
+        lines.remove('superkingdom: 0 (0.0%)')
+        lines.remove('phylum: 464 (12.8%)')
+        lines.remove('class: 533 (14.7%)')
+        lines.remove('order: 1050 (29.0%)')
+        lines.remove('family: 695 (19.2%)')
+        lines.remove('genus: 681 (18.8%)')
+        lines.remove('species: 200 (5.5%)')
 
         assert not lines

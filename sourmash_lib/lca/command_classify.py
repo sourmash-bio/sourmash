@@ -7,19 +7,12 @@ import sys
 import argparse
 import csv
 from collections import defaultdict, Counter
-import itertools
-import pprint
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
-import gzip
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
+from sourmash_lib.lca.lca_utils import debug, set_debug
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -31,9 +24,8 @@ def classify_signature(query_sig, dblist, threshold):
     Insist on at least 'threshold' counts of a given lineage before taking
     it seriously.
 
-    Return (lineage, status) where 'lineage' is a lineage tuple
-    [(rank, name), ...] and 'status' is either 'nomatch', 'found',
-    or 'disagree'.
+    Return (lineage, status) where 'lineage' is a tuple of LineagePairs
+    and 'status' is either 'nomatch', 'found', or 'disagree'.
 
     This function proceeds in two stages:
 
@@ -46,18 +38,18 @@ def classify_signature(query_sig, dblist, threshold):
 
       """
     # gather assignments from across all the databases
-    assignments = defaultdict(list)
+    assignments = defaultdict(set)
     for hashval in query_sig.minhash.get_mins():
         for lca_db in dblist:
             lineage = lca_db.get_lineage_assignments(hashval)
-            assignments[hashval].extend(lineage)
+            assignments[hashval].update(lineage)
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
     for hashval in assignments:
 
-        # for each list of tuple_info [(rank, name), ...] build
-        # a tree that lets us discover lowest-common-ancestor.
+        # for each collection of lineages, build a tree that lets
+        # us discover lowest-common-ancestor.
         tuple_info = assignments[hashval]
         tree = lca_utils.build_tree(tuple_info)
 
@@ -66,14 +58,13 @@ def classify_signature(query_sig, dblist, threshold):
         lca, reason = lca_utils.find_lca(tree)
         counts[lca] += 1
 
-    # ok, we now have the LCAs for each hashval, and their number
-    # of counts. Now sum across "significant" LCAs - those above
-    # threshold - and build a tree.
+    # ok, we now have the LCAs for each hashval, and their number of
+    # counts. Now build a tree across "significant" LCAs - those above
+    # threshold.
 
     tree = {}
-    tree_counts = defaultdict(int)
 
-    debug(pprint.pformat(counts.most_common()))
+    debug(counts.most_common())
 
     n = 0
     for lca, count in counts.most_common():
@@ -85,21 +76,18 @@ def classify_signature(query_sig, dblist, threshold):
         # update tree with this set of assignments
         lca_utils.build_tree([lca], tree)
 
-    if n > 1:
-        debug('XXX', n)
-
     status = 'nomatch'
     if not tree:
-        return [('', '')], status
+        return [], status
 
     # now find lowest-common-ancestor of the resulting tree.
     lca, reason = lca_utils.find_lca(tree)
     if reason == 0:               # leaf node
-        status = 'found'
         debug('END', lca)
+        status = 'found'
     else:                         # internal node => disagreement
-        status = 'disagree'
         debug('MULTI', lca)
+        status = 'disagree'
 
     debug('lineage is:', lca)
 
@@ -108,7 +96,7 @@ def classify_signature(query_sig, dblist, threshold):
 
 def classify(args):
     """
-    main single-genome classification function: 
+    main single-genome classification function.
     """
     p = argparse.ArgumentParser()
     p.add_argument('--db', nargs='+', action='append')
@@ -190,7 +178,8 @@ def classify(args):
         for query_sig in sourmash_lib.load_signatures(query_filename,
                                                       ksize=ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... classifying {} (file {} of {})', query_sig.name(), n, total_n, end='\r')
+            notify('... classifying {} (file {} of {})', query_sig.name(),
+                   n, total_n, end='\r')
             debug('classifying', query_sig.name())
             total_count += 1
 
@@ -200,16 +189,11 @@ def classify(args):
             # do the classification
             lineage, status = classify_signature(query_sig, dblist,
                                                  args.threshold)
+            debug(lineage)
 
             # output each classification to the spreadsheet
             row = [query_sig.name(), status]
-            debug(lineage)
-            for taxrank, (rank, name) in zip_longest(lca_utils.taxlist(),
-                                                     lineage,
-                                                     fillvalue=(None, '')):
-                if rank is not None and name:
-                    assert taxrank == rank, (taxrank, rank)
-                row.append(name)
+            row += lca_utils.zip_lineage(lineage)
 
             # when outputting to stdout, make output intelligible
             if not args.output:

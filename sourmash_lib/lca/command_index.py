@@ -6,8 +6,7 @@ from __future__ import print_function
 import sys
 import argparse
 import csv
-from collections import defaultdict, OrderedDict
-import json
+from collections import defaultdict
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
@@ -43,8 +42,7 @@ def index(args):
     if args.debug:
         set_debug(args.debug)
 
-    scaled = int(args.scaled)
-    ksize = int(args.ksize)
+    args.scaled = int(args.scaled)
 
     # parse spreadsheet!
     fp = open(args.csv, 'rt')
@@ -185,8 +183,8 @@ def index(args):
     db = lca_utils.LCA_Database()
     db.lineage_dict = lineage_dict
     db.hashval_to_lineage_id = hashval_to_lineage
-    db.ksize = args.ksize
-    db.scaled = args.scaled
+    db.ksize = int(args.ksize)
+    db.scaled = int(args.scaled)
     db.signatures_to_lineage = md5_to_lineage
 
     db.save(args.lca_db_out)

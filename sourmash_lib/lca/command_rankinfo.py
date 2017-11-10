@@ -5,20 +5,18 @@ Summarize rank-specific information from LCAs in one or more databases.
 from __future__ import print_function
 import sys
 import argparse
-import csv
-from collections import defaultdict, OrderedDict, Counter
-import json
-import pprint
+from collections import defaultdict
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
+from sourmash_lib.logging import error
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
 
 def make_lca_counts(dblist):
     """
+    Collect counts of all the LCAs in the list of databases.
+
+    CTB this could usefully be converted to a generator function.
     """
 
     # gather all hashvalue assignments from across all the databases
@@ -34,7 +32,7 @@ def make_lca_counts(dblist):
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
-        debug(pprint.pformat(lineages))
+        debug(lineages)
         tree = lca_utils.build_tree(lineages)
 
         # now find either a leaf or the first node with multiple
@@ -61,50 +59,24 @@ def rankinfo_main(args):
     if args.debug:
         set_debug(args.debug)
 
-    ksize_vals = set()
-    scaled_vals = set()
-    dblist = []
-
     # load all the databases
-    for db_name in args.db:
-        notify(u'\r\033[K', end=u'', file=sys.stderr)
-        notify('... loading database {}'.format(db_name), end='\r',
-              file=sys.stderr)
+    dblist, ksize, scaled = lca_utils.load_databases(args.db)
 
-        lca_db = lca_utils.LCA_Database()
-        lca_db.load(db_name)
-
-        ksize_vals.add(lca_db.ksize)
-        if len(ksize_vals) > 1:
-            raise Exception('multiple ksizes, quitting')
-        scaled_vals.add(lca_db.scaled)
-        if len(scaled_vals) > 1:
-            raise Exception('multiple scaled vals, quitting')
-
-        dblist.append(lca_db)
-
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} databases.', len(dblist))
-
-    ksize = ksize_vals.pop()
-    scaled = scaled_vals.pop()
-    notify('ksize={} scaled={}', ksize, scaled)
-
+    # count all the LCAs across these databases
     counts = make_lca_counts(dblist)
 
+    # collect counts across all ranks
     counts_by_rank = defaultdict(int)
     for lineage, count in counts.items():
         if lineage:
             lineage_tup = lineage[-1]
             counts_by_rank[lineage_tup.rank] += count
 
-#        p = '{:.1f}%'.format(p)
-
-#        print('{:5} {:>5}   {}'.format(p, count, lineage))
-
+    # output!
+    total = float(sum(counts_by_rank.values()))
     for rank in lca_utils.taxlist():
         count = counts_by_rank.get(rank, 0)
-        print('{},{}'.format(rank, count))
+        print('{}: {} ({:.1f}%)'.format(rank, count, count / total * 100.))
 
 
 if __name__ == '__main__':
