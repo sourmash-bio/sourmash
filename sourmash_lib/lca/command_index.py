@@ -32,7 +32,7 @@ def index(args):
                    help='split names in signatures on whitspace and period')
     p.add_argument('-f', '--force', action='store_true')
     p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
+                   help='load all signatures underneath directories.')
     args = p.parse_args(args)
 
     if args.start_column < 2:
