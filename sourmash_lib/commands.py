@@ -451,8 +451,15 @@ def plot(args):
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
+    notify('loading comparison matrix from {}...', D_filename)
     D = numpy.load(open(D_filename, 'rb'))
+    notify('...got {} x {} matrix.', *D.shape)
+
+    notify('loading labels from {}', labelfilename)
     labeltext = [ x.strip() for x in open(labelfilename) ]
+    if len(labeltext) != D.shape[0]:
+        error('{} labels != matrix size, exiting')
+        sys.exit(-1)
 
     # build filenames, decide on PDF/PNG output
     dendrogram_out = os.path.basename(D_filename) + '.dendro'
@@ -500,9 +507,10 @@ def plot(args):
     fig.savefig(matrix_out)
     notify('wrote numpy distance matrix to: {}', matrix_out)
 
-    # print out sample numbering for FYI.
-    for i, name in enumerate(labeltext):
-        print_results('{}\t{}', i, name)
+    if len(labeltext) < 30:
+        # for small matrices, print out sample numbering for FYI.
+        for i, name in enumerate(labeltext):
+            print_results('{}\t{}', i, name)
 
 
 def import_csv(args):
@@ -734,7 +742,7 @@ def search(args):
     if args.best_only:
         args.num_results = 1
 
-    if n_matches <= args.num_results:
+    if not args.num_results or n_matches <= args.num_results:
         print_results('{} matches:'.format(len(results)))
     else:
         print_results('{} matches; showing first {}:',
