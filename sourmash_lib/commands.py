@@ -474,6 +474,18 @@ def plot(args):
     else:
         matrix_out += '.png'
 
+    hist_out = os.path.basename(D_filename) + '.hist'
+    if args.pdf:
+        hist_out += '.pdf'
+    else:
+        hist_out += '.png'
+
+    # make the histogram
+    notify('saving histogram of matrix values => {}', hist_out)
+    fig = pylab.figure(figsize=(8,5))
+    pylab.hist(numpy.array(D.flat), bins=100)
+    fig.savefig(hist_out)
+
     ### make the dendrogram:
     fig = pylab.figure(figsize=(8,5))
     ax1 = fig.add_axes([0.1, 0.1, 0.7, 0.8])
