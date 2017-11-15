@@ -8,7 +8,7 @@ import sys
 import random
 
 import screed
-import sourmash_lib
+import sourmash
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
@@ -90,7 +90,7 @@ def compute(args):
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
-                        default=sourmash_lib.DEFAULT_SEED)
+                        default=sourmash.DEFAULT_SEED)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
     parser.add_argument('--license', default='CC0', type=str,
@@ -173,18 +173,18 @@ def compute(args):
         Elist = []
         for k in ksizes:
             if args.protein:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=True,
-                                    track_abundance=args.track_abundance,
-                                            scaled=args.scaled,
-                                            seed=seed)
+                E = sourmash.MinHash(ksize=k, n=args.num_hashes,
+                                     is_protein=True,
+                                     track_abundance=args.track_abundance,
+                                     scaled=args.scaled,
+                                     seed=seed)
                 Elist.append(E)
             if args.dna:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=False,
-                                    track_abundance=args.track_abundance,
-                                            scaled=args.scaled,
-                                            seed=seed)
+                E = sourmash.MinHash(ksize=k, n=args.num_hashes,
+                                     is_protein=False,
+                                     track_abundance=args.track_abundance,
+                                     scaled=args.scaled,
+                                     seed=seed)
                 Elist.append(E)
         return Elist
 
@@ -551,7 +551,7 @@ def import_csv(args):
             hashes = hashes.strip()
             hashes = list(map(int, hashes.split(' ' )))
 
-            e = sourmash_lib.MinHash(len(hashes), ksize)
+            e = sourmash.MinHash(len(hashes), ksize)
             e.add_many(hashes)
             s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
@@ -595,10 +595,10 @@ def sbt_combine(args):
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
 
-    tree = sourmash_lib.load_sbt_index(inp_files.pop(0))
+    tree = sourmash.load_sbt_index(inp_files.pop(0))
 
     for f in inp_files:
-        new_tree = sourmash_lib.load_sbt_index(f)
+        new_tree = sourmash.load_sbt_index(f)
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
@@ -610,7 +610,7 @@ def index(args):
     """
     Build an Sequence Bloom Tree index of the given signatures.
     """
-    import sourmash_lib.sbtmh
+    import sourmash.sbtmh
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
@@ -639,10 +639,10 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     if args.append:
-        tree = sourmash_lib.load_sbt_index(args.sbt_name)
+        tree = sourmash.load_sbt_index(args.sbt_name)
     else:
-        tree = sourmash_lib.create_sbt_index(args.bf_size,
-                                             n_children=args.n_children)
+        tree = sourmash.create_sbt_index(args.bf_size,
+                                         n_children=args.n_children)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
@@ -670,7 +670,7 @@ def index(args):
             nums.add(ss.minhash.num)
             scaleds.add(ss.minhash.scaled)
 
-            leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
+            leaf = sourmash.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
             n += 1
 
@@ -833,7 +833,7 @@ def categorize(args):
             for row in r:
                 already_names.add(row[0])
 
-    tree = sourmash_lib.load_sbt_index(args.sbt_name)
+    tree = sourmash.load_sbt_index(args.sbt_name)
 
     if args.traverse_directory:
         inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
@@ -852,7 +852,7 @@ def categorize(args):
                query_ksize, query_moltype)
 
         results = []
-        search_fn = sourmash_lib.sbtmh.SearchMinHashesFindBest().search
+        search_fn = sourmash.sbtmh.SearchMinHashesFindBest().search
 
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
@@ -1006,8 +1006,8 @@ def gather(args):
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
 
-            e = sourmash_lib.MinHash(ksize=query.minhash.ksize, n=0,
-                                     max_hash=new_max_hash)
+            e = sourmash.MinHash(ksize=query.minhash.ksize, n=0,
+                                 max_hash=new_max_hash)
             e.add_many(next_query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
@@ -1015,7 +1015,7 @@ def gather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbtmh import SearchMinHashesFindBest
+    from sourmash.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
@@ -1053,7 +1053,7 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    tree = sourmash_lib.load_sbt_index(args.sbt_name)
+    tree = sourmash.load_sbt_index(args.sbt_name)
 
     # check ksize from the SBT we are loading
     ksize = args.ksize
@@ -1062,8 +1062,8 @@ def watch(args):
         tree_mh = leaf.data.minhash
         ksize = tree_mh.ksize
 
-    E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
-                             is_protein=is_protein)
+    E = sourmash.MinHash(ksize=ksize, n=args.num_hashes,
+                         is_protein=is_protein)
     streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
 
     notify('Computing signature for k={}, {} from stdin', ksize, moltype)

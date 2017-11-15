@@ -64,7 +64,7 @@ class SigLeaf(Leaf):
         if self._data is None:
             buf = BytesIO(self.storage.load(self._path))
             with TextIOWrapper(buf) as data:
-                from sourmash_lib import signature
+                from . import signature
                 self._data = signature.load_one_signature(data)
         return self._data
 

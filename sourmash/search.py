@@ -2,7 +2,7 @@ from __future__ import division
 from collections import namedtuple
 import sys
 
-import sourmash_lib
+import sourmash
 from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
@@ -85,7 +85,7 @@ GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
-    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
+    from sourmash.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
