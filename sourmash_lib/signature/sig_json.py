@@ -12,7 +12,8 @@ import sourmash_lib
 import io
 import json
 import ijson
-from .logging import notify
+
+from sourmash_lib.logging import notify
 
 def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
     """
@@ -46,7 +47,7 @@ def _json_next_signature(iterable,
     - prefix_item: required when parsing nested JSON structures
     - ijson: ijson backend to use.
     """
-    from .signature import SourmashSignature
+    from .sig_utils import SourmashSignature
 
     d = dict()
     prefix, event, value = next(iterable)
@@ -230,7 +231,7 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
     """
-    from .signature import SIGNATURE_VERSION
+    from .sig_utils import SIGNATURE_VERSION
 
     top_records = {}
     for sig in siglist:

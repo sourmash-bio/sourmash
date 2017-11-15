@@ -5,9 +5,8 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 from __future__ import print_function
 import sys
 import hashlib
-import sourmash_lib
-from . import signature_json
-from .logging import notify, error
+from . import sig_json
+from sourmash_lib.logging import notify, error
 
 import io
 import gzip
@@ -198,8 +197,8 @@ def load_signatures(data, ksize=None, select_moltype=None,
 
     try:
         # JSON format
-        for sig in signature_json.load_signatures_json(data,
-                                                     ignore_md5sum=ignore_md5sum):
+        for sig in sig_json.load_signatures_json(data,
+                                                 ignore_md5sum=ignore_md5sum):
             if not ksize or ksize == sig.minhash.ksize:
                 if not select_moltype or \
                      sig.minhash.is_molecule_type(select_moltype):
@@ -235,4 +234,4 @@ def load_one_signature(data, ksize=None, select_moltype=None,
 
 def save_signatures(siglist, fp=None):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
-    return signature_json.save_signatures_json(siglist, fp)
+    return sig_json.save_signatures_json(siglist, fp)

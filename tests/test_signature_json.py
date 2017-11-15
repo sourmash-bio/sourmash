@@ -4,12 +4,12 @@ import json
 import ijson
 import sourmash_lib
 from sourmash_lib.signature import SourmashSignature
-from sourmash_lib.signature_json import (_json_next_atomic_array,
-                                         _json_next_signature,
-                                         load_signature_json,
-                                         load_signatures_json,
-                                         load_signatureset_json_iter,
-                                         save_signatures_json)
+from sourmash_lib.signature.sig_json import (_json_next_atomic_array,
+                                             _json_next_signature,
+                                             load_signature_json,
+                                             load_signatures_json,
+                                             load_signatureset_json_iter,
+                                             save_signatures_json)
 from collections import OrderedDict
     
 def test__json_next_atomic_array():
