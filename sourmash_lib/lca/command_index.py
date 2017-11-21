@@ -190,7 +190,7 @@ def index(args):
 
     # now, save!
     db_outfile = args.lca_db_out
-    if not db_outfile.endswith('.lca.json'):
+    if not (db_outfile.endswith('.lca.json') or db_outfile.endswith('.lca.json.gz')):
         db_outfile += '.lca.json'
     notify('saving to LCA DB: {}'.format(db_outfile))
 
