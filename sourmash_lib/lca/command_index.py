@@ -20,14 +20,19 @@ def index(args):
     main function for building an LCA database.
     """
     p = argparse.ArgumentParser()
-    p.add_argument('csv')
-    p.add_argument('lca_db_out')
-    p.add_argument('signatures', nargs='+')
+    p.add_argument('csv', help='taxonomy spreadsheet')
+    p.add_argument('lca_db_out', help='name to save database to')
+    p.add_argument('signatures', nargs='+',
+                   help='one or more sourmash signatures')
     p.add_argument('--scaled', default=10000, type=float)
     p.add_argument('-k', '--ksize', default=31, type=int)
     p.add_argument('-d', '--debug', action='store_true')
     p.add_argument('-C', '--start-column', default=2, type=int,
                    help='column at which taxonomic assignments start')
+    p.add_argument('--tabs', action='store_true',
+                   help='input spreadsheet is tab-delimited (default: commas)')
+    p.add_argument('--no-headers', action='store_true',
+                   help='no headers present in taxonomy spreadsheet')
     p.add_argument('--split-identifiers', action='store_true',
                    help='split names in signatures on whitspace and period')
     p.add_argument('-f', '--force', action='store_true')
@@ -46,30 +51,34 @@ def index(args):
 
     # parse spreadsheet!
     fp = open(args.csv, 'rt')
-    r = csv.reader(fp)
+    delimiter = ','
+    if args.tabs:
+        delimiter = '\t'
+    r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(args.start_column - 2)
     row_headers += list(lca_utils.taxlist())
 
     # first check that headers are interpretable.
-    notify('examining spreadsheet headers...')
-    first_row = next(iter(r))
+    if not args.no_headers:
+        notify('examining spreadsheet headers...')
+        first_row = next(iter(r))
 
-    n_disagree = 0
-    for (column, value) in zip(row_headers, first_row):
-        if column == '_skip_':
-            continue
+        n_disagree = 0
+        for (column, value) in zip(row_headers, first_row):
+            if column == '_skip_':
+                continue
 
-        if column.lower() != value.lower():
-            notify("** assuming column '{}' is {} in spreadsheet",
-                   value, column)
-            n_disagree += 1
-            if n_disagree > 2:
-                error('whoa, too many assumptions. are the headers right?')
-                error('expecting {}', ",".join(row_headers))
-                if not args.force:
-                    sys.exit(-1)
-                notify('...continue, because --force was specified.')
+            if column.lower() != value.lower():
+                notify("** assuming column '{}' is {} in spreadsheet",
+                       value, column)
+                n_disagree += 1
+                if n_disagree > 2:
+                    error('whoa, too many assumptions. are the headers right?')
+                    error('expecting {}', ",".join(row_headers))
+                    if not args.force:
+                        sys.exit(-1)
+                    notify('...continue, because --force was specified.')
 
     # convert 
     assignments = {}
@@ -151,6 +160,8 @@ def index(args):
 
             # is this one for which we have a lineage assigned?
             lineage_idx = assignments_idx.get(name)
+            if lineage_idx is None:
+               print('\nno lineage assignment for', name)
             if lineage_idx is not None:
                 # downsample to specified scaled; this has the side effect of
                 # making sure they're all at the same scaled value!
@@ -178,7 +189,10 @@ def index(args):
     lineage_dict = lineage_dict_2
 
     # now, save!
-    notify('saving to LCA DB: {}'.format(args.lca_db_out))
+    db_outfile = args.lca_db_out
+    if not db_outfile.endswith('.lca.json'):
+        db_outfile += '.lca.json'
+    notify('saving to LCA DB: {}'.format(db_outfile))
 
     db = lca_utils.LCA_Database()
     db.lineage_dict = lineage_dict
@@ -187,7 +201,7 @@ def index(args):
     db.scaled = int(args.scaled)
     db.signatures_to_lineage = md5_to_lineage
 
-    db.save(args.lca_db_out)
+    db.save(db_outfile)
 
 if __name__ == '__main__':
     sys.exit(index(sys.argv[1:]))
