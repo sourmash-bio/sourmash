@@ -142,6 +142,9 @@ def index(args):
 
     n = 0
     total_n = len(inp_files)
+    record_duplicates = set()
+    record_no_lineage = set()
+    record_remnants = set(assignments_idx.keys())
     for filename in inp_files:
         n += 1
         for sig in sourmash_lib.load_signatures(filename, ksize=args.ksize):
@@ -150,19 +153,23 @@ def index(args):
             debug(filename, sig.name())
 
             if sig.md5sum() in md5_to_lineage:
-                notify('\nin file {},', filename)
-                notify('duplicate md5sum: {}; skipping', sig.md5sum())
+                notify('\nWARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
+                record_duplicates.add(filename)
                 continue
 
             name = sig.name()
-            if args.split_identifiers:
+            if args.split_identifiers: # hack for NCBI-style names, etc.
                 name = name.split(' ')[0].split('.')[0]
 
             # is this one for which we have a lineage assigned?
             lineage_idx = assignments_idx.get(name)
             if lineage_idx is None:
-               print('\nno lineage assignment for', name)
-            if lineage_idx is not None:
+               notify('\nWARNING: no lineage assignment for', name)
+               record_no_lineage.add(name)
+            else:
+                # remove from our list of remnant lineages
+                record_remnants.remove(name)
+
                 # downsample to specified scaled; this has the side effect of
                 # making sure they're all at the same scaled value!
                 minhash = sig.minhash.downsample_scaled(args.scaled)
@@ -202,6 +209,11 @@ def index(args):
     db.signatures_to_lineage = md5_to_lineage
 
     db.save(db_outfile)
+
+    if record_duplicates or record_no_lineage or record_remnants:
+        notify('WARNING: {} duplicates, {} no lineage provided, {} no signatures',
+               len(record_duplicates), len(record_no_lineage),
+               len(record_remnants))
 
 if __name__ == '__main__':
     sys.exit(index(sys.argv[1:]))
