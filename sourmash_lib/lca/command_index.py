@@ -15,6 +15,27 @@ from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 
 
+def generate_report(record_duplicates, record_no_lineage, record_remnants,
+                    unused_lineages, filename):
+    """
+    Output a report of anomalies from building the index.
+    """
+    with open(filename, 'wt') as fp:
+        print('Duplicate signatures:', file=fp)
+        fp.write("\n".join(record_duplicates))
+        fp.write("\n")
+        print('----\nNo lineage provided for:', file=fp)
+        fp.write("\n".join(record_no_lineage))
+        fp.write("\n")
+        print('----\nNo signatures found for these lineage assignments:', file=fp)
+        fp.write('\n'.join(record_remnants))
+        fp.write("\n")
+        print('----\nUnused lineages:', file=fp)
+        for lineage in unused_lineages:
+            fp.write(";".join(lca_utils.zip_lineage(lineage)))
+            fp.write("\n")
+
+
 def index(args):
     """
     main function for building an LCA database.
@@ -38,6 +59,7 @@ def index(args):
     p.add_argument('-f', '--force', action='store_true')
     p.add_argument('--traverse-directory', action='store_true',
                    help='load all signatures underneath directories.')
+    p.add_argument('--report', help='output a report on anomalies, if any.')
     args = p.parse_args(args)
 
     if args.start_column < 2:
@@ -191,6 +213,8 @@ def index(args):
     for idx in assigned_lineages:
         lineage_dict_2[idx] = lineage_dict[idx]
 
+    unused_lineages = set(lineage_dict.values()) - set(lineage_dict_2.values())
+
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet',
            len(lineage_dict_2), len(lineage_dict))
     lineage_dict = lineage_dict_2
@@ -210,10 +234,25 @@ def index(args):
 
     db.save(db_outfile)
 
-    if record_duplicates or record_no_lineage or record_remnants:
-        notify('WARNING: {} duplicates, {} no lineage provided, {} no signatures',
-               len(record_duplicates), len(record_no_lineage),
-               len(record_remnants))
+    if record_duplicates or record_no_lineage or record_remnants or unused_lienages:
+        if record_duplicates:
+            notify('WARNING: {} duplicate signatures.', len(record_duplicates))
+        if record_no_lineage:
+            notify('WARNING: no lineage provided for {} signatures.',
+                   len(record_no_lineage))
+        if record_remnants:
+            notify('WARNING: no signatures for {} lineage assignments.',
+                   len(record_remnants))
+        if unused_lineages:
+            notify('WARNING: {} unused lineages.', len(unused_lineages))
+
+        if args.report:
+            notify("generating a report and saving in '{}'", args.report)
+            generate_report(record_duplicates, record_no_lineage,
+                            record_remnants, unused_lineages, args.report)
+        else:
+            notify('(You can use --report to generate a detailed report.)')
+
 
 if __name__ == '__main__':
     sys.exit(index(sys.argv[1:]))
