@@ -14,6 +14,64 @@ from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 
+def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
+                              use_headers=True, force=False):
+    # parse spreadsheet!
+    fp = open(filename, 'rt')
+    r = csv.reader(fp, delimiter=delimiter)
+    row_headers = ['identifiers']
+    row_headers += ['_skip_']*(start_column - 2)
+    row_headers += list(lca_utils.taxlist())
+
+    # first check that headers are interpretable.
+    if use_headers:
+        notify('examining spreadsheet headers...')
+        first_row = next(iter(r))
+
+        n_disagree = 0
+        for (column, value) in zip(row_headers, first_row):
+            if column == '_skip_':
+                continue
+
+            if column.lower() != value.lower():
+                notify("** assuming column '{}' is {} in spreadsheet",
+                       value, column)
+                n_disagree += 1
+                if n_disagree > 2:
+                    error('whoa, too many assumptions. are the headers right?')
+                    error('expecting {}', ",".join(row_headers))
+                    if not force:
+                        sys.exit(-1)
+                    notify('...continue, because --force was specified.')
+
+    # convert into a lineage pair
+    assignments = {}
+    num_rows = 0
+    for row in r:
+        if row and row[0].strip():        # want non-empty row
+            num_rows += 1
+            lineage = list(zip(row_headers, row))
+            lineage = [ x for x in lineage if x[0] != '_skip_' ]
+
+            ident = lineage[0][1]
+            lineage = lineage[1:]
+
+            # clean lineage of null names, replace with 'unassigned'
+            lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
+            lineage = [ LineagePair(a, b) for (a, b) in lineage ]
+
+            # remove end nulls
+            while lineage and lineage[-1].name == 'unassigned':
+                lineage = lineage[:-1]
+
+            # store lineage tuple
+            if lineage:
+                assignments[ident] = tuple(lineage)
+
+    fp.close()
+
+    return assignments, num_rows
+
 
 def generate_report(record_duplicates, record_no_lineage, record_remnants,
                     unused_lineages, filename):
@@ -71,62 +129,15 @@ def index(args):
 
     args.scaled = int(args.scaled)
 
-    # parse spreadsheet!
-    fp = open(args.csv, 'rt')
+    # first, load taxonomy spreadsheet
     delimiter = ','
     if args.tabs:
         delimiter = '\t'
-    r = csv.reader(fp, delimiter=delimiter)
-    row_headers = ['identifiers']
-    row_headers += ['_skip_']*(args.start_column - 2)
-    row_headers += list(lca_utils.taxlist())
-
-    # first check that headers are interpretable.
-    if not args.no_headers:
-        notify('examining spreadsheet headers...')
-        first_row = next(iter(r))
-
-        n_disagree = 0
-        for (column, value) in zip(row_headers, first_row):
-            if column == '_skip_':
-                continue
-
-            if column.lower() != value.lower():
-                notify("** assuming column '{}' is {} in spreadsheet",
-                       value, column)
-                n_disagree += 1
-                if n_disagree > 2:
-                    error('whoa, too many assumptions. are the headers right?')
-                    error('expecting {}', ",".join(row_headers))
-                    if not args.force:
-                        sys.exit(-1)
-                    notify('...continue, because --force was specified.')
-
-    # convert 
-    assignments = {}
-    num_rows = 0
-    for row in r:
-        if row and row[0].strip():        # want non-empty row
-            num_rows += 1
-            lineage = list(zip(row_headers, row))
-            lineage = [ x for x in lineage if x[0] != '_skip_' ]
-
-            ident = lineage[0][1]
-            lineage = lineage[1:]
-
-            # clean lineage of null names, replace with 'unassigned'
-            lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
-            lineage = [ LineagePair(a, b) for (a, b) in lineage ]
-
-            # remove end nulls
-            while lineage and lineage[-1].name == 'unassigned':
-                lineage = lineage[:-1]
-
-            # store lineage tuple
-            if lineage:
-                assignments[ident] = tuple(lineage)
-
-    fp.close()
+    assignments, num_rows = load_taxonomy_assignments(args.csv,
+                                               delimiter=delimiter,
+                                               start_column=args.start_column,
+                                               use_headers=not args.no_headers,
+                                               force=args.force)
 
     # convert lineages to numbers.
     next_lineage_index = 0
@@ -234,7 +245,7 @@ def index(args):
 
     db.save(db_outfile)
 
-    if record_duplicates or record_no_lineage or record_remnants or unused_lienages:
+    if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
         if record_duplicates:
             notify('WARNING: {} duplicate signatures.', len(record_duplicates))
         if record_no_lineage:
