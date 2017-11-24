@@ -2,6 +2,7 @@
 """
 Make plots using the distance matrix+labels output by ``sourmash compare``.
 """
+from .logging import error
 try:
     import numpy
     import scipy
@@ -21,17 +22,22 @@ def load_matrix_and_labels(basefile):
 
 
 def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
-                          vmax=1.0, vmin=0.0):
+                          vmax=1.0, vmin=0.0, force=False):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
     Returns a matplotlib figure."""
+    if D.max() > 1.0 or D.min() < 0.0:
+        error('This matrix doesn\'t look like a distance matrix - min value {}, max value {}', D.min(), D.max())
+        if not force:
+            raise Exception
+
     if show_labels:
         show_indices = True
 
     fig = pylab.figure(figsize=(11, 8))
     ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
 
-    # plot denderogram
+    # plot dendrogram
     Y = sch.linkage(D, method='single')  # centroid
 
     dendrolabels = labeltext
