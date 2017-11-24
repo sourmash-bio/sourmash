@@ -6,6 +6,7 @@ import sys
 import argparse
 
 from . import classify, index, summarize_main, rankinfo_main
+from .command_compare_csv import compare_csv
 from sourmash_lib.logging import set_quiet, error
 
 def main(sysv_args):
@@ -14,7 +15,8 @@ def main(sysv_args):
     commands = {'classify': classify,
                 'index': index,
                 'summarize': summarize_main,
-                'rankinfo': rankinfo_main}
+                'rankinfo': rankinfo_main,
+                'compare_csv': compare_csv}
 
     parser = argparse.ArgumentParser(
         description='lowest-common ancestor (LCA) utilities',
@@ -26,6 +28,7 @@ index <taxonomy.csv> <output_db name> <signature [...]>  - create LCA database
 classify --db <db_name [...]> --query <signature [...]>  - classify genomes
 summarize --db <db_name [...]> --query <signature [...]> - summarize mixture
 rankinfo <db_name [...]>                                 - database rank info
+compare_csv <csv1> <csv2>                                - compare spreadsheets
 
 Use '-h' to get subcommand-specific help, e.g.
 
