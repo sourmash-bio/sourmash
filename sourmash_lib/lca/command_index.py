@@ -14,6 +14,7 @@ from sourmash_lib.logging import notify, error
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 
+
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
     # parse spreadsheet!
