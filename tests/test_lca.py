@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
@@ -48,6 +49,10 @@ def test_build_tree_4():
 
     assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
                                            LineagePair('rank2', 'name2b') : {}} }
+
+def test_build_tree_5():
+    with pytest.raises(ValueError):
+        tree = build_tree([])
 
 
 def test_find_lca():
@@ -137,6 +142,37 @@ def test_basic_index_column_start():
         assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
 
 
+def test_basic_index_and_classify_with_tsv_and_gz():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-1.tsv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json.gz')
+
+        cmd = ['lca', 'index', '--tabs', '--no-header', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases' in err
+
+
 def test_basic_index_and_classify():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-1.csv')
@@ -193,6 +229,56 @@ def test_index_traverse():
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '...found 1 genomes with lineage assignments!!' in err
         assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+
+
+def test_index_traverse_real_spreadsheet_no_report():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: 105 unused lineages.' in err
+        assert '(You can use --report to generate a detailed report.)' in err
+
+
+def test_index_traverse_real_spreadsheet_report():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+        report_loc = os.path.join(location, 'report.txt')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report', report_loc]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: 105 unused lineages.' in err
+        assert '(You can use --report to generate a detailed report.)' not in err
+        assert os.path.exists(report_loc)
 
 
 def test_single_classify():
@@ -553,6 +639,36 @@ def test_summarize_to_root():
         assert '21.4%    27   (root)' in out
 
 
+def test_summarize_unknown_hashes():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '(root)' not in out
+        assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
+
+
 def test_rankinfo_on_multi():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/dir1.lca.json')
@@ -598,3 +714,48 @@ def test_rankinfo_on_single():
         lines.remove('species: 200 (5.5%)')
 
         assert not lines
+
+
+def test_compare_csv():
+    with utils.TempDirectory() as location:
+        a = utils.get_test_data('lca/classify-by-both.csv')
+        b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+
+        cmd = ['lca', 'compare_csv', a, b]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 106 distinct lineages, 957 rows' in err
+        assert 'missing 937 assignments in classify spreadsheet.' in err
+        assert '20 total assignments, 0 differ between spreadsheets.' in err
+
+
+def test_compare_csv_real():
+    with utils.TempDirectory() as location:
+        a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
+        b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
+
+        cmd = ['lca', 'compare_csv', a, b, '--start-column=3']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 87 distinct lineages, 2631 rows' in err
+        assert 'missing 71 assignments in classify spreadsheet.' in err
+        assert 'missing 1380 assignments in custom spreadsheet.' in err
+        assert '(these will not be evaluated any further)' in err
+        assert '987 total assignments, 889 differ between spreadsheets.' in err
+        assert '296 are compatible (one lineage is ancestor of another.' in err
+        assert '593 are incompatible (there is a disagreement in the trees).' in err
+        assert '164 incompatible at rank superkingdom' in err
+        assert '255 incompatible at rank phylum' in err
+        assert '107 incompatible at rank class' in err
+        assert '54 incompatible at rank order' in err
+        assert '13 incompatible at rank family' in err
+        assert '0 incompatible at rank genus' in err
+        assert '0 incompatible at rank species' in err

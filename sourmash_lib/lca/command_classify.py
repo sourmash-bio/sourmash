@@ -6,7 +6,7 @@ from __future__ import print_function
 import sys
 import argparse
 import csv
-from collections import defaultdict, Counter
+from collections import Counter
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
@@ -38,33 +38,18 @@ def classify_signature(query_sig, dblist, threshold):
 
       """
     # gather assignments from across all the databases
-    assignments = defaultdict(set)
-    for hashval in query_sig.minhash.get_mins():
-        for lca_db in dblist:
-            lineage = lca_db.get_lineage_assignments(hashval)
-            assignments[hashval].update(lineage)
+    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(),
+                                               dblist)
 
     # now convert to trees -> do LCA & counts
-    counts = Counter()
-    for hashval in assignments:
-
-        # for each collection of lineages, build a tree that lets
-        # us discover lowest-common-ancestor.
-        tuple_info = assignments[hashval]
-        tree = lca_utils.build_tree(tuple_info)
-
-        # now find either a leaf or the first node with multiple
-        # children; that's our lowest-common-ancestor node.
-        lca, reason = lca_utils.find_lca(tree)
-        counts[lca] += 1
+    counts = lca_utils.count_lca_for_assignments(assignments)
+    debug(counts.most_common())
 
     # ok, we now have the LCAs for each hashval, and their number of
     # counts. Now build a tree across "significant" LCAs - those above
     # threshold.
 
     tree = {}
-
-    debug(counts.most_common())
 
     for lca, count in counts.most_common():
         if count < threshold:
