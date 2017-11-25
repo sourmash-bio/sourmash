@@ -61,6 +61,9 @@ def summarize(hashvals, dblist, threshold):
         if count < threshold:
             break
 
+        if not lca:
+            aggregated_counts[lca] += count
+
         # climb from the lca to the root.
         while lca:
             aggregated_counts[lca] += count
@@ -143,7 +146,12 @@ def summarize_main(args):
     # output!
     total = float(len(hashvals))
     for (lineage, count) in lineage_counts.items():
-        lineage = ';'.join([ lineage_tup.name for lineage_tup in lineage ])
+        if lineage:
+            lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
+            lineage = ';'.join(lineage)
+        else:
+            lineage = '(root)'
+
         p = count / total * 100.
         p = '{:.1f}%'.format(p)
 

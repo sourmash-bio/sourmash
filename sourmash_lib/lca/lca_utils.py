@@ -29,7 +29,7 @@ def taxlist(include_strain=False):
 
 
 # produce an ordered list of tax names from lineage
-def zip_lineage(lineage, include_strain=False):
+def zip_lineage(lineage, include_strain=False, truncate_empty=False):
     """@CTB: document and test."""
     row = []
     empty = LineagePair(None, '')
@@ -38,6 +38,9 @@ def zip_lineage(lineage, include_strain=False):
         if lineage_tup != empty:
             if lineage_tup.rank != taxrank:
                 raise ValueError('incomplete lineage at {}!? {}'.format(lineage_tup.rank, lineage))
+        else:
+            if truncate_empty:
+                break
 
         row.append(lineage_tup.name)
     return row
