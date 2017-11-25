@@ -679,3 +679,20 @@ def test_rankinfo_on_single():
         lines.remove('species: 200 (5.5%)')
 
         assert not lines
+
+
+def test_compare_csv():
+    with utils.TempDirectory() as location:
+        a = utils.get_test_data('lca/classify-by-both.csv')
+        b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+
+        cmd = ['lca', 'compare_csv', a, b]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 106 distinct lineages, 957 rows' in err
+        assert 'missing 937 assignments in classify spreadsheet.' in err
+        assert '20 total assignments, 0 differ between spreadsheets.' in err
