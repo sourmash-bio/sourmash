@@ -696,3 +696,31 @@ def test_compare_csv():
         assert 'loaded 106 distinct lineages, 957 rows' in err
         assert 'missing 937 assignments in classify spreadsheet.' in err
         assert '20 total assignments, 0 differ between spreadsheets.' in err
+
+
+def test_compare_csv_real():
+    with utils.TempDirectory() as location:
+        a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
+        b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
+
+        cmd = ['lca', 'compare_csv', a, b, '--start-column=3']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 87 distinct lineages, 2631 rows' in err
+        assert 'missing 71 assignments in classify spreadsheet.' in err
+        assert 'missing 1380 assignments in custom spreadsheet.' in err
+        assert '(these will not be evaluated any further)' in err
+        assert '987 total assignments, 889 differ between spreadsheets.' in err
+        assert '296 are compatible (one lineage is ancestor of another.' in err
+        assert '593 are incompatible (there is a disagreement in the trees).' in err
+        assert '164 incompatible at rank superkingdom' in err
+        assert '255 incompatible at rank phylum' in err
+        assert '107 incompatible at rank class' in err
+        assert '54 incompatible at rank order' in err
+        assert '13 incompatible at rank family' in err
+        assert '0 incompatible at rank genus' in err
+        assert '0 incompatible at rank species' in err
