@@ -66,12 +66,9 @@ def classify_signature(query_sig, dblist, threshold):
 
     debug(counts.most_common())
 
-    n = 0
     for lca, count in counts.most_common():
         if count < threshold:
             break
-
-        n += 1
 
         # update tree with this set of assignments
         lca_utils.build_tree([lca], tree)

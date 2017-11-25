@@ -523,6 +523,36 @@ def test_multi_summarize_with_unassigned():
         assert not out_lines
 
 
+def test_summarize_to_root():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 2 genomes with lineage assignments!!' in err
+        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '78.6%    99   Archaea' in out
+        assert '21.4%    27   (root)' in out
+
+
 def test_rankinfo_on_multi():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/dir1.lca.json')
