@@ -226,6 +226,56 @@ def test_index_traverse():
         assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
 
 
+def test_index_traverse_real_spreadsheet_no_report():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: 105 unused lineages.' in err
+        assert '(You can use --report to generate a detailed report.)' in err
+
+
+def test_index_traverse_real_spreadsheet_report():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+        report_loc = os.path.join(location, 'report.txt')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report', report_loc]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: 105 unused lineages.' in err
+        assert '(You can use --report to generate a detailed report.)' not in err
+        assert os.path.exists(report_loc)
+
+
 def test_single_classify():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
