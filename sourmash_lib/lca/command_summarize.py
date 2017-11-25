@@ -10,7 +10,7 @@ from collections import defaultdict, Counter
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
+from sourmash_lib.logging import notify, error, print_results
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
@@ -33,7 +33,8 @@ def summarize(hashvals, dblist, threshold):
     for hashval in hashvals:
         for lca_db in dblist:
             lineages = lca_db.get_lineage_assignments(hashval)
-            assignments[hashval].update(lineages)
+            if lineages:
+                assignments[hashval].update(lineages)
 
     # now convert to trees -> do LCA & counts
     counts = Counter()
@@ -41,8 +42,8 @@ def summarize(hashvals, dblist, threshold):
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
-        tuple_info = assignments[hashval]
-        tree = lca_utils.build_tree(tuple_info)
+        lineages = assignments[hashval]
+        tree = lca_utils.build_tree(lineages)
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
@@ -155,7 +156,7 @@ def summarize_main(args):
         p = count / total * 100.
         p = '{:.1f}%'.format(p)
 
-        print('{:5} {:>5}   {}'.format(p, count, lineage))
+        print_results('{:5} {:>5}   {}'.format(p, count, lineage))
 
     # CSV:
     if args.output:

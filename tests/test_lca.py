@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
@@ -48,6 +49,10 @@ def test_build_tree_4():
 
     assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
                                            LineagePair('rank2', 'name2b') : {}} }
+
+def test_build_tree_5():
+    with pytest.raises(ValueError):
+        tree = build_tree([])
 
 
 def test_find_lca():
@@ -632,6 +637,36 @@ def test_summarize_to_root():
 
         assert '78.6%    99   Archaea' in out
         assert '21.4%    27   (root)' in out
+
+
+def test_summarize_unknown_hashes():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '(root)' not in out
+        assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
 
 
 def test_rankinfo_on_multi():
