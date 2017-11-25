@@ -5,7 +5,8 @@ from __future__ import print_function
 import sys
 import json
 import gzip
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, defaultdict, Counter
+
 try:                                      # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
@@ -265,3 +266,37 @@ def load_databases(filenames, scaled=None):
     scaled = scaled_vals.pop()
 
     return dblist, ksize, scaled
+
+
+def gather_assignments(hashvals, dblist):
+    """
+    Gather assignments from across all the databases for all the hashvals.
+    """
+    assignments = defaultdict(set)
+    for hashval in hashvals:
+        for lca_db in dblist:
+            lineages = lca_db.get_lineage_assignments(hashval)
+            if lineages:
+                assignments[hashval].update(lineages)
+
+    return assignments
+
+
+def count_lca_for_assignments(assignments):
+    """
+    For each hashval, count the LCA across its assignments.
+    """
+    counts = Counter()
+    for hashval in assignments:
+
+        # for each list of tuple_info [(rank, name), ...] build
+        # a tree that lets us discover lowest-common-ancestor.
+        lineages = assignments[hashval]
+        tree = build_tree(lineages)
+
+        # now find either a leaf or the first node with multiple
+        # children; that's our lowest-common-ancestor node.
+        lca, reason = find_lca(tree)
+        counts[lca] += 1
+
+    return counts
