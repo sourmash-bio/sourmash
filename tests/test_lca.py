@@ -137,6 +137,37 @@ def test_basic_index_column_start():
         assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
 
 
+def test_basic_index_and_classify_with_tsv_and_gz():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-1.tsv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json.gz')
+
+        cmd = ['lca', 'index', '--tabs', '--no-header', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 databases' in err
+
+
 def test_basic_index_and_classify():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-1.csv')
