@@ -198,7 +198,7 @@ def index(args):
             # is this one for which we have a lineage assigned?
             lineage_idx = assignments_idx.get(name)
             if lineage_idx is None:
-               notify('\nWARNING: no lineage assignment for', name)
+               notify('\nWARNING: no lineage assignment for {}.', name)
                record_no_lineage.add(name)
             else:
                 # remove from our list of remnant lineages
