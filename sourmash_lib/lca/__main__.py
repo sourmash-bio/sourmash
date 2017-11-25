@@ -7,7 +7,7 @@ import argparse
 
 from . import classify, index, summarize_main, rankinfo_main
 from .command_compare_csv import compare_csv
-from .command_search import search
+from .command_search import lca_search_main
 from sourmash_lib.logging import set_quiet, error
 
 def main(sysv_args):
@@ -18,7 +18,7 @@ def main(sysv_args):
                 'summarize': summarize_main,
                 'rankinfo': rankinfo_main,
                 'compare_csv': compare_csv,
-                'search': search}
+                'search': lca_search_main}
 
     parser = argparse.ArgumentParser(
         description='lowest-common ancestor (LCA) utilities',

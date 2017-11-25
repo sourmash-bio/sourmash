@@ -10,7 +10,7 @@ from collections import defaultdict, Counter
 
 import sourmash_lib
 from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
+from sourmash_lib.logging import notify, error, print_results
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
@@ -65,29 +65,20 @@ def search(hashvals, dblist):
     return aggregated_counts
 
 
-def summarize_main(args):
+def lca_search_main(args):
     """
-    main summarization function.
+    main lca search function.
     """
     p = argparse.ArgumentParser()
-    p.add_argument('--db', nargs='+', action='append')
-    p.add_argument('--query', nargs='+', action='append')
+    p.add_argument('query')
+    p.add_argument('dblist', nargs='+')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='CSV output')
     p.add_argument('--scaled', type=float)
     p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-k', '--ksize', type=int, default=31)
     args = p.parse_args(args)
-
-    if not args.db:
-        error('Error! must specify at least one LCA database with --db')
-        sys.exit(-1)
-
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
 
     if args.debug:
         set_debug(args.debug)
@@ -95,65 +86,61 @@ def summarize_main(args):
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    # flatten --db and --query
-    args.db = [item for sublist in args.db for item in sublist]
-    args.query = [item for sublist in args.query for item in sublist]
+    # load query
+    query_sig = sourmash_lib.load_one_signature(args.query, ksize=args.ksize)
 
     # load all the databases
-    dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
+    dblist, ksize, scaled = lca_utils.load_databases(args.dblist, args.scaled)
     notify('ksize={} scaled={}', ksize, scaled)
+    assert ksize == args.ksize
 
-    # find all the queries
-    notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    # get the correct query downsampling for the database
+    query_mh = query_sig.minhash
+    query_mh = query_mh.downsample_scaled(scaled)
 
-    # for each query, gather all the hashvals across databases
-    total_count = 0
-    n = 0
-    total_n = len(inp_files)
-    hashvals = defaultdict(int)
-    for query_filename in inp_files:
-        n += 1
-        for query_sig in sourmash_lib.load_signatures(query_filename,
-                                                      ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
-            total_count += 1
+    # for each hash in query, gather all matches
+    counts = Counter()
+    for hashval in query_mh.get_mins():
+        for lca_db in dblist:
+            lineages = lca_db.get_lineage_assignments(hashval)
+            if lineages:
+                lineages = tuple(sorted(lineages))
+                counts[lineages] += 1
 
-            mh = query_sig.minhash.downsample_scaled(scaled)
-            for hashval in mh.get_mins():
-                hashvals[hashval] += 1
+    total = len(query_mh.get_mins())
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
+    debug(counts)
 
-    # get the full counted list of lineage counts in this signature
-    lineage_counts = summarize(hashvals, dblist, args.threshold)
+    for lineages, count in counts.most_common():
+        if count < args.threshold:
+            break
 
-    # output!
-    total = float(len(hashvals))
-    for (lineage, count) in lineage_counts.items():
-        lineage = ';'.join([ lineage_tup.name for lineage_tup in lineage ])
+        debug('ZZZ', lineages)
+
+        if not lineages:
+            display = ['(root)']
+        else:
+            display = []
+            for lineage in lineages:
+                debug('ZZZZ', lineage)
+                if lineage:
+                    lineage = lca_utils.zip_lineage(lineage,
+                                                    truncate_empty=True)
+                    lineage = ';'.join(lineage)
+                else:
+                    lineage = '(root)'
+                    assert 0
+                display.append(lineage)
+
+        debug(display)
+
         p = count / total * 100.
         p = '{:.1f}%'.format(p)
 
-        print('{:5} {:>5}   {}'.format(p, count, lineage))
-
-    # CSV:
-    if args.output:
-        w = csv.writer(args.output)
-        headers = ['count'] + list(lca_utils.taxlist())
-        w.writerow(headers)
-
-        for (lineage, count) in lineage_counts.items():
-            debug('lineage:', lineage)
-            row = [count] + lca_utils.zip_lineage(lineage)
-            w.writerow(row)
+        print_results('{:5} {:>5}   {}', p, count, display[0])
+        for d in display[1:]:
+            print_results('              {}', d)
 
 
 if __name__ == '__main__':
-    sys.exit(summarize_main(sys.argv[1:]))
+    sys.exit(lca_search_main(sys.argv[1:]))
