@@ -18,53 +18,6 @@ from sourmash_lib.lca.lca_utils import debug, set_debug
 DEFAULT_THRESHOLD=5
 
 
-def search(hashvals, dblist):
-    """
-    """
-
-    # gather assignments from across all the databases
-    assignments = defaultdict(set)
-    for hashval in hashvals:
-        for lca_db in dblist:
-            lineages = lca_db.get_lineage_assignments(hashval)
-            assignments[hashval].update(lineages)
-
-    # now convert to trees -> do LCA & counts
-    counts = Counter()
-    for hashval in assignments:
-
-        # for each list of tuple_info [(rank, name), ...] build
-        # a tree that lets us discover lowest-common-ancestor.
-        tuple_info = assignments[hashval]
-        tree = lca_utils.build_tree(tuple_info)
-
-        # now find either a leaf or the first node with multiple
-        # children; that's our lowest-common-ancestor node.
-        lca, reason = lca_utils.find_lca(tree)
-        counts[lca] += 1
-
-    # ok, we now have the LCAs for each hashval, and their number
-    # of counts. Now aggregate counts across the tree, going up from
-    # the leaves.
-    tree = {}
-
-    debug(counts.most_common())
-
-    aggregated_counts = defaultdict(int)
-    for lca, count in counts.most_common():
-        if count < threshold:
-            break
-
-        # climb from the lca to the root.
-        while lca:
-            aggregated_counts[lca] += count
-            lca = lca[:-1]
-
-    debug(aggregated_counts)
-
-    return aggregated_counts
-
-
 def lca_search_main(args):
     """
     main lca search function.
@@ -106,23 +59,19 @@ def lca_search_main(args):
             if lineages:
                 lineages = tuple(sorted(lineages))
                 counts[lineages] += 1
+    debug(counts)
 
     total = len(query_mh.get_mins())
-
-    debug(counts)
 
     for lineages, count in counts.most_common():
         if count < args.threshold:
             break
-
-        debug('ZZZ', lineages)
 
         if not lineages:
             display = ['(root)']
         else:
             display = []
             for lineage in lineages:
-                debug('ZZZZ', lineage)
                 if lineage:
                     lineage = lca_utils.zip_lineage(lineage,
                                                     truncate_empty=True)
@@ -131,8 +80,6 @@ def lca_search_main(args):
                     lineage = '(root)'
                     assert 0
                 display.append(lineage)
-
-        debug(display)
 
         p = count / total * 100.
         p = '{:.1f}%'.format(p)

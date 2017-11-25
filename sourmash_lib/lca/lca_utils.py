@@ -36,7 +36,6 @@ def zip_lineage(lineage, include_strain=False, truncate_empty=False):
     empty = LineagePair(None, '')
     for taxrank, lineage_tup in zip_longest(taxlist(), lineage,
                                             fillvalue=empty):
-        debug('ABC', taxrank, lineage_tup, lineage_tup == empty)
         if lineage_tup != empty and lineage_tup.name:
             if lineage_tup.rank != taxrank:
                 raise ValueError('incomplete lineage at {}!? {}'.format(lineage_tup.rank, lineage))
