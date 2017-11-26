@@ -607,7 +607,8 @@ def index(args):
     parser.add_argument('-s', '--sparseness', type=float, default=.0,
                         help='What percentage of internal nodes will not be saved. '
                              'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
-
+    parser.add_argument('--scaled', type=float, default=0,
+                        help='downsample signatures to this scaled factor')
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
@@ -628,12 +629,17 @@ def index(args):
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
 
+    if args.scaled:
+        args.scaled = int(args.scaled)
+        notify('downsampling signatures to scaled={}', args.scaled)
+
     notify('loading {} files into SBT', len(inp_files))
 
     n = 0
     ksizes = set()
     moltypes = set()
     for f in inp_files:
+        notify('\r...reading from {} ({} signatures so far)', f, n, end='')
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
@@ -641,6 +647,9 @@ def index(args):
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
+
+            if args.scaled:
+                ss.minhash.downsample_scaled(args.scaled)
 
             leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
@@ -653,6 +662,8 @@ def index(args):
             error('ksizes: {}; moltypes: {}',
                   ", ".join(map(str, ksizes)), ", ".join(moltypes))
             sys.exit(-1)
+
+    notify('')
 
     # did we load any!?
     if n == 0:
