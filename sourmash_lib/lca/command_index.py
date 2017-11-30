@@ -18,7 +18,7 @@ from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
     # parse spreadsheet!
-    fp = open(filename, 'rt')
+    fp = open(filename, 'rtU')
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(start_column - 2)

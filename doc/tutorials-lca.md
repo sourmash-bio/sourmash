@@ -127,7 +127,7 @@ to identify each k-mer.  From this it can either find a consensus
 taxonomy between all the k-mers (`sourmash classify`) or it can summarize
 the mixture of k-mers present in one or more signatures (`sourmash summarize`).
 
-The `sourmash index` command can be used to prepare custom taxonomy
+The `sourmash lca index` command can be used to prepare custom taxonomy
 databases; sourmash will happily ingest any taxonomy, whether or not
 it matches NCBI. See
 [the spreadsheet from Delmont et al., 2017](https://github.com/ctb/2017-sourmash-lca/blob/master/tara-delmont-SuppTable3.csv)

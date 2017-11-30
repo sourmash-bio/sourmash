@@ -38,8 +38,6 @@ def summarize(hashvals, dblist, threshold):
     # ok, we now have the LCAs for each hashval, and their number
     # of counts. Now aggregate counts across the tree, going up from
     # the leaves.
-    tree = {}
-
     aggregated_counts = defaultdict(int)
     for lca, count in counts.most_common():
         if count < threshold:
