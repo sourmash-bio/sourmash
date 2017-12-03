@@ -1537,6 +1537,29 @@ def test_do_sourmash_sbt_search_downsample():
         assert 'short2.fa' in out
 
 
+def test_do_sourmash_sbt_search_downsample_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        testdata2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+
+        sbtname = 'foo'
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', sbtname,
+                                            testdata2],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, sbtname,
+                                            '--scaled=100000'],
+                                           in_directory=location)
+        print(status)
+        print(out)
+        print(err)
+        assert '1 matches' in out
+
+
 def test_do_sourmash_index_single():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
