@@ -1783,7 +1783,7 @@ def test_do_sourmash_sbt_search_otherdir():
 
         assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.json'))
 
-        sbt_name = os.path.join(location,'xxx', 'zzz',)
+        sbt_name = os.path.join(location, 'xxx', 'zzz',)
         sig_loc = os.path.join(location, 'short.fa.sig')
         status, out, err = utils.runscript('sourmash',
                                            ['search', sig_loc, sbt_name])
@@ -1793,6 +1793,122 @@ def test_do_sourmash_sbt_search_otherdir():
         assert 'short2.fa' in out
 
 
+def test_do_sourmash_sbt_search_scaled_vs_num_1():
+    # should not work: scaled query against num tree
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short2.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sbt_name])
+        print(out)
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_2():
+    # should not work: num query against scaled tree
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sbt_name])
+        print(out)
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_3():
+    # should not work: scaled query against num signature
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        sig_loc2 = os.path.join(location, 'short2.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sig_loc2])
+
+        print(out)
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_4():
+    # should not work: num query against scaled signature
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        sig_loc2 = os.path.join(location, 'short2.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc2, sig_loc])
+        print(out)
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
 
 
 def test_do_sourmash_check_search_vs_actual_similarity():

@@ -171,7 +171,8 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     # is one scaled, and the other not? cannot do search.
     if (tree_mh.scaled and not query_mh.scaled) or \
        (query_mh.scaled and not tree_mh.scaled):
-        error("for tree '{}', tree and query are incompatible for search.")
+        error("for tree '{}', tree and query are incompatible for search.",
+              treename)
         if tree_mh.scaled:
             error("tree was calculated with scaled, query was not.")
         else:

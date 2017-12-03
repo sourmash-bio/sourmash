@@ -1,6 +1,8 @@
 from collections import namedtuple
+import sys
 
 import sourmash_lib
+from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import (search_minhashes,
                                 search_minhashes_containment)
