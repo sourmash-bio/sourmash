@@ -1552,12 +1552,14 @@ def test_do_sourmash_sbt_search_downsample_2():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', testdata1, sbtname,
-                                            '--scaled=100000'],
+                                            '--scaled=100000',
+                                            '--threshold=0.01'],
                                            in_directory=location)
         print(status)
         print(out)
         print(err)
         assert '1 matches' in out
+        assert 0
 
 
 def test_do_sourmash_index_single():

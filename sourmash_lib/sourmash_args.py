@@ -159,12 +159,16 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
 
 def get_ksize(tree):
     """Walk nodes in `tree` to find out ksize"""
-    for node in tree.nodes.values():
-        if isinstance(node, SigLeaf):
-            return node.data.minhash.ksize
+    for leaf in tree.leaves():
+        return leaf.data.minhash.ksize
+
+    raise Exception("cannot find a leaf node on this SBT!?!")
 
 
-def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
+def load_sbts_and_sigs(filenames, query, traverse=False):
+    query_ksize = query.minhash.ksize
+    query_moltype = get_moltype(query)
+
     n_signatures = 0
     n_databases = 0
     databases = []

@@ -573,7 +573,9 @@ class SBT(object):
                     yield (i, node)
 
     def leaves(self):
-        return [c for c in self.nodes.values() if isinstance(c, Leaf)]
+        for c in self.nodes.values():
+            if isinstance(c, Leaf):
+                yield c
 
     def combine(self, other):
         larger, smaller = self, other

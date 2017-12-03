@@ -213,7 +213,7 @@ def test_binary_nary_tree():
         to_search = leaf
         n_leaves += 1
 
-    assert all([len(t.leaves()) == n_leaves for t in trees.values()])
+    assert all([len(list(t.leaves())) == n_leaves for t in trees.values()])
 
     results = {}
     print('*' * 60)
