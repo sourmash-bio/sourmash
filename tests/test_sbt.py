@@ -197,6 +197,26 @@ def test_tree_save_load(n_children):
         assert old_result == new_result
 
 
+def test_search_minhashes():
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory)
+
+    n_leaves = 0
+    for f in utils.SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+
+    to_search = next(iter(tree.leaves()))
+
+    # this fails if 'search_minhashes' is calc containment and not similarity.
+    results = tree.find(search_minhashes, to_search.data, 0.08)
+    for leaf in results:
+        assert to_search.data.similarity(leaf.data) >= 0.08
+
+    print(results)
+
+
 def test_binary_nary_tree():
     factory = GraphFactory(31, 1e5, 4)
     trees = {}
