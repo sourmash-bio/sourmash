@@ -1315,13 +1315,12 @@ def test_search_metagenome_downsample():
 
         cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+                                           in_directory=location, fail_ok=True)
+        assert status == -1
 
-        print(out)
-        print(err)
 
-        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '12 matches; showing first 3:' in out
+        assert "for tree 'gcf_all', scaled value is smaller than query." in err
+        assert 'tree scaled: 10000; query scaled: 100000. Cannot do similarity search.' in err
 
 
 def test_search_metagenome_downsample_containment():

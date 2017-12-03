@@ -157,7 +157,7 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
                     yield fullname
 
 
-def check_tree_is_compatible(treename, tree, query):
+def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     leaf = next(iter(tree.leaves()))
     tree_mh = leaf.data.minhash
 
@@ -168,10 +168,29 @@ def check_tree_is_compatible(treename, tree, query):
         error('this is different from query ksize of {}.', query_mh.ksize)
         return 0
 
+    # is one scaled, and the other not? cannot do search.
+    if (tree_mh.scaled and not query_mh.scaled) or \
+       (query_mh.scaled and not tree_mh.scaled):
+        error("for tree '{}', tree and query are incompatible for search.")
+        if tree_mh.scaled:
+            error("tree was calculated with scaled, query was not.")
+        else:
+            error("query was calculated with scaled, tree was not.")
+        return 0
+
+
+    # are the scaled values incompatible? cannot downsample tree for similarity
+    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
+      is_similarity_query:
+        error("for tree '{}', scaled value is smaller than query.", treename)
+        error("tree scaled: {}; query scaled: {}. Cannot do similarity search.",
+              tree_mh.scaled, query_mh.scaled)
+        return 0
+
     return 1
 
 
-def load_sbts_and_sigs(filenames, query, traverse=False):
+def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
 
@@ -197,7 +216,8 @@ def load_sbts_and_sigs(filenames, query, traverse=False):
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
 
-            if not check_tree_is_compatible(sbt_or_sigfile, tree, query):
+            if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
+                                            is_similarity_query):
                 sys.exit(-1)
 
             databases.append((tree, sbt_or_sigfile, True))
