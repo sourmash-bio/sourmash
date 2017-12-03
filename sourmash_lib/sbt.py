@@ -353,7 +353,7 @@ class SBT(object):
             data['filename'] = node.save(data['filename'])
             structure[i] = data
 
-            notify("{} of {} nodes saved".format(n, total_nodes), end='\r')
+            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
         notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = structure
