@@ -6,7 +6,8 @@ import pytest
 
 from sourmash_lib import signature
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash_lib.sbtmh import SigLeaf, search_minhashes
+from sourmash_lib.sbtmh import (SigLeaf, search_minhashes,
+                                search_minhashes_containment)
 from sourmash_lib.sbt_storage import (FSStorage, TarStorage,
                                       RedisStorage, IPFSStorage)
 
@@ -139,9 +140,9 @@ def test_tree_v1_load():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
+    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v1 == results_cur
@@ -158,9 +159,9 @@ def test_tree_v2_load():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes,
+    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v2 == results_cur
