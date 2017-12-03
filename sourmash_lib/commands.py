@@ -1030,7 +1030,9 @@ def watch(args):
     # check ksize from the SBT we are loading
     ksize = args.ksize
     if ksize is None:
-        ksize = sourmash_args.get_ksize(tree)
+        leaf = next(iter(tree.leaves()))
+        tree_mh = leaf.data.minhash
+        ksize = tree_mh.ksize
 
     E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
                              is_protein=is_protein)

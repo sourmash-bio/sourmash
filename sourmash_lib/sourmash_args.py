@@ -157,12 +157,18 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
                     yield fullname
 
 
-def get_ksize(tree):
-    """Walk nodes in `tree` to find out ksize"""
-    for leaf in tree.leaves():
-        return leaf.data.minhash.ksize
+def check_tree_is_compatible(treename, tree, query):
+    leaf = next(iter(tree.leaves()))
+    tree_mh = leaf.data.minhash
 
-    raise Exception("cannot find a leaf node on this SBT!?!")
+    query_mh = query.minhash
+
+    if tree_mh.ksize != query_mh.ksize:
+        error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
+        error('this is different from query ksize of {}.', query_mh.ksize)
+        return 0
+
+    return 1
 
 
 def load_sbts_and_sigs(filenames, query, traverse=False):
@@ -186,12 +192,12 @@ def load_sbts_and_sigs(filenames, query, traverse=False):
                 except:                       # ignore errors with traverse
                     continue
             continue
+
+        # try loading as an SBT.
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
-            ksize = get_ksize(tree)
-            if ksize != query_ksize:
-                error("ksize on tree '{}' is {};", sbt_or_sigfile, ksize)
-                error('this is different from query ksize of {}.', query_ksize)
+
+            if not check_tree_is_compatible(sbt_or_sigfile, tree, query):
                 sys.exit(-1)
 
             databases.append((tree, sbt_or_sigfile, True))
