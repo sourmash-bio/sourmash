@@ -28,8 +28,11 @@ def search_databases(query, databases, threshold, do_containment, best_only):
             tree = sbt_or_siglist
             for leaf in tree.find(search_fn, query, threshold):
                 similarity = query_match(leaf.data)
-                if similarity >= threshold and \
-                       leaf.data.md5sum() not in found_md5:
+
+                # tree search should always/only return matches above threshold
+                assert similarity >= threshold
+
+                if leaf.data.md5sum() not in found_md5:
                     sr = SearchResult(similarity=similarity,
                                       match_sig=leaf.data,
                                       md5=leaf.data.md5sum(),

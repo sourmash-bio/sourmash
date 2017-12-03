@@ -1796,6 +1796,26 @@ def test_do_sourmash_sbt_search_otherdir():
         assert 'short2.fa' in out
 
 
+
+
+def test_do_sourmash_check_search_vs_actual_similarity():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', files[0], 'zzz'],
+                                           in_directory=location)
+        assert status == 0
+
+
 def test_do_sourmash_sbt_search_bestonly():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
