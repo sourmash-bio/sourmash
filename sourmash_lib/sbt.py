@@ -398,7 +398,7 @@ class SBT(object):
         try:
             x.count(10)
         except TypeError:
-            raise Exception("khmer version is too old; need >= 2.1.")
+            raise Exception("khmer version is too old; need >= 2.1,<3")
 
         if leaf_loader is None:
             leaf_loader = Leaf.load
