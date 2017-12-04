@@ -157,6 +157,32 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
                     yield fullname
 
 
+def filter_compatible_signatures(query, siglist, force=False):
+    for sig in siglist:
+        if check_signatures_are_compatible(query, sig):
+            yield sig
+        else:
+            if not force:
+                raise ValueError("incompatible signature")
+
+
+def check_signatures_are_compatible(query, subject):
+    # is one scaled, and the other not? cannot do search
+    if query.minhash.scaled and not subject.minhash.scaled or \
+       not query.minhash.scaled and subject.minhash.scaled:
+       error("signature {} and {} are incompatible - cannot compare.",
+             query.name(), subject.name())
+       if query.minhash.scaled:
+           error("{} was calculated with --scaled, {} was not.",
+                 query.name(), subject.name())
+       if subject.minhash.scaled:
+           error("{} was calculated with --scaled, {} was not.",
+                 subject.name(), query.name())
+       return 0
+
+    return 1
+
+
 def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     leaf = next(iter(tree.leaves()))
     tree_mh = leaf.data.minhash
@@ -178,7 +204,6 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
         else:
             error("query was calculated with scaled, tree was not.")
         return 0
-
 
     # are the scaled values incompatible? cannot downsample tree for similarity
     if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
@@ -205,15 +230,18 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                     siglist = sig.load_signatures(sigfile,
                                                   ksize=query_ksize,
                                                   select_moltype=query_moltype)
+                    siglist = filter_compatible_signatures(query, siglist, 1)
                     siglist = list(siglist)
-                    databases.append((list(siglist), sbt_or_sigfile, False))
+                    databases.append((siglist, sbt_or_sigfile, False))
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
                 except:                       # ignore errors with traverse
-                    continue
+                    pass
+
+            # done! jump to beginning of main 'for' loop
             continue
 
-        # try loading as an SBT.
+        # no traverse? try loading as an SBT.
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
 
@@ -224,24 +252,38 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
             databases.append((tree, sbt_or_sigfile, True))
             notify('loaded SBT {}', sbt_or_sigfile, end='\r')
             n_databases += 1
+
+            # done! jump to beginning of main 'for' loop
+            continue
         except (ValueError, EnvironmentError):
             # not an SBT - try as a .sig
+            pass
 
-            try:
-                siglist = sig.load_signatures(sbt_or_sigfile,
-                                              ksize=query_ksize,
-                                              select_moltype=query_moltype)
-                siglist = list(siglist)
-                databases.append((list(siglist), sbt_or_sigfile, False))
-                notify('loaded {} signatures from {}', len(siglist),
-                       sbt_or_sigfile, end='\r')
-                n_signatures += len(siglist)
-            except EnvironmentError:
-                error("\nfile '{}' does not exist", sbt_or_sigfile)
-                sys.exit(-1)
+        # not a tree? try loading as a signature.
+        try:
+            siglist = sig.load_signatures(sbt_or_sigfile,
+                                          ksize=query_ksize,
+                                          select_moltype=query_moltype)
+            siglist = filter_compatible_signatures(query, siglist, False)
+            siglist = list(siglist)
+            databases.append((siglist, sbt_or_sigfile, False))
+            notify('loaded {} signatures from {}', len(siglist),
+                   sbt_or_sigfile, end='\r')
+            n_signatures += len(siglist)
+        except EnvironmentError:
+            error("\nfile '{}' does not exist", sbt_or_sigfile)
+            sys.exit(-1)
+        except ValueError:                # incompatible signature
+            sys.exit(-1)
+
     notify(' '*79, end='\r')
-    notify('loaded {} signatures and {} databases total.'.format(n_signatures,
-                                                                 n_databases))
+    if n_signatures and n_databases:
+        notify('loaded {} signatures and {} databases total.', n_signatures, 
+                                                               n_databases)
+    elif n_signatures:
+        notify('loaded {} signatures.', n_signatures)
+    elif n_databases:
+        notify('loaded {} databases.', n_databases)
 
     if databases:
         print('')

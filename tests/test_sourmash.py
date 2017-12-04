@@ -1818,11 +1818,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_1():
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short2.fa.sig')
         status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name])
-        print(out)
+                                           ['search', sig_loc, sbt_name],
+                                           fail_ok=True)
 
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
+        assert status == -1
+        assert 'tree and query are incompatible for search' in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_2():
@@ -1850,11 +1850,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_2():
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short.fa.sig')
         status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sbt_name])
-        print(out)
+                                           ['search', sig_loc, sbt_name],
+                                           fail_ok=True)
 
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
+        assert status == -1
+        assert 'tree and query are incompatible for search' in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_3():
@@ -1875,14 +1875,11 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3():
         sig_loc = os.path.join(location, 'short.fa.sig')
         sig_loc2 = os.path.join(location, 'short2.fa.sig')
         status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc, sig_loc2])
+                                           ['search', sig_loc, sig_loc2],
+                                           fail_ok=True)
 
-        print(out)
-
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
-
-
+        assert status == -1
+        assert 'incompatible - cannot compare' in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_4():
@@ -1904,11 +1901,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4():
         sig_loc2 = os.path.join(location, 'short2.fa.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['search', sig_loc2, sig_loc])
-        print(out)
-
-        assert 'short.fa' in out
-        assert 'short2.fa' in out
+                                           ['search', sig_loc2, sig_loc],
+                                           fail_ok=True)
+        assert status == -1
+        assert 'incompatible - cannot compare' in err
 
 
 def test_do_sourmash_check_search_vs_actual_similarity():
