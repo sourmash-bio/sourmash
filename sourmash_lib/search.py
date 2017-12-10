@@ -12,6 +12,21 @@ from .sbtmh import SearchMinHashesFindBest
 SearchResult = namedtuple('SearchResult',
                           'similarity, match_sig, md5, filename, name')
 
+
+# pretty-printing code.
+def format_bp(bp):
+    bp = float(bp)
+    if bp < 500:
+        return '{:.0f} bp '.format(bp)
+    elif bp <= 500e3:
+        return '{:.1f} kbp'.format(round(bp / 1e3, 1))
+    elif bp < 500e6:
+        return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
+    elif bp < 500e9:
+        return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
+    return '???'
+
+
 def search_databases(query, databases, threshold, do_containment, best_only):
     # set up the search & score function(s) - similarity vs containment
     search_fn = search_minhashes

@@ -13,6 +13,7 @@ import sourmash_lib
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
+from .search import format_bp
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -902,19 +903,6 @@ def gather(args):
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
-
-    # pretty-printing code.
-    def format_bp(bp):
-        bp = float(bp)
-        if bp < 500:
-            return '{:.0f} bp '.format(bp)
-        elif bp <= 500e3:
-            return '{:.1f} kbp'.format(round(bp / 1e3, 1))
-        elif bp < 500e6:
-            return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
-        elif bp < 500e9:
-            return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
-        return '???'
 
     found = []
     sum_found = 0
