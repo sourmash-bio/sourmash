@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 import sourmash_lib
+from .logging import notify
 from .signature import SourmashSignature
-from .sbtmh import (search_minhashes,
-                                search_minhashes_containment)
+from .sbtmh import search_minhashes, search_minhashes_containment
 from .sbtmh import SearchMinHashesFindBest
 
 # generic SearchResult across individual signatures + SBTs.
