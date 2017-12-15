@@ -179,6 +179,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
                     databases.append((list(siglist), sbt_or_sigfile, False))
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
+                    n_signatures += len(siglist)
                 except:                       # ignore errors with traverse
                     continue
             continue
