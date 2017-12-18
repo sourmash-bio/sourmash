@@ -235,6 +235,7 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                     databases.append((siglist, sbt_or_sigfile, False))
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
+                    n_signatures += len(siglist)
                 except:                       # ignore errors with traverse
                     pass
 
