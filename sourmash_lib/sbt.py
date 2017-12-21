@@ -244,7 +244,8 @@ class SBT(object):
         if pos == 0:
             return None
         p = int(math.floor((pos - 1) / self.d))
-        return NodePos(p, self.nodes[p])
+        node = self.nodes.get(p, None)
+        return NodePos(p, node)
 
     def children(self, pos):
         """Return all children nodes for node at position ``pos``.
@@ -281,7 +282,8 @@ class SBT(object):
             child node.
         """
         cd = self.d * parent + pos + 1
-        return NodePos(cd, self.nodes[cd])
+        node = self.nodes.get(cd, None)
+        return NodePos(cd, node)
 
     def save(self, path, storage=None, sparseness=0.0):
         """Saves an SBT description locally and node data to a storage.
@@ -518,7 +520,31 @@ class SBT(object):
                                 if i not in sbt_nodes}
         tree.max_node = max_node
 
+        tree._fill_max_n_below()
+
         return tree
+
+    def _fill_max_n_below(self):
+        for i, n in self.nodes.items():
+            if isinstance(n, Leaf):
+                parent = self.parent(i)
+                if parent.pos not in self.missing_nodes:
+                    max_n_below = parent.node.metadata.get('max_n_below', 0)
+                    max_n_below = max(len(n.data.minhash.get_mins()),
+                                      max_n_below)
+                    parent.node.metadata['max_n_below'] = max_n_below
+
+                    current = parent
+                    parent = self.parent(parent.pos)
+                    while parent and parent.pos not in self.missing_nodes:
+                        max_n_below = parent.node.metadata.get('max_n_below', 0)
+                        max_n_below = max(current.node.metadata['max_n_below'],
+                                          max_n_below)
+                        parent.node.metadata['max_n_below'] = max_n_below
+                        current = parent
+                        parent = self.parent(parent.pos)
+
+
 
     def print_dot(self):
         print("""
