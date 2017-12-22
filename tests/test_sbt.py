@@ -456,7 +456,7 @@ def test_tree_repair():
                                                  to_search, 0.1)}
 
     assert results_repair == results_cur
-    assert len(results_repair) == 4
+    assert len(results_repair) == 2
 
 
 def test_tree_repair_add_node():
