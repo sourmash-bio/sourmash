@@ -17,7 +17,7 @@ pip install -U https://github.com/dib-lab/sourmash/archive/add/lca.zip
 Next, download a genbank LCA database for k=31:
 
 ```
-curl -L -o /tmp/genbank-k31.lca.json.gz https://osf.io/zskb9/download
+curl -L -o genbank-k31.lca.json.gz https://osf.io/zskb9/download
 ```
 
 Download a random genome from genbank:
