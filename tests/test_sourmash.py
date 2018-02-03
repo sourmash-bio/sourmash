@@ -14,6 +14,8 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -586,6 +588,33 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
+
+
+def test_do_basic_compare():
+    import numpy
+    with utils.TempDirectory() as location:
+        testsigs = utils.get_test_data('genome-s1*.sig')
+        testsigs = glob.glob(testsigs)
+
+        args = ['compare', '-o', 'cmp', '-k', '21', '--dna'] + testsigs
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        cmp_outfile = os.path.join(location, 'cmp')
+        assert os.path.exists(cmp_outfile)
+        cmp_out = numpy.load(cmp_outfile)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash_lib.load_one_signature(fn, ksize=21,
+                                                        select_moltype='dna'))
+
+        cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+        for i, si in enumerate(sigs):
+            for j, sj in enumerate(sigs):
+                cmp_calc[i][j] = si.similarity(sj)
+
+        assert (cmp_out == cmp_calc).all()
 
 
 def test_do_compare_quiet():
@@ -1251,6 +1280,24 @@ def test_search_metagenome():
         assert '12 matches; showing first 3:' in out
 
 
+def test_search_metagenome_traverse():
+    with utils.TempDirectory() as location:
+        testdata_dir = utils.get_test_data('gather')
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'search {} {} -k 21 --traverse-directory'
+        cmd = cmd.format(query_sig, testdata_dir)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+        assert '13 matches; showing first 3:' in out
+
+
 def test_search_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1587,6 +1634,36 @@ def test_do_sourmash_index_traverse():
         assert 'short2.fa' in out
 
 
+def test_do_sourmash_index_sparseness():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            '--traverse-dir', '.',
+                                            '--sparseness', '1.0'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert 'loaded 2 sigs; saving SBT under' in err
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert len(glob.glob(os.path.join(location, '.sbt.zzz', '*'))) == 2
+        assert not glob.glob(os.path.join(location, '.sbt.zzz', '*internal*'))
+
+        assert 'short.fa' in out
+        assert 'short2.fa' in out
+
+
 def test_do_sourmash_sbt_combine():
     with utils.TempDirectory() as location:
         files = [utils.get_test_data(f) for f in utils.SIG_FILES]
@@ -1720,6 +1797,60 @@ def test_do_sourmash_sbt_search_bestonly():
         assert 'short.fa' in out
 
 
+def test_sbt_search_order_dependence():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz')
+        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+
+        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'index -k 21 134 genome-s10+s11.fa.gz.sig genome-s11.fa.gz.sig genome-s12.fa.gz.sig'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'search -k 21 genome-s11.fa.gz.sig 134 --best-only -k 21 --dna'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '100.0%' in out
+
+
+def test_sbt_search_order_dependence_2():
+    # *should* return the same result as test_sbt_search_order_dependence,
+    # but does not due to a bug.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz')
+        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+
+        cmd = 'compute --scaled 10000 -k 21,31 {} {} {} {}'
+        cmd = cmd.format(testdata1, testdata2, testdata3, testdata4)
+
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'index -k 21 314 genome-s11.fa.gz.sig genome-s10+s11.fa.gz.sig genome-s12.fa.gz.sig'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        cmd = 'search -k 21 genome-s11.fa.gz.sig 314 --best-only --dna'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '100.0%' in out
+
+
 def test_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
@@ -1731,8 +1862,8 @@ def test_compare_with_abundance_1():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
@@ -1759,8 +1890,8 @@ def test_compare_with_abundance_2():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
@@ -1788,8 +1919,8 @@ def test_compare_with_abundance_3():
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
 
-        s1 = signature.SourmashSignature('', E1, filename='e1', name='e1')
-        s2 = signature.SourmashSignature('', E2, filename='e2', name='e2')
+        s1 = signature.SourmashSignature(E1, filename='e1', name='e1')
+        s2 = signature.SourmashSignature(E2, filename='e2', name='e2')
 
         signature.save_signatures([s1],
                                   open(os.path.join(location, 'e1.sig'), 'w'))
@@ -2029,6 +2160,34 @@ def test_gather_metagenome():
         assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
+def test_gather_metagenome_traverse():
+    with utils.TempDirectory() as location:
+        # set up a directory $location/gather that contains
+        # everything in the 'tests/test-data/gather' directory
+        # *except* the query sequence, which is 'combined.sig'.
+        testdata_dir = utils.get_test_data('gather')
+        copy_testdata = os.path.join(location, 'somesigs')
+        shutil.copytree(testdata_dir, copy_testdata)
+        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        # now, feed in the new directory --
+        cmd = 'gather {} {} -k 21 --traverse-directory'
+        cmd = cmd.format(query_sig, copy_testdata)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+
+
 def test_gather_metagenome_output_unassigned():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF_000195995*g')
@@ -2058,7 +2217,7 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp      32.1%  100.0%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():
@@ -2514,3 +2673,127 @@ def test_watch_coverage():
         print(out)
         print(err)
         assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+
+
+def test_storage_convert():
+    import pytest
+
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'ipfs', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location, fail_ok=True)
+        if not status and "ipfs.exceptions.ConnectionError" in err:
+            raise pytest.xfail('ipfs probably not running')
+
+        ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(ipfs.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(ipfs.nodes.items())))
+
+        args = ['storage', 'convert',
+                '-b', """'TarStorage("{}")'""".format(
+                    os.path.join(location, 'v2.sbt.tar.gz')),
+                testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+        tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(tar.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(tar.nodes.items())))
+
+def test_storage_convert_identity():
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert', '-b', 'fsstorage', testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+
+def test_storage_convert_fsstorage_newpath():
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v2.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v2.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v2'),
+                        os.path.join(location, '.sbt.v2'))
+        testsbt = os.path.join(location, 'v2.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        args = ['storage', 'convert',
+                           '-b', 'fsstorage({})'.format(os.path.join(location, 'v3')),
+                           testsbt]
+        status, out, err = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+
+def test_license_cc0():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name().endswith('short.fa')
+
+        assert sig.d['license'] == 'CC0'
+
+
+def test_license_non_cc0():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            testdata1, '--license', 'GPL'],
+                                           in_directory=location, fail_ok=True)
+
+        assert status != 0
+        print(out)
+        print(err)
+        assert 'sourmash only supports CC0' in err
+
+
+def test_license_load_non_cc0():
+    with utils.TempDirectory() as location:
+        sigfile = utils.get_test_data('bad-license.sig')
+
+        try:
+            sig = next(signature.load_signatures(sigfile, do_raise=True))
+        except Exception as e:
+            assert "sourmash only supports CC0-licensed signatures" in str(e)

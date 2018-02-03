@@ -85,7 +85,7 @@ similarity   match
 
 
 Try the reverse - why is it bigger?
-         
+
 ```
 sourmash search -k 31 ecoli-genome.sig ecoli-reads.sig --containment
 ```
@@ -192,9 +192,9 @@ Here's a PNG version:
 
 Download and unpack a newer version of the k=31 RefSeq index described
 in
-[CTB's blog post](http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html)
+[CTB's blog post][0]
 -- this one contains sketches of all 100k Genbank microbes. (See
-[available databases](databases.html) for more information.)
+[available databases][1] for more information.)
 
 ```
 curl -O https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k31-2017.05.09.tar.gz
@@ -215,7 +215,7 @@ and you should get:
 # running sourmash subcommand: gather
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
 
-overlap     p_query p_match 
+overlap     p_query p_match
 ---------   ------- --------
 4.9 Mbp     100.0%   99.8%      CP011320.1 Escherichia coli strain SQ37,
 
@@ -230,7 +230,7 @@ unassembled) as well; you've just got to make the signature files.
 To see this in action, here is gather running on a signature generated
 from some sequences that assemble (but don't align to known genomes)
 from the
-[Shakya et al. 2013 mock metagenome paper](https://www.ncbi.nlm.nih.gov/pubmed/23387867).
+[Shakya et al. 2013 mock metagenome paper.][2]
 
 ```
 wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
@@ -279,4 +279,9 @@ the recovered matches hit 73.4% of the query
 It is straightforward to build your own databases for use with `search`
 and `gather`; ping us if you want us to write that up.
 
-[Return to index](index.html)
+[Return to index][3]
+
+[0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
+[1]:databases.html
+[2]:https://www.ncbi.nlm.nih.gov/pubmed/233877
+[3]:index.html

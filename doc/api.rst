@@ -21,9 +21,15 @@ underlying C++ code, but for now this is undocumented.)
 .. automodule:: sourmash_lib.signature
    :members:
 
+``SBT``: save and load Sequence Bloom Trees in JSON
+=============================================================
+
+.. automodule:: sourmash_lib.sbt
+   :members: GraphFactory, Node, NodePos, SBT, Leaf
+   :undoc-members:
+
 ``sourmash_lib.fig``: make plots and figures
 ============================================
 
 .. automodule:: sourmash_lib.fig
    :members:
-

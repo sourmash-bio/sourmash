@@ -64,6 +64,7 @@ Contents:
 
    command-line
    tutorials
+   tutorials-lca
    databases
    api
    api-example

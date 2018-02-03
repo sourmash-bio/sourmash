@@ -1,5 +1,5 @@
-Computational requirements
-==========================
+# Computational requirements
+
 
 sourmash has no particular memory requirements; it will need to hold
 the largest single sequence you have in memory, but the individual
@@ -12,7 +12,7 @@ in a second or so on a rather slow 2016 Mac laptop.
 MinHash sketches and signatures are quite small on disk.
 
 sourmash should run with little modification on Linux and Mac OS X,
-under Python 2.7.11 and Python 3.5.  Please see `the development
-repository README
-<https://github.com/dib-lab/sourmash/blob/master/README.md>`__ for
+under Python 2.7.11 and Python 3.5.  Please see [the development repository README][0]
+for
 information on source code, tests, and continuous integration.
+[0]:https://github.com/dib-lab/sourmash/blob/master/README.md
