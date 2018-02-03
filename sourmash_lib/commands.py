@@ -667,9 +667,9 @@ def index(args):
         elif scaleds == { 0 } and len(nums) == 1:
             pass # also good
         else:
-            error(nums)
-            error(scaleds)
-            raise Exception("foo")
+            error('trying to build an SBT with incompatible signatures.')
+            error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
+            sys.exit(-1)
 
 
     # did we load any!?

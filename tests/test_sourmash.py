@@ -1135,10 +1135,10 @@ def test_do_sourmash_index_multinum_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-n', '500', testdata1],
+                                           ['compute', '-k', '31', '-n', '500', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-n', '1000', testdata2],
+                                           ['compute', '-k', '31', '-n', '1000', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1149,8 +1149,7 @@ def test_do_sourmash_index_multinum_fail():
 
         print(status, out, err)
         assert status == -1
-
-
+        assert 'trying to build an SBT with incompatible signatures.' in err
 
 
 def test_do_sourmash_index_multiscaled_fail():
@@ -1165,13 +1164,14 @@ def test_do_sourmash_index_multiscaled_fail():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', '-k', '31', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig'],
                                            in_directory=location, fail_ok=True)
 
         print(status, out, err)
         assert status == -1
+        assert 'trying to build an SBT with incompatible signatures.' in err
 
 
 def test_do_sourmash_sbt_search_output():
