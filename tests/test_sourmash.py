@@ -848,7 +848,27 @@ def test_plot_subsample_2():
         assert expected in out
 
 
-def test_search_sig_does_not_exist():
+def test_search_query_sig_does_not_exist():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short2.fa.sig',
+                                            'short.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'No such file or directory' in err
+        assert len(err.splitlines()) < 5
+
+
+def test_search_subject_sig_does_not_exist():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
@@ -864,7 +884,26 @@ def test_search_sig_does_not_exist():
 
         print(status, out, err)
         assert status == -1
-        assert 'does not exist' in err
+        assert 'No such file or directory' in err
+
+
+def test_search_second_subject_sig_does_not_exist():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short.fa.sig', 'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'No such file or directory' in err
 
 
 def test_search():

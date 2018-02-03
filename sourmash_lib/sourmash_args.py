@@ -78,10 +78,14 @@ def calculate_moltype(args, default=None):
 
 
 def load_query_signature(filename, ksize, select_moltype):
-    sl = signature.load_signatures(filename,
-                                   ksize=ksize,
-                                   select_moltype=select_moltype)
-    sl = list(sl)
+    try:
+        sl = signature.load_signatures(filename,
+                                       ksize=ksize,
+                                       select_moltype=select_moltype,
+                                       do_raise=True)
+        sl = list(sl)
+    except FileNotFoundError:
+        sys.exit(-1)
 
     if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
@@ -265,8 +269,13 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
             siglist = sig.load_signatures(sbt_or_sigfile,
                                           ksize=query_ksize,
                                           select_moltype=query_moltype)
+            siglist = list(siglist)
+            if len(siglist) == 0:         # file not found
+                raise ValueError
+
             siglist = filter_compatible_signatures(query, siglist, False)
             siglist = list(siglist)
+
             databases.append((siglist, sbt_or_sigfile, False))
             notify('loaded {} signatures from {}', len(siglist),
                    sbt_or_sigfile, end='\r')
@@ -285,6 +294,8 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
         notify('loaded {} signatures.', n_signatures)
     elif n_databases:
         notify('loaded {} databases.', n_databases)
+    else:
+        sys.exit(-1)
 
     if databases:
         print('')

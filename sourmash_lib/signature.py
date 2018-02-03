@@ -189,12 +189,25 @@ def load_signatures(data, ksize=None, select_moltype=None,
 
     is_fp = False
     if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
+        done = False
         try:                                  # is it a file handle?
             data.read
             is_fp = True
-        except AttributeError:                # no - treat it like a filename.
-            data = _guess_open(data)
-            is_fp = True
+            done = True
+        except AttributeError:
+            pass
+
+        # not a file handle - treat it like a filename.
+        if not done:
+            try:
+                data = _guess_open(data)
+                is_fp = True
+                done = True
+            except OSError as excinfo:
+                error(str(excinfo))
+                if do_raise:
+                    raise
+                return []
 
     try:
         # JSON format
