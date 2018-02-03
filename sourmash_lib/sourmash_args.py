@@ -144,11 +144,15 @@ class LoadSingleSignatures(object):
                 raise ValueError('multiple k-mer sizes/molecule types present')
 
 
-def traverse_find_sigs(dirnames):
+def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
+        if dirname.endswith('.sig') and os.path.isfile(dirname):
+            yield dirname
+            continue
+
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                if name.endswith('.sig'):
+                if name.endswith('.sig') or yield_all_files:
                     fullname = os.path.join(root, name)
                     yield fullname
 
@@ -175,6 +179,7 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
                     databases.append((list(siglist), sbt_or_sigfile, False))
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
+                    n_signatures += len(siglist)
                 except:                       # ignore errors with traverse
                     continue
             continue
