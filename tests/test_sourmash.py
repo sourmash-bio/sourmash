@@ -1087,6 +1087,93 @@ def test_search_deduce_ksize():
         assert 'k=23' in err
 
 
+def test_do_sourmash_index_multik_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '32', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
+def test_do_sourmash_index_multimol_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--protein', '-k', '30',
+                                            testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
+def test_do_sourmash_index_multinum_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-n', '500', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-n', '1000', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
+
+
+def test_do_sourmash_index_multiscaled_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '10', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '1', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
 def test_do_sourmash_sbt_search_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

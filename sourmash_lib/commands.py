@@ -587,6 +587,9 @@ def sbt_combine(args):
 
 
 def index(args):
+    """
+    Build an Sequence Bloom Tree index of the given signatures.
+    """
     import sourmash_lib.sbtmh
 
     parser = argparse.ArgumentParser()
@@ -634,6 +637,8 @@ def index(args):
     n = 0
     ksizes = set()
     moltypes = set()
+    nums = set()
+    scaleds = set()
     for f in inp_files:
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
@@ -642,6 +647,8 @@ def index(args):
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
+            nums.add(ss.minhash.num)
+            scaleds.add(ss.minhash.scaled)
 
             leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
@@ -654,6 +661,16 @@ def index(args):
             error('ksizes: {}; moltypes: {}',
                   ", ".join(map(str, ksizes)), ", ".join(moltypes))
             sys.exit(-1)
+
+        if nums == { 0 } and len(scaleds) == 1:
+            pass # good
+        elif scaleds == { 0 } and len(nums) == 1:
+            pass # also good
+        else:
+            error(nums)
+            error(scaleds)
+            raise Exception("foo")
+
 
     # did we load any!?
     if n == 0:
