@@ -117,7 +117,7 @@ class LCA_Database(object):
     Wrapper class for taxonomic database.
 
     obj.lineage_dict: key 'lineage_id' => lineage tuple [(name, rank), ...]
-    obj.hashval_to_lineage_id: key 'hashval' => 'lineage_id'
+    obj.hashval_to_lineage_id: key 'hashval' => set('lineage_id')
     obj.ksize: k-mer size
     obj.scaled: scaled value
     obj.signatures_to_lineage: key 'md5sum' => 'lineage_id'
