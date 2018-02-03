@@ -2,7 +2,7 @@
 """
 Make plots using the distance matrix+labels output by ``sourmash compare``.
 """
-from .logging import error
+from .logging import error, notify
 try:
     import numpy
     import scipy
@@ -29,7 +29,11 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     if D.max() > 1.0 or D.min() < 0.0:
         error('This matrix doesn\'t look like a distance matrix - min value {}, max value {}', D.min(), D.max())
         if not force:
-            raise Exception
+            raise ValueError("not a distance matrix")
+        else:
+            notify('force is set; scaling to [0, 1]')
+            D -= D.min()
+            D /= D.max()
 
     if show_labels:
         show_indices = True
