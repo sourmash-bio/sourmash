@@ -174,6 +174,15 @@ def test_max_hash_cannot_limit(track_abundance):
         mh = MinHash(2, 4, track_abundance=track_abundance, max_hash=35)
 
 
+def test_no_downsample_scaled_if_n(track_abundance):
+    # make sure you can't set max_n and then downsample scaled
+    mh = MinHash(2, 4, track_abundance=track_abundance)
+    with pytest.raises(ValueError) as excinfo:
+        mh.downsample_scaled(100000000)
+
+    assert 'cannot downsample a standard MinHash' in str(excinfo)
+
+
 def test_scaled(track_abundance):
     # make sure you can't set both max_n and scaled.
     with pytest.raises(ValueError):
