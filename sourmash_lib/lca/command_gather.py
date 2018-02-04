@@ -3,6 +3,11 @@
 Execute a greedy search on lineages attached to hashvals in the query.
 
 Mimics `sourmash gather` but with tax information.
+
+CTB TODO:
+* sort out f_uniq / f_orig
+* add in abundance weighting
+* CSV output with full taxonomy
 """
 from __future__ import print_function, division
 import sys
@@ -43,10 +48,15 @@ def format_lineage(lineage_tup):
     d = dict(lineage_tup) # rank: value
 
     if 'genus' in present:
+        genus = d['genus']
         if 'species' in present:
-            name = '{} {}'.format(d['genus'], d['species'])
+            species = d['species']
+            if species.startswith(genus + ' '):
+                name = species
+            else:
+                name = '{} {}'.format(genus, species)
         else:
-            name = '{} sp.'.format(d['genus'])
+            name = '{} sp.'.format(genus)
     elif len(present) < 3:
         lineage_str = lca_utils.zip_lineage(lineage_tup, truncate_empty=True)
         lineage_str = "; ".join(lineage_str)
