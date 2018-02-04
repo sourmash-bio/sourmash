@@ -22,7 +22,7 @@ from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
 LCAGatherResult = namedtuple('LCAGatherResult',
-                             'intersect_bp, f_orig_query, f_unique_to_query, f_unique_weighted, average_abund, lineage')
+                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage')
 
 
 # pretty-printing code. redundant with ../search.py; fix when refactoring.
@@ -73,16 +73,24 @@ def format_lineage(lineage_tup):
     return name
 
 
-def gather_signature(query_sig, dblist):
+def gather_signature(query_sig, dblist, ignore_abundance):
     """
     Decompose 'query_sig' using the given list of databases.
     """
     notify('loaded query: {}... (k={})', query_sig.name()[:30],
                                          query_sig.minhash.ksize)
 
-    # gather assignments from across all the databases
+    # extract the basic set of mins
     query_mins = set(query_sig.minhash.get_mins())
     n_mins = len(query_mins)
+
+    if query_sig.minhash.track_abundance and not ignore_abundance:
+        orig_abunds = query_sig.minhash.get_mins(with_abundance=True)
+    else:
+        if query_sig.minhash.track_abundance and ignore_abundance:
+            notify('** ignoring abundance')
+        orig_abunds = { k: 1 for k in query_mins }
+    sum_abunds = sum(orig_abunds.values())
 
     while 1:
         # find all of the assignments for the current set of hashes
@@ -103,25 +111,35 @@ def gather_signature(query_sig, dblist):
         # find the most abundant assignment
         top_assignment, top_count = next(iter(counts.most_common()))
 
-        # construct 'result' object
-        intersect_bp = top_count * query_sig.minhash.scaled
-        result = LCAGatherResult(intersect_bp = intersect_bp,
-                                 f_orig_query = top_count / n_mins,
-                                 f_unique_to_query=0,
-                                 f_unique_weighted=0,
-                                 average_abund=0,
-                                 lineage=top_assignment)
-
-
         # now, remove from query mins.
+        intersect_mins = set()
         for hashval, assignment_set in assignments.items():
             if top_assignment in assignment_set:
                 query_mins.remove(hashval)
+                intersect_mins.add(hashval)
+
+        # should match!
+        assert top_count == len(intersect_mins)
+
+        # construct 'result' object
+        intersect_bp = top_count * query_sig.minhash.scaled
+        f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
+               / sum_abunds
+        average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
+               / len(intersect_mins)
+
+        result = LCAGatherResult(intersect_bp = intersect_bp,
+                                 f_unique_to_query= top_count / n_mins,
+                                 f_unique_weighted=f_unique_weighted,
+                                 average_abund=average_abund,
+                                 lineage=top_assignment)
+
+
 
         f_unassigned = len(query_mins) / n_mins
         est_bp = len(query_mins) * query_sig.minhash.scaled
 
-        yield result, f_unassigned, est_bp
+        yield result, f_unassigned, est_bp, query_mins
 
     ## done.
     
@@ -144,6 +162,12 @@ def gather_main(args):
     p.add_argument('query')
     p.add_argument('db', nargs='+')
     p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   help='output CSV containing matches to this file')
+    p.add_argument('--output-unassigned', type=argparse.FileType('wt'),
+                   help='output unassigned portions of the query as a signature to this file')
+    p.add_argument('--ignore-abundance',  action='store_true',
+                   help='do NOT use k-mer abundances if present')
     args = p.parse_args(args)
 
     if args.debug:
@@ -161,7 +185,7 @@ def gather_main(args):
 
     # do the classification, output results
     found = []
-    for result, f_unassigned, est_bp in gather_signature(query_sig, dblist):
+    for result, f_unassigned, est_bp, remaining_mins in gather_signature(query_sig, dblist, args.ignore_abundance):
         # is this our first time through the loop? print headers, if so.
         if not len(found):
             print_results("")
@@ -169,7 +193,7 @@ def gather_main(args):
             print_results("---------   -------")
 
         # output!
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_query = '{:.1f}%'.format(result.f_unique_to_query*100)
         str_bp = format_bp(result.intersect_bp)
         name = format_lineage(result.lineage)
 
@@ -192,6 +216,40 @@ def gather_main(args):
         print_results('No assignment for est {} of sequence.',
                       format_bp(est_bp))
         print_results('')
+
+    if not found:
+        sys.exit(0)
+
+    if args.output:
+        fieldnames = ['intersect_bp', 'f_unique_to_query', 'f_unique_weighted',
+                      'average_abund'] + list(lca_utils.taxlist())
+
+        w = csv.DictWriter(args.output, fieldnames=fieldnames)
+        w.writeheader()
+        for result in found:
+            lineage = result.lineage
+            d = dict(result._asdict())
+            del d['lineage']
+
+            for (rank, value) in lineage:
+                d[rank] = value
+
+            w.writerow(d)
+
+    if args.output_unassigned:
+        if not found:
+            notify('nothing found - entire query signature unassigned.')
+        elif not remaining_mins:
+            notify('no unassigned hashes! not saving.')
+        else:
+            outname = args.output_unassigned.name
+            notify('saving unassigned hashes to "{}"', outname)
+
+            e = query_sig.minhash.copy_and_clear()
+            e.add_many(remaining_mins)
+
+            sourmash_lib.save_signatures([ sourmash_lib.SourmashSignature(e) ],
+                                         args.output_unassigned)
 
 
 if __name__ == '__main__':

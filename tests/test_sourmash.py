@@ -2217,7 +2217,7 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '4.7 Mbp      32.1%  100.0%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():
