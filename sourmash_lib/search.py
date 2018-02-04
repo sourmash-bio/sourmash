@@ -1,3 +1,4 @@
+from __future__ import division
 from collections import namedtuple
 
 import sourmash_lib
