@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 """
-@@
+Execute a greedy search on lineages attached to hashvals in the query.
+
+Mimics `sourmash gather` but with tax information.
 """
 from __future__ import print_function, division
 import sys
@@ -61,7 +63,7 @@ def format_lineage(lineage_tup):
     return name
 
 
-def gather_signature(query_sig, dblist, threshold):
+def gather_signature(query_sig, dblist):
     """
     Decompose 'query_sig' using the given list of databases.
     """
@@ -72,7 +74,6 @@ def gather_signature(query_sig, dblist, threshold):
     query_mins = set(query_sig.minhash.get_mins())
     n_mins = len(query_mins)
 
-    found = []
     while 1:
         # find all of the assignments for the current set of hashes
         assignments = lca_utils.gather_assignments(query_mins, dblist)
@@ -81,7 +82,9 @@ def gather_signature(query_sig, dblist, threshold):
         if not assignments:
             break
 
-        # count 'em all
+        # count 'em all. note, this will combine identical lineages from
+        # different source genomes; the only that is counted is the lineage
+        # assignment.
         counts = Counter()
         for hashval, assignment_set in assignments.items():
             for assignment in assignment_set:
@@ -99,48 +102,33 @@ def gather_signature(query_sig, dblist, threshold):
                                  average_abund=0,
                                  lineage=top_assignment)
 
-        if not len(found):
-            print_results("")
-            print_results("overlap     p_query")
-            print_results("---------   -------")
-
-        # output!
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
-        est_bp = format_bp(result.intersect_bp)
-        name = format_lineage(result.lineage)
-
-        print_results('{:9}   {:>6}      {}', est_bp, pct_query, name)
 
         # now, remove from query mins.
         for hashval, assignment_set in assignments.items():
             if top_assignment in assignment_set:
                 query_mins.remove(hashval)
 
-        found.append(result)
+        f_unassigned = len(query_mins) / n_mins
+        est_bp = len(query_mins) * query_sig.minhash.scaled
+
+        yield result, f_unassigned, est_bp
 
     ## done.
     
-    f_unassigned = len(query_mins) / n_mins
-    est_bp = len(query_mins) * query_sig.minhash.scaled
-
-    if found:
-        print_results('')
-        if f_unassigned:
-            print_results('{:.1f}% ({}) have no assignment.', f_unassigned*100,
-                          format_bp(est_bp))
-        else:
-            print_results('Query is completely assigned.')
-            print_results('')
-    else:
-        print_results('')
-        print_results('No assignment for est {} of sequence.',
-                      format_bp(est_bp))
-        print_results('')
 
 
 def gather_main(args):
     """
-    @@
+    Do a greedy search for the hash components of a query against an LCA db.
+
+    Here we don't actually do a least-common-ancestor search of any kind; we
+    do essentially the same kind of search as we do in `sourmash gather`, with
+    the main difference that we are implicitly combining different genomes of
+    identical lineages.
+
+    This takes advantage of the structure of the LCA db, where we store the
+    full lineage information for each known hash, as opposed to storing only
+    the least-common-ancestor information for it.
     """
     p = argparse.ArgumentParser()
     p.add_argument('query')
@@ -162,7 +150,38 @@ def gather_main(args):
     query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
 
     # do the classification, output results
-    gather_signature(query_sig, dblist, 0.0)
+    found = []
+    for result, f_unassigned, est_bp in gather_signature(query_sig, dblist):
+        # is this our first time through the loop? print headers, if so.
+        if not len(found):
+            print_results("")
+            print_results("overlap     p_query")
+            print_results("---------   -------")
+
+        # output!
+        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        str_bp = format_bp(result.intersect_bp)
+        name = format_lineage(result.lineage)
+
+        print_results('{:9}   {:>6}      {}', str_bp, pct_query, name)
+
+        found.append(result)
+
+    if found:
+        print_results('')
+        if f_unassigned:
+            print_results('{:.1f}% ({}) have no assignment.', f_unassigned*100,
+                          format_bp(est_bp))
+        else:
+            print_results('Query is completely assigned.')
+            print_results('')
+    # nothing found.
+    else:
+        est_bp = len(query_sig.minhash.get_mins()) * query_sig.minhash.scaled
+        print_results('')
+        print_results('No assignment for est {} of sequence.',
+                      format_bp(est_bp))
+        print_results('')
 
 
 if __name__ == '__main__':
