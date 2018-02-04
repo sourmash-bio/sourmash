@@ -789,3 +789,52 @@ def test_compare_csv_real():
         assert '13 incompatible at rank family' in err
         assert '0 incompatible at rank genus' in err
         assert '0 incompatible at rank species' in err
+
+
+def test_single_gather():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'gather', input_sig, db1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '2.0 Mbp     100.0%      Alteromonas Alteromonas_macleodii' in out
+        assert 'Query is completely assigned.'
+
+
+def test_gather_unknown_hashes():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'gather', input_sig1, lca_db]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '270.0 kbp    11.5%      Archaea; family novelFamily_I' in out
+        assert '88.5% (2.1 Mbp) have no assignment.' in out
