@@ -258,11 +258,12 @@ def load_databases(filenames, scaled=None):
 
         dblist.append(lca_db)
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} databases.', len(dblist))
-
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
+
+    notify(u'\r\033[K', end=u'')
+    notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
+           ksize, scaled)
 
     return dblist, ksize, scaled
 

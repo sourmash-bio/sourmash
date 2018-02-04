@@ -92,7 +92,6 @@ def summarize_main(args):
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
-    notify('ksize={} scaled={}', ksize, scaled)
 
     # find all the queries
     notify('finding query signatures...')
