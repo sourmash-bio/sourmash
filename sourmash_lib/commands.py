@@ -446,14 +446,24 @@ def plot(args):
                         help="randomly downsample to this many samples, max.")
     parser.add_argument("--subsample-seed", type=int, default=1,
                         help="random seed for --subsample; default=1")
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='forcibly plot non-distance matrices')
+
     args = parser.parse_args(args)
 
     # load files
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
+    notify('loading comparison matrix from {}...', D_filename)
     D = numpy.load(open(D_filename, 'rb'))
+    notify('...got {} x {} matrix.', *D.shape)
+
+    notify('loading labels from {}', labelfilename)
     labeltext = [ x.strip() for x in open(labelfilename) ]
+    if len(labeltext) != D.shape[0]:
+        error('{} labels != matrix size, exiting')
+        sys.exit(-1)
 
     # build filenames, decide on PDF/PNG output
     dendrogram_out = os.path.basename(D_filename) + '.dendro'
@@ -467,6 +477,18 @@ def plot(args):
         matrix_out += '.pdf'
     else:
         matrix_out += '.png'
+
+    hist_out = os.path.basename(D_filename) + '.hist'
+    if args.pdf:
+        hist_out += '.pdf'
+    else:
+        hist_out += '.png'
+
+    # make the histogram
+    notify('saving histogram of matrix values => {}', hist_out)
+    fig = pylab.figure(figsize=(8,5))
+    pylab.hist(numpy.array(D.flat), bins=100)
+    fig.savefig(hist_out)
 
     ### make the dendrogram:
     fig = pylab.figure(figsize=(8,5))
@@ -497,13 +519,15 @@ def plot(args):
                                              show_labels=args.labels,
                                              show_indices=args.indices,
                                              vmin=args.vmin,
-                                             vmax=args.vmax)
+                                             vmax=args.vmax,
+                                             force=args.force)
     fig.savefig(matrix_out)
     notify('wrote numpy distance matrix to: {}', matrix_out)
 
-    # print out sample numbering for FYI.
-    for i, name in enumerate(labeltext):
-        print_results('{}\t{}', i, name)
+    if len(labeltext) < 30:
+        # for small matrices, print out sample numbering for FYI.
+        for i, name in enumerate(labeltext):
+            print_results('{}\t{}', i, name)
 
 
 def import_csv(args):
@@ -750,7 +774,7 @@ def search(args):
     if args.best_only:
         args.num_results = 1
 
-    if n_matches <= args.num_results:
+    if not args.num_results or n_matches <= args.num_results:
         print_results('{} matches:'.format(len(results)))
     else:
         print_results('{} matches; showing first {}:',
