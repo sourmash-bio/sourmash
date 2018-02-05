@@ -794,6 +794,42 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
+def test_do_plot_comparison_5_force():
+    import numpy
+    with utils.TempDirectory() as location:
+        D = numpy.zeros([2,2])
+        D[0, 0] = 5
+        with open(os.path.join(location, 'cmp'), 'wb') as fp:
+            numpy.save(fp, D)
+
+        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
+            fp.write("a\nb\n")
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--labels', '-f'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert status == 0
+
+
+def test_do_plot_comparison_4_fail_not_distance():
+    import numpy
+    with utils.TempDirectory() as location:
+        D = numpy.zeros([2,2])
+        D[0, 0] = 5
+        with open(os.path.join(location, 'cmp'), 'wb') as fp:
+            numpy.save(fp, D)
+
+        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
+            fp.write("a\nb\n")
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--labels'],
+                                           in_directory=location, fail_ok=True)
+        print(status, out, err)
+        assert status != 0
+
+
 def test_plot_subsample_1():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')

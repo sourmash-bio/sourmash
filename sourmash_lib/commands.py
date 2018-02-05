@@ -445,6 +445,9 @@ def plot(args):
                         help="randomly downsample to this many samples, max.")
     parser.add_argument("--subsample-seed", type=int, default=1,
                         help="random seed for --subsample; default=1")
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='forcibly plot non-distance matrices')
+
     args = parser.parse_args(args)
 
     # load files
@@ -496,7 +499,8 @@ def plot(args):
                                              show_labels=args.labels,
                                              show_indices=args.indices,
                                              vmin=args.vmin,
-                                             vmax=args.vmax)
+                                             vmax=args.vmax,
+                                             force=args.force)
     fig.savefig(matrix_out)
     notify('wrote numpy distance matrix to: {}', matrix_out)
 
