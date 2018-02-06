@@ -210,8 +210,14 @@ def load_sbts_and_sigs(filenames, query_ksize, query_moltype, traverse=False):
                 error("\nfile '{}' does not exist", sbt_or_sigfile)
                 sys.exit(-1)
     notify(' '*79, end='\r')
-    notify('loaded {} signatures and {} databases total.'.format(n_signatures,
-                                                                 n_databases))
+
+    if n_signatures and n_databases:
+        notify('loaded {} signatures and {} databases for search.',
+               n_signatures, n_databases)
+    elif n_signatures:
+        notify('loaded {} signatures for search.', n_signatures)
+    elif n_databases:
+        notify('loaded {} databases for search.', n_databases)
 
     if databases:
         print('')
