@@ -6,8 +6,6 @@ Mimics `sourmash gather` but with tax information.
 
 CTB TODO:
 * sort out f_uniq / f_orig
-* add in abundance weighting
-* CSV output with full taxonomy
 """
 from __future__ import print_function, division
 import sys
@@ -22,7 +20,7 @@ from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
 
 LCAGatherResult = namedtuple('LCAGatherResult',
-                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage')
+                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match')
 
 
 # pretty-printing code. redundant with ../search.py; fix when refactoring.
@@ -43,7 +41,6 @@ def format_lineage(lineage_tup):
     """
     Pretty print lineage.
     """
-    return str(lineage_tup)
     # list of ranks present
     present = [ l.rank for l in lineage_tup if l.name ]
     d = dict(lineage_tup) # rank: value
@@ -93,6 +90,22 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         orig_abunds = { k: 1 for k in query_mins }
     sum_abunds = sum(orig_abunds.values())
 
+    # first time through, record FOO.
+    md5_to_lineage = {}
+ 
+    # collect all mentioned lineage_ids -> md5s
+    x = set()
+    for hashval in query_mins:
+        for lca_db in dblist:
+            lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
+            for lid in lineage_ids:
+                md5 = lca_db.lineage_id_to_signature[lid]
+                x.add((lca_db, lid, md5))
+
+    for lca_db, lid, md5 in x:
+        md5_to_lineage[md5] = lca_db.lineage_dict[lid]
+
+    # now! do the gather:
     while 1:
         # find all of the assignments for the current set of hashes
         assignments = defaultdict(set)
@@ -101,7 +114,9 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                 lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
                 for lid in lineage_ids:
                     md5 = lca_db.lineage_id_to_signature[lid]
-                    assignments[hashval].add(md5)
+                    signature_size = lca_db.lineage_id_counts[lid]
+                    assignments[hashval].add((md5, signature_size))
+                    print(md5, signature_size)
                     
         # none? quit.
         if not assignments:
@@ -109,22 +124,25 @@ def gather_signature(query_sig, dblist, ignore_abundance):
 
         # count the distinct signatures.
         counts = Counter()
-        for hashval, assignment_set in assignments.items():
-            for assignment in assignment_set:
-                counts[assignment] += 1
+        for hashval, md5_set in assignments.items():
+            for (md5, sigsize) in md5_set:
+                counts[(md5, sigsize)] += 1
 
         # find the most abundant assignment
-        top_assignment, top_count = next(iter(counts.most_common()))
+        (top_md5, top_sigsize), top_count = next(iter(counts.most_common()))
 
         # now, remove from query mins.
         intersect_mins = set()
-        for hashval, assignment_set in assignments.items():
-            if top_assignment in assignment_set:
+        for hashval, md5_set in assignments.items():
+            if (top_md5, sigsize) in md5_set:
                 query_mins.remove(hashval)
                 intersect_mins.add(hashval)
 
         # should match!
         assert top_count == len(intersect_mins)
+
+        # calculate size of match (# of hashvals belonging to that sig)
+        match_size = top_sigsize
 
         # construct 'result' object
         intersect_bp = top_count * query_sig.minhash.scaled
@@ -132,14 +150,14 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                / sum_abunds
         average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
                / len(intersect_mins)
+        f_match = len(intersect_mins) / match_size
 
         result = LCAGatherResult(intersect_bp = intersect_bp,
                                  f_unique_to_query= top_count / n_mins,
                                  f_unique_weighted=f_unique_weighted,
                                  average_abund=average_abund,
-                                 lineage=top_assignment)
-
-
+                                 f_match=f_match,
+                                 lineage=md5_to_lineage[top_md5])
 
         f_unassigned = len(query_mins) / n_mins
         est_bp = len(query_mins) * query_sig.minhash.scaled
@@ -194,15 +212,17 @@ def gather_main(args):
         # is this our first time through the loop? print headers, if so.
         if not len(found):
             print_results("")
-            print_results("overlap     p_query")
-            print_results("---------   -------")
+            print_results("overlap     p_query p_match ")
+            print_results("---------   ------- --------")
 
         # output!
         pct_query = '{:.1f}%'.format(result.f_unique_to_query*100)
+        pct_match = '{:.1f}%'.format(result.f_match*100)
         str_bp = format_bp(result.intersect_bp)
         name = format_lineage(result.lineage)
 
-        print_results('{:9}   {:>6}      {}', str_bp, pct_query, name)
+        print_results('{:9}   {:>6}  {:>6}      {}', str_bp, pct_query,
+                      pct_match, name)
 
         found.append(result)
 
@@ -226,7 +246,7 @@ def gather_main(args):
         sys.exit(0)
 
     if args.output:
-        fieldnames = ['intersect_bp', 'f_unique_to_query', 'f_unique_weighted',
+        fieldnames = ['intersect_bp', 'f_match', 'f_unique_to_query', 'f_unique_weighted',
                       'average_abund'] + list(lca_utils.taxlist())
 
         w = csv.DictWriter(args.output, fieldnames=fieldnames)

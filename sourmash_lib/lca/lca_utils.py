@@ -161,8 +161,12 @@ class LCA_Database(object):
             # JSON doesn't have a 64 bit type so stores them as strings)
             hashval_to_lineage_id_2 = load_d['hashval_assignments']
             hashval_to_lineage_id = {}
+            lineage_id_counts = defaultdict(int)
+
             for k, v in hashval_to_lineage_id_2.items():
                 hashval_to_lineage_id[int(k)] = v
+                for vv in v:
+                    lineage_id_counts[vv] += 1
 
             signatures_to_lineage = load_d['signatures_to_lineage']
 
@@ -175,6 +179,7 @@ class LCA_Database(object):
         for k, v in signatures_to_lineage.items():
             lineage_id_to_signature[v] = k
         self.lineage_id_to_signature = lineage_id_to_signature
+        self.lineage_id_counts = lineage_id_counts
 
     def save(self, db_name):
         "Save to a JSON file."
