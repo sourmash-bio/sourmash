@@ -271,7 +271,7 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                                           ksize=query_ksize,
                                           select_moltype=query_moltype)
             siglist = list(siglist)
-            if len(siglist) == 0:         # file not found
+            if len(siglist) == 0:         # file not found, or parse error?
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
@@ -281,10 +281,8 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
             notify('loaded {} signatures from {}', len(siglist),
                    sbt_or_sigfile, end='\r')
             n_signatures += len(siglist)
-        except EnvironmentError:
+        except (EnvironmentError, ValueError):
             error("\nCannot open file '{}'", sbt_or_sigfile)
-            sys.exit(-1)
-        except ValueError:                # incompatible signature
             sys.exit(-1)
 
     notify(' '*79, end='\r')
