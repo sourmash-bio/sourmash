@@ -207,7 +207,7 @@ def load_signatures(data, ksize=None, select_moltype=None,
                 error(str(excinfo))
                 if do_raise:
                     raise
-                return []
+                return
 
     try:
         # JSON format

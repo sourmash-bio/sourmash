@@ -84,7 +84,8 @@ def load_query_signature(filename, ksize, select_moltype):
                                        select_moltype=select_moltype,
                                        do_raise=True)
         sl = list(sl)
-    except FileNotFoundError:
+    except IOError:
+        error("Cannot open file '{}'", filename)
         sys.exit(-1)
 
     if len(sl) and ksize is None:
@@ -281,7 +282,7 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                    sbt_or_sigfile, end='\r')
             n_signatures += len(siglist)
         except EnvironmentError:
-            error("\nfile '{}' does not exist", sbt_or_sigfile)
+            error("\nCannot open file '{}'", sbt_or_sigfile)
             sys.exit(-1)
         except ValueError:                # incompatible signature
             sys.exit(-1)

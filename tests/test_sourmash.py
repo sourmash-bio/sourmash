@@ -900,7 +900,7 @@ def test_search_query_sig_does_not_exist():
 
         print(status, out, err)
         assert status == -1
-        assert 'No such file or directory' in err
+        assert 'Cannot open file' in err
         assert len(err.splitlines()) < 5
 
 
@@ -920,7 +920,7 @@ def test_search_subject_sig_does_not_exist():
 
         print(status, out, err)
         assert status == -1
-        assert 'No such file or directory' in err
+        assert 'Cannot open file' in err
 
 
 def test_search_second_subject_sig_does_not_exist():
@@ -939,7 +939,7 @@ def test_search_second_subject_sig_does_not_exist():
 
         print(status, out, err)
         assert status == -1
-        assert 'No such file or directory' in err
+        assert 'Cannot open file' in err
 
 
 def test_search():
