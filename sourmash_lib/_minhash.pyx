@@ -264,6 +264,9 @@ cdef class MinHash(object):
         return self.downsample_scaled(new_scaled)
 
     def downsample_scaled(self, new_num):
+        if self.num:
+            raise ValueError('num != 0 - cannot downsample a standard MinHash')
+
         max_hash = self.max_hash
         if max_hash is None:
             raise ValueError('no max_hash available - cannot downsample')

@@ -884,7 +884,27 @@ def test_plot_subsample_2():
         assert expected in out
 
 
-def test_search_sig_does_not_exist():
+def test_search_query_sig_does_not_exist():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short2.fa.sig',
+                                            'short.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'Cannot open file' in err
+        assert len(err.splitlines()) < 5
+
+
+def test_search_subject_sig_does_not_exist():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
@@ -900,7 +920,26 @@ def test_search_sig_does_not_exist():
 
         print(status, out, err)
         assert status == -1
-        assert 'does not exist' in err
+        assert 'Cannot open file' in err
+
+
+def test_search_second_subject_sig_does_not_exist():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', 'short.fa.sig',
+                                            'short.fa.sig', 'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'Cannot open file' in err
 
 
 def test_search():
@@ -1082,6 +1121,93 @@ def test_search_deduce_ksize():
         print(status, out, err)
         assert '1 matches' in out
         assert 'k=23' in err
+
+
+def test_do_sourmash_index_multik_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '32', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
+def test_do_sourmash_index_multimol_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--protein', '-k', '30',
+                                            testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+
+
+def test_do_sourmash_index_multinum_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', '-n', '500', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', '-n', '1000', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'trying to build an SBT with incompatible signatures.' in err
+
+
+def test_do_sourmash_index_multiscaled_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '10', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '1', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'trying to build an SBT with incompatible signatures.' in err
 
 
 def test_do_sourmash_sbt_search_output():
@@ -1374,13 +1500,12 @@ def test_search_metagenome_downsample():
 
         cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+                                           in_directory=location, fail_ok=True)
+        assert status == -1
 
-        print(out)
-        print(err)
 
-        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
-        assert '12 matches; showing first 3:' in out
+        assert "for tree 'gcf_all', scaled value is smaller than query." in err
+        assert 'tree scaled: 10000; query scaled: 100000. Cannot do similarity search.' in err
 
 
 def test_search_metagenome_downsample_containment():
@@ -1594,6 +1719,28 @@ def test_do_sourmash_sbt_search_downsample():
 
         assert 'short.fa' in out
         assert 'short2.fa' in out
+
+
+def test_do_sourmash_sbt_search_downsample_2():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        testdata2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+
+        sbtname = 'foo'
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', sbtname,
+                                            testdata2],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, sbtname,
+                                            '--scaled=100000',
+                                            '--threshold=0.01'],
+                                           in_directory=location, fail_ok=True)
+        assert status == -1
+        assert 'Cannot do similarity search.' in err
 
 
 def test_do_sourmash_index_single():
@@ -1821,7 +1968,7 @@ def test_do_sourmash_sbt_search_otherdir():
 
         assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.json'))
 
-        sbt_name = os.path.join(location,'xxx', 'zzz',)
+        sbt_name = os.path.join(location, 'xxx', 'zzz',)
         sig_loc = os.path.join(location, 'short.fa.sig')
         status, out, err = utils.runscript('sourmash',
                                            ['search', sig_loc, sbt_name])
@@ -1829,6 +1976,138 @@ def test_do_sourmash_sbt_search_otherdir():
 
         assert 'short.fa' in out
         assert 'short2.fa' in out
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_1():
+    # should not work: scaled query against num tree
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short2.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sbt_name],
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'tree and query are incompatible for search' in err
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_2():
+    # should not work: num query against scaled tree
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sbt_name = os.path.join(location, 'zzz',)
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sbt_name],
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'tree and query are incompatible for search' in err
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_3():
+    # should not work: scaled query against num signature
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        sig_loc2 = os.path.join(location, 'short2.fa.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc, sig_loc2],
+                                           fail_ok=True)
+
+        assert status == -1
+        assert 'incompatible - cannot compare' in err
+
+
+def test_do_sourmash_sbt_search_scaled_vs_num_4():
+    # should not work: num query against scaled signature
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '1000'],
+                                           in_directory=location)
+
+        sig_loc = os.path.join(location, 'short.fa.sig')
+        sig_loc2 = os.path.join(location, 'short2.fa.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', sig_loc2, sig_loc],
+                                           fail_ok=True)
+        assert status == -1
+        assert 'incompatible - cannot compare' in err
+
+
+def test_do_sourmash_check_search_vs_actual_similarity():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', files[0], 'zzz'],
+                                           in_directory=location)
+        assert status == 0
 
 
 def test_do_sourmash_sbt_search_bestonly():

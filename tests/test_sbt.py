@@ -6,7 +6,8 @@ import pytest
 
 from sourmash_lib import signature
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash_lib.sbtmh import SigLeaf, search_minhashes
+from sourmash_lib.sbtmh import (SigLeaf, search_minhashes,
+                                search_minhashes_containment)
 from sourmash_lib.sbt_storage import (FSStorage, TarStorage,
                                       RedisStorage, IPFSStorage)
 
@@ -139,9 +140,9 @@ def test_tree_v1_load():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
+    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v1 == results_cur
@@ -158,9 +159,9 @@ def test_tree_v2_load():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes,
+    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v2 == results_cur
@@ -197,6 +198,26 @@ def test_tree_save_load(n_children):
         assert old_result == new_result
 
 
+def test_search_minhashes():
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory)
+
+    n_leaves = 0
+    for f in utils.SIG_FILES:
+        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+
+    to_search = next(iter(tree.leaves()))
+
+    # this fails if 'search_minhashes' is calc containment and not similarity.
+    results = tree.find(search_minhashes, to_search.data, 0.08)
+    for leaf in results:
+        assert to_search.data.similarity(leaf.data) >= 0.08
+
+    print(results)
+
+
 def test_binary_nary_tree():
     factory = GraphFactory(31, 1e5, 4)
     trees = {}
@@ -213,7 +234,7 @@ def test_binary_nary_tree():
         to_search = leaf
         n_leaves += 1
 
-    assert all([len(t.leaves()) == n_leaves for t in trees.values()])
+    assert all([len(list(t.leaves())) == n_leaves for t in trees.values()])
 
     results = {}
     print('*' * 60)
@@ -264,15 +285,15 @@ def test_sbt_combine(n_children):
 
     # check if adding a new node will use the next empty position
     next_empty = 0
-    for n, d in tree_1.nodes.items():
-        if d is None:
+    for n, d in enumerate(tree_1.nodes):
+        if n != d:
             next_empty = n
             break
     if not next_empty:
         next_empty = n + 1
 
     tree_1.add_node(leaf)
-    assert tree_1.max_node == next_empty
+    assert tree_1.next_node == next_empty
 
 
 def test_sbt_fsstorage():
@@ -435,7 +456,7 @@ def test_tree_repair():
                                                  to_search, 0.1)}
 
     assert results_repair == results_cur
-    assert len(results_repair) == 4
+    assert len(results_repair) == 2
 
 
 def test_tree_repair_add_node():

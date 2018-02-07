@@ -13,6 +13,7 @@ import sourmash_lib
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
+from .search import format_bp
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -610,6 +611,9 @@ def sbt_combine(args):
 
 
 def index(args):
+    """
+    Build an Sequence Bloom Tree index of the given signatures.
+    """
     import sourmash_lib.sbtmh
 
     parser = argparse.ArgumentParser()
@@ -657,6 +661,8 @@ def index(args):
     n = 0
     ksizes = set()
     moltypes = set()
+    nums = set()
+    scaleds = set()
     for f in inp_files:
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
@@ -665,6 +671,8 @@ def index(args):
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
+            nums.add(ss.minhash.num)
+            scaleds.add(ss.minhash.scaled)
 
             leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
@@ -677,6 +685,16 @@ def index(args):
             error('ksizes: {}; moltypes: {}',
                   ", ".join(map(str, ksizes)), ", ".join(moltypes))
             sys.exit(-1)
+
+        if nums == { 0 } and len(scaleds) == 1:
+            pass # good
+        elif scaleds == { 0 } and len(nums) == 1:
+            pass # also good
+        else:
+            error('trying to build an SBT with incompatible signatures.')
+            error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
+            sys.exit(-1)
+
 
     # did we load any!?
     if n == 0:
@@ -724,11 +742,9 @@ def search(args):
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
+                                             query.minhash.ksize,
+                                             sourmash_args.get_moltype(query))
 
     # downsample if requested
     if args.scaled:
@@ -741,8 +757,8 @@ def search(args):
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype,
+    databases = sourmash_args.load_sbts_and_sigs(args.databases, query,
+                                                 not args.containment,
                                                  args.traverse_directory)
 
     if not len(databases):
@@ -903,11 +919,9 @@ def gather(args):
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
+                                             query.minhash.ksize,
+                                             sourmash_args.get_moltype(query))
 
     # verify signature was computed right.
     if query.minhash.max_hash == 0:
@@ -926,8 +940,7 @@ def gather(args):
         sys.exit(-1)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype,
+    databases = sourmash_args.load_sbts_and_sigs(args.databases, query, False,
                                                  args.traverse_directory)
 
     if not len(databases):
@@ -995,7 +1008,7 @@ def gather(args):
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
 
-            e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
+            e = sourmash_lib.MinHash(ksize=query.minhash.ksize, n=0,
                                      max_hash=new_max_hash)
             e.add_many(query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature(e) ],
@@ -1044,24 +1057,18 @@ def watch(args):
 
     tree = sourmash_lib.load_sbt_index(args.sbt_name)
 
-    def get_ksize(tree):
-        """Walk nodes in `tree` to find out ksize"""
-        for node in tree.nodes.values():
-            if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
-                return node.data.minhash.ksize
-
-    # deduce ksize from the SBT we are loading
+    # check ksize from the SBT we are loading
     ksize = args.ksize
     if ksize is None:
-        ksize = get_ksize(tree)
+        leaf = next(iter(tree.leaves()))
+        tree_mh = leaf.data.minhash
+        ksize = tree_mh.ksize
 
     E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
                              is_protein=is_protein)
-    streamsig = sig.SourmashSignature(E, filename='stdin',
-                                      name=args.name)
+    streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
 
-    notify('Computing signature for k={}, {} from stdin',
-           ksize, moltype)
+    notify('Computing signature for k={}, {} from stdin', ksize, moltype)
 
     def do_search():
         search_fn = SearchMinHashesFindBest().search
