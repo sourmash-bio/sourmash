@@ -293,7 +293,7 @@ def test_sbt_combine(n_children):
         next_empty = n + 1
 
     tree_1.add_node(leaf)
-    assert tree_1.max_node == next_empty
+    assert tree_1.next_node == next_empty
 
 
 def test_sbt_fsstorage():

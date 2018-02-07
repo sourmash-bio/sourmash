@@ -118,13 +118,13 @@ class SBT(object):
         self.nodes = defaultdict(lambda: None)
         self.missing_nodes = set()
         self.d = d
-        self.max_node = 0
+        self.next_node = 0
         self.storage = storage
 
     def new_node_pos(self, node):
-        while self.nodes[self.max_node] is not None:
-            self.max_node += 1
-        return self.max_node
+        while self.nodes.get(self.next_node, None) is not None:
+            self.next_node += 1
+        return self.next_node
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
@@ -178,7 +178,7 @@ class SBT(object):
         visited, queue = set(), [0]
         while queue:
             node_p = queue.pop(0)
-            node_g = self.nodes[node_p]
+            node_g = self.nodes.get(node_p, None)
             if node_g is None:
                 if node_p in self.missing_nodes:
                     self._rebuild_node(node_p)
@@ -210,7 +210,7 @@ class SBT(object):
             (the default).
         """
 
-        node = self.nodes[pos]
+        node = self.nodes.get(pos, None)
         if node is not None:
             # this node was already build, skip
             return
@@ -518,7 +518,8 @@ class SBT(object):
         tree.nodes = sbt_nodes
         tree.missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
-        tree.max_node = max_node
+        # TODO: this might not be true with combine...
+        tree.next_node = max_node
 
         tree._fill_max_n_below()
 
@@ -545,7 +546,6 @@ class SBT(object):
                         parent = self.parent(parent.pos)
 
 
-
     def print_dot(self):
         print("""
         digraph G {
@@ -569,7 +569,7 @@ class SBT(object):
         visited, stack = set(), [0]
         while stack:
             node_p = stack.pop()
-            node_g = self.nodes[node_p]
+            node_g = self.nodes.get(node_p, None)
             if node_p not in visited and node_g is not None:
                 visited.add(node_p)
                 depth = int(math.floor(math.log(node_p + 1, self.d)))
@@ -632,9 +632,9 @@ class SBT(object):
             n_next = n_previous + int(self.d ** level)
             current_pos = n_next
 
-        # reset max_node, next time we add a node it will find the next
+        # reset next_node, next time we add a node it will find the next
         # empty position
-        self.max_node = 2
+        self.next_node = 2
 
         # TODO: do we want to return a new tree, or merge into this one?
         self.nodes = new_nodes
