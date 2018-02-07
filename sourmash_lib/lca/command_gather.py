@@ -43,6 +43,7 @@ def format_lineage(lineage_tup):
     """
     Pretty print lineage.
     """
+    return str(lineage_tup)
     # list of ranks present
     present = [ l.rank for l in lineage_tup if l.name ]
     d = dict(lineage_tup) # rank: value
@@ -94,15 +95,19 @@ def gather_signature(query_sig, dblist, ignore_abundance):
 
     while 1:
         # find all of the assignments for the current set of hashes
-        assignments = lca_utils.gather_assignments(query_mins, dblist)
-
+        assignments = defaultdict(set)
+        for hashval in query_mins:
+            for lca_db in dblist:
+                lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
+                for lid in lineage_ids:
+                    md5 = lca_db.lineage_id_to_signature[lid]
+                    assignments[hashval].add(md5)
+                    
         # none? quit.
         if not assignments:
             break
 
-        # count 'em all. note, this will combine identical lineages from
-        # different source genomes; the only that is counted is the lineage
-        # assignment.
+        # count the distinct signatures.
         counts = Counter()
         for hashval, assignment_set in assignments.items():
             for assignment in assignment_set:

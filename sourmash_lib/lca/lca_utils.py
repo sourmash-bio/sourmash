@@ -170,7 +170,11 @@ class LCA_Database(object):
         self.hashval_to_lineage_id = hashval_to_lineage_id
         self.ksize = ksize
         self.scaled = scaled
-        self.signatures_to_lineage = signatures_to_lineage
+        self.signature_to_lineage_id = signatures_to_lineage
+        lineage_id_to_signature = {}
+        for k, v in signatures_to_lineage.items():
+            lineage_id_to_signature[v] = k
+        self.lineage_id_to_signature = lineage_id_to_signature
 
     def save(self, db_name):
         "Save to a JSON file."
