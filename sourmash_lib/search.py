@@ -1,3 +1,4 @@
+from __future__ import division
 from collections import namedtuple
 
 import sourmash_lib
@@ -6,9 +7,27 @@ from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
 from .sbtmh import SearchMinHashesFindBest
 
+
+
+
 # generic SearchResult across individual signatures + SBTs.
 SearchResult = namedtuple('SearchResult',
                           'similarity, match_sig, md5, filename, name')
+
+
+def format_bp(bp):
+    "Pretty-print bp information."
+    bp = float(bp)
+    if bp < 500:
+        return '{:.0f} bp '.format(bp)
+    elif bp <= 500e3:
+        return '{:.1f} kbp'.format(round(bp / 1e3, 1))
+    elif bp < 500e6:
+        return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
+    elif bp < 500e9:
+        return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
+    return '???'
+
 
 def search_databases(query, databases, threshold, do_containment, best_only):
     # set up the search & score function(s) - similarity vs containment
@@ -58,11 +77,22 @@ def search_databases(query, databases, threshold, do_containment, best_only):
     return results
 
 
-def gather_databases(query, databases, threshold_bp):
+GatherResult = namedtuple('GatherResult',
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
+
+def gather_databases(query, databases, threshold_bp, ignore_abundance):
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
 
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
+
+    if orig_query.minhash.track_abundance and not ignore_abundance:
+        orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
+    else:
+        if orig_query.minhash.track_abundance and ignore_abundance:
+            notify('** ignoring abundance')
+        orig_abunds = { k: 1 for k in orig_query.minhash.get_mins(with_abundance=False) }
+    sum_abunds = sum(orig_abunds.values())
 
     # calculate the band size/resolution R for the genome
     R_metagenome = orig_query.minhash.scaled
@@ -91,7 +121,7 @@ def gather_databases(query, databases, threshold_bp):
             return None, None, None
 
         # take the best result
-        results.sort(key=lambda x: -x[0])   # reverse sort on similarity
+        results.sort(key=lambda x: (-x[0], x[1].md5sum()))   # reverse sort on similarity
         best_similarity, best_leaf = results[0]
         return best_similarity, best_leaf, filename
 
@@ -107,8 +137,7 @@ def gather_databases(query, databases, threshold_bp):
     query = build_new_signature(new_mins, orig_query)
 
     sum_found = 0.
-    GatherResult = namedtuple('GatherResult',
-                               'intersect_bp, f_orig_query, f_match, f_unique_to_query, filename, name, md5, leaf')
+
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -156,10 +185,18 @@ def gather_databases(query, databases, threshold_bp):
         query_n_mins = len(orig_query.minhash.get_hashes())
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
+        # calculate scores weighted by abundances
+        f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
+               / sum_abunds
+        average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
+               / len(intersect_mins)
+
         result = GatherResult(intersect_bp=intersect_bp,
                               f_orig_query=f_orig_query,
                               f_match=f_match,
                               f_unique_to_query=f_unique_to_query,
+                              f_unique_weighted=f_unique_weighted,
+                              average_abund=average_abund,
                               filename=filename,
                               md5=best_leaf.md5sum(),
                               name=best_leaf.name(),
@@ -169,4 +206,7 @@ def gather_databases(query, databases, threshold_bp):
         query_mins -= set(found_mins)
         query = build_new_signature(query_mins, orig_query)
 
-        yield result, len(intersect_mins), new_max_hash, query
+        weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
+             / sum_abunds
+
+        yield result, weighted_missed, new_max_hash, query

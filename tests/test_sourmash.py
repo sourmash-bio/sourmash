@@ -2216,7 +2216,7 @@ def test_gather_metagenome():
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_traverse():
@@ -2244,7 +2244,7 @@ def test_gather_metagenome_traverse():
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp      32.1%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_output_unassigned():
@@ -2305,8 +2305,8 @@ def test_gather_metagenome_downsample():
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert any(('4.1 Mbp      25.9%    2.4%      NC_011294.1 Salmonella enterica subsp...' in out,
-                    '4.1 Mbp      25.9%    2.4%      NC_011274.1 Salmonella enterica subsp...' in out))
+        assert all(('4.1 Mbp       0.6%    2.4%' in out,
+                    '4.1 Mbp       4.4%   17.1%' in out))
 
 
 def test_gather_save_matches():
@@ -2436,6 +2436,112 @@ def test_gather_deduce_moltype():
         print(err)
 
         assert '1.9 kbp     100.0%  100.0%' in out
+
+
+def test_gather_abund_1_1():
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query] + against_list,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert '49.6%   78.5%      tests/test-data/genome-s10.fa.gz' in out
+        assert '50.4%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert 'genome-s12.fa.gz' not in out
+
+
+def test_gather_abund_10_1():
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query, '-o', 'xxx.csv'] \
+                                            + against_list,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '91.0%  100.0%      tests/test-data/genome-s10.fa.gz' in out
+        assert '9.0%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert 'genome-s12.fa.gz' not in out
+
+        # check the calculations behind the above output by looking into
+        # the CSV.
+        with open(os.path.join(location, 'xxx.csv'), 'rt') as fp:
+            r = csv.DictReader(fp)
+
+            overlaps = []
+            f_weighted_list = []
+            average_abunds = []
+
+            for row in r:
+                overlap = float(row['intersect_bp'])
+                f_weighted = float(row['f_unique_weighted'])
+                average_abund = float(row['average_abund'])
+
+                overlaps.append(overlap)
+                f_weighted_list.append(f_weighted)
+                average_abunds.append(average_abund)
+
+            weighted_calc = []
+            for (overlap, average_abund) in zip(overlaps, average_abunds):
+                prod = overlap*average_abund
+                weighted_calc.append(prod)
+
+            total_weighted = sum(weighted_calc)
+            for prod, f_weighted in zip(weighted_calc, f_weighted_list):
+                assert prod / total_weighted == f_weighted, (prod, f_weighted)
+
+
+def test_gather_abund_10_1_ignore_abundance():
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query] \
+                                            + ['--ignore-abundance'] + \
+                                            against_list,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+        assert '57.2%  100.0%      tests/test-data/genome-s10.fa.gz' in out
+        assert '42.8%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert 'genome-s12.fa.gz' not in out
 
 
 def test_sbt_categorize():
