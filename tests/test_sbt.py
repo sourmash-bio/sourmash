@@ -285,8 +285,8 @@ def test_sbt_combine(n_children):
 
     # check if adding a new node will use the next empty position
     next_empty = 0
-    for n, d in tree_1.nodes.items():
-        if d is None:
+    for n, d in enumerate(tree_1.nodes):
+        if n != d:
             next_empty = n
             break
     if not next_empty:
