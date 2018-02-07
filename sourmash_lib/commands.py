@@ -885,7 +885,7 @@ def categorize(args):
 
 
 def gather(args):
-    from .search import gather_databases
+    from .search import gather_databases, GatherResult, format_bp
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -905,6 +905,8 @@ def gather(args):
                         help='downsample query to this scaled factor')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
+    parser.add_argument('--ignore-abundance',  action='store_true',
+                        help='do NOT use k-mer abundances if present')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
@@ -946,14 +948,13 @@ def gather(args):
         sys.exit(-1)
 
     found = []
-    sum_found = 0
-    for result, n_intersect_mins, new_max_hash, next_query in gather_databases(query, databases,
-                                                     args.threshold_bp):
+    for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         name = result.leaf._display_name(40)
+
 
         if not len(found):                # first result? print header.
             print_results("")
@@ -961,7 +962,7 @@ def gather(args):
             print_results("---------   ------- --------")
 
         # print interim result & save in a list for later use
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         name = result.leaf._display_name(40)
@@ -969,16 +970,14 @@ def gather(args):
         print_results('{:9}   {:>6}  {:>6}      {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
-        sum_found += n_intersect_mins
         found.append(result)
 
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
 
-    sum_found /= len(query.minhash.get_hashes())
     print_results('the recovered matches hit {:.1f}% of the query',
-           sum_found * 100)
+           (1 - weighted_missed) * 100)
     print_results('')
 
     if not found:
@@ -986,7 +985,8 @@ def gather(args):
 
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'name', 'filename', 'md5']
+                      'f_unique_to_query', 'f_unique_weighted',
+                      'average_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
