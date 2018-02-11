@@ -65,6 +65,7 @@ Contents:
    command-line
    tutorials
    tutorials-lca
+   classifying-signatures
    databases
    api
    api-example
