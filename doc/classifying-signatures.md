@@ -37,7 +37,7 @@ Neither search option (similarity or containment) is effective when
 comparing or searching with metagenomes, which typically have a
 mixture of many different genomes.  While you might use containment to
 see if a query genome is present in one or more metagenomes, a common
-question to ask is the reverse: **what genomes are in my metagenome?*
+question to ask is the reverse: **what genomes are in my metagenome?**
 
 We have implemented two algorithms in sourmash to do this.
 
