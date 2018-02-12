@@ -68,19 +68,25 @@ as we move forward!
 
 ## To do taxonomy, or not to do taxonomy?
 
-By default, there is no taxonomic information provided in sourmash
-signatures or SBT databases of signatures.  Generally what this means
-is that you will have to provide your own mapping from a match to some
-taxonomic hierarchy.  This is generally appropriate when you are working
-with lots of genomes that have no taxonomic information.
+By default, there is no structured taxonomic information available in
+sourmash signatures or SBT databases of signatures.  Generally what
+this means is that you will have to provide your own mapping from a
+match to some taxonomic hierarchy.  This is generally the case when
+you are working with lots of genomes that have no taxonomic
+information.
 
-The `lca` subcommands, however, work with LCA databases, which can only
-be built for genomes for which taxonomic information is present.  This is
-one of the main differences between the `sourmash lca` subcommands and the
-basic `sourmash search` functionality.
+The `lca` subcommands, however, work with LCA databases, which contain
+taxonomic information by construction.  This is one of the main
+differences between the `sourmash lca` subcommands and the basic
+`sourmash search` functionality.  So the `lca` subcommands will generally
+output structured taxonomic information, and these are what you should look
+to if you are interested in doing classification.
 
-We're still thinking about how to combine taxonomy and search, so feedback
-is welcome.
+It's important to note that taxonomy based on k-mers is very, very
+specific and if you get a match, it's pretty reliable. On the
+converse, however, k-mer identification is very brittle with respect
+to evolutionary divergence, so if you don't get a match it may only mean
+that the particular species isn't known.
 
 ## What commands should I use?
 
