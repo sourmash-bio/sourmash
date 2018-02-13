@@ -29,6 +29,21 @@ def get_minhash_max_hash():
     return MINHASH_MAX_HASH
 
 
+def get_max_hash_for_scaled(scaled):
+    if scaled == 0:
+        return 0
+    elif scaled == 1:
+        return get_minhash_max_hash()
+
+    return int(round(get_minhash_max_hash() / scaled, 0))
+
+
+def get_scaled_for_max_hash(max_hash):
+    if max_hash == 0:
+        return 0
+    return int(round(get_minhash_max_hash() / max_hash, 0))
+
+
 cdef bytes to_bytes(s):
     if not isinstance(s, (basestring, bytes)):
         raise TypeError("Requires a string-like sequence")
@@ -76,8 +91,16 @@ cdef class MinHash(object):
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0,
-                       mins=None):
+                       mins=None, HashIntoType scaled=0):
         self.track_abundance = track_abundance
+
+        if max_hash and scaled:
+            raise ValueError('cannot set both max_hash and scaled')
+        elif scaled:
+            max_hash = get_max_hash_for_scaled(scaled)
+
+        if max_hash and n:
+            raise ValueError('cannot set both n and max_hash')
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -137,7 +160,8 @@ cdef class MinHash(object):
                 self.track_abundance,
                 deref(self._this).seed,
                 deref(self._this).max_hash,
-                self.get_mins(with_abundance=self.track_abundance)))
+                self.get_mins(with_abundance=self.track_abundance),
+                0))
 
     def __richcmp__(self, other, op):
         if op == 2:
@@ -167,16 +191,14 @@ cdef class MinHash(object):
         self.add_many(other.get_mins())
 
     def __len__(self):
-        return deref(self._this).num
+        return deref(self._this).mins.size()
 
     cpdef get_mins(self, bool with_abundance=False):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         if with_abundance and self.track_abundance:
-            return mh.mins
-        elif self.track_abundance:
-            return [it.first for it in mh.mins]
+            return dict(zip(mh.mins, mh.abunds))
         else:
-            return [it for it in deref(self._this).mins]
+            return [it for it in sorted(deref(self._this).mins)]
 
     def get_hashes(self):
         return self.get_mins()
@@ -196,7 +218,9 @@ cdef class MinHash(object):
 
     @property
     def scaled(self):
-        return int(get_minhash_max_hash() / self.max_hash)
+        if self.max_hash:
+            return get_scaled_for_max_hash(self.max_hash)
+        return 0
 
     @property
     def is_protein(self):
@@ -209,8 +233,6 @@ cdef class MinHash(object):
     @property
     def max_hash(self):
         mm = deref(self._this).max_hash
-        if mm == 18446744073709551615:
-            mm = 0
 
         return mm
 
@@ -218,28 +240,10 @@ cdef class MinHash(object):
         deref(self._this).add_hash(h)
 
     def count_common(self, MinHash other):
-        cdef KmerMinAbundance *mh = NULL
-        cdef KmerMinAbundance *other_mh = NULL
-        cdef uint64_t n = 0
-
-        if self.track_abundance:
-            mh = <KmerMinAbundance*>address(deref(self._this))
-            if other.track_abundance:
-                other_mh = <KmerMinAbundance*>address(deref(other._this))
-                n = mh.count_common(deref(other_mh))
-            else:
-                n = mh.count_common(deref(other._this))
-        else:
-            if other.track_abundance:
-                other_mh = <KmerMinAbundance*>address(deref(other._this))
-                n = other_mh.count_common(deref(self._this))
-            else:
-                n = deref(self._this).count_common(deref(other._this))
-
-        return n
+        return deref(self._this).count_common(deref(other._this))
 
     def downsample_n(self, new_num):
-        if self.num < new_num:
+        if self.num and self.num < new_num:
             raise ValueError('new sample n is higher than current sample n')
 
         a = MinHash(new_num, deref(self._this).ksize,
@@ -255,21 +259,23 @@ cdef class MinHash(object):
     def downsample_max_hash(self, *others):
         max_hashes = [ x.max_hash for x in others ]
         new_max_hash = min(self.max_hash, *max_hashes)
-        new_scaled = int(get_minhash_max_hash() / new_max_hash)
+        new_scaled = get_scaled_for_max_hash(new_max_hash)
 
         return self.downsample_scaled(new_scaled)
 
     def downsample_scaled(self, new_num):
+        if self.num:
+            raise ValueError('num != 0 - cannot downsample a standard MinHash')
+
         max_hash = self.max_hash
         if max_hash is None:
             raise ValueError('no max_hash available - cannot downsample')
 
-        old_scaled = int(get_minhash_max_hash() / self.max_hash)
+        old_scaled = get_scaled_for_max_hash(self.max_hash)
         if old_scaled > new_num:
             raise ValueError('new scaled is lower than current sample scaled')
 
-        new_max_hash = get_minhash_max_hash() / float(new_num)
-        new_max_hash = int(round(new_max_hash, 0))
+        new_max_hash = get_max_hash_for_scaled(new_num)
 
         a = MinHash(0, deref(self._this).ksize,
                     deref(self._this).is_protein, self.track_abundance,
@@ -282,10 +288,6 @@ cdef class MinHash(object):
         return a
 
     def intersection(self, MinHash other):
-        cdef KmerMinAbundance *mh = NULL;
-        cdef KmerMinAbundance *other_mh = NULL;
-        cdef KmerMinAbundance *cmh = NULL;
-
         if self.num != other.num:
             err = 'must have same num: {} != {}'.format(self.num,
                                                             other.num)
@@ -300,28 +302,19 @@ cdef class MinHash(object):
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
 
-            mh = <KmerMinAbundance*>address(deref(self._this))
-            other_mh = <KmerMinAbundance*>address(deref(other._this))
-            cmh = <KmerMinAbundance*>combined_mh
-
-            cmh.merge_abund(deref(mh))
-            cmh.merge_abund(deref(other_mh))
-
-            common = set(self.get_mins())
-            common.intersection_update(other.get_mins())
-            common.intersection_update([it.first for it in cmh.mins])
         else:
             combined_mh = new KmerMinHash(num,
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
-            combined_mh.merge(deref(self._this))
-            combined_mh.merge(deref(other._this))
 
-            common = set(self.get_mins())
-            common.intersection_update(other.get_mins())
-            common.intersection_update(combined_mh.mins)
+        combined_mh.merge(deref(self._this))
+        combined_mh.merge(deref(other._this))
+
+        common = set(self.get_mins())
+        common.intersection_update(other.get_mins())
+        common.intersection_update(combined_mh.mins)
 
         return common, max(combined_mh.size(), 1)
 
@@ -349,7 +342,9 @@ cdef class MinHash(object):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
-        if not self.track_abundance or ignore_abundance:
+        # if either signature is flat, calculate Jaccard only.
+        if not (self.track_abundance and other.track_abundance) or \
+          ignore_abundance:
             return self.jaccard(other)
         else:
             # can we merge? if not, raise exception.
@@ -384,8 +379,9 @@ cdef class MinHash(object):
     def __iadd__(self, MinHash other):
         cdef KmerMinAbundance *mh = <KmerMinAbundance*>address(deref(self._this))
         cdef KmerMinAbundance *other_mh = <KmerMinAbundance*>address(deref(other._this))
-        if self.track_abundance:
-            deref(mh).merge_abund(deref(other_mh))
+
+        if self.track_abundance and other.track_abundance:
+            deref(mh).merge(deref(other_mh))
         else:
             deref(self._this).merge(deref(other._this))
 
@@ -394,9 +390,15 @@ cdef class MinHash(object):
 
     cpdef set_abundances(self, dict values):
         if self.track_abundance:
-            for k, v in values.items():
-                if not self.max_hash or k < self.max_hash:
-                    (<KmerMinAbundance*>address(deref(self._this))).mins[k] = v
+            added = 0
+
+            for k, v in sorted(values.items()):
+                if not self.max_hash or k <= self.max_hash:
+                    deref(self._this).mins.push_back(k)
+                    (<KmerMinAbundance*>address(deref(self._this))).abunds.push_back(v)
+                    added += 1
+                    if self.num > 0 and added >= self.num:
+                        break
         else:
             raise RuntimeError("Use track_abundance=True when constructing "
                                "the MinHash to use set_abundances.")

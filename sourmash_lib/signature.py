@@ -19,17 +19,27 @@ SIGNATURE_VERSION=0.4
 class SourmashSignature(object):
     "Main class for signature information."
 
-    def __init__(self, email, minhash, name='', filename=''):
+    def __init__(self, minhash, name='', filename=''):
         self.d = {}
         self.d['class'] = 'sourmash_signature'
-        self.d['type'] = 'mrnaseq'
-        self.d['email'] = email
         if name:
             self.d['name'] = name
         if filename:
             self.d['filename'] = filename
 
         self.minhash = minhash
+        self.d['license'] = 'CC0'
+
+    def __hash__(self):
+        return hash(self.md5sum())
+
+    def __str__(self):
+        name = self.name()
+        md5pref = self.md5sum()[:8]
+        if name != md5pref:
+            return "SourmashSignature('{}', {})".format(name, md5pref)
+        return "SourmashSignature({})".format(md5pref)
+    __repr__ = __str__
 
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
@@ -40,10 +50,11 @@ class SourmashSignature(object):
         return m.hexdigest()
 
     def __eq__(self, other):
-        for k in self.d:
-            if self.d[k] != other.d[k]:
+        allkeys = set(self.d.keys()).union(set(other.d.keys()))
+        for k in allkeys:
+            if self.d.get(k) != other.d.get(k):
                 return False
-            
+
         return self.minhash == other.minhash
 
     def name(self):
@@ -76,8 +87,8 @@ class SourmashSignature(object):
 
         sketch = {}
         sketch['ksize'] = int(minhash.ksize)
-        sketch['num'] = len(minhash)
-        sketch['max_hash'] = int(minhash.max_hash)
+        sketch['num'] = minhash.num
+        sketch['max_hash'] = minhash.max_hash
         sketch['seed'] = int(minhash.seed)
         if self.minhash.track_abundance:
             values = minhash.get_mins(with_abundance=True)
@@ -94,8 +105,7 @@ class SourmashSignature(object):
 
         e['signature'] = sketch
 
-        return self.d.get('email'), self.d.get('name'), \
-            self.d.get('filename'), sketch
+        return self.d.get('name'), self.d.get('filename'), sketch
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."
@@ -163,45 +173,63 @@ def _guess_open(filename):
     return sigfile
 
 
-def load_signatures(data, select_ksize=None, select_moltype=None,
-                    ignore_md5sum=False):
+def load_signatures(data, ksize=None, select_moltype=None,
+                    ignore_md5sum=False, do_raise=False):
     """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
 
     Note, the order is not necessarily the same as what is in the source file.
     """
+    if ksize:
+        ksize = int(ksize)
+
     if not data:
         return
 
     is_fp = False
     if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
+        done = False
         try:                                  # is it a file handle?
             data.read
             is_fp = True
-        except AttributeError:                # no - treat it like a filename.
-            data = _guess_open(data)
-            is_fp = True
+            done = True
+        except AttributeError:
+            pass
+
+        # not a file handle - treat it like a filename.
+        if not done:
+            try:
+                data = _guess_open(data)
+                is_fp = True
+                done = True
+            except OSError as excinfo:
+                error(str(excinfo))
+                if do_raise:
+                    raise
+                return
 
     try:
         # JSON format
         for sig in signature_json.load_signatures_json(data,
                                                      ignore_md5sum=ignore_md5sum):
-            if not select_ksize or select_ksize == sig.minhash.ksize:
+            if not ksize or ksize == sig.minhash.ksize:
                 if not select_moltype or \
                      sig.minhash.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
         error("Error in parsing signature; quitting.")
         error("Exception: {}", str(e))
+        if do_raise:
+            raise
     finally:
         if is_fp:
             data.close()
 
 
-def load_one_signature(data, select_ksize=None, select_moltype=None,
+def load_one_signature(data, ksize=None, select_moltype=None,
                        ignore_md5sum=False):
-    sigiter = load_signatures(data, select_ksize=select_ksize,
+    sigiter = load_signatures(data, ksize=ksize,
                               select_moltype=select_moltype,
                               ignore_md5sum=ignore_md5sum)
 

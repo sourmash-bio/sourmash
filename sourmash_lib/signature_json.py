@@ -4,7 +4,7 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 """
 
 # This was written for Python 3, may be there is a chance it will work with Python 2...
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import sys
 import sourmash_lib
@@ -33,7 +33,6 @@ def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
 
 
 def _json_next_signature(iterable,
-                         email = None,
                          name = None,
                          filename = None,
                          ignore_md5sum=False,
@@ -41,7 +40,6 @@ def _json_next_signature(iterable,
                          ijson = ijson):
     """Helper function to unpack and check one signature block only.
     - iterable: an iterable such the one returned by ijson.parse()
-    - email:
     - name:
     - filename:
     - ignore_md5sum:
@@ -70,6 +68,8 @@ def _json_next_signature(iterable,
     ksize = d['ksize']
     mins = d['mins']
     n = d['num']
+    if n == 0xffffffff:               # load legacy signatures where n == -1
+        n = 0
     max_hash = d.get('max_hash', 0)
     seed = d.get('seed', sourmash_lib.DEFAULT_SEED)
 
@@ -96,7 +96,7 @@ def _json_next_signature(iterable,
         abundances = list(map(int, d['abundances']))
         e.set_abundances(dict(zip(mins, abundances)))
 
-    sig = SourmashSignature(email, e)
+    sig = SourmashSignature(e)
 
     if not ignore_md5sum:
         md5sum = d['md5sum']
@@ -135,7 +135,6 @@ def load_signature_json(iterable,
             assert event == 'start_array'
             while event != 'end_array':
                 sig = _json_next_signature(iterable,
-                                           email = None,
                                            name = None,
                                            filename = None,
                                            ignore_md5sum=ignore_md5sum,
@@ -149,21 +148,26 @@ def load_signature_json(iterable,
         d[key] = value
         prefix, event, value = next(iterable)
 
-    # email, name, and filename not assumed to be parsed before the 'signatures'
+    # name, and filename not assumed to be parsed before the 'signatures'
     for sig in signatures:
-        sig.d['email'] = d['email']
         if 'name' in d:
             sig.d['name'] = d['name']
         if 'filename' in d:
             sig.d['filename'] = d['filename']
 
+    # hardcode in support only for CC0 going forward
+    if d.get('license', 'CC0') != 'CC0':
+        raise Exception("sourmash only supports CC0-licensed signatures.")
+
+    sig.d['license'] = d.get('license', 'CC0')
+
     return d
 
 
-def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ijson=ijson):
+def load_signatureset_json_iter(data, ksize=None, ignore_md5sum=False, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
-    - select_ksize:
+    - ksize:
     - ignore_md5sum:
     - ijson: ijson backend
     """
@@ -181,7 +185,7 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
                                       prefix_item = 'item.signatures.item.mins.item',
                                       ignore_md5sum=ignore_md5sum,
                                       ijson=ijson)
-            if not select_ksize or select_ksize == sig.minhash.ksize:
+            if not ksize or ksize == sig.minhash.ksize:
                 yield sig
         except ValueError:
             # possible end of the array of signatures
@@ -190,10 +194,10 @@ def load_signatureset_json_iter(data, select_ksize=None, ignore_md5sum=False, ij
             break
         n += 1
 
-def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijson):
+def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
     """
     - data: file handle (or file handle-like) object
-    - select_ksize:
+    - ksize:
     - ignore_md5sum:
     - ijson: ijson backend
     """
@@ -205,7 +209,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
             data = unicode(data)
         data = io.StringIO(data)
 
-    it = load_signatureset_json_iter(data, select_ksize=select_ksize,
+    it = load_signatureset_json_iter(data, ksize=ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
 
@@ -219,7 +223,7 @@ def load_signatures_json(data, select_ksize=None, ignore_md5sum=True, ijson=ijso
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
+def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp:
@@ -230,8 +234,8 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
     top_records = {}
     for sig in siglist:
-        email, name, filename, sketch = sig._save()
-        k = (email, name, filename)
+        name, filename, sketch = sig._save()
+        k = (name, filename)
         x = top_records.get(k, [])
         x.append(sketch)
         top_records[k] = x
@@ -240,9 +244,8 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
         return ""
 
     records = []
-    for (email, name, filename), sketches in top_records.items():
+    for (name, filename), sketches in top_records.items():
         record = {}
-        record['email'] = email
         if name:
             record['name'] = name
         if filename:
@@ -251,14 +254,18 @@ def save_signatures_json(siglist, fp=None, indent=4, sort_keys=True):
 
         record['version'] = SIGNATURE_VERSION
         record['class'] = 'sourmash_signature'
-        record['type'] = 'mrnaseq'
         record['hash_function'] = '0.murmur64'
+        record['license'] = 'CC0'
+        record['email'] = ''
 
         records.append(record)
 
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
-        s = json.dump(records, fp, indent=indent, sort_keys=sort_keys)
-    else:
-        s = json.dumps(records, indent=indent, sort_keys=sort_keys)
+        try:
+            fp.write(s)
+        except TypeError:
+            fp.write(unicode(s))
+        return None
 
     return s

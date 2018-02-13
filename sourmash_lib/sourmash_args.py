@@ -77,13 +77,18 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_query_signature(filename, select_ksize, select_moltype):
-    sl = signature.load_signatures(filename,
-                                   select_ksize=select_ksize,
-                                   select_moltype=select_moltype)
-    sl = list(sl)
+def load_query_signature(filename, ksize, select_moltype):
+    try:
+        sl = signature.load_signatures(filename,
+                                       ksize=ksize,
+                                       select_moltype=select_moltype,
+                                       do_raise=True)
+        sl = list(sl)
+    except IOError:
+        error("Cannot open file '{}'", filename)
+        sys.exit(-1)
 
-    if len(sl) and select_ksize is None:
+    if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
         if len(ksizes) == 1:
             ksize = ksizes.pop()
@@ -92,8 +97,8 @@ def load_query_signature(filename, select_ksize, select_moltype):
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
             notify('selecting default query k={}.', DEFAULT_LOAD_K)
-        elif select_ksize:
-            notify('selecting specified query k={}', select_ksize)
+        elif ksize:
+            notify('selecting specified query k={}', ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -105,10 +110,10 @@ def load_query_signature(filename, select_ksize, select_moltype):
 
 
 class LoadSingleSignatures(object):
-    def __init__(self, filelist,  select_ksize=None, select_moltype=None,
+    def __init__(self, filelist,  ksize=None, select_moltype=None,
                  ignore_files=set()):
         self.filelist = filelist
-        self.select_ksize = select_ksize
+        self.ksize = ksize
         self.select_moltype = select_moltype
         self.ignore_files = ignore_files
 
@@ -124,7 +129,7 @@ class LoadSingleSignatures(object):
                 continue
 
             sl = signature.load_signatures(filename,
-                                           select_ksize=self.select_ksize,
+                                           ksize=self.ksize,
                                            select_moltype=self.select_moltype)
             sl = list(sl)
             if len(sl) == 0:
@@ -144,48 +149,154 @@ class LoadSingleSignatures(object):
                 raise ValueError('multiple k-mer sizes/molecule types present')
 
 
-def traverse_find_sigs(dirnames):
+def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
+        if dirname.endswith('.sig') and os.path.isfile(dirname):
+            yield dirname
+            continue
+
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                if name.endswith('.sig'):
+                if name.endswith('.sig') or yield_all_files:
                     fullname = os.path.join(root, name)
                     yield fullname
 
 
-def get_ksize(tree):
-    """Walk nodes in `tree` to find out ksize"""
-    for node in tree.nodes.values():
-        if isinstance(node, SigLeaf):
-            return node.data.minhash.ksize
+def filter_compatible_signatures(query, siglist, force=False):
+    for sig in siglist:
+        if check_signatures_are_compatible(query, sig):
+            yield sig
+        else:
+            if not force:
+                raise ValueError("incompatible signature")
 
 
-def load_sbts_and_sigs(filenames, query_ksize, query_moltype):
+def check_signatures_are_compatible(query, subject):
+    # is one scaled, and the other not? cannot do search
+    if query.minhash.scaled and not subject.minhash.scaled or \
+       not query.minhash.scaled and subject.minhash.scaled:
+       error("signature {} and {} are incompatible - cannot compare.",
+             query.name(), subject.name())
+       if query.minhash.scaled:
+           error("{} was calculated with --scaled, {} was not.",
+                 query.name(), subject.name())
+       if subject.minhash.scaled:
+           error("{} was calculated with --scaled, {} was not.",
+                 subject.name(), query.name())
+       return 0
+
+    return 1
+
+
+def check_tree_is_compatible(treename, tree, query, is_similarity_query):
+    leaf = next(iter(tree.leaves()))
+    tree_mh = leaf.data.minhash
+
+    query_mh = query.minhash
+
+    if tree_mh.ksize != query_mh.ksize:
+        error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
+        error('this is different from query ksize of {}.', query_mh.ksize)
+        return 0
+
+    # is one scaled, and the other not? cannot do search.
+    if (tree_mh.scaled and not query_mh.scaled) or \
+       (query_mh.scaled and not tree_mh.scaled):
+        error("for tree '{}', tree and query are incompatible for search.",
+              treename)
+        if tree_mh.scaled:
+            error("tree was calculated with scaled, query was not.")
+        else:
+            error("query was calculated with scaled, tree was not.")
+        return 0
+
+    # are the scaled values incompatible? cannot downsample tree for similarity
+    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
+      is_similarity_query:
+        error("for tree '{}', scaled value is smaller than query.", treename)
+        error("tree scaled: {}; query scaled: {}. Cannot do similarity search.",
+              tree_mh.scaled, query_mh.scaled)
+        return 0
+
+    return 1
+
+
+def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
+    query_ksize = query.minhash.ksize
+    query_moltype = get_moltype(query)
+
+    n_signatures = 0
+    n_databases = 0
     databases = []
     for sbt_or_sigfile in filenames:
+        if traverse and os.path.isdir(sbt_or_sigfile):
+            for sigfile in traverse_find_sigs([sbt_or_sigfile]):
+                try:
+                    siglist = sig.load_signatures(sigfile,
+                                                  ksize=query_ksize,
+                                                  select_moltype=query_moltype)
+                    siglist = filter_compatible_signatures(query, siglist, 1)
+                    siglist = list(siglist)
+                    databases.append((siglist, sbt_or_sigfile, False))
+                    notify('loaded {} signatures from {}', len(siglist),
+                           sigfile, end='\r')
+                    n_signatures += len(siglist)
+                except:                       # ignore errors with traverse
+                    pass
+
+            # done! jump to beginning of main 'for' loop
+            continue
+
+        # no traverse? try loading as an SBT.
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
-            ksize = get_ksize(tree)
-            if ksize != query_ksize:
-                error("ksize on tree '{}' is {};", sbt_or_sigfile, ksize)
-                error('this is different from query ksize of {}.', query_ksize)
+
+            if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
+                                            is_similarity_query):
                 sys.exit(-1)
 
             databases.append((tree, sbt_or_sigfile, True))
-            notify('loaded SBT {}', sbt_or_sigfile)
+            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
+            n_databases += 1
+
+            # done! jump to beginning of main 'for' loop
+            continue
         except (ValueError, EnvironmentError):
             # not an SBT - try as a .sig
+            pass
 
-            try:
-                siglist = sig.load_signatures(sbt_or_sigfile,
-                                              select_ksize=query_ksize,
-                                              select_moltype=query_moltype)
-                siglist = list(siglist)
-                databases.append((list(siglist), sbt_or_sigfile, False))
-                notify('loaded {} signatures from {}', len(siglist),
-                       sbt_or_sigfile)
-            except EnvironmentError:
-                error("file '{}' does not exist", sbt_or_sigfile)
-                sys.exit(-1)
+        # not a tree? try loading as a signature.
+        try:
+            siglist = sig.load_signatures(sbt_or_sigfile,
+                                          ksize=query_ksize,
+                                          select_moltype=query_moltype)
+            siglist = list(siglist)
+            if len(siglist) == 0:         # file not found, or parse error?
+                raise ValueError
+
+            siglist = filter_compatible_signatures(query, siglist, False)
+            siglist = list(siglist)
+
+            databases.append((siglist, sbt_or_sigfile, False))
+            notify('loaded {} signatures from {}', len(siglist),
+                   sbt_or_sigfile, end='\r')
+            n_signatures += len(siglist)
+        except (EnvironmentError, ValueError):
+            error("\nCannot open file '{}'", sbt_or_sigfile)
+            sys.exit(-1)
+
+    notify(' '*79, end='\r')
+    if n_signatures and n_databases:
+        notify('loaded {} signatures and {} databases total.', n_signatures, 
+                                                               n_databases)
+    elif n_signatures:
+        notify('loaded {} signatures.', n_signatures)
+    elif n_databases:
+        notify('loaded {} databases.', n_databases)
+    else:
+        sys.exit(-1)
+
+    if databases:
+        print('')
 
     return databases
