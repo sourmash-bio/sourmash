@@ -95,25 +95,28 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     if orig_query.minhash.track_abundance and not ignore_abundance:
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
-    sum_abunds = sum(orig_abunds.values())
-
     # calculate the band size/resolution R for the genome
     R_metagenome = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
+        # CTB: could optimize by sharing scores across searches, i.e.
+        # a good early score truncates later searches.
+
         results = []
         for (sbt_or_siglist, filename, is_sbt) in dblist:
-            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
+            # search a tree
             if is_sbt:
                 tree = sbt_or_siglist
+                search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
 
                 for leaf in tree.find(search_fn, query, 0.0):
                     leaf_e = leaf.data.minhash
                     similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
                         results.append((similarity, leaf.data))
+
+            # search a signature
             else:
                 for ss in sbt_or_siglist:
                     similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
@@ -130,15 +133,18 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
 
     # define a function to build new signature object from set of mins
-    def build_new_signature(mins, template_sig):
+    def build_new_signature(mins, template_sig, scaled=None):
         e = template_sig.minhash.copy_and_clear()
         e.add_many(mins)
+        if scaled:
+            e = e.downsample_scaled(scaled)
         return SourmashSignature(e)
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins, orig_query)
 
+    R_comparison = 0
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -157,15 +163,16 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         R_genome = best_leaf.minhash.scaled
 
         # pick the highest R / lowest resolution
-        R_comparison = max(R_metagenome, R_genome)
+        R_comparison = max(R_comparison, R_metagenome, R_genome)
 
-        print('XXX', R_comparison)
-
-        # eliminate mins under this.
+        # eliminate mins under this new resolution.
+        # (CTB note: this means that if a high scaled/low res signature is
+        # found early on, resolution will be low from then on.)
         new_max_hash = get_max_hash_for_scaled(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
+        sum_abunds = sum([ v for (k,v) in orig_abunds.items() if k < new_max_hash ])
 
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
@@ -193,6 +200,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
                / len(intersect_mins)
 
+        # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
                               f_orig_query=f_orig_query,
                               f_match=f_match,
@@ -206,7 +214,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins, orig_query)
+        query = build_new_signature(query_mins, orig_query, R_comparison)
 
         weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
              / sum_abunds
