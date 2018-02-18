@@ -21,7 +21,7 @@ LineagePair = namedtuple('LineagePair', ['rank', 'name'])
 
 
 # ordered list of taxonomic ranks
-def taxlist(include_strain=False):
+def taxlist(include_strain=True):
     for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
               'species']:
         yield k
@@ -120,14 +120,16 @@ class LCA_Database(object):
     obj.hashval_to_lineage_id: key 'hashval' => set('lineage_id')
     obj.ksize: k-mer size
     obj.scaled: scaled value
-    obj.signatures_to_lineage: key 'md5sum' => 'lineage_id'
+    obj.signatures_to_lineage_id: key 'md5sum' => 'lineage_id'
+    obj.signatures_to_name: key 'md5sum' => 'name' from original signature
     """
     def __init__(self):
         self.lineage_dict = None
         self.hashval_to_lineage_id = None
         self.ksize = None
         self.scaled = None
-        self.signatures_to_lineage = None
+        self.signatures_to_lineage_id = None
+        self.signatures_to_name = None
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -168,15 +170,17 @@ class LCA_Database(object):
                 for vv in v:
                     lineage_id_counts[vv] += 1
 
-            signatures_to_lineage = load_d['signatures_to_lineage']
+            signatures_to_lineage_id = load_d['signatures_to_lineage']
+            signatures_to_name = load_d.get('signatures_to_name', None)
 
         self.lineage_dict = lineage_dict
         self.hashval_to_lineage_id = hashval_to_lineage_id
         self.ksize = ksize
         self.scaled = scaled
-        self.signature_to_lineage_id = signatures_to_lineage
+        self.signature_to_lineage_id = signatures_to_lineage_id
+        self.signature_to_name = signatures_to_name
         lineage_id_to_signature = {}
-        for k, v in signatures_to_lineage.items():
+        for k, v in signatures_to_lineage_id.items():
             lineage_id_to_signature[v] = k
         self.lineage_id_to_signature = lineage_id_to_signature
         self.lineage_id_counts = lineage_id_counts
@@ -205,7 +209,8 @@ class LCA_Database(object):
             # convert values from sets to lists, so that JSON knows how to save
             save_d['hashval_assignments'] = \
                dict((k, list(v)) for (k, v) in self.hashval_to_lineage_id.items())
-            save_d['signatures_to_lineage'] = self.signatures_to_lineage
+            save_d['signatures_to_lineage'] = self.signatures_to_lineage_id
+            save_d['signatures_to_name'] = self.signatures_to_name
             json.dump(save_d, fp)
 
     def downsample_scaled(self, scaled):

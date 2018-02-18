@@ -163,6 +163,7 @@ def index(args):
     # load signatures, construct index of hashvals to lineages
     hashval_to_lineage = defaultdict(set)
     md5_to_lineage = {}
+    md5_to_name = {}
 
     notify('finding signatures...')
     if args.traverse_directory:
@@ -214,6 +215,7 @@ def index(args):
 
                 # store md5 -> lineage too
                 md5_to_lineage[sig.md5sum()] = lineage_idx
+                md5_to_name[sig.md5sum()] = sig.name()
 
     notify(u'\r\033[K', end=u'')
     notify('...found {} genomes with lineage assignments!!',
@@ -242,7 +244,8 @@ def index(args):
     db.hashval_to_lineage_id = hashval_to_lineage
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
-    db.signatures_to_lineage = md5_to_lineage
+    db.signatures_to_lineage_id = md5_to_lineage
+    db.signatures_to_name = md5_to_name
 
     db.save(db_outfile)
 

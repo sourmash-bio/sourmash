@@ -34,7 +34,9 @@ def format_lineage(lineage_tup):
 
     if 'genus' in present:
         genus = d['genus']
-        if 'species' in present:
+        if 'strain' in present:
+            name = d['strain']
+        elif 'species' in present:
             species = d['species']
             if species.startswith(genus + ' '):
                 name = species
@@ -103,7 +105,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                     md5 = lca_db.lineage_id_to_signature[lid]
                     signature_size = lca_db.lineage_id_counts[lid]
                     assignments[hashval].add((md5, signature_size))
-                    print(md5, signature_size)
                     
         # none? quit.
         if not assignments:
@@ -126,7 +127,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                 intersect_mins.add(hashval)
 
         # should match!
-        assert top_count == len(intersect_mins)
+        # @@CTB assert top_count == len(intersect_mins)
 
         # calculate size of match (# of hashvals belonging to that sig)
         match_size = top_sigsize
