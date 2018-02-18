@@ -1,14 +1,14 @@
 # Using sourmash from the command line
 
+From the command line, sourmash can be used to compute
+[MinHash sketches][0] from DNA sequences, compare them to each other,
+and plot the results; these sketches are saved into "signature files".
+These signatures allow you to estimate sequence similarity quickly and
+accurately in large collections, among other capabilities.
 
-From the command line, sourmash can be used to compute [MinHash sketches][0] from DNA
-sequences, compare them to each other, and plot the results.  This
-allows you to estimate sequence similarity quickly and accurately.
-
-Please see the [mash software][1]
- and the [mash paper (Ondov et al., 2016)][2]
-for background
-information on how and why MinHash sketches work.
+Please see the [mash software][1] and the
+[mash paper (Ondov et al., 2016)][2] for background information on
+how and why MinHash sketches work.
 
 ______
 
@@ -17,7 +17,6 @@ sourmash uses a subcommand syntax, so all commands start with
 taken.
 
 ## An example
-
 
 Grab three bacterial genomes from NCBI:
 ```
@@ -43,17 +42,46 @@ This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
 similarity matrix and heatmap.
 
-## The `sourmash` command and its subcommands
+![E. coli comparison plot](_static/cmp.dendro.png)
+![E. coli comparison plot](_static/cmp.matrix.png)
 
+## The `sourmash` command and its subcommands
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
-There are three main subcommands: `compute`, `compare`, and `plot`.
+There are five main subcommands: `compute`, `compare`, `plot`,
+`search`, and `gather`.  See [the tutorial](tutorials.html) for a
+walkthrough of these commands.
+
+* `compute` creates signatures.
+* `compare` compares signatures and builds a distance matrix.
+* `plot` plots distance matrices created by `compare`.
+* `search` finds matches to a query signature in a collection of signatures.
+* `gather` finds non-overlapping matches to a metagenome in a collection of signatures.
+
+There are also a number of commands that work with taxonomic
+information; these are grouped under the `sourmash lca`
+subcommand. See [the LCA tutorial](tutorials-lca.html) for a
+walkthrough of these commands.
+
+* `lca classify` classifies many signatures against an LCA database.
+* `lca summarize` summarizes the content of a metagenome using an LCA database.
+* `lca gather` finds non-overlapping matches to a metagenome in an LCA database.
+* `lca index` creates a database for use with LCA subcommands.
+* `lca rankinfo` summarizes the content of a database.
+* `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
+
+Finally, there are a number of utility and information commands:
+
+* `info` shows version and software information.
+* `index` indexes many signatures using a Sequence Bloom Tree (SBT).
+* `sbt_combine` combines multiple SBTs.
+* `categorize` is an experimental command to categorize many signatures.
+* `watch` is an experimental command to classify a stream of sequencing data.
 
 ### `sourmash compute`
 
-
-The `compute` subcommand computes and saves MinHash sketches for
+The `compute` subcommand computes and saves signatures for
 each sequence in one or more sequence files.  It takes as input FASTA
 or FASTQ files, and these files can be uncompressed or compressed with
 gzip or bzip2.  The output will be one or more JSON signature files
@@ -68,6 +96,12 @@ Optional arguments:
 --ksizes K1[,K2,K3] -- one or more k-mer sizes to use; default is 31
 --force -- recompute existing signatures; convert non-DNA characters to N
 --output -- save all the signatures to this file; can be '-' for stdout.
+--track-abundance -- compute and save k-mer abundances.
+--name-from-first -- name the signature based on the first sequence in the file
+--singleton -- instead of computing a single signature for each input file,
+               compute one for each sequence
+--merged <name> -- compute a single signature for all of the input files,
+                   naming it <name>
 ```
 ### `sourmash compare`
 
@@ -78,7 +112,9 @@ The `compare` subcommand compares one or more signature files
 is a text display of a similarity matrix where each entry `[i, j]`
 contains the estimated Jaccard index between input signature `i` and
 input signature `j`.  The output matrix can be saved to a file
-with `--output` and used with the `sourmash plot` subcommand.
+with `--output` and used with the `sourmash plot` subcommand (or loaded
+with `numpy.load(...)`.  Using `--csv` will output a CSV file that can
+be loaded into other languages than Python, such as R.
 
 Usage:
 ```
@@ -92,7 +128,6 @@ Options:
 ```
 
 ### `sourmash plot`
-
 
 The `plot` subcommand produces two plots -- a dendrogram and a
 dendrogram+matrix -- from a distance matrix computed by `sourmash compare
@@ -109,16 +144,199 @@ Options:
 --labels -- display the signature names (by default, the filenames) on the plot
 --indices -- turn off index display on the plot.
 --vmax -- maximum value (default 1.0) for heatmap.
---vmin -- minimum value (deafult 0.0) for heatmap.
+--vmin -- minimum value (default 0.0) for heatmap.
 --subsample=<N> -- plot a maximum of <N> samples, randomly chosen.
 --subsample-seed=<seed> -- seed for pseudorandom number generator.
 ```
-Example figures:
 
-<img src="https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.matrix.png?raw=true" style="width:60%" />
+Example output:
 
-<img src="https://github.com/dib-lab/sourmash/blob/master/doc/_static/cmp.dendro.png?raw=true" style="width:60%" />
+![An E. coli comparison plot](_static/ecoli_cmp.matrix.png)
 
+### `sourmash search`
+
+The `search` subcommand searches a collection of signatures or SBTs for
+matches to the query signature.  It can search for matches with either
+high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
+or containment; the default is to use Jaccard similarity, unless
+`--containment` if specified.  `-o/--output` will create a CSV file
+containing the matches.
+
+`search` will load all of provided signatures into memory, which can
+be slow and somewhat memory intensive for large collections.  You can
+use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
+be quickly searched on disk; this is [the same format in which we provide
+GenBank and other databases](databases.html).
+
+Usage:
+```
+sourmash search query.sig [ list of signatures or SBTs ]
+```
+
+Example output:
+
+```
+49 matches; showing first 20:
+similarity   match
+----------   -----
+ 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
+ 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
+ 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
+ 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
+ 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
+...    
+```
+
+### `sourmash gather`
+
+The `gather` subcommand finds all non-overlapping matches to the
+query.  This is specifically meant for metagenome and genome bin
+analysis.  (See [Classifying Signatures](classifying-signatures.html)
+for more information on the different approaches that can be used
+here.)
+
+If the input signature was computed with `--track-abundance`, output
+will be abundance weighted (unless `--ignore-abundances` is
+specified).  `-o/--output` will create a CSV file containing the
+matches.
+
+`gather`, like `search`, will load all of provided signatures into
+memory.  You can use `sourmash index` to create a Sequence Bloom Tree
+(SBT) that can be quickly searched on disk; this is
+[the same format in which we provide GenBank and other databases](databases.html).
+
+Usage:
+```
+sourmash gather query.sig [ list of signatures or SBTs ]
+```
+
+Example output:
+```
+overlap     p_query p_match 
+---------   ------- --------
+1.4 Mbp      11.0%   58.0%      JANA01000001.1 Fusobacterium sp. OBRC...
+1.0 Mbp       7.7%   25.9%      CP001957.1 Haloferax volcanii DS2 pla...
+0.9 Mbp       7.4%   11.8%      BA000019.2 Nostoc sp. PCC 7120 DNA, c...
+0.7 Mbp       5.9%   23.0%      FOVK01000036.1 Proteiniclasticum rumi...
+0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
+```
+
+Note:
+
+Use `sourmash gather` to classify a metagenome against a collection of
+genomes with no (or incomplete) taxonomic information.  Use `sourmash
+lca summarize` and `sourmash lca gather` to classify a metagenome
+using a collection of genomes with taxonomic information.
+
+## `sourmash lca` subcommands
+
+These commands use LCA databases (created with `index`, below, or
+prepared databases such as
+[genbank-k31.lca.json.gz, from the LCA tutorial](tutorials-lca.html).
+
+### `sourmash lca classify`
+
+`sourmash lca classify` classifies one or more signatures using the given
+list of LCA DBs. It is meant for classifying metagenome-assembled genome
+bins (MAGs) and single-cell genomes (SAGs).
+
+Usage:
+
+```
+sourmash lca --query query.sig [query2.sig ...] --db <lca db> [<lca db2> ...]
+```
+
+Example output:
+
+```
+ID,status,superkingdom,phylum,class,order,family,genus,species
+"NC_009665.1 Shewanella baltica OS185, complete genome",found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Shewanellaceae,Shewanella,Shewanella baltica
+```
+
+### `sourmash lca summarize`
+
+`sourmash lca summarize` produces a Kraken-style summary of the
+combined contents of the given query signatures.  It is meant for
+exploring metagenomes and metagenome-assembled genome bins.
+
+Usage:
+
+```
+sourmash lca summarize --query query.sig [query2.sig ...] 
+    --db <lca db> [<lca db2> ...]
+```
+
+Example output:
+
+```
+100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
+100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
+100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
+100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
+100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria
+100.0%   792   Bacteria;Proteobacteria
+100.0%   792   Bacteria
+```
+
+### `sourmash lca gather`
+
+The `sourmash lca gather` command classifies finds all non-overlapping
+matches to the query, similar to the `sourmash gather` command.  This
+is specifically meant for metagenome and genome bin analysis.  (See
+[Classifying Signatures](classifying-signatures.html) for more
+information on the different approaches that can be used here.)
+
+Usage:
+
+```
+sourmash lca gather query.sig [<lca database> ...]
+```
+
+Example output:
+
+```
+overlap     p_query p_match
+---------   ------- --------
+1.8 Mbp      14.6%    9.1%      Fusobacterium nucleatum
+1.0 Mbp       7.8%   16.3%      Proteiniclasticum ruminis
+1.0 Mbp       7.7%   25.9%      Haloferax volcanii
+0.9 Mbp       7.4%   11.8%      Nostoc sp. PCC 7120
+0.9 Mbp       7.0%    5.8%      Shewanella baltica
+0.8 Mbp       6.0%    8.6%      Desulfovibrio vulgaris
+0.6 Mbp       4.9%   12.6%      Thermus thermophilus
+```
+
+### `sourmash lca index`
+
+The `sourmash lca index` command creates an LCA database from
+a lineage spreadsheet and a collection of signatures.  This can be used
+to create LCA databases from private collections of genomes, and can
+also be used to create databases for e.g. subsets of GenBank.
+
+See [the `sourmash lca` tutorial](tutorials-lca.html) and the blog
+post
+[Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
+for some use cases.
+
+If you are interested in preparing lineage spreadsheets from GenBank
+genomes (or building off of NCBI taxonomies more generally), please
+see
+[the NCBI lineage repository](https://github.com/dib-lab/2018-ncbi-lineages).
+
+### `sourmash lca rankinfo`
+
+The `sourmash lca rankinfo` command displays k-mer specificity
+information for one or more LCA databases.  See the blog post
+[How specific are k-mers for taxonomic assignment of microbes, anyway?](http://ivory.idyll.org/blog/2017-how-specific-kmers.html) for example output.
+
+### `sourmash lca compare_csv`
+
+The `sourmash lca compare_csv` command compares two lineage
+spreadsheets (such as those output by `sourmash lca classify` or taken
+as input by `sourmash lca index`) and summarizes their
+agreement/disagreement.  Please see the blog post
+[Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
+for an example use case.
 
 [0]:https://en.wikipedia.org/wiki/MinHash   
 [1]:http://mash.readthedocs.io/en/latest/__

@@ -9,9 +9,9 @@ links and details.
 (These `sourmash lca classify` and `sourmash lca summarize` steps require
 about 4 GB of RAM when using the genbank database, as below.)
 
-First, install sourmash from the LCA branch:
+First, install sourmash 2.0a4 or later.
 ```
-pip install -U https://github.com/dib-lab/sourmash/archive/add/lca.zip
+pip install -U https://github.com/dib-lab/sourmash/archive/master.zip
 ```
 
 Next, download a genbank LCA database for k=31:
