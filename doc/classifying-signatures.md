@@ -41,15 +41,14 @@ question to ask is the reverse: **what genomes are in my metagenome?**
 
 We have implemented two algorithms in sourmash to do this.
 
-One, approaches based on lowest common ancestor ("LCA"), uses
-taxonomic information from e.g. GenBank to classify individual k-mers,
-and then infers taxonomic distributions of metagenome contents from
-the presence of these individual k-mers. (This is the approach
-pioneered by [Kraken](https://ccb.jhu.edu/software/kraken/) and many
-other tools.)  `sourmash lca` can be used to classify individual
-genome bins with `classify`, or summarize metagenome taxonomy with
-`summarize`.  The [sourmash lca
-tutorial](http://sourmash.readthedocs.io/en/latest/tutorials-lca.html)
+One algorithm uses taxonomic information from e.g. GenBank to classify
+individual k-mers, and then infers taxonomic distributions of
+metagenome contents from the presence of these individual
+k-mers. (This is the approach pioneered by
+[Kraken](https://ccb.jhu.edu/software/kraken/) and many other tools.)
+`sourmash lca` can be used to classify individual genome bins with
+`classify`, or summarize metagenome taxonomy with `summarize`.  The
+[sourmash lca tutorial](http://sourmash.readthedocs.io/en/latest/tutorials-lca.html)
 shows how to use the `lca classify` and `summarize` commands, and also
 provides guidance on building your own database.
 

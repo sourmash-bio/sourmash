@@ -231,7 +231,7 @@ using a collection of genomes with taxonomic information.
 
 ## `sourmash lca` subcommands
 
-These commands use LCA databases (created with `index`, below, or
+These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
 [genbank-k31.lca.json.gz, from the LCA tutorial](tutorials-lca.html).
 
@@ -281,7 +281,7 @@ Example output:
 
 ### `sourmash lca gather`
 
-The `sourmash lca gather` command classifies finds all non-overlapping
+The `sourmash lca gather` command finds all non-overlapping
 matches to the query, similar to the `sourmash gather` command.  This
 is specifically meant for metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.html) for more
