@@ -2,10 +2,7 @@
 """
 Execute a greedy search on lineages attached to hashvals in the query.
 
-Mimics `sourmash gather` but with tax information.
-
-CTB TODO:
-* sort out f_uniq / f_orig
+Mimics `sourmash gather` but provides taxonomic information.
 """
 from __future__ import print_function, division
 import sys
@@ -21,7 +18,7 @@ from sourmash_lib.lca.lca_utils import debug, set_debug
 from sourmash_lib.search import format_bp
 
 LCAGatherResult = namedtuple('LCAGatherResult',
-                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match')
+                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name')
 
 
 def format_lineage(lineage_tup):
@@ -80,10 +77,11 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         orig_abunds = { k: 1 for k in query_mins }
     sum_abunds = sum(orig_abunds.values())
 
-    # first time through, record FOO.
-    md5_to_lineage = {}
  
-    # collect all mentioned lineage_ids -> md5s
+    # collect all mentioned lineage_ids -> md5s, from across the databases
+    md5_to_lineage = {}
+    md5_to_name = {}
+
     x = set()
     for hashval in query_mins:
         for lca_db in dblist:
@@ -94,6 +92,10 @@ def gather_signature(query_sig, dblist, ignore_abundance):
 
     for lca_db, lid, md5 in x:
         md5_to_lineage[md5] = lca_db.lineage_dict[lid]
+        if lca_db.signature_to_name:
+            md5_to_name[md5] = lca_db.signature_to_name[md5]
+        else:
+            md5_to_name[md5] = ''
 
     # now! do the gather:
     while 1:
@@ -146,7 +148,8 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                                  f_unique_weighted=f_unique_weighted,
                                  average_abund=average_abund,
                                  f_match=f_match,
-                                 lineage=md5_to_lineage[top_md5])
+                                 lineage=md5_to_lineage[top_md5],
+                                 name=md5_to_name[top_md5])
 
         f_unassigned = len(query_mins) / n_mins
         est_bp = len(query_mins) * query_sig.minhash.scaled
@@ -236,7 +239,7 @@ def gather_main(args):
 
     if args.output:
         fieldnames = ['intersect_bp', 'f_match', 'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund'] + list(lca_utils.taxlist())
+                      'average_abund', 'name'] + list(lca_utils.taxlist())
 
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
