@@ -310,7 +310,7 @@ def test_single_classify_empty():
         print(out)
         print(err)
 
-        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,' in out
+        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,,' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -452,7 +452,7 @@ def test_unassigned_last_index_and_classify():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,\r\n' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,,\r\n' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -487,7 +487,7 @@ def test_index_and_classify_internal_unassigned_multi():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,\r\n' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,,\r\n' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -500,7 +500,7 @@ def test_index_and_classify_internal_unassigned_multi():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,\r\n' in out
+        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,,\r\n' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -519,7 +519,7 @@ def test_multi_db_classify():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,,' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 2 LCA databases' in err
 
@@ -719,6 +719,7 @@ def test_rankinfo_on_multi():
         lines.remove('family: 695 (19.2%)')
         lines.remove('genus: 681 (18.8%)')
         lines.remove('species: 200 (5.5%)')
+        lines.remove('strain: 0 (0.0%)')
 
         assert not lines
 
@@ -742,6 +743,7 @@ def test_rankinfo_on_single():
         lines.remove('family: 695 (19.2%)')
         lines.remove('genus: 681 (18.8%)')
         lines.remove('species: 200 (5.5%)')
+        lines.remove('strain: 0 (0.0%)')
 
         assert not lines
 
@@ -806,7 +808,7 @@ def test_single_gather():
         print(out)
         print(err)
 
-        assert '2.0 Mbp     100.0%      Alteromonas Alteromonas_macleodii' in out
+        assert '2.0 Mbp     100.0%  100.0%      Alteromonas Alteromonas_macleodii' in out
         assert 'Query is completely assigned.'
 
 
@@ -836,5 +838,5 @@ def test_gather_unknown_hashes():
         print(out)
         print(err)
 
-        assert '270.0 kbp    11.5%      Archaea; family novelFamily_I' in out
+        assert '270.0 kbp    11.5%   21.4%      Archaea; family novelFamily_I' in out
         assert '88.5% (2.1 Mbp) have no assignment.' in out
