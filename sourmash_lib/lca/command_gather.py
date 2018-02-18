@@ -145,7 +145,7 @@ def gather_main(args):
     full lineage information for each known hash, as opposed to storing only
     the least-common-ancestor information for it.
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca gather")
     p.add_argument('query')
     p.add_argument('db', nargs='+')
     p.add_argument('-d', '--debug', action='store_true')

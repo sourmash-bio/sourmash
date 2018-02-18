@@ -99,7 +99,7 @@ def index(args):
     """
     main function for building an LCA database.
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca index")
     p.add_argument('csv', help='taxonomy spreadsheet')
     p.add_argument('lca_db_out', help='name to save database to')
     p.add_argument('signatures', nargs='+',
