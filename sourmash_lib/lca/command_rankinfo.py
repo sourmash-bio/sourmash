@@ -45,9 +45,9 @@ def make_lca_counts(dblist):
 
 def rankinfo_main(args):
     """
-    main summarization function:
+    rankinfo!
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca rankinfo")
     p.add_argument('db', nargs='+')
     p.add_argument('--scaled', type=float)
     p.add_argument('-d', '--debug', action='store_true')
