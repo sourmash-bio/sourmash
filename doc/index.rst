@@ -86,16 +86,16 @@ sourmash has relatively small disk and memory requirements compared to
 many other software programs used for genome search and taxonomic
 classification.
 
-First, `mash` beats sourmash in speed and memory, so if you can use mash,
+First, ``mash`` beats sourmash in speed and memory, so if you can use mash,
 more power to you :)
 
-`sourmash search` and `sourmash gather` can be used to search all
-genbank microbial genomes ([using our prepared
-databases](databases.html)) with about 20 GB of disk and in under 1 GB
+``sourmash search`` and ``sourmash gather`` can be used to search all
+genbank microbial genomes (`using our prepared
+databases <databases.html>`__) with about 20 GB of disk and in under 1 GB
 of RAM.  Typically a search for a single genome takes about 30 seconds
 on a laptop.
 
-`sourmash lca` can be used to search/classify against all genbank
+``sourmash lca`` can be used to search/classify against all genbank
 microbial genomes with about 200 MB of disk space and about 10 GB of
 RAM. Typically a metagenome classification takes about 1 minute on a
 laptop.
