@@ -89,13 +89,11 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
-
+    orig_abunds = { k: 1 for k in orig_mins }
+    
     if orig_query.minhash.track_abundance and not ignore_abundance:
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
-    else:
-        if orig_query.minhash.track_abundance and ignore_abundance:
-            notify('** ignoring abundance')
-        orig_abunds = { k: 1 for k in orig_query.minhash.get_mins(with_abundance=False) }
+
     sum_abunds = sum(orig_abunds.values())
 
     # calculate the band size/resolution R for the genome
@@ -139,8 +137,6 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins, orig_query)
-
-    sum_found = 0.
 
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)

@@ -3,11 +3,9 @@
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 from __future__ import print_function
-import sys
 import hashlib
-import sourmash_lib
 from . import signature_json
-from .logging import notify, error
+from .logging import error
 
 import io
 import gzip
@@ -239,7 +237,7 @@ def load_one_signature(data, ksize=None, select_moltype=None,
         raise ValueError("no signatures to load")
 
     try:
-        next_sig = next(sigiter)
+        next(sigiter)
     except StopIteration:
         return first_sig
 
