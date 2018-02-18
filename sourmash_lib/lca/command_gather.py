@@ -38,7 +38,8 @@ def format_lineage(lineage_tup):
             name = d['strain']
         elif 'species' in present:
             species = d['species']
-            if species.startswith(genus + ' '):
+            if species.startswith(genus + ' ') or \
+              species.startswith(genus + '_'):
                 name = species
             else:
                 name = '{} {}'.format(genus, species)

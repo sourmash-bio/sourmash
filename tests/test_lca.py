@@ -808,7 +808,7 @@ def test_single_gather():
         print(out)
         print(err)
 
-        assert '2.0 Mbp     100.0%  100.0%      Alteromonas Alteromonas_macleodii' in out
+        assert '2.0 Mbp     100.0%  100.0%      Alteromonas_macleodii' in out
         assert 'Query is completely assigned.'
 
 
