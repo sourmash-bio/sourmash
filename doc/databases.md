@@ -1,9 +1,9 @@
 # Prepared search databases
 
-## RefSeq microbial genomes
+## RefSeq microbial genomes - SBT
 
-These database are formatted for use with `sourmash sbt_search` and
-`sourmash sbt_gather`.
+These database are formatted for use with `sourmash search` and
+`sourmash gather`.
 
 Approximately 60,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
@@ -12,10 +12,10 @@ from NCBI RefSeq.
 * [RefSeq k=31, 2017.05.09][1] - 3.5 GB
 * [RefSeq k=51, 2017.05.09][2] - 3.5 GB
 
-## Genbank microbial genomes
+## Genbank microbial genomes - SBT
 
-These database are formatted for use with `sourmash sbt_search` and
-`sourmash sbt_gather`.
+These database are formatted for use with `sourmash search` and
+`sourmash gather`.
 
 Approximately 100,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.
@@ -49,3 +49,14 @@ sourmash compute -k 21,31,51 \
 [3]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k21-2017.05.09.tar.gz
 [4]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k31-2017.05.09.tar.gz
 [5]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k51-2017.05.09.tar.gz
+
+## Genbank LCA Database
+
+These databases are formatted for use with `sourmash lca`.
+
+Approximately 87,000 microbial genomes (including viral and fungal)
+from NCBI Genbank.
+
+* [Genbank k=21, 2017.11.07](https://osf.io/s3jx8/download), 105 MB
+* [Genbank k=31, 2017.11.07](https://osf.io/zskb9/download), 118 MB
+* [Genbank k=51, 2017.11.07](https://osf.io/md2nt/download), 123 MB
