@@ -60,3 +60,17 @@ from NCBI Genbank.
 * [Genbank k=21, 2017.11.07](https://osf.io/s3jx8/download), 105 MB
 * [Genbank k=31, 2017.11.07](https://osf.io/zskb9/download), 118 MB
 * [Genbank k=51, 2017.11.07](https://osf.io/md2nt/download), 123 MB
+
+### Details
+
+The above LCA databases were calculated as follows:
+
+```
+sourmash lca index genbank-genomes-taxonomy.2017.05.29.csv \
+    genbank-k21.lca.json.gz -k 21 --scaled=10000 \
+    -f --traverse-directory .sbt.genbank-k21 --split-identifiers
+```
+
+See
+[github.com/dib-lab/2018-ncbi-lineages](https://github.com/dib-lab/2018-ncbi-lineages)
+for information on preparing the genbank-genomes-taxonomy file.
