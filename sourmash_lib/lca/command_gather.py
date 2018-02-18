@@ -18,7 +18,7 @@ from sourmash_lib.lca.lca_utils import debug, set_debug
 from sourmash_lib.search import format_bp
 
 LCAGatherResult = namedtuple('LCAGatherResult',
-                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name')
+                             'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name, n_equal_matches')
 
 
 def format_lineage(lineage_tup):
@@ -120,7 +120,15 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                 counts[(md5, sigsize)] += 1
 
         # find the most abundant assignment
-        (top_md5, top_sigsize), top_count = next(iter(counts.most_common()))
+        common_iter = iter(counts.most_common())
+        (top_md5, top_sigsize), top_count = next(common_iter)
+
+        equiv_counts = 0
+        for (_, _), count in common_iter:
+            if count == top_count:
+                equiv_counts += 1
+            else:
+                break
 
         # now, remove from query mins.
         intersect_mins = set()
@@ -149,7 +157,8 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                                  average_abund=average_abund,
                                  f_match=f_match,
                                  lineage=md5_to_lineage[top_md5],
-                                 name=md5_to_name[top_md5])
+                                 name=md5_to_name[top_md5],
+                                 n_equal_matches=equiv_counts)
 
         f_unassigned = len(query_mins) / n_mins
         est_bp = len(query_mins) * query_sig.minhash.scaled
@@ -213,8 +222,12 @@ def gather_main(args):
         str_bp = format_bp(result.intersect_bp)
         name = format_lineage(result.lineage)
 
-        print_results('{:9}   {:>6}  {:>6}      {}', str_bp, pct_query,
-                      pct_match, name)
+        equal_match_str = ""
+        if result.n_equal_matches:
+            equal_match_str = " (** {} equal matches)".format(result.n_equal_matches)
+
+        print_results('{:9}   {:>6}  {:>6}      {}{}', str_bp, pct_query,
+                      pct_match, name, equal_match_str)
 
         found.append(result)
 
@@ -239,7 +252,7 @@ def gather_main(args):
 
     if args.output:
         fieldnames = ['intersect_bp', 'f_match', 'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'name'] + list(lca_utils.taxlist())
+                      'average_abund', 'name', 'n_equal_matches'] + list(lca_utils.taxlist())
 
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
