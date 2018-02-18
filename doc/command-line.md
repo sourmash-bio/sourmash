@@ -42,8 +42,9 @@ This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
 similarity matrix and heatmap.
 
-![E. coli comparison plot](_static/cmp.dendro.png)
-![E. coli comparison plot](_static/cmp.matrix.png)
+Matrix:
+
+![Matrix](_static/cmp.matrix.png)
 
 ## The `sourmash` command and its subcommands
 
@@ -159,7 +160,7 @@ The `search` subcommand searches a collection of signatures or SBTs for
 matches to the query signature.  It can search for matches with either
 high [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index)
 or containment; the default is to use Jaccard similarity, unless
-`--containment` if specified.  `-o/--output` will create a CSV file
+`--containment` is specified.  `-o/--output` will create a CSV file
 containing the matches.
 
 `search` will load all of provided signatures into memory, which can
