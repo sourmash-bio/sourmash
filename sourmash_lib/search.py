@@ -7,7 +7,7 @@ from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
 from .sbtmh import SearchMinHashesFindBest
-
+from ._minhash import get_max_hash_for_scaled
 
 
 
@@ -90,7 +90,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
     orig_abunds = { k: 1 for k in orig_mins }
-    
+
+    # do we pay attention to abundances?o
     if orig_query.minhash.track_abundance and not ignore_abundance:
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
@@ -147,9 +148,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         query_mins = set(query.minhash.get_hashes())
         found_mins = best_leaf.minhash.get_hashes()
 
-        # figure out what the resolution of the banding on the genome is,
-        # based either on an explicit --scaled parameter, or on genome
-        # cardinality (deprecated)
+        # figure out what the resolution of the banding on the subject is
         if not best_leaf.minhash.max_hash:
             error('Best hash match in sbt_gather has no max_hash')
             error('Please prepare database of sequences with --scaled')
@@ -160,8 +159,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # pick the highest R / lowest resolution
         R_comparison = max(R_metagenome, R_genome)
 
-        # CTB: these could probably be replaced by minhash.downsample_scaled.
-        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
+        print('XXX', R_comparison)
+
+        # eliminate mins under this.
+        new_max_hash = get_max_hash_for_scaled(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
@@ -182,7 +183,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        query_n_mins = len(orig_query.minhash.get_hashes())
+        orig_mh = orig_query.minhash.downsample_scaled(R_comparison)
+        query_n_mins = len(orig_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         # calculate scores weighted by abundances
