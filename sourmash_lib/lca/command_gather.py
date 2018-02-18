@@ -123,12 +123,12 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         # now, remove from query mins.
         intersect_mins = set()
         for hashval, md5_set in assignments.items():
-            if (top_md5, sigsize) in md5_set:
+            if (top_md5, top_sigsize) in md5_set:
                 query_mins.remove(hashval)
                 intersect_mins.add(hashval)
 
         # should match!
-        # @@CTB assert top_count == len(intersect_mins)
+        assert top_count == len(intersect_mins)
 
         # calculate size of match (# of hashvals belonging to that sig)
         match_size = top_sigsize
