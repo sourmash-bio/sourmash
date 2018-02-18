@@ -839,7 +839,7 @@ def test_gather_unknown_hashes():
         print(err)
 
         assert '270.0 kbp    11.5%   21.4%      Archaea; family novelFamily_I' in out
-        assert '88.5% (2.1 Mbp) have no assignment.' in out
+        assert '88.5% (2.1 Mbp) of hashes have no assignment.' in out
 
 
 def test_gather_equiv_results():

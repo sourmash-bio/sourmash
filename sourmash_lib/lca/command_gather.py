@@ -234,7 +234,7 @@ def gather_main(args):
     if found:
         print_results('')
         if f_unassigned:
-            print_results('{:.1f}% ({}) have no assignment.', f_unassigned*100,
+            print_results('{:.1f}% ({}) of hashes have no assignment.', f_unassigned*100,
                           format_bp(est_bp))
         else:
             print_results('Query is completely assigned.')
