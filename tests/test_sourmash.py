@@ -2597,7 +2597,7 @@ def test_gather_query_downsample():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', '-k', '31',
-                                             query_sig, *testdata_sigs],
+                                             query_sig] + testdata_sigs,
                                            in_directory=location)
 
         print(out)
