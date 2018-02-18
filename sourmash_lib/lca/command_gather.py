@@ -20,23 +20,10 @@ from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error, print_results
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash_lib.search import format_bp
 
 LCAGatherResult = namedtuple('LCAGatherResult',
                              'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage')
-
-
-# pretty-printing code. redundant with ../search.py; fix when refactoring.
-def format_bp(bp):
-    bp = float(bp)
-    if bp < 500:
-        return '{:.0f} bp'.format(bp)
-    elif bp <= 500e3:
-        return '{:.1f} kbp'.format(round(bp / 1e3, 1))
-    elif bp < 500e6:
-        return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
-    elif bp < 500e9:
-        return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
-    return '???'
 
 
 def format_lineage(lineage_tup):
