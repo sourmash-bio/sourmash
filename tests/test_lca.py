@@ -840,3 +840,28 @@ def test_gather_unknown_hashes():
 
         assert '270.0 kbp    11.5%   21.4%      Archaea; family novelFamily_I' in out
         assert '88.5% (2.1 Mbp) have no assignment.' in out
+
+
+def test_gather_equiv_results():
+    with utils.TempDirectory() as location:
+        query_sig = utils.get_test_data('47+63.fa.sig')
+        lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+        cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '2.7 Mbp     100.0%' in out
+        assert 'Shewanella baltica' in out
+        assert '(** 1 equal matches)'
+        assert ('OS223' in out) or ('OS185' in out)
+
+        assert os.path.exists(lca_db)
+
+        r = csv.DictReader(open(os.path.join(location, 'matches.csv')))
+        row = next(r)
+        assert row['n_equal_matches'] == '1'
