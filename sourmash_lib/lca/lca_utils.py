@@ -138,7 +138,10 @@ class LCA_Database(object):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
-            load_d = json.load(fp)
+            try:
+                load_d = json.load(fp)
+            except json.decoder.JSONDecodeError:
+                raise ValueError("cannot parse database file '{}'; is it a valid LCA db?".format(db_name))
             version = load_d['version']
             assert version == '1.0'
 
