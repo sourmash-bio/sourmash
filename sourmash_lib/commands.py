@@ -303,6 +303,8 @@ def compare(args):
                         help='do NOT use k-mer abundances if present')
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='compare all signatures underneath directories.')
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -317,21 +319,28 @@ def compare(args):
     moltypes = set()
     for filename in args.signatures:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, ksize=args.ksize,
+        loaded = sig.load_signatures(filename, args.traverse_directory,
+                                     size=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
         siglist.extend(loaded)
-
-        # track ksizes/moltypes
+    
+    # check directories for all signatures 
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+    else:
+        inp_files = list(args.signatures)
+ 
+    # track ksizes/moltypes
         for s in loaded:
             ksizes.add(s.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(s))
 
         # error out while loading if we have more than one ksize/moltype
-        if len(ksizes) > 1 or len(moltypes) > 1:
-            break
+#        if len(ksizes) > 1 or len(moltypes) > 1:
+#            break
 
     # check ksizes and type
     if len(ksizes) > 1:
