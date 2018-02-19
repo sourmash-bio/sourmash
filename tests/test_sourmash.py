@@ -1210,6 +1210,51 @@ def test_do_sourmash_index_multiscaled_fail():
         assert 'trying to build an SBT with incompatible signatures.' in err
 
 
+def test_do_sourmash_index_multiscaled_rescale():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '10', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '1', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            '--scaled', '10',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == 0
+
+
+def test_do_sourmash_index_multiscaled_rescale_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '10', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '--scaled', '1', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            '--scaled', '5',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location, fail_ok=True)
+
+        print(status, out, err)
+        assert status == -1
+        assert 'new scaled is lower than current sample scaled' in err
+
+
 def test_do_sourmash_sbt_search_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

@@ -678,10 +678,10 @@ def index(args):
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
-            scaleds.add(ss.minhash.scaled)
 
             if args.scaled:
-                ss.minhash.downsample_scaled(args.scaled)
+                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
+            scaleds.add(ss.minhash.scaled)
 
             leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
