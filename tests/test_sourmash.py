@@ -1580,6 +1580,34 @@ def test_search_metagenome_downsample_containment():
         assert '12 matches; showing first 3:' in out
 
 
+def test_search_metagenome_downsample_index():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        # downscale during indexing, rather than during search.
+        cmd = ['index', 'gcf_all', '-k', '21', '--scaled', '100000']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'search {} gcf_all -k 21 --containment'
+        cmd = cmd.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+        assert '12 matches; showing first 3:' in out
+
+
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
