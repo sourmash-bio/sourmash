@@ -119,16 +119,22 @@ def gather_signature(query_sig, dblist, ignore_abundance):
             for (md5, sigsize) in md5_set:
                 counts[(md5, sigsize)] += 1
 
-        # find the most abundant assignment
+        # collect the most abundant assignments
         common_iter = iter(counts.most_common())
-        (top_md5, top_sigsize), top_count = next(common_iter)
+        best_list = []
+        (md5, sigsize), top_count = next(common_iter)
 
-        equiv_counts = 0
-        for (_, _), count in common_iter:
-            if count == top_count:
-                equiv_counts += 1
-            else:
+        best_list.append((md5_to_name[md5], md5, sigsize))
+        for (md5, sigsize), count in common_iter:
+            if count != top_count:
                 break
+            best_list.append((md5_to_name[md5], md5, sigsize))
+
+        # sort on name and pick the top (for consistency).
+        best_list.sort()
+        _, top_md5, top_sigsize = best_list[0]
+
+        equiv_counts = len(best_list) - 1
 
         # now, remove from query mins.
         intersect_mins = set()
