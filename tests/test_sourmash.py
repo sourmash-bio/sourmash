@@ -1528,6 +1528,9 @@ def test_search_metagenome_traverse():
         assert '13 matches; showing first 3:' in out
 
 
+# explanation: you cannot downsample a scaled SBT to match a scaled
+# signature, so make sure that when you try such a search, it fails!
+# (you *can* downsample a signature to match an SBT.)
 def test_search_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
