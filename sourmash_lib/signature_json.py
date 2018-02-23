@@ -177,7 +177,6 @@ def load_signatureset_json_iter(data, ksize=None, ignore_md5sum=False, ijson=ijs
     prefix, event, value = next(parser)
     assert prefix == '' and event == 'start_array' and value is None
 
-    siglist = []
     n = 0
     while True:
         try:
