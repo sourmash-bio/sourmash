@@ -2588,6 +2588,25 @@ def test_gather_metagenome_downsample():
                     '4.1 Mbp       4.4%   17.1%' in out))
 
 
+def test_gather_query_downsample():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', '-k', '31',
+                                             query_sig] + testdata_sigs,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'loaded 12 signatures' in err
+        assert '4.9 Mbp     100.0%  100.0%      NC_003197.2' in out
+
+
 def test_gather_save_matches():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')

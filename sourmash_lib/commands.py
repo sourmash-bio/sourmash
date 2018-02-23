@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import sys
-from collections import namedtuple
 import random
 
 import screed
@@ -13,7 +12,6 @@ import sourmash_lib
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .search import format_bp
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -252,7 +250,6 @@ def compute(args):
                         elif args.name_from_first:
                             name = record.name
 
-                    s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
                 notify('')
@@ -424,7 +421,6 @@ def plot(args):
     import matplotlib as mpl
     mpl.use('Agg')
     import numpy
-    import scipy
     import pylab
     import scipy.cluster.hierarchy as sch
     from . import fig as sourmash_fig
@@ -885,7 +881,7 @@ def categorize(args):
 
 
 def gather(args):
-    from .search import gather_databases, GatherResult, format_bp
+    from .search import gather_databases, format_bp
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -907,6 +903,7 @@ def gather(args):
                         help='suppress non-error output')
     parser.add_argument('--ignore-abundance',  action='store_true',
                         help='do NOT use k-mer abundances if present')
+    parser.add_argument('-d', '--debug', action='store_true')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
@@ -1017,7 +1014,7 @@ def gather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbtmh import search_minhashes, SearchMinHashesFindBest
+    from sourmash_lib.sbtmh import SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
