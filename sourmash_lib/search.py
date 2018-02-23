@@ -127,7 +127,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             return None, None, None
 
         # take the best result
-        results.sort(key=lambda x: (-x[0], x[1].md5sum()))   # reverse sort on similarity
+        results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
         best_similarity, best_leaf = results[0]
         return best_similarity, best_leaf, filename
 

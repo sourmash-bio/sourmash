@@ -15,7 +15,7 @@ from sourmash_lib.lca.lca_utils import debug, set_debug, zip_lineage
 from sourmash_lib.lca.command_index import load_taxonomy_assignments
 
 def compare_csv(args):
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca compare_csv")
     p.add_argument('csv1', help='taxonomy spreadsheet output by classify')
     p.add_argument('csv2', help='custom taxonomy spreadsheet')
     p.add_argument('-d', '--debug', action='store_true')

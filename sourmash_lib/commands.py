@@ -999,7 +999,7 @@ def gather(args):
     if args.output_unassigned:
         if not found:
             notify('nothing found - entire query signature unassigned.')
-        if not query.minhash.get_mins():
+        elif not query.minhash.get_mins():
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
@@ -1007,7 +1007,7 @@ def gather(args):
 
             e = sourmash_lib.MinHash(ksize=query.minhash.ksize, n=0,
                                      max_hash=new_max_hash)
-            e.add_many(query.minhash.get_mins())
+            e.add_many(next_query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
 

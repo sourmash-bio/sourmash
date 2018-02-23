@@ -80,7 +80,7 @@ def classify(args):
     """
     main single-genome classification function.
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca classify")
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
@@ -109,7 +109,6 @@ def classify(args):
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
-    notify('ksize={} scaled={}', ksize, scaled)
 
     # find all the queries
     notify('finding query signatures...')

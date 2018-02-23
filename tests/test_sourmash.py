@@ -2549,13 +2549,14 @@ def test_gather_metagenome_output_unassigned():
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
         testdata2_sigs = glob.glob(testdata2_glob)[0]
 
-        cmd = 'gather {} {} -k 21'.format('unassigned.sig', testdata2_sigs)
+        cmd = 'gather {} {} {} -k 21'.format('unassigned.sig', testdata_sigs, testdata2_sigs)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
-        assert '4.7 Mbp      32.1%  100.0%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1' not in out
+        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():
