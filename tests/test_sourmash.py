@@ -2873,7 +2873,7 @@ def test_sbt_categorize():
         assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,genome-s10.fa.gz,0.50' in out_csv
+        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
 
 
 def test_sbt_categorize_already_done():
