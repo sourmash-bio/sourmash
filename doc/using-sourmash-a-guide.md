@@ -39,9 +39,18 @@ guidance, we'll link to them here!)
 
 ## What scaled values should I use?
 
+Right now it's a bit hand-wavy, but:
+
 We suggest calculating all your signatures using `--scaled
-1000`. Again, when we have formal guidance on this, we'll link to it
-here.
+1000`.  This will give you a compression ratio of 1000-to-1 while
+making it possible to detect regions of similarity in the 10kb range.
+
+For comparison with more traditional MinHash approaches like `mash`,
+if you have a 5 Mbp genome and use `--scaled 1000`, you will extract
+approximately 5000 hashes. So a scaled of 1000 is equivalent to using
+`-n 5000` with mash.
+
+Again, when we have formal guidance on this, we'll link to it here.
 
 ## What kind of input data does sourmash work on?
 
