@@ -2583,13 +2583,14 @@ def test_gather_metagenome_output_unassigned():
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
         testdata2_sigs = glob.glob(testdata2_glob)[0]
 
-        cmd = 'gather {} {} -k 21'.format('unassigned.sig', testdata2_sigs)
+        cmd = 'gather {} {} {} -k 21'.format('unassigned.sig', testdata_sigs, testdata2_sigs)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
-        assert '4.7 Mbp      32.1%  100.0%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1' not in out
+        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_downsample():
@@ -2620,6 +2621,25 @@ def test_gather_metagenome_downsample():
         assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
         assert all(('4.1 Mbp       0.6%    2.4%' in out,
                     '4.1 Mbp       4.4%   17.1%' in out))
+
+
+def test_gather_query_downsample():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', '-k', '31',
+                                             query_sig] + testdata_sigs,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'loaded 12 signatures' in err
+        assert '4.9 Mbp     100.0%  100.0%      NC_003197.2' in out
 
 
 def test_gather_save_matches():

@@ -233,7 +233,7 @@ using a collection of genomes with taxonomic information.
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
-[genbank-k31.lca.json.gz, from the LCA tutorial](tutorials-lca.html).
+[genbank-k31.lca.json.gz](databases.html)).
 
 ### `sourmash lca classify`
 

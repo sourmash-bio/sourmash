@@ -163,9 +163,9 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
 
 
 def filter_compatible_signatures(query, siglist, force=False):
-    for sig in siglist:
-        if check_signatures_are_compatible(query, sig):
-            yield sig
+    for ss in siglist:
+        if check_signatures_are_compatible(query, ss):
+            yield ss
         else:
             if not force:
                 raise ValueError("incompatible signature")

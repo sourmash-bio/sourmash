@@ -3,8 +3,6 @@
 An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 """
 from __future__ import print_function
-import re
-import math
 import os
 
 from ._minhash import (MinHash, get_minhash_default_seed, get_minhash_max_hash)
