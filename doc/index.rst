@@ -127,6 +127,7 @@ Contents:
    command-line
    tutorials
    tutorials-lca
+   using-sourmash-a-guide
    classifying-signatures
    databases
    api
