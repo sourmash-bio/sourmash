@@ -10,7 +10,6 @@ Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
 how and why MinHash sketches work.
 
-______
 
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
@@ -87,6 +86,11 @@ each sequence in one or more sequence files.  It takes as input FASTA
 or FASTQ files, and these files can be uncompressed or compressed with
 gzip or bzip2.  The output will be one or more JSON signature files
 that can be used with `sourmash compare`.
+
+Please see [Using sourmash: a practical guide](using-sourmash-a-guide.md)
+for more information on computing signatures.
+
+______
 
 Usage:
 ```
