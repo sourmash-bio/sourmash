@@ -47,6 +47,16 @@ The comparison code (`sourmash compare`) uses numpy, and the plotting
 code uses matplotlib and scipy, but most of the code is usable without
 these.
 
+### Installation with conda
+
+You can also use conda:
+
+```bash
+$ conda create -n sourmash_env sourmash=2.0a3 python=3.6.4
+$ source activate sourmash_env
+$ sourmash compute -h
+```
+
 ## Support
 
 Please ask questions and files issues
