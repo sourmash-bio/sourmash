@@ -34,9 +34,12 @@ sourmash is a product of the
 
 ## Installation
 
-You can do:
+We currently recommend installing the 2.0 pre-release series directly
+from GitHub.
 
-    pip install sourmash
+You can use pip to do that like so:
+
+    pip install https://github.com/dib-lab/sourmash/archive/master.zip
 
 sourmash runs under both Python 2.7.x and Python 3.5.  The base
 requirements are screed and ijson, together with a C++ development
@@ -52,10 +55,12 @@ these.
 You can also use conda:
 
 ```bash
-$ conda create -n sourmash_env sourmash=2.0a3 python=3.6.4
+$ conda create -n sourmash_env sourmash python=3.6.4
 $ source activate sourmash_env
 $ sourmash compute -h
 ```
+
+which will install the latest alpha release.
 
 ## Support
 
@@ -73,8 +78,9 @@ Development happens on github at
 
 Tests require py.test and can be run with `make test`.
 
+Please see [the developer notes](doc/developer.md) for more information.
+
 ----
 
 CTB
-
-6.jun.2016
+Feb 2018
