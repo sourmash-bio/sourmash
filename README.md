@@ -52,7 +52,7 @@ these.
 
 ### Installation with conda
 
-You can also use conda:
+Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install  sourmash by running:
 
 ```bash
 $ conda create -n sourmash_env sourmash python=3.6.4
