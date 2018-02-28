@@ -248,7 +248,7 @@ bins (MAGs) and single-cell genomes (SAGs).
 Usage:
 
 ```
-sourmash lca --query query.sig [query2.sig ...] --db <lca db> [<lca db2> ...]
+sourmash lca classify --query query.sig [query2.sig ...] --db <lca db> [<lca db2> ...]
 ```
 
 For example, the command
@@ -317,7 +317,7 @@ sourmash lca summarize --query query.sig [query2.sig ...]
 For example, the command line:
 
 ```
-sourmash lca classify --query tests/test-data/63.fa.sig \
+sourmash lca summarize --query tests/test-data/63.fa.sig \
     --db tests/test-data/podar-ref.lca.json 
 ```
 
