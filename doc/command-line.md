@@ -359,6 +359,11 @@ is specifically meant for metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.html) for more
 information on the different approaches that can be used here.)
 
+If the input signature was computed with `--track-abundance`, output
+will be abundance weighted (unless `--ignore-abundances` is
+specified).  `-o/--output` will create a CSV file containing the
+matches.
+
 Usage:
 
 ```
