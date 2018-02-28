@@ -3,7 +3,6 @@
 
 ## Other MinHash implementations for DNA
 
-
 In addition to [mash][0], also see:
 
 * [RKMH][1]: Read Classification by Kmers
@@ -11,6 +10,7 @@ In addition to [mash][0], also see:
 * [Finch][3]: "Fast sketches,
   count histograms, better filtering."
 * [BBMap and SendSketch][13]: part of Brian Bushnell's tool collection.
+* [PATRIC](https://patricbrc.org/) uses MinHash for genome search.
 
 If you are interested in exactly how these MinHash approaches
 calculate the hashes of DNA sequences, please see some simple Python
@@ -85,9 +85,21 @@ we are still [working on ways to convert the file formats][11]
 
 
 Please see:
- * [developer][24]
- * [release][25]
+ * [Developer information][24]
+ * [Release workflow][25]
 
+## Known issues
+
+For at least some versions of matplotlib, users may encounter an
+error "Failed to connect to server socket:" or "RuntimeError:
+Invalid DISPLAY variable".  This is because by default matplotlib
+tries to connect to X11 to use the Tkinter backend.
+
+The solution is to force the use of the 'Agg' backend in matplotlib;
+see [this stackoverflow answer](https://stackoverflow.com/a/34294056)
+or [this sourmash issue comment](https://github.com/dib-lab/sourmash/issues/254#issuecomment-304274590).
+
+Newer versions of matplotlib do not seem to have this problem.
 
 [0]:https://github.com/marbl/Mash
 [1]:https://github.com/edawson/rkmh
