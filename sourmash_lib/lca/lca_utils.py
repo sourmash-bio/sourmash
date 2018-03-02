@@ -124,12 +124,16 @@ class LCA_Database(object):
     obj.signatures_to_name: key 'md5sum' => 'name' from original signature
     """
     def __init__(self):
+        self.filename = None
         self.lineage_dict = None
         self.hashval_to_lineage_id = None
         self.ksize = None
         self.scaled = None
         self.signatures_to_lineage_id = None
         self.signatures_to_name = None
+
+    def __repr__(self):
+        return "LCA_Database('{}')".format(self.filename)
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -187,6 +191,7 @@ class LCA_Database(object):
             lineage_id_to_signature[v] = k
         self.lineage_id_to_signature = lineage_id_to_signature
         self.lineage_id_counts = lineage_id_counts
+        self.filename = db_name
 
     def save(self, db_name):
         "Save to a JSON file."
@@ -251,16 +256,24 @@ class LCA_Database(object):
         return x
 
 
-def load_databases(filenames, scaled=None):
+def load_single_database(filename, verbose=False):
+    "Load a signle LCA database; return (db, ksize, scaled)"
+    dblist, ksize, scaled = load_databases([filename], verbose=verbose)
+    return dblist[0], ksize, scaled
+
+
+def load_databases(filenames, scaled=None, verbose=True):
+    "Load multiple LCA databases; return (dblist, ksize, scaled)"
     ksize_vals = set()
     scaled_vals = set()
     dblist = []
 
     # load all the databases
     for db_name in filenames:
-        notify(u'\r\033[K', end=u'', file=sys.stderr)
-        notify('... loading database {}'.format(db_name), end='\r',
-              file=sys.stderr)
+        if verbose:
+            notify(u'\r\033[K', end=u'', file=sys.stderr)
+            notify('... loading database {}'.format(db_name), end='\r',
+                  file=sys.stderr)
 
         lca_db = LCA_Database()
         lca_db.load(db_name)
@@ -278,9 +291,10 @@ def load_databases(filenames, scaled=None):
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
-           ksize, scaled)
+    if verbose:
+        notify(u'\r\033[K', end=u'')
+        notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
+               ksize, scaled)
 
     return dblist, ksize, scaled
 
