@@ -983,7 +983,7 @@ def gather(args):
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'name', 'filename', 'md5']
+                      'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
