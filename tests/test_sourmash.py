@@ -2304,7 +2304,7 @@ def test_gather():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%       0.0' in out
 
 
 def test_gather_csv():
@@ -2393,7 +2393,7 @@ def test_gather_multiple_sbts():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%       0.0' in out
 
 
 def test_gather_sbt_and_sigs():
@@ -2428,7 +2428,7 @@ def test_gather_sbt_and_sigs():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%       0.0' in out
 
 
 def test_gather_file_output():
@@ -2463,7 +2463,7 @@ def test_gather_file_output():
 
         print(out)
         print(err)
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%       0.0' in out
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
@@ -2494,8 +2494,8 @@ def test_gather_metagenome():
 
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.9 Mbp       33.2%  100.0%       0.0    NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp        0.5%    1.5%       0.0    NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_traverse():
@@ -2522,8 +2522,8 @@ def test_gather_metagenome_traverse():
 
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert '4.9 Mbp       33.2%  100.0%       0.0    NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.7 Mbp        0.5%    1.5%       0.0    NC_011294.1 Salmonella enterica subsp...' in out
 
 
 def test_gather_metagenome_output_unassigned():
