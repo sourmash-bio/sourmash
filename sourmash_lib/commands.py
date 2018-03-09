@@ -955,18 +955,18 @@ def gather(args):
 
         if not len(found):                # first result? print header.
             print_results("")
-            print_results("overlap     p_query p_match ")
-            print_results("---------   ------- --------")
+            print_results("overlap     p_query p_match avg_abund")
+            print_results("---------   ------- ------- ---------")
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-
+        average_abund ='{:.1f}'.format(result.average_abund)
         name = result.leaf._display_name(40)
 
-        print_results('{:9}   {:>6}  {:>6}      {}',
+        print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
-                      name)
+                      average_abund, name)
         found.append(result)
 
 

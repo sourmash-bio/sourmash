@@ -82,7 +82,7 @@ def search_databases(query, databases, threshold, do_containment, best_only):
 
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
     from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
@@ -203,7 +203,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         average_abund, median_abund, std_abund = 0, 0, 0
         if orig_query.minhash.track_abundance and not ignore_abundance:
             average_abund = np.mean(intersect_abunds)
-            median_abunds = np.median(intersect_abunds)
+            median_abund = np.median(intersect_abunds)
             std_abund = np.std(intersect_abunds)
 
         # build a result namedtuple
