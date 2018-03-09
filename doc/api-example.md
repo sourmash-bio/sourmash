@@ -109,11 +109,14 @@ making the minhashes, which can be saved and loaded easily.
 
 ## Saving and loading signature files
 
+Signature files encapsulate MinHashes in JSON, and provide a way to
+add some metadata to MinHashes.
+
 ```
->>> from sourmash_lib import signature
->>> sig1 = signature.SourmashSignature(minhashes[0], name=genomes[0][:20])
+>>> from sourmash_lib import SourmashSignature, save_signatures
+>>> sig1 = SourmashSignature(minhashes[0], name=genomes[0][:20])
 >>> with open('/tmp/genome1.sig', 'wt') as fp:
-...   signature.save_signatures([sig1], fp)
+...   save_signatures([sig1], fp)
 
 ```
 
@@ -121,18 +124,43 @@ Here, `/tmp/genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
+>>> from sourmash_lib import load_one_signature
 >>> sigfp = open('/tmp/genome1.sig', 'rt')
->>> siglist = list(signature.load_signatures(sigfp))
->>> loaded_sig = siglist[0]
+>>> loaded_sig = load_one_signature(sigfp)
 
 ```
 
 then compare:
 
 ```
->>> loaded_sig.minhash.jaccard(sig1.minhash)
+>>> loaded_sig.jaccard(sig1)
 1.0
->>> sig1.minhash.jaccard(loaded_sig.minhash)
+>>> sig1.jaccard(loaded_sig)
 1.0
+
+```
+
+## Manipulating signatures and their hashes.
+
+It is relatively straightforward to work directly with hashes.
+
+First, load two signatures:
+
+```
+>>> sigfile1 = 'tests/test-data/genome-s10.fa.gz.sig'
+>>> sig1 = load_one_signature(sigfile1, ksize=21, select_moltype='DNA')
+>>> sigfile2 = 'tests/test-data/genome-s11.fa.gz.sig'
+>>> sig2 = load_one_signature(sigfile2, ksize=21, select_moltype='DNA')
+
+```
+
+Then, get the hashes, and (e.g.) compute the union:
+
+```
+>>> hashes1 = set(sig1.minhash.get_mins())
+>>> hashes2 = set(sig2.minhash.get_mins())
+>>> hash_union = hashes1.union(hashes2)
+>>> print('{} hashes in union of {} and {}'.format(len(hash_union), len(hashes1), len(hashes2)))
+1000 hashes in union of 500 and 500
 
 ```
