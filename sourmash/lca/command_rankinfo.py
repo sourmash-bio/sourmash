@@ -7,9 +7,9 @@ import sys
 import argparse
 from collections import defaultdict
 
-from sourmash_lib.logging import error
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash.logging import error
+from sourmash.lca import lca_utils
+from sourmash.lca.lca_utils import debug, set_debug
 
 
 def make_lca_counts(dblist):

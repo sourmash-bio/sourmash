@@ -11,6 +11,7 @@ from ._minhash import (MinHash, get_minhash_default_seed, get_minhash_max_hash)
 from .signature import (load_signatures, load_one_signature, SourmashSignature,
                         save_signatures)
 from .sbtmh import load_sbt_index, search_sbt_index, create_sbt_index
+from . import lca
 
 # retrieve VERSION from sourmash/VERSION.
 thisdir = os.path.dirname(__file__)

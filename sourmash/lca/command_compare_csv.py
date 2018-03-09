@@ -7,12 +7,12 @@ import sys
 import argparse
 from collections import defaultdict
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error, print_results
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug, zip_lineage
-from sourmash_lib.lca.command_index import load_taxonomy_assignments
+import sourmash
+from sourmash import sourmash_args
+from sourmash.logging import notify, error, print_results
+from sourmash.lca import lca_utils
+from sourmash.lca.lca_utils import debug, set_debug, zip_lineage
+from sourmash.lca.command_index import load_taxonomy_assignments
 
 def compare_csv(args):
     p = argparse.ArgumentParser(prog="sourmash lca compare_csv")
