@@ -2543,7 +2543,7 @@ def test_gather_metagenome_output_unassigned():
 
         assert 'found 1 matches total' in out
         assert 'the recovered matches hit 33.2% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert '4.9 Mbp       33.2%  100.0%       0.0    NC_003198.1' in out
 
         # now examine unassigned
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
@@ -2555,7 +2555,7 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1' not in out
+        assert '4.9 Mbp       33.2%  100.0%       0.0    NC_003198.1' not in out
         assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
 
 
@@ -2584,9 +2584,9 @@ def test_gather_metagenome_downsample():
 
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert all(('4.1 Mbp       0.6%    2.4%' in out,
-                    '4.1 Mbp       4.4%   17.1%' in out))
+        assert '5.2 Mbp       32.9%  100.0%       0.0    NC_003198.1' in out
+        assert all(('4.1 Mbp        0.6%    2.4%       0.0' in out,
+                    '4.1 Mbp        4.4%   17.1%       0.0' in out))
 
 
 def test_gather_query_downsample():
@@ -2605,7 +2605,7 @@ def test_gather_query_downsample():
         print(err)
 
         assert 'loaded 12 signatures' in err
-        assert '4.9 Mbp     100.0%  100.0%      NC_003197.2' in out
+        assert '4.9 Mbp      100.0%  100.0%       0.0    NC_003197.2' in out
 
 
 def test_gather_save_matches():
@@ -2698,7 +2698,7 @@ def test_gather_deduce_ksize():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%       0.0' in out
 
 
 def test_gather_deduce_moltype():
@@ -2734,7 +2734,7 @@ def test_gather_deduce_moltype():
         print(out)
         print(err)
 
-        assert '1.9 kbp     100.0%  100.0%' in out
+        assert '1.9 kbp      100.0%  100.0%       0.0' in out
 
 
 def test_gather_abund_1_1():
@@ -2758,8 +2758,8 @@ def test_gather_abund_1_1():
         print(out)
         print(err)
 
-        assert '49.6%   78.5%      tests/test-data/genome-s10.fa.gz' in out
-        assert '50.4%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert '49.6%   78.5%       1.8    tests/test-data/genome-s10.fa.gz' in out
+        assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
         assert 'genome-s12.fa.gz' not in out
 
 
@@ -2784,8 +2784,8 @@ def test_gather_abund_10_1():
 
         print(out)
         print(err)
-        assert '91.0%  100.0%      tests/test-data/genome-s10.fa.gz' in out
-        assert '9.0%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
+        assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
         assert 'genome-s12.fa.gz' not in out
 
         # check the calculations behind the above output by looking into
@@ -2838,8 +2838,8 @@ def test_gather_abund_10_1_ignore_abundance():
 
         print(out)
         print(err)
-        assert '57.2%  100.0%      tests/test-data/genome-s10.fa.gz' in out
-        assert '42.8%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert '57.2%  100.0%       0.0    tests/test-data/genome-s10.fa.gz' in out
+        assert '42.8%   80.0%       0.0    tests/test-data/genome-s11.fa.gz' in out
         assert 'genome-s12.fa.gz' not in out
 
 
