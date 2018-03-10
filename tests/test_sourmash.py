@@ -12,18 +12,18 @@ import json
 import csv
 
 from . import sourmash_tst_utils as utils
-import sourmash
-from sourmash import MinHash
-from sourmash.sbt import SBT
-from sourmash.sbtmh import SigLeaf
+import sourmash_lib
+from sourmash_lib import MinHash
+from sourmash_lib.sbt import SBT
+from sourmash_lib.sbtmh import SigLeaf
 try:
     import matplotlib
     matplotlib.use('Agg')
 except ImportError:
     pass
 
-from sourmash import signature
-from sourmash import VERSION
+from sourmash_lib import signature
+from sourmash_lib import VERSION
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -378,7 +378,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash.MAX_HASH }
+        assert set(max_hashes) == { sourmash_lib.MAX_HASH }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -606,8 +606,8 @@ def test_do_basic_compare():
 
         sigs = []
         for fn in testsigs:
-            sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                    select_moltype='dna'))
+            sigs.append(sourmash_lib.load_one_signature(fn, ksize=21,
+                                                        select_moltype='dna'))
 
         cmp_calc = numpy.zeros([len(sigs), len(sigs)])
         for i, si in enumerate(sigs):
