@@ -140,8 +140,8 @@ def test_do_sourmash_compute_output_and_name_valid_file():
 
         all_testdata = " ".join([testdata1, testdata2, testdata3])
         sigfile_merged = os.path.join(location, 'short.all.fa.sig')
-        cmd = "cat {} | {}/sourmash compute -k 31 -o {} -".format(
-                all_testdata, utils.scriptpath(), sigfile_merged)
+        cmd = "cat {} | sourmash compute -k 31 -o {} -".format(
+                all_testdata, sigfile_merged)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         with open(sigfile_merged, 'r') as f:
@@ -2949,7 +2949,7 @@ def test_sbt_categorize():
         assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,genome-s10.fa.gz,0.50' in out_csv
+        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
 
 
 def test_sbt_categorize_already_done():
@@ -3050,9 +3050,9 @@ def test_watch():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --ksize 21 --dna zzz
+             gunzip -c {} | sourmash watch --ksize 21 --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)
@@ -3073,9 +3073,9 @@ def test_watch_deduce_ksize():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --dna zzz
+             gunzip -c {} | sourmash watch --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)

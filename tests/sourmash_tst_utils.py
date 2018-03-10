@@ -47,8 +47,7 @@ def _runscript(scriptname):
     namespace['sys'] = globals()['sys']
 
     try:
-        pkg_resources.get_distribution("sourmash").run_script(
-            scriptname, namespace)
+        pkg_resources.load_entry_point("sourmash", 'console_scripts', scriptname)()
         return 0
     except pkg_resources.ResolutionError:
         pass
@@ -126,7 +125,7 @@ def get_test_data(filename):
     filepath = None
     try:
         filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash_lib/test-data/"\
+            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/"\
                 + filename)
     except ResolutionError:
         pass

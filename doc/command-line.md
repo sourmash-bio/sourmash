@@ -10,7 +10,6 @@ Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
 how and why MinHash sketches work.
 
-______
 
 sourmash uses a subcommand syntax, so all commands start with
 `sourmash` followed by a subcommand specifying the action to be
@@ -87,6 +86,11 @@ each sequence in one or more sequence files.  It takes as input FASTA
 or FASTQ files, and these files can be uncompressed or compressed with
 gzip or bzip2.  The output will be one or more JSON signature files
 that can be used with `sourmash compare`.
+
+Please see [Using sourmash: a practical guide](using-sourmash-a-guide.md)
+for more information on computing signatures.
+
+______
 
 Usage:
 ```
@@ -244,21 +248,64 @@ bins (MAGs) and single-cell genomes (SAGs).
 Usage:
 
 ```
-sourmash lca --query query.sig [query2.sig ...] --db <lca db> [<lca db2> ...]
+sourmash lca classify --query query.sig [query2.sig ...] --db <lca db> [<lca db2> ...]
 ```
 
-Example output:
+For example, the command
+
+```
+sourmash lca classify --query tests/test-data/63.fa.sig \
+    --db podar-ref.lca.json 
+```
+
+will produce the following logging to stderr:
+
+```
+loaded 1 LCA databases. ksize=31, scaled=10000
+finding query signatures...
+outputting classifications to stdout
+... classifying NC_011663.1 Shewanella baltica OS223, complete genome
+classified 1 signatures total
+```
+
+and the example classification output is a CSV file with headers:
 
 ```
 ID,status,superkingdom,phylum,class,order,family,genus,species
 "NC_009665.1 Shewanella baltica OS185, complete genome",found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Shewanellaceae,Shewanella,Shewanella baltica
 ```
 
+The `status` column in the classification output can take three
+possible values: `nomatch`, `found`, and `disagree`.  `nomatch` means
+that no match was found for this query, and `found` means that an
+unambiguous assignment was found - all k-mers were classified within
+the same taxonomic hierarchy, and the most detailed lineage available
+was reported.  `disagree` means that there was a taxonomic disagreement,
+and the lowest compatible taxonomic node was reported.
+
+To elaborate on this a bit, suppose that all of the k-mers within a
+signature were classified as family *Shewanellaceae*, genus
+*Shewanella*, or species *Shewanella baltica*. Then the lowest
+compatible node (here species *Shewanella baltica*) would be reported,
+and the status of the classification would be `found`.  However, if a
+number of additional k-mers in the input signaturer were classified as
+*Shewanella oneidensis*, sourmash would be unable to resolve the
+taxonomic assignment below genus *Shewanella* and it would report
+a status of `disagree` with the genus-level assignment of *Shewanella*;
+species level assignments would not be reported.
+
+(This is the approach that Kraken and other lowest common ancestor
+implementations use, we believe.)
+
 ### `sourmash lca summarize`
 
 `sourmash lca summarize` produces a Kraken-style summary of the
 combined contents of the given query signatures.  It is meant for
 exploring metagenomes and metagenome-assembled genome bins.
+
+Note, unlike `sourmash lca classify`, `lca summarize` merges all
+of the query signatures into one and reports on the combined contents.
+This may be changed in the future.
 
 Usage:
 
@@ -267,17 +314,42 @@ sourmash lca summarize --query query.sig [query2.sig ...]
     --db <lca db> [<lca db2> ...]
 ```
 
-Example output:
+For example, the command line:
 
 ```
-100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
-100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
-100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
-100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
-100.0%   792   Bacteria;Proteobacteria;Gammaproteobacteria
-100.0%   792   Bacteria;Proteobacteria
-100.0%   792   Bacteria
+sourmash lca summarize --query tests/test-data/63.fa.sig \
+    --db tests/test-data/podar-ref.lca.json 
 ```
+
+will produce the following log output to stderr:
+
+```
+loaded 1 LCA databases. ksize=31, scaled=10000
+finding query signatures...
+loaded 1 signatures from 1 files total.
+```
+
+and the following example summarize output to stdout:
+
+```
+50.5%   278   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica;Shewanella baltica OS223
+100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
+100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
+100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
+100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
+100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria
+100.0%   550   Bacteria;Proteobacteria
+100.0%   550   Bacteria
+```
+
+The output is space-separated and consists of three columns: the
+perrcentage of total k-mers that have this classification; the number of
+k-mers that have this classification; and the lineage classification.
+K-mer classifications are reported hierarchically, so the percentages
+and totals contain all assignments that are at a lower taxonomic level -
+e.g. *Bacteria*, above, contains all the k-mers in *Bacteria;Proteobacteria*.
+
+The same information is reported in a CSV file if `-o/--output` is used.
 
 ### `sourmash lca gather`
 
@@ -286,6 +358,11 @@ matches to the query, similar to the `sourmash gather` command.  This
 is specifically meant for metagenome and genome bin analysis.  (See
 [Classifying Signatures](classifying-signatures.html) for more
 information on the different approaches that can be used here.)
+
+If the input signature was computed with `--track-abundance`, output
+will be abundance weighted (unless `--ignore-abundances` is
+specified).  `-o/--output` will create a CSV file containing the
+matches.
 
 Usage:
 
