@@ -11,7 +11,7 @@ from collections import defaultdict, Counter
 from .. import sourmash_args, load_signatures
 from ..logging import notify, error, print_results
 from . import lca_utils
-from .lca_utils import debug, set_debug
+from .lca_utils import debug, set_debug, check_files_exist
 
 DEFAULT_THRESHOLD=5
 
