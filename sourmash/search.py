@@ -2,13 +2,11 @@ from __future__ import division
 from collections import namedtuple
 import sys
 
-import sourmash
 from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
-from .sbtmh import SearchMinHashesFindBest
+from .sbtmh import SearchMinHashesFindBest, SearchMinHashesFindBestIgnoreMaxHash
 from ._minhash import get_max_hash_for_scaled
-
 
 
 # generic SearchResult across individual signatures + SBTs.
@@ -85,8 +83,6 @@ GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
-    from sourmash.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
-
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
     orig_abunds = { k: 1 for k in orig_mins }

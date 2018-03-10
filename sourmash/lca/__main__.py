@@ -7,7 +7,7 @@ import argparse
 
 from . import classify, index, summarize_main, rankinfo_main, gather_main
 from .command_compare_csv import compare_csv
-from sourmash.logging import set_quiet, error
+from ..logging import set_quiet, error
 
 usage='''
 sourmash lca <command> [<args>] - work with taxonomic information.

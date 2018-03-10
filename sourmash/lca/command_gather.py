@@ -10,12 +10,12 @@ import argparse
 import csv
 from collections import Counter, defaultdict, namedtuple
 
-import sourmash
-from sourmash import sourmash_args
-from sourmash.logging import notify, error, print_results
-from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import debug, set_debug
-from sourmash.search import format_bp
+from .. import sourmash_args, save_signatures, SourmashSignature
+from ..logging import notify, error, print_results
+from . import lca_utils
+from .lca_utils import debug, set_debug
+from ..search import format_bp
+
 
 LCAGatherResult = namedtuple('LCAGatherResult',
                              'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name, n_equal_matches')
@@ -284,8 +284,7 @@ def gather_main(args):
             e = query_sig.minhash.copy_and_clear()
             e.add_many(remaining_mins)
 
-            sourmash.save_signatures([ sourmash.SourmashSignature(e) ],
-                                         args.output_unassigned)
+            save_signatures([ SourmashSignature(e) ], args.output_unassigned)
 
 
 if __name__ == '__main__':

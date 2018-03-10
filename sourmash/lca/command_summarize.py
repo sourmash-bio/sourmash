@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import defaultdict, Counter
 
-import sourmash
-from sourmash import sourmash_args
-from sourmash.logging import notify, error, print_results
-from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import debug, set_debug
+from .. import sourmash_args, load_signatures
+from ..logging import notify, error, print_results
+from . import lca_utils
+from .lca_utils import debug, set_debug
 
 
 DEFAULT_THRESHOLD=5
@@ -107,8 +106,7 @@ def summarize_main(args):
     hashvals = defaultdict(int)
     for query_filename in inp_files:
         n += 1
-        for query_sig in sourmash.load_signatures(query_filename,
-                                                      ksize=ksize):
+        for query_sig in load_signatures(query_filename, ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
