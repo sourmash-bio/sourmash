@@ -74,3 +74,6 @@ def main():
 
     cmd = commands.get(args.command)
     cmd(sys.argv[2:])
+
+if __name__ == '__main__':
+    main()
