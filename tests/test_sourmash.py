@@ -140,8 +140,8 @@ def test_do_sourmash_compute_output_and_name_valid_file():
 
         all_testdata = " ".join([testdata1, testdata2, testdata3])
         sigfile_merged = os.path.join(location, 'short.all.fa.sig')
-        cmd = "cat {} | {}/sourmash compute -k 31 -o {} -".format(
-                all_testdata, utils.scriptpath(), sigfile_merged)
+        cmd = "cat {} | sourmash compute -k 31 -o {} -".format(
+                all_testdata, sigfile_merged)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         with open(sigfile_merged, 'r') as f:
@@ -2974,9 +2974,9 @@ def test_watch():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --ksize 21 --dna zzz
+             gunzip -c {} | sourmash watch --ksize 21 --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)
@@ -2997,9 +2997,9 @@ def test_watch_deduce_ksize():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --dna zzz
+             gunzip -c {} | sourmash watch --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)

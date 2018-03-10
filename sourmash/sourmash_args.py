@@ -7,8 +7,8 @@ from . import signature
 from .logging import notify, error
 
 from . import signature as sig
-from sourmash_lib.sbt import SBT
-from sourmash_lib.sbtmh import SigLeaf
+from .sbt import SBT
+from .sbtmh import SigLeaf
 
 DEFAULT_LOAD_K=31
 

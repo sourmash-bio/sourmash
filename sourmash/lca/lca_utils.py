@@ -13,8 +13,9 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 import pprint
 
-import sourmash_lib._minhash
-from sourmash_lib.logging import notify
+from .._minhash import get_max_hash_for_scaled
+from ..logging import notify
+
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
@@ -226,7 +227,7 @@ class LCA_Database(object):
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
-        max_hash = sourmash_lib._minhash.get_max_hash_for_scaled(scaled)
+        max_hash = get_max_hash_for_scaled(scaled)
         new_hashvals = {}
         for k, v in self.hashval_to_lineage_id.items():
             if k < max_hash:
