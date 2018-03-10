@@ -14,7 +14,7 @@ import sourmash_lib
 from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error, print_results
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash_lib.lca.lca_utils import debug, set_debug, check_files_exist
 from sourmash_lib.search import format_bp
 
 LCAGatherResult = namedtuple('LCAGatherResult',
@@ -77,7 +77,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         orig_abunds = { k: 1 for k in query_mins }
     sum_abunds = sum(orig_abunds.values())
 
- 
+
     # collect all mentioned lineage_ids -> md5s, from across the databases
     md5_to_lineage = {}
     md5_to_name = {}
@@ -108,7 +108,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                     md5 = lca_db.lineage_id_to_signature[lid]
                     signature_size = lca_db.lineage_id_counts[lid]
                     assignments[hashval].add((md5, signature_size))
-                    
+
         # none? quit.
         if not assignments:
             break
@@ -172,7 +172,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         yield result, f_unassigned, est_bp, query_mins
 
     ## done.
-    
+
 
 
 def gather_main(args):
@@ -202,6 +202,9 @@ def gather_main(args):
 
     if args.debug:
         set_debug(args.debug)
+
+    if not check_files_exist(args.query, *args.db):
+        sys.exit(-1)
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, None)

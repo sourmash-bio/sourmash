@@ -12,7 +12,7 @@ import sourmash_lib
 from sourmash_lib import sourmash_args
 from sourmash_lib.logging import notify, error, print_results
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from sourmash_lib.lca.lca_utils import debug, set_debug, check_files_exist
 
 
 DEFAULT_THRESHOLD=5
@@ -89,6 +89,9 @@ def summarize_main(args):
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
+
+    if not check_files_exist(*args.query, *args.db):
+        sys.exit(-1)
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
