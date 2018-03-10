@@ -627,6 +627,8 @@ def index(args):
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
                         help='Bloom filter size used for internal nodes.')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Try loading all files with --traverse-directory')
     parser.add_argument('-s', '--sparseness', type=float, default=.0,
                         help='What percentage of internal nodes will not be saved. '
                              'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
@@ -643,7 +645,8 @@ def index(args):
         tree = create_sbt_index(args.bf_size, n_children=args.n_children)
 
     if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
+                                                          args.force))
     else:
         inp_files = list(args.signatures)
 
