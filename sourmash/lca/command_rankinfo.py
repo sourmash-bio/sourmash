@@ -7,9 +7,9 @@ import sys
 import argparse
 from collections import defaultdict
 
-from sourmash_lib.logging import error
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from ..logging import error
+from . import lca_utils
+from .lca_utils import debug, set_debug
 
 
 def make_lca_counts(dblist):
@@ -45,9 +45,9 @@ def make_lca_counts(dblist):
 
 def rankinfo_main(args):
     """
-    main summarization function:
+    rankinfo!
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca rankinfo")
     p.add_argument('db', nargs='+')
     p.add_argument('--scaled', type=float)
     p.add_argument('-d', '--debug', action='store_true')

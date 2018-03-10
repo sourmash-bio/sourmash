@@ -95,7 +95,7 @@ class SBT(object):
     """A Sequence Bloom Tree implementation allowing generic internal nodes and leaves.
 
     The default node and leaf format is a Bloom Filter (like the original implementation),
-    but we also provide a MinHash leaf class (in the sourmash_lib.sbtmh.Leaf
+    but we also provide a MinHash leaf class (in the sourmash.sbtmh.Leaf
 
     Parameters
     ----------
@@ -118,13 +118,13 @@ class SBT(object):
         self.nodes = defaultdict(lambda: None)
         self.missing_nodes = set()
         self.d = d
-        self.max_node = 0
+        self.next_node = 0
         self.storage = storage
 
     def new_node_pos(self, node):
-        while self.nodes[self.max_node] is not None:
-            self.max_node += 1
-        return self.max_node
+        while self.nodes.get(self.next_node, None) is not None:
+            self.next_node += 1
+        return self.next_node
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
@@ -178,7 +178,7 @@ class SBT(object):
         visited, queue = set(), [0]
         while queue:
             node_p = queue.pop(0)
-            node_g = self.nodes[node_p]
+            node_g = self.nodes.get(node_p, None)
             if node_g is None:
                 if node_p in self.missing_nodes:
                     self._rebuild_node(node_p)
@@ -210,7 +210,7 @@ class SBT(object):
             (the default).
         """
 
-        node = self.nodes[pos]
+        node = self.nodes.get(pos, None)
         if node is not None:
             # this node was already build, skip
             return
@@ -244,7 +244,8 @@ class SBT(object):
         if pos == 0:
             return None
         p = int(math.floor((pos - 1) / self.d))
-        return NodePos(p, self.nodes[p])
+        node = self.nodes.get(p, None)
+        return NodePos(p, node)
 
     def children(self, pos):
         """Return all children nodes for node at position ``pos``.
@@ -281,7 +282,8 @@ class SBT(object):
             child node.
         """
         cd = self.d * parent + pos + 1
-        return NodePos(cd, self.nodes[cd])
+        node = self.nodes.get(cd, None)
+        return NodePos(cd, node)
 
     def save(self, path, storage=None, sparseness=0.0):
         """Saves an SBT description locally and node data to a storage.
@@ -353,7 +355,7 @@ class SBT(object):
             data['filename'] = node.save(data['filename'])
             structure[i] = data
 
-            notify("{} of {} nodes saved".format(n, total_nodes), end='\r')
+            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
         notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = structure
@@ -398,7 +400,7 @@ class SBT(object):
         try:
             x.count(10)
         except TypeError:
-            raise Exception("khmer version is too old; need >= 2.1.")
+            raise Exception("khmer version is too old; need >= 2.1,<3")
 
         if leaf_loader is None:
             leaf_loader = Leaf.load
@@ -516,9 +518,33 @@ class SBT(object):
         tree.nodes = sbt_nodes
         tree.missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
-        tree.max_node = max_node
+        # TODO: this might not be true with combine...
+        tree.next_node = max_node
+
+        tree._fill_max_n_below()
 
         return tree
+
+    def _fill_max_n_below(self):
+        for i, n in self.nodes.items():
+            if isinstance(n, Leaf):
+                parent = self.parent(i)
+                if parent.pos not in self.missing_nodes:
+                    max_n_below = parent.node.metadata.get('max_n_below', 0)
+                    max_n_below = max(len(n.data.minhash.get_mins()),
+                                      max_n_below)
+                    parent.node.metadata['max_n_below'] = max_n_below
+
+                    current = parent
+                    parent = self.parent(parent.pos)
+                    while parent and parent.pos not in self.missing_nodes:
+                        max_n_below = parent.node.metadata.get('max_n_below', 0)
+                        max_n_below = max(current.node.metadata['max_n_below'],
+                                          max_n_below)
+                        parent.node.metadata['max_n_below'] = max_n_below
+                        current = parent
+                        parent = self.parent(parent.pos)
+
 
     def print_dot(self):
         print("""
@@ -543,7 +569,7 @@ class SBT(object):
         visited, stack = set(), [0]
         while stack:
             node_p = stack.pop()
-            node_g = self.nodes[node_p]
+            node_g = self.nodes.get(node_p, None)
             if node_p not in visited and node_g is not None:
                 visited.add(node_p)
                 depth = int(math.floor(math.log(node_p + 1, self.d)))
@@ -573,7 +599,9 @@ class SBT(object):
                     yield (i, node)
 
     def leaves(self):
-        return [c for c in self.nodes.values() if isinstance(c, Leaf)]
+        for c in self.nodes.values():
+            if isinstance(c, Leaf):
+                yield c
 
     def combine(self, other):
         larger, smaller = self, other
@@ -593,22 +621,20 @@ class SBT(object):
         for level in range(1, levels + 1):
             for tree in (larger, smaller):
                 for pos in range(n_previous, n_next):
-                    if tree.nodes[pos] is not None:
+                    if tree.nodes.get(pos, None) is not None:
                         new_node = copy(tree.nodes[pos])
                         if isinstance(new_node, Node):
                             # An internal node, we need to update the name
                             new_node.name = "internal.{}".format(current_pos)
                         new_nodes[current_pos] = new_node
-                    else:
-                        del tree.nodes[pos]
                     current_pos += 1
             n_previous = n_next
             n_next = n_previous + int(self.d ** level)
             current_pos = n_next
 
-        # reset max_node, next time we add a node it will find the next
+        # reset next_node, next time we add a node it will find the next
         # empty position
-        self.max_node = 2
+        self.next_node = 2
 
         # TODO: do we want to return a new tree, or merge into this one?
         self.nodes = new_nodes

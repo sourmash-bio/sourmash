@@ -48,7 +48,7 @@ cd sourmash
         pip uninstall -y sourmash; pip uninstall -y sourmash; make install
         mkdir ../not-sourmash # if there is a subdir named 'sourmash' py.test will execute tests
         # there instead of the installed sourmash module's tests
-        pushd ../not-sourmash; py.test --pyargs sourmash_lib; popd
+        pushd ../not-sourmash; py.test --pyargs sourmash; popd
 
 
         # Secondly we test via pip
@@ -63,7 +63,7 @@ cd sourmash
         cp dist/sourmash*tar.gz ../../../testenv3/
         pip uninstall -y sourmash; pip uninstall -y sourmash; make install
         cd ../.. # no subdir named sourmash here, safe for testing installed sourmash module
-        py.test --pyargs sourmash_lib
+        py.test --pyargs sourmash
 
         # Is the distribution in testenv2 complete enough to build another
         # functional distribution?
@@ -80,7 +80,7 @@ cd sourmash
         make test
         pip uninstall -y sourmash; pip uninstall -y sourmash; make install
         mkdir ../not-sourmash
-        pushd ../not-sourmash ; py.test  --pyargs sourmash_lib ; popd
+        pushd ../not-sourmash ; py.test  --pyargs sourmash ; popd
 ```
 4\. Publish the new release on the testing PyPI server.  You will need
    to change your PyPI credentials as documented here:
@@ -100,7 +100,7 @@ cd sourmash
         # install as much as possible from non-test server!
         pip install screed pytest numpy matplotlib scipy
         pip install -i https://testpypi.python.org/pypi --pre --no-clean sourmash
-        py.test --pyargs sourmash_lib
+        py.test --pyargs sourmash
 ```
 5\. Do any final testing:
 
@@ -144,5 +144,5 @@ so:
 ```
 
    apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
-   pip install sourmash[test] && py.test --pyargs sourmash_lib
+   pip install sourmash[test] && py.test --pyargs sourmash
 ```

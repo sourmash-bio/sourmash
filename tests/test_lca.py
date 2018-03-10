@@ -170,7 +170,7 @@ def test_basic_index_and_classify_with_tsv_and_gz():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_basic_index_and_classify():
@@ -203,7 +203,7 @@ def test_basic_index_and_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_index_traverse():
@@ -295,7 +295,7 @@ def test_single_classify():
 
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_single_classify_empty():
@@ -310,9 +310,9 @@ def test_single_classify_empty():
         print(out)
         print(err)
 
-        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,' in out
+        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,,' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_single_classify_traverse():
@@ -333,7 +333,7 @@ def test_single_classify_traverse():
 
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_multi_query_classify_traverse():
@@ -421,7 +421,7 @@ def test_unassigned_internal_index_and_classify():
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,unassigned,Alteromonadaceae,unassigned,Alteromonas_macleodii' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_unassigned_last_index_and_classify():
@@ -452,9 +452,9 @@ def test_unassigned_last_index_and_classify():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,\r\n' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,,,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_index_and_classify_internal_unassigned_multi():
@@ -487,9 +487,9 @@ def test_index_and_classify_internal_unassigned_multi():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,\r\n' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,unassigned,unassigned,Alteromonadaceae,,,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
         # classify input_sig2
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig2]
@@ -500,9 +500,9 @@ def test_index_and_classify_internal_unassigned_multi():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,\r\n' in out
+        assert 'TARA_PSW_MAG_00136,found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus,,\r\n' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 1 databases' in err
+        assert 'loaded 1 LCA databases' in err
 
 
 def test_multi_db_classify():
@@ -519,9 +519,9 @@ def test_multi_db_classify():
         print(err)
 
         assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in out
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,' in out
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,,,,' in out
         assert 'classified 1 signatures total' in err
-        assert 'loaded 2 databases' in err
+        assert 'loaded 2 LCA databases' in err
 
 
 def test_classify_unknown_hashes():
@@ -719,6 +719,7 @@ def test_rankinfo_on_multi():
         lines.remove('family: 695 (19.2%)')
         lines.remove('genus: 681 (18.8%)')
         lines.remove('species: 200 (5.5%)')
+        lines.remove('strain: 0 (0.0%)')
 
         assert not lines
 
@@ -742,6 +743,7 @@ def test_rankinfo_on_single():
         lines.remove('family: 695 (19.2%)')
         lines.remove('genus: 681 (18.8%)')
         lines.remove('species: 200 (5.5%)')
+        lines.remove('strain: 0 (0.0%)')
 
         assert not lines
 
@@ -789,3 +791,77 @@ def test_compare_csv_real():
         assert '13 incompatible at rank family' in err
         assert '0 incompatible at rank genus' in err
         assert '0 incompatible at rank species' in err
+
+
+def test_single_gather():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'gather', input_sig, db1]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '2.0 Mbp     100.0%  100.0%      Alteromonas_macleodii' in out
+        assert 'Query is completely assigned.'
+
+
+def test_gather_unknown_hashes():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '...found 1 genomes with lineage assignments!!' in err
+        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+
+        cmd = ['lca', 'gather', input_sig1, lca_db]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '270.0 kbp    11.5%   21.4%      Archaea; family novelFamily_I' in out
+        assert '88.5% (2.1 Mbp) of hashes have no assignment.' in out
+
+
+def test_gather_equiv_results():
+    with utils.TempDirectory() as location:
+        query_sig = utils.get_test_data('47+63.fa.sig')
+        lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+        cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '2.7 Mbp     100.0%' in out
+        assert 'Shewanella baltica' in out
+        assert '(** 1 equal matches)'
+        assert ('OS223' in out) or ('OS185' in out)
+
+        assert os.path.exists(lca_db)
+
+        r = csv.DictReader(open(os.path.join(location, 'matches.csv')))
+        row = next(r)
+        assert row['n_equal_matches'] == '1'

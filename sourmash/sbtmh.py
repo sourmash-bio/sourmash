@@ -64,7 +64,6 @@ class SigLeaf(Leaf):
         if self._data is None:
             buf = BytesIO(self.storage.load(self._path))
             with TextIOWrapper(buf) as data:
-                from sourmash_lib import signature
                 self._data = signature.load_one_signature(data)
         return self._data
 
@@ -75,27 +74,34 @@ class SigLeaf(Leaf):
 
 def search_minhashes(node, sig, threshold, results=None, downsample=True):
     mins = sig.minhash.get_mins()
+    score = 0
 
     if isinstance(node, SigLeaf):
         try:
-            matches = node.data.minhash.count_common(sig.minhash)
+            score = node.data.minhash.similarity(sig.minhash)
         except Exception as e:
             if 'mismatch in max_hash' in str(e) and downsample:
                 xx = sig.minhash.downsample_max_hash(node.data.minhash)
                 yy = node.data.minhash.downsample_max_hash(sig.minhash)
 
-                matches = yy.count_common(xx)
+                score = yy.similarity(xx)
             else:
                 raise
 
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        matches = sum(1 for value in mins if node.data.get(value))
+        if len(mins):
+            matches = sum(1 for value in mins if node.data.get(value))
+            max_mins = node.metadata.get('max_n_below', -1)
+            if max_mins == -1:
+                raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+            score = float(matches) / max_mins
 
     if results is not None:
-        results[node.name] = float(matches) / len(mins)
+        results[node.name] = score
 
-    if len(mins) and float(matches) / len(mins) >= threshold:
+    if score >= threshold:
         return 1
+
     return 0
 
 

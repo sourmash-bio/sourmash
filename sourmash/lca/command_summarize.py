@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import defaultdict, Counter
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error, print_results
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from .. import sourmash_args, load_signatures
+from ..logging import notify, error, print_results
+from . import lca_utils
+from .lca_utils import debug, set_debug
 
 
 DEFAULT_THRESHOLD=5
@@ -60,7 +59,7 @@ def summarize_main(args):
     """
     main summarization function.
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca summarize")
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
@@ -92,7 +91,6 @@ def summarize_main(args):
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
-    notify('ksize={} scaled={}', ksize, scaled)
 
     # find all the queries
     notify('finding query signatures...')
@@ -108,8 +106,7 @@ def summarize_main(args):
     hashvals = defaultdict(int)
     for query_filename in inp_files:
         n += 1
-        for query_sig in sourmash_lib.load_signatures(query_filename,
-                                                      ksize=ksize):
+        for query_sig in load_signatures(query_filename, ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')

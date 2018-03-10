@@ -5,14 +5,14 @@ import csv
 import os
 import os.path
 import sys
-from collections import namedtuple
 import random
 
 import screed
-import sourmash_lib
+from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
+from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -91,7 +91,7 @@ def compute(args):
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
-                        default=sourmash_lib.DEFAULT_SEED)
+                        default=DEFAULT_SEED)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
     parser.add_argument('--license', default='CC0', type=str,
@@ -174,18 +174,18 @@ def compute(args):
         Elist = []
         for k in ksizes:
             if args.protein:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=True,
-                                    track_abundance=args.track_abundance,
-                                            scaled=args.scaled,
-                                            seed=seed)
+                E = MinHash(ksize=k, n=args.num_hashes,
+                            is_protein=True,
+                            track_abundance=args.track_abundance,
+                            scaled=args.scaled,
+                            seed=seed)
                 Elist.append(E)
             if args.dna:
-                E = sourmash_lib.MinHash(ksize=k, n=args.num_hashes,
-                                            is_protein=False,
-                                    track_abundance=args.track_abundance,
-                                            scaled=args.scaled,
-                                            seed=seed)
+                E = MinHash(ksize=k, n=args.num_hashes,
+                            is_protein=False,
+                            track_abundance=args.track_abundance,
+                            scaled=args.scaled,
+                            seed=seed)
                 Elist.append(E)
         return Elist
 
@@ -251,7 +251,6 @@ def compute(args):
                         elif args.name_from_first:
                             name = record.name
 
-                    s = record.sequence
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
                 notify('')
@@ -423,7 +422,6 @@ def plot(args):
     import matplotlib as mpl
     mpl.use('Agg')
     import numpy
-    import scipy
     import pylab
     import scipy.cluster.hierarchy as sch
     from . import fig as sourmash_fig
@@ -445,14 +443,24 @@ def plot(args):
                         help="randomly downsample to this many samples, max.")
     parser.add_argument("--subsample-seed", type=int, default=1,
                         help="random seed for --subsample; default=1")
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='forcibly plot non-distance matrices')
+
     args = parser.parse_args(args)
 
     # load files
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
 
+    notify('loading comparison matrix from {}...', D_filename)
     D = numpy.load(open(D_filename, 'rb'))
+    notify('...got {} x {} matrix.', *D.shape)
+
+    notify('loading labels from {}', labelfilename)
     labeltext = [ x.strip() for x in open(labelfilename) ]
+    if len(labeltext) != D.shape[0]:
+        error('{} labels != matrix size, exiting')
+        sys.exit(-1)
 
     # build filenames, decide on PDF/PNG output
     dendrogram_out = os.path.basename(D_filename) + '.dendro'
@@ -466,6 +474,18 @@ def plot(args):
         matrix_out += '.pdf'
     else:
         matrix_out += '.png'
+
+    hist_out = os.path.basename(D_filename) + '.hist'
+    if args.pdf:
+        hist_out += '.pdf'
+    else:
+        hist_out += '.png'
+
+    # make the histogram
+    notify('saving histogram of matrix values => {}', hist_out)
+    fig = pylab.figure(figsize=(8,5))
+    pylab.hist(numpy.array(D.flat), bins=100)
+    fig.savefig(hist_out)
 
     ### make the dendrogram:
     fig = pylab.figure(figsize=(8,5))
@@ -496,13 +516,15 @@ def plot(args):
                                              show_labels=args.labels,
                                              show_indices=args.indices,
                                              vmin=args.vmin,
-                                             vmax=args.vmax)
+                                             vmax=args.vmax,
+                                             force=args.force)
     fig.savefig(matrix_out)
     notify('wrote numpy distance matrix to: {}', matrix_out)
 
-    # print out sample numbering for FYI.
-    for i, name in enumerate(labeltext):
-        print_results('{}\t{}', i, name)
+    if len(labeltext) < 30:
+        # for small matrices, print out sample numbering for FYI.
+        for i, name in enumerate(labeltext):
+            print_results('{}\t{}', i, name)
 
 
 def import_csv(args):
@@ -530,7 +552,7 @@ def import_csv(args):
             hashes = hashes.strip()
             hashes = list(map(int, hashes.split(' ' )))
 
-            e = sourmash_lib.MinHash(len(hashes), ksize)
+            e = MinHash(len(hashes), ksize)
             e.add_many(hashes)
             s = sig.SourmashSignature(e, filename=name)
             siglist.append(s)
@@ -574,10 +596,10 @@ def sbt_combine(args):
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
 
-    tree = sourmash_lib.load_sbt_index(inp_files.pop(0))
+    tree = load_sbt_index(inp_files.pop(0))
 
     for f in inp_files:
-        new_tree = sourmash_lib.load_sbt_index(f)
+        new_tree = load_sbt_index(f)
         # TODO: check if parameters are the same for both trees!
         tree.combine(new_tree)
 
@@ -586,8 +608,9 @@ def sbt_combine(args):
 
 
 def index(args):
-    import sourmash_lib.sbtmh
-
+    """
+    Build an Sequence Bloom Tree index of the given signatures.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('signatures', nargs='+',
@@ -615,10 +638,9 @@ def index(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     if args.append:
-        tree = sourmash_lib.load_sbt_index(args.sbt_name)
+        tree = load_sbt_index(args.sbt_name)
     else:
-        tree = sourmash_lib.create_sbt_index(args.bf_size,
-                                             n_children=args.n_children)
+        tree = create_sbt_index(args.bf_size, n_children=args.n_children)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
@@ -633,6 +655,8 @@ def index(args):
     n = 0
     ksizes = set()
     moltypes = set()
+    nums = set()
+    scaleds = set()
     for f in inp_files:
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
@@ -641,8 +665,10 @@ def index(args):
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
+            nums.add(ss.minhash.num)
+            scaleds.add(ss.minhash.scaled)
 
-            leaf = sourmash_lib.sbtmh.SigLeaf(ss.md5sum(), ss)
+            leaf = SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
             n += 1
 
@@ -653,6 +679,16 @@ def index(args):
             error('ksizes: {}; moltypes: {}',
                   ", ".join(map(str, ksizes)), ", ".join(moltypes))
             sys.exit(-1)
+
+        if nums == { 0 } and len(scaleds) == 1:
+            pass # good
+        elif scaleds == { 0 } and len(nums) == 1:
+            pass # also good
+        else:
+            error('trying to build an SBT with incompatible signatures.')
+            error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
+            sys.exit(-1)
+
 
     # did we load any!?
     if n == 0:
@@ -700,11 +736,9 @@ def search(args):
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
+                                             query.minhash.ksize,
+                                             sourmash_args.get_moltype(query))
 
     # downsample if requested
     if args.scaled:
@@ -717,8 +751,8 @@ def search(args):
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype,
+    databases = sourmash_args.load_sbts_and_sigs(args.databases, query,
+                                                 not args.containment,
                                                  args.traverse_directory)
 
     if not len(databases):
@@ -734,7 +768,7 @@ def search(args):
     if args.best_only:
         args.num_results = 1
 
-    if n_matches <= args.num_results:
+    if not args.num_results or n_matches <= args.num_results:
         print_results('{} matches:'.format(len(results)))
     else:
         print_results('{} matches; showing first {}:',
@@ -797,7 +831,7 @@ def categorize(args):
             for row in r:
                 already_names.add(row[0])
 
-    tree = sourmash_lib.load_sbt_index(args.sbt_name)
+    tree = load_sbt_index(args.sbt_name)
 
     if args.traverse_directory:
         inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
@@ -816,7 +850,7 @@ def categorize(args):
                query_ksize, query_moltype)
 
         results = []
-        search_fn = sourmash_lib.sbtmh.SearchMinHashesFindBest().search
+        search_fn = SearchMinHashesFindBest().search
 
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
@@ -836,7 +870,8 @@ def categorize(args):
 
         if args.csv:
             w = csv.writer(args.csv)
-            w.writerow([queryfile, best_hit_query_name, best_hit_sim])
+            w.writerow([queryfile, query.name(), best_hit_query_name,
+                        best_hit_sim])
 
     if loader.skipped_ignore:
         notify('skipped/ignore: {}', loader.skipped_ignore)
@@ -845,7 +880,7 @@ def categorize(args):
 
 
 def gather(args):
-    from .search import gather_databases
+    from .search import gather_databases, format_bp
 
     parser = argparse.ArgumentParser()
     parser.add_argument('query', help='query signature')
@@ -865,6 +900,9 @@ def gather(args):
                         help='downsample query to this scaled factor')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
+    parser.add_argument('--ignore-abundance',  action='store_true',
+                        help='do NOT use k-mer abundances if present')
+    parser.add_argument('-d', '--debug', action='store_true')
 
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
@@ -877,11 +915,9 @@ def gather(args):
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
                                                select_moltype=moltype)
-    query_moltype = sourmash_args.get_moltype(query)
-    query_ksize = query.minhash.ksize
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                             query_ksize,
-                                             query_moltype)
+                                             query.minhash.ksize,
+                                             sourmash_args.get_moltype(query))
 
     # verify signature was computed right.
     if query.minhash.max_hash == 0:
@@ -900,36 +936,21 @@ def gather(args):
         sys.exit(-1)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases,
-                                                 query_ksize, query_moltype,
+    databases = sourmash_args.load_sbts_and_sigs(args.databases, query, False,
                                                  args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    # pretty-printing code.
-    def format_bp(bp):
-        bp = float(bp)
-        if bp < 500:
-            return '{:.0f} bp '.format(bp)
-        elif bp <= 500e3:
-            return '{:.1f} kbp'.format(round(bp / 1e3, 1))
-        elif bp < 500e6:
-            return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
-        elif bp < 500e9:
-            return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
-        return '???'
-
     found = []
-    sum_found = 0
-    for result, n_intersect_mins, new_max_hash, next_query in gather_databases(query, databases,
-                                                     args.threshold_bp):
+    for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         name = result.leaf._display_name(40)
+
 
         if not len(found):                # first result? print header.
             print_results("")
@@ -937,7 +958,7 @@ def gather(args):
             print_results("---------   ------- --------")
 
         # print interim result & save in a list for later use
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+        pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
 
         name = result.leaf._display_name(40)
@@ -945,16 +966,14 @@ def gather(args):
         print_results('{:9}   {:>6}  {:>6}      {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
-        sum_found += n_intersect_mins
         found.append(result)
 
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
 
-    sum_found /= len(query.minhash.get_hashes())
     print_results('the recovered matches hit {:.1f}% of the query',
-           sum_found * 100)
+           (1 - weighted_missed) * 100)
     print_results('')
 
     if not found:
@@ -962,7 +981,8 @@ def gather(args):
 
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'name', 'filename', 'md5']
+                      'f_unique_to_query', 'f_unique_weighted',
+                      'average_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
@@ -978,22 +998,20 @@ def gather(args):
     if args.output_unassigned:
         if not found:
             notify('nothing found - entire query signature unassigned.')
-        if not query.minhash.get_mins():
+        elif not query.minhash.get_mins():
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
 
-            e = sourmash_lib.MinHash(ksize=query_ksize, n=0,
-                                     max_hash=new_max_hash)
-            e.add_many(query.minhash.get_mins())
+            e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
+            e.add_many(next_query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
 
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-    from sourmash_lib.sbtmh import search_minhashes, SearchMinHashesFindBest
 
     parser = argparse.ArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
@@ -1031,26 +1049,19 @@ def watch(args):
         moltype = 'protein'
         is_protein = True
 
-    tree = sourmash_lib.load_sbt_index(args.sbt_name)
+    tree = load_sbt_index(args.sbt_name)
 
-    def get_ksize(tree):
-        """Walk nodes in `tree` to find out ksize"""
-        for node in tree.nodes.values():
-            if isinstance(node, sourmash_lib.sbtmh.SigLeaf):
-                return node.data.minhash.ksize
-
-    # deduce ksize from the SBT we are loading
+    # check ksize from the SBT we are loading
     ksize = args.ksize
     if ksize is None:
-        ksize = get_ksize(tree)
+        leaf = next(iter(tree.leaves()))
+        tree_mh = leaf.data.minhash
+        ksize = tree_mh.ksize
 
-    E = sourmash_lib.MinHash(ksize=ksize, n=args.num_hashes,
-                             is_protein=is_protein)
-    streamsig = sig.SourmashSignature(E, filename='stdin',
-                                      name=args.name)
+    E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein)
+    streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
 
-    notify('Computing signature for k={}, {} from stdin',
-           ksize, moltype)
+    notify('Computing signature for k={}, {} from stdin', ksize, moltype)
 
     def do_search():
         search_fn = SearchMinHashesFindBest().search
