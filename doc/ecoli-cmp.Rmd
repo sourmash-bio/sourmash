@@ -1,0 +1,56 @@
+---
+title: "Working with matrix output by sourmash compare"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load a comparison matrix into R
+
+
+```{r chunk1}
+
+sourmash_comp_matrix <- read.csv("ecoli.cmp.csv")
+
+# Label the rows
+rownames(sourmash_comp_matrix) <- colnames(sourmash_comp_matrix)
+
+# Transform for plotting
+sourmash_comp_matrix <- as.matrix(sourmash_comp_matrix)
+
+```
+
+### Make an MDS plot
+
+```{r mds}
+fit <- dist(sourmash_comp_matrix)
+fit <- cmdscale(fit)
+x <- fit[, 1]
+y <- fit[, 2]
+plot(fit[ , 1], fit[ , 2], xlab = "Dimension 1", ylab = "Dimension 2")
+```
+
+### Make a tSNE plot
+
+```{r tSNE}
+library(Rtsne)
+tsne_model <- Rtsne(sourmash_comp_matrix, check_duplicates=FALSE, pca=TRUE, perplexity=5, theta=0.5, dims=2)
+d_tsne = as.data.frame(tsne_model$Y) 
+plot(d_tsne$V1, d_tsne$V2)
+```
+
+### Make an unclustered heatmap
+
+```{r heatmap}
+heatmap(sourmash_comp_matrix, Colv=F, scale='none')
+```
+
+### Make a clustered heatmap
+
+```{r clustered-heatmap}
+hc.rows <- hclust(dist(sourmash_comp_matrix))
+hc.cols <- hclust(dist(t(sourmash_comp_matrix)))
+heatmap(sourmash_comp_matrix[cutree(hc.rows,k=2)==1,], Colv=as.dendrogram(hc.cols), scale='none')
+```
