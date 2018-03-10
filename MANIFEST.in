@@ -1,6 +1,7 @@
 include LICENSE Makefile Dockerfile LICENSE Makefile README.md requirements.txt
 include index.ipynb
 recursive-include sourmash_lib *
+recursive-include sourmash *
 recursive-include third-party *.cc *.h
 global-exclude *.orig
 global-exclude *.pyc

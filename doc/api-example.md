@@ -16,14 +16,14 @@ Define two sequences:
 Create two minhashes using 3-mers, and add the sequences:
 
 ```
->>> import sourmash_lib
->>> E1 = sourmash_lib.MinHash(n=20, ksize=3)
+>>> import sourmash
+>>> E1 = sourmash.MinHash(n=20, ksize=3)
 >>> E1.add_sequence(seq1)
 
 ```
 
 ```
->>> E2 = sourmash_lib.MinHash(n=20, ksize=3)
+>>> E2 = sourmash.MinHash(n=20, ksize=3)
 >>> E2.add_sequence(seq2)
 
 ```
@@ -81,7 +81,7 @@ raising an exception.
 >>> import screed
 >>> minhashes = []
 >>> for g in genomes:
-...     E = sourmash_lib.MinHash(n=500, ksize=31)
+...     E = sourmash.MinHash(n=500, ksize=31)
 ...     for record in screed.open(g):
 ...         E.add_sequence(record.sequence[:50000], True)
 ...     minhashes.append(E)
@@ -110,7 +110,7 @@ making the minhashes, which can be saved and loaded easily.
 ## Saving and loading signature files
 
 ```
->>> from sourmash_lib import signature
+>>> from sourmash import signature
 >>> sig1 = signature.SourmashSignature(minhashes[0], name=genomes[0][:20])
 >>> with open('/tmp/genome1.sig', 'wt') as fp:
 ...   signature.save_signatures([sig1], fp)

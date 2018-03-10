@@ -18,3 +18,4 @@ _minhash.so
 *.so
 .coverage
 sourmash_lib/_minhash.cpp
+sourmash/_minhash.cpp
