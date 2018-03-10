@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import defaultdict, Counter
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error, print_results
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug
+from .. import sourmash_args
+from ..logging import notify, error, print_results
+from . import lca_utils
+from .lca_utils import debug, set_debug
 
 
 DEFAULT_THRESHOLD=5

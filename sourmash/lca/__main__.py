@@ -34,7 +34,7 @@ def main(sysv_args):
                 'index': index,
                 'summarize': summarize_main,
                 'rankinfo': rankinfo_main,
-                'search': lca_search_main}
+                'search': lca_search_main,
                 'gather': gather_main,
                 'compare_csv': compare_csv}
 
