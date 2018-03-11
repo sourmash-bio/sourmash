@@ -107,7 +107,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                     md5 = lca_db.lineage_id_to_signature[lid]
                     signature_size = lca_db.lineage_id_counts[lid]
                     assignments[hashval].add((md5, signature_size))
-
         # none? quit.
         if not assignments:
             break
@@ -171,7 +170,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         yield result, f_unassigned, est_bp, query_mins
 
     ## done.
-
 
 
 def gather_main(args):
