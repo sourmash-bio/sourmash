@@ -11,8 +11,7 @@ from collections import defaultdict, Counter
 from .. import sourmash_args, load_signatures
 from ..logging import notify, error, print_results
 from . import lca_utils
-from .lca_utils import debug, set_debug
-
+from .lca_utils import debug, set_debug, check_files_exist
 
 DEFAULT_THRESHOLD=5
 
@@ -88,6 +87,13 @@ def summarize_main(args):
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
+
+    # have to have two calls as python < 3.5 can only have one expanded list
+    if not check_files_exist(*args.query):
+        sys.exit(-1)
+
+    if not check_files_exist(*args.db):
+        sys.exit(-1)
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
