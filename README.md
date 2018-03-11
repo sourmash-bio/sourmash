@@ -72,9 +72,11 @@ Please ask questions and files issues
 Development happens on github at
 [dib-lab/sourmash](https://github.com/dib-lab/sourmash).
 
-`sourmash` is the main command-line entry point; run it for help.
+After installation, `sourmash` is the main command-line entry point;
+run it with `python -m sourmash`, or do `pip install -e /path/to/repo` to
+do a developer install in a virtual environment.
 
-`sourmash/` contains the library code.
+The `sourmash/` directory contains the library code.
 
 Tests require py.test and can be run with `make test`.
 
