@@ -1253,6 +1253,13 @@ def test_do_sourmash_sbt_move_and_search_output():
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
+        print(out)
+
+        import json
+        with open(os.path.join(location, 'zzz.sbt.json')) as fp:
+            d = json.load(fp)
+            assert d['storage']['args']['path'] == '.sbt.zzz'
+
         newpath = os.path.join(location, 'subdir')
         os.mkdir(newpath)
 

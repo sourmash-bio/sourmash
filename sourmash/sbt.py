@@ -313,8 +313,11 @@ class SBT(object):
 
         if storage is None:
             # default storage
-            dirname = os.path.join(os.path.dirname(fn), '.sbt.{}'.format(os.path.basename(path)))
-            storage = FSStorage(dirname)
+            location = os.path.dirname(fn)
+            subdir = '.sbt.{}'.format(os.path.basename(path))
+
+            storage = FSStorage(location, subdir)
+            fn = os.path.join(location, fn)
 
         backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
 
@@ -416,7 +419,7 @@ class SBT(object):
             version = jnodes['version']
 
         if version < 3 and storage is None:
-            storage = FSStorage(os.path.join(dirname, '.sbt.{}'.format(sbt_name)))
+            storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
 
         return loaders[version](jnodes, leaf_loader, dirname, storage)
 
@@ -494,7 +497,7 @@ class SBT(object):
 
         klass = STORAGES[info['storage']['backend']]
         if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(os.path.join(dirname, info['storage']['args']['path']))
+            storage = FSStorage(dirname, info['storage']['args']['path'])
         elif storage is None:
             storage = klass(**info['storage']['args'])
 
@@ -810,13 +813,15 @@ def convert_cmd(name, backend):
         backend = TarStorage
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
-        if not options:
+        if options:
+            options = [os.path.dirname(options[0]), os.path.basename(options[0])]
+        else:
             # this is the default for SBT v2
             tag = '.sbt.' + os.path.basename(name)
             if tag.endswith('.sbt.json'):
                 tag = tag[:-9]
             path = os.path.dirname(name)
-            options = [os.path.join(path, tag)]
+            options = [path, tag]
 
     else:
         error('backend not recognized: {}'.format(backend))
