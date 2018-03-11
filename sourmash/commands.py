@@ -665,6 +665,7 @@ def index(args):
                                       select_moltype=moltype)
 
         # load all matching signatures in this file
+        ss = None
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
@@ -674,6 +675,9 @@ def index(args):
             leaf = SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
             n += 1
+
+        if not ss:
+            continue
 
         # check to make sure we aren't loading incompatible signatures
         if len(ksizes) > 1 or len(moltypes) > 1:
