@@ -106,7 +106,11 @@ def classify(args):
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
 
-    if not check_files_exist(*args.query, *args.db):
+    # have to have two calls as python < 3.5 can only have one expanded list
+    if not check_files_exist(*args.query):
+        sys.exit(-1)
+
+    if not check_files_exist(*args.db):
         sys.exit(-1)
 
     # load all the databases
