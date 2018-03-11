@@ -95,7 +95,7 @@ class SBT(object):
     """A Sequence Bloom Tree implementation allowing generic internal nodes and leaves.
 
     The default node and leaf format is a Bloom Filter (like the original implementation),
-    but we also provide a MinHash leaf class (in the sourmash_lib.sbtmh.Leaf
+    but we also provide a MinHash leaf class (in the sourmash.sbtmh.Leaf
 
     Parameters
     ----------

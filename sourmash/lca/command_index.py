@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import defaultdict
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
+from .. import sourmash_args, load_signatures
+from ..logging import notify, error
+from . import lca_utils
+from .lca_utils import debug, set_debug, LineagePair
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -182,7 +181,7 @@ def index(args):
     record_remnants = set(assignments_idx.keys())
     for filename in inp_files:
         n += 1
-        for sig in sourmash_lib.load_signatures(filename, ksize=args.ksize):
+        for sig in load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
             debug(filename, sig.name())

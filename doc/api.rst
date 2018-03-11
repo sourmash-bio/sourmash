@@ -12,24 +12,24 @@ underlying C++ code, but for now this is undocumented.)
 ``MinHash``: basic MinHash sketch functionality
 ===============================================
 
-.. automodule:: sourmash_lib
+.. automodule:: sourmash
    :members:
 
 ``SourmashSignature``: save and load MinHash sketches in JSON
 =============================================================
 
-.. automodule:: sourmash_lib.signature
+.. automodule:: sourmash.signature
    :members:
 
 ``SBT``: save and load Sequence Bloom Trees in JSON
 =============================================================
 
-.. automodule:: sourmash_lib.sbt
+.. automodule:: sourmash.sbt
    :members: GraphFactory, Node, NodePos, SBT, Leaf
    :undoc-members:
 
-``sourmash_lib.fig``: make plots and figures
+``sourmash.fig``: make plots and figures
 ============================================
 
-.. automodule:: sourmash_lib.fig
+.. automodule:: sourmash.fig
    :members:

@@ -1,12 +1,12 @@
 from __future__ import print_function
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools import Extension
 import os
 
-# retrieve VERSION from sourmash_lib/VERSION.
+# retrieve VERSION from sourmash/VERSION.
 thisdir = os.path.dirname(__file__)
-version_file = open(os.path.join(thisdir, 'sourmash_lib', 'VERSION'))
+version_file = open(os.path.join(thisdir, 'sourmash', 'VERSION'))
 VERSION = version_file.read().strip()
 
 EXTRA_COMPILE_ARGS = ['-std=c++11', '-pedantic']
@@ -51,16 +51,16 @@ SETUP_METADATA = \
     "author": "C. Titus Brown",
     "author_email": "titus@idyll.org",
     "license": "BSD 3-clause",
-    "packages": ["sourmash_lib"],
+    "packages": find_packages(),
     "entry_points": {'console_scripts': [
-        'sourmash = sourmash_lib.__main__:main'
+        'sourmash = sourmash.__main__:main'
         ]
     },
-    "ext_modules": [Extension("sourmash_lib._minhash",
-                               sources=["sourmash_lib/_minhash.pyx",
+    "ext_modules": [Extension("sourmash._minhash",
+                               sources=["sourmash/_minhash.pyx",
                                         "third-party/smhasher/MurmurHash3.cc"],
-                               depends=["sourmash_lib/kmer_min_hash.hh"],
-                               include_dirs=["./sourmash_lib",
+                               depends=["sourmash/kmer_min_hash.hh"],
+                               include_dirs=["./sourmash",
                                              "./third-party/smhasher/"],
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -74,7 +74,7 @@ SETUP_METADATA = \
         },
     "include_package_data": True,
     "package_data": {
-        "sourmash_lib": ['*.pxd']
+        "sourmash": ['*.pxd']
     },
     "classifiers": CLASSIFIERS
     }

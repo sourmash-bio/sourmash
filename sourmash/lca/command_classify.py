@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import Counter
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug, check_files_exist
+from .. import sourmash_args, load_signatures
+from ..logging import notify, error
+from . import lca_utils
+from .lca_utils import debug, set_debug, check_files_exist
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -135,8 +134,7 @@ def classify(args):
     total_n = len(inp_files)
     for query_filename in inp_files:
         n += 1
-        for query_sig in sourmash_lib.load_signatures(query_filename,
-                                                      ksize=ksize):
+        for query_sig in load_signatures(query_filename, ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... classifying {} (file {} of {})', query_sig.name(),
                    n, total_n, end='\r')

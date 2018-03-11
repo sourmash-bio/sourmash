@@ -1,5 +1,0 @@
-#! /usr/bin/env python
-# NOTE: this script is only used in 'developer' mode (python setup.py
-# build_ext -i) -- see setup.py entrypoints for what end-users use.
-from sourmash_lib.__main__ import main
-main()
