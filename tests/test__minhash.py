@@ -36,6 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import math
 import pickle
 
 import pytest
@@ -43,7 +44,8 @@ import pytest
 from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
-import math
+from . import sourmash_tst_utils as utils
+from sourmash_lib import signature
 
 # add:
 # * get default params from Python
@@ -152,6 +154,13 @@ def test_scaled(track_abundance):
     assert mh.get_mins() == [10, 20, 30]
 
 
+def test_max_hash_conversion():
+    SCALED=100000
+    max_hash = get_max_hash_for_scaled(SCALED)
+    new_scaled = get_scaled_for_max_hash(max_hash)
+    assert new_scaled == SCALED
+
+
 def test_max_hash_and_scaled_error(track_abundance):
     # test behavior when supplying both max_hash and scaled
     with pytest.raises(ValueError):
@@ -165,6 +174,15 @@ def test_max_hash_cannot_limit(track_abundance):
         mh = MinHash(2, 4, track_abundance=track_abundance, max_hash=35)
 
 
+def test_no_downsample_scaled_if_n(track_abundance):
+    # make sure you can't set max_n and then downsample scaled
+    mh = MinHash(2, 4, track_abundance=track_abundance)
+    with pytest.raises(ValueError) as excinfo:
+        mh.downsample_scaled(100000000)
+
+    assert 'cannot downsample a standard MinHash' in str(excinfo)
+
+
 def test_scaled(track_abundance):
     # make sure you can't set both max_n and scaled.
     with pytest.raises(ValueError):
@@ -175,8 +193,11 @@ def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as e:
         mh.add_sequence('ATGR')
+    print(e)
+
+    assert 'invalid DNA character in input: R' in str(e)
 
 
 def test_basic_dna_bad_2(track_abundance):
@@ -946,3 +967,27 @@ def test_minhash_abund_merge_flat_2():
         b.add_hash(i)
 
     a.merge(b)
+
+
+def test_distance_matrix(track_abundance):
+    import numpy
+
+    siglist = [next(signature.load_signatures(utils.get_test_data(f)))
+               for f in utils.SIG_FILES]
+
+    D1 = numpy.zeros([len(siglist), len(siglist)])
+    D2 = numpy.zeros([len(siglist), len(siglist)])
+
+    for i, E in enumerate(siglist):
+        for j, E2 in enumerate(siglist):
+            if i < j:
+                continue
+            similarity = E.similarity(E2, track_abundance)
+            D2[i][j] = similarity
+            D2[j][i] = similarity
+
+    for i, E in enumerate(siglist):
+        for j, E2 in enumerate(siglist):
+            D1[i][j] = E.similarity(E2, track_abundance)
+
+    assert numpy.array_equal(D1, D2)
