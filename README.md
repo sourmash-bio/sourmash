@@ -34,9 +34,12 @@ sourmash is a product of the
 
 ## Installation
 
-You can do:
+We currently recommend installing the 2.0 pre-release series directly
+from GitHub.
 
-    pip install sourmash
+You can use pip to do that like so:
+
+    pip install https://github.com/dib-lab/sourmash/archive/master.zip
 
 sourmash runs under both Python 2.7.x and Python 3.5.  The base
 requirements are screed and ijson, together with a C++ development
@@ -46,6 +49,18 @@ C++ extension).
 The comparison code (`sourmash compare`) uses numpy, and the plotting
 code uses matplotlib and scipy, but most of the code is usable without
 these.
+
+### Installation with conda
+
+Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install  sourmash by running:
+
+```bash
+$ conda create -n sourmash_env sourmash python=3.6.4
+$ source activate sourmash_env
+$ sourmash compute -h
+```
+
+which will install the latest alpha release.
 
 ## Support
 
@@ -57,14 +72,17 @@ Please ask questions and files issues
 Development happens on github at
 [dib-lab/sourmash](https://github.com/dib-lab/sourmash).
 
-`sourmash` is the main command-line entry point; run it for help.
+After installation, `sourmash` is the main command-line entry point;
+run it with `python -m sourmash`, or do `pip install -e /path/to/repo` to
+do a developer install in a virtual environment.
 
-`sourmash_lib/` contains the library code.
+The `sourmash/` directory contains the library code.
 
 Tests require py.test and can be run with `make test`.
+
+Please see [the developer notes](doc/developer.md) for more information.
 
 ----
 
 CTB
-
-6.jun.2016
+Feb 2018

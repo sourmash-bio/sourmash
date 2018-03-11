@@ -1,6 +1,5 @@
 # Developer information
 
-
 ## Development environment
 
 
@@ -20,12 +19,11 @@ sourmash clone directory, you can do:
 ```
 python -m virtualenv dev
 . dev/bin/activate
-make clean test
+pip install -e .
 ```
 ## Automated tests and code coverage calculation
 
-
-We use [drone.io][0] for continuous integration.
+We use [Travis][0] for continuous integration.
 
 Code coverage calculation is enabled (on Linux only) by running
 `make coverage`.  This recompiles the C++ extension without
@@ -36,6 +34,5 @@ compiled with code coverage analysis enabled.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-
-[0]:https://drone.io/github.com/dib-lab/sourmash/
+[0]:https://travis-ci.org/dib-lab/sourmash
 [1]:https://codecov.io/gh/dib-lab/sourmash/
