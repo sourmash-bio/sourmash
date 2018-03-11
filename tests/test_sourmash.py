@@ -130,6 +130,7 @@ def test_do_sourmash_compute_output_and_name_valid_file():
                                            in_directory=location)
 
         assert os.path.exists(sigfile)
+        assert 'calculated 1 signatures for 4 sequences taken from 3 files' in err
 
         # is it valid json?
         import json
