@@ -30,23 +30,27 @@ class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
 
 class FSStorage(Storage):
 
-    def __init__(self, path):
-        self.path = path
-        if not os.path.exists(path):
-            os.makedirs(path)
+    def __init__(self, location, subdir):
+        self.location = location
+        self.subdir = subdir
+
+        fullpath = os.path.join(location, subdir)
+        if not os.path.exists(fullpath):
+            os.makedirs(fullpath)
 
     def init_args(self):
-        return {'path': self.path}
+        return {'path': self.subdir}
 
     def save(self, path, content):
-        with open(os.path.join(self.path, path), 'wb') as f:
+        "Save a node/leaf."
+        with open(os.path.join(self.location, self.subdir, path), 'wb') as f:
             f.write(content)
 
         return path
 
     def load(self, path):
         out = BytesIO()
-        with open(os.path.join(self.path, path), 'rb') as f:
+        with open(os.path.join(self.location, self.subdir, path), 'rb') as f:
             out.write(f.read())
 
         return out.getvalue()

@@ -1237,6 +1237,47 @@ def test_do_sourmash_sbt_search_output():
         assert 'short2.fa' in output
 
 
+def test_do_sourmash_sbt_move_and_search_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        print(out)
+
+        import json
+        with open(os.path.join(location, 'zzz.sbt.json')) as fp:
+            d = json.load(fp)
+            assert d['storage']['args']['path'] == '.sbt.zzz'
+
+        newpath = os.path.join(location, 'subdir')
+        os.mkdir(newpath)
+
+        # move both JSON file and subdirectory.
+        shutil.move(os.path.join(location, 'zzz.sbt.json'), newpath)
+        shutil.move(os.path.join(location, '.sbt.zzz'), newpath)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '../short.fa.sig',
+                                            'zzz', '-o', 'foo'],
+                                           in_directory=newpath)
+        outfile = open(os.path.join(newpath, 'foo'))
+        output = outfile.read()
+        print(output)
+        assert 'short.fa' in output
+        assert 'short2.fa' in output
+
+
 def test_search_deduce_ksize_and_select_appropriate():
     # deduce ksize from query and select correct signature from DB
     with utils.TempDirectory() as location:
