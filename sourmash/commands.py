@@ -157,7 +157,7 @@ def compute(args):
             error('bad ksizes: {}', ", ".join(bad_ksizes))
             sys.exit(-1)
 
-    notify('Computing a total of {} signatures.', num_sigs)
+    notify('Computing a total of {} signature(s).', num_sigs)
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -235,8 +235,8 @@ def compute(args):
 
                     siglist += build_siglist(Elist, filename, name=record.name)
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(siglist), n + 1, filename)
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -253,7 +253,8 @@ def compute(args):
 
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
-                notify('')
+
+                notify('...{} {} sequences', filename, n, end='')
 
                 sigs = build_siglist(Elist, filename, name)
                 if args.output:
@@ -261,8 +262,8 @@ def compute(args):
                 else:
                     siglist = sigs
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(sigs), n + 1, filename)
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
@@ -273,19 +274,25 @@ def compute(args):
         # make minhashes for the whole file
         Elist = make_minhashes()
 
+        total_seq = 0
         for filename in args.filenames:
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
+
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
                     notify('\r... {} {}', filename, n, end='')
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
+            notify('... {} {} sequences', filename, n + 1)
+
+            total_seq += n + 1
 
         siglist = build_siglist(Elist, filename, name=args.merge)
-        notify('calculated {} signatures for {} sequences taken from {}'.\
-               format(len(siglist), n + 1, " ".join(args.filenames)))
+        notify('calculated {} signatures for {} sequences taken from {} files',
+               len(siglist), total_seq, len(args.filenames))
+
         # at end, save!
         save_siglist(siglist, args.output)
 
