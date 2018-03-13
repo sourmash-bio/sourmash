@@ -3,6 +3,7 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::errors::SourmashError;
+use crate::ffi::utils::SourmashStr;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::{
     aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions, KmerMinHash,
@@ -159,6 +160,19 @@ unsafe fn kmerminhash_get_mins(ptr: *mut KmerMinHash) -> Result<*const u64> {
     let output = mh.mins.clone();
 
     Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_md5sum(ptr: *mut KmerMinHash) -> Result<SourmashStr> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let output = mh.md5sum();
+
+    Ok(SourmashStr::from_string(output))
 }
 }
 

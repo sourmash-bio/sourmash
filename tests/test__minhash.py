@@ -668,7 +668,6 @@ def test_mh_merge_check_length2(track_abundance):
     c = a.merge(b)
     assert len(c.get_mins()) == 3
 
-
 def test_mh_asymmetric_merge(track_abundance):
     # test merging two asymmetric (different size) MHs
     a = MinHash(20, 10, track_abundance=track_abundance)

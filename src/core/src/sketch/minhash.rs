@@ -28,6 +28,21 @@ pub enum HashFunctions {
     murmur64_hp = 4,
 }
 
+impl std::fmt::Display for HashFunctions {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                HashFunctions::murmur64_DNA => "dna",
+                HashFunctions::murmur64_protein => "protein",
+                HashFunctions::murmur64_dayhoff => "dayhoff",
+                HashFunctions::murmur64_hp => "hp",
+            }
+        )
+    }
+}
+
 impl TryFrom<&str> for HashFunctions {
     type Error = Error;
 
@@ -90,21 +105,7 @@ impl Serialize for KmerMinHash {
             partial.serialize_field("abundances", abunds)?;
         }
 
-        partial.serialize_field(
-            "molecule",
-            match &self.is_protein() {
-                true => {
-                    if self.dayhoff() {
-                        "dayhoff"
-                    } else if self.hp() {
-                        "hp"
-                    } else {
-                        "protein"
-                    }
-                }
-                false => "DNA",
-            },
-        )?;
+        partial.serialize_field("molecule", &self.hash_function.to_string())?;
 
         partial.end()
     }
@@ -133,8 +134,23 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
             "protein" => HashFunctions::murmur64_protein,
             "dayhoff" => HashFunctions::murmur64_dayhoff,
+            "hp" => HashFunctions::murmur64_hp,
             "dna" => HashFunctions::murmur64_DNA,
             _ => unimplemented!(), // TODO: throw error here
+        };
+
+        // This shouldn't be necessary, but at some point we
+        // created signatures with unordered mins =(
+        let (mins, abunds) = if let Some(abunds) = tmpsig.abundances {
+            let mut values: Vec<(_, _)> = tmpsig.mins.iter().zip(abunds.iter()).collect();
+            values.sort();
+            let mins = values.iter().map(|(v, _)| **v).collect();
+            let abunds = values.iter().map(|(_, v)| **v).collect();
+            (mins, Some(abunds))
+        } else {
+            let mut values: Vec<_> = tmpsig.mins.into_iter().collect();
+            values.sort();
+            (values, None)
         };
 
         Ok(KmerMinHash {
@@ -142,8 +158,8 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
-            mins: tmpsig.mins,
-            abunds: tmpsig.abundances,
+            mins,
+            abunds,
             hash_function,
         })
     }
