@@ -872,7 +872,8 @@ def categorize(args):
 
         if args.csv:
             w = csv.writer(args.csv)
-            w.writerow([queryfile, best_hit_query_name, best_hit_sim])
+            w.writerow([queryfile, query.name(), best_hit_query_name,
+                        best_hit_sim])
 
     if loader.skipped_ignore:
         notify('skipped/ignore: {}', loader.skipped_ignore)
