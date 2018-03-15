@@ -7,8 +7,8 @@ from . import signature
 from .logging import notify, error
 
 from . import signature as sig
-from sourmash_lib.sbt import SBT
-from sourmash_lib.sbtmh import SigLeaf
+from .sbt import SBT
+from .sbtmh import SigLeaf
 
 DEFAULT_LOAD_K=31
 
@@ -151,7 +151,7 @@ class LoadSingleSignatures(object):
 
 def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
-        if dirname.endswith('.sig') and os.path.isfile(dirname):
+        if (dirname.endswith('.sig') or yield_all_files) and os.path.isfile(dirname):
             yield dirname
             continue
 

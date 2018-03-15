@@ -5,6 +5,7 @@ from __future__ import print_function
 import sys
 import json
 import gzip
+from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
 
 try:                                      # py2/py3 compat
@@ -13,11 +14,26 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 import pprint
 
-import sourmash_lib._minhash
-from sourmash_lib.logging import notify
+from .._minhash import get_max_hash_for_scaled
+from ..logging import notify, error
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+
+
+def check_files_exist(*files):
+    ret = True
+    not_found = []
+    for f in files:
+        if not exists(f):
+            not_found.append(f)
+            ret = False
+
+    if len(not_found):
+        error('Error! Could not find the following files.'
+              ' Make sure the file paths are specified correctly.\n{}'.format('\n'.join(not_found)))
+
+    return ret
 
 
 # ordered list of taxonomic ranks
@@ -226,7 +242,7 @@ class LCA_Database(object):
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
-        max_hash = sourmash_lib._minhash.get_max_hash_for_scaled(scaled)
+        max_hash = get_max_hash_for_scaled(scaled)
         new_hashvals = {}
         for k, v in self.hashval_to_lineage_id.items():
             if k < max_hash:

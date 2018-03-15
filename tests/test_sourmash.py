@@ -130,6 +130,7 @@ def test_do_sourmash_compute_output_and_name_valid_file():
                                            in_directory=location)
 
         assert os.path.exists(sigfile)
+        assert 'calculated 1 signatures for 4 sequences taken from 3 files' in err
 
         # is it valid json?
         import json
@@ -140,8 +141,8 @@ def test_do_sourmash_compute_output_and_name_valid_file():
 
         all_testdata = " ".join([testdata1, testdata2, testdata3])
         sigfile_merged = os.path.join(location, 'short.all.fa.sig')
-        cmd = "cat {} | {}/sourmash compute -k 31 -o {} -".format(
-                all_testdata, utils.scriptpath(), sigfile_merged)
+        cmd = "cat {} | sourmash compute -k 31 -o {} -".format(
+                all_testdata, sigfile_merged)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         with open(sigfile_merged, 'r') as f:
@@ -1231,6 +1232,47 @@ def test_do_sourmash_sbt_search_output():
                                             'zzz', '-o', 'foo'],
                                            in_directory=location)
         outfile = open(os.path.join(location, 'foo'))
+        output = outfile.read()
+        print(output)
+        assert 'short.fa' in output
+        assert 'short2.fa' in output
+
+
+def test_do_sourmash_sbt_move_and_search_output():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        print(out)
+
+        import json
+        with open(os.path.join(location, 'zzz.sbt.json')) as fp:
+            d = json.load(fp)
+            assert d['storage']['args']['path'] == '.sbt.zzz'
+
+        newpath = os.path.join(location, 'subdir')
+        os.mkdir(newpath)
+
+        # move both JSON file and subdirectory.
+        shutil.move(os.path.join(location, 'zzz.sbt.json'), newpath)
+        shutil.move(os.path.join(location, '.sbt.zzz'), newpath)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '../short.fa.sig',
+                                            'zzz', '-o', 'foo'],
+                                           in_directory=newpath)
+        outfile = open(os.path.join(newpath, 'foo'))
         output = outfile.read()
         print(output)
         assert 'short.fa' in output
@@ -2976,9 +3018,9 @@ def test_watch():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --ksize 21 --dna zzz
+             gunzip -c {} | sourmash watch --ksize 21 --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)
@@ -2999,9 +3041,9 @@ def test_watch_deduce_ksize():
 
         cmd = """
 
-             gunzip -c {} | {}/sourmash watch --dna zzz
+             gunzip -c {} | sourmash watch --dna zzz
 
-        """.format(testdata0, utils.scriptpath())
+        """.format(testdata0)
         status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
 
         print(out)

@@ -140,6 +140,7 @@ Contents:
    databases
    api
    api-example
+   other-languages
    requirements
    more-info
    support
