@@ -247,7 +247,7 @@ def gather_main(args):
             print_results('')
     # nothing found.
     else:
-        est_bp = len(query_sig.minhash.get_mins()) * query_sig.minhash.scaled
+        est_bp = len(query_sig.minhash) * query_sig.minhash.scaled
         print_results('')
         print_results('No assignment for est {} of sequence.',
                       format_bp(est_bp))
