@@ -68,7 +68,7 @@ SETUP_METADATA = \
     "install_requires": ["screed>=0.9", "ijson", "khmer>=2.1<3.0"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },
@@ -80,4 +80,3 @@ SETUP_METADATA = \
     }
 
 setup(**SETUP_METADATA)
-
