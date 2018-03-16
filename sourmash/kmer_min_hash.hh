@@ -26,6 +26,7 @@ uint64_t _hash_murmur(const std::string& kmer,
 typedef uint64_t HashIntoType;
 
 typedef std::vector<HashIntoType> CMinHashType;
+typedef std::pair<CMinHashType, uint64_t> IntersectionResult;
 
 class minhash_exception : public std::exception
 {
@@ -235,6 +236,41 @@ public:
                               other.mins.begin(), other.mins.end(),
                               std::back_inserter(counter));
         return counter.count;
+    }
+
+    virtual std::pair<CMinHashType, uint64_t> intersection(const KmerMinHash& other) {
+        check_compatible(other);
+        if (num != other.num) {
+            std::string message = "must have same num: " + std::to_string(num)
+                                  + " != " + std::to_string(other.num);
+            throw minhash_exception(message);
+        }
+
+        KmerMinHash combined_mh = KmerMinHash(num, ksize, is_protein, seed, max_hash);
+        combined_mh.merge(*this);
+        combined_mh.merge(other);
+
+        CMinHashType common;
+        CMinHashType it1;
+        std::set_intersection(mins.begin(), mins.end(),
+                              other.mins.begin(), other.mins.end(),
+                              std::back_inserter(it1));
+        std::set_intersection(it1.begin(), it1.end(),
+                              combined_mh.mins.begin(), combined_mh.mins.end(),
+                              std::back_inserter(common));
+
+        uint64_t size = combined_mh.size();
+        if (size == 0) {
+            size = 1;
+        }
+
+        std::pair<CMinHashType, uint64_t> result (common, size);
+        return result;
+    }
+
+    virtual double compare(const KmerMinHash& other) {
+        auto result = intersection(other);
+        return static_cast<double>(result.first.size()) / result.second;
     }
 
     virtual size_t size() {

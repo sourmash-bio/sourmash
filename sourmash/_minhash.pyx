@@ -287,41 +287,18 @@ cdef class MinHash(object):
 
         return a
 
-    def intersection(self, MinHash other):
-        if self.num != other.num:
-            err = 'must have same num: {} != {}'.format(self.num,
-                                                            other.num)
-            raise TypeError(err)
-        else:
-            num = self.num
+    def intersection(self, MinHash other, in_common=False):
+        cdef IntersectionResult result;
+        result = deref(self._this).intersection(deref(other._this));
 
-        if self.track_abundance and other.track_abundance:
-            combined_mh = new KmerMinAbundance(num,
-                                          deref(self._this).ksize,
-                                          deref(self._this).is_protein,
-                                          deref(self._this).seed,
-                                          deref(self._this).max_hash)
+        common = set()
+        if in_common:
+            common = set(result.first)
 
-        else:
-            combined_mh = new KmerMinHash(num,
-                                          deref(self._this).ksize,
-                                          deref(self._this).is_protein,
-                                          deref(self._this).seed,
-                                          deref(self._this).max_hash)
-
-        combined_mh.merge(deref(self._this))
-        combined_mh.merge(deref(other._this))
-
-        common = set(self.get_mins())
-        common.intersection_update(other.get_mins())
-        common.intersection_update(combined_mh.mins)
-
-        return common, max(combined_mh.size(), 1)
+        return common, result.second
 
     def compare(self, MinHash other):
-        common, size = self.intersection(other)
-        n = len(common)
-        return n / size
+        return deref(self._this).compare(deref(other._this));
 
     def jaccard(self, MinHash other):
         return self.compare(other)

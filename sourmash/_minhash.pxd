@@ -10,11 +10,13 @@ from libcpp.set cimport set as cppset
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint64_t
 from libcpp.vector cimport vector
+from libcpp.pair cimport pair
 
 
 cdef extern from "kmer_min_hash.hh":
     ctypedef uint64_t HashIntoType;
     ctypedef vector[HashIntoType] CMinHashType;
+    ctypedef pair[CMinHashType, uint64_t] IntersectionResult;
 
 
     cdef uint64_t _hash_murmur(const string, uint32_t seed)
@@ -34,6 +36,8 @@ cdef extern from "kmer_min_hash.hh":
         void add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinHash&) except +ValueError
+        double compare(const KmerMinHash&) except +ValueError
+        IntersectionResult intersection(const KmerMinHash&) except +ValueError
         unsigned long size()
 
 
@@ -47,6 +51,7 @@ cdef extern from "kmer_min_hash.hh":
         void merge(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
+        double compare(const KmerMinHash&) except +ValueError
         unsigned long size()
 
 

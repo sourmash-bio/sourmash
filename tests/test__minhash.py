@@ -286,38 +286,38 @@ def test_intersection_1(track_abundance):
     common = set(a.get_mins())
     combined_size = 3
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
     # add same sequence again
     b.add_sequence('TGCCGCCCAGCA')
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
@@ -327,18 +327,18 @@ def test_intersection_1(track_abundance):
     new_in_common = set(a.get_mins()).intersection(set(b.get_mins()))
     new_combined_size = 8
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == new_in_common
     assert size == new_combined_size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == new_in_common
     assert size == new_combined_size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == set(a.get_mins())
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == set(b.get_mins())
 
 
@@ -430,7 +430,7 @@ def test_mh_asymmetric(track_abundance):
     assert a.count_common(b) == 10
     assert b.count_common(a) == 10
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         a.compare(b)
 
     a = a.downsample_n(10)
@@ -506,7 +506,7 @@ def test_mh_asymmetric_merge(track_abundance):
     assert len(d) == len(b)
 
     # can't compare different sizes without downsampling
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         d.compare(a)
 
     a = a.downsample_n(d.num)
@@ -542,7 +542,7 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
 
     try:
         d.compare(a)
-    except TypeError as exc:
+    except ValueError as exc:
         assert 'must have same num' in str(exc)
 
     a = a.downsample_n(d.num)
