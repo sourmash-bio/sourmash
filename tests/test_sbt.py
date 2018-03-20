@@ -285,7 +285,7 @@ def test_sbt_combine(n_children):
 
     # check if adding a new node will use the next empty position
     next_empty = 0
-    for n, d in enumerate(tree_1.nodes):
+    for n, (d, _) in enumerate(tree_1):
         if n != d:
             next_empty = n
             break
@@ -468,7 +468,7 @@ def test_tree_repair_add_node():
         leaf = SigLeaf(os.path.basename(f), sig)
         tree_repair.add_node(leaf)
 
-    for pos, node in list(tree_repair.nodes.items()):
+    for pos, node in tree_repair:
         # Every parent of a node must be an internal node (and not a leaf),
         # except for node 0 (the root), whose parent is None.
         if pos != 0:
@@ -499,7 +499,7 @@ def test_save_sparseness(n_children):
         tree.save(os.path.join(location, 'demo'), sparseness=1.0)
         tree_loaded = SBT.load(os.path.join(location, 'demo'),
                                leaf_loader=SigLeaf.load)
-        assert all(not isinstance(n, Node) for n in tree_loaded.nodes.values())
+        assert all(not isinstance(n, Node) for _, n in tree_loaded)
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
@@ -509,7 +509,7 @@ def test_save_sparseness(n_children):
 
         assert old_result == new_result
 
-        for pos, node in list(tree_loaded.nodes.items()):
+        for pos, node in tree_loaded:
             # Every parent of a node must be an internal node (and not a leaf),
             # except for node 0 (the root), whose parent is None.
             if pos != 0:

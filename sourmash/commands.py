@@ -753,7 +753,7 @@ def index(args):
             scaleds.add(ss.minhash.scaled)
 
             leaf = SigLeaf(ss.md5sum(), ss)
-            tree.add_node(leaf)
+            tree.add_node(leaf, update_internal=False)
             n += 1
 
         if not ss:
