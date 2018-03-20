@@ -722,6 +722,8 @@ def search(args):
                         nargs='+')
     parser.add_argument('--traverse-directory', action='store_true',
                         help='search all signatures underneath directories.')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Try loading all files')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('--threshold', default=0.08, type=float,
@@ -767,7 +769,8 @@ def search(args):
     # set up the search databases
     databases = sourmash_args.load_sbts_and_sigs(args.databases, query,
                                                  not args.containment,
-                                                 args.traverse_directory)
+                                                 args.traverse_directory,
+                                                 args.force)
 
     if not len(databases):
         error('Nothing found to search!')

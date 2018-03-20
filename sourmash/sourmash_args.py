@@ -221,7 +221,8 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     return 1
 
 
-def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
+def load_sbts_and_sigs(filenames, query, is_similarity_query,
+                       traverse=False, force=False):
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
 
@@ -230,7 +231,7 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
     databases = []
     for sbt_or_sigfile in filenames:
         if traverse and os.path.isdir(sbt_or_sigfile):
-            for sigfile in traverse_find_sigs([sbt_or_sigfile]):
+            for sigfile in traverse_find_sigs([sbt_or_sigfile], force):
                 try:
                     siglist = sig.load_signatures(sigfile,
                                                   ksize=query_ksize,
@@ -272,6 +273,8 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                                           select_moltype=query_moltype)
             siglist = list(siglist)
             if len(siglist) == 0:         # file not found, or parse error?
+                if force:
+                    continue
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
