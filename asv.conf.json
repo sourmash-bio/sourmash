@@ -6,8 +6,9 @@
     "branches": ["master"], // for git
     "dvcs": "git",
     "environment_type": "virtualenv",
-    "pythons": ["2.7", "3.5", "3.6"],
+    "pythons": ["3.6"],
     "env_dir": ".asv/env",
     "results_dir": ".asv/results",
     "html_dir": ".asv/html",
+    "build_cache_size": 8
 }
