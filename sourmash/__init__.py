@@ -20,7 +20,9 @@ from . import sbtmh
 from . import sbt_storage
 from . import signature
 
-# retrieve VERSION from sourmash/VERSION.
-thisdir = os.path.dirname(__file__)
-version_file = open(os.path.join(thisdir, 'VERSION'))
-VERSION = version_file.read().strip()
+from pkg_resources import get_distribution, DistributionNotFound
+try:
+    VERSION = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
