@@ -2901,8 +2901,8 @@ def test_gather_abund_10_1_ignore_abundance():
 
         print(out)
         print(err)
-        assert '57.2%  100.0%       0.0    tests/test-data/genome-s10.fa.gz' in out
-        assert '42.8%   80.0%       0.0    tests/test-data/genome-s11.fa.gz' in out
+        assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
+        assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
         assert 'genome-s12.fa.gz' not in out
 
 
