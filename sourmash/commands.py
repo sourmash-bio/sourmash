@@ -958,6 +958,7 @@ def gather(args):
         sys.exit(-1)
 
     found = []
+    weighted_missed = 1
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
