@@ -2346,7 +2346,7 @@ def test_gather():
         print(out)
         print(err)
 
-        assert '0.9 kbp      100.0%  100.0%       0.0' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_csv():
