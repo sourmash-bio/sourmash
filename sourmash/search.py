@@ -87,7 +87,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_mins = orig_query.minhash.get_hashes()
     orig_abunds = { k: 1 for k in orig_mins }
 
-    # do we pay attention to abundances?o
+    # do we pay attention to abundances?
     if orig_query.minhash.track_abundance and not ignore_abundance:
         import numpy as np
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)

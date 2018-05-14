@@ -968,7 +968,7 @@ def gather(args):
 
 
         if not len(found):                # first result? print header.
-            if not args.ignore_abundance:
+            if query.minhash.track_abundance and not args.ignore_abundance:
                 print_results("")
                 print_results("overlap     p_query p_match avg_abund")
                 print_results("---------   ------- ------- ---------")
@@ -984,7 +984,7 @@ def gather(args):
         average_abund ='{:.1f}'.format(result.average_abund)
         name = result.leaf._display_name(40)
 
-        if not args.ignore_abundance:
+        if query.minhash.track_abundance and not args.ignore_abundance:
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       average_abund, name)
