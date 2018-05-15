@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 
-Compute MinHash signatures for DNA sequences.
+Compute MinHash signatures for nucleotide (DNA/RNA) and protein sequences.
 
 Usage:
 
