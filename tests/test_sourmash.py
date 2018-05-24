@@ -3213,3 +3213,40 @@ def test_license_load_non_cc0():
             sig = next(signature.load_signatures(sigfile, do_raise=True))
         except Exception as e:
             assert "sourmash only supports CC0-licensed signatures" in str(e)
+
+
+def test_do_sourmash_compute_hash_to_reads_map():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+        sigfile = os.path.join(location, 'short.fa.sig')
+        mapfile = os.path.join(location, 'mapping.json')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--hash-to-reads', mapfile,
+                                            '-o', sigfile,
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(sigfile)
+        assert os.path.exists(mapfile)
+        assert not out # stdout should be empty
+
+        # is it valid json?
+        with open(sigfile, 'r') as f:
+            data_sigs = json.load(f)
+
+        filesigs = [sig['filename'] for sig in data_sigs]
+        assert all(testdata in filesigs
+                   for testdata in (testdata1, testdata2, testdata3))
+
+        # is it valid json?
+        with open(mapfile, 'r') as f:
+            data_map = json.load(f)
+
+#        filesigs = [sig['filename'] for sig in data_map]
+#        assert all(testdata in filesigs
+#                   for testdata in (testdata1, testdata2, testdata3))
