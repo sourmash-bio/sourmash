@@ -124,7 +124,7 @@ public:
         }
         return 0;
     }
-    std::vector<HashIntoType> add_sequence(const char * sequence, bool force=false) {
+    std::vector<HashIntoType> add_sequence(const char * sequence, bool force=false, bool output_added=false) {
         std::vector<HashIntoType> added;
         if (strlen(sequence) < ksize) {
             return added;
@@ -151,7 +151,7 @@ public:
                 } else {
                     h = add_word(rc);
                 }
-                if (h) {
+                if (h and output_added) {
                     added.push_back(h);
                 }
             }
@@ -166,7 +166,7 @@ public:
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
                     h = add_word(kmer);
-                    if (h) {
+                    if (h and output_added) {
                         added.push_back(h);
                     }
                 }
@@ -177,7 +177,7 @@ public:
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
                     h = add_word(kmer);
-                    if (h) {
+                    if (h and output_added) {
                         added.push_back(h);
                     }
                 }

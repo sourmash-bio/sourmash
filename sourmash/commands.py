@@ -199,7 +199,7 @@ def compute(args):
             if input_is_protein:
                 E.add_protein(seq)
             else:
-                added = E.add_sequence(seq, not check_sequence)
+                added = E.add_sequence(seq, not check_sequence, output_added=True)
                 if args.hash_to_reads:
                     for h in added:
                         reads[h].append((record.name, filename))
