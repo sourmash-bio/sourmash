@@ -175,8 +175,7 @@ cdef class MinHash(object):
         return a
 
     def add_sequence(self, sequence, bool force=False):
-        deref(self._this).add_sequence(to_bytes(sequence), force)
-        return []
+        return deref(self._this).add_sequence(to_bytes(sequence), force)
 
     def add(self, kmer):
         "Add kmer into sketch."

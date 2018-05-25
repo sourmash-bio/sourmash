@@ -90,11 +90,11 @@ public:
         }
     }
 
-    virtual void add_hash(const HashIntoType h) {
+    virtual bool add_hash(const HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {
         if (mins.size() == 0) {
           mins.push_back(h);
-          return;
+          return true;
         }
         else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
@@ -102,6 +102,7 @@ public:
           // must still be growing, we know the list won't get too long
           if (pos == mins.cend()) {
             mins.push_back(h);
+            return true;
           }
           // inserting somewhere in the middle, if this value isn't already
           // in mins store it and shrink list if needed
@@ -110,17 +111,23 @@ public:
             if (num and mins.size() > num) {
               mins.pop_back();
             }
+            return true;
           }
         }
       }
+      return false;
     }
-    void add_word(const std::string& word) {
+    HashIntoType add_word(const std::string& word) {
         const HashIntoType hash = _hash_murmur(word, seed);
-        add_hash(hash);
+        if (add_hash(hash)) {
+            return hash;
+        }
+        return 0;
     }
-    void add_sequence(const char * sequence, bool force=false) {
+    std::vector<HashIntoType> add_sequence(const char * sequence, bool force=false) {
+        std::vector<HashIntoType> added;
         if (strlen(sequence) < ksize) {
-            return;
+            return added;
         }
         const std::string seq = sequence;
         if (!is_protein) {
@@ -138,10 +145,14 @@ public:
 
                 const std::string rc = _revcomp(kmer);
 
+                HashIntoType h = 0;
                 if (kmer < rc) {
-                    add_word(kmer);
+                    h = add_word(kmer);
                 } else {
-                    add_word(rc);
+                    h = add_word(rc);
+                }
+                if (h) {
+                    added.push_back(h);
                 }
             }
         } else {                      // protein
@@ -150,10 +161,14 @@ public:
                 std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i));
                 unsigned int aa_ksize = int(ksize / 3);
                 std::string kmer;
+                HashIntoType h = 0;
 
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
-                    add_word(kmer);
+                    h = add_word(kmer);
+                    if (h) {
+                        added.push_back(h);
+                    }
                 }
 
                 aa = _dna_to_aa(rc.substr(i, rc.length() - i));
@@ -161,10 +176,14 @@ public:
 
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
                     kmer = aa.substr(j, aa_ksize);
-                    add_word(kmer);
+                    h = add_word(kmer);
+                    if (h) {
+                        added.push_back(h);
+                    }
                 }
             }
         }
+        return added;
     }
 
     std::string _dna_to_aa(const std::string& dna) {
@@ -294,13 +313,13 @@ class KmerMinAbundance: public KmerMinHash {
                      HashIntoType mx) :
         KmerMinHash(n, k, prot, seed, mx) { };
 
-    virtual void add_hash(HashIntoType h) {
+    virtual bool add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {
         // empty? add it, if within range / no range specified.
         if (mins.size() == 0) {
           mins.push_back(h);
           abunds.push_back(1);
-          return;
+          return true;
         } else if (h <= max_hash or mins.back() > h or mins.size() < num) {
           // "good" hash - within range, smaller than current entry, or
           // still space.
@@ -311,6 +330,7 @@ class KmerMinAbundance: public KmerMinHash {
           if (pos == mins.cend()) {
             mins.push_back(h);
             abunds.push_back(1);
+            return true;
           } else if (*pos != h) {
           // didn't find hash already in mins, so
           // inserting somewhere in the middle; shrink list if needed.
@@ -325,13 +345,16 @@ class KmerMinAbundance: public KmerMinHash {
             if (mins.size() > num and not max_hash) {
               mins.pop_back();
               abunds.pop_back();
+              return true;
             }
           } else { // *pos == h - hash value already there, increment count.
             auto p = std::distance(begin(mins), pos);
             abunds[p] += 1;
+            return true;
           }
         }
       }
+      return false;
     }
 
     virtual void merge(const KmerMinAbundance& other) {

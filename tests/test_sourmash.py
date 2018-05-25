@@ -3227,8 +3227,8 @@ def test_do_sourmash_compute_hash_to_reads_map():
                                            ['compute', '-k', '31',
                                             '--hash-to-reads', mapfile,
                                             '-o', sigfile,
-                                            testdata1,
-                                            testdata2, testdata3],
+                                            testdata1, testdata2,
+                                            testdata3],
                                            in_directory=location)
 
         assert os.path.exists(sigfile)
@@ -3243,10 +3243,12 @@ def test_do_sourmash_compute_hash_to_reads_map():
         assert all(testdata in filesigs
                    for testdata in (testdata1, testdata2, testdata3))
 
+        hashes = set()
+        for sig in signature.load_signatures(sigfile):
+            hashes.update(sig.minhash.get_mins())
+
         # is it valid json?
         with open(mapfile, 'r') as f:
             data_map = json.load(f)
 
-#        filesigs = [sig['filename'] for sig in data_map]
-#        assert all(testdata in filesigs
-#                   for testdata in (testdata1, testdata2, testdata3))
+        assert len(hashes - set(int(k) for k in data_map.keys())) == 0
