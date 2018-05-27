@@ -122,7 +122,9 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
-        const std::string seq = sequence;
+        std::string seq = sequence;
+        transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
+
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
