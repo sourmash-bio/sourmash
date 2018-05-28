@@ -1,7 +1,9 @@
 from __future__ import print_function, division
 
 import argparse
+from collections import defaultdict
 import csv
+import json
 import os
 import os.path
 import sys
@@ -79,6 +81,8 @@ def compute(args):
                         help='recompute signatures even if the file exists (default: False)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='output computed signatures to this file')
+    parser.add_argument('--hash-to-reads', type=argparse.FileType('wt'),
+                        help='output a mapping from hashes to the original reads')
     parser.add_argument('--singleton', action='store_true',
                         help='compute a signature for each sequence record individually (default: False)')
     parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
@@ -189,12 +193,17 @@ def compute(args):
                 Elist.append(E)
         return Elist
 
-    def add_seq(Elist, seq, input_is_protein, check_sequence):
+    def add_seq(Elist, record, input_is_protein, check_sequence, filename):
+        seq = record.sequence
         for E in Elist:
             if input_is_protein:
                 E.add_protein(seq)
             else:
-                E.add_sequence(seq, not check_sequence)
+                added = E.add_sequence(seq, not check_sequence, output_added=True)
+                if args.hash_to_reads:
+                    for h in added:
+                        reads[h].append((record.name, filename))
+
 
     def build_siglist(Elist, filename, name=None):
         return [ sig.SourmashSignature(E, filename=filename,
@@ -214,6 +223,9 @@ def compute(args):
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
+    if args.hash_to_reads:
+        reads = defaultdict(list)
+
     if not args.merge:
         if args.output:
             siglist = []
@@ -230,8 +242,9 @@ def compute(args):
                 for n, record in enumerate(screed.open(filename)):
                     # make minhashes for each sequence
                     Elist = make_minhashes()
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    add_seq(Elist, record,
+                            args.input_is_protein, args.check_sequence,
+                            filename)
 
                     siglist += build_siglist(Elist, filename, name=record.name)
 
@@ -251,8 +264,9 @@ def compute(args):
                         elif args.name_from_first:
                             name = record.name
 
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                    add_seq(Elist, record,
+                            args.input_is_protein, args.check_sequence,
+                            filename)
 
                 notify('...{} {} sequences', filename, n, end='')
 
@@ -283,8 +297,9 @@ def compute(args):
                 if n % 10000 == 0 and n:
                     notify('\r... {} {}', filename, n, end='')
 
-                add_seq(Elist, record.sequence,
-                        args.input_is_protein, args.check_sequence)
+                add_seq(Elist, record,
+                        args.input_is_protein, args.check_sequence,
+                        filename)
             notify('... {} {} sequences', filename, n + 1)
 
             total_seq += n + 1
@@ -295,6 +310,9 @@ def compute(args):
 
         # at end, save!
         save_siglist(siglist, args.output)
+
+    if args.hash_to_reads:
+        json.dump(reads, args.hash_to_reads)
 
 
 def compare(args):
