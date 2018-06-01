@@ -5,6 +5,7 @@ from __future__ import print_function
 import sys
 import json
 import gzip
+from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
 
 try:                                      # py2/py3 compat
@@ -13,15 +14,30 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 import pprint
 
-import sourmash_lib._minhash
-from sourmash_lib.logging import notify
+from .._minhash import get_max_hash_for_scaled
+from ..logging import notify, error
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
 
 
+def check_files_exist(*files):
+    ret = True
+    not_found = []
+    for f in files:
+        if not exists(f):
+            not_found.append(f)
+            ret = False
+
+    if len(not_found):
+        error('Error! Could not find the following files.'
+              ' Make sure the file paths are specified correctly.\n{}'.format('\n'.join(not_found)))
+
+    return ret
+
+
 # ordered list of taxonomic ranks
-def taxlist(include_strain=False):
+def taxlist(include_strain=True):
     for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
               'species']:
         yield k
@@ -117,17 +133,19 @@ class LCA_Database(object):
     Wrapper class for taxonomic database.
 
     obj.lineage_dict: key 'lineage_id' => lineage tuple [(name, rank), ...]
-    obj.hashval_to_lineage_id: key 'hashval' => 'lineage_id'
+    obj.hashval_to_lineage_id: key 'hashval' => set('lineage_id')
     obj.ksize: k-mer size
     obj.scaled: scaled value
-    obj.signatures_to_lineage: key 'md5sum' => 'lineage_id'
+    obj.signatures_to_lineage_id: key 'md5sum' => 'lineage_id'
+    obj.signatures_to_name: key 'md5sum' => 'name' from original signature
     """
     def __init__(self):
         self.lineage_dict = None
         self.hashval_to_lineage_id = None
         self.ksize = None
         self.scaled = None
-        self.signatures_to_lineage = None
+        self.signatures_to_lineage_id = None
+        self.signatures_to_name = None
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -136,7 +154,10 @@ class LCA_Database(object):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
-            load_d = json.load(fp)
+            try:
+                load_d = json.load(fp)
+            except json.decoder.JSONDecodeError:
+                raise ValueError("cannot parse database file '{}'; is it a valid LCA db?".format(db_name))
             version = load_d['version']
             assert version == '1.0'
 
@@ -161,16 +182,27 @@ class LCA_Database(object):
             # JSON doesn't have a 64 bit type so stores them as strings)
             hashval_to_lineage_id_2 = load_d['hashval_assignments']
             hashval_to_lineage_id = {}
+            lineage_id_counts = defaultdict(int)
+
             for k, v in hashval_to_lineage_id_2.items():
                 hashval_to_lineage_id[int(k)] = v
+                for vv in v:
+                    lineage_id_counts[vv] += 1
 
-            signatures_to_lineage = load_d['signatures_to_lineage']
+            signatures_to_lineage_id = load_d['signatures_to_lineage']
+            signatures_to_name = load_d.get('signatures_to_name', None)
 
         self.lineage_dict = lineage_dict
         self.hashval_to_lineage_id = hashval_to_lineage_id
         self.ksize = ksize
         self.scaled = scaled
-        self.signatures_to_lineage = signatures_to_lineage
+        self.signature_to_lineage_id = signatures_to_lineage_id
+        self.signature_to_name = signatures_to_name
+        lineage_id_to_signature = {}
+        for k, v in signatures_to_lineage_id.items():
+            lineage_id_to_signature[v] = k
+        self.lineage_id_to_signature = lineage_id_to_signature
+        self.lineage_id_counts = lineage_id_counts
 
     def save(self, db_name):
         "Save to a JSON file."
@@ -196,7 +228,8 @@ class LCA_Database(object):
             # convert values from sets to lists, so that JSON knows how to save
             save_d['hashval_assignments'] = \
                dict((k, list(v)) for (k, v) in self.hashval_to_lineage_id.items())
-            save_d['signatures_to_lineage'] = self.signatures_to_lineage
+            save_d['signatures_to_lineage'] = self.signatures_to_lineage_id
+            save_d['signatures_to_name'] = self.signatures_to_name
             json.dump(save_d, fp)
 
     def downsample_scaled(self, scaled):
@@ -209,7 +242,7 @@ class LCA_Database(object):
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
-        max_hash = sourmash_lib._minhash.get_max_hash_for_scaled(scaled)
+        max_hash = get_max_hash_for_scaled(scaled)
         new_hashvals = {}
         for k, v in self.hashval_to_lineage_id.items():
             if k < max_hash:
@@ -258,11 +291,12 @@ def load_databases(filenames, scaled=None):
 
         dblist.append(lca_db)
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} databases.', len(dblist))
-
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
+
+    notify(u'\r\033[K', end=u'')
+    notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
+           ksize, scaled)
 
     return dblist, ksize, scaled
 

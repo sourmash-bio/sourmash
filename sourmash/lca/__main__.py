@@ -1,13 +1,13 @@
 """
-Command-line entry point for 'python -m sourmash_lib.lca'
+Command-line entry point for 'python -m sourmash.lca'
 """
 
 import sys
 import argparse
 
-from . import classify, index, summarize_main, rankinfo_main
+from . import classify, index, summarize_main, rankinfo_main, gather_main
 from .command_compare_csv import compare_csv
-from sourmash_lib.logging import set_quiet, error
+from ..logging import set_quiet, error
 
 usage='''
 sourmash lca <command> [<args>] - work with taxonomic information.
@@ -33,6 +33,7 @@ def main(sysv_args):
                 'index': index,
                 'summarize': summarize_main,
                 'rankinfo': rankinfo_main,
+                'gather': gather_main,
                 'compare_csv': compare_csv}
 
     parser = argparse.ArgumentParser(

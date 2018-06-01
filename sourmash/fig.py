@@ -5,7 +5,6 @@ Make plots using the distance matrix+labels output by ``sourmash compare``.
 from .logging import error, notify
 try:
     import numpy
-    import scipy
     import pylab
     import scipy.cluster.hierarchy as sch
 except (RuntimeError, ImportError):

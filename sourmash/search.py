@@ -2,13 +2,11 @@ from __future__ import division
 from collections import namedtuple
 import sys
 
-import sourmash_lib
 from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
-from .sbtmh import SearchMinHashesFindBest
-
-
+from .sbtmh import SearchMinHashesFindBest, SearchMinHashesFindBestIgnoreMaxHash
+from ._minhash import get_max_hash_for_scaled
 
 
 # generic SearchResult across individual signatures + SBTs.
@@ -85,36 +83,36 @@ GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
-    from sourmash_lib.sbtmh import SearchMinHashesFindBestIgnoreMaxHash
-
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
+    orig_abunds = { k: 1 for k in orig_mins }
 
+    # do we pay attention to abundances?o
     if orig_query.minhash.track_abundance and not ignore_abundance:
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
-    else:
-        if orig_query.minhash.track_abundance and ignore_abundance:
-            notify('** ignoring abundance')
-        orig_abunds = { k: 1 for k in orig_query.minhash.get_mins(with_abundance=False) }
-    sum_abunds = sum(orig_abunds.values())
 
     # calculate the band size/resolution R for the genome
     R_metagenome = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
+        # CTB: could optimize by sharing scores across searches, i.e.
+        # a good early score truncates later searches.
+
         results = []
         for (sbt_or_siglist, filename, is_sbt) in dblist:
-            search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
-
+            # search a tree
             if is_sbt:
                 tree = sbt_or_siglist
+                search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
 
                 for leaf in tree.find(search_fn, query, 0.0):
                     leaf_e = leaf.data.minhash
                     similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
                         results.append((similarity, leaf.data))
+
+            # search a signature
             else:
                 for ss in sbt_or_siglist:
                     similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
@@ -125,23 +123,24 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             return None, None, None
 
         # take the best result
-        results.sort(key=lambda x: (-x[0], x[1].md5sum()))   # reverse sort on similarity
+        results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
         best_similarity, best_leaf = results[0]
         return best_similarity, best_leaf, filename
 
 
     # define a function to build new signature object from set of mins
-    def build_new_signature(mins, template_sig):
+    def build_new_signature(mins, template_sig, scaled=None):
         e = template_sig.minhash.copy_and_clear()
         e.add_many(mins)
+        if scaled:
+            e = e.downsample_scaled(scaled)
         return SourmashSignature(e)
 
     # construct a new query that doesn't have the max_hash attribute set.
     new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins, orig_query)
 
-    sum_found = 0.
-
+    R_comparison = 0
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -151,9 +150,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         query_mins = set(query.minhash.get_hashes())
         found_mins = best_leaf.minhash.get_hashes()
 
-        # figure out what the resolution of the banding on the genome is,
-        # based either on an explicit --scaled parameter, or on genome
-        # cardinality (deprecated)
+        # figure out what the resolution of the banding on the subject is
         if not best_leaf.minhash.max_hash:
             error('Best hash match in sbt_gather has no max_hash')
             error('Please prepare database of sequences with --scaled')
@@ -162,13 +159,16 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         R_genome = best_leaf.minhash.scaled
 
         # pick the highest R / lowest resolution
-        R_comparison = max(R_metagenome, R_genome)
+        R_comparison = max(R_comparison, R_metagenome, R_genome)
 
-        # CTB: these could probably be replaced by minhash.downsample_scaled.
-        new_max_hash = sourmash_lib.MAX_HASH / float(R_comparison)
+        # eliminate mins under this new resolution.
+        # (CTB note: this means that if a high scaled/low res signature is
+        # found early on, resolution will be low from then on.)
+        new_max_hash = get_max_hash_for_scaled(R_comparison)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
+        sum_abunds = sum([ v for (k,v) in orig_abunds.items() if k < new_max_hash ])
 
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
@@ -186,7 +186,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        query_n_mins = len(orig_query.minhash.get_hashes())
+        orig_mh = orig_query.minhash.downsample_scaled(R_comparison)
+        query_n_mins = len(orig_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         # calculate scores weighted by abundances
@@ -195,6 +196,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
                / len(intersect_mins)
 
+        # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
                               f_orig_query=f_orig_query,
                               f_match=f_match,
@@ -208,7 +210,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins, orig_query)
+        query = build_new_signature(query_mins, orig_query, R_comparison)
 
         weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
              / sum_abunds

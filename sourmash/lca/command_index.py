@@ -8,11 +8,10 @@ import argparse
 import csv
 from collections import defaultdict
 
-import sourmash_lib
-from sourmash_lib import sourmash_args
-from sourmash_lib.logging import notify, error
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import debug, set_debug, LineagePair
+from .. import sourmash_args, load_signatures
+from ..logging import notify, error
+from . import lca_utils
+from .lca_utils import debug, set_debug, LineagePair
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -99,7 +98,7 @@ def index(args):
     """
     main function for building an LCA database.
     """
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(prog="sourmash lca index")
     p.add_argument('csv', help='taxonomy spreadsheet')
     p.add_argument('lca_db_out', help='name to save database to')
     p.add_argument('signatures', nargs='+',
@@ -163,6 +162,7 @@ def index(args):
     # load signatures, construct index of hashvals to lineages
     hashval_to_lineage = defaultdict(set)
     md5_to_lineage = {}
+    md5_to_name = {}
 
     notify('finding signatures...')
     if args.traverse_directory:
@@ -181,7 +181,7 @@ def index(args):
     record_remnants = set(assignments_idx.keys())
     for filename in inp_files:
         n += 1
-        for sig in sourmash_lib.load_signatures(filename, ksize=args.ksize):
+        for sig in load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
             debug(filename, sig.name())
@@ -214,6 +214,7 @@ def index(args):
 
                 # store md5 -> lineage too
                 md5_to_lineage[sig.md5sum()] = lineage_idx
+                md5_to_name[sig.md5sum()] = sig.name()
 
     notify(u'\r\033[K', end=u'')
     notify('...found {} genomes with lineage assignments!!',
@@ -242,7 +243,8 @@ def index(args):
     db.hashval_to_lineage_id = hashval_to_lineage
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
-    db.signatures_to_lineage = md5_to_lineage
+    db.signatures_to_lineage_id = md5_to_lineage
+    db.signatures_to_name = md5_to_name
 
     db.save(db_outfile)
 

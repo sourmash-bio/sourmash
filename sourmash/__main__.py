@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import argparse
 
-from .logging import notify, error, set_quiet
+from .logging import error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
@@ -74,3 +74,6 @@ def main():
 
     cmd = commands.get(args.command)
     cmd(sys.argv[2:])
+
+if __name__ == '__main__':
+    main()
