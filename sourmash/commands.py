@@ -318,34 +318,34 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # check directories for all signatures
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+    else:
+        inp_files = list(args.signatures)
+
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
-    for filename in args.signatures:
+    for filename in inp_files:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, args.traverse_directory,
-                                     size=args.ksize,
+        loaded = sig.load_signatures(filename,
+                                     ksize=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
         siglist.extend(loaded)
     
-    # check directories for all signatures 
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
-    else:
-        inp_files = list(args.signatures)
- 
-    # track ksizes/moltypes
+        # track ksizes/moltypes
         for s in loaded:
             ksizes.add(s.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(s))
 
         # error out while loading if we have more than one ksize/moltype
-#        if len(ksizes) > 1 or len(moltypes) > 1:
-#            break
+        if len(ksizes) > 1 or len(moltypes) > 1:
+            break
 
     # check ksizes and type
     if len(ksizes) > 1:
