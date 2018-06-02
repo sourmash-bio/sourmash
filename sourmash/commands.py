@@ -968,17 +968,28 @@ def gather(args):
 
 
         if not len(found):                # first result? print header.
-            print_results("")
-            print_results("overlap     p_query p_match ")
-            print_results("---------   ------- --------")
+            if query.minhash.track_abundance and not args.ignore_abundance:
+                print_results("")
+                print_results("overlap     p_query p_match avg_abund")
+                print_results("---------   ------- ------- ---------")
+            else:
+                print_results("")
+                print_results("overlap     p_query p_match")
+                print_results("---------   ------- -------")
+
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-
+        average_abund ='{:.1f}'.format(result.average_abund)
         name = result.leaf._display_name(40)
 
-        print_results('{:9}   {:>6}  {:>6}      {}',
+        if query.minhash.track_abundance and not args.ignore_abundance:
+            print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                      format_bp(result.intersect_bp), pct_query, pct_genome,
+                      average_abund, name)
+        else:
+            print_results('{:9}   {:>7} {:>7}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
         found.append(result)
@@ -997,7 +1008,7 @@ def gather(args):
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'name', 'filename', 'md5']
+                      'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
