@@ -54,10 +54,10 @@ class SigLeaf(Leaf):
     def update(self, parent):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
-        max_n_below = parent.metadata.get('max_n_below', 0)
-        max_n_below = max(len(self.data.minhash.get_mins()),
-                          max_n_below)
-        parent.metadata['max_n_below'] = max_n_below
+        min_n_below = parent.metadata.get('min_n_below', 1)
+        min_n_below = min(len(self.data.minhash.get_mins()),
+                          min_n_below)
+        parent.metadata['min_n_below'] = min_n_below
 
     @property
     def data(self):
@@ -73,6 +73,9 @@ class SigLeaf(Leaf):
 
 
 def search_minhashes(node, sig, threshold, results=None, downsample=True):
+    """\
+    Default tree search function, searching for best Jaccard similarity.
+    """
     mins = sig.minhash.get_mins()
     score = 0
 
@@ -91,7 +94,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     else:  # Node or Leaf, Nodegraph by minhash comparison
         if len(mins):
             matches = sum(1 for value in mins if node.data.get(value))
-            max_mins = node.metadata.get('max_n_below', -1)
+            max_mins = node.metadata.get('min_n_below', -1)
             if max_mins == -1:
                 raise Exception('cannot do similarity search on this SBT; need to rebuild.')
             score = float(matches) / max_mins
@@ -128,7 +131,7 @@ class SearchMinHashesFindBest(object):
         else:  # internal object, not leaf.
             if len(mins):
                 matches = sum(1 for value in mins if node.data.get(value))
-                max_mins = node.metadata.get('max_n_below', -1)
+                max_mins = node.metadata.get('min_n_below', -1)
                 if max_mins == -1:
                     raise Exception('cannot do similarity search on this SBT; need to rebuild.')
                 score = float(matches) / max_mins

@@ -25,6 +25,7 @@ def main():
         matches = list([ x.data for x in matches ])
         if query not in matches:
             print(query)
+            assert 0
                                                  
 
 if __name__ == '__main__':
