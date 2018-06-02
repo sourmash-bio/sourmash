@@ -233,6 +233,19 @@ def test_basic_dna_bad_force_2(track_abundance):
     assert len(mh.get_mins()) == 2       # (only 2 hashes should be there)
 
 
+def test_consume_lowercase(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(20, 10, track_abundance=track_abundance)
+
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA'.lower())
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+
+    assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
+
+
 def test_compare_1(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)

@@ -2512,6 +2512,22 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
+def test_gather_nomatch():
+    with utils.TempDirectory() as location:
+        testdata_query = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+        testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+        cmd = 'gather {} {}'.format(testdata_query, testdata_match)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 0 matches total' in out
+        assert 'the recovered matches hit 0.0% of the query' in out
+
+
 def test_gather_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
