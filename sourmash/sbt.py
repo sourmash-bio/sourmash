@@ -529,6 +529,10 @@ class SBT(object):
         return tree
 
     def _fill_min_n_below(self):
+        """\
+        Propagate the smallest hash size below each node up the tree from
+        the leaves.
+        """
         for i, n in self.nodes.items():
             if isinstance(n, Leaf):
                 parent = self.parent(i)
