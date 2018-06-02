@@ -1238,6 +1238,26 @@ def test_do_sourmash_sbt_search_output():
         assert 'short2.fa' in output
 
 
+# check against a bug in sbt search triggered by incorrect max Jaccard
+# calculation.
+def test_do_sourmash_sbt_search_check_bug():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+        testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, 'zzz'],
+                                           in_directory=location)
+        assert '1 matches:' in out
+
+
 def test_do_sourmash_sbt_move_and_search_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
