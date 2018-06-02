@@ -73,6 +73,35 @@ class SigLeaf(Leaf):
         self._data = new_data
 
 
+### Search functionality.
+
+def _max_jaccard_underneath_internal_node(node, hashes):
+    """\
+    calculate the maximum possibility similarity score below
+    this node, based on the number of matches in 'hashes' at this node,
+    divided by the smallest minhash size below this node.
+
+    This should yield be an upper bound on the Jaccard similarity
+    for any signature below this point.
+    """
+    if len(hashes) == 0:
+        return 0.0
+
+    # count the maximum number of hash matches beneath this node
+    matches = sum(1 for value in hashes if node.data.get(value))
+
+    # get the size of the smallest collection of hashes below this point
+    min_n_below = node.metadata.get('min_n_below', -1)
+
+    if min_n_below == -1:
+        raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+
+    # max of numerator divided by min of denominator => max Jaccard
+    max_score = float(matches) / min_n_below
+
+    return max_score
+    
+
 def search_minhashes(node, sig, threshold, results=None, downsample=True):
     """\
     Default tree search function, searching for best Jaccard similarity.
@@ -92,13 +121,8 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
             else:
                 raise
 
-    else:  # Node or Leaf, Nodegraph by minhash comparison
-        if len(mins):
-            matches = sum(1 for value in mins if node.data.get(value))
-            min_n_below = node.metadata.get('min_n_below', -1)
-            if min_n_below == -1:
-                raise Exception('cannot do similarity search on this SBT; need to rebuild.')
-            score = float(matches) / min_n_below
+    else:  # Node minhash comparison
+        score = _max_jaccard_underneath_internal_node(node, mins)
 
     if results is not None:
         results[node.name] = score
@@ -130,24 +154,13 @@ class SearchMinHashesFindBest(object):
                 else:
                     raise
         else:  # internal object, not leaf.
-            if len(mins):
-
-                # calculate the maximum possibility similarity score below
-                # this node, based on the number of matches at this node,
-                # divided by the smallest minhash size below this node
-                # (which should be an upper bound on the Jaccard similarity
-                # of any signature below this point)
-                matches = sum(1 for value in mins if node.data.get(value))
-                min_n_below = node.metadata.get('min_n_below', -1)
-                if min_n_below == -1:
-                    raise Exception('cannot do similarity search on this SBT; need to rebuild.')
-                score = float(matches) / min_n_below
+            score = _max_jaccard_underneath_internal_node(node, mins)
 
         if results is not None:
             results[node.name] = score
 
         if score >= threshold:
-            # have we done better than this? if yes, truncate.
+            # have we done better than this elsewhere? if yes, truncate.
             if score > self.best_match:
                 # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
