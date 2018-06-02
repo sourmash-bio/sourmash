@@ -540,8 +540,6 @@ class SBT(object):
                     min_n_below = parent.node.metadata.get('min_n_below', 1)
                     min_n_below = min(len(n.data.minhash.get_mins()),
                                       min_n_below)
-                    if min_n_below == 0:
-                        min_n_below = 1
                     parent.node.metadata['min_n_below'] = min_n_below
 
                     current = parent
