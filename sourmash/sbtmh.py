@@ -57,6 +57,7 @@ class SigLeaf(Leaf):
         min_n_below = parent.metadata.get('min_n_below', 1)
         min_n_below = min(len(self.data.minhash.get_mins()),
                           min_n_below)
+
         parent.metadata['min_n_below'] = min_n_below
 
     @property
@@ -94,10 +95,10 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     else:  # Node or Leaf, Nodegraph by minhash comparison
         if len(mins):
             matches = sum(1 for value in mins if node.data.get(value))
-            max_mins = node.metadata.get('min_n_below', -1)
-            if max_mins == -1:
+            min_n_below = node.metadata.get('min_n_below', -1)
+            if min_n_below == -1:
                 raise Exception('cannot do similarity search on this SBT; need to rebuild.')
-            score = float(matches) / max_mins
+            score = float(matches) / min_n_below
 
     if results is not None:
         results[node.name] = score
@@ -130,11 +131,17 @@ class SearchMinHashesFindBest(object):
                     raise
         else:  # internal object, not leaf.
             if len(mins):
+
+                # calculate the maximum possibility similarity score below
+                # this node, based on the number of matches at this node,
+                # divided by the smallest minhash size below this node
+                # (which should be an upper bound on the Jaccard similarity
+                # of any signature below this point)
                 matches = sum(1 for value in mins if node.data.get(value))
-                max_mins = node.metadata.get('min_n_below', -1)
-                if max_mins == -1:
+                min_n_below = node.metadata.get('min_n_below', -1)
+                if min_n_below == -1:
                     raise Exception('cannot do similarity search on this SBT; need to rebuild.')
-                score = float(matches) / max_mins
+                score = float(matches) / min_n_below
 
         if results is not None:
             results[node.name] = score
