@@ -636,6 +636,15 @@ def test_do_compare_quiet():
         assert not out
         assert not err
 
+def test_do_traverse_directory_compare():
+    import numpy
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--traverse-directory', 
+                                            'test-data/gather-abund'],
+                                           in_directory=location)
+        assert not out
+        assert not err
 
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
