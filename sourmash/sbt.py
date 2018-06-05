@@ -305,7 +305,7 @@ class SBT(object):
         str
             full path to the new SBT description
         """
-        version = 3
+        version = 4
 
         if path.endswith('.sbt.json'):
             path = path[:-9]
@@ -395,6 +395,7 @@ class SBT(object):
             1: cls._load_v1,
             2: cls._load_v2,
             3: cls._load_v3,
+            4: cls._load_v4,
         }
 
         # @CTB hack: check to make sure khmer Nodegraph supports the
@@ -525,6 +526,46 @@ class SBT(object):
         tree.next_node = max_node
 
         tree._fill_min_n_below()
+
+        return tree
+
+    @classmethod
+    def _load_v4(cls, info, leaf_loader, dirname, storage):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
+        if not nodes:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = defaultdict(lambda: None)
+
+        klass = STORAGES[info['storage']['backend']]
+        if info['storage']['backend'] == "FSStorage":
+            storage = FSStorage(dirname, info['storage']['args']['path'])
+        elif storage is None:
+            storage = klass(**info['storage']['args'])
+
+        factory = GraphFactory(*info['factory']['args'])
+
+        max_node = 0
+        for k, node in nodes.items():
+            if node is None:
+                continue
+
+            if 'internal' in node['name']:
+                node['factory'] = factory
+                sbt_node = Node.load(node, storage)
+            else:
+                sbt_node = leaf_loader(node, storage)
+
+            sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
+
+        tree = cls(factory, d=info['d'], storage=storage)
+        tree.nodes = sbt_nodes
+        tree.missing_nodes = {i for i in range(max_node)
+                                if i not in sbt_nodes}
+        # TODO: this might not be true with combine...
+        tree.next_node = max_node
 
         return tree
 
