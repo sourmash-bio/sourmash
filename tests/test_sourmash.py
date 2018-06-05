@@ -636,15 +636,18 @@ def test_do_compare_quiet():
         assert not out
         assert not err
 
+
 def test_do_traverse_directory_compare():
     import numpy
     with utils.TempDirectory() as location:
         status, out, err = utils.runscript('sourmash',
                                            ['compare', '--traverse-directory', 
-                                            'test-data/gather-abund'],
+                                            '-k 21', '--dna', utils.get_test_data('compare')],
                                            in_directory=location)
-        assert not out
-        assert not err
+        print(out)
+        assert '0-genome-s11.fa.gz' in out
+        assert '1-genome-s10.fa.gz' in out
+
 
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
