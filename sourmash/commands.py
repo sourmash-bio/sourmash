@@ -337,7 +337,7 @@ def compare(args):
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
         siglist.extend(loaded)
-    
+
         # track ksizes/moltypes
         for s in loaded:
             ksizes.add(s.minhash.ksize)
