@@ -117,7 +117,7 @@ class SBT(object):
     def __init__(self, factory, d=2, storage=None):
         self.factory = factory
         self.nodes = defaultdict(lambda: None)
-        self.missing_nodes = set()
+        self._missing_nodes = set()
         self.d = d
         self.next_node = 0
         self.storage = storage
@@ -181,7 +181,7 @@ class SBT(object):
             node_p = queue.pop(0)
             node_g = self.nodes.get(node_p, None)
             if node_g is None:
-                if node_p in self.missing_nodes:
+                if node_p in self._missing_nodes:
                     self._rebuild_node(node_p)
                     node_g = self.nodes[node_p]
                 else:
@@ -219,11 +219,11 @@ class SBT(object):
         node = Node(self.factory, name="internal.{}".format(pos))
         self.nodes[pos] = node
         for c in self.children(pos):
-            if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
+            if c.pos in self._missing_nodes or isinstance(c.node, Leaf):
                 if c.node is None:
                     self._rebuild_node(c.pos)
                 self.nodes[c.pos].update(node)
-        self.missing_nodes.remove(pos)
+        self._missing_nodes.remove(pos)
 
 
     def parent(self, pos):
@@ -286,7 +286,7 @@ class SBT(object):
         node = self.nodes.get(cd, None)
         return NodePos(cd, node)
 
-    def save(self, path, storage=None, sparseness=0.0):
+    def save(self, path, storage=None, sparseness=0.0, structure_only=False):
         """Saves an SBT description locally and node data to a storage.
 
         Parameters
@@ -300,6 +300,9 @@ class SBT(object):
             How much of the internal nodes should be saved.
             Defaults to 0.0 (save all internal nodes data),
             can go up to 1.0 (don't save any internal nodes data)
+        structure_only: boolean
+            Write only the index schema and metadata, but not the data.
+            Defaults to False (save data too)
 
         Returns
         -------
@@ -349,14 +352,22 @@ class SBT(object):
                 'filename': os.path.basename(node.name),
                 'name': node.name
             }
+
+            try:
+                node.metadata.pop('max_n_below')
+            except (AttributeError, KeyError):
+                pass
+
             data['metadata'] = node.metadata
 
-            # trigger data loading before saving to the new place
-            node.data
+            if structure_only is False:
+                # trigger data loading before saving to the new place
+                node.data
 
-            node.storage = storage
+                node.storage = storage
 
-            data['filename'] = node.save(data['filename'])
+                data['filename'] = node.save(data['filename'])
+
             structure[i] = data
 
             notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
@@ -521,7 +532,7 @@ class SBT(object):
 
         tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
-        tree.missing_nodes = {i for i in range(max_node)
+        tree._missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
         # TODO: this might not be true with combine...
         tree.next_node = max_node
@@ -563,7 +574,7 @@ class SBT(object):
 
         tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
-        tree.missing_nodes = {i for i in range(max_node)
+        tree._missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
         # TODO: this might not be true with combine...
         tree.next_node = max_node
@@ -575,25 +586,61 @@ class SBT(object):
         Propagate the smallest hash size below each node up the tree from
         the leaves.
         """
-        for i, n in self.nodes.items():
-            if isinstance(n, Leaf):
-                parent = self.parent(i)
-                if parent.pos not in self.missing_nodes:
-                    min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
-                    min_n_below = min(len(n.data.minhash.get_mins()),
-                                      min_n_below)
-                    parent.node.metadata['min_n_below'] = min_n_below
+        def fill_min_n_below(node, *args, **kwargs):
+            original_min_n_below = node.metadata.get('min_n_below', sys.maxsize)
+            min_n_below = original_min_n_below
 
-                    current = parent
-                    parent = self.parent(parent.pos)
-                    while parent and parent.pos not in self.missing_nodes:
-                        min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
-                        min_n_below = min(current.node.metadata['min_n_below'],
-                                          min_n_below)
-                        parent.node.metadata['min_n_below'] = min_n_below
-                        current = parent
-                        parent = self.parent(parent.pos)
+            children = kwargs['children']
+            for child in children:
+                if child.node is not None:
+                    if isinstance(child.node, Leaf):
+                        min_n_below = min(len(child.node.data.minhash), min_n_below)
+                    else:
+                        child_n = child.node.metadata.get('min_n_below', sys.maxsize)
+                        min_n_below = min(child_n, min_n_below)
 
+            node.metadata['min_n_below'] = min_n_below
+            return original_min_n_below == min_n_below
+
+        self._fill_up(fill_min_n_below)
+
+    def _fill_up(self, search_fn, *args, **kwargs):
+        visited, queue = set(), [i[0] for i in reversed(sorted(self._leaves()))]
+        notify("started filling up")
+        processed = 0
+        while queue:
+            node_p = queue.pop(0)
+
+            parent = self.parent(node_p)
+            if parent is None:
+                # we are in the root, no more nodes available to search
+                assert len(queue) == 0
+                return
+
+            if parent.node is None:
+                if parent.pos in self._missing_nodes:
+                    self._rebuild_node(parent.pos)
+                    parent = self.parent(node_p)
+                else:
+                    continue
+
+            siblings = self.children(parent.pos)
+
+            if node_p not in visited:
+                visited.add(node_p)
+                for sibling in siblings:
+                    visited.add(sibling.pos)
+                    try:
+                        queue.remove(sibling.pos)
+                    except ValueError:
+                        pass
+
+                if search_fn(parent.node, children=siblings, *args):
+                    queue.append(parent.pos)
+
+            processed += 1
+            if processed % 100 == 0:
+                notify("processed {}, in queue {}\r", processed, len(queue))
 
     def print_dot(self):
         print("""

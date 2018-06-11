@@ -1172,4 +1172,4 @@ def migrate(args):
     tree = load_sbt_index(args.sbt_name)
 
     notify('saving SBT under "{}".', args.sbt_name)
-    tree.save(args.sbt_name)
+    tree.save(args.sbt_name, structure_only=True)
