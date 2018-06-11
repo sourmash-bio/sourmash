@@ -15,7 +15,7 @@ from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
 from sourmash_lib.sbt import SBT
-from sourmash_lib.sbtmh import SigLeaf
+from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -1270,9 +1270,8 @@ def test_do_sourmash_sbt_search_check_bug():
                                            in_directory=location)
         assert '1 matches:' in out
 
-        with open(os.path.join(location, 'zzz.sbt.json')) as fp:
-            d = json.load(fp)
-            assert d['nodes']['0']['metadata']['min_n_below'] == 431
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        assert tree.nodes[0].metadata['min_n_below'] == 431
 
 
 def test_do_sourmash_sbt_move_and_search_output():
