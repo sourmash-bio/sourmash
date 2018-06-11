@@ -15,7 +15,7 @@ from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
 from sourmash_lib.sbt import SBT
-from sourmash_lib.sbtmh import SigLeaf
+from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -133,7 +133,6 @@ def test_do_sourmash_compute_output_and_name_valid_file():
         assert 'calculated 1 signatures for 4 sequences taken from 3 files' in err
 
         # is it valid json?
-        import json
         with open(sigfile, 'r') as f:
             data = json.load(f)
 
@@ -641,12 +640,12 @@ def test_do_traverse_directory_compare():
     import numpy
     with utils.TempDirectory() as location:
         status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--traverse-directory', 
+                                           ['compare', '--traverse-directory',
                                             '-k 21', '--dna', utils.get_test_data('compare')],
                                            in_directory=location)
         print(out)
-        assert '0-genome-s10.fa.gz' in out
-        assert '1-genome-s11.fa.gz' in out
+        assert 'genome-s10.fa.gz' in out
+        assert 'genome-s11.fa.gz' in out
 
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
@@ -1253,7 +1252,10 @@ def test_do_sourmash_sbt_search_output():
 # calculation.
 def test_do_sourmash_sbt_search_check_bug():
     with utils.TempDirectory() as location:
+        # mins: 431
         testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+
+        # mins: 6264
         testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
 
         status, out, err = utils.runscript('sourmash',
@@ -1267,6 +1269,9 @@ def test_do_sourmash_sbt_search_check_bug():
                                            ['search', testdata1, 'zzz'],
                                            in_directory=location)
         assert '1 matches:' in out
+
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        assert tree.nodes[0].metadata['min_n_below'] == 431
 
 
 def test_do_sourmash_sbt_move_and_search_output():
@@ -1287,7 +1292,6 @@ def test_do_sourmash_sbt_move_and_search_output():
 
         print(out)
 
-        import json
         with open(os.path.join(location, 'zzz.sbt.json')) as fp:
             d = json.load(fp)
             assert d['storage']['args']['path'] == '.sbt.zzz'

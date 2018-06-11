@@ -49,6 +49,7 @@ import json
 import math
 import os
 from random import randint, random
+import sys
 from tempfile import NamedTemporaryFile
 
 import khmer
@@ -578,7 +579,7 @@ class SBT(object):
             if isinstance(n, Leaf):
                 parent = self.parent(i)
                 if parent.pos not in self.missing_nodes:
-                    min_n_below = parent.node.metadata.get('min_n_below', 1)
+                    min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
                     min_n_below = min(len(n.data.minhash.get_mins()),
                                       min_n_below)
                     parent.node.metadata['min_n_below'] = min_n_below
@@ -586,7 +587,7 @@ class SBT(object):
                     current = parent
                     parent = self.parent(parent.pos)
                     while parent and parent.pos not in self.missing_nodes:
-                        min_n_below = parent.node.metadata.get('min_n_below', 1)
+                        min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
                         min_n_below = min(current.node.metadata['min_n_below'],
                                           min_n_below)
                         parent.node.metadata['min_n_below'] = min_n_below
@@ -744,7 +745,7 @@ class Node(object):
 
     def update(self, parent):
         parent.data.update(self.data)
-        min_n_below = min(parent.metadata.get('min_n_below', 1),
+        min_n_below = min(parent.metadata.get('min_n_below', sys.maxsize),
                           self.metadata.get('min_n_below'))
         parent.metadata['min_n_below'] = min_n_below
 
