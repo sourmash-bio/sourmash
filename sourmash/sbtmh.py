@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from io import BytesIO, TextIOWrapper
+import sys
 
 from .sbt import Leaf, SBT, GraphFactory
 from . import signature
@@ -54,7 +55,7 @@ class SigLeaf(Leaf):
     def update(self, parent):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
-        min_n_below = parent.metadata.get('min_n_below', 1)
+        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
         min_n_below = min(len(self.data.minhash.get_mins()),
                           min_n_below)
 
@@ -100,7 +101,7 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     max_score = float(matches) / min_n_below
 
     return max_score
-    
+
 
 def search_minhashes(node, sig, threshold, results=None, downsample=True):
     """\
