@@ -640,12 +640,12 @@ def test_do_traverse_directory_compare():
     import numpy
     with utils.TempDirectory() as location:
         status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--traverse-directory', 
+                                           ['compare', '--traverse-directory',
                                             '-k 21', '--dna', utils.get_test_data('compare')],
                                            in_directory=location)
         print(out)
-        assert '0-genome-s10.fa.gz' in out
-        assert '1-genome-s11.fa.gz' in out
+        assert 'genome-s10.fa.gz' in out
+        assert 'genome-s11.fa.gz' in out
 
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
