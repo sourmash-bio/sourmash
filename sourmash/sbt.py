@@ -55,7 +55,7 @@ from tempfile import NamedTemporaryFile
 import khmer
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
-from .logging import error, notify
+from .logging import error, notify, debug
 
 
 STORAGES = {
@@ -222,7 +222,9 @@ class SBT(object):
             if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
                 if c.node is None:
                     self._rebuild_node(c.pos)
-                self.nodes[c.pos].update(node)
+            c_node = self.nodes[c.pos]
+            if c_node is not None:
+                c_node.update(node)
         self.missing_nodes.remove(pos)
 
 
@@ -537,6 +539,8 @@ class SBT(object):
         # TODO: this might not be true with combine...
         tree.next_node = max_node
 
+        error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+        error("WARNING: proceeding with execution, but it will take longer to finish!")
         tree._fill_min_n_below()
 
         return tree
@@ -600,13 +604,13 @@ class SBT(object):
                         min_n_below = min(child_n, min_n_below)
 
             node.metadata['min_n_below'] = min_n_below
-            return original_min_n_below == min_n_below
+            return original_min_n_below != min_n_below
 
         self._fill_up(fill_min_n_below)
 
     def _fill_up(self, search_fn, *args, **kwargs):
         visited, queue = set(), [i[0] for i in reversed(sorted(self._leaves()))]
-        notify("started filling up")
+        debug("started filling up")
         processed = 0
         while queue:
             node_p = queue.pop(0)
@@ -617,10 +621,12 @@ class SBT(object):
                 assert len(queue) == 0
                 return
 
+            was_missing = False
             if parent.node is None:
                 if parent.pos in self.missing_nodes:
                     self._rebuild_node(parent.pos)
                     parent = self.parent(node_p)
+                    was_missing = True
                 else:
                     continue
 
@@ -635,12 +641,12 @@ class SBT(object):
                     except ValueError:
                         pass
 
-                if search_fn(parent.node, children=siblings, *args):
+                if search_fn(parent.node, children=siblings, *args) or was_missing:
                     queue.append(parent.pos)
 
             processed += 1
             if processed % 100 == 0:
-                notify("processed {}, in queue {}\r", processed, len(queue))
+                debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def print_dot(self):
         print("""
