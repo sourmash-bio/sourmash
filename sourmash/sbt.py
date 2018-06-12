@@ -117,7 +117,7 @@ class SBT(object):
     def __init__(self, factory, d=2, storage=None):
         self.factory = factory
         self.nodes = defaultdict(lambda: None)
-        self._missing_nodes = set()
+        self.missing_nodes = set()
         self.d = d
         self.next_node = 0
         self.storage = storage
@@ -181,7 +181,7 @@ class SBT(object):
             node_p = queue.pop(0)
             node_g = self.nodes.get(node_p, None)
             if node_g is None:
-                if node_p in self._missing_nodes:
+                if node_p in self.missing_nodes:
                     self._rebuild_node(node_p)
                     node_g = self.nodes[node_p]
                 else:
@@ -219,11 +219,11 @@ class SBT(object):
         node = Node(self.factory, name="internal.{}".format(pos))
         self.nodes[pos] = node
         for c in self.children(pos):
-            if c.pos in self._missing_nodes or isinstance(c.node, Leaf):
+            if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
                 if c.node is None:
                     self._rebuild_node(c.pos)
                 self.nodes[c.pos].update(node)
-        self._missing_nodes.remove(pos)
+        self.missing_nodes.remove(pos)
 
 
     def parent(self, pos):
@@ -532,7 +532,7 @@ class SBT(object):
 
         tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
-        tree._missing_nodes = {i for i in range(max_node)
+        tree.missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
         # TODO: this might not be true with combine...
         tree.next_node = max_node
@@ -574,7 +574,7 @@ class SBT(object):
 
         tree = cls(factory, d=info['d'], storage=storage)
         tree.nodes = sbt_nodes
-        tree._missing_nodes = {i for i in range(max_node)
+        tree.missing_nodes = {i for i in range(max_node)
                                 if i not in sbt_nodes}
         # TODO: this might not be true with combine...
         tree.next_node = max_node
@@ -618,7 +618,7 @@ class SBT(object):
                 return
 
             if parent.node is None:
-                if parent.pos in self._missing_nodes:
+                if parent.pos in self.missing_nodes:
                     self._rebuild_node(parent.pos)
                     parent = self.parent(node_p)
                 else:
