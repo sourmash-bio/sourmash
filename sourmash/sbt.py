@@ -603,6 +603,9 @@ class SBT(object):
                         child_n = child.node.metadata.get('min_n_below', sys.maxsize)
                         min_n_below = min(child_n, min_n_below)
 
+            if min_n_below == 0:
+                min_n_below = 1
+
             node.metadata['min_n_below'] = min_n_below
             return original_min_n_below != min_n_below
 
