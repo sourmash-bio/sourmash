@@ -59,6 +59,9 @@ class SigLeaf(Leaf):
         min_n_below = min(len(self.data.minhash.get_mins()),
                           min_n_below)
 
+        if min_n_below == 0:
+            min_n_below = 1
+
         parent.metadata['min_n_below'] = min_n_below
 
     @property

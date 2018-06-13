@@ -1274,6 +1274,30 @@ def test_do_sourmash_sbt_search_check_bug():
         assert tree.nodes[0].metadata['min_n_below'] == 431
 
 
+def test_do_sourmash_sbt_search_empty_sig():
+    with utils.TempDirectory() as location:
+        # mins: 431
+        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+
+        # mins: 0
+        testdata2 = utils.get_test_data('sbt-search-bug/empty.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, 'zzz'],
+                                           in_directory=location)
+        assert '1 matches:' in out
+
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        assert tree.nodes[0].metadata['min_n_below'] == 1
+
+
 def test_do_sourmash_sbt_move_and_search_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

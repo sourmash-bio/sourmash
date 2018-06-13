@@ -803,6 +803,8 @@ class Node(object):
         parent.data.update(self.data)
         min_n_below = min(parent.metadata.get('min_n_below', sys.maxsize),
                           self.metadata.get('min_n_below'))
+        if min_n_below == 0:
+            min_n_below = 1
         parent.metadata['min_n_below'] = min_n_below
 
 
