@@ -41,7 +41,7 @@ Download some reads and a reference genome:
 ```
 mkdir ~/data
 cd ~/data
-wget http://public.ged.msu.edu.s3.amazonaws.com/ecoli_ref-5m-trim.pe.fq.gz
+wget https://s3.amazonaws.com/public.ged.msu.edu/ecoli_ref-5m.fastq.gz
 wget https://s3.amazonaws.com/public.ged.msu.edu/ecoliMG1655.fa.gz
 ```
 
