@@ -197,7 +197,7 @@ def test_basic_dna_bad(track_abundance):
         mh.add_sequence('ATGR')
     print(e)
 
-    assert 'invalid DNA character in input: R' in str(e)
+    assert 'invalid DNA character in input k-mer: ATGR' in str(e)
 
 
 def test_basic_dna_bad_2(track_abundance):
