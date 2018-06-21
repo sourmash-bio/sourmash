@@ -132,8 +132,8 @@ public:
                     if (force) {
                         continue;
                     } else {
-                        std::string msg = "invalid DNA character in input: ";
-                        msg += seq[i + ksize - 1];
+                        std::string msg = "invalid DNA character in input k-mer: ";
+                        msg += kmer;
                         throw minhash_exception(msg);
                     }
                 }
