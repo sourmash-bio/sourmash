@@ -14,7 +14,7 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
-from sourmash_lib.sbt import SBT
+from sourmash_lib.sbt import SBT, Node
 from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
@@ -3237,6 +3237,32 @@ def test_storage_convert_fsstorage_newpath():
         assert all(n1[1].name == n2[1].name
                    for (n1, n2) in zip(sorted(original.nodes.items()),
                                        sorted(identity.nodes.items())))
+
+
+def test_migrate():
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v3.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v3.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v3'),
+                        os.path.join(location, '.sbt.v3'))
+        testsbt = os.path.join(location, 'v3.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        status, out, err = utils.runscript('sourmash', ['migrate', testsbt],
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+        assert "this is an old index version" not in err
+        assert all('min_n_below' in node.metadata
+                       for node in identity.nodes.values()
+                       if isinstance(node, Node))
 
 
 def test_license_cc0():

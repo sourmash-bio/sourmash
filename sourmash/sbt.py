@@ -382,7 +382,7 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, location, leaf_loader=None, storage=None):
+    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """Load an SBT description from a file.
 
         Parameters
@@ -436,10 +436,11 @@ class SBT(object):
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage)
+        return loaders[version](jnodes, leaf_loader, dirname, storage,
+                                print_version_warning)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -470,7 +471,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -502,7 +503,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -539,14 +540,15 @@ class SBT(object):
         # TODO: this might not be true with combine...
         tree.next_node = max_node
 
-        error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
-        error("WARNING: proceeding with execution, but it will take longer to finish!")
+        if print_version_warning:
+            error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+            error("WARNING: proceeding with execution, but it will take longer to finish!")
         tree._fill_min_n_below()
 
         return tree
 
     @classmethod
-    def _load_v4(cls, info, leaf_loader, dirname, storage):
+    def _load_v4(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
