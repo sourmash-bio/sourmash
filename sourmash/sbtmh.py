@@ -8,9 +8,10 @@ from .sbt import Leaf, SBT, GraphFactory
 from . import signature
 
 
-def load_sbt_index(filename):
+def load_sbt_index(filename, print_version_warning=True):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load)
+    return SBT.load(filename, leaf_loader=SigLeaf.load,
+                    print_version_warning=print_version_warning)
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
@@ -58,6 +59,9 @@ class SigLeaf(Leaf):
         min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
         min_n_below = min(len(self.data.minhash.get_mins()),
                           min_n_below)
+
+        if min_n_below == 0:
+            min_n_below = 1
 
         parent.metadata['min_n_below'] = min_n_below
 

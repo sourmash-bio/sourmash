@@ -55,7 +55,7 @@ from tempfile import NamedTemporaryFile
 import khmer
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
-from .logging import error, notify
+from .logging import error, notify, debug
 
 
 STORAGES = {
@@ -222,7 +222,9 @@ class SBT(object):
             if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
                 if c.node is None:
                     self._rebuild_node(c.pos)
-                self.nodes[c.pos].update(node)
+            c_node = self.nodes[c.pos]
+            if c_node is not None:
+                c_node.update(node)
         self.missing_nodes.remove(pos)
 
 
@@ -286,7 +288,7 @@ class SBT(object):
         node = self.nodes.get(cd, None)
         return NodePos(cd, node)
 
-    def save(self, path, storage=None, sparseness=0.0):
+    def save(self, path, storage=None, sparseness=0.0, structure_only=False):
         """Saves an SBT description locally and node data to a storage.
 
         Parameters
@@ -300,6 +302,9 @@ class SBT(object):
             How much of the internal nodes should be saved.
             Defaults to 0.0 (save all internal nodes data),
             can go up to 1.0 (don't save any internal nodes data)
+        structure_only: boolean
+            Write only the index schema and metadata, but not the data.
+            Defaults to False (save data too)
 
         Returns
         -------
@@ -349,14 +354,22 @@ class SBT(object):
                 'filename': os.path.basename(node.name),
                 'name': node.name
             }
+
+            try:
+                node.metadata.pop('max_n_below')
+            except (AttributeError, KeyError):
+                pass
+
             data['metadata'] = node.metadata
 
-            # trigger data loading before saving to the new place
-            node.data
+            if structure_only is False:
+                # trigger data loading before saving to the new place
+                node.data
 
-            node.storage = storage
+                node.storage = storage
 
-            data['filename'] = node.save(data['filename'])
+                data['filename'] = node.save(data['filename'])
+
             structure[i] = data
 
             notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
@@ -369,7 +382,7 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, location, leaf_loader=None, storage=None):
+    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """Load an SBT description from a file.
 
         Parameters
@@ -423,10 +436,11 @@ class SBT(object):
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage)
+        return loaders[version](jnodes, leaf_loader, dirname, storage,
+                                print_version_warning)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -457,7 +471,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -489,7 +503,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -526,12 +540,15 @@ class SBT(object):
         # TODO: this might not be true with combine...
         tree.next_node = max_node
 
+        if print_version_warning:
+            error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+            error("WARNING: proceeding with execution, but it will take longer to finish!")
         tree._fill_min_n_below()
 
         return tree
 
     @classmethod
-    def _load_v4(cls, info, leaf_loader, dirname, storage):
+    def _load_v4(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -575,25 +592,66 @@ class SBT(object):
         Propagate the smallest hash size below each node up the tree from
         the leaves.
         """
-        for i, n in self.nodes.items():
-            if isinstance(n, Leaf):
-                parent = self.parent(i)
-                if parent.pos not in self.missing_nodes:
-                    min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
-                    min_n_below = min(len(n.data.minhash.get_mins()),
-                                      min_n_below)
-                    parent.node.metadata['min_n_below'] = min_n_below
+        def fill_min_n_below(node, *args, **kwargs):
+            original_min_n_below = node.metadata.get('min_n_below', sys.maxsize)
+            min_n_below = original_min_n_below
 
-                    current = parent
-                    parent = self.parent(parent.pos)
-                    while parent and parent.pos not in self.missing_nodes:
-                        min_n_below = parent.node.metadata.get('min_n_below', sys.maxsize)
-                        min_n_below = min(current.node.metadata['min_n_below'],
-                                          min_n_below)
-                        parent.node.metadata['min_n_below'] = min_n_below
-                        current = parent
-                        parent = self.parent(parent.pos)
+            children = kwargs['children']
+            for child in children:
+                if child.node is not None:
+                    if isinstance(child.node, Leaf):
+                        min_n_below = min(len(child.node.data.minhash), min_n_below)
+                    else:
+                        child_n = child.node.metadata.get('min_n_below', sys.maxsize)
+                        min_n_below = min(child_n, min_n_below)
 
+            if min_n_below == 0:
+                min_n_below = 1
+
+            node.metadata['min_n_below'] = min_n_below
+            return original_min_n_below != min_n_below
+
+        self._fill_up(fill_min_n_below)
+
+    def _fill_up(self, search_fn, *args, **kwargs):
+        visited, queue = set(), [i[0] for i in reversed(sorted(self._leaves()))]
+        debug("started filling up")
+        processed = 0
+        while queue:
+            node_p = queue.pop(0)
+
+            parent = self.parent(node_p)
+            if parent is None:
+                # we are in the root, no more nodes available to search
+                assert len(queue) == 0
+                return
+
+            was_missing = False
+            if parent.node is None:
+                if parent.pos in self.missing_nodes:
+                    self._rebuild_node(parent.pos)
+                    parent = self.parent(node_p)
+                    was_missing = True
+                else:
+                    continue
+
+            siblings = self.children(parent.pos)
+
+            if node_p not in visited:
+                visited.add(node_p)
+                for sibling in siblings:
+                    visited.add(sibling.pos)
+                    try:
+                        queue.remove(sibling.pos)
+                    except ValueError:
+                        pass
+
+                if search_fn(parent.node, children=siblings, *args) or was_missing:
+                    queue.append(parent.pos)
+
+            processed += 1
+            if processed % 100 == 0:
+                debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def print_dot(self):
         print("""
@@ -747,6 +805,8 @@ class Node(object):
         parent.data.update(self.data)
         min_n_below = min(parent.metadata.get('min_n_below', sys.maxsize),
                           self.metadata.get('min_n_below'))
+        if min_n_below == 0:
+            min_n_below = 1
         parent.metadata['min_n_below'] = min_n_below
 
 

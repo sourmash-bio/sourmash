@@ -1160,3 +1160,15 @@ def storage(args):
     set_quiet(args.quiet)
     if args.command == 'convert':
         convert_cmd(args.sbt, args.backend)
+
+
+def migrate(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name to save SBT into')
+
+    args = parser.parse_args(args)
+
+    tree = load_sbt_index(args.sbt_name, print_version_warning=False)
+
+    notify('saving SBT under "{}".', args.sbt_name)
+    tree.save(args.sbt_name, structure_only=True)
