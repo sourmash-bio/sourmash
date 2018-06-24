@@ -1,15 +1,13 @@
 language: python
-python: 3.6
-
-sudo: required
-dist: trusty
 
 services:
   - redis-server
+  - docker
 
 branches:
   only:
     - master
+    - /^v.*$/
 
 matrix:
   fast_finish: true
@@ -36,11 +34,32 @@ matrix:
       env:
         - TOX_ENV=py36
 
+    - os: linux
+      python: "3.7"
+      sudo: required
+      dist: trusty
+      env:
+        - TOX_ENV=py37
+
 install:
-- pip install tox
-- sudo apt-get --yes install snapd
-- sudo snap install ipfs
+  - pip install tox
+  - sudo apt-get --yes install snapd
+  - sudo snap install ipfs
+  - docker pull $DOCKER_IMAGE
 
 script:
   - /snap/bin/ipfs daemon --init --offline &
   - tox -e $TOX_ENV
+
+deploy:
+  provider: releases
+  api_key: "api_key"
+  file_glob: true
+  file: dist/sourmash*.whl
+  skip_cleanup: true
+  env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+  script:
+    - docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels.sh
+  on:
+    repo: dib-lab/sourmash
+    tags: true
