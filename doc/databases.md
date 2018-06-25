@@ -8,9 +8,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 60,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
 
-* [RefSeq k=21, 2018.02.15][0] - 7 GB
-* [RefSeq k=31, 2018.02.15][1] - 7 GB
-* [RefSeq k=51, 2018.02.15][2] - 7.1 GB
+* [RefSeq k=21, 2018.03.29][0] - 7 GB
+* [RefSeq k=31, 2018.03.29][1] - 7 GB
+* [RefSeq k=51, 2018.03.29][2] - 7.1 GB
 
 ## Genbank microbial genomes - SBT
 
@@ -20,9 +20,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 100,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.
 
-* [Genbank k=21, 2018.02.15][3]- 8.4 GB
-* [Genbank k=31, 2018.02.15][4] - 8.4 GB
-* [Genbank k=51, 2018.02.15][5] - 8.4 GB
+* [Genbank k=21, 2018.03.29][3]- 8.4 GB
+* [Genbank k=31, 2018.03.29][4] - 8.4 GB
+* [Genbank k=51, 2018.03.29][5] - 8.4 GB
 
 ### Details
 
@@ -30,29 +30,29 @@ The individual signatures for the above SBTs were calculated as follows:
 
 ```
 sourmash compute -k 4,5 \
-                         -n 2000 \
-                         --track-abundance \
-                         --name-from-first \
-                         -o {output} \
-                         {input}
+                 -n 2000 \
+                 --track-abundance \
+                 --name-from-first \
+                 -o {output} \
+                 {input}
 
 sourmash compute -k 21,31,51 \
-                         --scaled 2000 \
-                         --track-abundance \
-                         --name-from-first \
-                         -o {output} \
-                         {input}
+                 --scaled 2000 \
+                 --track-abundance \
+                 --name-from-first \
+                 -o {output} \
+                 {input}
 ```
 
 See https://github.com/dib-lab/sourmash_databases for a Snakemake workflow
 to build the databases.
 
-[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/refseq-d2-k21.tar.gz
-[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/refseq-d2-k31.tar.gz
-[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/refseq-d2-k51.tar.gz
-[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/genbank-d2-k21.tar.gz
-[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/genbank-d2-k31.tar.gz
-[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/genbank-d2-k51.tar.gz
+[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k21.tar.gz
+[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k31.tar.gz
+[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k51.tar.gz
+[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k21.tar.gz
+[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k31.tar.gz
+[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k51.tar.gz
 
 ## Genbank LCA Database
 
