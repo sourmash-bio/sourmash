@@ -30,4 +30,9 @@ coverage: all
 benchmark: all
 	asv continuous master
 
+wheel:
+	export DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64; \
+	docker pull $${DOCKER_IMAGE} ; \
+	docker run --rm -v `pwd`:/io $${DOCKER_IMAGE} /io/travis/build-wheels.sh
+
 FORCE:
