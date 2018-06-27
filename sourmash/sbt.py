@@ -54,6 +54,11 @@ from tempfile import NamedTemporaryFile
 
 import khmer
 
+try:
+    load_nodegraph = khmer.load_nodegraph
+except AttributeError:
+    load_nodegraph = khmer.Nodegraph.load
+
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
 from .logging import error, notify, debug
 
@@ -785,7 +790,7 @@ class Node(object):
                 with NamedTemporaryFile(suffix=".gz") as f:
                     f.write(data)
                     f.file.flush()
-                    self._data = khmer.load_nodegraph(f.name)
+                    self._data = load_nodegraph(f.name)
         return self._data
 
     @data.setter
@@ -838,7 +843,7 @@ class Leaf(object):
             with NamedTemporaryFile(suffix=".gz") as f:
                 f.write(data)
                 f.file.flush()
-                self._data = khmer.load_nodegraph(f.name)
+                self._data = load_nodegraph(f.name)
         return self._data
 
     @data.setter
