@@ -42,11 +42,16 @@ else:                                     # ...likely Linux
    else:
       EXTRA_COMPILE_ARGS.append('-O3')
 
+with open('README.md', 'r') as readme:
+    LONG_DESCRIPTION = readme.read()
+
 SETUP_METADATA = \
                {
     "name": "sourmash",
     "version": VERSION,
     "description": "tools for comparing DNA sequences with MinHash sketches",
+    "long_description": LONG_DESCRIPTION,
+    "long_description_content_type": "text/markdown",
     "url": "https://github.com/dib-lab/sourmash",
     "author": "C. Titus Brown",
     "author_email": "titus@idyll.org",
@@ -65,10 +70,10 @@ SETUP_METADATA = \
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
                                extra_link_args=EXTRA_LINK_ARGS)],
-    "install_requires": ["screed>=0.9", "ijson", "khmer>=2.1<3.0"],
-    "setup_requires": ['Cython>=0.25.2', "setuptools>=18.0"],
+    "install_requires": ["screed>=0.9", "ijson", "khmer>=2.1"],
+    "setup_requires": ['Cython>=0.25.2', "setuptools>=38.6.0"],
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy','recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
         },

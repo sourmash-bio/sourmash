@@ -308,6 +308,8 @@ def compare(args):
                         help='do NOT use k-mer abundances if present')
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='compare all signatures underneath directories.')
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -316,13 +318,20 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # check directories for all signatures
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+    else:
+        inp_files = list(args.signatures)
+
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
-    for filename in args.signatures:
+    for filename in inp_files:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, ksize=args.ksize,
+        loaded = sig.load_signatures(filename,
+                                     ksize=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
@@ -968,17 +977,28 @@ def gather(args):
 
 
         if not len(found):                # first result? print header.
-            print_results("")
-            print_results("overlap     p_query p_match ")
-            print_results("---------   ------- --------")
+            if query.minhash.track_abundance and not args.ignore_abundance:
+                print_results("")
+                print_results("overlap     p_query p_match avg_abund")
+                print_results("---------   ------- ------- ---------")
+            else:
+                print_results("")
+                print_results("overlap     p_query p_match")
+                print_results("---------   ------- -------")
+
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-
+        average_abund ='{:.1f}'.format(result.average_abund)
         name = result.leaf._display_name(40)
 
-        print_results('{:9}   {:>6}  {:>6}      {}',
+        if query.minhash.track_abundance and not args.ignore_abundance:
+            print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                      format_bp(result.intersect_bp), pct_query, pct_genome,
+                      average_abund, name)
+        else:
+            print_results('{:9}   {:>7} {:>7}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
         found.append(result)
@@ -997,7 +1017,7 @@ def gather(args):
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'name', 'filename', 'md5']
+                      'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
@@ -1140,3 +1160,15 @@ def storage(args):
     set_quiet(args.quiet)
     if args.command == 'convert':
         convert_cmd(args.sbt, args.backend)
+
+
+def migrate(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name to save SBT into')
+
+    args = parser.parse_args(args)
+
+    tree = load_sbt_index(args.sbt_name, print_version_warning=False)
+
+    notify('saving SBT under "{}".', args.sbt_name)
+    tree.save(args.sbt_name, structure_only=True)

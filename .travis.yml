@@ -1,46 +1,48 @@
 language: python
-python: 3.6
-
-sudo: required
-dist: trusty
-
 services:
-  - redis-server
-
+- redis-server
+- docker
 branches:
   only:
-    - master
-
+  - master
+  - "/^v.*$/"
 matrix:
   fast_finish: true
   include:
-
-    - os: linux
-      python: "2.7"
-      sudo: required
-      dist: trusty
-      env:
-        - TOX_ENV=py27
-
-    - os: linux
-      python: "3.5"
-      sudo: required
-      dist: trusty
-      env:
-        - TOX_ENV=py35
-
-    - os: linux
-      python: "3.6"
-      sudo: required
-      dist: trusty
-      env:
-        - TOX_ENV=py36
-
+  - os: linux
+    python: '2.7'
+    sudo: required
+    dist: xenial
+    env:
+    - TOX_ENV=py27
+  - os: linux
+    python: '3.5'
+    sudo: required
+    dist: xenial
+    env:
+    - TOX_ENV=py35
+  - os: linux
+    python: '3.6'
+    sudo: required
+    dist: xenial
+    env:
+    - TOX_ENV=py36
 install:
 - pip install tox
-- sudo apt-get --yes install snapd
 - sudo snap install ipfs
-
 script:
-  - /snap/bin/ipfs daemon --init --offline &
-  - tox -e $TOX_ENV
+- "/snap/bin/ipfs daemon --init --offline &"
+- tox -e $TOX_ENV
+before_deploy:
+- git clean -xfd
+- docker run --rm -v `pwd`:/io quay.io/pypa/manylinux1_x86_64 $PRE_CMD /io/.travis/build-wheels.sh
+  $TOX_ENV
+deploy:
+  provider: releases
+  api_key:
+    secure: CTO7kiWKLper/nJU093pp796P6MhV2IPz4M2Ws0//YOqU2gKZalyGmAdJtqsFk0+eZthnOp0GQzuSJYpN0+jOx3IU+SInnMg7HdLooyfLxgjDri9xOMBtTiCzSbY77NnLKNk4Nj8idb3Gfjp0F+/5TIRlpInTZ7iYGoG1ZYM/kCyBiTkzDd8tO1LBKhWBad3h3bv099OcmoYT7GETuS9LMmUYJLOe/aotOfOhSttNxYIIIY2RmjFQjWBZCAWPx9P8PnTdhDmrMQL9kRBz+z9/E+ikaaMgtx9QTsF75mZn1qix0+a0LwvRaXKCzYCZ7KGUaSs/npIrBbtXxxA7wK4GFTGb2ERpJOzp4MGzwLiToQlNOHZ48F2N3RgQVL0v+rfvGjt14csWRA21jfrvP2yk4G8lrHZsVxdBeMyPw8/4EnFm307zZbd8LY21byz2K9450mzExLGTx+0AWKQGyygT6PPOXYsNqxC5XEMNZDKTknaGQ1RjiZwRnZAq9quk4KNNmfbgRnuEVKcK0SXeudq3wRwbyA5jT/cYaScfBAdhAgge6tto9aEss+mUEEhm1ZmCxSAfTRKJgE3+ug4npTSSb0KLdGWW4V+ygQ2t+kA9G+1j7U01CGG3jY7aPc/mnJF7Sb2XP0+PNS9eLZpXa6rlJ/1ieMSqppuvvgQgHmKHVs=
+  file_glob: true
+  file: dist/sourmash*.whl
+  skip_cleanup: true
+  on:
+    tags: true

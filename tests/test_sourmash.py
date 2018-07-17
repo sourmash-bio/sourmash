@@ -14,8 +14,8 @@ import csv
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 from sourmash_lib import MinHash
-from sourmash_lib.sbt import SBT
-from sourmash_lib.sbtmh import SigLeaf
+from sourmash_lib.sbt import SBT, Node
+from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -133,7 +133,6 @@ def test_do_sourmash_compute_output_and_name_valid_file():
         assert 'calculated 1 signatures for 4 sequences taken from 3 files' in err
 
         # is it valid json?
-        import json
         with open(sigfile, 'r') as f:
             data = json.load(f)
 
@@ -636,6 +635,17 @@ def test_do_compare_quiet():
         assert not out
         assert not err
 
+
+def test_do_traverse_directory_compare():
+    import numpy
+    with utils.TempDirectory() as location:
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', '--traverse-directory',
+                                            '-k 21', '--dna', utils.get_test_data('compare')],
+                                           in_directory=location)
+        print(out)
+        assert 'genome-s10.fa.gz' in out
+        assert 'genome-s11.fa.gz' in out
 
 def test_do_compare_output_csv():
     with utils.TempDirectory() as location:
@@ -1238,6 +1248,56 @@ def test_do_sourmash_sbt_search_output():
         assert 'short2.fa' in output
 
 
+# check against a bug in sbt search triggered by incorrect max Jaccard
+# calculation.
+def test_do_sourmash_sbt_search_check_bug():
+    with utils.TempDirectory() as location:
+        # mins: 431
+        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+
+        # mins: 6264
+        testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, 'zzz'],
+                                           in_directory=location)
+        assert '1 matches:' in out
+
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        assert tree.nodes[0].metadata['min_n_below'] == 431
+
+
+def test_do_sourmash_sbt_search_empty_sig():
+    with utils.TempDirectory() as location:
+        # mins: 431
+        testdata1 = utils.get_test_data('sbt-search-bug/nano.sig')
+
+        # mins: 0
+        testdata2 = utils.get_test_data('sbt-search-bug/empty.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz', '-k', '31',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', testdata1, 'zzz'],
+                                           in_directory=location)
+        assert '1 matches:' in out
+
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        assert tree.nodes[0].metadata['min_n_below'] == 1
+
+
 def test_do_sourmash_sbt_move_and_search_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -1256,7 +1316,6 @@ def test_do_sourmash_sbt_move_and_search_output():
 
         print(out)
 
-        import json
         with open(os.path.join(location, 'zzz.sbt.json')) as fp:
             d = json.load(fp)
             assert d['storage']['args']['path'] == '.sbt.zzz'
@@ -2346,7 +2405,7 @@ def test_gather():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_csv():
@@ -2435,7 +2494,7 @@ def test_gather_multiple_sbts():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_sbt_and_sigs():
@@ -2470,7 +2529,7 @@ def test_gather_sbt_and_sigs():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_file_output():
@@ -2505,7 +2564,7 @@ def test_gather_file_output():
 
         print(out)
         print(err)
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
         with open(os.path.join(location, 'foo.out')) as f:
             output = f.read()
             print((output,))
@@ -2552,9 +2611,10 @@ def test_gather_metagenome():
 
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
-
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
 
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:
@@ -2580,8 +2640,10 @@ def test_gather_metagenome_traverse():
 
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert '4.7 Mbp       0.5%    1.5%      NC_011294.1 Salmonella enterica subsp...' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
 def test_gather_metagenome_output_unassigned():
@@ -2601,7 +2663,8 @@ def test_gather_metagenome_output_unassigned():
 
         assert 'found 1 matches total' in out
         assert 'the recovered matches hit 33.2% of the query' in out
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
 
         # now examine unassigned
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
@@ -2613,9 +2676,8 @@ def test_gather_metagenome_output_unassigned():
 
         print(out)
         print(err)
-        assert '4.9 Mbp      33.2%  100.0%      NC_003198.1' not in out
-        assert '1.3 Mbp      13.6%   28.2%      NC_011294.1 Salmonella enterica subsp...' in out
-
+        assert all(('1.3 Mbp       13.6%   28.2%' in out,
+                'NC_011294.1' in out))
 
 def test_gather_metagenome_downsample():
     with utils.TempDirectory() as location:
@@ -2642,9 +2704,10 @@ def test_gather_metagenome_downsample():
 
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
-        assert '5.2 Mbp      32.9%  100.0%      NC_003198.1 Salmonella enterica subsp...' in out
-        assert all(('4.1 Mbp       0.6%    2.4%' in out,
-                    '4.1 Mbp       4.4%   17.1%' in out))
+        assert all(('5.2 Mbp       32.9%  100.0%' in out,
+                'NC_003198.1' in out))
+        assert all(('4.1 Mbp        0.6%    2.4%' in out,
+                    '4.1 Mbp        4.4%   17.1%' in out))
 
 
 def test_gather_query_downsample():
@@ -2663,7 +2726,8 @@ def test_gather_query_downsample():
         print(err)
 
         assert 'loaded 12 signatures' in err
-        assert '4.9 Mbp     100.0%  100.0%      NC_003197.2' in out
+        assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                'NC_003197.2' in out))
 
 
 def test_gather_save_matches():
@@ -2756,7 +2820,7 @@ def test_gather_deduce_ksize():
         print(out)
         print(err)
 
-        assert '0.9 kbp     100.0%  100.0%' in out
+        assert '0.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_deduce_moltype():
@@ -2792,7 +2856,7 @@ def test_gather_deduce_moltype():
         print(out)
         print(err)
 
-        assert '1.9 kbp     100.0%  100.0%' in out
+        assert '1.9 kbp      100.0%  100.0%' in out
 
 
 def test_gather_abund_1_1():
@@ -2816,8 +2880,8 @@ def test_gather_abund_1_1():
         print(out)
         print(err)
 
-        assert '49.6%   78.5%      tests/test-data/genome-s10.fa.gz' in out
-        assert '50.4%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert '49.6%   78.5%       1.8    tests/test-data/genome-s10.fa.gz' in out
+        assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
         assert 'genome-s12.fa.gz' not in out
 
 
@@ -2842,8 +2906,8 @@ def test_gather_abund_10_1():
 
         print(out)
         print(err)
-        assert '91.0%  100.0%      tests/test-data/genome-s10.fa.gz' in out
-        assert '9.0%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
+        assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
         assert 'genome-s12.fa.gz' not in out
 
         # check the calculations behind the above output by looking into
@@ -2896,8 +2960,8 @@ def test_gather_abund_10_1_ignore_abundance():
 
         print(out)
         print(err)
-        assert '57.2%  100.0%      tests/test-data/genome-s10.fa.gz' in out
-        assert '42.8%   80.0%      tests/test-data/genome-s11.fa.gz' in out
+        assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
+        assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
         assert 'genome-s12.fa.gz' not in out
 
 
@@ -3173,6 +3237,32 @@ def test_storage_convert_fsstorage_newpath():
         assert all(n1[1].name == n2[1].name
                    for (n1, n2) in zip(sorted(original.nodes.items()),
                                        sorted(identity.nodes.items())))
+
+
+def test_migrate():
+    with utils.TempDirectory() as location:
+        testdata = utils.get_test_data('v3.sbt.json')
+        shutil.copyfile(testdata, os.path.join(location, 'v3.sbt.json'))
+        shutil.copytree(os.path.join(os.path.dirname(testdata), '.sbt.v3'),
+                        os.path.join(location, '.sbt.v3'))
+        testsbt = os.path.join(location, 'v3.sbt.json')
+
+        original = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        status, out, err = utils.runscript('sourmash', ['migrate', testsbt],
+                                           in_directory=location)
+
+        identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
+
+        assert len(original.nodes) == len(identity.nodes)
+        assert all(n1[1].name == n2[1].name
+                   for (n1, n2) in zip(sorted(original.nodes.items()),
+                                       sorted(identity.nodes.items())))
+
+        assert "this is an old index version" not in err
+        assert all('min_n_below' in node.metadata
+                       for node in identity.nodes.values()
+                       if isinstance(node, Node))
 
 
 def test_license_cc0():

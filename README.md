@@ -34,14 +34,12 @@ sourmash is a product of the
 
 ## Installation
 
-We currently recommend installing the 2.0 pre-release series directly
-from GitHub.
-
+We currently recommend installing the 2.0 pre-release series.
 You can use pip to do that like so:
 
-    pip install https://github.com/dib-lab/sourmash/archive/master.zip
+    pip install --pre sourmash
 
-sourmash runs under both Python 2.7.x and Python 3.5.  The base
+sourmash runs under both Python 2.7.x and Python 3.5+.  The base
 requirements are screed and ijson, together with a C++ development
 environment and the CPython development headers and libraries (for the
 C++ extension).
@@ -50,9 +48,11 @@ The comparison code (`sourmash compare`) uses numpy, and the plotting
 code uses matplotlib and scipy, but most of the code is usable without
 these.
 
+For `search` and `gather` you also need `khmer` version 2.1+.
+
 ### Installation with conda
 
-Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install  sourmash by running:
+Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install sourmash by running:
 
 ```bash
 $ conda create -n sourmash_env sourmash python=3.6.4
@@ -85,4 +85,4 @@ Please see [the developer notes](doc/developer.md) for more information.
 ----
 
 CTB
-Feb 2018
+June 2018

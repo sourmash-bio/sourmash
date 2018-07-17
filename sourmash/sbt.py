@@ -49,12 +49,18 @@ import json
 import math
 import os
 from random import randint, random
+import sys
 from tempfile import NamedTemporaryFile
 
 import khmer
 
+try:
+    load_nodegraph = khmer.load_nodegraph
+except AttributeError:
+    load_nodegraph = khmer.Nodegraph.load
+
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
-from .logging import error, notify
+from .logging import error, notify, debug
 
 
 STORAGES = {
@@ -221,7 +227,9 @@ class SBT(object):
             if c.pos in self.missing_nodes or isinstance(c.node, Leaf):
                 if c.node is None:
                     self._rebuild_node(c.pos)
-                self.nodes[c.pos].update(node)
+            c_node = self.nodes[c.pos]
+            if c_node is not None:
+                c_node.update(node)
         self.missing_nodes.remove(pos)
 
 
@@ -285,7 +293,7 @@ class SBT(object):
         node = self.nodes.get(cd, None)
         return NodePos(cd, node)
 
-    def save(self, path, storage=None, sparseness=0.0):
+    def save(self, path, storage=None, sparseness=0.0, structure_only=False):
         """Saves an SBT description locally and node data to a storage.
 
         Parameters
@@ -299,13 +307,16 @@ class SBT(object):
             How much of the internal nodes should be saved.
             Defaults to 0.0 (save all internal nodes data),
             can go up to 1.0 (don't save any internal nodes data)
+        structure_only: boolean
+            Write only the index schema and metadata, but not the data.
+            Defaults to False (save data too)
 
         Returns
         -------
         str
             full path to the new SBT description
         """
-        version = 3
+        version = 4
 
         if path.endswith('.sbt.json'):
             path = path[:-9]
@@ -348,14 +359,22 @@ class SBT(object):
                 'filename': os.path.basename(node.name),
                 'name': node.name
             }
+
+            try:
+                node.metadata.pop('max_n_below')
+            except (AttributeError, KeyError):
+                pass
+
             data['metadata'] = node.metadata
 
-            # trigger data loading before saving to the new place
-            node.data
+            if structure_only is False:
+                # trigger data loading before saving to the new place
+                node.data
 
-            node.storage = storage
+                node.storage = storage
 
-            data['filename'] = node.save(data['filename'])
+                data['filename'] = node.save(data['filename'])
+
             structure[i] = data
 
             notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
@@ -368,7 +387,7 @@ class SBT(object):
         return fn
 
     @classmethod
-    def load(cls, location, leaf_loader=None, storage=None):
+    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """Load an SBT description from a file.
 
         Parameters
@@ -395,6 +414,7 @@ class SBT(object):
             1: cls._load_v1,
             2: cls._load_v2,
             3: cls._load_v3,
+            4: cls._load_v4,
         }
 
         # @CTB hack: check to make sure khmer Nodegraph supports the
@@ -421,10 +441,11 @@ class SBT(object):
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage)
+        return loaders[version](jnodes, leaf_loader, dirname, storage,
+                                print_version_warning)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -455,7 +476,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -487,7 +508,7 @@ class SBT(object):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -524,30 +545,118 @@ class SBT(object):
         # TODO: this might not be true with combine...
         tree.next_node = max_node
 
-        tree._fill_max_n_below()
+        if print_version_warning:
+            error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+            error("WARNING: proceeding with execution, but it will take longer to finish!")
+        tree._fill_min_n_below()
 
         return tree
 
-    def _fill_max_n_below(self):
-        for i, n in self.nodes.items():
-            if isinstance(n, Leaf):
-                parent = self.parent(i)
-                if parent.pos not in self.missing_nodes:
-                    max_n_below = parent.node.metadata.get('max_n_below', 0)
-                    max_n_below = max(len(n.data.minhash.get_mins()),
-                                      max_n_below)
-                    parent.node.metadata['max_n_below'] = max_n_below
+    @classmethod
+    def _load_v4(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
-                    current = parent
-                    parent = self.parent(parent.pos)
-                    while parent and parent.pos not in self.missing_nodes:
-                        max_n_below = parent.node.metadata.get('max_n_below', 0)
-                        max_n_below = max(current.node.metadata['max_n_below'],
-                                          max_n_below)
-                        parent.node.metadata['max_n_below'] = max_n_below
-                        current = parent
-                        parent = self.parent(parent.pos)
+        if not nodes:
+            raise ValueError("Empty tree!")
 
+        sbt_nodes = defaultdict(lambda: None)
+
+        klass = STORAGES[info['storage']['backend']]
+        if info['storage']['backend'] == "FSStorage":
+            storage = FSStorage(dirname, info['storage']['args']['path'])
+        elif storage is None:
+            storage = klass(**info['storage']['args'])
+
+        factory = GraphFactory(*info['factory']['args'])
+
+        max_node = 0
+        for k, node in nodes.items():
+            if node is None:
+                continue
+
+            if 'internal' in node['name']:
+                node['factory'] = factory
+                sbt_node = Node.load(node, storage)
+            else:
+                sbt_node = leaf_loader(node, storage)
+
+            sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
+
+        tree = cls(factory, d=info['d'], storage=storage)
+        tree.nodes = sbt_nodes
+        tree.missing_nodes = {i for i in range(max_node)
+                                if i not in sbt_nodes}
+        # TODO: this might not be true with combine...
+        tree.next_node = max_node
+
+        return tree
+
+    def _fill_min_n_below(self):
+        """\
+        Propagate the smallest hash size below each node up the tree from
+        the leaves.
+        """
+        def fill_min_n_below(node, *args, **kwargs):
+            original_min_n_below = node.metadata.get('min_n_below', sys.maxsize)
+            min_n_below = original_min_n_below
+
+            children = kwargs['children']
+            for child in children:
+                if child.node is not None:
+                    if isinstance(child.node, Leaf):
+                        min_n_below = min(len(child.node.data.minhash), min_n_below)
+                    else:
+                        child_n = child.node.metadata.get('min_n_below', sys.maxsize)
+                        min_n_below = min(child_n, min_n_below)
+
+            if min_n_below == 0:
+                min_n_below = 1
+
+            node.metadata['min_n_below'] = min_n_below
+            return original_min_n_below != min_n_below
+
+        self._fill_up(fill_min_n_below)
+
+    def _fill_up(self, search_fn, *args, **kwargs):
+        visited, queue = set(), [i[0] for i in reversed(sorted(self._leaves()))]
+        debug("started filling up")
+        processed = 0
+        while queue:
+            node_p = queue.pop(0)
+
+            parent = self.parent(node_p)
+            if parent is None:
+                # we are in the root, no more nodes available to search
+                assert len(queue) == 0
+                return
+
+            was_missing = False
+            if parent.node is None:
+                if parent.pos in self.missing_nodes:
+                    self._rebuild_node(parent.pos)
+                    parent = self.parent(node_p)
+                    was_missing = True
+                else:
+                    continue
+
+            siblings = self.children(parent.pos)
+
+            if node_p not in visited:
+                visited.add(node_p)
+                for sibling in siblings:
+                    visited.add(sibling.pos)
+                    try:
+                        queue.remove(sibling.pos)
+                    except ValueError:
+                        pass
+
+                if search_fn(parent.node, children=siblings, *args) or was_missing:
+                    queue.append(parent.pos)
+
+            processed += 1
+            if processed % 100 == 0:
+                debug("processed {}, in queue {}", processed, len(queue), sep='\r')
 
     def print_dot(self):
         print("""
@@ -681,7 +790,7 @@ class Node(object):
                 with NamedTemporaryFile(suffix=".gz") as f:
                     f.write(data)
                     f.file.flush()
-                    self._data = khmer.load_nodegraph(f.name)
+                    self._data = load_nodegraph(f.name)
         return self._data
 
     @data.setter
@@ -699,9 +808,11 @@ class Node(object):
 
     def update(self, parent):
         parent.data.update(self.data)
-        max_n_below = max(parent.metadata.get('max_n_below', 0),
-                          self.metadata.get('max_n_below'))
-        parent.metadata['max_n_below'] = max_n_below
+        min_n_below = min(parent.metadata.get('min_n_below', sys.maxsize),
+                          self.metadata.get('min_n_below'))
+        if min_n_below == 0:
+            min_n_below = 1
+        parent.metadata['min_n_below'] = min_n_below
 
 
 class Leaf(object):
@@ -732,7 +843,7 @@ class Leaf(object):
             with NamedTemporaryFile(suffix=".gz") as f:
                 f.write(data)
                 f.file.flush()
-                self._data = khmer.load_nodegraph(f.name)
+                self._data = load_nodegraph(f.name)
         return self._data
 
     @data.setter

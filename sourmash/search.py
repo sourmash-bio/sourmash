@@ -80,15 +80,16 @@ def search_databases(query, databases, threshold, do_containment, best_only):
 
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, filename, name, md5, leaf')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
     orig_abunds = { k: 1 for k in orig_mins }
 
-    # do we pay attention to abundances?o
+    # do we pay attention to abundances?
     if orig_query.minhash.track_abundance and not ignore_abundance:
+        import numpy as np
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
     # calculate the band size/resolution R for the genome
@@ -193,8 +194,13 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
                / sum_abunds
-        average_abund = sum((orig_abunds[k] for k in intersect_mins)) \
-               / len(intersect_mins)
+
+        intersect_abunds = list(sorted(orig_abunds[k] for k in intersect_mins))
+        average_abund, median_abund, std_abund = 0, 0, 0
+        if orig_query.minhash.track_abundance and not ignore_abundance:
+            average_abund = np.mean(intersect_abunds)
+            median_abund = np.median(intersect_abunds)
+            std_abund = np.std(intersect_abunds)
 
         # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
@@ -203,6 +209,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               f_unique_to_query=f_unique_to_query,
                               f_unique_weighted=f_unique_weighted,
                               average_abund=average_abund,
+                              median_abund=median_abund,
+                              std_abund=std_abund,
                               filename=filename,
                               md5=best_leaf.md5sum(),
                               name=best_leaf.name(),
