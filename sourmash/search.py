@@ -5,7 +5,7 @@ import sys
 from .logging import notify, error
 from .signature import SourmashSignature
 from .sbtmh import search_minhashes, search_minhashes_containment
-from .sbtmh import SearchMinHashesFindBest, SearchMinHashesFindBestIgnoreMaxHash
+from .sbtmh import SearchMinHashesFindBest, GatherMinHashesFindBestIgnoreMaxHash
 from ._minhash import get_max_hash_for_scaled
 
 
@@ -105,20 +105,20 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             # search a tree
             if is_sbt:
                 tree = sbt_or_siglist
-                search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+                search_fn = GatherMinHashesFindBestIgnoreMaxHash().search
 
                 for leaf in tree.find(search_fn, query, 0.0):
                     leaf_e = leaf.data.minhash
-                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
-                    if similarity > 0.0:
-                        results.append((similarity, leaf.data))
+                    ctn = query.minhash.containment_ignore_maxhash(leaf_e)
+                    if ctn > 0.0:
+                        results.append((ctn, leaf.data))
 
             # search a signature
             else:
                 for ss in sbt_or_siglist:
-                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
-                    if similarity > 0.0:
-                        results.append((similarity, ss))
+                    ctn = query.minhash.containment_ignore_maxhash(ss.minhash)
+                    if ctn > 0.0:
+                        results.append((ctn, ss))
 
         if not results:
             return None, None, None

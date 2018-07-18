@@ -366,7 +366,7 @@ cdef class MinHash(object):
         """
         return self.count_common(other) / len(self.get_mins())
 
-    def similarity_ignore_maxhash(self, MinHash other):
+    def containment_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
         if not a:
             return 0.0
