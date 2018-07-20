@@ -57,8 +57,7 @@ class SigLeaf(Leaf):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
         min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
-        min_n_below = min(len(self.data.minhash.get_mins()),
-                          min_n_below)
+        min_n_below = min(len(self.data.minhash), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
@@ -111,7 +110,6 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
-    mins = sig.minhash.get_mins()
     score = 0
 
     if isinstance(node, SigLeaf):
@@ -127,7 +125,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
                 raise
 
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, mins)
+        score = _max_jaccard_underneath_internal_node(node, sig.minhash.get_mins())
 
     if results is not None:
         results[node.name] = score
@@ -144,7 +142,6 @@ class SearchMinHashesFindBest(object):
         self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
-        mins = sig.minhash.get_mins()
         score = 0
 
         if isinstance(node, SigLeaf):
@@ -159,7 +156,7 @@ class SearchMinHashesFindBest(object):
                 else:
                     raise
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, mins)
+            score = _max_jaccard_underneath_internal_node(node, sig.minhash.get_mins())
 
         if results is not None:
             results[node.name] = score
@@ -177,8 +174,6 @@ class SearchMinHashesFindBest(object):
 
 def search_minhashes_containment(node, sig, threshold,
                                  results=None, downsample=True):
-    mins = sig.minhash.get_mins()
-
     if isinstance(node, SigLeaf):
         try:
             matches = node.data.minhash.count_common(sig.minhash)
@@ -192,12 +187,12 @@ def search_minhashes_containment(node, sig, threshold,
                 raise
 
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        matches = sum(1 for value in mins if node.data.get(value))
+        matches = sum(1 for value in sig.minhash.get_mins() if node.data.get(value))
 
     if results is not None:
-        results[node.name] = float(matches) / len(mins)
+        results[node.name] = float(matches) / len(sig.minhash)
 
-    if len(mins) and float(matches) / len(mins) >= threshold:
+    if len(sig.minhash) and float(matches) / len(sig.minhash) >= threshold:
         return 1
     return 0
 
@@ -207,8 +202,6 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
-        mins = sig.minhash.get_mins()
-
         if isinstance(node, SigLeaf):
             max_scaled = max(node.data.minhash.scaled, sig.minhash.scaled)
 
@@ -216,23 +209,23 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
             mh2 = sig.minhash.downsample_scaled(max_scaled)
             matches = mh1.count_common(mh2)
         else:  # Node or Leaf, Nodegraph by minhash comparison
-            matches = sum(1 for value in mins if node.data.get(value))
+            matches = sum(1 for value in sig.minhash.get_mins() if node.data.get(value))
 
         score = 0
-        if not len(mins):
+        if not len(sig.minhash):
             return 0
 
-        score = float(matches) / len(mins)
+        score = float(matches) / len(sig.minhash)
 
         if results is not None:
             results[node.name] = score
 
         if score >= threshold:
             # have we done better than this? if yes, truncate.
-            if float(matches) / len(mins) > self.best_match:
+            if float(matches) / len(sig.minhash) > self.best_match:
                 # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
-                    self.best_match = float(matches) / len(mins)
+                    self.best_match = float(matches) / len(sig.minhash)
                 return 1
 
         return 0
