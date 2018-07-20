@@ -93,7 +93,8 @@ def _max_jaccard_underneath_internal_node(node, hashes):
         return 0.0
 
     # count the maximum number of hash matches beneath this node
-    matches = sum(1 for value in hashes if node.data.get(value))
+    get = node.data.get
+    matches = sum(1 for value in hashes if get(value))
 
     # get the size of the smallest collection of hashes below this point
     min_n_below = node.metadata.get('min_n_below', -1)
@@ -192,7 +193,8 @@ def search_minhashes_containment(node, sig, threshold,
                 raise
 
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        matches = sum(1 for value in mins if node.data.get(value))
+        get = node.data.get
+        matches = sum(1 for value in mins if get(value))
 
     if results is not None:
         results[node.name] = float(matches) / len(mins)
@@ -216,7 +218,8 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
             mh2 = sig.minhash.downsample_scaled(max_scaled)
             matches = mh1.count_common(mh2)
         else:  # Node or Leaf, Nodegraph by minhash comparison
-            matches = sum(1 for value in mins if node.data.get(value))
+            get = node.data.get
+            matches = sum(1 for value in mins if get(value))
 
         score = 0
         if not len(mins):
