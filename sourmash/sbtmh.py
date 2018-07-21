@@ -204,6 +204,7 @@ def search_minhashes_containment(node, sig, threshold,
     return 0
 
 
+STORE = {}
 class GatherMinHashesFindBestIgnoreMaxHash(object):
     def __init__(self, initial_best_match=0.0):
         self.best_match = initial_best_match
@@ -222,8 +223,23 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
             mh2 = sig.minhash.downsample_scaled(max_scaled)
             matches = mh1.count_common(mh2)
         else:  # Nodegraph by minhash comparison
-            get = node.data.get
-            matches = sum(1 for value in mins if get(value))
+            g = node.data.get
+            if node in STORE:
+                d = STORE.get(node)
+                matches = sum(1 for value in mins if d[value])
+            elif len(STORE) < 100:
+                d = STORE.get(node, {})
+                STORE[node] = d
+
+                matches = 0
+                for value in mins:
+                    rez = g(value)
+                    d[value] = rez
+                    if rez:
+                        matches += 1
+                    d[value] = rez
+            else:
+                matches = sum(1 for value in mins if g(value))
 
         score = float(matches) / len(mins)
 
