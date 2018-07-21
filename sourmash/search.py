@@ -92,7 +92,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         import numpy as np
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
-    # calculate the band size/resolution R for the genome
+    # store the scaled value for the query
     orig_scaled = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
