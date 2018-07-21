@@ -232,7 +232,7 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
             results[node.name] = score
 
         if score >= threshold:
-            # have we done better than this? if yes, truncate searches below.
+            # have we done better than this? if no, truncate searches below.
             if score >= self.best_match:
                 # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
