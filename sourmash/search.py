@@ -93,7 +93,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
     # calculate the band size/resolution R for the genome
-    R_metagenome = orig_query.minhash.scaled
+    orig_scaled = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query):
@@ -141,7 +141,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     new_mins = query.minhash.get_hashes()
     query = build_new_signature(new_mins, orig_query)
 
-    R_comparison = 0
+    cmp_scaled = 0
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
@@ -157,15 +157,15 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             error('Please prepare database of sequences with --scaled')
             sys.exit(-1)
 
-        R_genome = best_leaf.minhash.scaled
+        match_scaled = best_leaf.minhash.scaled
 
-        # pick the highest R / lowest resolution
-        R_comparison = max(R_comparison, R_metagenome, R_genome)
+        # pick the highest scaled / lowest resolution
+        cmp_scaled = max(cmp_scaled, match_scaled, orig_scaled)
 
         # eliminate mins under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        new_max_hash = get_max_hash_for_scaled(R_comparison)
+        new_max_hash = get_max_hash_for_scaled(cmp_scaled)
         query_mins = set([ i for i in query_mins if i < new_max_hash ])
         found_mins = set([ i for i in found_mins if i < new_max_hash ])
         orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
@@ -174,7 +174,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
-        intersect_bp = R_comparison * len(intersect_orig_mins)
+        intersect_bp = cmp_scaled * len(intersect_orig_mins)
 
         if intersect_bp < threshold_bp:   # hard cutoff for now
             notify('found less than {} in common. => exiting',
@@ -187,7 +187,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        orig_mh = orig_query.minhash.downsample_scaled(R_comparison)
+        orig_mh = orig_query.minhash.downsample_scaled(cmp_scaled)
         query_n_mins = len(orig_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
@@ -218,7 +218,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # construct a new query, minus the previous one.
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins, orig_query, R_comparison)
+        query = build_new_signature(query_mins, orig_query, cmp_scaled)
 
         weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
              / sum_abunds
