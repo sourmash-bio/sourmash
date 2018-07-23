@@ -117,6 +117,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                     ctn = query.minhash.containment_ignore_maxhash(leaf_e)
                     if ctn > 0.0:
                         results.append((ctn, leaf.data))
+                        best_ctn_sofar = max(best_ctn_sofar, ctn)
 
             # search a signature
             else:
@@ -124,6 +125,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                     ctn = query.minhash.containment_ignore_maxhash(ss.minhash)
                     if ctn > 0.0:
                         results.append((ctn, ss))
+                        best_ctn_sofar = max(best_ctn_sofar, ctn)
 
         if not results:
             return None, None, None
