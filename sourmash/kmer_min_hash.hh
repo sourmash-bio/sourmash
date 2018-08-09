@@ -174,7 +174,7 @@ public:
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
-            translated = _codon_table.find(codon)
+            std::map<std::string,std::string>::iterator translated = _codon_table.find(codon);
             if (translated != _codon_table.end()) {
                 // "second" is the element mapped to by the codon
                 aa += translated -> second;
