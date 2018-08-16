@@ -9,7 +9,7 @@ from .logging import notify, error
 
 from . import signature as sig
 from .sbt import SBT, Node
-from .sbtmh import SigLeaf
+from .sbtmh import SigLeaf, select_signature
 
 DEFAULT_LOAD_K=31
 
@@ -190,10 +190,10 @@ def check_signatures_are_compatible(query, subject):
 
 
 def check_tree_is_compatible(treename, tree, query, is_similarity_query):
-    leaf = next(iter(tree.leaves()))
-    tree_mh = leaf.data.minhash
-
     query_mh = query.minhash
+
+    leaf = next(iter(tree.leaves()))
+    tree_mh = select_signature(leaf, query).minhash
 
     if tree_mh.ksize != query_mh.ksize:
         error("ksize on tree '{}' is {};", treename, tree_mh.ksize)

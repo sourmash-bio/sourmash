@@ -68,8 +68,7 @@ class SigLeaf(Leaf):
         for v in minhash.get_mins():
             parent.data.count(v)
         min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
-        min_n_below = min(len(self.data.minhash.get_mins()),
-                          min_n_below)
+        min_n_below = min(len(minhash), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1

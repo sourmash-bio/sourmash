@@ -1100,9 +1100,7 @@ def watch(args):
     # check ksize from the SBT we are loading
     ksize = args.ksize
     if ksize is None:
-        leaf = next(iter(tree.leaves()))
-        tree_mh = leaf.data.minhash
-        ksize = tree_mh.ksize
+        ksize = get_ksize(tree)
 
     E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein)
     streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)

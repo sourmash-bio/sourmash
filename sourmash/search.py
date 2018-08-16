@@ -53,7 +53,7 @@ def search_databases(query, databases, threshold, do_containment, best_only):
                 # tree search should always/only return matches above threshold
                 assert similarity >= threshold
 
-                if leaf.data.md5sum() not in found_md5:
+                if leafdata.md5sum() not in found_md5:
                     sr = SearchResult(similarity=similarity,
                                       match_sig=leafdata,
                                       md5=leafdata.md5sum(),
