@@ -886,9 +886,9 @@ def categorize(args):
         search_fn = SearchMinHashesFindBest().search
 
         for leaf in tree.find(search_fn, query, args.threshold):
-            node_sig = select_signature(leaf, query)
-            if node_sig.md5sum() != query.md5sum(): # ignore self.
-                results.append((query.similarity(node_sig), node_sig))
+            leaf_data = select_signature(leaf, query)
+            if leaf_data.md5sum() != query.md5sum(): # ignore self.
+                results.append((query.similarity(leaf_data), leaf_data))
 
         best_hit_sim = 0.0
         best_hit_query_name = ""

@@ -201,8 +201,9 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 
     tree_mh = tree_mh.minhash
 
-    if tree_mh.ksize != query_mh.ksize:
-        error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
+    tree_ksize = get_ksize(tree)
+    if tree_ksize != query_mh.ksize:
+        error("ksize on tree '{}' is {};", treename, tree_ksize)
         error('this is different from query ksize of {}.', query_mh.ksize)
         return 0
 
@@ -229,7 +230,15 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 
 
 def get_ksize(tree):
-    """Walk nodes in `tree` to find out ksize"""
+    """Walk nodes in `tree` to find out ksizes"""
+    try:
+        return tree.nodes[0].data.ksize()
+    except AttributeError:
+        return get_all_ksizes(tree)
+
+
+def get_all_ksizes(tree):
+    """Walk nodes in `tree` to find out all ksizes"""
     ksizes = set()
     for node in tree.nodes.values():
         if isinstance(node, Node):
