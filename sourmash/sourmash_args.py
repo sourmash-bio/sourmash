@@ -193,7 +193,13 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     query_mh = query.minhash
 
     leaf = next(iter(tree.leaves()))
-    tree_mh = select_signature(leaf, query).minhash
+    tree_mh = select_signature(leaf, query)
+    if tree_mh is None:
+        error("tree '{}' is not compatible", treename)
+        error('this is different from query ksize of {}.', query_mh.ksize)
+        return 0
+
+    tree_mh = tree_mh.minhash
 
     if tree_mh.ksize != query_mh.ksize:
         error("ksize on tree '{}' is {};", treename, tree_mh.ksize)

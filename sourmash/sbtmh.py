@@ -121,8 +121,10 @@ def _max_jaccard_underneath_internal_node(node, hashes):
 def select_signature(node, sig):
     if isinstance(node.data, collections.Sequence):
         # TODO: select proper signature
-        query = next(q for q in node.data if q.minhash.ksize == sig.minhash.ksize)
-        return query
+        matches = [q for q in node.data if q.minhash.ksize == sig.minhash.ksize]
+        if matches:
+            return matches[0]
+        return None
     return node.data
 
 
