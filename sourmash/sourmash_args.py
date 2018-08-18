@@ -9,6 +9,7 @@ from .logging import notify, error
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
+from .lca import lca_utils
 
 DEFAULT_LOAD_K=31
 
@@ -221,7 +222,7 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     return 1
 
 
-def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
 
@@ -255,14 +256,30 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
                                             is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((tree, sbt_or_sigfile, True))
+            databases.append((tree, sbt_or_sigfile, 'SBT'))
             notify('loaded SBT {}', sbt_or_sigfile, end='\r')
             n_databases += 1
 
             # done! jump to beginning of main 'for' loop
             continue
         except (ValueError, EnvironmentError):
-            # not an SBT - try as a .sig
+            # not an SBT - try as an LCA
+            pass
+
+        # ok. try loading as an LCA.
+        try:
+            lca_db = lca_utils.LCA_Database()
+            lca_db.load(sbt_or_sigfile)
+
+            ## @CTB check is compatible
+            notify('loaded LCA {}', sbt_or_sigfile, end='\r')
+            n_databases += 1
+
+            databases.append((lca_db, sbt_or_sigfile, 'LCA'))
+
+            continue
+        except (ValueError, TypeError, EnvironmentError):
+            # not an LCA database - try as a .sig
             pass
 
         # not a tree? try loading as a signature.
@@ -277,7 +294,7 @@ def load_sbts_and_sigs(filenames, query, is_similarity_query, traverse=False):
             siglist = filter_compatible_signatures(query, siglist, False)
             siglist = list(siglist)
 
-            databases.append((siglist, sbt_or_sigfile, False))
+            databases.append((siglist, sbt_or_sigfile, 'signature'))
             notify('loaded {} signatures from {}', len(siglist),
                    sbt_or_sigfile, end='\r')
             n_signatures += len(siglist)

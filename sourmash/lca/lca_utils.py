@@ -146,6 +146,7 @@ class LCA_Database(object):
         self.scaled = None
         self.signatures_to_lineage_id = None
         self.signatures_to_name = None
+        self.db_name = None
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -203,6 +204,7 @@ class LCA_Database(object):
             lineage_id_to_signature[v] = k
         self.lineage_id_to_signature = lineage_id_to_signature
         self.lineage_id_counts = lineage_id_counts
+        self.db_name = db_name
 
     def save(self, db_name):
         "Save to a JSON file."
@@ -265,6 +267,51 @@ class LCA_Database(object):
             x.append(lineage)
 
         return x
+
+    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
+        """
+        Do a Jaccard similarity or containment search.
+        """
+        # make sure we're looking at the same scaled value as database
+        if self.scaled > minhash.scaled:
+            minhash = minhash.downsample_scaled(self.scaled)
+        elif self.scaled < minhash.scaled and not ignore_scaled:
+            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+
+        query_mins = set(minhash.get_mins())
+
+        md5_to_name = {}
+        md5_to_counts = {}
+
+        c = Counter()
+        for hashval in query_mins:
+            lineage_id_list = self.hashval_to_lineage_id.get(hashval, [])
+            for lid in lineage_id_list:
+                md5 = self.lineage_id_to_signature[lid]
+                md5_to_name[md5] = self.signature_to_name[md5]
+                md5_to_counts[md5] = self.lineage_id_counts[lid]
+                c[md5] += 1
+
+        for md5, count in c.items():
+            name = md5_to_name[md5]
+            match_size = md5_to_counts[md5]
+
+            if containment:
+                score = count / len(query_mins)
+            else:
+                score = count / (len(query_mins) + match_size - count)
+
+            if score >= threshold:
+                # reconstruct signature... ugh.
+                from .. import SourmashSignature
+                lid = self.signature_to_lineage_id[md5]
+                lineage_mins = [ k for (k, v) in self.hashval_to_lineage_id.items() if lid in v ]
+                match_mh = minhash.copy_and_clear()
+                match_mh.add_many(lineage_mins)
+
+                match_sig = SourmashSignature(match_mh, name=name)
+
+                yield score, match_sig, md5, self.db_name, name
 
 
 def load_databases(filenames, scaled=None):

@@ -774,7 +774,7 @@ def search(args):
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases, query,
+    databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                  not args.containment,
                                                  args.traverse_directory)
 
@@ -959,7 +959,7 @@ def gather(args):
         sys.exit(-1)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases, query, False,
+    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                  args.traverse_directory)
 
     if not len(databases):
