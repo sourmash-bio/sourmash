@@ -278,6 +278,17 @@ class LCA_Database(object):
         elif self.scaled < minhash.scaled and not ignore_scaled:
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
+        if not hasattr(self, 'signatures'):
+            print('XXX creating')
+            sigd = defaultdict(minhash.copy_and_clear)
+
+            for (k, v) in self.hashval_to_lineage_id.items():
+                for vv in v:
+                    sigd[vv].add_hash(k)
+
+            self.signatures = sigd
+            print('YYY done extracted', len(sigd))
+
         query_mins = set(minhash.get_mins())
 
         md5_to_name = {}
@@ -305,10 +316,7 @@ class LCA_Database(object):
                 # reconstruct signature... ugh.
                 from .. import SourmashSignature
                 lid = self.signature_to_lineage_id[md5]
-                lineage_mins = [ k for (k, v) in self.hashval_to_lineage_id.items() if lid in v ]
-                match_mh = minhash.copy_and_clear()
-                match_mh.add_many(lineage_mins)
-
+                match_mh = self.signatures[lid]
                 match_sig = SourmashSignature(match_mh, name=name)
 
                 yield score, match_sig, md5, self.db_name, name
