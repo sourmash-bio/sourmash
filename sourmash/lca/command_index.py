@@ -139,32 +139,46 @@ def index(args):
                                                use_headers=not args.no_headers,
                                                force=args.force)
 
-    # convert lineages to numbers.
-    next_lineage_index = 0
+    # convert identities to numbers.
+    next_index = 0
     lineage_dict = {}
+    ident_to_idx = {}
 
-    assignments_idx = {}
-    lineage_to_idx = {}
+    next_lid = 0
+    lid_to_lineage = {}
+    lineages_to_lid = {}
     for (ident, lineage) in assignments.items():
-        idx = lineage_to_idx.get(lineage)
-        if idx is None:
-            idx = next_lineage_index
-            next_lineage_index += 1
+        idx = ident_to_idx.get(ident)
+        assert idx is None
 
-            lineage_dict[idx] = lineage
-            lineage_to_idx[lineage] = idx
+        idx = next_index
+        next_index += 1
 
-        assignments_idx[ident] = idx
+        # name -> index
+        ident_to_idx[ident] = idx
 
-    notify('{} distinct lineages in spreadsheet out of {} rows',
+        # lineage -> id
+        lid = lineages_to_lid.get(lineage)
+        if lid is None:
+            lid = next_lid
+            next_lid += 1
+
+            lineages_to_lid[lineage] = lid
+            lid_to_lineage[lid] = lineage
+        
+        # index -> lineage id
+        lineage_dict[idx] = lid
+
+    notify('{} distinct identities in spreadsheet out of {} rows',
            len(lineage_dict), num_rows)
+    notify('{} distinct lineages in spreadsheet out of {} rows',
+           len(set(lineage_dict.values())), num_rows)
 
-    # load signatures, construct index of hashvals to lineages
-    hashval_to_lineage = defaultdict(set)
-    md5_to_lineage = {}
+    # load signatures, construct index of hashvals to ident
+    hashval_to_ident = defaultdict(set)
     md5_to_name = {}
 
-    notify('finding signatures...')
+#    notify('finding signatures...')
     if args.traverse_directory:
         yield_all_files = False           # only pick up *.sig files?
         if args.force:
@@ -178,7 +192,8 @@ def index(args):
     total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
-    record_remnants = set(assignments_idx.keys())
+    record_remnants = set(ident_to_idx.keys())
+    record_used_lineages = set()
     for filename in inp_files:
         n += 1
         for sig in load_signatures(filename, ksize=args.ksize):
@@ -186,7 +201,7 @@ def index(args):
             notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
             debug(filename, sig.name())
 
-            if sig.md5sum() in md5_to_lineage:
+            if sig.md5sum() in md5_to_name:
                 notify('\nWARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
                 record_duplicates.add(filename)
                 continue
@@ -195,77 +210,71 @@ def index(args):
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 name = name.split(' ')[0].split('.')[0]
 
+            # store md5 -> name too
+            md5_to_name[sig.md5sum()] = sig.name()
+            
+            # remove from our list of remnant lineages
+            record_remnants.remove(name)
+
+            # downsample to specified scaled; this has the side effect of
+            # making sure they're all at the same scaled value!
+            minhash = sig.minhash.downsample_scaled(args.scaled)
+
+            # connect hashvals to lineage
+            for hashval in minhash.get_mins():
+                hashval_to_ident[hashval].add(name)
+
             # is this one for which we have a lineage assigned?
-            lineage_idx = assignments_idx.get(name)
-            if lineage_idx is None:
-               notify('\nWARNING: no lineage assignment for {}.', name)
-               record_no_lineage.add(name)
-            else:
-                # remove from our list of remnant lineages
-                record_remnants.remove(name)
+            idx = ident_to_idx.get(name)
+            lid = lineage_dict.get(idx)
+            lineage = lid_to_lineage.get(lid)
 
-                # downsample to specified scaled; this has the side effect of
-                # making sure they're all at the same scaled value!
-                minhash = sig.minhash.downsample_scaled(args.scaled)
-
-                # connect hashvals to lineage
-                for hashval in minhash.get_mins():
-                    hashval_to_lineage[hashval].add(lineage_idx)
-
-                # store md5 -> lineage too
-                md5_to_lineage[sig.md5sum()] = lineage_idx
-                md5_to_name[sig.md5sum()] = sig.name()
+            if lineage is None:
+                notify('\nWARNING: no lineage assignment for {}.', name)
+                record_no_lineage.add(name)
+            else:   
+                record_used_lineages.add(lineage)
 
     notify(u'\r\033[K', end=u'')
-    notify('...found {} genomes with lineage assignments!!',
-           len(md5_to_lineage))
-
-    # remove those lineages with no genomes associated
-    assigned_lineages = set(md5_to_lineage.values())
-    lineage_dict_2 = {}
-    for idx in assigned_lineages:
-        lineage_dict_2[idx] = lineage_dict[idx]
-
-    unused_lineages = set(lineage_dict.values()) - set(lineage_dict_2.values())
 
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet',
-           len(lineage_dict_2), len(lineage_dict))
-    lineage_dict = lineage_dict_2
+           len(record_used_lineages), len(set(assignments.values())))
 
-    # now, save!
-    db_outfile = args.lca_db_out
-    if not (db_outfile.endswith('.lca.json') or db_outfile.endswith('.lca.json.gz')):
-        db_outfile += '.lca.json'
-    notify('saving to LCA DB: {}'.format(db_outfile))
+    if 0:
+        # now, save!
+        db_outfile = args.lca_db_out
+        if not (db_outfile.endswith('.lca.json') or db_outfile.endswith('.lca.json.gz')):
+            db_outfile += '.lca.json'
+        notify('saving to LCA DB: {}'.format(db_outfile))
 
-    db = lca_utils.LCA_Database()
-    db.lineage_dict = lineage_dict
-    db.hashval_to_lineage_id = hashval_to_lineage
-    db.ksize = int(args.ksize)
-    db.scaled = int(args.scaled)
-    db.signatures_to_lineage_id = md5_to_lineage
-    db.signatures_to_name = md5_to_name
+        db = lca_utils.LCA_Database()
+        db.lineage_dict = lineage_dict
+        db.hashval_to_lineage_id = hashval_to_lineage
+        db.ksize = int(args.ksize)
+        db.scaled = int(args.scaled)
+        db.signatures_to_lineage_id = md5_to_lineage
+        db.signatures_to_name = md5_to_name
 
-    db.save(db_outfile)
+        db.save(db_outfile)
 
-    if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
-        if record_duplicates:
-            notify('WARNING: {} duplicate signatures.', len(record_duplicates))
-        if record_no_lineage:
-            notify('WARNING: no lineage provided for {} signatures.',
-                   len(record_no_lineage))
-        if record_remnants:
-            notify('WARNING: no signatures for {} lineage assignments.',
-                   len(record_remnants))
-        if unused_lineages:
-            notify('WARNING: {} unused lineages.', len(unused_lineages))
+        if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
+            if record_duplicates:
+                notify('WARNING: {} duplicate signatures.', len(record_duplicates))
+            if record_no_lineage:
+                notify('WARNING: no lineage provided for {} signatures.',
+                       len(record_no_lineage))
+            if record_remnants:
+                notify('WARNING: no signatures for {} lineage assignments.',
+                       len(record_remnants))
+            if unused_lineages:
+                notify('WARNING: {} unused lineages.', len(unused_lineages))
 
-        if args.report:
-            notify("generating a report and saving in '{}'", args.report)
-            generate_report(record_duplicates, record_no_lineage,
-                            record_remnants, unused_lineages, args.report)
-        else:
-            notify('(You can use --report to generate a detailed report.)')
+            if args.report:
+                notify("generating a report and saving in '{}'", args.report)
+                generate_report(record_duplicates, record_no_lineage,
+                                record_remnants, unused_lineages, args.report)
+            else:
+                notify('(You can use --report to generate a detailed report.)')
 
 
 if __name__ == '__main__':
