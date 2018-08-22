@@ -218,7 +218,11 @@ def index(args):
             md5_to_name[sig.md5sum()] = sig.name()
             
             # remove from our list of remnant lineages
-            record_remnants.remove(ident)
+            try:
+                record_remnants.remove(ident)
+            except KeyError:
+                # @CTB
+                pass
 
             # downsample to specified scaled; this has the side effect of
             # making sure they're all at the same scaled value!
