@@ -140,12 +140,15 @@ class LCA_Database(object):
     obj.signatures_to_name: key 'md5sum' => 'name' from original signature
     """
     def __init__(self):
-        self.lineage_dict = None
-        self.hashval_to_lineage_id = None
         self.ksize = None
         self.scaled = None
-        self.signatures_to_lineage_id = None
-        self.signatures_to_name = None
+        
+        self.ident_to_idx = None
+        self.idx_to_lid = None
+        self.lineage_to_lid = None
+        self.lid_to_lineage = None
+        self.hashval_to_idx = None
+    
         self.db_name = None
 
     def load(self, db_name):
@@ -167,43 +170,40 @@ class LCA_Database(object):
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
+            self.ksize = ksize
+            self.scaled = scaled
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
-            lineage_dict_2 = load_d['lineages']
-            lineage_dict = {}
-            for k, v in lineage_dict_2.items():
+            lid_to_lineage_2 = load_d['lid_to_lineage']
+            lid_to_lineage = {}
+            for k, v in lid_to_lineage_2.items():
+                v = dict(v)
                 vv = []
                 for rank in taxlist():
                     name = v.get(rank, '')
                     vv.append(LineagePair(rank, name))
 
-                lineage_dict[int(k)] = tuple(vv)
+                lid_to_lineage[int(k)] = tuple(vv)
+            self.lid_to_lineage = lid_to_lineage
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
-            hashval_to_lineage_id_2 = load_d['hashval_assignments']
-            hashval_to_lineage_id = {}
-            lineage_id_counts = defaultdict(int)
+            hashval_to_idx_2 = load_d['hashval_to_idx']
+            hashval_to_idx = {}
 
-            for k, v in hashval_to_lineage_id_2.items():
-                hashval_to_lineage_id[int(k)] = v
-                for vv in v:
-                    lineage_id_counts[vv] += 1
+            for k, v in hashval_to_idx_2.items():
+                hashval_to_idx[int(k)] = v
+#                for vv in v:
+#                    lineage_id_counts[vv] += 1
+            self.hashval_to_idx = hashval_to_idx
 
-            signatures_to_lineage_id = load_d['signatures_to_lineage']
-            signatures_to_name = load_d.get('signatures_to_name', None)
+            self.ident_to_name = load_d['ident_to_name']
+            self.ident_to_idx = load_d['ident_to_idx']
 
-        self.lineage_dict = lineage_dict
-        self.hashval_to_lineage_id = hashval_to_lineage_id
-        self.ksize = ksize
-        self.scaled = scaled
-        self.signature_to_lineage_id = signatures_to_lineage_id
-        self.signature_to_name = signatures_to_name
-        lineage_id_to_signature = {}
-        for k, v in signatures_to_lineage_id.items():
-            lineage_id_to_signature[v] = k
-        self.lineage_id_to_signature = lineage_id_to_signature
-        self.lineage_id_counts = lineage_id_counts
+            self.idx_to_lid = {}
+            for k, v in load_d['idx_to_lid'].items():
+                self.idx_to_lid[int(k)] = v
+            
         self.db_name = db_name
 
     def save(self, db_name):
@@ -223,15 +223,19 @@ class LCA_Database(object):
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
-            for k, v in self.lineage_dict.items():
+            for k, v in self.lid_to_lineage.items():
                 d[k] = dict([ (vv.rank, vv.name) for vv in v ])
-            save_d['lineages'] = d
+            save_d['lid_to_lineage'] = d
 
             # convert values from sets to lists, so that JSON knows how to save
-            save_d['hashval_assignments'] = \
-               dict((k, list(v)) for (k, v) in self.hashval_to_lineage_id.items())
-            save_d['signatures_to_lineage'] = self.signatures_to_lineage_id
-            save_d['signatures_to_name'] = self.signatures_to_name
+            save_d['hashval_to_idx'] = \
+               dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
+
+            save_d['ident_to_name'] = self.ident_to_name
+            save_d['ident_to_idx'] = self.ident_to_idx
+            save_d['idx_to_lid'] = self.idx_to_lid
+            save_d['lid_to_lineage'] = self.lid_to_lineage
+            
             json.dump(save_d, fp)
 
     def downsample_scaled(self, scaled):
