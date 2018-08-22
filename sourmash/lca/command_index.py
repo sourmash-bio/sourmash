@@ -147,15 +147,24 @@ def index(args):
     next_lid = 0
     lid_to_lineage = {}
     lineage_to_lid = {}
-    for (ident, lineage) in assignments.items():
+
+    def get_ident_index(ident, fail_on_duplicate=False):
+        nonlocal next_index
+
         idx = ident_to_idx.get(ident)
-        assert idx is None
+        if fail_on_duplicate:
+            assert idx is None     # should be no duplicate identities
 
-        idx = next_index
-        next_index += 1
+        if idx is None:
+            idx = next_index
+            next_index += 1
 
-        # name -> index
-        ident_to_idx[ident] = idx
+            ident_to_idx[ident] = idx
+
+        return idx
+
+    def get_lineage_id(lineage):
+        nonlocal next_lid
 
         # lineage -> id
         lid = lineage_to_lid.get(lineage)
@@ -165,6 +174,12 @@ def index(args):
 
             lineage_to_lid[lineage] = lid
             lid_to_lineage[lid] = lineage
+
+        return lid
+
+    for (ident, lineage) in assignments.items():
+        idx = get_ident_index(ident, fail_on_duplicate=True)
+        lid = get_lineage_id(lineage)
         
         # index -> lineage id
         idx_to_lid[idx] = lid
@@ -228,25 +243,22 @@ def index(args):
             # making sure they're all at the same scaled value!
             minhash = sig.minhash.downsample_scaled(args.scaled)
 
-            # connect hashvals to lineage
-            idx = ident_to_idx.get(ident)
-            lineage = None
-            if idx is None:
-                notify('\nWARNING: no entry in spreadsheet for {}.', ident)
-            else:
-                for hashval in minhash.get_mins():
-                    hashval_to_idx[hashval].add(idx)
+            # connect hashvals to identity (and maybe lineage)
+            idx = get_ident_index(ident)
+            lid = idx_to_lid.get(idx)
 
-                # is this one for which we have a lineage assigned?
-                idx = ident_to_idx.get(ident)
-                lid = idx_to_lid.get(idx)
+            lineage = None
+            if lid is not None:
                 lineage = lid_to_lineage.get(lid)
 
-                if lineage is None:
-                    notify('\nWARNING: no lineage assignment for {}.', ident)
-                    record_no_lineage.add(ident)
-                else:   
-                    record_used_lineages.add(lineage)
+            if lineage is None:
+                notify('WARNING: no lineage assignment for {}.', ident)
+                record_no_lineage.add(ident)
+            else:
+                record_used_lineages.add(lineage)
+
+            for hashval in minhash.get_mins():
+                hashval_to_idx[hashval].add(idx)
 
     notify(u'\r\033[K', end=u'')
 
