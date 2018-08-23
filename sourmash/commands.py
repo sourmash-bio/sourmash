@@ -399,14 +399,15 @@ def compare(args):
             D[i][j] = similarity
             D[j][i] = similarity
 
-        if len(siglist) < 30:
+        labeltext.append(E.name())
+
+    if len(siglist) < 30:
+        for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
             name_num = '{}-{}'.format(i, E.name())
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, D[i, :, ],))
-
-        labeltext.append(E.name())
 
     print_results('min similarity in matrix: {:.3f}', numpy.min(D))
 
