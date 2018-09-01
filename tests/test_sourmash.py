@@ -165,6 +165,21 @@ def test_do_sourmash_compute_singleton():
         assert sig.name().endswith('shortName')
 
 
+def test_do_sourmash_compute_10x():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('lung_ptprc.bam')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', '--10x',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'lung_ptprc.bam.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert sig.name().endswith('shortName')
+
+
 def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
