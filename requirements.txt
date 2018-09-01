@@ -9,3 +9,4 @@ sphinx
 alabaster
 recommonmark
 sphinxcontrib-napoleon
+pysam
