@@ -2,6 +2,7 @@ from __future__ import print_function, division
 
 import argparse
 import csv
+import itertools
 import os
 import os.path
 import sys
@@ -13,6 +14,7 @@ from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
+from .tenx import read_10x_folder
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -85,6 +87,8 @@ def compute(args):
                         help="merge all input files into one signature named this")
     parser.add_argument('--name-from-first', action='store_true',
                         help="name the signature generated from each file after the first record in the file (default: False)")
+    parser.add_argument('--10x', action='store_true',
+                        help="Input is 10x single cell output folder (default: False)")
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
@@ -237,6 +241,36 @@ def compute(args):
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
+            elif args['10x']:
+                barcodes, bam_file = read_10x_folder(filename)
+                cell_seqs = {barcode: make_minhashes() for barcode in barcodes}
+
+                notify('... reading sequences from {}', filename)
+
+                for i, alignment in enumerate(bam_file):
+                    if n % 10000 == 0:
+                        if n:
+                            notify('\r...{} {}', filename, n, end='')
+                    high_quality_mapping = alignment.mapq == 255
+                    good_barcode = alignment.has_tag('CB') and \
+                                   alignment.get_tag('CB') in barcodes
+                    good_umi = alignment.has_tag('UB')
+
+                    pass_qc = high_quality_mapping and good_barcode and \
+                              good_umi
+                    ​
+                    if pass_qc:
+                        barcode = alignment.get_tag('CB')
+                        # if this isn't marked a duplicate, count it as a UMI
+                        if not alignment.is_duplicate:
+                            add_seq(cell_seqs[barcode], alignment.seq,
+                                    args.input_is_protein, args.check_sequence)
+                cell_signatures = [
+                    build_siglist(seqs, filename=filename, name=barcode)
+                    for barcode, seqs in cell_seqs.items()]
+                siglist += list(itertools.chain(*cell_signatures))
+
+
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
