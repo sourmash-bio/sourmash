@@ -167,9 +167,10 @@ def test_do_sourmash_compute_singleton():
 
 def test_do_sourmash_compute_10x():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('lung_ptprc.bam')
+        testdata1 = utils.get_test_data('lung_ptprc')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--10x',
+                                           ['compute', '-k', '31',
+                                            '--input-is-10x',
                                             testdata1],
                                            in_directory=location)
 
