@@ -174,11 +174,19 @@ def test_do_sourmash_compute_10x():
                                             testdata1],
                                            in_directory=location)
 
-        sigfile = os.path.join(location, 'lung_ptprc.bam.sig')
+        sigfile = os.path.join(location, 'lung_ptprc.sig')
         assert os.path.exists(sigfile)
 
-        sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('shortName')
+        with open(sigfile) as f:
+            data = json.load(f)
+
+        barcode_signatures = [sig['name'] for sig in data]
+
+        with open(utils.get_test_data('lung_ptprc/barcodes.tsv')) as f:
+            true_barcodes = set(x.strip() for x in f.readlines())
+
+        assert all(bc in true_barcodes for bc in barcode_signatures)
+
 
 
 def test_do_sourmash_compute_name():

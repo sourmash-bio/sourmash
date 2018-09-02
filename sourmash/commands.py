@@ -87,7 +87,7 @@ def compute(args):
                         help="merge all input files into one signature named this")
     parser.add_argument('--name-from-first', action='store_true',
                         help="name the signature generated from each file after the first record in the file (default: False)")
-    parser.add_argument('--10x', action='store_true',
+    parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
@@ -241,13 +241,13 @@ def compute(args):
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
-            elif args['10x']:
+            elif args.input_is_10x:
                 barcodes, bam_file = read_10x_folder(filename)
                 cell_seqs = {barcode: make_minhashes() for barcode in barcodes}
 
                 notify('... reading sequences from {}', filename)
 
-                for i, alignment in enumerate(bam_file):
+                for n, alignment in enumerate(bam_file):
                     if n % 10000 == 0:
                         if n:
                             notify('\r...{} {}', filename, n, end='')
@@ -258,7 +258,6 @@ def compute(args):
 
                     pass_qc = high_quality_mapping and good_barcode and \
                               good_umi
-                    ​
                     if pass_qc:
                         barcode = alignment.get_tag('CB')
                         # if this isn't marked a duplicate, count it as a UMI
@@ -268,8 +267,11 @@ def compute(args):
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
                     for barcode, seqs in cell_seqs.items()]
-                siglist += list(itertools.chain(*cell_signatures))
-
+                sigs = list(itertools.chain(*cell_signatures))
+                if args.output:
+                    siglist += sigs
+                else:
+                    siglist = sigs
 
             else:
                 # make minhashes for the whole file
