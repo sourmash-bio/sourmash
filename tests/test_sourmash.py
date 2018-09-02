@@ -166,6 +166,8 @@ def test_do_sourmash_compute_singleton():
 
 
 def test_do_sourmash_compute_10x():
+    pysam = pytest.importorskip('pysam')
+
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('lung_ptprc')
         status, out, err = utils.runscript('sourmash',
