@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
