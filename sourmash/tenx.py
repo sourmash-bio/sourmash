@@ -1,4 +1,5 @@
 import os
+import pysam
 
 
 def read_single_column(filename):
@@ -10,9 +11,6 @@ def read_single_column(filename):
 
 def read_10x_folder(folder):
     """Get QC-pass barcodes, genes, and bam file from a 10x folder"""
-
-    import pysam
-
     barcodes = read_single_column(os.path.join(folder, 'barcodes.tsv'))
 
     bam_file = pysam.AlignmentFile(
