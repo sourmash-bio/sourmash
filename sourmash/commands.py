@@ -215,6 +215,21 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
+    def maybe_add_alignment(alignment, cell_seqs):
+        high_quality_mapping = alignment.mapq == 255
+        good_barcode = alignment.has_tag('CB') and \
+                       alignment.get_tag('CB') in barcodes
+        good_umi = alignment.has_tag('UB')
+
+        pass_qc = high_quality_mapping and good_barcode and \
+                  good_umi
+        if pass_qc:
+            barcode = alignment.get_tag('CB')
+            # if this isn't marked a duplicate, count it as a UMI
+            if not alignment.is_duplicate:
+                add_seq(cell_seqs[barcode], alignment.seq,
+                        args.input_is_protein, args.check_sequence)
+
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
@@ -251,19 +266,8 @@ def compute(args):
                     if n % 10000 == 0:
                         if n:
                             notify('\r...{} {}', filename, n, end='')
-                    high_quality_mapping = alignment.mapq == 255
-                    good_barcode = alignment.has_tag('CB') and \
-                                   alignment.get_tag('CB') in barcodes
-                    good_umi = alignment.has_tag('UB')
+                    maybe_add_alignment(alignment, cell_seqs)
 
-                    pass_qc = high_quality_mapping and good_barcode and \
-                              good_umi
-                    if pass_qc:
-                        barcode = alignment.get_tag('CB')
-                        # if this isn't marked a duplicate, count it as a UMI
-                        if not alignment.is_duplicate:
-                            add_seq(cell_seqs[barcode], alignment.seq,
-                                    args.input_is_protein, args.check_sequence)
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
                     for barcode, seqs in cell_seqs.items()]
