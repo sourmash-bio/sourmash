@@ -1,5 +1,5 @@
 import os
-import pysam
+import bamnostic as bs
 
 
 def read_single_column(filename):
@@ -13,7 +13,7 @@ def read_10x_folder(folder):
     """Get QC-pass barcodes, genes, and bam file from a 10x folder"""
     barcodes = read_single_column(os.path.join(folder, 'barcodes.tsv'))
 
-    bam_file = pysam.AlignmentFile(
+    bam_file = bs.AlignmentFile(
         os.path.join(folder, 'possorted_genome_bam.bam'), mode='rb')
 
     return barcodes, bam_file

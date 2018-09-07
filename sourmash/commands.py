@@ -3,6 +3,8 @@ from __future__ import print_function, division
 import argparse
 import csv
 import itertools
+import multiprocessing
+import pathos.multiprocessing as mp
 import os
 import os.path
 import sys
@@ -21,6 +23,8 @@ DEFAULT_COMPUTE_K = '21,31,51'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
+
+
 
 
 def info(args):
@@ -44,7 +48,6 @@ def info(args):
         import screed
         notify('screed version {}', screed.__version__)
         notify('- loaded from path: {}', os.path.dirname(screed.__file__))
-
 
 def compute(args):
     """Compute the signature for one or more files.
@@ -215,7 +218,11 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def maybe_add_alignment(alignment, cell_seqs):
+    def maybe_add_barcode(barcode, cell_seqs):
+        if barcode not in cell_seqs:
+            cell_seqs[barcode] = make_minhashes()
+
+    def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
         high_quality_mapping = alignment.mapq == 255
         good_barcode = alignment.has_tag('CB') and \
                        alignment.get_tag('CB') in barcodes
@@ -227,6 +234,7 @@ def compute(args):
             barcode = alignment.get_tag('CB')
             # if this isn't marked a duplicate, count it as a UMI
             if not alignment.is_duplicate:
+                maybe_add_barcode(barcode, cell_seqs)
                 add_seq(cell_seqs[barcode], alignment.seq,
                         args.input_is_protein, args.check_sequence)
 
@@ -258,15 +266,19 @@ def compute(args):
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
                 barcodes, bam_file = read_10x_folder(filename)
-                cell_seqs = {barcode: make_minhashes() for barcode in barcodes}
+                manager = multiprocessing.Manager()
+
+                cell_seqs = manager.dict()
 
                 notify('... reading sequences from {}', filename)
 
-                for n, alignment in enumerate(bam_file):
-                    if n % 10000 == 0:
-                        if n:
-                            notify('\r...{} {}', filename, n, end='')
-                    maybe_add_alignment(alignment, cell_seqs)
+                with mp.Pool(processes=2) as pool:
+                    pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                # for n, alignment in enumerate(bam_file):
+                #     if n % 10000 == 0:
+                #         if n:
+                #             notify('\r...{} {}', filename, n, end='')
+                #     maybe_add_alignment(alignment, cell_seqs)
 
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
