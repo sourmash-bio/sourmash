@@ -735,7 +735,7 @@ def search(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('--threshold', default=0.08, type=float,
-                        help='minimum threshold for reporting matches')
+                        help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='output matching signatures to this file.')
     parser.add_argument('--best-only', action='store_true',
@@ -836,7 +836,8 @@ def categorize(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('-k', '--ksize', type=int, default=None)
-    parser.add_argument('--threshold', default=0.08, type=float)
+    parser.add_argument('--threshold', default=0.08, type=float,
+                       help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--traverse-directory', action="store_true")
 
     sourmash_args.add_moltype_args(parser)
@@ -917,7 +918,7 @@ def gather(args):
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='save the matched signatures from the database to this file.')
     parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results')
+                        help='threshold (in bp) for reporting results (default=50,000)')
     parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
                         help='output unassigned portions of the query as a signature to this file')
     parser.add_argument('--scaled', type=float, default=0,
@@ -1057,7 +1058,7 @@ def watch(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='save signature generated from data here')
     parser.add_argument('--threshold', default=0.05, type=float,
-                        help='minimum threshold for matches')
+                        help='minimum threshold for matches (default=0.05)')
     parser.add_argument('--input-is-protein', action='store_true',
                         help='Consume protein sequences - no translation needed')
     sourmash_args.add_construct_moltype_args(parser)
