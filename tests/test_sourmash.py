@@ -170,14 +170,14 @@ def test_do_sourmash_compute_10x():
     pysam = pytest.importorskip('pysam')
 
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('lung_ptprc')
+        testdata1 = utils.get_test_data('10x-example')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--input-is-10x',
                                             testdata1],
                                            in_directory=location)
 
-        sigfile = os.path.join(location, 'lung_ptprc.sig')
+        sigfile = os.path.join(location, '10x-example.sig')
         assert os.path.exists(sigfile)
 
         with open(sigfile) as f:
@@ -185,7 +185,7 @@ def test_do_sourmash_compute_10x():
 
         barcode_signatures = [sig['name'] for sig in data]
 
-        with open(utils.get_test_data('lung_ptprc/barcodes.tsv')) as f:
+        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
 
         assert all(bc in true_barcodes for bc in barcode_signatures)
