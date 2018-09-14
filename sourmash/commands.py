@@ -745,7 +745,8 @@ def search(args):
     parser.add_argument('--containment', action='store_true',
                         help='evaluate containment rather than similarity')
     parser.add_argument('--ignore-abundance', action='store_true',
-                        help='do NOT use k-mer abundances if present')
+                        help='do NOT use k-mer abundances if present. Note: '
+                             'has no effect if --containment is specified')
     parser.add_argument('--scaled', type=float, default=0,
                         help='downsample query to this scaled factor (yields greater speed)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
