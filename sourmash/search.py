@@ -36,8 +36,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
         x, downsample=True, ignore_abundance=ignore_abundance)
     if do_containment:
         search_fn = search_minhashes_containment
-        query_match = lambda x: query.contained_by(
-            x, downsample=True, ignore_abundance=ignore_abundance)
+        query_match = lambda x: query.contained_by(x, downsample=True)
 
     results = []
     found_md5 = set()
