@@ -10,3 +10,4 @@ alabaster
 recommonmark
 sphinxcontrib-napoleon
 pysam
+pathos
