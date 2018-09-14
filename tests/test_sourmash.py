@@ -1005,6 +1005,9 @@ def test_search_ignore_abundance():
         assert '1 matches' in out2
         assert '93.0%' in out2
 
+        # Make sure results are different!
+        assert out1 != out2
+
 
 def test_search_csv():
     with utils.TempDirectory() as location:
@@ -3034,62 +3037,49 @@ def test_sbt_categorize():
 
 def test_sbt_categorize_ignore_abundance():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('genome-s10.fa.gz')
-        testdata2 = utils.get_test_data('genome-s11.fa.gz')
-        testdata3 = utils.get_test_data('genome-s12.fa.gz')
-        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
 
-        shutil.copyfile(testdata1, os.path.join(location, 'genome-s10.fa.gz'))
-        shutil.copyfile(testdata2, os.path.join(location, 'genome-s11.fa.gz'))
-        shutil.copyfile(testdata3, os.path.join(location, 'genome-s12.fa.gz'))
-        shutil.copyfile(testdata4, os.path.join(location, 'genome-s10+s11.fa.gz'))
-
-        status1, out1, err1 = utils.runscript('sourmash',
-                                           ['compute',
-                                            testdata1, testdata2, testdata3,
-                                            testdata4,
-                                            '--track-abundance'],
-                                           in_directory=location)
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
 
         # omit 3
-        args = ['index', '--dna', '-k', '21', 'thebestdatabase',
-                'genome-s10.fa.gz.sig',
-                'genome-s11.fa.gz.sig']
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
         status2, out2, err2 = utils.runscript('sourmash', args,
                                            in_directory=location)
 
         # --- Categorize without ignoring abundance ---
-        args = ['categorize', 'thebestdatabase', '--traverse-directory', '.',
-                '--ksize', '21', '--dna', '--csv', 'out.csv']
+        args = ['categorize', 'thebestdatabase',
+                '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
         status3, out3, err3 = utils.runscript('sourmash', args,
                                            in_directory=location)
 
         print(out3)
         print(err3)
 
-        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
-        # yields 521/1000 ==> ~0.5
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err3
+        assert 'for 1-1, found: 0.57 tests/test-data/genome-s10.fa.gz' in err3
 
-        out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,tests/test-data/genome-s10.fa.gz,0.57' in out_csv3
 
         # --- Now categorize with ignored abundance ---
-        args = ['categorize', 'thebestdatabase', '--traverse-directory', '.',
-                '--ignore-abundance',
-                '--ksize', '21', '--dna', '--csv', 'out.csv']
+        args = ['categorize', '--ignore-abundance',
+                '--ksize', '21', '--dna', '--csv', 'out4.csv',
+                'thebestdatabase', query]
         status4, out4, err4 = utils.runscript('sourmash', args,
                                            in_directory=location)
 
         print(out4)
         print(err4)
 
-        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
-        # yields 521/1000 ==> ~0.5
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err4
+        assert 'for 1-1, found: 0.57 tests/test-data/genome-s10.fa.gz' in err4
 
-        out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+        out_csv4 = open(os.path.join(location, 'out4.csv')).read()
+        assert '/reads-s10x10-s11.sig,1-1,tests/test-data/genome-s10.fa.gz,0.57' in out_csv4
+
+        # Make sure ignoring abundance produces a different output!
+        assert err3 != err4
 
 
 def test_sbt_categorize_already_done():
