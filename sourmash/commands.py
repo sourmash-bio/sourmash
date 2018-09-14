@@ -92,6 +92,8 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
+    parser.add_argument('-p', '--processes', default=2,
+                        help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
@@ -224,9 +226,9 @@ def compute(args):
 
     def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
         high_quality_mapping = alignment.mapq == 255
-        good_barcode = alignment.has_tag('CB') and \
+        good_barcode = 'CB' in alignment.tags and \
                        alignment.get_tag('CB') in barcodes
-        good_umi = alignment.has_tag('UB')
+        good_umi = 'UB' in alignment.tags
 
         pass_qc = high_quality_mapping and good_barcode and \
                   good_umi
@@ -272,8 +274,9 @@ def compute(args):
 
                 notify('... reading sequences from {}', filename)
 
-                with mp.Pool(processes=2) as pool:
-                    pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                with mp.Pool(processes=args.processes) as pool:
+                    pool.map(lambda x: maybe_add_alignment(
+                        x, cell_seqs, args, barcodes), bam_file)
                 # for n, alignment in enumerate(bam_file):
                 #     if n % 10000 == 0:
                 #         if n:
