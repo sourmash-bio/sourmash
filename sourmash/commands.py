@@ -92,7 +92,7 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('-p', '--processes', default=2,
+    parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
@@ -275,8 +275,7 @@ def compute(args):
                 notify('... reading sequences from {}', filename)
 
                 with mp.Pool(processes=args.processes) as pool:
-                    pool.map(lambda x: maybe_add_alignment(
-                        x, cell_seqs, args, barcodes), bam_file)
+                    pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
                 # for n, alignment in enumerate(bam_file):
                 #     if n % 10000 == 0:
                 #         if n:
