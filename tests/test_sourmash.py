@@ -972,6 +972,40 @@ def test_search():
         assert '93.0%' in out
 
 
+def test_search_ignore_abundance():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--track-abundance',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        # Make sure there's different percent matches when using or
+        # not using abundance
+        status1, out1, err1 = utils.runscript('sourmash',
+                                           ['search',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status1, out1, err1)
+        assert '1 matches' in out1
+        assert '81.5%' in out1
+
+        status2, out2, err2 = utils.runscript('sourmash',
+                                           ['search',
+                                            '--ignore-abundance',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status2, out2, err2)
+        assert '1 matches' in out2
+        assert '93.0%' in out2
+
+
 def test_search_csv():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -2993,6 +3027,66 @@ def test_sbt_categorize():
         # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
         # yields 521/1000 ==> ~0.5
         assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+
+        out_csv = open(os.path.join(location, 'out.csv')).read()
+        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+
+
+def test_sbt_categorize_ignore_abundance():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz')
+        testdata4 = utils.get_test_data('genome-s10+s11.fa.gz')
+
+        shutil.copyfile(testdata1, os.path.join(location, 'genome-s10.fa.gz'))
+        shutil.copyfile(testdata2, os.path.join(location, 'genome-s11.fa.gz'))
+        shutil.copyfile(testdata3, os.path.join(location, 'genome-s12.fa.gz'))
+        shutil.copyfile(testdata4, os.path.join(location, 'genome-s10+s11.fa.gz'))
+
+        status1, out1, err1 = utils.runscript('sourmash',
+                                           ['compute',
+                                            testdata1, testdata2, testdata3,
+                                            testdata4,
+                                            '--track-abundance'],
+                                           in_directory=location)
+
+        # omit 3
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase',
+                'genome-s10.fa.gz.sig',
+                'genome-s11.fa.gz.sig']
+        status2, out2, err2 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        # --- Categorize without ignoring abundance ---
+        args = ['categorize', 'thebestdatabase', '--traverse-directory', '.',
+                '--ksize', '21', '--dna', '--csv', 'out.csv']
+        status3, out3, err3 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out3)
+        print(err3)
+
+        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
+        # yields 521/1000 ==> ~0.5
+        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err3
+
+        out_csv = open(os.path.join(location, 'out.csv')).read()
+        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+
+        # --- Now categorize with ignored abundance ---
+        args = ['categorize', 'thebestdatabase', '--traverse-directory', '.',
+                '--ignore-abundance',
+                '--ksize', '21', '--dna', '--csv', 'out.csv']
+        status4, out4, err4 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out4)
+        print(err4)
+
+        # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
+        # yields 521/1000 ==> ~0.5
+        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err4
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
         assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
