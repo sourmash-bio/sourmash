@@ -9,5 +9,5 @@ sphinx
 alabaster
 recommonmark
 sphinxcontrib-napoleon
-pysam
 pathos
+-e git://github.com/betteridiot/bamnostic.git@e690e50de5cfc59569e36b100d1538c47ba009d5#egg=bamnostic
