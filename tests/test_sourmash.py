@@ -972,6 +972,43 @@ def test_search():
         assert '93.0%' in out
 
 
+def test_search_ignore_abundance():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--track-abundance',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        # Make sure there's different percent matches when using or
+        # not using abundance
+        status1, out1, err1 = utils.runscript('sourmash',
+                                           ['search',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status1, out1, err1)
+        assert '1 matches' in out1
+        assert '81.5%' in out1
+
+        status2, out2, err2 = utils.runscript('sourmash',
+                                           ['search',
+                                            '--ignore-abundance',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status2, out2, err2)
+        assert '1 matches' in out2
+        assert '93.0%' in out2
+
+        # Make sure results are different!
+        assert out1 != out2
+
+
 def test_search_csv():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -2996,6 +3033,53 @@ def test_sbt_categorize():
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
         assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+
+
+def test_sbt_categorize_ignore_abundance():
+    with utils.TempDirectory() as location:
+
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['reads-s10-s11']
+        against_list = [ 'gather-abund/' + i + '.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        # omit 3
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+        status2, out2, err2 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        # --- Categorize without ignoring abundance ---
+        args = ['categorize', 'thebestdatabase',
+                '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+        status3, out3, err3 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out3)
+        print(err3)
+
+        assert 'for 1-1, found: 0.44 1-1' in err3
+
+        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
+
+        # --- Now categorize with ignored abundance ---
+        args = ['categorize', '--ignore-abundance',
+                '--ksize', '21', '--dna', '--csv', 'out4.csv',
+                'thebestdatabase', query]
+        status4, out4, err4 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out4)
+        print(err4)
+
+        assert 'for 1-1, found: 0.88 1-1' in err4
+
+        out_csv4 = open(os.path.join(location, 'out4.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
+
+        # Make sure ignoring abundance produces a different output!
+        assert err3 != err4
 
 
 def test_sbt_categorize_already_done():

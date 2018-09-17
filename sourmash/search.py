@@ -28,10 +28,12 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only):
+def search_databases(query, databases, threshold, do_containment, best_only,
+                     ignore_abundance):
     # set up the search & score function(s) - similarity vs containment
     search_fn = search_minhashes
-    query_match = lambda x: query.similarity(x, downsample=True)
+    query_match = lambda x: query.similarity(
+        x, downsample=True, ignore_abundance=ignore_abundance)
     if do_containment:
         search_fn = search_minhashes_containment
         query_match = lambda x: query.contained_by(x, downsample=True)
