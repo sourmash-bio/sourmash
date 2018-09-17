@@ -3039,8 +3039,8 @@ def test_sbt_categorize_ignore_abundance():
     with utils.TempDirectory() as location:
 
         query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+        against_list = ['reads-s10-s11']
+        against_list = [ 'gather-abund/' + i + '.sig' \
                          for i in against_list ]
         against_list = [ utils.get_test_data(i) for i in against_list ]
 
@@ -3058,10 +3058,10 @@ def test_sbt_categorize_ignore_abundance():
         print(out3)
         print(err3)
 
-        assert 'for 1-1, found: 0.57 tests/test-data/genome-s10.fa.gz' in err3
+        assert 'for 1-1, found: 0.44 1-1' in err3
 
         out_csv3 = open(os.path.join(location, 'out3.csv')).read()
-        assert 'reads-s10x10-s11.sig,1-1,tests/test-data/genome-s10.fa.gz,0.57' in out_csv3
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
 
         # --- Now categorize with ignored abundance ---
         args = ['categorize', '--ignore-abundance',
@@ -3073,10 +3073,10 @@ def test_sbt_categorize_ignore_abundance():
         print(out4)
         print(err4)
 
-        assert 'for 1-1, found: 0.57 tests/test-data/genome-s10.fa.gz' in err4
+        assert 'for 1-1, found: 0.88 1-1' in err4
 
         out_csv4 = open(os.path.join(location, 'out4.csv')).read()
-        assert '/reads-s10x10-s11.sig,1-1,tests/test-data/genome-s10.fa.gz,0.57' in out_csv4
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
 
         # Make sure ignoring abundance produces a different output!
         assert err3 != err4
