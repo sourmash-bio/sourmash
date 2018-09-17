@@ -274,8 +274,8 @@ def compute(args):
 
                 notify('... reading sequences from {}', filename)
 
-                with mp.Pool(processes=args.processes) as pool:
-                    pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                pool = mp.Pool(processes=args.processes)
+                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
                 # for n, alignment in enumerate(bam_file):
                 #     if n % 10000 == 0:
                 #         if n:
