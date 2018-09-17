@@ -167,7 +167,7 @@ def test_do_sourmash_compute_singleton():
 
 
 def test_do_sourmash_compute_10x():
-    pysam = pytest.importorskip('pysam')
+    bamnostic = pytest.importorskip('bamnostic')
 
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example')
