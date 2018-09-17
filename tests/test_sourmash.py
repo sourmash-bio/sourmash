@@ -320,6 +320,27 @@ def test_do_sourmash_compute_multik_only_protein():
             assert 30 in ksizes
 
 
+def test_do_sourmash_compute_protein_bad_sequences():
+    """Proper error handling when Ns in dna sequence"""
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.bad.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.bad.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+
 def test_do_sourmash_compute_multik_input_is_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa')
