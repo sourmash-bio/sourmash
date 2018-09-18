@@ -69,8 +69,7 @@ class SigLeaf(Leaf):
     def data(self):
         if self._data is None:
             buf = BytesIO(self.storage.load(self._path))
-            with TextIOWrapper(buf) as data:
-                self._data = signature.load_one_signature(data)
+            self._data = signature.load_one_signature(buf)
         return self._data
 
     @data.setter

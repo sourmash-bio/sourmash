@@ -10,7 +10,8 @@ import sys
 
 import io
 import json
-import ijson
+import ijson.backends.yajl2 as ijson
+
 
 from . import DEFAULT_SEED, MinHash
 from .logging import notify
@@ -205,10 +206,7 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
     n = 0
 
     if isinstance(data, str):
-        # Required for compatibility with Python 2
-        if sys.version_info[0] < 3:
-            data = unicode(data)
-        data = io.StringIO(data)
+        data = io.BytesIO(data.encode('utf-8'))
 
     it = load_signatureset_json_iter(data, ksize=ksize,
                                      ignore_md5sum=ignore_md5sum,
