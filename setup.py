@@ -67,7 +67,7 @@ SETUP_METADATA = \
     "install_requires": ["screed>=0.9", "ijson", "khmer>=2.1"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=38.6.0",
                        'setuptools_scm', 'setuptools_scm_git_archive'],
-    "use_scm_version": True,
+    "use_scm_version": {"write_to": "sourmash/version.py"},
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy','recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
