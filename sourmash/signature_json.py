@@ -10,7 +10,10 @@ import sys
 
 import io
 import json
-import ijson.backends.yajl2 as ijson
+try:
+    import ijson.backends.yajl2 as ijson
+except ImportError:
+    import ijson
 
 
 from . import DEFAULT_SEED, MinHash
