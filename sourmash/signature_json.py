@@ -194,9 +194,13 @@ def load_signatureset_json_iter(data, ksize=None, ignore_md5sum=False, ijson=ijs
                 yield sig
         except ValueError:
             # possible end of the array of signatures
-            prefix, event, value = next(parser)
-            assert event == 'end_array'
-            break
+            try:
+                prefix, event, value = next(parser)
+                assert event == 'end_array'
+            except StopIteration:
+                pass
+            finally:
+                break
         n += 1
 
 def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
