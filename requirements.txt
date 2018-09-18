@@ -10,4 +10,4 @@ alabaster
 recommonmark
 sphinxcontrib-napoleon
 pathos
-bamnostic>=0.9.1
+bamnostic>=0.9.2
