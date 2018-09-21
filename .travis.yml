@@ -31,6 +31,12 @@ matrix:
     dist: xenial
     env:
     - TOX_ENV=py36
+  - os: linux
+    python: '3.7'
+    sudo: required
+    dist: xenial
+    env:
+    - TOX_ENV=py37
 install:
 - pip install tox
 - sudo snap install ipfs
