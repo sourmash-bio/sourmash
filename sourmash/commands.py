@@ -399,14 +399,15 @@ def compare(args):
             D[i][j] = similarity
             D[j][i] = similarity
 
-        if len(siglist) < 30:
+        labeltext.append(E.name())
+
+    if len(siglist) < 30:
+        for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
             name_num = '{}-{}'.format(i, E.name())
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, D[i, :, ],))
-
-        labeltext.append(E.name())
 
     print_results('min similarity in matrix: {:.3f}', numpy.min(D))
 
@@ -734,7 +735,7 @@ def search(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('--threshold', default=0.08, type=float,
-                        help='minimum threshold for reporting matches')
+                        help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='output matching signatures to this file.')
     parser.add_argument('--best-only', action='store_true',
@@ -743,6 +744,9 @@ def search(args):
                         help='number of results to report')
     parser.add_argument('--containment', action='store_true',
                         help='evaluate containment rather than similarity')
+    parser.add_argument('--ignore-abundance', action='store_true',
+                        help='do NOT use k-mer abundances if present. Note: '
+                             'has no effect if --containment is specified')
     parser.add_argument('--scaled', type=float, default=0,
                         help='downsample query to this scaled factor (yields greater speed)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
@@ -785,7 +789,7 @@ def search(args):
     # do the actual search
     results = search_databases(query, databases,
                                args.threshold, args.containment,
-                               args.best_only)
+                               args.best_only, args.ignore_abundance)
 
     n_matches = len(results)
     if args.best_only:
@@ -835,8 +839,11 @@ def categorize(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('-k', '--ksize', type=int, default=None)
-    parser.add_argument('--threshold', default=0.08, type=float)
+    parser.add_argument('--threshold', default=0.08, type=float,
+                       help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--traverse-directory', action="store_true")
+    parser.add_argument('--ignore-abundance', action='store_true',
+                        help='do NOT use k-mer abundances if present')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -877,7 +884,9 @@ def categorize(args):
 
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
-                results.append((query.similarity(leaf.data), leaf.data))
+                similarity = query.similarity(
+                    leaf.data, ignore_abundance=args.ignore_abundance)
+                results.append((similarity, leaf.data))
 
         best_hit_sim = 0.0
         best_hit_query_name = ""
@@ -916,7 +925,7 @@ def gather(args):
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='save the matched signatures from the database to this file.')
     parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results')
+                        help='threshold (in bp) for reporting results (default=50,000)')
     parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
                         help='output unassigned portions of the query as a signature to this file')
     parser.add_argument('--scaled', type=float, default=0,
@@ -1056,7 +1065,7 @@ def watch(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='save signature generated from data here')
     parser.add_argument('--threshold', default=0.05, type=float,
-                        help='minimum threshold for matches')
+                        help='minimum threshold for matches (default=0.05)')
     parser.add_argument('--input-is-protein', action='store_true',
                         help='Consume protein sequences - no translation needed')
     sourmash_args.add_construct_moltype_args(parser)
