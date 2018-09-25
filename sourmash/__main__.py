@@ -9,7 +9,7 @@ from .logging import error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
-                       plot, watch, info, storage)
+                       plot, watch, info, storage, migrate)
 from .lca import main as lca_main
 
 usage='''
@@ -57,7 +57,8 @@ def main():
                 'watch': watch,
                 'sbt_combine': sbt_combine, 'info': info,
                 'storage': storage,
-                'lca': lca_main}
+                'lca': lca_main,
+                'migrate': migrate}
     parser = argparse.ArgumentParser(
         description='work with compressed sequence representations')
     parser.add_argument('command', nargs='?')
@@ -74,3 +75,6 @@ def main():
 
     cmd = commands.get(args.command)
     cmd(sys.argv[2:])
+
+if __name__ == '__main__':
+    main()

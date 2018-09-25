@@ -8,9 +8,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 60,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
 
-* [RefSeq k=21, 2017.05.09][0] - 3.5 GB
-* [RefSeq k=31, 2017.05.09][1] - 3.5 GB
-* [RefSeq k=51, 2017.05.09][2] - 3.5 GB
+* [RefSeq k=21, 2018.03.29][0] - 7 GB
+* [RefSeq k=31, 2018.03.29][1] - 7 GB
+* [RefSeq k=51, 2018.03.29][2] - 7.1 GB
 
 ## Genbank microbial genomes - SBT
 
@@ -20,9 +20,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 100,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.
 
-* [Genbank k=21, 2017.05.09][3]- 4.2 GB
-* [Genbank k=31, 2017.05.09][4] - 4.2 GB
-* [Genbank k=51, 2017.05.09][5] - 4.2 GB
+* [Genbank k=21, 2018.03.29][3]- 8.4 GB
+* [Genbank k=31, 2018.03.29][4] - 8.4 GB
+* [Genbank k=51, 2018.03.29][5] - 8.4 GB
 
 ### Details
 
@@ -30,25 +30,29 @@ The individual signatures for the above SBTs were calculated as follows:
 
 ```
 sourmash compute -k 4,5 \
-                         -n 2000 \
-                         --track-abundance \
-                         --name-from-first \
-                         -o {output} \
-                         {input}
+                 -n 2000 \
+                 --track-abundance \
+                 --name-from-first \
+                 -o {output} \
+                 {input}
 
 sourmash compute -k 21,31,51 \
-                         --scaled 2000 \
-                         --track-abundance \
-                         --name-from-first \
-                         -o {output} \
-                         {input}
+                 --scaled 2000 \
+                 --track-abundance \
+                 --name-from-first \
+                 -o {output} \
+                 {input}
 ```
-[0]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k21-2017.05.09.tar.gz
-[1]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k31-2017.05.09.tar.gz
-[2]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-refseq-sbt-k51-2017.05.09.tar.gz
-[3]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k21-2017.05.09.tar.gz
-[4]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k31-2017.05.09.tar.gz
-[5]:https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k51-2017.05.09.tar.gz
+
+See https://github.com/dib-lab/sourmash_databases for a Snakemake workflow
+to build the databases.
+
+[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k21.tar.gz
+[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k31.tar.gz
+[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k51.tar.gz
+[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k21.tar.gz
+[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k31.tar.gz
+[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k51.tar.gz
 
 ## Genbank LCA Database
 

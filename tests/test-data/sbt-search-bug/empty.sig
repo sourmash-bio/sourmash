@@ -1,0 +1,1 @@
+[{"class":"sourmash_signature","email":"","filename":"empty.fa","hash_function":"0.murmur64","license":"CC0","name":"empty sig","signatures":[{"ksize":31,"max_hash":18446744073709552,"md5sum":"c16a5320fa475530d9583c34fd356ef5","mins":[],"molecule":"DNA","num":0,"seed":42}],"version":0.4}]

@@ -122,7 +122,9 @@ public:
         if (strlen(sequence) < ksize) {
             return;
         }
-        const std::string seq = sequence;
+        std::string seq = sequence;
+        transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
+
         if (!is_protein) {
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
                 const std::string kmer = seq.substr(i, ksize);
@@ -130,8 +132,8 @@ public:
                     if (force) {
                         continue;
                     } else {
-                        std::string msg = "invalid DNA character in input: ";
-                        msg += seq[i + ksize - 1];
+                        std::string msg = "invalid DNA character in input k-mer: ";
+                        msg += kmer;
                         throw minhash_exception(msg);
                     }
                 }
@@ -172,7 +174,14 @@ public:
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
-            aa += (_codon_table)[codon];
+            auto translated = _codon_table.find(codon);
+            if (translated != _codon_table.end()) {
+                // "second" is the element mapped to by the codon
+                aa += translated -> second;
+            } else {
+                // Otherwise, assign the "X" or "unknown" amino acid
+                aa += "X";
+            }
         }
         return aa;
     }
