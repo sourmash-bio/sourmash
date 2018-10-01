@@ -2,6 +2,9 @@ from __future__ import print_function, division
 
 import argparse
 import csv
+import itertools
+import multiprocessing
+import pathos.multiprocessing as mp
 import os
 import os.path
 import sys
@@ -13,12 +16,15 @@ from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
+from .tenx import read_10x_folder
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
+
+
 
 
 def info(args):
@@ -42,7 +48,6 @@ def info(args):
         import screed
         notify('screed version {}', screed.__version__)
         notify('- loaded from path: {}', os.path.dirname(screed.__file__))
-
 
 def compute(args):
     """Compute the signature for one or more files.
@@ -85,6 +90,10 @@ def compute(args):
                         help="merge all input files into one signature named this")
     parser.add_argument('--name-from-first', action='store_true',
                         help="name the signature generated from each file after the first record in the file (default: False)")
+    parser.add_argument('--input-is-10x', action='store_true',
+                        help="Input is 10x single cell output folder (default: False)")
+    parser.add_argument('-p', '--processes', default=2, type=int,
+                        help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
@@ -211,6 +220,26 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
+    def maybe_add_barcode(barcode, cell_seqs):
+        if barcode not in cell_seqs:
+            cell_seqs[barcode] = make_minhashes()
+
+    def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
+        high_quality_mapping = alignment.mapq == 255
+        good_barcode = 'CB' in alignment.tags and \
+                       alignment.get_tag('CB') in barcodes
+        good_umi = 'UB' in alignment.tags
+
+        pass_qc = high_quality_mapping and good_barcode and \
+                  good_umi
+        if pass_qc:
+            barcode = alignment.get_tag('CB')
+            # if this isn't marked a duplicate, count it as a UMI
+            if not alignment.is_duplicate:
+                maybe_add_barcode(barcode, cell_seqs)
+                add_seq(cell_seqs[barcode], alignment.seq,
+                        args.input_is_protein, args.check_sequence)
+
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
@@ -237,6 +266,31 @@ def compute(args):
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
+            elif args.input_is_10x:
+                barcodes, bam_file = read_10x_folder(filename)
+                manager = multiprocessing.Manager()
+
+                cell_seqs = manager.dict()
+
+                notify('... reading sequences from {}', filename)
+
+                pool = mp.Pool(processes=args.processes)
+                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                # for n, alignment in enumerate(bam_file):
+                #     if n % 10000 == 0:
+                #         if n:
+                #             notify('\r...{} {}', filename, n, end='')
+                #     maybe_add_alignment(alignment, cell_seqs)
+
+                cell_signatures = [
+                    build_siglist(seqs, filename=filename, name=barcode)
+                    for barcode, seqs in cell_seqs.items()]
+                sigs = list(itertools.chain(*cell_signatures))
+                if args.output:
+                    siglist += sigs
+                else:
+                    siglist = sigs
+
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()

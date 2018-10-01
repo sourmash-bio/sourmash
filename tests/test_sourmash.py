@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
@@ -163,6 +164,32 @@ def test_do_sourmash_compute_singleton():
 
         sig = next(signature.load_signatures(sigfile))
         assert sig.name().endswith('shortName')
+
+
+def test_do_sourmash_compute_10x():
+    bamnostic = pytest.importorskip('bamnostic')
+
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('10x-example')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--input-is-10x',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile) as f:
+            data = json.load(f)
+
+        barcode_signatures = [sig['name'] for sig in data]
+
+        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
+            true_barcodes = set(x.strip() for x in f.readlines())
+
+        assert all(bc in true_barcodes for bc in barcode_signatures)
+
 
 
 def test_do_sourmash_compute_name():
