@@ -19,6 +19,7 @@ except ImportError:
 
 from .._minhash import get_max_hash_for_scaled
 from ..logging import notify, error, debug
+from ..index import Index
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
@@ -138,7 +139,7 @@ def find_lca(tree):
             return tuple(lineage), len(node)
 
 
-class LCA_Database(object):
+class LCA_Database(Index):
     """
     Wrapper class for taxonomic database.
 
@@ -260,6 +261,9 @@ class LCA_Database(object):
             save_d['lid_to_lineage'] = self.lid_to_lineage
             
             json.dump(save_d, fp)
+
+    def find(self, search_fn, *args, **kwargs):
+        pass
 
     def downsample_scaled(self, scaled):
         """

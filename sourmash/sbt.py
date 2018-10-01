@@ -66,7 +66,7 @@ except AttributeError:
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
 from .logging import error, notify, debug
-
+from .index import Index
 
 STORAGES = {
     'TarStorage': TarStorage,
@@ -102,7 +102,7 @@ class GraphFactory(object):
         return (self.ksize, self.starting_size, self.n_tables)
 
 
-class SBT(object):
+class SBT(Index):
     """A Sequence Bloom Tree implementation allowing generic internal nodes and leaves.
 
     The default node and leaf format is a Bloom Filter (like the original implementation),
