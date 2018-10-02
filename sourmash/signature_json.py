@@ -10,7 +10,11 @@ import sys
 
 import io
 import json
-import ijson
+try:
+    import ijson.backends.yajl2 as ijson
+except ImportError:
+    import ijson
+
 
 from . import DEFAULT_SEED, MinHash
 from .logging import notify
@@ -190,9 +194,13 @@ def load_signatureset_json_iter(data, ksize=None, ignore_md5sum=False, ijson=ijs
                 yield sig
         except ValueError:
             # possible end of the array of signatures
-            prefix, event, value = next(parser)
-            assert event == 'end_array'
-            break
+            try:
+                prefix, event, value = next(parser)
+                assert event == 'end_array'
+            except StopIteration:
+                pass
+            finally:
+                break
         n += 1
 
 def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
@@ -205,10 +213,7 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
     n = 0
 
     if isinstance(data, str):
-        # Required for compatibility with Python 2
-        if sys.version_info[0] < 3:
-            data = unicode(data)
-        data = io.StringIO(data)
+        data = io.BytesIO(data.encode('utf-8'))
 
     it = load_signatureset_json_iter(data, ksize=ksize,
                                      ignore_md5sum=ignore_md5sum,

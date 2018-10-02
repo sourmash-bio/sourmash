@@ -6,6 +6,10 @@ branches:
   only:
   - master
   - "/^v.*$/"
+addons:
+  apt:
+    packages:
+    - libyajl2
 matrix:
   fast_finish: true
   include:
@@ -27,11 +31,17 @@ matrix:
     dist: xenial
     env:
     - TOX_ENV=py36
+  - os: linux
+    python: '3.7'
+    sudo: required
+    dist: xenial
+    env:
+    - TOX_ENV=py37
 install:
 - pip install tox
 - sudo snap install ipfs
 script:
-- "/snap/bin/ipfs daemon --init --offline &"
+- "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
 - tox -e $TOX_ENV
 before_deploy:
 - git clean -xfd
