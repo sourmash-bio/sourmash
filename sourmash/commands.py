@@ -4,7 +4,6 @@ import argparse
 import csv
 import itertools
 import multiprocessing
-import pathos.multiprocessing as mp
 import os
 import os.path
 import sys
@@ -16,7 +15,6 @@ from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
-from .tenx import read_10x_folder
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
@@ -267,6 +265,9 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                import pathos.multiprocessing as mp
+                from .tenx import read_10x_folder
+
                 barcodes, bam_file = read_10x_folder(filename)
                 manager = multiprocessing.Manager()
 

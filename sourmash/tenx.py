@@ -1,5 +1,4 @@
 import os
-import bamnostic as bs
 
 
 def read_single_column(filename):
@@ -11,6 +10,8 @@ def read_single_column(filename):
 
 def read_10x_folder(folder):
     """Get QC-pass barcodes, genes, and bam file from a 10x folder"""
+    import bamnostic as bs
+
     barcodes = read_single_column(os.path.join(folder, 'barcodes.tsv'))
 
     bam_file = bs.AlignmentFile(
