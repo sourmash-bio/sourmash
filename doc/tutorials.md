@@ -272,6 +272,14 @@ the recovered matches hit 73.1% of the query
 
 ```
 
+If you use the `-o` flag, gather will write out a csv that contains additional information. The column headers and their meanings are:  
+
++ intersect_bp: the approximate number of base pairs in common between the query and the match  
++ f_orig_query: fraction of original query; the fraction of the original query that is contained within the match  
++ f_match: fraction of match; the fraction of the match that is contained within the query  
++ f_unique_to_query: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
++ f_unique_weighted: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
+
 It is straightforward to build your own databases for use with `search`
 and `gather`; ping us if you want us to write that up.
 
