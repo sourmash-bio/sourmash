@@ -10,7 +10,7 @@ To try it out, do::
     graph1 = factory()
     # ... add stuff to graph1 ...
     leaf1 = Leaf("a", graph1)
-    root.add_node(leaf1)
+    root.insert(leaf1)
 
 For example, ::
 
@@ -26,7 +26,7 @@ For example, ::
         graph = factory()
         graph.consume_fasta(filename)
         leaf = Leaf(filename, graph)
-        root.add_node(leaf)
+        root.insert(leaf)
 
 then define a search function, ::
 
@@ -57,6 +57,7 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
+from deprecation import deprecated
 import khmer
 
 try:
@@ -160,13 +161,13 @@ class SBT(Index):
 
         return self.next_node
 
-    def add_node(self, leaf):
-        pos = self.new_node_pos(leaf)
+    def insert(self, node):
+        pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
             n = Node(self.factory, name="internal." + str(pos))
             self._nodes[0] = n
-            pos = self.new_node_pos(leaf)
+            pos = self.new_node_pos(node)
 
         # Cases:
         # 1) parent is a Leaf (already covered)
@@ -186,27 +187,31 @@ class SBT(Index):
             c1, c2 = self.children(p.pos)[:2]
 
             self._leaves[c1.pos] = p.node
-            self._leaves[c2.pos] = leaf
+            self._leaves[c2.pos] = node 
             del self._leaves[p.pos]
 
-            for child in (p.node, leaf):
+            for child in (p.node, node):
                 child.update(n)
         elif isinstance(p.node, Node):
-            self._leaves[pos] = leaf
-            leaf.update(p.node)
+            self._leaves[pos] = node 
+            node.update(p.node)
         elif p.node is None:
             n = Node(self.factory, name="internal." + str(p.pos))
             self._nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
-            self._leaves[c1.pos] = leaf
-            leaf.update(n)
+            self._leaves[c1.pos] = node 
+            node.update(n)
 
         # update all parents!
         p = self.parent(p.pos)
         while p:
             self._rebuild_node(p.pos)
-            leaf.update(self._nodes[p.pos])
+            node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
+
+    @deprecated(details="Use the insert method instead")
+    def add_node(self, node):
+        self.insert(node)
 
     def find(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."

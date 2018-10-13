@@ -265,6 +265,9 @@ class LCA_Database(Index):
     def find(self, search_fn, *args, **kwargs):
         pass
 
+    def insert(self, node):
+        pass
+
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes

@@ -1,9 +1,18 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
+
+
+# compatible with Python 2 *and* 3:
+ABC = ABCMeta('ABC', (object,), {'__slots__': ()})
+
 
 class Index(ABC):
 
     @abstractmethod
     def find(self, search_fn, *args, **kwargs):
+        ''' '''
+
+    @abstractmethod
+    def insert(self, node):
         ''' '''
 
     @abstractmethod
