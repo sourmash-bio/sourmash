@@ -121,7 +121,7 @@ Here, `/tmp/genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
->>> sigfp = open('/tmp/genome1.sig', 'rt')
+>>> sigfp = open('/tmp/genome1.sig', 'rb')
 >>> siglist = list(signature.load_signatures(sigfp))
 >>> loaded_sig = siglist[0]
 

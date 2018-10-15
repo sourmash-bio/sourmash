@@ -16,8 +16,12 @@ from .lca_utils import debug, set_debug, LineagePair
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
+    mode = 'rt'
+    if sys.version_info < (3, ):
+        mode = 'rtU'
+
     # parse spreadsheet!
-    fp = open(filename, 'rtU')
+    fp = open(filename, mode)
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(start_column - 2)
