@@ -87,5 +87,24 @@ def test_storage_convert(tmpdir):
     assert all(n1[1].name == n2[1].name for (n1, n2) in zip(original, tar))
 
 
-def test_prepare_index():
-    pass
+def test_prepare_index(tmpdir):
+    pytest.importorskip("ipfsapi")
+
+    try:
+        with IPFSStorage() as storage:
+            for f in utils.SIG_FILES:
+                with open(utils.get_test_data(f), 'rb') as data:
+                    storage.save('', data.read())
+    except NotImplementedError:
+        pytest.xfail("Using a Read-only client for IPFS")
+
+    testdata = utils.get_test_data("ipfs_leaves.sbt.json")
+    testsbt = tmpdir.join("tree.sbt.json")
+
+    shutil.copyfile(testdata, str(testsbt))
+
+    args = [
+        "prepare",
+        str(testsbt),
+    ]
+    status, out, err = utils.runscript("sourmash", args, in_directory=str(tmpdir))

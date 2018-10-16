@@ -1402,3 +1402,14 @@ def migrate(args):
 
     notify('saving SBT under "{}".', args.sbt_name)
     tree.save(args.sbt_name, structure_only=True)
+
+
+def prepare(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name of SBT to load')
+    args = parser.parse_args(args)
+
+    #tree = load_sbt_index(args.sbt_name, print_version_warning=False)
+
+    #notify('saving SBT under "{}".', args.sbt_name)
+    #tree.save(args.sbt_name, structure_only=True)
