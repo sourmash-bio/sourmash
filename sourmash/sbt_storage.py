@@ -97,13 +97,36 @@ class TarStorage(Storage):
         self.tarfile.close()
 
 
+class ReadOnlyIPFSClient(object):
+    """ Read-only IPFS client, only allow downloading data using a public HTTP gateway.
+
+    To be used when an IPFS node is not available.
+    """
+
+    def __init__(self, host='https://ipfs.io'):
+        self.host = host
+        # Backup host: https://cloudflare-ipfs.com
+
+    def cat(self, multihash):
+        return '{}/ipfs/{}'.format(self.host, multihash)
+
+    def add_bytes(self, content):
+        raise NotImplementedError('This is a read-only client.')
+
+    def pin_add(self, obj):
+        raise NotImplementedError('This is a read-only client.')
+
+
 class IPFSStorage(Storage):
 
     def __init__(self, pin_on_add=True, **kwargs):
         import ipfsapi
         self.ipfs_args = kwargs
         self.pin_on_add = pin_on_add
-        self.api = ipfsapi.connect(**self.ipfs_args)
+        try:
+            self.api = ipfsapi.connect(**self.ipfs_args)
+        except ipfsapi.exceptions.ConnectionError:
+            self.api = ReadOnlyIPFSClient()
 
     def save(self, path, content):
         # api.add_bytes(b"Mary had a little lamb")
