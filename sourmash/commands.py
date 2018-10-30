@@ -1405,11 +1405,19 @@ def migrate(args):
 
 
 def prepare(args):
+    from .sbt import parse_backend_args
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to load')
+    parser.add_argument('sbt_name', help='name of SBT to prepare')
+    parser.add_argument('-b', "--backend", type=str,
+                        help='Backend to convert to',
+                        default='FSStorage')
     args = parser.parse_args(args)
 
-    #tree = load_sbt_index(args.sbt_name, print_version_warning=False)
+    notify('saving SBT under "{}".', args.sbt_name)
 
-    #notify('saving SBT under "{}".', args.sbt_name)
-    #tree.save(args.sbt_name, structure_only=True)
+    backend, options = parse_backend_args(args.sbt_name, args.backend)
+
+    with backend(*options) as storage:
+        sbt = load_sbt_index(args.sbt_name, print_version_warning=False)
+        sbt.save(args.sbt_name, storage=storage)

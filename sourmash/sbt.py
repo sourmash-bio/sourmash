@@ -679,7 +679,10 @@ class SBT(object):
 
     @classmethod
     def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
-        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+        nodes = {}
+        if 'nodes' in info:
+            nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
         leaves = {int(k): v for (k, v) in info['leaves'].items()}
 
         if not leaves:
@@ -1040,20 +1043,18 @@ def filter_distance(filter_a, filter_b, n=1000):
     return distance / (8.0 * len(A) * n)
 
 
-def convert_cmd(name, backend):
-    from .sbtmh import SigLeaf
-
+def parse_backend_args(name, backend):
     options = backend.split('(')
     backend = options.pop(0)
     backend = backend.lower().strip("'")
 
     if options:
-      print(options)
-      options = options[0].split(')')
-      options = [options.pop(0)]
-      #options = {}
+        print(options)
+        options = options[0].split(')')
+        options = [options.pop(0)]
+        #options = {}
     else:
-      options = []
+        options = []
 
     if backend.lower() in ('ipfs', 'ipfsstorage'):
         backend = IPFSStorage
@@ -1075,6 +1076,14 @@ def convert_cmd(name, backend):
 
     else:
         error('backend not recognized: {}'.format(backend))
+
+    return backend, options
+
+
+def convert_cmd(name, backend_args):
+    from .sbtmh import SigLeaf
+
+    backend, options = parse_backend_args(name, backend_args)
 
     with backend(*options) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)

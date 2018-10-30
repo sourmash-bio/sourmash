@@ -8,7 +8,7 @@ import pytest
 from sourmash_lib import signature
 from sourmash_lib.sbt import SBT, GraphFactory
 from sourmash_lib.sbtmh import SigLeaf, search_minhashes
-from sourmash_lib.sbt_storage import IPFSStorage
+from sourmash_lib.sbt_storage import IPFSStorage, FSStorage
 
 from . import sourmash_tst_utils as utils
 
@@ -108,3 +108,12 @@ def test_prepare_index(tmpdir):
         str(testsbt),
     ]
     status, out, err = utils.runscript("sourmash", args, in_directory=str(tmpdir))
+    prepared_sbt = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+    assert not(isinstance(prepared_sbt.storage, IPFSStorage))
+    assert isinstance(prepared_sbt.storage, FSStorage)
+
+    sig = utils.get_test_data(utils.SIG_FILES[0])
+    status, out, err = utils.runscript('sourmash',
+                                       ['search', sig, str(testsbt)],
+                                       in_directory=str(tmpdir))
+    assert '3 matches:' in out
