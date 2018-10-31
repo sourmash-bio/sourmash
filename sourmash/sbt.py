@@ -410,7 +410,7 @@ class SBT(object):
             'args': self.factory.init_args()
         }
 
-        if not self.is_ready:
+        if not self.is_ready and structure_only is False:
             self._fill_internal()
 
         nodes = {}

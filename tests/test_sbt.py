@@ -129,42 +129,25 @@ def test_longer_search(n_children):
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-def test_tree_v1_load():
-    tree_v1 = SBT.load(utils.get_test_data('v1.sbt.json'),
-                       leaf_loader=SigLeaf.load)
+@pytest.mark.parametrize("old_version",
+                         ['v1', 'v2', 'v3', 'v4'])
+def test_tree_load_old_versions(old_version):
+    tree_old = SBT.load(utils.get_test_data(old_version + '.sbt.json'),
+                        leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v3.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('v5.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = next(signature.load_signatures(testdata1))
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
-                                               to_search, 0.1)}
+    results_old = {str(s) for s in tree_old.find(search_minhashes_containment,
+                                                 to_search, 0.1)}
     results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
                                                  to_search, 0.1)}
 
-    assert results_v1 == results_cur
-    assert len(results_v1) == 4
-
-
-def test_tree_v2_load():
-    tree_v2 = SBT.load(utils.get_test_data('v2.sbt.json'),
-                       leaf_loader=SigLeaf.load)
-
-    tree_cur = SBT.load(utils.get_test_data('v3.sbt.json'),
-                        leaf_loader=SigLeaf.load)
-
-    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = next(signature.load_signatures(testdata1))
-
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
-
-    assert results_v2 == results_cur
-    assert len(results_v2) == 4
+    assert results_old == results_cur
+    assert len(results_old) == 4
 
 
 def test_tree_save_load(n_children):
