@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals, division
 import abc
 from io import BytesIO
 import os
+import urllib
 import tarfile
 
 
@@ -108,7 +109,8 @@ class ReadOnlyIPFSClient(object):
         # Backup host: https://cloudflare-ipfs.com
 
     def cat(self, multihash):
-        return '{}/ipfs/{}'.format(self.host, multihash)
+        response = urllib.request.urlopen('{}/ipfs/{}'.format(self.host, multihash))
+        return response.read()
 
     def add_bytes(self, content):
         raise NotImplementedError('This is a read-only client.')
