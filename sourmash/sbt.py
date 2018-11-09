@@ -411,7 +411,7 @@ class SBT(object):
         }
 
         if not self.is_ready and structure_only is False:
-            self._fill_internal()
+            self._fill_internal_and_save(storage)
 
         nodes = {}
         leaves = {}
@@ -769,6 +769,24 @@ class SBT(object):
             return original_min_n_below != min_n_below
 
         self._fill_up(fill_min_n_below)
+
+    def _fill_internal_and_save(self, storage):
+
+        def fill_nodegraphs_and_save(node, *args, **kwargs):
+            children = kwargs['children']
+            storage = kwargs['storage']
+            for child in children:
+                if child.node is not None:
+                    child.node.update(node)
+
+                    # TODO: this was copied from SBT.save
+                    child.node.save(os.path.basename(node.name))
+
+                    child.node.unload()
+            return True
+
+        self._fill_up(fill_nodegraphs_and_save, storage=storage)
+        self.is_ready = True
 
     def _fill_internal(self):
 
