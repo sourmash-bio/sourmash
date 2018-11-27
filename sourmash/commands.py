@@ -222,6 +222,19 @@ def compute(args):
         if barcode not in cell_seqs:
             cell_seqs[barcode] = make_minhashes()
 
+    def add_barcode_seqs(barcode, sequences, filename):
+        """Add all a barcodes' sequences to a signature
+
+        :param barcode: str
+        :param sequences: [str]
+        :return: [sig.SourmashSignature]
+        """
+        Elist = make_minhashes()
+        for sequence in sequences:
+            add_seq(Elist, sequence, args.input_is_protein,
+                    args.check_sequence)
+        return build_siglist(Elist, filename, name=barcode)
+
     def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
         high_quality_mapping = alignment.mapq == 255
         good_barcode = 'CB' in alignment.tags and \
@@ -266,22 +279,18 @@ def compute(args):
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
                 import pathos.multiprocessing as mp
-                from .tenx import read_10x_folder
+                from .tenx import read_10x_folder, barcode_iterator
 
                 barcodes, bam_file = read_10x_folder(filename)
-                manager = multiprocessing.Manager()
-
-                cell_seqs = manager.dict()
 
                 notify('... reading sequences from {}', filename)
 
-                pool = mp.Pool(processes=args.processes)
-                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args,
-                                                       barcodes), bam_file)
+                barcode_sequences = barcode_iterator(bam_file, barcodes)
 
-                cell_signatures = [
-                    build_siglist(seqs, filename=filename, name=barcode)
-                    for barcode, seqs in cell_seqs.items()]
+                pool = mp.Pool(processes=args.processes)
+                cell_signatures = pool.map(add_barcode_seqs, barcode_sequences,
+                         filename=filename)
+
                 sigs = list(itertools.chain(*cell_signatures))
                 if args.output:
                     siglist += sigs
