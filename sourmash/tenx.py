@@ -36,9 +36,25 @@ def _pass_alignment_qc(alignment, barcodes):
     return pass_qc
 
 
-def barcode_iterator(bam, barcodes):
+def _parse_barcode_renamer(barcodes, barcode_renamer):
+    if barcode_renamer is not None:
+        renamer = {}
+
+        with open(barcode_renamer) as f:
+            for line in f.readlines():
+                barcode, renamed = line.split()
+                assert barcode in barcodes
+                renamer[barcode] = renamed
+    else:
+        renamer = dict(zip(barcodes, barcodes))
+    return renamer
+
+
+def barcode_iterator(bam, barcodes, barcode_renamer):
     """Yield a (barcode, list of str) pair for each QC-pass barcode"""
     bam_filtered = (x for x in bam if _pass_alignment_qc(x, barcodes))
+
+    renamer = _parse_barcode_renamer(barcode_renamer)
 
     # alignments only have a CELL_BARCODE tag if they past QC
     bam_sort_by_barcode = sorted(bam_filtered,
@@ -52,7 +68,7 @@ def barcode_iterator(bam, barcodes):
 
         # If this is a new non-null barcode, return all previous sequences
         if previous_barcode is not None and barcode != previous_barcode:
-            yield previous_barcode, barcode_alignments
+            yield renamer[previous_barcode], barcode_alignments
 
             # Reset the barcode alignments
             barcode_alignments = []
@@ -64,4 +80,4 @@ def barcode_iterator(bam, barcodes):
         previous_barcode = barcode
 
     # Yield the final one
-    yield previous_barcode, barcode_alignments
+    yield renamer[previous_barcode], barcode_alignments

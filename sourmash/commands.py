@@ -89,6 +89,10 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
+    parser.add_argument('--10x-barcode-renamer', type=str,
+                        help="Tab-separated file mapping 10x barcode name "
+                             "to new name, e.g. with channel or cell "
+                             "annotation label")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -286,7 +290,8 @@ def compute(args):
 
                 notify('... reading sequences from {}', filename)
 
-                barcode_sequences = barcode_iterator(bam_file, barcodes)
+                barcode_sequences = barcode_iterator(bam_file, barcodes,
+                                                     args['10x_barcode_renamer'])
 
                 pool = mp.Pool(processes=args.processes)
                 cell_signatures = pool.map(add_barcode_seqs, barcode_sequences)
