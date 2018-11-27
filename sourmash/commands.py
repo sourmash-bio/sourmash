@@ -276,12 +276,8 @@ def compute(args):
                 notify('... reading sequences from {}', filename)
 
                 pool = mp.Pool(processes=args.processes)
-                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
-                # for n, alignment in enumerate(bam_file):
-                #     if n % 10000 == 0:
-                #         if n:
-                #             notify('\r...{} {}', filename, n, end='')
-                #     maybe_add_alignment(alignment, cell_seqs)
+                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args,
+                                                       barcodes), bam_file)
 
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
