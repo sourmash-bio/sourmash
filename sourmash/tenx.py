@@ -21,6 +21,7 @@ def read_10x_folder(folder):
 
     return barcodes, bam_file
 
+
 def _pass_alignment_qc(alignment, barcodes):
     high_quality_mapping = alignment.mapq == 255
     good_barcode = 'CB' in alignment.tags and \
@@ -32,8 +33,9 @@ def _pass_alignment_qc(alignment, barcodes):
     return pass_qc
 
 
-def barcode_iterator(bam):
-    bam_filtered = (x for x in bam if _pass_alignment_qc(x))
+def barcode_iterator(bam, barcodes):
+    """Yield a (barcode, list of str) pair for each QC-pass barcode"""
+    bam_filtered = (x for x in bam if _pass_alignment_qc(x, barcodes))
 
     # alignments only have a CELL_BARCODE tag if they past QC
     bam_sort_by_barcode = sorted(bam_filtered,
