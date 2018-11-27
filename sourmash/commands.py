@@ -221,18 +221,20 @@ def compute(args):
         if barcode not in cell_seqs:
             cell_seqs[barcode] = make_minhashes()
 
-    def add_barcode_seqs(barcode, sequences, filename):
+    def add_barcode_seqs(barcode, sequences):
         """Add all a barcodes' sequences to a signature
 
         :param barcode: str
         :param sequences: [str]
         :return: [sig.SourmashSignature]
         """
+        from .tenx import BAM_FILENAME
+
         Elist = make_minhashes()
         for sequence in sequences:
             add_seq(Elist, sequence, args.input_is_protein,
                     args.check_sequence)
-        return build_siglist(Elist, filename, name=barcode)
+        return build_siglist(Elist, BAM_FILENAME, name=barcode)
 
     def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
         high_quality_mapping = alignment.mapq == 255
@@ -287,8 +289,7 @@ def compute(args):
                 barcode_sequences = barcode_iterator(bam_file, barcodes)
 
                 pool = mp.Pool(processes=args.processes)
-                cell_signatures = pool.map(add_barcode_seqs, barcode_sequences,
-                         filename=filename)
+                cell_signatures = pool.map(add_barcode_seqs, barcode_sequences)
 
                 sigs = list(itertools.chain(*cell_signatures))
                 if args.output:

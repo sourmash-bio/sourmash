@@ -1,6 +1,10 @@
 import os
 
 CELL_BARCODE = 'CB'
+UMI = 'UB'
+
+BAM_FILENAME = 'possorted_genome_bam.bam'
+BARCODES_TSV = 'barcodes.tsv'
 
 
 def read_single_column(filename):
@@ -14,19 +18,18 @@ def read_10x_folder(folder):
     """Get QC-pass barcodes, genes, and bam file from a 10x folder"""
     import bamnostic as bs
 
-    barcodes = read_single_column(os.path.join(folder, 'barcodes.tsv'))
+    barcodes = read_single_column(os.path.join(folder, BARCODES_TSV))
 
-    bam_file = bs.AlignmentFile(
-        os.path.join(folder, 'possorted_genome_bam.bam'), mode='rb')
+    bam_file = bs.AlignmentFile(os.path.join(folder, BAM_FILENAME), mode='rb')
 
     return barcodes, bam_file
 
 
 def _pass_alignment_qc(alignment, barcodes):
     high_quality_mapping = alignment.mapq == 255
-    good_barcode = 'CB' in alignment.tags and \
-                   alignment.get_tag('CB') in barcodes
-    good_umi = 'UB' in alignment.tags
+    good_barcode = CELL_BARCODE in alignment.tags and \
+                   alignment.get_tag(CELL_BARCODE) in barcodes
+    good_umi = UMI in alignment.tags
 
     pass_qc = high_quality_mapping and good_barcode and \
               good_umi
