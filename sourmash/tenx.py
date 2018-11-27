@@ -42,8 +42,21 @@ def barcode_iterator(bam):
     previous_barcode = None
     barcode_alignments = []
     for alignment in bam_sort_by_barcode:
+        # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
         barcode = alignment.get_tag(CELL_BARCODE)
 
         # If this is a new non-null barcode, return all previous sequences
         if previous_barcode is not None and barcode != previous_barcode:
-            yield barcode_alignments
+            yield previous_barcode, barcode_alignments
+
+            # Reset the barcode alignments
+            barcode_alignments = []
+
+        # Add only the aligned sequence to this list of barcode alignments
+        barcode_alignments.append(alignment.seq)
+
+        # Set this current barcode as the previous one
+        previous_barcode = barcode
+
+    # Yield the final one
+    yield previous_barcode, barcode_alignments
