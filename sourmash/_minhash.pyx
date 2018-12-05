@@ -364,7 +364,7 @@ cdef class MinHash(object):
         """\
         Calculate how much of self is contained by other.
         """
-        if not self.get_mins():
+        if not len(self):
             return 0.0
         return self.count_common(other) / len(self.get_mins())
 
