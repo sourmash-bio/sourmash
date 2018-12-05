@@ -70,6 +70,26 @@ def test_basic_dna(track_abundance):
     assert len(b) == 1
 
 
+def test_div_zero(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for similarity
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.similarity(mh2) == 0
+    assert mh2.similarity(mh) == 0
+
+
+def test_div_zero_contained(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for contained_by
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.contained_by(mh2) == 0
+    assert mh2.contained_by(mh) == 0
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
