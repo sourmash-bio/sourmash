@@ -81,17 +81,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
     md5_to_lineage = {}
     md5_to_name = {}
 
-    x = set()
-    for lca_db in dblist:
-        siglist = []
-        idx_set = set()
-
-        for hashval in query_mins:
-            idx_set.update(lca_db.hashval_to_idx.get(hashval, []))
-
-        for idx in idx_set:
-            pass
-
     # now! do the gather:
     while 1:
         # find all of the assignments for the current set of hashes
@@ -118,19 +107,19 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         best_list = []
         (best_lca_db, best_idx), top_count = next(common_iter)
 
-        best_list.append((lca_db, idx))
+        best_list.append((best_lca_db, best_idx))
         for (lca_db, idx), count in common_iter:
             if count != top_count:
                 break
             best_list.append((lca_db, idx))
 
-        # sort on name and pick the top (for consistency).
-        #best_list.sort()
-        #_, top_md5, top_sigsize = best_list[0]
+        # sort on idx and pick the lowest (for consistency).
+        best_list.sort(key=lambda x: x[1])
+        best_lca_db, best_idx = best_list[0]
 
         equiv_counts = len(best_list) - 1
 
-        # now, remove from query mins.
+        # now, remove hashes from query mins.
         intersect_mins = set()
         for hashval, match_set in assignments.items():
             if (best_lca_db, best_idx) in match_set:
