@@ -364,6 +364,8 @@ cdef class MinHash(object):
         """\
         Calculate how much of self is contained by other.
         """
+        if not len(self):
+            return 0.0
         return self.count_common(other) / len(self.get_mins())
 
     def similarity_ignore_maxhash(self, MinHash other):

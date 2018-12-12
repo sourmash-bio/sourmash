@@ -17,7 +17,7 @@ We have demo notebooks on binder that you can interact with:
 
 [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
 
-Sourmash is [published on JOSS](http://dx.doi.org/10.21105/joss.00027).
+Sourmash is [published on JOSS](https://doi.org/10.21105/joss.00027).
 
 ----
 
