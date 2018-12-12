@@ -132,12 +132,11 @@ class LCA_Database(object):
     """
     Wrapper class for taxonomic database.
 
-    obj.lineage_dict: key 'lineage_id' => lineage tuple [(name, rank), ...]
-    obj.hashval_to_lineage_id: key 'hashval' => set('lineage_id')
-    obj.ksize: k-mer size
-    obj.scaled: scaled value
-    obj.signatures_to_lineage_id: key 'md5sum' => 'lineage_id'
-    obj.signatures_to_name: key 'md5sum' => 'name' from original signature
+    obj.ident_to_idx: key 'identifier' to 'idx'
+    obj.idx_to_lid: key 'idx' to 'lid'
+    obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
+    obj.hashval_to_idx: key 'hashval' => set('idx')
+    obj.lineage_to_lid: key (tuple of LineagePair objects) to 'lid'
     """
     def __init__(self):
         self.ksize = None
@@ -167,6 +166,9 @@ class LCA_Database(object):
 
             type = load_d['type']
             assert type == 'sourmash_lca'
+
+            if 'lid_to_lineage' not in load_d:
+                raise Exception("Error! This is an old-style LCA DB. You'll need to build or download a newer one.")
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
@@ -282,7 +284,6 @@ class LCA_Database(object):
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         if not hasattr(self, 'signatures'):
-            print('XXX creating')
             sigd = defaultdict(minhash.copy_and_clear)
 
             for (k, v) in self.hashval_to_idx.items():
@@ -290,7 +291,6 @@ class LCA_Database(object):
                     sigd[vv].add_hash(k)
 
             self.signatures = sigd
-            print('YYY done extracted', len(sigd))
 
         if not hasattr(self, 'idx_to_ident'):
             idx_to_ident = {}
