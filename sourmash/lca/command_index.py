@@ -193,9 +193,9 @@ def index(args):
         # index -> lineage id
         idx_to_lid[idx] = lid
 
-    notify('{} distinct identities in spreadsheet out of {} rows',
+    notify('{} distinct identities in spreadsheet out of {} rows.',
            len(idx_to_lid), num_rows)
-    notify('{} distinct lineages in spreadsheet out of {} rows',
+    notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(idx_to_lid.values())), num_rows)
 
     # load signatures, construct index of hashvals to ident
@@ -278,7 +278,7 @@ def index(args):
 
     notify(u'\r\033[K', end=u'')
 
-    notify('{} assigned lineages out of {} distinct lineages in spreadsheet',
+    notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
            len(record_used_lineages), len(set(assignments.values())))
     unused_lineages = set(assignments.values()) - record_used_lineages
 

@@ -262,10 +262,12 @@ class LCA_Database(object):
         """
         x = []
 
-        lineage_id_list = self.hashval_to_lineage_id.get(hashval, [])
-        for lineage_id in lineage_id_list:
-            lineage = self.lineage_dict[lineage_id]
-            x.append(lineage)
+        idx_list = self.hashval_to_idx.get(hashval, [])
+        for idx in idx_list:
+            lid = self.idx_to_lid.get(idx, None)
+            if lid is not None:
+                lineage = self.lid_to_lineage[lid]
+                x.append(lineage)
 
         return x
 
@@ -366,6 +368,7 @@ def gather_assignments(hashvals, dblist):
     assignments = defaultdict(set)
     for hashval in hashvals:
         for lca_db in dblist:
+#            idxes = lca_db.
             lineages = lca_db.get_lineage_assignments(hashval)
             if lineages:
                 assignments[hashval].update(lineages)

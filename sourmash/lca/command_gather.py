@@ -102,6 +102,12 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         assignments = defaultdict(set)
         for hashval in query_mins:
             for lca_db in dblist:
+                idx_list = lca_db.hashval_to_idx.get(hashval, [])
+
+                lineage_ids = None
+                for idx in idx_list:
+                    pass
+                    
                 lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
                 for lid in lineage_ids:
                     md5 = lca_db.lineage_id_to_signature[lid]
