@@ -80,7 +80,7 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
 
 def generate_report(record_duplicates, record_no_lineage, record_remnants,
-                    unused_lineages, filename):
+                    unused_lineages, unused_identifiers, filename):
     """
     Output a report of anomalies from building the index.
     """
@@ -88,10 +88,13 @@ def generate_report(record_duplicates, record_no_lineage, record_remnants,
         print('Duplicate signatures:', file=fp)
         fp.write("\n".join(record_duplicates))
         fp.write("\n")
-        print('----\nNo lineage provided for:', file=fp)
+        print('----\nUnused identifiers:', file=fp)
+        fp.write("\n".join(unused_identifiers))
+        fp.write("\n")
+        print('----\nNo lineage provided for these identifiers:', file=fp)
         fp.write("\n".join(record_no_lineage))
         fp.write("\n")
-        print('----\nNo signatures found for these lineage assignments:', file=fp)
+        print('----\nNo signatures found for these identifiers:', file=fp)
         fp.write('\n'.join(record_remnants))
         fp.write("\n")
         print('----\nUnused lineages:', file=fp)
@@ -329,10 +332,14 @@ def index(args):
         if unused_lineages:
             notify('WARNING: {} unused lineages.', len(unused_lineages))
 
+        if unused_identifiers:
+            notify('WARNING: {} unused identifiers.', len(unused_identifiers))
+
         if args.report:
             notify("generating a report and saving in '{}'", args.report)
             generate_report(record_duplicates, record_no_lineage,
-                            record_remnants, unused_lineages, args.report)
+                            record_remnants, unused_lineages,
+                            unused_identifiers, args.report)
         else:
             notify('(You can use --report to generate a detailed report.)')
 
