@@ -16,6 +16,12 @@ from .lca_utils import debug, set_debug, LineagePair
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
+    """
+    Load a taxonomy assignment spreadsheet into a dictionary.
+
+    The 'assignments' dictionary that's returned maps identifiers to
+    lineage tuples.
+    """
     # parse spreadsheet!
     fp = open(filename, 'rtU')
     r = csv.reader(fp, delimiter=delimiter)
@@ -204,12 +210,17 @@ def index(args):
     else:
         inp_files = list(args.signatures)
 
+    #
+    # main loop, connecting lineage ID to signature.
+    #
+
     n = 0
     total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
     record_remnants = set(ident_to_idx.keys())
     record_used_lineages = set()
+    record_used_idents = set()
     for filename in inp_files:
         n += 1
         for sig in load_signatures(filename, ksize=args.ksize):
@@ -239,6 +250,8 @@ def index(args):
                 # @CTB
                 pass
 
+            record_used_idents.add(ident)
+
             # downsample to specified scaled; this has the side effect of
             # making sure they're all at the same scaled value!
             minhash = sig.minhash.downsample_scaled(args.scaled)
@@ -266,9 +279,28 @@ def index(args):
            len(record_used_lineages), len(set(assignments.values())))
     unused_lineages = set(assignments.values()) - record_used_lineages
 
+    notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
+           len(record_used_idents), len(set(assignments)))
+
+    # remove unused identifiers
+    unused_identifiers = set(assignments) - record_used_idents
+    for ident in unused_identifiers:
+        assert ident not in ident_to_name
+        idx = get_ident_index(ident)
+        del ident_to_idx[ident]
+        if idx in idx_to_lid:
+            del idx_to_lid[idx]
+
+    # remove unusued lineages and lids
+    for lineage in unused_lineages:
+        lid = lineage_to_lid[lineage]
+        del lineage_to_lid[lineage]
+        del lid_to_lineage[lid]
+
     # now, save!
     db_outfile = args.lca_db_out
-    if not (db_outfile.endswith('.lca.json') or db_outfile.endswith('.lca.json.gz')):
+    if not (db_outfile.endswith('.lca.json') or \
+                db_outfile.endswith('.lca.json.gz')):
         db_outfile += '.lca.json'
     notify('saving to LCA DB: {}'.format(db_outfile))
 
