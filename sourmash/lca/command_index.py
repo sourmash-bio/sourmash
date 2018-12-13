@@ -153,38 +153,34 @@ def index(args):
                                                force=args.force)
 
     # convert identities to numbers.
-    next_index = 0
     ident_to_idx = {}
     idx_to_lid = {}
 
-    next_lid = 0
     lid_to_lineage = {}
     lineage_to_lid = {}
 
-    def get_ident_index(ident, fail_on_duplicate=False):
-        nonlocal next_index
+    arg_d = dict(next_index=0, next_lid=0)          # hack to keep from using nonlocal
 
+    def get_ident_index(ident, fail_on_duplicate=False, arg_d=arg_d):
         idx = ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
 
         if idx is None:
-            idx = next_index
-            next_index += 1
+            idx = arg_d['next_index']
+            arg_d['next_index'] += 1
 
             ident_to_idx[ident] = idx
 
         return idx
 
-    def get_lineage_id(lineage):
-        nonlocal next_lid
-
+    def get_lineage_id(lineage, arg_d=arg_d):
         # lineage -> id
         lid = lineage_to_lid.get(lineage)
         if lid is None:
-            lid = next_lid
-            next_lid += 1
-
+            lid = arg_d['next_lid']
+            arg_d['next_lid'] += 1
+            
             lineage_to_lid[lineage] = lid
             lid_to_lineage[lid] = lineage
 
