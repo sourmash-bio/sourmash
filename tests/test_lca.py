@@ -841,7 +841,7 @@ def test_gather_equiv_results():
 
         assert '2.7 Mbp     100.0%' in out
         assert 'Shewanella baltica' in out
-        assert '(** 1 equal matches)'
+        assert '(** 1 equal matches)' in out
         assert ('OS223' in out) or ('OS185' in out)
 
         assert os.path.exists(lca_db)
@@ -849,3 +849,20 @@ def test_gather_equiv_results():
         r = csv.DictReader(open(os.path.join(location, 'matches.csv')))
         row = next(r)
         assert row['n_equal_matches'] == '1'
+
+
+def test_gather_old_lca_db():
+    with utils.TempDirectory() as location:
+        query_sig = utils.get_test_data('47+63.fa.sig')
+        lca_db = utils.get_test_data('lca/old-db-format-1.json')
+
+        cmd = ['lca', 'gather', query_sig, lca_db]
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(cmd)
+        print(out)
+        print(err)
+        assert 'Error! This is an old-style LCA DB.' in err
+        assert status != 0
