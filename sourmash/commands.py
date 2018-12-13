@@ -92,7 +92,7 @@ def compute(args):
     parser.add_argument('--rename-10x-barcodes', type=str,
                         help="Tab-separated file mapping 10x barcode name "
                              "to new name, e.g. with channel or cell "
-                             "annotation label")
+                             "annotation label", required=False)
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -225,13 +225,15 @@ def compute(args):
         if barcode not in cell_seqs:
             cell_seqs[barcode] = make_minhashes()
 
-    def add_barcode_seqs(barcode, sequences):
+    def add_barcode_seqs(barcode_sequences):
         """Add all a barcodes' sequences to a signature
 
         :param barcode: str
         :param sequences: [str]
         :return: [sig.SourmashSignature]
         """
+        barcode, sequences = barcode_sequences
+
         from .tenx import BAM_FILENAME
 
         Elist = make_minhashes()
