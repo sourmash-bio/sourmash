@@ -54,7 +54,7 @@ def barcode_iterator(bam, barcodes, barcode_renamer):
     """Yield a (barcode, list of str) pair for each QC-pass barcode"""
     bam_filtered = (x for x in bam if _pass_alignment_qc(x, barcodes))
 
-    renamer = _parse_barcode_renamer(barcode_renamer)
+    renamer = _parse_barcode_renamer(barcodes, barcode_renamer)
 
     # alignments only have a CELL_BARCODE tag if they past QC
     bam_sort_by_barcode = sorted(bam_filtered,
