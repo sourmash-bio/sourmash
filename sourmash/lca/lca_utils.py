@@ -328,6 +328,9 @@ class LCA_Database(object):
 
 
 def load_databases(filenames, scaled=None):
+    """
+    Load multiple databases, downsampling to a common scaled upon req.
+    """
     ksize_vals = set()
     scaled_vals = set()
     dblist = []
@@ -368,7 +371,6 @@ def gather_assignments(hashvals, dblist):
     assignments = defaultdict(set)
     for hashval in hashvals:
         for lca_db in dblist:
-#            idxes = lca_db.
             lineages = lca_db.get_lineage_assignments(hashval)
             if lineages:
                 assignments[hashval].update(lineages)
