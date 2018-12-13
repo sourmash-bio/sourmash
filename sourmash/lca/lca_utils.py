@@ -157,18 +157,23 @@ class LCA_Database(object):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
+            load_d = {}
             try:
                 load_d = json.load(fp)
             except json.decoder.JSONDecodeError:
-                raise ValueError("cannot parse database file '{}'; is it a valid LCA db?".format(db_name))
-            version = load_d['version']
-            assert version == '1.0'
+                pass
 
-            type = load_d['type']
-            assert type == 'sourmash_lca'
+            if not load_d:
+                raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
 
-            if 'lid_to_lineage' not in load_d:
-                raise Exception("Error! This is an old-style LCA DB. You'll need to build or download a newer one.")
+            version = load_d.get('version')
+            db_type = load_d.get('type')
+
+            if db_type != 'sourmash_lca':
+                raise ValueError("database file '{}' is not an LCA db.".format(db_name))
+
+            if version != '2.0' or 'lid_to_lineage' not in load_d:
+                raise ValueError("Error! This is an old-style LCA DB. You'll need to build or download a newer one.")
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
@@ -217,7 +222,7 @@ class LCA_Database(object):
         with xopen(db_name, 'wt') as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '1.0'
+            save_d['version'] = '2.0'
             save_d['type'] = 'sourmash_lca'
             save_d['license'] = 'CC0'
             save_d['ksize'] = self.ksize
