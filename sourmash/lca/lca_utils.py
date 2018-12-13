@@ -166,8 +166,13 @@ class LCA_Database(object):
             if not load_d:
                 raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
 
-            version = load_d.get('version')
-            db_type = load_d.get('type')
+            version = None
+            db_type = None
+            try:
+                version = load_d.get('version')
+                db_type = load_d.get('type')
+            except AttributeError:
+                pass
 
             if db_type != 'sourmash_lca':
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
