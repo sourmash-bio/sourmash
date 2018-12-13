@@ -157,7 +157,7 @@ def compute(args):
         notify('Computing only protein (and not DNA) signatures.')
         num_sigs = len(ksizes)
 
-    if args.protein:
+    if args.protein and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
