@@ -271,7 +271,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             lca_db = lca_utils.LCA_Database()
             lca_db.load(sbt_or_sigfile)
 
-            ## @CTB check is compatible
+            if query_ksize != lca_db.ksize:
+                raise ValueError("incorrect ksize: query {}, lca db {}".format(query_ksize, lca_db.ksize))
+
+            query_scaled = query_sig.minhash.scaled
+            if query_scaled <= lca_db.scaled:
+                raise ValueError("incompatible scaled values: query {}, lca db {}".format(query_scaled, lca_db.scaled))
+
             notify('loaded LCA {}', sbt_or_sigfile, end='\r')
             n_databases += 1
 
