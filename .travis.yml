@@ -57,22 +57,19 @@ jobs:
         - tox
     - &wheel
       stage: Build wheels
-      script:
-        - $PIP install cibuildwheel==0.10.0
-        - cibuildwheel --output-dir wheelhouse
-      os: osx
-      language: generic
-      env:
-        - PIP=pip2
-    - <<: *wheel
-      os: linux
-      dist: xenial
-      language: python
-      python: '3.7'
       services:
         - docker
       env:
         - PIP=pip
+        - CIBW_SKIP='*-manylinux1_i686'
+      script:
+        - $PIP install cibuildwheel==0.10.0
+        - cibuildwheel --output-dir wheelhouse
+    - <<: *wheel
+      os: osx
+      language: generic
+      env:
+        - PIP=pip2
     - stage: GitHub Release
       deploy:
         provider: releases
