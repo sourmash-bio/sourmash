@@ -15,9 +15,9 @@ if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 python:
   - "3.7"
-  - "3.6"
-  - "3.5"
-  - "2.7"
+#  - "3.6"
+#  - "3.5"
+#  - "2.7"
 
 dist: xenial
 
@@ -67,11 +67,12 @@ jobs:
     - <<: *wheel
       os: linux
       dist: xenial
+      language: python
+      python: '3.7'
       services:
         - docker
       env:
         - PIP=pip
-        - CIBW_BEFORE_BUILD='source .travis/install_cargo.sh'
     - stage: GitHub Release
       deploy:
         provider: releases
