@@ -9,9 +9,10 @@ cache:
 #  - master
 #  - "/^v.*$/"
 
-# only test master and tagged releases on push
-# # always test things that aren't pushes (like PRs)
-if: type != push OR branch = master OR branch =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
+# always test things that aren't pushes (like PRs)
+# never test tags or pushes to non-master branches (wait for PR)
+# https://github.com/travis-ci/travis-ci/issues/2200#issuecomment-441395545)
+# if: type != push OR (tag IS blank AND branch = master)
 
 python:
   - "3.7"
