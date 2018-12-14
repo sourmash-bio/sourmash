@@ -31,7 +31,14 @@ jobs:
       dist: xenial
     - &test
       stage: test
+    - <<: *test
       os: osx
+      language: generic
+      before_install:
+        - brew update
+        - brew outdated python || brew upgrade python
+      env:
+        - TOXENV=py37
     - &integration
       stage: integration
       os: linux
@@ -49,7 +56,6 @@ jobs:
       script:
         - $PIP install cibuildwheel==0.10.0
         - cibuildwheel --output-dir wheelhouse
-    - <<: *wheel
       os: osx
       language: generic
       env:
