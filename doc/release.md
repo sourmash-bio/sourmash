@@ -27,7 +27,7 @@ cd sourmash
  and then tag the release candidate with the new version number prefixed by
    the letter 'v':
 ```
-        git tag v${new_version}-${rc}
+        git tag -a v${new_version}-${rc}
         git push --tags git@github.com:dib-lab/sourmash.git
 ```
 3\. Test the release candidate. Bonus: repeat on Mac OS X:
@@ -116,7 +116,7 @@ so:
    authorized account):
 ```
         cd ../sourmash
-        git tag v${new_version}
+        git tag -a v${new_version}
         python setup.py register sdist upload
 ```
 2\. Delete the release candidate tag and push the tag updates to GitHub:
