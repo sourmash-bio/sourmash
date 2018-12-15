@@ -278,6 +278,10 @@ def index(args):
 
     notify(u'\r\033[K', end=u'')
 
+    if not hashval_to_idx:
+        error('ERROR: no hash values found - are there any signatures?')
+        sys.exit(1)
+
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
            len(record_used_lineages), len(set(assignments.values())))
     unused_lineages = set(assignments.values()) - record_used_lineages

@@ -866,3 +866,50 @@ def test_gather_old_lca_db():
         print(err)
         assert 'Error! This is an old-style LCA DB.' in err
         assert status != 0
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_scaled(c):
+    # create a database with scaled of 10000
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '10000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # next, create a query sig with scaled of 100000
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '100000', testdata1,
+                   '-o', 'test_query.sig')
+    print(c)
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', 'test_query.sig', 'test.lca.json')
+        print(c)
+
+    assert 'new scaled 10000 is lower than current sample scaled 10000' in str(e.value)
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_ksize(c):
+    # create a database with ksize of 25
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # this should fail: the LCA database has ksize 25, and the query sig has
+    # no compatible ksizes.
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+
+    assert '0 signatures matching ksize and molecule type;' in str(e.value)
