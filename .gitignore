@@ -19,3 +19,8 @@ _minhash.so
 .coverage
 sourmash_lib/_minhash.cpp
 sourmash/_minhash.cpp
+.asv/
+.eggs/
+.pytest_cache
+.python-version
+sourmash/version.py
