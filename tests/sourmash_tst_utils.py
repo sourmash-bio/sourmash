@@ -220,7 +220,7 @@ def in_tempdir(fn):
     def wrapper(*args, **kwargs):
         with TempDirectory() as location:
             ctxt = RunnerContext(location)
-            newargs = ctxt, *args
+            newargs = [ctxt] + list(args)
             return fn(*newargs, **kwargs)
 
     return wrapper
@@ -229,7 +229,7 @@ def in_tempdir(fn):
 def in_thisdir(fn):
     def wrapper(*args, **kwargs):
         ctxt = RunnerContext(os.getcwd())
-        newargs = ctxt, *args
+        newargs = [ctxt] + list(args)
         return fn(*newargs, **kwargs)
 
     return wrapper
