@@ -278,6 +278,12 @@ def index(args):
 
     notify(u'\r\033[K', end=u'')
 
+    if n == 0:
+        error('ERROR: no signatures found. ??')
+        if args.traverse_directory and not args.force:
+            error('(note, with --traverse-directory, you may want to use -f)')
+        sys.exit(1)
+
     if not hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
