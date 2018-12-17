@@ -1018,7 +1018,7 @@ def gather(args):
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # empty?
-    if not query.minhash.get_mins():
+    if not len(query.minhash):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
@@ -1097,7 +1097,7 @@ def gather(args):
     if args.output_unassigned:
         if not found:
             notify('nothing found - entire query signature unassigned.')
-        elif not query.minhash.get_mins():
+        elif not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
@@ -1179,7 +1179,7 @@ def multigather(args):
             query.minhash = query.minhash.downsample_scaled(args.scaled)
 
         # empty?
-        if not query.minhash.get_mins():
+        if not len(query.minhash):
             error('no query hashes!? skipping to next..')
             continue
 
@@ -1256,7 +1256,7 @@ def multigather(args):
         with open(output_unassigned, 'wt') as fp:
             if not found:
                 notify('nothing found - entire query signature unassigned.')
-            elif not query.minhash.get_mins():
+            elif not len(query.minhash):
                 notify('no unassigned hashes! not saving.')
             else:
                 notify('saving unassigned hashes to "{}"', output_unassigned)
