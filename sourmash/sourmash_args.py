@@ -223,6 +223,11 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
+    """
+    Load one or more SBTs, LCAs, and/or signatures.
+
+    Check for compatibility with query.
+    """
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
 
@@ -230,6 +235,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     n_databases = 0
     databases = []
     for sbt_or_sigfile in filenames:
+        notify('loading from {}...', sbt_or_sigfile, end='\r')
+        # are we collecting signatures from a directory/path?
         if traverse and os.path.isdir(sbt_or_sigfile):
             for sigfile in traverse_find_sigs([sbt_or_sigfile]):
                 try:
