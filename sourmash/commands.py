@@ -828,8 +828,9 @@ def search(args):
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
 
-        notify('downsampling query from scaled={} to {}',
-               query.minhash.scaled, int(args.scaled))
+        if args.scaled != query.minhash.scaled:
+            notify('downsampling query from scaled={} to {}',
+                   query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
