@@ -40,12 +40,12 @@ def search_databases(query, databases, threshold, do_containment, best_only,
 
     results = []
     found_md5 = set()
-    for (sbt_or_siglist, filename, is_sbt) in databases:
-        if is_sbt:
+    for (obj, filename, filetype) in databases:
+        if filetype == 'SBT':
             if best_only:            # this needs to be reset for each SBT
                 search_fn = SearchMinHashesFindBest().search
 
-            tree = sbt_or_siglist
+            tree = obj
             for leaf in tree.find(search_fn, query, threshold):
                 similarity = query_match(leaf.data)
 
@@ -61,8 +61,21 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                     found_md5.add(sr.md5)
                     results.append(sr)
 
+        elif filetype == 'LCA':
+            lca_db = obj
+            for x in lca_db.find(query.minhash, threshold, do_containment):
+                (score, match_sig, md5, filename, name) = x
+                if md5 not in found_md5:
+                    sr = SearchResult(similarity=score,
+                                      match_sig=match_sig,
+                                      md5=md5,
+                                      filename=filename,
+                                      name=name)
+                    found_md5.add(sr.md5)
+                    results.append(sr)
+
         else: # list of signatures
-            for ss in sbt_or_siglist:
+            for ss in obj:
                 similarity = query_match(ss)
                 if similarity >= threshold and \
                        ss.md5sum() not in found_md5:
@@ -103,10 +116,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # a good early score truncates later searches.
 
         results = []
-        for (sbt_or_siglist, filename, is_sbt) in dblist:
+        for (obj, filename, filetype) in dblist:
             # search a tree
-            if is_sbt:
-                tree = sbt_or_siglist
+            if filetype == 'SBT':
+                tree = obj
                 search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
 
                 for leaf in tree.find(search_fn, query, 0.0):
@@ -114,10 +127,18 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                     similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
                         results.append((similarity, leaf.data))
+            # or an LCA database
+            elif filetype == 'LCA':
+                lca_db = obj
+                for x in lca_db.find(query.minhash, 0.0,
+                                     containment=True, ignore_scaled=True):
+                    (score, match_sig, md5, filename, name) = x
+                    if score > 0.0:
+                        results.append((score, match_sig))
 
             # search a signature
             else:
-                for ss in sbt_or_siglist:
+                for ss in obj:
                     similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
                     if similarity > 0.0:
                         results.append((similarity, ss))
