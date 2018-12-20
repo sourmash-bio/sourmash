@@ -43,7 +43,12 @@ then define a search function, ::
 
 from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple, Mapping, defaultdict
+from collections import namedtuple, defaultdict
+try:
+    from collections.abc import Mapping
+except ImportError:  # Python 2...
+    from collections import Mapping
+
 from copy import copy
 import json
 import math

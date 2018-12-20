@@ -273,7 +273,7 @@ cdef class MinHash(object):
 
         old_scaled = get_scaled_for_max_hash(self.max_hash)
         if old_scaled > new_num:
-            raise ValueError('new scaled is lower than current sample scaled')
+            raise ValueError('new scaled {} is lower than current sample scaled {}'.format(new_num, old_scaled))
 
         new_max_hash = get_max_hash_for_scaled(new_num)
 
@@ -364,6 +364,8 @@ cdef class MinHash(object):
         """\
         Calculate how much of self is contained by other.
         """
+        if not len(self):
+            return 0.0
         return self.count_common(other) / len(self.get_mins())
 
     def containment_ignore_maxhash(self, MinHash other):
