@@ -111,18 +111,23 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_scaled = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
-    def find_best(dblist, query):
-        # CTB: could optimize by sharing scores across searches, i.e.
-        # a good early score truncates later searches.
+    def find_best(dblist, query, remainder):
+
+        # precompute best containment from all of the remainders
+        best_ctn_sofar = 0.0
+        for x in remainder:
+            ctn = query.minhash.containment_ignore_maxhash(x.minhash)
+            if ctn > best_ctn_sofar:
+                best_ctn_sofar = ctn
 
         results = []
         for (obj, filename, filetype) in dblist:
             # search a tree
             if filetype == 'SBT':
                 tree = obj
-                search_fn = GatherMinHashesFindBestIgnoreMaxHash().search
+                search_fn = GatherMinHashesFindBestIgnoreMaxHash(best_ctn_sofar).search
 
-                for leaf in tree.find(search_fn, query, 0.0):
+                for leaf in tree.find(search_fn, query, best_ctn_sofar):
                     leaf_e = leaf.data.minhash
                     similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
@@ -149,6 +154,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # take the best result
         results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
         best_similarity, best_leaf = results[0]
+
+        for x in results[1:]:
+            remainder.add(x[1])
+
         return best_similarity, best_leaf, filename
 
 
@@ -165,8 +174,9 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     query = build_new_signature(new_mins, orig_query)
 
     cmp_scaled = 0
+    remainder = set()
     while 1:
-        best_similarity, best_leaf, filename = find_best(databases, query)
+        best_similarity, best_leaf, filename = find_best(databases, query, remainder)
         if not best_leaf:          # no matches at all!
             break
 
