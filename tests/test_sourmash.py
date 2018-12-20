@@ -10,6 +10,7 @@ import screed
 import glob
 import json
 import csv
+import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash_lib
@@ -165,6 +166,32 @@ def test_do_sourmash_compute_singleton():
         assert sig.name().endswith('shortName')
 
 
+def test_do_sourmash_compute_10x():
+    bamnostic = pytest.importorskip('bamnostic')
+
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('10x-example')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--input-is-10x',
+                                            testdata1],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile) as f:
+            data = json.load(f)
+
+        barcode_signatures = [sig['name'] for sig in data]
+
+        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
+            true_barcodes = set(x.strip() for x in f.readlines())
+
+        assert all(bc in true_barcodes for bc in barcode_signatures)
+
+
+
 def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -309,6 +336,27 @@ def test_do_sourmash_compute_multik_only_protein():
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+
+def test_do_sourmash_compute_protein_bad_sequences():
+    """Proper error handling when Ns in dna sequence"""
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.bad.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--protein', '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.bad.fa.sig')
         assert os.path.exists(outfile)
 
         with open(outfile, 'rt') as fp:
@@ -972,6 +1020,43 @@ def test_search():
         assert '93.0%' in out
 
 
+def test_search_ignore_abundance():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--track-abundance',
+                                            testdata1, testdata2],
+                                           in_directory=location)
+
+
+
+        # Make sure there's different percent matches when using or
+        # not using abundance
+        status1, out1, err1 = utils.runscript('sourmash',
+                                           ['search',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status1, out1, err1)
+        assert '1 matches' in out1
+        assert '81.5%' in out1
+
+        status2, out2, err2 = utils.runscript('sourmash',
+                                           ['search',
+                                            '--ignore-abundance',
+                                            'short.fa.sig',
+                                            'short2.fa.sig'],
+                                           in_directory=location)
+        print(status2, out2, err2)
+        assert '1 matches' in out2
+        assert '93.0%' in out2
+
+        # Make sure results are different!
+        assert out1 != out2
+
+
 def test_search_csv():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -997,6 +1082,28 @@ def test_search_csv():
             assert row['name'].endswith('short2.fa')
             assert row['filename'].endswith('short2.fa.sig')
             assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
+
+
+@utils.in_tempdir
+def test_search_lca_db(c):
+    # can we do a 'sourmash search' on an LCA database?
+    query = utils.get_test_data('47.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    c.run_sourmash('search', query, lca_db)
+    print(c)
+    assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
+
+
+@utils.in_tempdir
+def test_gather_lca_db(c):
+    # can we do a 'sourmash gather' on an LCA database?
+    query = utils.get_test_data('47+63.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    c.run_sourmash('gather', query, lca_db)
+    print(c)
+    assert 'NC_009665.1 Shewanella baltica OS185' in str(c)
 
 
 def test_compare_deduce_molecule():
@@ -2616,6 +2723,35 @@ def test_gather_metagenome():
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
 
+def test_multigather_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'multigather --query {} --db gcf_all -k 21'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:
         # set up a directory $location/gather that contains
@@ -2996,6 +3132,53 @@ def test_sbt_categorize():
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
         assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+
+
+def test_sbt_categorize_ignore_abundance():
+    with utils.TempDirectory() as location:
+
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['reads-s10-s11']
+        against_list = [ 'gather-abund/' + i + '.sig' \
+                         for i in against_list ]
+        against_list = [ utils.get_test_data(i) for i in against_list ]
+
+        # omit 3
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+        status2, out2, err2 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        # --- Categorize without ignoring abundance ---
+        args = ['categorize', 'thebestdatabase',
+                '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+        status3, out3, err3 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out3)
+        print(err3)
+
+        assert 'for 1-1, found: 0.44 1-1' in err3
+
+        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
+
+        # --- Now categorize with ignored abundance ---
+        args = ['categorize', '--ignore-abundance',
+                '--ksize', '21', '--dna', '--csv', 'out4.csv',
+                'thebestdatabase', query]
+        status4, out4, err4 = utils.runscript('sourmash', args,
+                                           in_directory=location)
+
+        print(out4)
+        print(err4)
+
+        assert 'for 1-1, found: 0.88 1-1' in err4
+
+        out_csv4 = open(os.path.join(location, 'out4.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
+
+        # Make sure ignoring abundance produces a different output!
+        assert err3 != err4
 
 
 def test_sbt_categorize_already_done():

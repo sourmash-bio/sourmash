@@ -28,22 +28,24 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only):
+def search_databases(query, databases, threshold, do_containment, best_only,
+                     ignore_abundance):
     # set up the search & score function(s) - similarity vs containment
     search_fn = search_minhashes
-    query_match = lambda x: query.similarity(x, downsample=True)
+    query_match = lambda x: query.similarity(
+        x, downsample=True, ignore_abundance=ignore_abundance)
     if do_containment:
         search_fn = search_minhashes_containment
         query_match = lambda x: query.contained_by(x, downsample=True)
 
     results = []
     found_md5 = set()
-    for (sbt_or_siglist, filename, is_sbt) in databases:
-        if is_sbt:
+    for (obj, filename, filetype) in databases:
+        if filetype == 'SBT':
             if best_only:            # this needs to be reset for each SBT
                 search_fn = SearchMinHashesFindBest().search
 
-            tree = sbt_or_siglist
+            tree = obj
             for leaf in tree.find(search_fn, query, threshold):
                 similarity = query_match(leaf.data)
 
@@ -59,8 +61,21 @@ def search_databases(query, databases, threshold, do_containment, best_only):
                     found_md5.add(sr.md5)
                     results.append(sr)
 
+        elif filetype == 'LCA':
+            lca_db = obj
+            for x in lca_db.find(query.minhash, threshold, do_containment):
+                (score, match_sig, md5, filename, name) = x
+                if md5 not in found_md5:
+                    sr = SearchResult(similarity=score,
+                                      match_sig=match_sig,
+                                      md5=md5,
+                                      filename=filename,
+                                      name=name)
+                    found_md5.add(sr.md5)
+                    results.append(sr)
+
         else: # list of signatures
-            for ss in sbt_or_siglist:
+            for ss in obj:
                 similarity = query_match(ss)
                 if similarity >= threshold and \
                        ss.md5sum() not in found_md5:
@@ -106,24 +121,32 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                 best_ctn_sofar = ctn
 
         results = []
-        for (sbt_or_siglist, filename, is_sbt) in dblist:
+        for (obj, filename, filetype) in dblist:
             # search a tree
-            if is_sbt:
-                tree = sbt_or_siglist
+            if filetype == 'SBT':
+                tree = obj
                 search_fn = GatherMinHashesFindBestIgnoreMaxHash(best_ctn_sofar).search
 
                 for leaf in tree.find(search_fn, query, best_ctn_sofar):
                     leaf_e = leaf.data.minhash
-                    ctn = query.minhash.containment_ignore_maxhash(leaf_e)
-                    if ctn > 0.0:
-                        results.append((ctn, leaf.data))
+                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
+                    if similarity > 0.0:
+                        results.append((similarity, leaf.data))
+            # or an LCA database
+            elif filetype == 'LCA':
+                lca_db = obj
+                for x in lca_db.find(query.minhash, 0.0,
+                                     containment=True, ignore_scaled=True):
+                    (score, match_sig, md5, filename, name) = x
+                    if score > 0.0:
+                        results.append((score, match_sig))
 
             # search a signature
             else:
-                for ss in sbt_or_siglist:
-                    ctn = query.minhash.containment_ignore_maxhash(ss.minhash)
-                    if ctn > 0.0:
-                        results.append((ctn, ss))
+                for ss in obj:
+                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
+                    if similarity > 0.0:
+                        results.append((similarity, ss))
 
         if not results:
             return None, None, None
