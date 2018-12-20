@@ -120,7 +120,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             # search a tree
             if filetype == 'SBT':
                 tree = obj
-                search_fn = SearchMinHashesFindBestIgnoreMaxHash().search
+                search_fn = GatherMinHashesFindBestIgnoreMaxHash().search
 
                 for leaf in tree.find(search_fn, query, 0.0):
                     leaf_e = leaf.data.minhash
