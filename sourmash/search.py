@@ -129,7 +129,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
                 for leaf in tree.find(search_fn, query, best_ctn_sofar):
                     leaf_e = leaf.data.minhash
-                    similarity = query.minhash.similarity_ignore_maxhash(leaf_e)
+                    similarity = query.minhash.containment_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
                         results.append((similarity, leaf.data))
             # or an LCA database
@@ -144,7 +144,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             # search a signature
             else:
                 for ss in obj:
-                    similarity = query.minhash.similarity_ignore_maxhash(ss.minhash)
+                    similarity = query.minhash.containment_ignore_maxhash(ss.minhash)
                     if similarity > 0.0:
                         results.append((similarity, ss))
 
