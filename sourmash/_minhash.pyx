@@ -198,7 +198,7 @@ cdef class MinHash(object):
         if with_abundance and self.track_abundance:
             return dict(zip(mh.mins, mh.abunds))
         else:
-            return [it for it in sorted(deref(self._this).mins)]
+            return deref(self._this).mins
 
     def get_hashes(self):
         return self.get_mins()
@@ -368,7 +368,7 @@ cdef class MinHash(object):
             return 0.0
         return self.count_common(other) / len(self.get_mins())
 
-    def similarity_ignore_maxhash(self, MinHash other):
+    def containment_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
         if not a:
             return 0.0
