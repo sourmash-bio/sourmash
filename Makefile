@@ -16,7 +16,7 @@ dist: FORCE
 	$(PYTHON) setup.py sdist
 
 test: all
-	pip install '.[test]'
+	pip install -e '.[test]'
 	$(PYTHON) -m pytest
 
 doc: .PHONY
@@ -29,5 +29,13 @@ coverage: all
 
 benchmark: all
 	asv continuous master
+
+wheel:
+	export DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64; \
+	docker pull $${DOCKER_IMAGE} ; \
+	docker run --rm -v `pwd`:/io $${DOCKER_IMAGE} /io/travis/build-wheels.sh
+
+last-tag:
+	git fetch -p -q; git tag -l | sort -V | tail -1
 
 FORCE:
