@@ -1782,7 +1782,8 @@ def test_do_sourmash_index_bad_args():
                                             '--dna', '--protein'],
                                            in_directory=location, fail_ok=True)
 
-        assert "cannot specify both --dna and --protein!" in err
+        print(out, err)
+        assert "cannot specify both --dna/--rna and --protein!" in err
         assert status != 0
 
 

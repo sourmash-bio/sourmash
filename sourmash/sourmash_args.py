@@ -22,11 +22,12 @@ def add_moltype_args(parser):
                         help='do not choose a protein signature')
     parser.set_defaults(protein=False)
 
-    parser.add_argument('--dna', dest='dna', default=None,
+    parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
-                        help='choose a DNA signature (default: True)')
-    parser.add_argument('--no-dna', dest='dna', action='store_false',
-                        help='do not choose a DNA signature')
+                        help='choose a nucleotide signature (default: True)')
+    parser.add_argument('--no-dna', '--no-rna', dest='dna',
+                        action='store_false',
+                        help='do not choose a nucleotide signature')
     parser.set_defaults(dna=None)
 
 
@@ -38,11 +39,12 @@ def add_construct_moltype_args(parser):
                         help='do not build protein signatures')
     parser.set_defaults(protein=False)
 
-    parser.add_argument('--dna', dest='dna', default=None,
+    parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
-                        help='build DNA signatures (default: True)')
-    parser.add_argument('--no-dna', dest='dna', action='store_false',
-                        help='do not build DNA signatures')
+                        help='build nucleotide signatures (default: True)')
+    parser.add_argument('--no-dna', '--no-rna', dest='dna',
+                        action='store_false',
+                        help='do not build nucleotide signatures')
     parser.set_defaults(dna=True)
 
 
@@ -65,7 +67,7 @@ def get_moltype(sig, require=False):
 def calculate_moltype(args, default=None):
     if args.protein:
         if args.dna is True:
-            error('cannot specify both --dna and --protein!')
+            error('cannot specify both --dna/--rna and --protein!')
             sys.exit(-1)
         args.dna = False
 
@@ -104,7 +106,7 @@ def load_query_signature(filename, ksize, select_moltype):
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
         error('{} signatures matching ksize and molecule type;', len(sl))
-        error('need exactly one. Specify --ksize or --dna/--protein.')
+        error('need exactly one. Specify --ksize or --dna, --rna, or --protein.')
         sys.exit(-1)
 
     return sl[0]
