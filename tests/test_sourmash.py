@@ -1328,49 +1328,43 @@ def test_do_sourmash_index_multiscaled_fail():
         assert 'trying to build an SBT with incompatible signatures.' in err
 
 
-def test_do_sourmash_index_multiscaled_rescale():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '10', testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '1', testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_sourmash_index_multiscaled_rescale(c):
+    # test sourmash index --scaled
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--scaled', '10',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    c.run_sourmash('compute', '--scaled', '10', testdata1)
+    c.run_sourmash('compute', '--scaled', '1', testdata2)
 
-        print(status, out, err)
-        assert status == 0
+    c.run_sourmash('index', '-k', '31', 'zzz',
+                   '--scaled', '10',
+                   'short.fa.sig',
+                   'short2.fa.sig')
+
+    print(c)
+    assert c.last_result.status == 0
 
 
-def test_do_sourmash_index_multiscaled_rescale_fail():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '10', testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '1', testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_sourmash_index_multiscaled_rescale_fail(c):
+    # test sourmash index --scaled with invalid rescaling (10 -> 5)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--scaled', '5',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    c.run_sourmash('compute', '--scaled', '10', testdata1)
+    c.run_sourmash('compute', '--scaled', '1', testdata2)
+    # this should fail: cannot go from a scaled value of 10 to 5
 
-        print(status, out, err)
-        assert status == -1
-        assert 'new scaled is lower than current sample scaled' in err
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('index', '-k', '31', 'zzz',
+                       '--scaled', '5',
+                       'short.fa.sig',
+                       'short2.fa.sig')
+
+    print(e.value)
+    assert c.last_result.status == -1
+    assert 'new scaled 5 is lower than current sample scaled 10' in c.last_result.err
 
 
 def test_do_sourmash_sbt_search_output():
