@@ -8,6 +8,10 @@ import gzip
 from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
 
+__all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
+           'load_single_database', 'load_databases', 'gather_assignments',
+           'count_lca_for_assignments', 'LineagePair']
+
 try:                                      # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
@@ -38,6 +42,9 @@ def check_files_exist(*files):
 
 # ordered list of taxonomic ranks
 def taxlist(include_strain=True):
+    """
+    Provide an ordered list of taxonomic ranks.
+    """
     for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
               'species']:
         yield k
@@ -46,18 +53,32 @@ def taxlist(include_strain=True):
 
 
 # produce an ordered list of tax names from lineage
-def zip_lineage(lineage, include_strain=False, truncate_empty=False):
-    """@CTB: document and test."""
+def zip_lineage(lineage, include_strain=True, truncate_empty=False):
+    """
+    Given an iterable of LineagePair objects, return list of lineage names.
+
+    This utility function handles species/strain and empty lineage entries
+    gracefully.
+
+    >>> x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    >>> zip_lineage(x)
+    ['a', 'b', '', '', '', '', '', '']
+
+    >>> x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    >>> zip_lineage(x)
+    ['a', '', 'c', '', '', '', '', '']
+    """
+
     row = []
     empty = LineagePair(None, '')
-    for taxrank, lineage_tup in zip_longest(taxlist(), lineage,
-                                            fillvalue=empty):
-        if lineage_tup != empty and lineage_tup.name:
-            if lineage_tup.rank != taxrank:
-                raise ValueError('incomplete lineage at {}!? {}'.format(lineage_tup.rank, lineage))
-        else:
+    for taxrank, lineage_tup in zip_longest(taxlist(include_strain=include_strain), lineage, fillvalue=empty):
+        if lineage_tup == empty:
             if truncate_empty:
                 break
+        else:
+            # validate non-empty tax, e.g. superkingdom/phylum/class in order.
+            if lineage_tup.rank != taxrank:
+                raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
 
         row.append(lineage_tup.name)
     return row

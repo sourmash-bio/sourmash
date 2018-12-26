@@ -16,9 +16,41 @@ from . import sourmash_tst_utils as utils
 import sourmash_lib
 
 from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import (build_tree, find_lca, LineagePair)
+from sourmash_lib.lca.lca_utils import *
 
 ## lca_utils tests
+
+
+def test_taxlist_1():
+    assert list(taxlist()) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
+
+
+def test_taxlist_2():
+    assert list(taxlist(include_strain=False)) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+
+
+def test_zip_lineage_1():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x) == ['a', 'b', '', '', '', '', '', '']
+
+
+def test_zip_lineage_2():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x, truncate_empty=True) == ['a', 'b']
+
+
+def test_zip_lineage_3():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert zip_lineage(x) == ['a', '', 'c', '', '', '', '', '']
+
+
+def test_zip_lineage_4():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('class', 'c') ]
+    with pytest.raises(ValueError) as e:
+        zip_lineage(x)
+
+    assert 'incomplete lineage at phylum - is class instead' in str(e)
+
 
 def test_build_tree():
     tree = build_tree([[LineagePair('rank1', 'name1'),
