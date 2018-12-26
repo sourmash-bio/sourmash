@@ -13,18 +13,18 @@ import csv
 import pytest
 
 from . import sourmash_tst_utils as utils
-import sourmash_lib
-from sourmash_lib import MinHash
-from sourmash_lib.sbt import SBT, Node
-from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
+import sourmash
+from sourmash import MinHash
+from sourmash.sbt import SBT, Node
+from sourmash.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
     matplotlib.use('Agg')
 except ImportError:
     pass
 
-from sourmash_lib import signature
-from sourmash_lib import VERSION
+from sourmash import signature
+from sourmash import VERSION
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -426,7 +426,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash_lib.MAX_HASH }
+        assert set(max_hashes) == { sourmash.MAX_HASH }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -654,7 +654,7 @@ def test_do_basic_compare():
 
         sigs = []
         for fn in testsigs:
-            sigs.append(sourmash_lib.load_one_signature(fn, ksize=21,
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
                                                         select_moltype='dna'))
 
         cmp_calc = numpy.zeros([len(sigs), len(sigs)])
