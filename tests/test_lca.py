@@ -15,6 +15,7 @@ import pytest
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 
+from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import (build_tree, find_lca, LineagePair)
 
 ## lca_utils tests
@@ -69,6 +70,35 @@ def test_find_lca_2():
     lca = find_lca(tree)
 
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
+
+
+def test_load_single_db():
+    filename = utils.get_test_data('lca/delmont-1.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    print(db)
+
+    assert ksize == 31
+    assert scaled == 10000
+
+
+def test_databases():
+    filename1 = utils.get_test_data('lca/delmont-1.lca.json')
+    filename2 = utils.get_test_data('lca/delmont-2.lca.json')
+    dblist, ksize, scaled = lca_utils.load_databases([filename1, filename2])
+
+    print(dblist)
+
+    assert len(dblist) == 2
+    assert ksize == 31
+    assert scaled == 10000
+
+
+def test_db_repr():
+    filename = utils.get_test_data('lca/delmont-1.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    assert repr(db) == "LCA_Database('{}')".format(filename)
 
 
 ## command line tests
