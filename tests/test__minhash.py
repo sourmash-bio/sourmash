@@ -70,6 +70,26 @@ def test_basic_dna(track_abundance):
     assert len(b) == 1
 
 
+def test_div_zero(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for similarity
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.similarity(mh2) == 0
+    assert mh2.similarity(mh) == 0
+
+
+def test_div_zero_contained(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for contained_by
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.contained_by(mh2) == 0
+    assert mh2.contained_by(mh) == 0
+
+
 def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
@@ -197,7 +217,7 @@ def test_basic_dna_bad(track_abundance):
         mh.add_sequence('ATGR')
     print(e)
 
-    assert 'invalid DNA character in input: R' in str(e)
+    assert 'invalid DNA character in input k-mer: ATGR' in str(e)
 
 
 def test_basic_dna_bad_2(track_abundance):
@@ -231,6 +251,19 @@ def test_basic_dna_bad_force_2(track_abundance):
     mh.add_sequence('AATG', True)        # checking that right kmers were added
     mh.add_sequence('GCGG', True)
     assert len(mh.get_mins()) == 2       # (only 2 hashes should be there)
+
+
+def test_consume_lowercase(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(20, 10, track_abundance=track_abundance)
+
+    a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA'.lower())
+    b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
+
+    assert a.compare(b) == 1.0
+    assert b.compare(b) == 1.0
+    assert b.compare(a) == 1.0
+    assert a.compare(a) == 1.0
 
 
 def test_compare_1(track_abundance):

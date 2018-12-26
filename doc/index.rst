@@ -26,7 +26,7 @@ software and the `mash paper (Ondov et al., 2016)
 <http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
 information on how and why MinHash sketches work.
 
-We have two tutorials available: one on `genome and metagenome searching <tutorial.html>`__, and one on `taxonomic analysis <tutorial-lca.html>`__.
+We have two tutorials available: one on `genome and metagenome searching <tutorials.html>`__, and one on `taxonomic analysis <tutorials-lca.html>`__.
 
 ----
 
@@ -140,6 +140,7 @@ Contents:
    databases
    api
    api-example
+   other-languages
    requirements
    more-info
    support

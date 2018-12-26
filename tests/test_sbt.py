@@ -313,7 +313,7 @@ def test_sbt_fsstorage():
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
-        with FSStorage(os.path.join(location, '.fstree')) as storage:
+        with FSStorage(location, '.fstree') as storage:
             tree.save(os.path.join(location, 'tree'), storage=storage)
 
         tree = SBT.load(os.path.join(location, 'tree'), leaf_loader=SigLeaf.load)
@@ -325,7 +325,7 @@ def test_sbt_fsstorage():
 
         assert old_result == new_result
 
-        assert os.path.exists(os.path.join(location, tree.storage.path))
+        assert os.path.exists(os.path.join(location, tree.storage.subdir))
         assert os.path.exists(os.path.join(location, '.fstree'))
 
 
