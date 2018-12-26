@@ -845,8 +845,8 @@ def search(args):
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                 not args.containment,
-                                                 args.traverse_directory)
+                                                not args.containment,
+                                                args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
