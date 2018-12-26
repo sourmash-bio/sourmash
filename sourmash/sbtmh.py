@@ -203,12 +203,16 @@ def search_minhashes_containment(node, sig, threshold,
     return 0
 
 
-class SearchMinHashesFindBestIgnoreMaxHash(object):
-    def __init__(self):
-        self.best_match = 0.
+class GatherMinHashesFindBestIgnoreMaxHash(object):
+    def __init__(self, initial_best_match=0.0):
+        self.best_match = initial_best_match
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
+
+        score = 0
+        if not len(mins):
+            return 0
 
         if isinstance(node, SigLeaf):
             max_scaled = max(node.data.minhash.scaled, sig.minhash.scaled)
@@ -216,25 +220,22 @@ class SearchMinHashesFindBestIgnoreMaxHash(object):
             mh1 = node.data.minhash.downsample_scaled(max_scaled)
             mh2 = sig.minhash.downsample_scaled(max_scaled)
             matches = mh1.count_common(mh2)
-        else:  # Node or Leaf, Nodegraph by minhash comparison
+        else:  # Nodegraph by minhash comparison
             get = node.data.get
             matches = sum(1 for value in mins if get(value))
 
-        score = 0
-        if not len(mins):
-            return 0
-
         score = float(matches) / len(mins)
 
+        # store results if we have passed in an appropriate dictionary
         if results is not None:
             results[node.name] = score
 
         if score >= threshold:
-            # have we done better than this? if yes, truncate.
-            if float(matches) / len(mins) > self.best_match:
+            # have we done better than this? if no, truncate searches below.
+            if score >= self.best_match:
                 # update best if it's a leaf node...
                 if isinstance(node, SigLeaf):
-                    self.best_match = float(matches) / len(mins)
+                    self.best_match = score
                 return 1
 
         return 0
