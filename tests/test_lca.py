@@ -13,9 +13,9 @@ import csv
 import pytest
 
 from . import sourmash_tst_utils as utils
-import sourmash_lib
+import sourmash
 
-from sourmash_lib.lca.lca_utils import (build_tree, find_lca, LineagePair)
+from sourmash.lca.lca_utils import (build_tree, find_lca, LineagePair)
 
 ## lca_utils tests
 
