@@ -190,6 +190,7 @@ def check_signatures_are_compatible(query, subject):
 
 
 def check_tree_is_compatible(treename, tree, query, is_similarity_query):
+    # get a minhash from the tree
     leaf = next(iter(tree.leaves()))
     tree_mh = leaf.data.minhash
 
