@@ -38,7 +38,8 @@ def merge(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
 
@@ -61,8 +62,7 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
-    output_json = sourmash.save_signatures([merged_sigobj])
-    print(output_json)
+    output_json = sourmash.save_signatures([merged_sigobj], fp=args.output)
 
     notify('loaded and merged {} signatures', total_loaded)
 
@@ -76,7 +76,8 @@ def intersect(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -100,8 +101,7 @@ def intersect(args):
     intersect_mh.add_many(mins)
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
-    output_json = sourmash.save_signatures([intersect_sigobj])
-    print(output_json)
+    output_json = sourmash.save_signatures([intersect_sigobj], fp=args.output)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -116,7 +116,8 @@ def subtract(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -140,8 +141,7 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    output_json = sourmash.save_signatures([subtract_sigobj])
-    print(output_json)
+    output_json = sourmash.save_signatures([subtract_sigobj], fp=args.output)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -156,7 +156,8 @@ def rename(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -165,8 +166,7 @@ def rename(args):
 
     sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
     sigobj.d['name'] = args.name
-    output_json = sourmash.save_signatures([sigobj])
-    print(output_json)
+    output_json = sourmash.save_signatures([sigobj], fp=args.output)
 
     notify("set name to '{}'", args.name)
 
@@ -180,7 +180,8 @@ def extract(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -188,8 +189,7 @@ def extract(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
-    output_json = sourmash.save_signatures([sigobj])
-    print(output_json)
+    output_json = sourmash.save_signatures([sigobj], fp=args.output)
 
     notify("extracted single signature from '{}'", args.signature)
 
@@ -205,7 +205,8 @@ def downsample(args):
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output signature to this file')
+                   default=sys.stdout,
+                   help='output signature to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -221,8 +222,7 @@ def downsample(args):
         notify('loaded and downsample signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
-    output_json = sourmash.save_signatures(output_list)
-    print(output_json)
+    output_json = sourmash.save_signatures(output_list, fp=args.output)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
