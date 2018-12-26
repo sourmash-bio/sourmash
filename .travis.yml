@@ -1,9 +1,4 @@
 language: python
-python:
-  - "3.7"
-  - "3.6"
-  - "3.5"
-  - "2.7"
 os: linux
 dist: xenial
 
@@ -24,41 +19,46 @@ jobs:
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
+      python: 3.7
+
     - &test
       stage: test
+      python: 2.7
     - <<: *test
       os: osx
       language: generic
-      before_install:
-        - brew update
-        - brew outdated python || brew upgrade python
       env:
-        - TOXENV=py37
+        - TOXENV=py36
     - <<: *test
-      os: linux
-      install:
-        - pip install tox-travis
+      python: 3.7
+      name: integration (ipfs/redis)
+      before_install:
         - sudo snap install ipfs
+        - "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
       services:
         - redis-server
         - docker
-      script:
-        - "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
-        - tox
+    - <<: *test
+      python: 3.6
+    - <<: *test
+      python: 3.5
+
     - &wheel
       stage: build wheel and send to github releases
+      python: 3.7
       services:
         - docker
       env:
         - PIP=pip
         - CIBW_SKIP='*-manylinux1_i686'
+      install: skip
       script:
         - $PIP install cibuildwheel==0.10.0
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
         api_key:
-          secure: CTO7kiWKLper/nJU093pp796P6MhV2IPz4M2Ws0//YOqU2gKZalyGmAdJtqsFk0+eZthnOp0GQzuSJYpN0+jOx3IU+SInnMg7HdLooyfLxgjDri9xOMBtTiCzSbY77NnLKNk4Nj8idb3Gfjp0F+/5TIRlpInTZ7iYGoG1ZYM/kCyBiTkzDd8tO1LBKhWBad3h3bv099OcmoYT7GETuS9LMmUYJLOe/aotOfOhSttNxYIIIY2RmjFQjWBZCAWPx9P8PnTdhDmrMQL9kRBz+z9/E+ikaaMgtx9QTsF75mZn1qix0+a0LwvRaXKCzYCZ7KGUaSs/npIrBbtXxxA7wK4GFTGb2ERpJOzp4MGzwLiToQlNOHZ48F2N3RgQVL0v+rfvGjt14csWRA21jfrvP2yk4G8lrHZsVxdBeMyPw8/4EnFm307zZbd8LY21byz2K9450mzExLGTx+0AWKQGyygT6PPOXYsNqxC5XEMNZDKTknaGQ1RjiZwRnZAq9quk4KNNmfbgRnuEVKcK0SXeudq3wRwbyA5jT/cYaScfBAdhAgge6tto9aEss+mUEEhm1ZmCxSAfTRKJgE3+ug4npTSSb0KLdGWW4V+ygQ2t+kA9G+1j7U01CGG3jY7aPc/mnJF7Sb2XP0+PNS9eLZpXa6rlJ/1ieMSqppuvvgQgHmKHVs=
+          secure: "FZmx00gL0m0uNVN8fpvqbUZSI20EEk4sgrEv4wpGFr8SFNwPb/VuizQRTapeF2AW9qzbfbUv4bR/+oSKu5jxvd+7+p9HlOZT285a5yfxay9OA8YUbpQz4a9J0CETOpxrA2wRRWBDqzjEWzLTGUquOhyBZn4cwujvA9syOdB7OSNKsB6ARc+zhqPeoMKc9JcjzwiEIh7tcCHoZ1epN5zyfsjqFEY8XlylHTU/WSI3SS9KIGuBqWf6/haoYD7BH+f2g56GMHvBEmGjk5cf/lrCpqiho7Z3fGgJcYf3fRWM3qSVUM9JyHUIqPS6oPZIp7zP40TztiK4Oeen4EpcS/KdoSdu5CjfgMYgF/qdlL28ntgnVYhcA/6IDSRg6V4H3b20qjsn3NlaNVdsSNCu3GzkvM/dtvp5I/41XcFCNqMOljMr3tRw2ZVo44/1vYW0FB0b0FjhjNcnMyTOQjSRR78zetdoorewTJdEmxthMieHIw1Mqzwg4e6JvsC30sh1uSaFq4FHrj2Fe6lAlgwPs1e9vx4w0Zs0kxxusNAdbBB8FH8paFuUEGjgT0Jo9KHOLtvRy+OU2OacQePuhG1kGBRvJz7O4/prAFLGWIW8tyZDnMCuv1vmk6YZd6ih3omkL178X94pjzavtlUip/ugF0NIwS5o+zucRow9txAX2jXgDCM="
         file_glob: true
         file: wheelhouse/sourmash*.whl
         skip_cleanup: true
@@ -66,9 +66,14 @@ jobs:
           tags: true
     - <<: *wheel
       os: osx
+      osx_image: xcode10.1
       language: generic
+      before_script:
+        - $PIP install -U pip setuptools
       env:
         - PIP=pip2
+        - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
+
 stages:
   - check
   - test
