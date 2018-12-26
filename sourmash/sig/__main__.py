@@ -4,25 +4,96 @@ Command-line entry point for 'python -m sourmash.sig'
 import sys
 import argparse
 
-from ..logging import set_quiet, error
+import sourmash
+import copy
+
+from ..logging import set_quiet, error, notify, set_quiet
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
-merge <signature> [<signature> ...]
+merge <signature> [<signature> ...]     - merge one or more signatures
+intersect <signature> [<signature> ...] - intersect one or more signatures
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
 sourmash signature merge -h
 '''
 
+
+def merge(args):
+    """
+    merge one or more signatures.
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    first_sigfile = args.signatures[0]
+    first_sig = sourmash.load_one_signature(first_sigfile)
+    notify('loaded signature from {}...', first_sigfile, end='\r')
+    total_loaded = 1
+
+    mh = copy.copy(first_sig.minhash)
+
+    for sigfile in args.signatures[1:]:
+        sigobj = sourmash.load_one_signature(sigfile)
+        mh.merge(sigobj.minhash)
+        notify('loaded and merged signature from {}...', sigfile, end='\r')
+        total_loaded += 1
+
+    merged_sigobj = sourmash.SourmashSignature(mh)
+
+    output_json = sourmash.save_signatures([merged_sigobj])
+    print(output_json)
+
+    notify('loaded and merged {} signatures', total_loaded)
+
+
+def intersect(args):
+    """
+    merge one or more signatures.
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    first_sigfile = args.signatures[0]
+    first_sig = sourmash.load_one_signature(first_sigfile)
+    notify('loaded signature from {}...', first_sigfile, end='\r')
+    total_loaded = 1
+
+    mins = set(first_sig.minhash.get_mins())
+
+    for sigfile in args.signatures[1:]:
+        sigobj = sourmash.load_one_signature(sigfile)
+        mins.intersection_update(sigobj.minhash.get_mins())
+        notify('loaded and intersected signature from {}...', sigfile, end='\r')
+        total_loaded += 1
+
+    intersect_mh = first_sig.minhash.copy_and_clear()
+    intersect_mh.add_many(mins)
+    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+
+    output_json = sourmash.save_signatures([intersect_sigobj])
+    print(output_json)
+
+    notify('loaded and intersected {} signatures', total_loaded)
+
+
 def main(sysv_args):
     set_quiet(False)
 
-    merge_cmd = lambda x: None
-    commands = {'merge': merge_cmd}
+    commands = {'merge': merge,
+                'intersect': intersect}
 
     parser = argparse.ArgumentParser(
         description='signature file manipulation utilities', usage=usage)
