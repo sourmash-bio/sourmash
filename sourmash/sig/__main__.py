@@ -16,6 +16,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 merge <signature> [<signature> ...]     - merge one or more signatures
 intersect <signature> [<signature> ...] - intersect one or more signatures
+rename <signature> <name>               - rename signature
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -57,7 +58,7 @@ def merge(args):
 
 def intersect(args):
     """
-    merge one or more signatures.
+    intersect one or more signatures by taking the intersection of hashes.
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
@@ -89,11 +90,32 @@ def intersect(args):
     notify('loaded and intersected {} signatures', total_loaded)
 
 
+def rename(args):
+    """
+    rename a signature.
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature rename')
+    p.add_argument('signature')
+    p.add_argument('name')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    sigobj = sourmash.load_one_signature(args.signature)
+    sigobj.d['name'] = args.name
+    output_json = sourmash.save_signatures([sigobj])
+    print(output_json)
+
+    notify("set name to '{}'", args.name)
+
+
 def main(sysv_args):
     set_quiet(False)
 
     commands = {'merge': merge,
-                'intersect': intersect}
+                'intersect': intersect,
+                'rename': rename}
 
     parser = argparse.ArgumentParser(
         description='signature file manipulation utilities', usage=usage)
@@ -111,6 +133,7 @@ def main(sysv_args):
 
     cmd = commands.get(args.sig_command)
     cmd(sysv_args[1:])
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
