@@ -41,6 +41,27 @@ def test_sig_merge_1(c):
 
 
 @utils.in_tempdir
+def test_sig_merge_1_ksize_moltype(c):
+    # check ksize, moltype args
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+    c.run_sourmash('sig', 'merge', sig47, sig63, '--dna', '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+@utils.in_tempdir
 def test_sig_merge_2(c):
     # merge of 47 with nothing should be 47
     sig47 = utils.get_test_data('47.fa.sig')

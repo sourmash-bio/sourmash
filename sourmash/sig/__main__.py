@@ -8,6 +8,8 @@ import sourmash
 import copy
 
 from ..logging import set_quiet, error, notify, set_quiet
+from .. import sourmash_args
+from ..sourmash_args import DEFAULT_LOAD_K
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -35,18 +37,24 @@ def merge(args):
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
     first_sigfile = args.signatures[0]
-    first_sig = sourmash.load_one_signature(first_sigfile)
+    first_sig = sourmash.load_one_signature(first_sigfile, ksize=args.ksize, select_moltype=moltype)
     notify('loaded signature from {}...', first_sigfile, end='\r')
     total_loaded = 1
 
     mh = copy.copy(first_sig.minhash)
 
     for sigfile in args.signatures[1:]:
-        sigobj = sourmash.load_one_signature(sigfile)
+        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
         mh.merge(sigobj.minhash)
         notify('loaded and merged signature from {}...', sigfile, end='\r')
         total_loaded += 1
@@ -67,18 +75,23 @@ def intersect(args):
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
     first_sigfile = args.signatures[0]
-    first_sig = sourmash.load_one_signature(first_sigfile)
+    first_sig = sourmash.load_one_signature(first_sigfile, ksize=args.ksize, select_moltype=moltype)
     notify('loaded signature from {}...', first_sigfile, end='\r')
     total_loaded = 1
 
     mins = set(first_sig.minhash.get_mins())
 
     for sigfile in args.signatures[1:]:
-        sigobj = sourmash.load_one_signature(sigfile)
+        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
         mins.intersection_update(sigobj.minhash.get_mins())
         notify('loaded and intersected signature from {}...', sigfile, end='\r')
         total_loaded += 1
@@ -102,17 +115,22 @@ def subtract(args):
     p.add_argument('subtraction_sigs', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
     from_sigfile = args.signature_from
-    from_sigobj = sourmash.load_one_signature(from_sigfile)
+    from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
     mins = set(from_sigobj.minhash.get_mins())
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
-        sigobj = sourmash.load_one_signature(sigfile)
+        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
         mins -= set(sigobj.minhash.get_mins())
         notify('loaded and subtracted signature from {}...', sigfile, end='\r')
         total_loaded += 1
@@ -137,10 +155,15 @@ def rename(args):
     p.add_argument('name')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature)
+    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
     sigobj.d['name'] = args.name
     output_json = sourmash.save_signatures([sigobj])
     print(output_json)
@@ -156,10 +179,15 @@ def extract(args):
     p.add_argument('signature')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature)
+    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
     output_json = sourmash.save_signatures([sigobj])
     print(output_json)
 
@@ -176,13 +204,18 @@ def downsample(args):
                    help='value to downsample to')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                        help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
     set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
 
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
-        sigobj = sourmash.load_one_signature(sigfile)
+        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
         sigobj.minhash = sigobj.minhash.downsample_scaled(args.scaled)
         output_list.append(sigobj)
         notify('loaded and downsample signature from {}...', sigfile, end='\r')
