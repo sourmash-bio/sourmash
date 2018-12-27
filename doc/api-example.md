@@ -11,7 +11,7 @@ Define two sequences:
 
 ```
 
-Create two minhashes using 3-mers, and add the sequences:
+Create two MinHashes using 3-mers, and add the sequences:
 
 ```
 >>> import sourmash
@@ -34,7 +34,7 @@ One of the 3-mers (out of 7) overlaps, so Jaccard index is 1/7:
 
 ```
 
-and of course the minhashes match themselves:
+and of course the MinHashes match themselves:
 
 ```
 >>> E1.jaccard(E1)
@@ -175,7 +175,7 @@ be collected for a given input data set.
 >>> signum = sourmash.MinHash(n=500, ksize=31)
 
 ```
-Because of this paramter, below we'll call them 'num' signatures.
+Because of this parameter, below we'll call them 'num' signatures.
 
 Modulo hash (or 'scaled') signatures are specific to sourmash and they
 enable an expanded range of metagenome analyses, with the downside
@@ -252,7 +252,7 @@ Let's start by loading 50kb of genomic sequence in to memory:
 
 ```
 
-Now, suppose we make a MinHash signature limited to 1000 hashes:
+Now, suppose we make a num signature limited to 1000 hashes:
 
 ```
 >>> larger = sourmash.MinHash(n=1000, ksize=31)
@@ -274,8 +274,8 @@ We can downsample this to 500 by extracting the hashes and using
 
 ```
 
-and note that there's a convenience function that does the same thing
-faster --
+Also note that there's a convenience function that does the same thing,
+faster!
 ```
 >>> smaller2 = larger.downsample_n(500)
 >>> smaller2 == smaller
@@ -316,12 +316,12 @@ The hashing function used is identical between num and scaled signatures,
 so the hash values themselves are compatible - it's the comparison between
 collections of them that doesn't work.
 
-But, in some circumstances, regular MinHash signatures can be
+But, in some circumstances, num signatures can be
 extracted from scaled signatures, and vice versa.  We haven't yet
 implemented nice shortcuts for this in sourmash, but you can hack it
 together yourself quite easily :).
 
-To extract a regular MinHash from a scaled MinHash, first create or load
+To extract a num MinHash object from a scaled MinHash, first create or load
 your MinHash, and then extract the hash values:
 ```
 >>> num_mh = sourmash.MinHash(n=1000, ksize=31)
