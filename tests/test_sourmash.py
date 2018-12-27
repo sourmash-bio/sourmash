@@ -327,6 +327,20 @@ def test_do_sourmash_compute_multik_protein_bad_ksize():
         assert 'protein ksizes must be divisible by 3' in err
 
 
+def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short-protein.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '20,32',
+                                            '--protein', '--no-dna',
+                                            '--input-is-protein',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+        outfile = os.path.join(location, 'short-protein.fa.sig')
+        assert os.path.exists(outfile)
+
+
 def test_do_sourmash_compute_multik_only_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
