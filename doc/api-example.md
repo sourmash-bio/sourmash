@@ -123,8 +123,7 @@ compared -- first, load:
 
 ```
 >>> from sourmash import load_one_signature
->>> sigfp = open('/tmp/genome1.sig', 'rt')
->>> loaded_sig = load_one_signature(sigfp)
+>>> loaded_sig = load_one_signature('/tmp/genome1.sig')
 
 ```
 
@@ -176,6 +175,7 @@ be collected for a given input data set.
 >>> signum = sourmash.MinHash(n=500, ksize=31)
 
 ```
+Because of this paramter, below we'll call them 'num' signatures.
 
 Modulo hash (or 'scaled') signatures are specific to sourmash and they
 enable an expanded range of metagenome analyses, with the downside
@@ -192,7 +192,7 @@ of 1000.
 
 ```
 
-You can differentiate between MinHash and modulo hash signatures by
+You can differentiate between num signatures and scaled signatures by
 looking at the `num` and `scaled` attributes on a MinHash object:
 
 ```
@@ -224,13 +224,25 @@ TypeError: must have same num: 500 != 1000
 You can make signatures compatible by downsampling; see the next
 sections.
 
+### A brief introduction to MinHash object methods and attributes
+
+MinHash objects have the following methods and attributes:
+
+* `ksize`, `num`, and `scaled` - the basic parameters used to create a MinHash object.
+* `get_mins()` - retrieve all of the hashes contained in this object.
+* `add_sequence(seq)` - hash sequence and add hash values.
+* `add(hash)` and `add_many(hashvals)` - add hash values directly.
+* `similarity(other)` - calculate Jaccard similarity with the other MinHash object.
+* `contained_by(other)` - calculate the Jaccard containment of self by other.
+* `copy_and_clear()` - make an empty copy of a MinHash object with the same parameters.
+* `__len__()` - return the number of actual hash values.
+
 ### Downsampling signatures
 
-Similarly to conversion, MinHash signatures can always be made
-smaller, and scaled signatures can always be 'downsampled' to higher
-scaled values, without referring to the original data.
+Num and scaled signatures can always be downsampled without referring
+back to the original data.
 
-Let's start by grabbing some sequence to work with:
+Let's start by loading 50kb of genomic sequence in to memory:
 ```
 >>> genomes = glob.glob('data/GCF*.fna.gz')
 >>> genomes = list(sorted(genomes))
@@ -240,7 +252,7 @@ Let's start by grabbing some sequence to work with:
 
 ```
 
-Now, suppose we have a MinHash signature limited to 1000 hashes:
+Now, suppose we make a MinHash signature limited to 1000 hashes:
 
 ```
 >>> larger = sourmash.MinHash(n=1000, ksize=31)
