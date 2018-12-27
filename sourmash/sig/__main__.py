@@ -182,6 +182,11 @@ def extract(args):
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout,
                    help='output signature to this file')
+    p.add_argument('--md5', default=None,
+                   help='select signatures whose md5 contains this substring')
+    p.add_argument('--name', default=None,
+                   help='select signatures whose name contains this substring')
+
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -189,13 +194,26 @@ def extract(args):
     moltype = sourmash_args.calculate_moltype(args)
 
     outlist = []
+    total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash.load_signatures(filename, ksize=args.ksize,
                                            select_moltype=moltype)
+        siglist = list(siglist)
+
+        total_loaded += len(siglist)
+
+        # select!
+        if args.md5 is not None:
+            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+        if args.name is not None:
+            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+
         outlist.extend(siglist)
 
     output_json = sourmash.save_signatures(outlist, fp=args.output)
 
+    notify("loaded {} total that matched ksize & molecule type",
+           total_loaded)
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
 

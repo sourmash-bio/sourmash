@@ -510,3 +510,19 @@ sourmash signature extract *.sig -k 21 --dna -o extracted.sig
 ```
 will extract all nucleotide signatures calculated at k=21 from all
 .sig files in the current directory.
+
+There are currently two other useful selectors for `extract`: you can specify
+(part of) an md5sum, as output in the CSVs produced by `search` and `gather`;
+and you can specify (part of) a name.
+
+For example,
+```
+sourmash signature extract tests/test-data/*.fa.sig --md5 09a0869
+```
+will extract the signature from `47.fa.sig` which has an md5sum of
+`09a08691ce52952152f0e866a59f6261`; and 
+```
+sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
+```
+will extract the same signature, which has an accession number of
+`NC_009665.1`.

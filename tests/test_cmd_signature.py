@@ -179,6 +179,82 @@ def test_sig_extract_1(c):
 
 
 @utils.in_tempdir
+def test_sig_extract_2(c):
+    # extract matches to 47's md5sum from among several
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'extract', sig47, sig63, '--md5', '09a0869')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    print(test_extract_sig.minhash)
+    print(actual_extract_sig.minhash)
+
+    assert actual_extract_sig.minhash == test_extract_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_extract_3(c):
+    # extract nothing (no md5 match)
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'extract', sig47, '--md5', 'FOO')
+
+    # stdout should be empty.
+    out = c.last_result.out
+    assert not out
+
+
+@utils.in_tempdir
+def test_sig_extract_4(c):
+    # extract matches to 47's name from among several signatures
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'extract', sig47, sig63, '--name', 'NC_009665.1')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_extract_sig = sourmash.load_one_signature(sig47)
+    actual_extract_sig = sourmash.load_one_signature(out)
+
+    print(test_extract_sig.minhash)
+    print(actual_extract_sig.minhash)
+
+    assert actual_extract_sig.minhash == test_extract_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_extract_5(c):
+    # extract nothing (no name match)
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'extract', sig47, '--name', 'FOO')
+
+    # stdout should be empty.
+    out = c.last_result.out
+    assert not out
+
+
+@utils.in_tempdir
+def test_sig_extract_6(c):
+    # extract matches to several names from among several signatures
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'extract', sig47, sig63, '--name', 'Shewanella')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 2
+
+
+@utils.in_tempdir
 def test_sig_downsample_1(c):
     # downsample a signature
     sig47 = utils.get_test_data('47.fa.sig')
