@@ -125,6 +125,7 @@ compared -- first, load:
 >>> from sourmash import load_one_signature
 >>> sigfp = open('/tmp/genome1.sig', 'rt')
 >>> loaded_sig = load_one_signature(sigfp)
+
 ```
 
 then compare:
@@ -162,42 +163,92 @@ Then, get the hashes, and (e.g.) compute the union:
 
 ```
 
-## Working with `scaled` signatures and SBTs.
+## Working with fast search trees (Sequence Bloom Trees, or SBTs)
 
-Suppose we calculate signatures with a scaled value of 10,000, and
-create a search tree from them like so:
+Suppose we have a number of signatures calculated with `--scaled`, like so:
 
 ```
-sourmash compute --scaled 10000 -f data/GCF*.fna.gz
-sourmash index -k 31 test.sbt GCF*.sig
+sourmash compute --scaled 10000 data/GCF*.fna.gz
 ```
+
+and now we want to create a Sequence Bloom Tree (SBT) so that we can
+search them efficiently.  You can do this with `sourmash index`, but
+you can also access the Python API directly.
+
+### Creating a search tree
+
+Let's start by using 'glob' to grab some example signatures from the
+test data in the sourmash repository:
+
+```
+>>> import glob
+>>> input_filenames = glob.glob('tests/test-data/doctest-data/GCF*.sig')
+
+```
+
+Now, create a tree:
+
+```
+>>> import sourmash
+>>> tree = sourmash.create_sbt_index()
+
+```
+
+Load each signature, and add it to the tree:
+
+```
+>>> from sourmash.sbtmh import SigLeaf
+>>> for filename in input_filenames:
+...     sig = sourmash.load_one_signature(filename, ksize=31)
+...     leaf = SigLeaf(sig.md5sum(), sig)
+...     tree.add_node(leaf)
+
+```
+(note, you'll need to make sure that all of the signatures are compatible
+with each other! The `sourmash index` command does all of the necessary
+checks.)
+
+Now, save the tree:
+
+```
+>>> filename = tree.save('/tmp/test.sbt.json')
+
+```
+
+### Loading and search SBTs
 
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
 
-The SBT filename is `test.sbt`, as above:
+The SBT filename is `/tmp/test.sbt.json`, as above:
 ```
->>> SBT_filename = test.sbt
+>>> SBT_filename = '/tmp/test.sbt.json'
+
 ```
 
 and with it we can load the SBT:
 ```
->>> tree = sourmash_lib.load_sbt_index(SBT_filename)
+>>> tree = sourmash.load_sbt_index(SBT_filename)
+
 ```
 
 Now, load a DNA sequence:
 
 ```
+>>> filename = 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz'
 >>> query_seq = next(iter(screed.open(filename))).sequence
 >>> print('got {} DNA characters to query'.format(len(query_seq)))
+got 4641652 DNA characters to query
+
 ```
 
 and create a signature:
 ```
->>> minhash = sourmash_lib.MinHash(ksize=KSIZE, n=0, scaled=10000)
+>>> minhash = sourmash.MinHash(ksize=31, n=0, scaled=10000)
 >>> minhash.add_sequence(query_seq)
 
->>> query_sig = sourmash_lib.SourmashSignature('', minhash, name='my favorite query')
+>>> query_sig = sourmash.SourmashSignature(minhash, name='my favorite query')
+
 ```
 
 Now do a search --
@@ -206,5 +257,13 @@ Now do a search --
 >>> threshold = 0.1
                                            
 >>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
-...    print((query_sig.name(), found_sig.name(), similarity,))
+...    print(query_sig.name())
+...    print(found_sig.name())
+...    print(similarity)
+my favorite query
+NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome
+1.0
+
 ```
+
+et voila!
