@@ -288,7 +288,7 @@ signature were classified as family *Shewanellaceae*, genus
 *Shewanella*, or species *Shewanella baltica*. Then the lowest
 compatible node (here species *Shewanella baltica*) would be reported,
 and the status of the classification would be `found`.  However, if a
-number of additional k-mers in the input signaturer were classified as
+number of additional k-mers in the input signature were classified as
 *Shewanella oneidensis*, sourmash would be unable to resolve the
 taxonomic assignment below genus *Shewanella* and it would report
 a status of `disagree` with the genus-level assignment of *Shewanella*;
@@ -343,7 +343,7 @@ and the following example summarize output to stdout:
 ```
 
 The output is space-separated and consists of three columns: the
-perrcentage of total k-mers that have this classification; the number of
+percentage of total k-mers that have this classification; the number of
 k-mers that have this classification; and the lineage classification.
 K-mer classifications are reported hierarchically, so the percentages
 and totals contain all assignments that are at a lower taxonomic level -
