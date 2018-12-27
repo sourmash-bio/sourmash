@@ -15,9 +15,42 @@ import pytest
 from . import sourmash_tst_utils as utils
 import sourmash_lib
 
-from sourmash_lib.lca.lca_utils import (build_tree, find_lca, LineagePair)
+from sourmash_lib.lca import lca_utils
+from sourmash_lib.lca.lca_utils import *
 
 ## lca_utils tests
+
+
+def test_taxlist_1():
+    assert list(taxlist()) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
+
+
+def test_taxlist_2():
+    assert list(taxlist(include_strain=False)) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+
+
+def test_zip_lineage_1():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x) == ['a', 'b', '', '', '', '', '', '']
+
+
+def test_zip_lineage_2():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x, truncate_empty=True) == ['a', 'b']
+
+
+def test_zip_lineage_3():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert zip_lineage(x) == ['a', '', 'c', '', '', '', '', '']
+
+
+def test_zip_lineage_4():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('class', 'c') ]
+    with pytest.raises(ValueError) as e:
+        zip_lineage(x)
+
+    assert 'incomplete lineage at phylum - is class instead' in str(e)
+
 
 def test_build_tree():
     tree = build_tree([[LineagePair('rank1', 'name1'),
@@ -69,6 +102,35 @@ def test_find_lca_2():
     lca = find_lca(tree)
 
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
+
+
+def test_load_single_db():
+    filename = utils.get_test_data('lca/delmont-1.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    print(db)
+
+    assert ksize == 31
+    assert scaled == 10000
+
+
+def test_databases():
+    filename1 = utils.get_test_data('lca/delmont-1.lca.json')
+    filename2 = utils.get_test_data('lca/delmont-2.lca.json')
+    dblist, ksize, scaled = lca_utils.load_databases([filename1, filename2])
+
+    print(dblist)
+
+    assert len(dblist) == 2
+    assert ksize == 31
+    assert scaled == 10000
+
+
+def test_db_repr():
+    filename = utils.get_test_data('lca/delmont-1.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    assert repr(db) == "LCA_Database('{}')".format(filename)
 
 
 ## command line tests
