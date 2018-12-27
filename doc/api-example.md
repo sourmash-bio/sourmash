@@ -2,7 +2,7 @@
 # `sourmash` Python examples
 
 
-## A very simple example: two k-mers
+## A first example: two k-mers
 
 
 Define two sequences:
