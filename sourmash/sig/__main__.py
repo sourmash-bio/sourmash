@@ -176,7 +176,7 @@ def extract(args):
     extract a signature.
     """
     p = argparse.ArgumentParser(prog='sourmash signature extract')
-    p.add_argument('signature')
+    p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
@@ -188,10 +188,16 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
-    output_json = sourmash.save_signatures([sigobj], fp=args.output)
+    outlist = []
+    for filename in args.signatures:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype)
+        outlist.extend(siglist)
 
-    notify("extracted single signature from '{}'", args.signature)
+    output_json = sourmash.save_signatures(outlist, fp=args.output)
+
+    notify("extracted {} signatures from {} file(s)", len(outlist),
+           len(args.signatures))
 
 
 def downsample(args):

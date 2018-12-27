@@ -233,7 +233,7 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` and `sourmash lca gather` to classify a metagenome
 using a collection of genomes with taxonomic information.
 
-## `sourmash lca` subcommands
+## `sourmash lca` subcommands for taxonomic classification
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
@@ -420,3 +420,93 @@ for an example use case.
 [1]:http://mash.readthedocs.io/en/latest/__
 [2]:http://biorxiv.org/content/early/2015/10/26/029827
 [3]:https://en.wikipedia.org/wiki/Jaccard_index
+
+## `sourmash signature` subcommands for signature manipulation
+
+These commands manipulate signatures from the command line. Currently
+supported subcommands include `merge`, `rename`, `intersect`,
+`extract`, `downsample`, and `subtract`.
+
+All of the signature commands work only on compatible signatures, where
+the k-mer size and nucleotide/protein sequences match.  If working directly
+with the hash values (e.g. `merge`, `intersect`, `subtract`) then the
+scaled values must also match; you can use `downsample` to convert a bunch
+of samples to the same scaled value.
+
+If there are multiple signatures in a file with different ksizes and/or
+from nucleotide and protein sequences, you can choose amongst them with
+`-k/--ksize` and `--dna` or `--protein`, as with other sourmash commands
+such as `search`, `gather`, and `compare`.
+
+Note, you can use `sourmash sig` as shorthand for all of these commands.
+
+### `sourmash signature merge`
+
+Merge two (or more) signatures.
+
+For example,
+```
+sourmash signature merge file1.sig file2.sig -o merged.sig
+```
+will output the union of all the hashes in `file1.sig` and `file2.sig`
+to `merged.sig`.
+
+### `sourmash signature rename`
+
+Rename the display name for a signature - this is the name output for matches
+in `compare`, `search`, `gather`, etc.
+
+For example,
+```
+sourmash signature rename file1.sig "new name" -o renamed.sig
+```
+will place a renamed copy of the hashes in `file1.sig` in the file
+`renamed.sig`.
+
+### `sourmash signature subtract`
+
+Subtract all of the hash values from one signature that are in one or more
+of the others.
+
+For example,
+
+```
+sourmash signature subtract file1.sig file2.sig file3.sig -o subtracted.sig
+```
+will subtract all of the hashes in `file2.sig` and `file3.sig` from
+`file1.sig`, and save the new signature to `subtracted.sig`.
+
+### `sourmash signature intersect`
+
+Output the intersection of the hash values in multiple signature files.
+
+For example,
+
+```
+sourmash signature intersect file1.sig file2.sig file3.sig -o intersect.sig
+```
+will output the intersection of all the hashes in those three files to
+`intersect.sig`.
+
+### `sourmash signature downsample`
+
+Downsample one or more signatures computed with `--scaled` to a larger
+scaled value, decreasing its size (and sensitivity).
+
+For example,
+```
+sourmash signature downsample file1.sig file2.sig --scaled 100000 -o downsampled.sig
+```
+will output each signature, downsampled to a scaled value of 100000, to
+`downsampled.sig`.
+
+## `sourmash signature extract`
+
+Extract the specified signature(s) from a collection of signatures.
+
+For example,
+```
+sourmash signature extract *.sig -k 21 --dna -o extracted.sig
+```
+will extract all nucleotide signatures calculated at k=21 from all
+.sig files in the current directory.
