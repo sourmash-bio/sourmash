@@ -347,8 +347,8 @@ maximum hash value in the num MinHash is greater than or equal to the
 You can extract scaled MinHashes to num MinHashes whenever there are
 more hash values in the scaled MinHash than num.
 
-Yoda sayeth: *When understand these two sentences you can, this code may
-you use.*
+Yoda sayeth: *When understand these two sentences you can, use this code may
+you.*
 
 ## Working with fast search trees (Sequence Bloom Trees, or SBTs)
 
