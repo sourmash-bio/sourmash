@@ -46,7 +46,20 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                 search_fn = SearchMinHashesFindBest().search
 
             tree = obj
-            for leaf in tree.find(search_fn, query, threshold):
+
+            # figure out scaled value of tree, downsample query if needed.
+            leaf = next(iter(tree.leaves()))
+            tree_mh = leaf.data.minhash
+
+            tree_query = query
+            if tree_mh.scaled and query.minhash.scaled and \
+              tree_mh.scaled > query.minhash.scaled:
+                resampled_query_mh = tree_query.minhash
+                resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+                tree_query = SourmashSignature(resampled_query_mh)
+
+            # now, search!
+            for leaf in tree.find(search_fn, tree_query, threshold):
                 similarity = query_match(leaf.data)
 
                 # tree search should always/only return matches above threshold
