@@ -2,6 +2,7 @@
 Tests for the 'sourmash signature' command line.
 """
 from __future__ import print_function, unicode_literals
+import csv
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -269,3 +270,44 @@ def test_sig_downsample_1(c):
     test_mh = test_downsample_sig.minhash.downsample_scaled(10000)
 
     assert actual_downsample_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_info_1(c):
+    # get basic info on a signature
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'info', sig47)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+source file: 47.fa
+md5: 09a08691ce52952152f0e866a59f6261
+k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
+size: 5177
+signature license: CC0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in c.last_result.out
+
+
+@utils.in_tempdir
+def test_sig_info_2(c):
+    # get info in CSV spreadsheet
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'info', sig47, sig63, '--csv', 'out.csv')
+
+
+    expected_md5 = ['09a08691ce52952152f0e866a59f6261',
+                    '38729c6374925585db28916b82a6f513']
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+
+        n = 0
+
+        for row, md5 in zip(r, expected_md5):
+            assert row['md5'] == md5
+            n += 1
+
+        assert n == 2

@@ -175,7 +175,7 @@ def _guess_open(filename):
 
 
 def load_signatures(data, ksize=None, select_moltype=None,
-                    ignore_md5sum=False, do_raise=False):
+                    ignore_md5sum=False, do_raise=False, quiet=False):
     """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
@@ -205,7 +205,7 @@ def load_signatures(data, ksize=None, select_moltype=None,
                 is_fp = True
                 done = True
             except OSError as excinfo:
-                error(str(excinfo))
+                if not quiet: error(str(excinfo))
                 if do_raise:
                     raise
                 return
@@ -224,8 +224,9 @@ def load_signatures(data, ksize=None, select_moltype=None,
                      sig.minhash.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
-        error("Error in parsing signature; quitting.")
-        error("Exception: {}", str(e))
+        if not quiet:
+            error("Error in parsing signature; quitting.")
+            error("Exception: {}", str(e))
         if do_raise:
             raise
     finally:

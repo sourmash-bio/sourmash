@@ -3,6 +3,7 @@ Command-line entry point for 'python -m sourmash.sig'
 """
 import sys
 import argparse
+import csv
 
 import sourmash
 import copy
@@ -16,6 +17,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
+info <signature> [<signature> ... ]       - provide basic info on signatures
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
 intersect <signature> [<signature> ...]   - intersect one or more signatures
@@ -27,6 +29,81 @@ subtract <signature> <other_sig> [...]    - subtract one or more signatures
 
 sourmash signature merge -h
 '''
+
+
+def info(args):
+    """
+    provide basic info on signatures
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('--csv', type=argparse.FileType('wt'),
+                   help='output information to a CSV file')
+
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    siglist = []
+    for sigfile in args.signatures:
+        this_siglist = []
+        try:
+            this_siglist = list(sourmash.load_signatures(sigfile, quiet=True,
+                                                         do_raise=True))
+        except Exception as e:
+            error('Error reading signatures from {}; skipping'.format(sigfile))
+
+        for k in this_siglist:
+            siglist.append((k, sigfile))
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
+               end='\r')
+
+    notify('loaded {} signatures total.', len(siglist))
+
+    # write CSV?
+    w = None
+    if args.csv:
+        w = csv.DictWriter(args.csv,
+                           ['signature_file', 'md5', 'ksize', 'moltype', 'num',
+                            'scaled', 'n_hashes', 'seed', 'with_abundance',
+                            'name', 'filename', 'license'],
+                           extrasaction='ignore')
+        w.writeheader()
+
+    # extract info, write as appropriate.
+    for (sig, signature_file) in siglist:
+        mh = sig.minhash
+        ksize = mh.ksize
+        moltype = 'DNA'
+        if mh.is_protein:
+            moltype = 'protein'
+        scaled = mh.scaled
+        num = mh.num
+        seed = mh.seed
+        n_hashes = len(mh)
+        with_abundance = 0
+        if mh.track_abundance:
+            with_abundance = 1
+        md5 = sig.md5sum()
+        name = sig.name()
+        filename = sig.d.get('filename', '')
+        license = sig.d['license']
+
+        if w:
+            w.writerow(locals())
+
+        if not args.quiet:
+            print('''\
+---
+signature filename: {signature_file}
+signature: {name}
+source file: {filename}
+md5: {md5}
+k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundance={with_abundance}
+size: {n_hashes}
+signature license: {license}
+'''.format(**locals()))
 
 
 def merge(args):
@@ -259,7 +336,8 @@ def main(sysv_args):
                 'rename': rename,
                 'extract': extract,
                 'downsample': downsample,
-                'subtract': subtract}
+                'subtract': subtract,
+                'info': info}
 
     parser = argparse.ArgumentParser(
         description='signature file manipulation utilities', usage=usage)
@@ -278,6 +356,8 @@ def main(sysv_args):
     cmd = commands.get(args.sig_command)
     cmd(sysv_args[1:])
 
+    return 0
+
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
