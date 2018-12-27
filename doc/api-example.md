@@ -163,6 +163,193 @@ Then, get the hashes, and (e.g.) compute the union:
 
 ```
 
+## sourmash MinHash objects and manipulations
+
+sourmash supports two basic kinds of signatures, MinHash and modulo hash
+signatures. MinHash signatures are equivalent to mash signatures;
+they are limited in size, and very effective for comparing genomes and
+other data sets that are of similar size. The key parameter for MinHash
+signatures is `num`, which specifies the maximum number of hashes to
+be collected for a given input data set.
+
+```
+>>> signum = sourmash.MinHash(n=500, ksize=31)
+
+```
+
+Modulo hash (or 'scaled') signatures are specific to sourmash and they
+enable an expanded range of metagenome analyses, with the downside
+that they can become arbitrarily large.  The key parameter for modulo
+hash signatures is `scaled`, which specifies the average sampling rate
+for hashes for a given input data set.  A scaled of 1000 means that,
+on average, 1 in 1000 k-mers will be turned into a hash for later
+comparisons; this is a sort of compression factor, in that a 5 Mbp
+genome will yield approximately 5000 hash values with a scaled factor
+of 1000.
+
+```
+>>> sigscaled = sourmash.MinHash(n=0, ksize=31, scaled=1000)
+
+```
+
+You can differentiate between MinHash and modulo hash signatures by
+looking at the `num` and `scaled` attributes on a MinHash object:
+
+```
+>>> signum.num
+500
+>>> signum.scaled
+0
+>>> sigscaled.num
+0
+>>> sigscaled.scaled
+1000
+
+```
+
+The MinHash class is otherwise identical between the two types of signatures.
+
+Note that you cannot compute Jaccard similarity or containment for
+MinHash objects with different num or scaled values (or different ksizes):
+
+```
+>>> signum2 = sourmash.MinHash(n=1000, ksize=31)
+>>> signum.similarity(signum2)
+Traceback (most recent call last):
+  ...
+TypeError: must have same num: 500 != 1000
+
+```
+
+You can make signatures compatible by downsampling; see the next
+sections.
+
+### Downsampling signatures
+
+Similarly to conversion, MinHash signatures can always be made
+smaller, and scaled signatures can always be 'downsampled' to higher
+scaled values, without referring to the original data.
+
+Let's start by grabbing some sequence to work with:
+```
+>>> genomes = glob.glob('data/GCF*.fna.gz')
+>>> genomes = list(sorted(genomes))
+>>> genome = genomes[0]
+>>> record = next(iter(screed.open(genome)))
+>>> sequence = record.sequence[:50000]
+
+```
+
+Now, suppose we have a MinHash signature limited to 1000 hashes:
+
+```
+>>> larger = sourmash.MinHash(n=1000, ksize=31)
+>>> larger.add_sequence(sequence)
+>>> len(larger)
+1000
+
+```
+
+We can downsample this to 500 by extracting the hashes and using
+`add_many` to add them to a new MinHash like so:
+
+```
+>>> hashvals = larger.get_mins()
+>>> smaller = sourmash.MinHash(n=500, ksize=31)
+>>> smaller.add_many(hashvals)
+>>> len(smaller)
+500
+
+```
+
+and note that there's a convenience function that does the same thing
+faster --
+```
+>>> smaller2 = larger.downsample_n(500)
+>>> smaller2 == smaller
+True
+
+```
+
+The same can be done with scaled MinHashes:
+
+```
+>>> large_scaled = sourmash.MinHash(n=0, ksize=31, scaled=100)
+>>> large_scaled.add_sequence(sequence)
+>>> len(large_scaled)
+459
+>>> small_scaled = sourmash.MinHash(n=0, ksize=31, scaled=500)
+>>> small_scaled.add_many(large_scaled.get_mins())
+>>> len(small_scaled)
+69
+
+```
+
+And, again, there's a convenience function that you can use:
+```
+>>> small_scaled2 = large_scaled.downsample_scaled(500)
+>>> small_scaled == small_scaled2
+True
+
+```
+
+### Converting between `num` and `scaled` signatures
+
+(Beware, these are confusing techniques for working with hashes that
+are easy to get wrong! We suggest
+[posting questions in the issue tracker](https://github.com/dib-lab/sourmash/issues)
+as you go, if you are interested in exploring this area!)
+
+The hashing function used is identical between num and scaled signatures,
+so the hash values themselves are compatible - it's the comparison between
+collections of them that doesn't work.
+
+But, in some circumstances, regular MinHash signatures can be
+extracted from scaled signatures, and vice versa.  We haven't yet
+implemented nice shortcuts for this in sourmash, but you can hack it
+together yourself quite easily :).
+
+To extract a regular MinHash from a scaled MinHash, first create or load
+your MinHash, and then extract the hash values:
+```
+>>> num_mh = sourmash.MinHash(n=1000, ksize=31)
+>>> num_mh.add_sequence(sequence)
+>>> hashvals = num_mh.get_mins()
+
+```
+
+Now, create the new scaled MinHash object and add the hashes to it:
+
+```
+>>> scaled_mh = sourmash.MinHash(n=0, ksize=31, scaled=10000)
+>>> scaled_mh.add_many(hashvals)
+
+```
+
+and you are done!
+
+The same works in reverse, of course:
+```
+>>> scaled_mh = sourmash.MinHash(n=0, ksize=31, scaled=50)
+>>> scaled_mh.add_sequence(sequence)
+>>> hashvals = scaled_mh.get_mins()
+>>> num_mh = sourmash.MinHash(n=500, ksize=31)
+>>> num_mh.add_many(hashvals)
+
+```
+
+So... when can you do this extraction reliably?
+
+You can extract num MinHashes from scaled MinHashes whenever the
+maximum hash value in the num MinHash is greater than or equal to the
+`max_hash` attribute of the scaled MinHash.
+
+You can extract scaled MinHashes to num MinHashes whenever there are
+more hash values in the scaled MinHash than num.
+
+Yoda sayeth: *When understand these two sentences you can, this code may
+you use.*
+
 ## Working with fast search trees (Sequence Bloom Trees, or SBTs)
 
 Suppose we have a number of signatures calculated with `--scaled`, like so:
@@ -242,7 +429,7 @@ got 4641652 DNA characters to query
 
 ```
 
-and create a signature:
+and create a scaled signature:
 ```
 >>> minhash = sourmash.MinHash(ksize=31, n=0, scaled=10000)
 >>> minhash.add_sequence(query_seq)
