@@ -1120,6 +1120,20 @@ def test_gather_lca_db(c):
     assert 'NC_009665.1 Shewanella baltica OS185' in str(c)
 
 
+@utils.in_tempdir
+def test_gather_csv_output_filename_bug(c):
+    # check a bug where the database filename in the output CSV was incorrect
+    query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db_1 = utils.get_test_data('lca/delmont-1.lca.json')
+    lca_db_2 = utils.get_test_data('lca/delmont-2.lca.json')
+
+    c.run_sourmash('gather', query, lca_db_1, lca_db_2, '-o', 'out.csv')
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+        assert row['filename'] == lca_db_1
+
+
 def test_compare_deduce_molecule():
     # deduce DNA vs protein from query, if it is unique
     with utils.TempDirectory() as location:
