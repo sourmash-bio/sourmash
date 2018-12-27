@@ -8,6 +8,10 @@ import gzip
 from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
 
+__all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
+           'load_single_database', 'load_databases', 'gather_assignments',
+           'count_lca_for_assignments', 'LineagePair']
+
 try:                                      # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
@@ -38,6 +42,9 @@ def check_files_exist(*files):
 
 # ordered list of taxonomic ranks
 def taxlist(include_strain=True):
+    """
+    Provide an ordered list of taxonomic ranks.
+    """
     for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
               'species']:
         yield k
@@ -46,18 +53,32 @@ def taxlist(include_strain=True):
 
 
 # produce an ordered list of tax names from lineage
-def zip_lineage(lineage, include_strain=False, truncate_empty=False):
-    """@CTB: document and test."""
+def zip_lineage(lineage, include_strain=True, truncate_empty=False):
+    """
+    Given an iterable of LineagePair objects, return list of lineage names.
+
+    This utility function handles species/strain and empty lineage entries
+    gracefully.
+
+    >>> x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    >>> zip_lineage(x)
+    ['a', 'b', '', '', '', '', '', '']
+
+    >>> x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    >>> zip_lineage(x)
+    ['a', '', 'c', '', '', '', '', '']
+    """
+
     row = []
     empty = LineagePair(None, '')
-    for taxrank, lineage_tup in zip_longest(taxlist(), lineage,
-                                            fillvalue=empty):
-        if lineage_tup != empty and lineage_tup.name:
-            if lineage_tup.rank != taxrank:
-                raise ValueError('incomplete lineage at {}!? {}'.format(lineage_tup.rank, lineage))
-        else:
+    for taxrank, lineage_tup in zip_longest(taxlist(include_strain=include_strain), lineage, fillvalue=empty):
+        if lineage_tup == empty:
             if truncate_empty:
                 break
+        else:
+            # validate non-empty tax, e.g. superkingdom/phylum/class in order.
+            if lineage_tup.rank != taxrank:
+                raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
 
         row.append(lineage_tup.name)
     return row
@@ -148,7 +169,10 @@ class LCA_Database(object):
         self.lid_to_lineage = None
         self.hashval_to_idx = None
     
-        self.db_name = None
+        self.filename = None
+
+    def __repr__(self):
+        return "LCA_Database('{}')".format(self.filename)
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -205,8 +229,6 @@ class LCA_Database(object):
 
             for k, v in hashval_to_idx_2.items():
                 hashval_to_idx[int(k)] = v
-#                for vv in v:
-#                    lineage_id_counts[vv] += 1
             self.hashval_to_idx = hashval_to_idx
 
             self.ident_to_name = load_d['ident_to_name']
@@ -215,8 +237,8 @@ class LCA_Database(object):
             self.idx_to_lid = {}
             for k, v in load_d['idx_to_lid'].items():
                 self.idx_to_lid[int(k)] = v
-            
-        self.db_name = db_name
+
+        self.filename = db_name
 
     def save(self, db_name):
         "Save to a JSON file."
@@ -334,22 +356,27 @@ class LCA_Database(object):
                 from .. import SourmashSignature
                 match_sig = SourmashSignature(match_mh, name=name)
 
-                yield score, match_sig, match_sig.md5sum(), self.db_name, name
+                yield score, match_sig, match_sig.md5sum(), self.filename, name
 
 
-def load_databases(filenames, scaled=None):
-    """
-    Load multiple databases, downsampling to a common scaled upon req.
-    """
+def load_single_database(filename, verbose=False):
+    "Load a single LCA database; return (db, ksize, scaled)"
+    dblist, ksize, scaled = load_databases([filename], verbose=verbose)
+    return dblist[0], ksize, scaled
+
+
+def load_databases(filenames, scaled=None, verbose=True):
+    "Load multiple LCA databases; return (dblist, ksize, scaled)"
     ksize_vals = set()
     scaled_vals = set()
     dblist = []
 
     # load all the databases
     for db_name in filenames:
-        notify(u'\r\033[K', end=u'', file=sys.stderr)
-        notify('... loading database {}'.format(db_name), end='\r',
-              file=sys.stderr)
+        if verbose:
+            notify(u'\r\033[K', end=u'', file=sys.stderr)
+            notify('... loading database {}'.format(db_name), end='\r',
+                  file=sys.stderr)
 
         lca_db = LCA_Database()
         lca_db.load(db_name)
@@ -367,9 +394,10 @@ def load_databases(filenames, scaled=None):
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
-           ksize, scaled)
+    if verbose:
+        notify(u'\r\033[K', end=u'')
+        notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
+               ksize, scaled)
 
     return dblist, ksize, scaled
 
