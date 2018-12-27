@@ -96,8 +96,7 @@ def test_basic_index():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
 def test_basic_index_bad_spreadsheet():
@@ -117,8 +116,7 @@ def test_basic_index_bad_spreadsheet():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
 def test_basic_index_column_start():
@@ -138,8 +136,7 @@ def test_basic_index_column_start():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
 def test_basic_index_and_classify_with_tsv_and_gz():
@@ -157,8 +154,7 @@ def test_basic_index_and_classify_with_tsv_and_gz():
 
         assert os.path.exists(lca_db)
 
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -190,8 +186,7 @@ def test_basic_index_and_classify():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -227,8 +222,7 @@ def test_index_traverse():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
 def test_index_traverse_real_spreadsheet_no_report():
@@ -248,8 +242,7 @@ def test_index_traverse_real_spreadsheet_no_report():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
         assert 'WARNING: no signatures for 956 lineage assignments.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' in err
@@ -273,8 +266,7 @@ def test_index_traverse_real_spreadsheet_report():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 106 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
         assert 'WARNING: no signatures for 956 lineage assignments.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' not in err
@@ -408,8 +400,7 @@ def test_unassigned_internal_index_and_classify():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -441,8 +432,7 @@ def test_unassigned_last_index_and_classify():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 1 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -475,8 +465,7 @@ def test_index_and_classify_internal_unassigned_multi():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 2 genomes with lineage assignments!!' in err
-        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         # classify input_sig1
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
@@ -540,8 +529,7 @@ def test_classify_unknown_hashes():
 
         assert os.path.exists(lca_db)
 
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'classify', '--db', lca_db, '--query', input_sig1]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -611,8 +599,7 @@ def test_multi_summarize_with_unassigned():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '...found 2 genomes with lineage assignments!!' in err
-        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
                input_sig2]
@@ -655,8 +642,7 @@ def test_summarize_to_root():
 
         assert os.path.exists(lca_db)
 
-        assert '...found 2 genomes with lineage assignments!!' in err
-        assert '2 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -685,8 +671,7 @@ def test_summarize_unknown_hashes():
 
         assert os.path.exists(lca_db)
 
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -828,8 +813,7 @@ def test_gather_unknown_hashes():
 
         assert os.path.exists(lca_db)
 
-        assert '...found 1 genomes with lineage assignments!!' in err
-        assert '1 assigned lineages out of 2 distinct lineages in spreadsheet' in err
+        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'gather', input_sig1, lca_db]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -857,7 +841,7 @@ def test_gather_equiv_results():
 
         assert '2.7 Mbp     100.0%' in out
         assert 'Shewanella baltica' in out
-        assert '(** 1 equal matches)'
+        assert '(** 1 equal matches)' in out
         assert ('OS223' in out) or ('OS185' in out)
 
         assert os.path.exists(lca_db)
@@ -865,3 +849,67 @@ def test_gather_equiv_results():
         r = csv.DictReader(open(os.path.join(location, 'matches.csv')))
         row = next(r)
         assert row['n_equal_matches'] == '1'
+
+
+def test_gather_old_lca_db():
+    with utils.TempDirectory() as location:
+        query_sig = utils.get_test_data('47+63.fa.sig')
+        lca_db = utils.get_test_data('lca/old-db-format-1.json')
+
+        cmd = ['lca', 'gather', query_sig, lca_db]
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(cmd)
+        print(out)
+        print(err)
+        assert 'Error! This is an old-style LCA DB.' in err
+        assert status != 0
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_scaled(c):
+    # create a database with scaled of 10000
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '10000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # next, create a query sig with scaled of 100000
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '100000', testdata1,
+                   '-o', 'test_query.sig')
+    print(c)
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', 'test_query.sig', 'test.lca.json')
+        print(c)
+
+    assert 'new scaled 10000 is lower than current sample scaled 10000' in str(e.value)
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_ksize(c):
+    # create a database with ksize of 25
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # this should fail: the LCA database has ksize 25, and the query sig has
+    # no compatible ksizes.
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+
+    assert '0 signatures matching ksize and molecule type;' in str(e.value)

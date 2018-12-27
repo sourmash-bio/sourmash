@@ -127,7 +127,6 @@ compared -- first, load:
 >>> from sourmash_lib import load_one_signature
 >>> sigfp = open('/tmp/genome1.sig', 'rt')
 >>> loaded_sig = load_one_signature(sigfp)
-
 ```
 
 then compare:

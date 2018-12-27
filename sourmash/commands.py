@@ -2,6 +2,8 @@ from __future__ import print_function, division
 
 import argparse
 import csv
+import itertools
+import multiprocessing
 import os
 import os.path
 import sys
@@ -19,6 +21,8 @@ DEFAULT_COMPUTE_K = '21,31,51'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
+
+
 
 
 def info(args):
@@ -42,7 +46,6 @@ def info(args):
         import screed
         notify('screed version {}', screed.__version__)
         notify('- loaded from path: {}', os.path.dirname(screed.__file__))
-
 
 def compute(args):
     """Compute the signature for one or more files.
@@ -85,6 +88,10 @@ def compute(args):
                         help="merge all input files into one signature named this")
     parser.add_argument('--name-from-first', action='store_true',
                         help="name the signature generated from each file after the first record in the file (default: False)")
+    parser.add_argument('--input-is-10x', action='store_true',
+                        help="Input is 10x single cell output folder (default: False)")
+    parser.add_argument('-p', '--processes', default=2, type=int,
+                        help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
@@ -157,7 +164,7 @@ def compute(args):
             error('bad ksizes: {}', ", ".join(bad_ksizes))
             sys.exit(-1)
 
-    notify('Computing a total of {} signatures.', num_sigs)
+    notify('Computing a total of {} signature(s).', num_sigs)
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
@@ -211,6 +218,26 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
+    def maybe_add_barcode(barcode, cell_seqs):
+        if barcode not in cell_seqs:
+            cell_seqs[barcode] = make_minhashes()
+
+    def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
+        high_quality_mapping = alignment.mapq == 255
+        good_barcode = 'CB' in alignment.tags and \
+                       alignment.get_tag('CB') in barcodes
+        good_umi = 'UB' in alignment.tags
+
+        pass_qc = high_quality_mapping and good_barcode and \
+                  good_umi
+        if pass_qc:
+            barcode = alignment.get_tag('CB')
+            # if this isn't marked a duplicate, count it as a UMI
+            if not alignment.is_duplicate:
+                maybe_add_barcode(barcode, cell_seqs)
+                add_seq(cell_seqs[barcode], alignment.seq,
+                        args.input_is_protein, args.check_sequence)
+
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
@@ -235,8 +262,36 @@ def compute(args):
 
                     siglist += build_siglist(Elist, filename, name=record.name)
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(siglist), n + 1, filename)
+            elif args.input_is_10x:
+                import pathos.multiprocessing as mp
+                from .tenx import read_10x_folder
+
+                barcodes, bam_file = read_10x_folder(filename)
+                manager = multiprocessing.Manager()
+
+                cell_seqs = manager.dict()
+
+                notify('... reading sequences from {}', filename)
+
+                pool = mp.Pool(processes=args.processes)
+                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                # for n, alignment in enumerate(bam_file):
+                #     if n % 10000 == 0:
+                #         if n:
+                #             notify('\r...{} {}', filename, n, end='')
+                #     maybe_add_alignment(alignment, cell_seqs)
+
+                cell_signatures = [
+                    build_siglist(seqs, filename=filename, name=barcode)
+                    for barcode, seqs in cell_seqs.items()]
+                sigs = list(itertools.chain(*cell_signatures))
+                if args.output:
+                    siglist += sigs
+                else:
+                    siglist = sigs
+
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -253,7 +308,8 @@ def compute(args):
 
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
-                notify('')
+
+                notify('...{} {} sequences', filename, n, end='')
 
                 sigs = build_siglist(Elist, filename, name)
                 if args.output:
@@ -261,8 +317,8 @@ def compute(args):
                 else:
                     siglist = sigs
 
-                notify('calculated {} signatures for {} sequences in {}'.\
-                          format(len(siglist), n + 1, filename))
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(sigs), n + 1, filename)
 
             if not args.output:
                 save_siglist(siglist, args.output, sigfile)
@@ -273,19 +329,25 @@ def compute(args):
         # make minhashes for the whole file
         Elist = make_minhashes()
 
+        total_seq = 0
         for filename in args.filenames:
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
+
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0 and n:
                     notify('\r... {} {}', filename, n, end='')
 
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
+            notify('... {} {} sequences', filename, n + 1)
+
+            total_seq += n + 1
 
         siglist = build_siglist(Elist, filename, name=args.merge)
-        notify('calculated {} signatures for {} sequences taken from {}'.\
-               format(len(siglist), n + 1, " ".join(args.filenames)))
+        notify('calculated {} signatures for {} sequences taken from {} files',
+               len(siglist), total_seq, len(args.filenames))
+
         # at end, save!
         save_siglist(siglist, args.output)
 
@@ -301,6 +363,8 @@ def compare(args):
                         help='do NOT use k-mer abundances if present')
     sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(parser)
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='compare all signatures underneath directories.')
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -309,13 +373,20 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # check directories for all signatures
+    if args.traverse_directory:
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+    else:
+        inp_files = list(args.signatures)
+
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
-    for filename in args.signatures:
+    for filename in inp_files:
         notify('loading {}', filename, end='\r')
-        loaded = sig.load_signatures(filename, ksize=args.ksize,
+        loaded = sig.load_signatures(filename,
+                                     ksize=args.ksize,
                                      select_moltype=moltype)
         loaded = list(loaded)
         if not loaded:
@@ -383,14 +454,15 @@ def compare(args):
             D[i][j] = similarity
             D[j][i] = similarity
 
-        if len(siglist) < 30:
+        labeltext.append(E.name())
+
+    if len(siglist) < 30:
+        for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
             name_num = '{}-{}'.format(i, E.name())
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, D[i, :, ],))
-
-        labeltext.append(E.name())
 
     print_results('min similarity in matrix: {:.3f}', numpy.min(D))
 
@@ -627,6 +699,8 @@ def index(args):
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
                         help='Bloom filter size used for internal nodes.')
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Try loading all files with --traverse-directory')
     parser.add_argument('-s', '--sparseness', type=float, default=.0,
                         help='What percentage of internal nodes will not be saved. '
                              'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
@@ -643,7 +717,8 @@ def index(args):
         tree = create_sbt_index(args.bf_size, n_children=args.n_children)
 
     if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
+        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
+                                                          args.force))
     else:
         inp_files = list(args.signatures)
 
@@ -662,6 +737,7 @@ def index(args):
                                       select_moltype=moltype)
 
         # load all matching signatures in this file
+        ss = None
         for ss in siglist:
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
@@ -671,6 +747,9 @@ def index(args):
             leaf = SigLeaf(ss.md5sum(), ss)
             tree.add_node(leaf)
             n += 1
+
+        if not ss:
+            continue
 
         # check to make sure we aren't loading incompatible signatures
         if len(ksizes) > 1 or len(moltypes) > 1:
@@ -711,7 +790,7 @@ def search(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('--threshold', default=0.08, type=float,
-                        help='minimum threshold for reporting matches')
+                        help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='output matching signatures to this file.')
     parser.add_argument('--best-only', action='store_true',
@@ -720,6 +799,9 @@ def search(args):
                         help='number of results to report')
     parser.add_argument('--containment', action='store_true',
                         help='evaluate containment rather than similarity')
+    parser.add_argument('--ignore-abundance', action='store_true',
+                        help='do NOT use k-mer abundances if present. Note: '
+                             'has no effect if --containment is specified')
     parser.add_argument('--scaled', type=float, default=0,
                         help='downsample query to this scaled factor (yields greater speed)')
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
@@ -746,12 +828,13 @@ def search(args):
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
 
-        notify('downsampling query from scaled={} to {}',
-               query.minhash.scaled, int(args.scaled))
+        if args.scaled != query.minhash.scaled:
+            notify('downsampling query from scaled={} to {}',
+                   query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases, query,
+    databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                  not args.containment,
                                                  args.traverse_directory)
 
@@ -762,7 +845,7 @@ def search(args):
     # do the actual search
     results = search_databases(query, databases,
                                args.threshold, args.containment,
-                               args.best_only)
+                               args.best_only, args.ignore_abundance)
 
     n_matches = len(results)
     if args.best_only:
@@ -812,8 +895,11 @@ def categorize(args):
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     parser.add_argument('-k', '--ksize', type=int, default=None)
-    parser.add_argument('--threshold', default=0.08, type=float)
+    parser.add_argument('--threshold', default=0.08, type=float,
+                       help='minimum threshold for reporting matches (default=0.08)')
     parser.add_argument('--traverse-directory', action="store_true")
+    parser.add_argument('--ignore-abundance', action='store_true',
+                        help='do NOT use k-mer abundances if present')
 
     sourmash_args.add_moltype_args(parser)
 
@@ -854,7 +940,9 @@ def categorize(args):
 
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
-                results.append((query.similarity(leaf.data), leaf.data))
+                similarity = query.similarity(
+                    leaf.data, ignore_abundance=args.ignore_abundance)
+                results.append((similarity, leaf.data))
 
         best_hit_sim = 0.0
         best_hit_query_name = ""
@@ -893,7 +981,7 @@ def gather(args):
     parser.add_argument('--save-matches', type=argparse.FileType('wt'),
                         help='save the matched signatures from the database to this file.')
     parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results')
+                        help='threshold (in bp) for reporting results (default=50,000)')
     parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
                         help='output unassigned portions of the query as a signature to this file')
     parser.add_argument('--scaled', type=float, default=0,
@@ -931,12 +1019,12 @@ def gather(args):
         query.minhash = query.minhash.downsample_scaled(args.scaled)
 
     # empty?
-    if not query.minhash.get_mins():
+    if not len(query.minhash):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
     # set up the search databases
-    databases = sourmash_args.load_sbts_and_sigs(args.databases, query, False,
+    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
                                                  args.traverse_directory)
 
     if not len(databases):
@@ -944,6 +1032,7 @@ def gather(args):
         sys.exit(-1)
 
     found = []
+    weighted_missed = 1
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
@@ -953,17 +1042,28 @@ def gather(args):
 
 
         if not len(found):                # first result? print header.
-            print_results("")
-            print_results("overlap     p_query p_match ")
-            print_results("---------   ------- --------")
+            if query.minhash.track_abundance and not args.ignore_abundance:
+                print_results("")
+                print_results("overlap     p_query p_match avg_abund")
+                print_results("---------   ------- ------- ---------")
+            else:
+                print_results("")
+                print_results("overlap     p_query p_match")
+                print_results("---------   ------- -------")
+
 
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-
+        average_abund ='{:.1f}'.format(result.average_abund)
         name = result.leaf._display_name(40)
 
-        print_results('{:9}   {:>6}  {:>6}      {}',
+        if query.minhash.track_abundance and not args.ignore_abundance:
+            print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                      format_bp(result.intersect_bp), pct_query, pct_genome,
+                      average_abund, name)
+        else:
+            print_results('{:9}   {:>7} {:>7}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       name)
         found.append(result)
@@ -982,7 +1082,7 @@ def gather(args):
     if args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'name', 'filename', 'md5']
+                      'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
         w = csv.DictWriter(args.output, fieldnames=fieldnames)
         w.writeheader()
         for result in found:
@@ -998,7 +1098,7 @@ def gather(args):
     if args.output_unassigned:
         if not found:
             notify('nothing found - entire query signature unassigned.')
-        elif not query.minhash.get_mins():
+        elif not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
@@ -1008,6 +1108,165 @@ def gather(args):
             e.add_many(next_query.minhash.get_mins())
             sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
+
+
+def multigather(args):
+    from .search import gather_databases, format_bp
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db', nargs='+', action='append')
+    parser.add_argument('--query', nargs='+', action='append')
+    parser.add_argument('--traverse-directory', action='store_true',
+                        help='search all signatures underneath directories.')
+    parser.add_argument('--threshold-bp', type=float, default=5e4,
+                        help='threshold (in bp) for reporting results')
+    parser.add_argument('--scaled', type=float, default=0,
+                        help='downsample query to this scaled factor')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='suppress non-error output')
+    parser.add_argument('--ignore-abundance',  action='store_true',
+                        help='do NOT use k-mer abundances if present')
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(parser)
+
+    args = parser.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    if not args.db:
+        error('Error! must specify at least one database with --db')
+        sys.exit(-1)
+
+    if not args.query:
+        error('Error! must specify at least one query signature with --query')
+        sys.exit(-1)
+
+    # flatten --db and --query
+    args.db = [item for sublist in args.db for item in sublist]
+    args.query = [item for sublist in args.query for item in sublist]
+
+    query = sourmash_args.load_query_signature(args.query[0],
+                                               ksize=args.ksize,
+                                               select_moltype=moltype)
+    # set up the search databases
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
+                                                args.traverse_directory)
+
+    if not len(databases):
+        error('Nothing found to search!')
+        sys.exit(-1)
+
+    # run gather on all the queries.
+    for queryfile in args.query:
+        # load the query signature & figure out all the things
+        query = sourmash_args.load_query_signature(queryfile,
+                                                   ksize=args.ksize,
+                                                   select_moltype=moltype)
+        notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                 query.minhash.ksize,
+                                                 sourmash_args.get_moltype(query))
+
+        # verify signature was computed right.
+        if query.minhash.max_hash == 0:
+            error('query signature needs to be created with --scaled; skipping')
+            continue
+
+        # downsample if requested
+        if args.scaled:
+            notify('downsampling query from scaled={} to {}',
+                   query.minhash.scaled, int(args.scaled))
+            query.minhash = query.minhash.downsample_scaled(args.scaled)
+
+        # empty?
+        if not len(query.minhash):
+            error('no query hashes!? skipping to next..')
+            continue
+
+        found = []
+        weighted_missed = 1
+        for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+            # print interim result & save in a list for later use
+            pct_query = '{:.1f}%'.format(result.f_orig_query*100)
+            pct_genome = '{:.1f}%'.format(result.f_match*100)
+
+            name = result.leaf._display_name(40)
+
+
+            if not len(found):                # first result? print header.
+                if query.minhash.track_abundance and not args.ignore_abundance:
+                    print_results("")
+                    print_results("overlap     p_query p_match avg_abund")
+                    print_results("---------   ------- ------- ---------")
+                else:
+                    print_results("")
+                    print_results("overlap     p_query p_match")
+                    print_results("---------   ------- -------")
+
+
+            # print interim result & save in a list for later use
+            pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
+            pct_genome = '{:.1f}%'.format(result.f_match*100)
+            average_abund ='{:.1f}'.format(result.average_abund)
+            name = result.leaf._display_name(40)
+
+            if query.minhash.track_abundance and not args.ignore_abundance:
+                print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          average_abund, name)
+            else:
+                print_results('{:9}   {:>7} {:>7}    {}',
+                          format_bp(result.intersect_bp), pct_query, pct_genome,
+                          name)
+            found.append(result)
+
+
+        # basic reporting
+        print_results('\nfound {} matches total;', len(found))
+
+        print_results('the recovered matches hit {:.1f}% of the query',
+               (1 - weighted_missed) * 100)
+        print_results('')
+
+        if not found:
+            notify('nothing found... skipping.')
+            continue
+
+        output_base = os.path.basename(queryfile)
+        output_csv = output_base + '.csv'
+
+        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
+                  'f_unique_to_query', 'f_unique_weighted',
+                  'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
+        with open(output_csv, 'wt') as fp:
+            w = csv.DictWriter(fp, fieldnames=fieldnames)
+            w.writeheader()
+            for result in found:
+                d = dict(result._asdict())
+                del d['leaf']                 # actual signature not in CSV.
+                w.writerow(d)
+
+        output_matches = output_base + '.matches.sig'
+        with open(output_matches, 'wt') as fp:
+            outname = output_matches
+            notify('saving all matches to "{}"', outname)
+            sig.save_signatures([ r.leaf for r in found ], fp)
+
+        output_unassigned = output_base + '.unassigned.sig'
+        with open(output_unassigned, 'wt') as fp:
+            if not found:
+                notify('nothing found - entire query signature unassigned.')
+            elif not len(query.minhash):
+                notify('no unassigned hashes! not saving.')
+            else:
+                notify('saving unassigned hashes to "{}"', output_unassigned)
+
+                e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
+                e.add_many(next_query.minhash.get_mins())
+                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+
+        # fini, next query!
 
 
 def watch(args):
@@ -1021,7 +1280,7 @@ def watch(args):
     parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
                         help='save signature generated from data here')
     parser.add_argument('--threshold', default=0.05, type=float,
-                        help='minimum threshold for matches')
+                        help='minimum threshold for matches (default=0.05)')
     parser.add_argument('--input-is-protein', action='store_true',
                         help='Consume protein sequences - no translation needed')
     sourmash_args.add_construct_moltype_args(parser)
@@ -1125,3 +1384,15 @@ def storage(args):
     set_quiet(args.quiet)
     if args.command == 'convert':
         convert_cmd(args.sbt, args.backend)
+
+
+def migrate(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sbt_name', help='name to save SBT into')
+
+    args = parser.parse_args(args)
+
+    tree = load_sbt_index(args.sbt_name, print_version_warning=False)
+
+    notify('saving SBT under "{}".', args.sbt_name)
+    tree.save(args.sbt_name, structure_only=True)
