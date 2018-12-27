@@ -1,6 +1,4 @@
-
 # `sourmash` Python examples
-
 
 ## A first example: two k-mers
 
@@ -124,7 +122,7 @@ Here, `/tmp/genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
->>> from sourmash_lib import load_one_signature
+>>> from sourmash import load_one_signature
 >>> sigfp = open('/tmp/genome1.sig', 'rt')
 >>> loaded_sig = load_one_signature(sigfp)
 ```
@@ -162,4 +160,51 @@ Then, get the hashes, and (e.g.) compute the union:
 >>> print('{} hashes in union of {} and {}'.format(len(hash_union), len(hashes1), len(hashes2)))
 1000 hashes in union of 500 and 500
 
+```
+
+## Working with `scaled` signatures and SBTs.
+
+Suppose we calculate signatures with a scaled value of 10,000, and
+create a search tree from them like so:
+
+```
+sourmash compute --scaled 10000 -f data/GCF*.fna.gz
+sourmash index -k 31 test.sbt GCF*.sig
+```
+
+How do we load the SBT and search it with a DNA sequence,
+from within Python?
+
+The SBT filename is `test.sbt`, as above:
+```
+>>> SBT_filename = test.sbt
+```
+
+and with it we can load the SBT:
+```
+>>> tree = sourmash_lib.load_sbt_index(SBT_filename)
+```
+
+Now, load a DNA sequence:
+
+```
+>>> query_seq = next(iter(screed.open(filename))).sequence
+>>> print('got {} DNA characters to query'.format(len(query_seq)))
+```
+
+and create a signature:
+```
+>>> minhash = sourmash_lib.MinHash(ksize=KSIZE, n=0, scaled=10000)
+>>> minhash.add_sequence(query_seq)
+
+>>> query_sig = sourmash_lib.SourmashSignature('', minhash, name='my favorite query')
+```
+
+Now do a search --
+
+```
+>>> threshold = 0.1
+                                           
+>>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
+...    print((query_sig.name(), found_sig.name(), similarity,))
 ```
