@@ -74,8 +74,6 @@ def test_sig_merge_2(c):
     test_merge_sig = sourmash.load_one_signature(sig47)
     actual_merge_sig = sourmash.load_one_signature(out)
 
-    print(test_merge_sig.minhash)
-    print(actual_merge_sig.minhash)
     print(out)
 
     assert actual_merge_sig.minhash == test_merge_sig.minhash
@@ -173,10 +171,7 @@ def test_sig_extract_1(c):
     test_extract_sig = sourmash.load_one_signature(sig47)
     actual_extract_sig = sourmash.load_one_signature(out)
 
-    print(test_extract_sig.minhash)
-    print(actual_extract_sig.minhash)
-
-    assert actual_extract_sig.minhash == test_extract_sig.minhash
+    assert actual_extract_sig == test_extract_sig
 
 
 @utils.in_tempdir
@@ -195,7 +190,7 @@ def test_sig_extract_2(c):
     print(test_extract_sig.minhash)
     print(actual_extract_sig.minhash)
 
-    assert actual_extract_sig.minhash == test_extract_sig.minhash
+    assert actual_extract_sig == test_extract_sig
 
 
 @utils.in_tempdir
@@ -225,7 +220,7 @@ def test_sig_extract_4(c):
     print(test_extract_sig.minhash)
     print(actual_extract_sig.minhash)
 
-    assert actual_extract_sig.minhash == test_extract_sig.minhash
+    assert actual_extract_sig == test_extract_sig
 
 
 @utils.in_tempdir
