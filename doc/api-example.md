@@ -235,7 +235,7 @@ MinHash objects have the following methods and attributes:
 * `similarity(other)` - calculate Jaccard similarity with the other MinHash object.
 * `contained_by(other)` - calculate the Jaccard containment of self by other.
 * `copy_and_clear()` - make an empty copy of a MinHash object with the same parameters.
-* `__len__()` - return the number of actual hash values.
+* `__len__()` - return the number of actual hash values. Note you can also do `len(mh)`, where `mh` is a MinHash object.
 
 ### Downsampling signatures
 
