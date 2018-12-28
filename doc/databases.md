@@ -3,7 +3,8 @@
 ## RefSeq microbial genomes - SBT
 
 These database are formatted for use with `sourmash search` and
-`sourmash gather`.
+`sourmash gather`. They are calculated with a scaled value of
+2000.
 
 Approximately 60,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
@@ -58,6 +59,7 @@ to build the databases.
 
 These databases are formatted for use with `sourmash lca`; they are
 v2 LCA databases and will work with sourmash v2.0a11 and later.
+They are calculated with a scaled value of 10000 (1e5).
 
 Approximately 87,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.

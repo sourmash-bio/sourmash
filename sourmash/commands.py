@@ -157,7 +157,7 @@ def compute(args):
         notify('Computing only protein (and not nucleotide) signatures.')
         num_sigs = len(ksizes)
 
-    if args.protein:
+    if args.protein and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
@@ -704,7 +704,8 @@ def index(args):
     parser.add_argument('-s', '--sparseness', type=float, default=.0,
                         help='What percentage of internal nodes will not be saved. '
                              'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
-
+    parser.add_argument('--scaled', type=float, default=0,
+                        help='downsample signatures to this scaled factor')
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
@@ -725,6 +726,10 @@ def index(args):
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
 
+    if args.scaled:
+        args.scaled = int(args.scaled)
+        notify('downsampling signatures to scaled={}', args.scaled)
+
     notify('loading {} files into SBT', len(inp_files))
 
     n = 0
@@ -733,6 +738,7 @@ def index(args):
     nums = set()
     scaleds = set()
     for f in inp_files:
+        notify('\r...reading from {} ({} signatures so far)', f, n, end='')
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
@@ -742,6 +748,9 @@ def index(args):
             ksizes.add(ss.minhash.ksize)
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
+
+            if args.scaled:
+                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
             scaleds.add(ss.minhash.scaled)
 
             leaf = SigLeaf(ss.md5sum(), ss)
@@ -768,6 +777,7 @@ def index(args):
             error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
             sys.exit(-1)
 
+    notify('')
 
     # did we load any!?
     if n == 0:
@@ -835,8 +845,8 @@ def search(args):
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                 not args.containment,
-                                                 args.traverse_directory)
+                                                not args.containment,
+                                                args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
