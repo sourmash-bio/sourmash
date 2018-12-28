@@ -83,8 +83,8 @@ Installing sourmash
 -------------------
 
 We currently suggest installing the latest pre-release in the sourmash
-2.0 series; please see [the README file in
-github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/master/README.md)
+2.0 series; please see `the README file in
+github.com/dib-lab/sourmash <https://github.com/dib-lab/sourmash/blob/master/README.md>`__
 for information.  You can use pip or conda equally well.
 
 Memory and speed
