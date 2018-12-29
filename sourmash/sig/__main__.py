@@ -109,6 +109,8 @@ signature license: {license}
 def merge(args):
     """
     merge one or more signatures.
+
+    @CTB check abundance
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
@@ -147,6 +149,8 @@ def merge(args):
 def intersect(args):
     """
     intersect one or more signatures by taking the intersection of hashes.
+
+    @CTB check abundance
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
@@ -186,6 +190,8 @@ def intersect(args):
 def subtract(args):
     """
     subtract one or more signatures from another
+
+    @CTB check abundance
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signature_from')
@@ -203,24 +209,32 @@ def subtract(args):
 
     from_sigfile = args.signature_from
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
-    mins = set(from_sigobj.minhash.get_mins())
+
+    from_mh = from_sigobj.minhash
+    subtract_mins = set(from_mh.get_mins())
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        mins -= set(sigobj.minhash.get_mins())
+        subtract_mins -= set(sigobj.minhash.get_mins())
         notify('loaded and subtracted signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
     subtract_mh = from_sigobj.minhash.copy_and_clear()
-    subtract_mh.add_many(mins)
+    if subtract_mh.track_abundance:
+        values = {}
+        for hashval, abund in from_mh.get_mins(with_abundance=True):
+            if hashval in subtract_mins:   # only take hash values in subtract
+                values[hashval] = abund
+    else:
+        subtract_mh.add_many(subtract_mins)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
     output_json = sourmash.save_signatures([subtract_sigobj], fp=args.output)
 
-    notify('loaded and intersected {} signatures', total_loaded)
+    notify('loaded and subtracted {} signatures', total_loaded)
 
 
 def rename(args):

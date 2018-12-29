@@ -889,7 +889,7 @@ def test_scaled_property(track_abundance):
 
 
 def test_mh_subtract(track_abundance):
-    # test merging two identically configured minhashes
+    # test subtracting two identically configured minhashes
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
