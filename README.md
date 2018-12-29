@@ -39,12 +39,12 @@ We recommend using bioconda to install sourmash:
 ```
 conda install sourmash
 ```
-This will install the 2.0 pre-release series.
+This will install the latest stable version of sourmash 2.
 
-You can also use pip to install the pre-release like so:
+You can also use pip to install sourmash:
 
 ```
-pip install --pre sourmash
+pip install sourmash
 ```
     
 A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/tutorials.html).
