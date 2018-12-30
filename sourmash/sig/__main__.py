@@ -31,6 +31,11 @@ sourmash signature merge -h
 '''
 
 
+def _check_abundance_compatibility(sig1, sig2):
+    if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
+        raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
+
+
 def info(args):
     """
     provide basic info on signatures
@@ -109,8 +114,6 @@ signature license: {license}
 def merge(args):
     """
     merge one or more signatures.
-
-    @CTB check abundance
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
@@ -126,6 +129,7 @@ def merge(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # load a first signature; record compatibility of with-abundance.
     first_sigfile = args.signatures[0]
     first_sig = sourmash.load_one_signature(first_sigfile, ksize=args.ksize, select_moltype=moltype)
     notify('loaded signature from {}...', first_sigfile, end='\r')
@@ -133,9 +137,18 @@ def merge(args):
 
     mh = copy.copy(first_sig.minhash)
 
+    # merge each successive 
     for sigfile in args.signatures[1:]:
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        mh.merge(sigobj.minhash)
+        try:
+            _check_abundance_compatibility(first_sig, sigobj)
+
+            mh.merge(sigobj.minhash)
+        except:
+            error("ERROR when merging signature '{}' ({}) from file {}",
+                  sigobj.name(), sigobj.md5sum()[:8], sigfile)
+            raise
+
         notify('loaded and merged signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
@@ -150,7 +163,7 @@ def intersect(args):
     """
     intersect one or more signatures by taking the intersection of hashes.
 
-    @CTB check abundance
+    This function always removes abundances.
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
@@ -178,7 +191,12 @@ def intersect(args):
         notify('loaded and intersected signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
+    # forcibly turn off track_abundance
     intersect_mh = first_sig.minhash.copy_and_clear()
+    new_mh_params = list(intersect_mh.__getstate__())
+    new_mh_params[5] = False
+    intersect_mh.__setstate__(new_mh_params)
+    assert not intersect_mh.track_abundance
     intersect_mh.add_many(mins)
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
@@ -190,8 +208,6 @@ def intersect(args):
 def subtract(args):
     """
     subtract one or more signatures from another
-
-    @CTB check abundance
     """
     p = argparse.ArgumentParser(prog='sourmash signature merge')
     p.add_argument('signature_from')
@@ -217,6 +233,13 @@ def subtract(args):
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
+        try:
+            _check_abundance_compatibility(from_sigobj, sigobj)
+        except:
+            error("ERROR when subtracting signature '{}' ({}) from file {}",
+                  sigobj.name(), sigobj.md5sum()[:8], sigfile)
+            raise
+
         subtract_mins -= set(sigobj.minhash.get_mins())
         notify('loaded and subtracted signature from {}...', sigfile, end='\r')
         total_loaded += 1

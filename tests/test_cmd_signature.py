@@ -4,6 +4,8 @@ Tests for the 'sourmash signature' command line.
 from __future__ import print_function, unicode_literals
 import csv
 
+import pytest
+
 from . import sourmash_tst_utils as utils
 import sourmash
 
@@ -80,10 +82,69 @@ def test_sig_merge_2(c):
 
 
 @utils.in_tempdir
+def test_sig_merge_3_abund_ab_ok(c):
+    # merge of 47 and 63 with abund should work
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig63abund = utils.get_test_data('track_abund/63.fa.sig')
+
+    c.run_sourmash('sig', 'merge', sig47abund, sig63abund)
+    actual_merge_sig = sourmash.load_one_signature(c.last_result.out)
+    # @CTB: should check that this merge did what we think it should do!
+
+
+@utils.in_tempdir
+def test_sig_merge_3_abund_ab(c):
+    # merge of 47 with abund, with 63 without, should fail; and vice versa
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63abund = utils.get_test_data('track_abund/63.fa.sig')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'merge', sig47, sig63abund)
+
+    print(c.last_result)
+    assert 'incompatible signatures: track_abundance is False in first sig, True in second' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_sig_merge_3_abund_ba(c):
+    # merge of 47 with abund, with 63 without, should fail; and vice versa
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63abund = utils.get_test_data('track_abund/63.fa.sig')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'merge', sig63abund, sig47)
+
+    print(c.last_result)
+    assert 'incompatible signatures: track_abundance is True in first sig, False in second' in c.last_result.err
+
+
+@utils.in_tempdir
 def test_sig_intersect_1(c):
     # intersect of 47 and 63 should be intersection of mins
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63-intersect.fa.sig')
+    c.run_sourmash('sig', 'intersect', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_intersect_sig = sourmash.load_one_signature(sig47and63)
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    print(test_intersect_sig.minhash)
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_2(c):
+    # intersect of 47 with abund and 63 with abund should be same
+    # as without abund, i.e. intersect 'flattens'
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
     sig47and63 = utils.get_test_data('47+63-intersect.fa.sig')
     c.run_sourmash('sig', 'intersect', sig47, sig63)
 

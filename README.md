@@ -46,7 +46,7 @@ You can also use pip to install the pre-release like so:
 ```
 pip install --pre sourmash
 ```
-    
+
 A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/tutorials.html).
 
 ### Requirements
