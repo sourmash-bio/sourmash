@@ -20,6 +20,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 info <signature> [<signature> ... ]       - provide basic info on signatures
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
+flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
@@ -332,6 +333,63 @@ def extract(args):
            len(args.signatures))
 
 
+def flatten(args):
+    """
+    flatten a signature, removing abundances.
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature extract')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout,
+                   help='output signature to this file')
+    p.add_argument('--md5', default=None,
+                   help='select signatures whose md5 contains this substring')
+    p.add_argument('--name', default=None,
+                   help='select signatures whose name contains this substring')
+
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    outlist = []
+    total_loaded = 0
+    for filename in args.signatures:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype)
+        siglist = list(siglist)
+
+        total_loaded += len(siglist)
+
+        # select!
+        if args.md5 is not None:
+            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+        if args.name is not None:
+            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+
+        for ss in siglist:
+            flattened_mh = ss.minhash.copy_and_clear()
+            new_mh_params = list(flattened_mh.__getstate__())
+            new_mh_params[5] = False
+            flattened_mh.__setstate__(new_mh_params)
+            assert not flattened_mh.track_abundance
+            flattened_mh.add_many(ss.minhash.get_mins())
+
+            ss.minhash = flattened_mh
+
+        outlist.extend(siglist)
+
+    output_json = sourmash.save_signatures(outlist, fp=args.output)
+
+    notify("loaded {} total that matched ksize & molecule type",
+           total_loaded)
+    notify("extracted {} signatures from {} file(s)", len(outlist),
+           len(args.signatures))
+
+
 def downsample(args):
     """
     downsample a scaled signature.
@@ -372,6 +430,7 @@ def main(sysv_args):
                 'intersect': intersect,
                 'rename': rename,
                 'extract': extract,
+                'flatten': flatten,
                 'downsample': downsample,
                 'subtract': subtract,
                 'info': info}

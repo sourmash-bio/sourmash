@@ -312,6 +312,25 @@ def test_sig_extract_6(c):
 
 
 @utils.in_tempdir
+def test_sig_flatten_1(c):
+    # extract matches to several names from among several signatures
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'flatten', sig47abund, '--name', 'Shewanella')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+    test_flattened = sourmash.load_one_signature(sig47)
+    assert test_flattened.minhash == siglist[0].minhash
+
+
+@utils.in_tempdir
 def test_sig_downsample_1(c):
     # downsample a signature
     sig47 = utils.get_test_data('47.fa.sig')

@@ -451,6 +451,11 @@ sourmash signature merge file1.sig file2.sig -o merged.sig
 will output the union of all the hashes in `file1.sig` and `file2.sig`
 to `merged.sig`.
 
+All of the signatures passed to merge must either have
+`track_abundance` turned on, or all must have `track_abundance` turned off.
+If they have `track_abundance` on, then the merged signature will have the
+sum of all abundances across the individual signatures.
+
 ### `sourmash signature rename`
 
 Rename the display name for a signature - this is the name output for matches
@@ -487,6 +492,10 @@ sourmash signature intersect file1.sig file2.sig file3.sig -o intersect.sig
 ```
 will output the intersection of all the hashes in those three files to
 `intersect.sig`.
+
+The `intersect` command flattens all signatures, i.e. the abundances
+in any signatures will be ignored and the output signature will have
+`track_abundance` turned off.
 
 ### `sourmash signature downsample`
 
@@ -526,3 +535,17 @@ sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 ```
 will extract the same signature, which has an accession number of
 `NC_009665.1`.
+
+## `sourmash signature flatten`
+
+Flatten the specified signature(s), removing abundances and setting
+track_abundance to False.
+
+For example,
+```
+sourmash signature flatten *.sig -o flattened.sig
+```
+will remove all abundances from all of the .sig files in the current
+directory.
+
+The `flatten` command accepts the same selectors as `extract`.
