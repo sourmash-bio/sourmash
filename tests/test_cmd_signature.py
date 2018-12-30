@@ -182,6 +182,26 @@ def test_sig_subtract_1(c):
 
 
 @utils.in_tempdir
+def test_sig_subtract_2(c):
+    # subtract of 63 from 47 should fail if 47 has abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'subtract', sig47, sig63)
+
+
+@utils.in_tempdir
+def test_sig_subtract_3(c):
+    # subtract of 63 from 47 should fail if 63 has abund
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'subtract', sig47, sig63)
+
+
+@utils.in_tempdir
 def test_sig_intersect_2(c):
     # intersect of 47 and nothing should be self
     sig47 = utils.get_test_data('47.fa.sig')

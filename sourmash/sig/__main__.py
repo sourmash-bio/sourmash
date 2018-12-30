@@ -228,31 +228,29 @@ def subtract(args):
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
 
     from_mh = from_sigobj.minhash
+    if from_mh.track_abundance:
+        error('Cannot use subtract on signatures with abundance tracking, sorry!')
+        sys.exit(1)
+
     subtract_mins = set(from_mh.get_mins())
+
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        try:
-            _check_abundance_compatibility(from_sigobj, sigobj)
-        except:
-            error("ERROR when subtracting signature '{}' ({}) from file {}",
-                  sigobj.name(), sigobj.md5sum()[:8], sigfile)
-            raise
+
+        if sigobj.minhash.track_abundance:
+            error('Cannot use subtract on signatures with abundance tracking, sorry!')
+            sys.exit(1)
 
         subtract_mins -= set(sigobj.minhash.get_mins())
+
         notify('loaded and subtracted signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
     subtract_mh = from_sigobj.minhash.copy_and_clear()
-    if subtract_mh.track_abundance:
-        values = {}
-        for hashval, abund in from_mh.get_mins(with_abundance=True):
-            if hashval in subtract_mins:   # only take hash values in subtract
-                values[hashval] = abund
-    else:
-        subtract_mh.add_many(subtract_mins)
+    subtract_mh.add_many(subtract_mins)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 

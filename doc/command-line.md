@@ -451,8 +451,8 @@ sourmash signature merge file1.sig file2.sig -o merged.sig
 will output the union of all the hashes in `file1.sig` and `file2.sig`
 to `merged.sig`.
 
-All of the signatures passed to merge must either have
-`track_abundance` turned on, or all must have `track_abundance` turned off.
+All of the signatures passed to merge must either have been computed
+with `--track-abundance`, or not; mixtures cannot be used.
 If they have `track_abundance` on, then the merged signature will have the
 sum of all abundances across the individual signatures.
 
@@ -480,6 +480,9 @@ sourmash signature subtract file1.sig file2.sig file3.sig -o subtracted.sig
 ```
 will subtract all of the hashes in `file2.sig` and `file3.sig` from
 `file1.sig`, and save the new signature to `subtracted.sig`.
+
+Subtract does not currently work on signatures calculated with
+`--track-abundance`.
 
 ### `sourmash signature intersect`
 
