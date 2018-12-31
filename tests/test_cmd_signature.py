@@ -406,3 +406,35 @@ def test_sig_info_2(c):
             n += 1
 
         assert n == 2
+
+
+@utils.in_tempdir
+def test_import_export_1(c):
+    # check to make sure we can import what we've exported!
+    inp = utils.get_test_data('genome-s11.fa.gz.sig')
+    outp = c.output('export.json')
+
+    c.run_sourmash('sig', 'export', inp, '-o', outp, '-k', '21', '--dna')
+    c.run_sourmash('sig', 'import', outp)
+
+    original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')
+    roundtrip = sourmash.load_one_signature(c.last_result.out)
+
+    assert original.minhash == roundtrip.minhash
+
+
+@utils.in_tempdir
+def test_import_export_2(c):
+    # check to make sure we can import a mash JSON dump file.
+    # NOTE: msh.json_dump file calculated like so:
+    #   mash sketch -s 500 -k 21 ./tests/test-data/genome-s11.fa.gz
+    #   mash info -d ./tests/test-data/genome-s11.fa.gz.msh > tests/test-data/genome-s11.fa.gz.msh.json_dump
+    #
+    sig1 = utils.get_test_data('genome-s11.fa.gz.sig')
+    msh_sig = utils.get_test_data('genome-s11.fa.gz.msh.json_dump')
+
+    c.run_sourmash('sig', 'import', msh_sig)
+    imported = sourmash.load_one_signature(c.last_result.out)
+    compare = sourmash.load_one_signature(sig1, ksize=21, select_moltype='DNA')
+
+    assert imported.minhash == compare.minhash

@@ -552,3 +552,24 @@ will remove all abundances from all of the .sig files in the current
 directory.
 
 The `flatten` command accepts the same selectors as `extract`.
+
+## `sourmash signature import`
+
+Import signatures into sourmash format. Currently only supports mash,
+and can import mash sketches output by `mash info -d <filename.msh>`.
+
+For example,
+```
+sourmash signature import filename.msh.json -o imported.sig
+```
+will import the contents of `filename.msh.json` into `imported.sig`.
+
+## `sourmash signature export`
+
+Export signatures from sourmash format. Currently only supports
+mash dump format.
+
+For example
+```
+sourmash signature export filename.sig -o filename.sig.msh.json
+```

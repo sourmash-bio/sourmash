@@ -4,6 +4,7 @@ Command-line entry point for 'python -m sourmash.sig'
 import sys
 import argparse
 import csv
+import json
 
 import sourmash
 import copy
@@ -25,6 +26,8 @@ intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
 subtract <signature> <other_sig> [...]    - subtract one or more signatures
+import [ ... ]                            - import a mash or other signature
+export <signature>                        - export a signature, e.g. to mash
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -41,7 +44,7 @@ def info(args):
     """
     provide basic info on signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p = argparse.ArgumentParser(prog='sourmash signature info')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -166,7 +169,7 @@ def intersect(args):
 
     This function always removes abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p = argparse.ArgumentParser(prog='sourmash signature intersect')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -210,7 +213,7 @@ def subtract(args):
     """
     subtract one or more signatures from another
     """
-    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p = argparse.ArgumentParser(prog='sourmash signature subtract')
     p.add_argument('signature_from')
     p.add_argument('subtraction_sigs', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -335,7 +338,7 @@ def flatten(args):
     """
     flatten a signature, removing abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature extract')
+    p = argparse.ArgumentParser(prog='sourmash signature flatten')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -392,7 +395,7 @@ def downsample(args):
     """
     downsample a scaled signature.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature rename')
+    p = argparse.ArgumentParser(prog='sourmash signature downsample')
     p.add_argument('signatures', nargs="+")
     p.add_argument('--scaled', type=int, default=10000,
                    help='value to downsample to')
@@ -421,6 +424,81 @@ def downsample(args):
     notify("loaded and downsampled {} signatures", total_loaded)
 
 
+def sig_import(args):
+    """
+    import a signature into sourmash format.
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature import')
+    p.add_argument('filenames', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout,
+                   help='output signature to this file')
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    siglist = []
+    for filename in args.filenames:
+        with open(filename) as fp:
+            x = json.loads(fp.read())
+
+        ksize = x['kmer']
+        num = x['sketchSize']
+
+        assert x['hashType'] == "MurmurHash3_x64_128"
+        assert x['hashBits'] == 64
+        assert x['hashSeed'] == 42
+
+        xx = x['sketches'][0]
+        hashes = xx['hashes']
+
+        mh = sourmash.MinHash(ksize=ksize, n=num, is_protein=False)
+        mh.add_many(hashes)
+
+        s = sourmash.SourmashSignature(mh, filename=filename)
+        siglist.append(s)
+
+    sourmash.save_signatures(siglist, args.output)
+
+
+def export(args):
+    """
+    export a signature to mash format
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature export')
+    p.add_argument('filename')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout,
+                   help='output signature to this file')
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    total_loaded = 0
+    ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
+                                     select_moltype=moltype)
+    mh = ss.minhash
+
+    x = {}
+    x['kmer'] = mh.ksize
+    x['sketchSize'] = len(mh)
+
+    x['hashType'] = "MurmurHash3_x64_128"
+    x['hashBits'] = 64
+    x['hashSeed'] = mh.seed
+
+    ll = list(mh.get_mins())
+    x['sketches'] = [{ 'hashes': ll }]
+
+    print(json.dumps(x), file=args.output)
+    notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
+
+
 def main(sysv_args):
     set_quiet(False)
 
@@ -431,6 +509,8 @@ def main(sysv_args):
                 'flatten': flatten,
                 'downsample': downsample,
                 'subtract': subtract,
+                'import': sig_import,
+                'export': export,
                 'info': info}
 
     parser = argparse.ArgumentParser(
