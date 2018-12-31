@@ -5,13 +5,14 @@ use std::ptr;
 use std::slice;
 
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{aa_to_dayhoff, translate_codon, KmerMinHash};
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
     n: u32,
     k: u32,
     prot: bool,
+    dayhoff: bool,
     seed: u64,
     mx: u64,
     track_abundance: bool,
@@ -20,6 +21,7 @@ pub unsafe extern "C" fn kmerminhash_new(
         n,
         k,
         prot,
+        dayhoff,
         seed,
         mx,
         track_abundance,
@@ -74,6 +76,23 @@ pub unsafe extern "C" fn kmerminhash_add_word(ptr: *mut KmerMinHash, word: *cons
     };
 
     mh.add_word(c_str.to_bytes());
+}
+
+ffi_fn! {
+unsafe fn sourmash_translate_codon(codon: *const c_char) -> Result<c_char> {
+    let c_str = {
+        assert!(!codon.is_null());
+
+        CStr::from_ptr(codon)
+    };
+
+    Ok(translate_codon(c_str.to_bytes())? as c_char)
+}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sourmash_aa_to_dayhoff(aa: c_char) -> c_char {
+    aa_to_dayhoff(aa as u8) as c_char
 }
 
 #[no_mangle]
@@ -205,6 +224,15 @@ pub unsafe extern "C" fn kmerminhash_is_protein(ptr: *mut KmerMinHash) -> bool {
         &mut *ptr
     };
     mh.is_protein()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_dayhoff(ptr: *mut KmerMinHash) -> bool {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    mh.dayhoff()
 }
 
 #[no_mangle]

@@ -23,6 +23,7 @@ pub struct KmerMinHash {
     num: u32,
     ksize: u32,
     is_protein: bool,
+    dayhoff: bool,
     seed: u64,
     max_hash: u64,
     pub(crate) mins: Vec<u64>,
@@ -35,6 +36,7 @@ impl Default for KmerMinHash {
             num: 1000,
             ksize: 21,
             is_protein: false,
+            dayhoff: false,
             seed: 42,
             max_hash: 0,
             mins: Vec::with_capacity(1000),
@@ -68,7 +70,13 @@ impl Serialize for KmerMinHash {
         partial.serialize_field(
             "molecule",
             match &self.is_protein {
-                true => "protein",
+                true => {
+                    if self.dayhoff {
+                        "dayhoff"
+                    } else {
+                        "protein"
+                    }
+                }
                 false => "DNA",
             },
         )?;
@@ -97,6 +105,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let tmpsig = TempSig::deserialize(deserializer)?;
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
+        let molecule = tmpsig.molecule.to_lowercase();
 
         Ok(KmerMinHash {
             num,
@@ -105,11 +114,13 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             max_hash: tmpsig.max_hash,
             mins: tmpsig.mins,
             abunds: tmpsig.abundances,
-            is_protein: match tmpsig.molecule.to_lowercase().as_ref() {
+            is_protein: match molecule.as_ref() {
                 "protein" => true,
+                "dayhoff" => true,
                 "dna" => false,
                 _ => unimplemented!(),
             },
+            dayhoff: molecule == "dayhoff",
         })
     }
 }
@@ -119,6 +130,7 @@ impl KmerMinHash {
         num: u32,
         ksize: u32,
         is_protein: bool,
+        dayhoff: bool,
         seed: u64,
         max_hash: u64,
         track_abundance: bool,
@@ -142,6 +154,7 @@ impl KmerMinHash {
             num,
             ksize,
             is_protein,
+            dayhoff,
             seed,
             max_hash,
             mins,
@@ -391,6 +404,7 @@ impl KmerMinHash {
             self.num,
             self.ksize,
             self.is_protein,
+            self.dayhoff,
             self.seed,
             self.max_hash,
             self.abunds.is_some(),
@@ -423,6 +437,7 @@ impl KmerMinHash {
             self.num,
             self.ksize,
             self.is_protein,
+            self.dayhoff,
             self.seed,
             self.max_hash,
             self.abunds.is_some(),
@@ -455,6 +470,10 @@ impl KmerMinHash {
             return Ok(0.0);
         }
     }
+
+    pub fn dayhoff(&self) -> bool {
+        self.dayhoff
+    }
 }
 
 impl SigsTrait for KmerMinHash {
@@ -475,6 +494,9 @@ impl SigsTrait for KmerMinHash {
             return Err(SourmashError::MismatchKSizes.into());
         }
         if self.is_protein != other.is_protein {
+            return Err(SourmashError::MismatchDNAProt.into());
+        }
+        if self.dayhoff != other.dayhoff {
             return Err(SourmashError::MismatchDNAProt.into());
         }
         if self.max_hash != other.max_hash {
@@ -521,7 +543,7 @@ impl SigsTrait for KmerMinHash {
                         .skip(i)
                         .take(sequence.len() - i)
                         .collect();
-                    let aa = to_aa(&substr);
+                    let aa = to_aa(&substr, self.dayhoff)?;
 
                     aa.windows(aa_ksize as usize)
                         .map(|n| self.add_word(n))
@@ -529,7 +551,7 @@ impl SigsTrait for KmerMinHash {
 
                     let rc_substr: Vec<u8> =
                         rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                    let aa_rc = to_aa(&rc_substr);
+                    let aa_rc = to_aa(&rc_substr, self.dayhoff)?;
 
                     aa_rc
                         .windows(aa_ksize as usize)
@@ -596,7 +618,7 @@ lazy_static! {
         ("TTA", b'L'), ("TTG", b'L'),
 
         // S
-        ("TCT", b'S'), ("TCC", b'S'), ("TCA", b'S'), ("TCG", b'S'),
+        ("TCT", b'S'), ("TCC", b'S'), ("TCA", b'S'), ("TCG", b'S'), ("TCN", b'S'),
 
         // Y
         ("TAT", b'Y'), ("TAC", b'Y'),
@@ -611,10 +633,10 @@ lazy_static! {
         ("TGG", b'W'),
 
         // L
-        ("CTT", b'L'), ("CTC", b'L'), ("CTA", b'L'), ("CTG", b'L'),
+        ("CTT", b'L'), ("CTC", b'L'), ("CTA", b'L'), ("CTG", b'L'), ("CTN", b'L'),
 
         // P
-        ("CCT", b'P'), ("CCC", b'P'), ("CCA", b'P'), ("CCG", b'P'),
+        ("CCT", b'P'), ("CCC", b'P'), ("CCA", b'P'), ("CCG", b'P'), ("CCN", b'P'),
 
         // H
         ("CAT", b'H'), ("CAC", b'H'),
@@ -622,7 +644,7 @@ lazy_static! {
         ("CAA", b'Q'), ("CAG", b'Q'),
 
         // R
-        ("CGT", b'R'), ("CGC", b'R'), ("CGA", b'R'), ("CGG", b'R'),
+        ("CGT", b'R'), ("CGC", b'R'), ("CGA", b'R'), ("CGG", b'R'), ("CGN", b'R'),
 
         // I
         ("ATT", b'I'), ("ATC", b'I'), ("ATA", b'I'),
@@ -630,7 +652,7 @@ lazy_static! {
         ("ATG", b'M'),
 
         // T
-        ("ACT", b'T'), ("ACC", b'T'), ("ACA", b'T'), ("ACG", b'T'),
+        ("ACT", b'T'), ("ACC", b'T'), ("ACA", b'T'), ("ACG", b'T'), ("ACN", b'T'),
 
         // N
         ("AAT", b'N'), ("AAC", b'N'),
@@ -643,10 +665,10 @@ lazy_static! {
         ("AGA", b'R'), ("AGG", b'R'),
 
         // V
-        ("GTT", b'V'), ("GTC", b'V'), ("GTA", b'V'), ("GTG", b'V'),
+        ("GTT", b'V'), ("GTC", b'V'), ("GTA", b'V'), ("GTG", b'V'), ("GTN", b'V'),
 
         // A
-        ("GCT", b'A'), ("GCC", b'A'), ("GCA", b'A'), ("GCG", b'A'),
+        ("GCT", b'A'), ("GCC", b'A'), ("GCA", b'A'), ("GCG", b'A'), ("GCN", b'A'),
 
         // D
         ("GAT", b'D'), ("GAC", b'D'),
@@ -654,25 +676,110 @@ lazy_static! {
         ("GAA", b'E'), ("GAG", b'E'),
 
         // G
-        ("GGT", b'G'), ("GGC", b'G'), ("GGA", b'G'), ("GGG", b'G'),
+        ("GGT", b'G'), ("GGC", b'G'), ("GGA", b'G'), ("GGG", b'G'), ("GGN", b'G'),
+        ].into_iter().cloned().collect()
+    };
+}
+
+// Dayhoff table from
+// Peris, P., López, D., & Campos, M. (2008).
+// IgTM: An algorithm to predict transmembrane domains and topology in
+// proteins. BMC Bioinformatics, 9(1), 1029–11.
+// http://doi.org/10.1186/1471-2105-9-367
+//
+// Original source:
+// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
+// A model of evolutionary change in proteins,
+// in Atlas of Protein Sequence and Structure,
+// ed Dayhoff M. O., editor.
+// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
+//
+// | Amino acid    | Property              | Dayhoff |
+// |---------------|-----------------------|---------|
+// | C             | Sulfur polymerization | a       |
+// | A, G, P, S, T | Small                 | b       |
+// | D, E, N, Q    | Acid and amide        | c       |
+// | H, K, R       | Basic                 | d       |
+// | I, L, M, V    | Hydrophobic           | e       |
+// | F, W, Y       | Aromatic              | f       |
+lazy_static! {
+    static ref DAYHOFFTABLE: HashMap<u8, u8> = {
+      [
+        // a
+        (b'C', b'a'),
+
+        // b
+        (b'A', b'b'), (b'G', b'b'), (b'P', b'b'), (b'S', b'b'), (b'T', b'b'),
+
+        // c
+        (b'D', b'c'), (b'E', b'c'), (b'N', b'c'), (b'Q', b'c'),
+
+        // d
+        (b'H', b'd'), (b'K', b'd'), (b'R', b'd'),
+
+        // e
+        (b'I', b'e'), (b'L', b'e'), (b'M', b'e'), (b'V', b'e'),
+
+        // e
+        (b'F', b'f'), (b'W', b'f'), (b'Y', b'f'),
         ].into_iter().cloned().collect()
     };
 }
 
 #[inline]
-fn to_aa(seq: &[u8]) -> Vec<u8> {
-    let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
+pub(crate) fn translate_codon(codon: &[u8]) -> Result<u8, Error> {
+    if codon.len() == 1 {
+        return Ok(b'X');
+    }
 
-    for chunk in seq.chunks(3) {
-        if chunk.len() != 3 {
-            break;
-        }
-        if let Some(codon) = CODONTABLE.get(str::from_utf8(chunk).unwrap()) {
-            converted.push(*codon);
+    if codon.len() == 2 {
+        let mut v = codon.to_vec();
+        v.push(b'N');
+        match CODONTABLE.get(str::from_utf8(v.as_slice()).unwrap()) {
+            Some(aa) => return Ok(*aa),
+            None => return Ok(b'X'),
         }
     }
 
-    converted
+    if codon.len() == 3 {
+        match CODONTABLE.get(str::from_utf8(codon).unwrap()) {
+            Some(aa) => return Ok(*aa),
+            None => return Ok(b'X'),
+        }
+    }
+
+    Err(SourmashError::InvalidCodonLength {
+        message: format!("{}", codon.len()),
+    }
+    .into())
+}
+
+#[inline]
+pub(crate) fn aa_to_dayhoff(aa: u8) -> char {
+    match DAYHOFFTABLE.get(&aa) {
+        Some(letter) => *letter as char,
+        None => 'X',
+    }
+}
+
+#[inline]
+fn to_aa(seq: &[u8], dayhoff: bool) -> Result<Vec<u8>, Error> {
+    let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
+
+    for chunk in seq.chunks(3) {
+        if chunk.len() < 3 {
+            break;
+        }
+
+        let residue = translate_codon(chunk)?;
+        if dayhoff {
+            converted.push(aa_to_dayhoff(residue) as u8);
+        } else {
+            converted.push(residue);
+        }
+    }
+
+    Ok(converted)
 }
 
 #[inline]

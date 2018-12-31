@@ -41,6 +41,10 @@ typedef struct {
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
+char sourmash_translate_codon(const char *codon);
+
+char sourmash_aa_to_dayhoff(char aa);
+
 void kmerminhash_abunds_push(KmerMinHash *ptr, uint64_t val);
 
 void kmerminhash_add_from(KmerMinHash *ptr, const KmerMinHash *other);
@@ -79,6 +83,8 @@ uint64_t kmerminhash_intersection(KmerMinHash *ptr, const KmerMinHash *other);
 
 bool kmerminhash_is_protein(KmerMinHash *ptr);
 
+bool kmerminhash_dayhoff(KmerMinHash *ptr);
+
 uint32_t kmerminhash_ksize(KmerMinHash *ptr);
 
 uint64_t kmerminhash_max_hash(KmerMinHash *ptr);
@@ -90,6 +96,7 @@ void kmerminhash_mins_push(KmerMinHash *ptr, uint64_t val);
 KmerMinHash *kmerminhash_new(uint32_t n,
                              uint32_t k,
                              bool prot,
+                             bool dayhoff,
                              uint64_t seed,
                              uint64_t mx,
                              bool track_abundance);

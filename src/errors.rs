@@ -27,6 +27,9 @@ pub enum SourmashError {
     #[fail(display = "invalid protein character in input: {}", message)]
     InvalidProt { message: String },
 
+    #[fail(display = "Codon is invalid length: {}", message)]
+    InvalidCodonLength { message: String },
+
     #[fail(display = "Error from deserialization")]
     SerdeError,
 }
@@ -49,6 +52,7 @@ pub enum SourmashErrorCode {
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
+    InvalidCodonLength = 11_03,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
@@ -76,6 +80,9 @@ impl SourmashErrorCode {
                     }
                     SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
+                    SourmashError::InvalidCodonLength { .. } => {
+                        SourmashErrorCode::InvalidCodonLength
+                    }
                     SourmashError::SerdeError => SourmashErrorCode::SerdeError,
                 };
             }

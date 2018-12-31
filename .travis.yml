@@ -4,7 +4,10 @@ dist: xenial
 
 cache:
   directories:
-    - $HOME/.cache/pip
+    - "$HOME/.cache/pip"
+    - "$HOME/.cargo"
+    - "target"
+    - ".tox"
 
 branches:
   only:
@@ -13,7 +16,12 @@ branches:
 
 script: tox
 
-install: pip install tox-travis
+install:
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+  - export PATH="$HOME/.cargo/bin:$PATH"
+  - rustc -V
+
+before_script: pip install tox-travis
 
 jobs:
   allow_failures:
@@ -45,6 +53,15 @@ jobs:
       python: 3.6
     - <<: *test
       python: 3.5
+    - <<: *test
+      name: wasm-pack
+      language: rust
+      rust: stable
+      before_script: skip
+      script:
+        - rustup target add wasm32-unknown-unknown
+        - cargo install --force wasm-pack
+        - wasm-pack build
 
     - &wheel
       stage: build wheel and send to github releases
@@ -53,8 +70,11 @@ jobs:
         - docker
       env:
         - PIP=pip
+        - CIBW_BUILD='cp37-*'
         - CIBW_SKIP='*-manylinux1_i686'
-      install: skip
+        - CIBW_BEFORE_BUILD_LINUX='source .travis/install_cargo.sh'
+        - CIBW_ENVIRONMENT_LINUX='PATH="$HOME/.cargo/bin:$PATH"'
+      before_script: skip
       script:
         - sudo $PIP install cibuildwheel==0.10.2
         - cibuildwheel --output-dir wheelhouse
@@ -75,6 +95,7 @@ jobs:
         - sudo $PIP install -U pip setuptools
       env:
         - PIP=pip2
+        - CIBW_BUILD='cp37-*'
         - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
 
 stages:
