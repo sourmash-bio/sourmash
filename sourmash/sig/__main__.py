@@ -398,8 +398,10 @@ def downsample(args):
     """
     p = argparse.ArgumentParser(prog='sourmash signature downsample')
     p.add_argument('signatures', nargs="+")
-    p.add_argument('--scaled', type=int, default=10000,
-                   help='value to downsample to')
+    p.add_argument('--scaled', type=int, default=0,
+                   help='scaled value to downsample to')
+    p.add_argument('--num', type=int, default=0,
+                   help='num value to downsample to')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
@@ -411,13 +413,35 @@ def downsample(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    if not args.num and not args.scaled:
+        error('must specify either --num or --scaled value')
+        sys.exit(-1)
+
+    if args.num and args.scaled:
+        error('cannot specify both --num and --scaled')
+        sys.exit(-1)
+
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        sigobj.minhash = sigobj.minhash.downsample_scaled(args.scaled)
+        mh = sigobj.minhash
+
+        if args.scaled:
+            if mh.scaled:
+                mh = mh.downsample_scaled(args.scaled)
+            else:
+                pass
+        elif args.num:
+            if mh.num:
+                mh = mh.downsample_n(args.num)
+            else:
+                pass
+
+        sigobj.minhash = mh
+
         output_list.append(sigobj)
-        notify('loaded and downsample signature from {}...', sigfile, end='\r')
+        notify('loaded and downsampled signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
     output_json = sourmash.save_signatures(output_list, fp=args.output)

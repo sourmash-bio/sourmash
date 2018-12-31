@@ -351,8 +351,8 @@ def test_sig_flatten_1(c):
 
 
 @utils.in_tempdir
-def test_sig_downsample_1(c):
-    # downsample a signature
+def test_sig_downsample_1_scaled(c):
+    # downsample a scaled signature
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'downsample', '--scaled', '10000', sig47)
 
@@ -365,6 +365,42 @@ def test_sig_downsample_1(c):
     test_mh = test_downsample_sig.minhash.downsample_scaled(10000)
 
     assert actual_downsample_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_downsample_1_scaled_empty(c):
+    # downsample a scaled signature
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', sig47)
+
+
+@utils.in_tempdir
+def test_sig_downsample_2_num(c):
+    # downsample a num signature
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+    c.run_sourmash('sig', 'downsample', '--num', '500',
+                   '-k', '21', '--dna', sigs11)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_downsample_sig = sourmash.load_one_signature(sigs11, ksize=21,
+                                                      select_moltype='DNA')
+    actual_downsample_sig = sourmash.load_one_signature(out)
+    test_mh = test_downsample_sig.minhash.downsample_n(500)
+
+    assert actual_downsample_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_downsample_2_num_empty(c):
+    # downsample a num signature
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '-k', '21', '--dna', sigs11)
 
 
 @utils.in_tempdir
