@@ -1,14 +1,14 @@
-use serde::de::{Deserialize, Deserializer};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use serde_derive::Deserialize;
-
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
 use failure::Error;
 use lazy_static::lazy_static;
+use serde::de::{Deserialize, Deserializer};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde_derive::Deserialize;
 
 use crate::_hash_murmur;
 use crate::errors::SourmashError;
@@ -25,6 +25,20 @@ pub enum HashFunctions {
     murmur64_protein = 2,
     murmur64_dayhoff = 3,
     murmur64_hp = 4,
+}
+
+impl TryFrom<&str> for HashFunctions {
+    type Error = Error;
+
+    fn try_from(moltype: &str) -> Result<Self, Self::Error> {
+        match moltype.to_lowercase().as_ref() {
+            "dna" => Ok(HashFunctions::murmur64_DNA),
+            "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
+            "hp" => Ok(HashFunctions::murmur64_hp),
+            "protein" => Ok(HashFunctions::murmur64_protein),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
@@ -175,6 +189,10 @@ impl KmerMinHash {
 
     pub fn is_protein(&self) -> bool {
         self.hash_function == HashFunctions::murmur64_protein
+    }
+
+    fn is_dna(&self) -> bool {
+        self.hash_function == HashFunctions::murmur64_DNA
     }
 
     pub fn seed(&self) -> u64 {
@@ -523,8 +541,7 @@ impl SigsTrait for KmerMinHash {
             .map(|&x| (x as char).to_ascii_uppercase() as u8)
             .collect();
         if sequence.len() >= (self.ksize as usize) {
-            if !self.is_protein() {
-                // dna
+            if self.is_dna() {
                 for kmer in sequence.windows(self.ksize as usize) {
                     if _checkdna(kmer) {
                         let rc = revcomp(kmer);

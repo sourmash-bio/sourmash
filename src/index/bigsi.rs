@@ -155,6 +155,7 @@ impl<'a> Index<'a> for BIGSI<Signature> {
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
@@ -179,8 +180,13 @@ mod test {
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs =
-            Signature::load_signatures(&mut reader, Some(31), Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let sig_data = sigs[0].clone();
 
         let leaf: SigStore<_> = sig_data.into();

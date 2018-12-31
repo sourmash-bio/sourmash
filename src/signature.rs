@@ -14,6 +14,7 @@ use typed_builder::TypedBuilder;
 
 use crate::errors::SourmashError;
 use crate::index::storage::ToWriter;
+use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
 
 pub trait SigsTrait {
@@ -156,7 +157,7 @@ impl Signature {
     pub fn load_signatures<R>(
         buf: &mut R,
         ksize: Option<usize>,
-        moltype: Option<&str>,
+        moltype: Option<HashFunctions>,
         _scaled: Option<u64>,
     ) -> Result<Vec<Signature>, Error>
     where
@@ -190,9 +191,7 @@ impl Signature {
 
                             match moltype {
                                 Some(x) => {
-                                    if (x.to_lowercase() == "dna" && !mh.is_protein())
-                                        || (x.to_lowercase() == "protein" && mh.is_protein())
-                                    {
+                                    if mh.hash_function() == x {
                                         return true;
                                     }
                                 }
@@ -208,7 +207,7 @@ impl Signature {
 
                             match moltype {
                                 Some(x) => {
-                                    if x.to_lowercase() == "dna" {
+                                    if x == HashFunctions::murmur64_DNA {
                                         return true;
                                     } else {
                                         // TODO: draff only supports dna for now
@@ -285,6 +284,7 @@ impl PartialEq for Signature {
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
@@ -297,8 +297,13 @@ mod test {
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs =
-            Signature::load_signatures(&mut reader, Some(31), Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let _sig_data = sigs[0].clone();
         // TODO: check sig_data
     }
