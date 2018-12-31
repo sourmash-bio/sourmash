@@ -1,6 +1,7 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
+from __future__ import print_function, unicode_literals
 import sys
 import argparse
 import csv
