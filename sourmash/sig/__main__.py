@@ -13,6 +13,7 @@ import copy
 from ..logging import set_quiet, error, notify, set_quiet
 from .. import sourmash_args
 from ..sourmash_args import DEFAULT_LOAD_K
+from .._minhash import get_max_hash_for_scaled
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
@@ -430,8 +431,19 @@ def downsample(args):
         if args.scaled:
             if mh.scaled:
                 mh = mh.downsample_scaled(args.scaled)
-            else:
-                pass
+            else:                         # try to turn a num into a scaled
+                # first check: can we?
+                max_hash = get_max_hash_for_scaled(args.scaled)
+                mins = mh.get_mins()
+                if max(mins) < max_hash:
+                    raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
+
+                mh_new = copy.copy(mh)
+                new_mh_params = list(mh_new.__getstate__())
+                new_mh_params[0] = 0      # set num -> 0
+                # set max_hash
+                new_mh_params[6] = get_max_hash_for_scaled(args.scaled)
+                mh_new.__setstate__(new_mh_params)
         elif args.num:
             if mh.num:
                 mh = mh.downsample_n(args.num)

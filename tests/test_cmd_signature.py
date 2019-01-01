@@ -395,6 +395,40 @@ def test_sig_downsample_2_num(c):
 
 
 @utils.in_tempdir
+def test_sig_downsample_2_num_to_scaled(c):
+    # downsample a num signature and convert it into a scaled sig
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+    c.run_sourmash('sig', 'downsample', '--scaled', '10000',
+                   '-k', '21', '--dna', sigs11)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_downsample_sig = sourmash.load_one_signature(sigs11, ksize=21,
+                                                      select_moltype='DNA')
+    actual_downsample_sig = sourmash.load_one_signature(out)
+
+    test_mins = test_downsample_sig.minhash.get_mins()
+    actual_mins = actual_downsample_sig.minhash.get_mins()
+
+    # select those mins that are beneath the new max hash...
+    max_hash = actual_downsample_sig.minhash.max_hash
+    test_mins_down = { k for k in test_mins if k < max_hash }
+    assert test_mins == actual_mins
+
+
+@utils.in_tempdir
+def test_sig_downsample_2_num_to_scaled_fail(c):
+    # downsample a num signature and FAIL to convert it into a scaled sig
+    # because new scaled is too low
+    sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--scaled', '100',
+                       '-k', '21', '--dna', sigs11)
+
+
+@utils.in_tempdir
 def test_sig_downsample_2_num_empty(c):
     # downsample a num signature
     sigs11 = utils.get_test_data('genome-s11.fa.gz.sig')
