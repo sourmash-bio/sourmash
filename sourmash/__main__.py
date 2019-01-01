@@ -36,9 +36,9 @@ sbt_combine             Combine multiple SBTs into a new one.
 categorize              Identify best matches for many signatures using an SBT.
 watch                   Classify a stream of sequences.
 
-** Other information:
+** Other commands:
 
-info                        Sourmash version and other information.
+info                        Display sourmash version and other information.
 signature                   Sourmash signature manipulation utilities.
 
 Use '-h' to get subcommand-specific help, e.g.
