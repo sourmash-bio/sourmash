@@ -368,6 +368,38 @@ def test_sig_downsample_1_scaled(c):
 
 
 @utils.in_tempdir
+def test_sig_downsample_1_scaled_to_num(c):
+    # downsample a scaled signature
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'downsample', '--num', '500', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_downsample_sig = sourmash.load_one_signature(out)
+    actual_mins = actual_downsample_sig.minhash.get_mins()
+    actual_mins = list(actual_mins)
+    actual_mins.sort()
+
+    test_downsample_sig = sourmash.load_one_signature(sig47)
+    test_mins = test_downsample_sig.minhash.get_mins()
+    test_mins = list(test_mins)
+    test_mins.sort()
+    test_mins = test_mins[:500]           # take 500 smallest
+
+    assert actual_mins == test_mins
+
+
+@utils.in_tempdir
+def test_sig_downsample_1_scaled_to_num_fail(c):
+    # downsample a scaled signature
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'downsample', '--num', '50000', sig47)
+
+
+@utils.in_tempdir
 def test_sig_downsample_1_scaled_empty(c):
     # downsample a scaled signature
     sig47 = utils.get_test_data('47.fa.sig')
@@ -414,7 +446,7 @@ def test_sig_downsample_2_num_to_scaled(c):
     # select those mins that are beneath the new max hash...
     max_hash = actual_downsample_sig.minhash.max_hash
     test_mins_down = { k for k in test_mins if k < max_hash }
-    assert test_mins == actual_mins
+    assert test_mins_down == set(actual_mins)
 
 
 @utils.in_tempdir

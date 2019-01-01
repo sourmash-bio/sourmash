@@ -428,9 +428,11 @@ def downsample(args):
         sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
         mh = sigobj.minhash
 
+        notify('loading and downsampling signature from {}...', sigfile, end='\r')
+        total_loaded += 1
         if args.scaled:
             if mh.scaled:
-                mh = mh.downsample_scaled(args.scaled)
+                mh_new = mh.downsample_scaled(args.scaled)
             else:                         # try to turn a num into a scaled
                 # first check: can we?
                 max_hash = get_max_hash_for_scaled(args.scaled)
@@ -446,15 +448,22 @@ def downsample(args):
                 mh_new.__setstate__(new_mh_params)
         elif args.num:
             if mh.num:
-                mh = mh.downsample_n(args.num)
-            else:
-                pass
+                mh_new = mh.downsample_n(args.num)
+            else:                         # try to turn a scaled into a num
+                # first check: can we?
+                if len(mh) < args.num:
+                    raise ValueError("this scaled MinHash has only {} hashes")
 
-        sigobj.minhash = mh
+                mh_new = copy.copy(mh)
+                new_mh_params = list(mh_new.__getstate__())
+                new_mh_params[0] = args.num      # set num -> args.num
+                # set max_hash
+                new_mh_params[6] = 0
+                mh_new.__setstate__(new_mh_params)
+
+        sigobj.minhash = mh_new
 
         output_list.append(sigobj)
-        notify('loaded and downsampled signature from {}...', sigfile, end='\r')
-        total_loaded += 1
 
     output_json = sourmash.save_signatures(output_list, fp=args.output)
 

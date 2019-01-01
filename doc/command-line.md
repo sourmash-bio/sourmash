@@ -502,15 +502,25 @@ in any signatures will be ignored and the output signature will have
 
 ### `sourmash signature downsample`
 
-Downsample one or more signatures computed with `--scaled` to a larger
-scaled value, decreasing its size (and sensitivity).
+Downsample one or more signatures.
+
+With `downsample`, you can --
+
+* increase the `--scaled` value for a signature computed with `--scaled`, shrinking it in size;
+* decrease the `num` value for a traditional num MinHash, shrinking it in size;
+* try to convert a `--scaled` signature to a `num` signature;
+* try to convert a `num` signature to a `--scaled` signature.
 
 For example,
 ```
 sourmash signature downsample file1.sig file2.sig --scaled 100000 -o downsampled.sig
 ```
 will output each signature, downsampled to a scaled value of 100000, to
-`downsampled.sig`.
+`downsampled.sig`; and
+```
+sourmash signature downsample --num 500 scaled_file.sig -o downsampled.sig
+```
+will try to convert a scaled MinHash to a num MinHash.
 
 ## `sourmash signature extract`
 
