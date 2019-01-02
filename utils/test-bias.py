@@ -22,7 +22,7 @@ def kmers(seq, kk):
 n = 10000  # sequence length
 ksize = 10  # k-mer length
 h = 5000  # number of hashes in sketch
-i_range = range(1, 5000, 100)  # range of intersection sizes
+i_range = range(1, 50000, 100)  # range of intersection sizes
 true_jaccards = np.zeros(len(i_range))
 estimate_jaccards = np.zeros(len(i_range))
 it = 0
@@ -32,10 +32,10 @@ for i_size in i_range:
     seq1 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
     seq2 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
 
-    with open('xyz/{}-1.fa'.format(i_size), 'wt') as fp:
-        fp.write('>a\n{}\n'.format(seq1))
-    with open('xyz/{}-2.fa'.format(i_size), 'wt') as fp:
-        fp.write('>a\n{}\n'.format(seq2))
+#    with open('xyz/{}-1.fa'.format(i_size), 'wt') as fp:
+#        fp.write('>a\n{}\n'.format(seq1))
+#    with open('xyz/{}-2.fa'.format(i_size), 'wt') as fp:
+#        fp.write('>a\n{}\n'.format(seq2))
 
     # Calculate exact Jaccard index
     kmers1 = set(kmers(seq1, ksize))
