@@ -5,42 +5,53 @@
 import sourmash
 import numpy as np
 import matplotlib.pyplot as plt
+import random
+import screed
+
+random.seed(1)
+
+def kmers(seq, kk):
+    for i in range(len(seq) - kk + 1):
+        kmer = seq[i:i+kk]
+        rc = screed.rc(kmer)
+        if kmer < rc:
+            yield kmer
+        else:
+            yield rc
 
 n = 10000  # sequence length
 ksize = 10  # k-mer length
 h = 5000  # number of hashes in sketch
-i_range = range(1, 50000, 100)  # range of intersection sizes
+i_range = range(1, 5000, 100)  # range of intersection sizes
 true_jaccards = np.zeros(len(i_range))
 estimate_jaccards = np.zeros(len(i_range))
 it = 0
 for i_size in i_range:
-	# Append a common string to two different random strings (true jaccard will be ~ i_size/n)
-	common_string = ''.join(np.random.choice(['A', 'C', 'T', 'G'], i_size))
-	seq1 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
-	seq2 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
+    # Append a common string to two different random strings (true jaccard will be ~ i_size/n)
+    common_string = ''.join(np.random.choice(['A', 'C', 'T', 'G'], i_size))
+    seq1 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
+    seq2 = ''.join(np.random.choice(['A', 'C', 'T', 'G'], n)) + common_string
 
-	# Calculate exact Jaccard index
-	kmers1 = set()
-	kmers2 = set()
-	for i in range(len(seq1) - ksize + 1):
-		kmers1.add(seq1[i:i+ksize])
+    with open('xyz/{}-1.fa'.format(i_size), 'wt') as fp:
+        fp.write('>a\n{}\n'.format(seq1))
+    with open('xyz/{}-2.fa'.format(i_size), 'wt') as fp:
+        fp.write('>a\n{}\n'.format(seq2))
 
-	for i in range(len(seq2) - ksize + 1):
-		kmers2.add(seq2[i:i+ksize])
+    # Calculate exact Jaccard index
+    kmers1 = set(kmers(seq1, ksize))
+    kmers2 = set(kmers(seq2, ksize))
 
-	true_jaccard = len(kmers1.intersection(kmers2)) / float(len(kmers1.union(kmers2)))
-	# in case E1.jaccard(E2) is computing containment. It isn't (using commit 6609b3a)
-	#true_jaccard = len(kmers1.intersection(kmers2)) / float(len(kmers1))
-	true_jaccards[it] = true_jaccard
+    true_jaccard = len(kmers1.intersection(kmers2)) / float(len(kmers1.union(kmers2)))
+    true_jaccards[it] = true_jaccard
 
-	# Calculate sourmash estimate of Jaccard index
-	E1 = sourmash.MinHash(n=h, ksize=ksize)
-	E2 = sourmash.MinHash(n=h, ksize=ksize)
-	E1.add_sequence(seq1)
-	E2.add_sequence(seq2)
-	estimate_jaccard = E1.jaccard(E2)
-	estimate_jaccards[it] = estimate_jaccard
-	it += 1
+    # Calculate sourmash estimate of Jaccard index
+    E1 = sourmash.MinHash(n=h, ksize=ksize)
+    E2 = sourmash.MinHash(n=h, ksize=ksize)
+    E1.add_sequence(seq1)
+    E2.add_sequence(seq2)
+    estimate_jaccard = E1.jaccard(E2)
+    estimate_jaccards[it] = estimate_jaccard
+    it += 1
 
 differences = true_jaccards - estimate_jaccards
 sorted_true = sorted(true_jaccards)
