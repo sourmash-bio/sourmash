@@ -3,8 +3,7 @@
 =======================
 
 The primary programmatic way of interacting with ``sourmash`` is via
-its Python API.  Please also see [examples of using the
-API](api-example.html).
+its Python API.  Please also see `examples of using the API <api-example.html>`_.
 
 .. contents::
    :depth: 2
