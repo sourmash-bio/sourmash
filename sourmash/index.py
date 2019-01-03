@@ -11,6 +11,14 @@ class Index(ABC):
         """ """
 
     @abstractmethod
+    def search(self, signature, *args, **kwargs):
+        """ """
+
+    @abstractmethod
+    def gather(self, signature, *args, **kwargs):
+        """ """
+
+    @abstractmethod
     def insert(self, node):
         """ """
 
@@ -38,6 +46,17 @@ class LinearIndex(Index):
             if search_fn(node, *args):
                 matches.append(node)
         return matches
+
+    def search(self, signature, *args, **kwargs):
+        matches = []
+
+        for node in self.signatures:
+            if signature.similarity(node):
+                matches.append(node)
+        return matches
+
+    def gather(self, signature, *args, **kwargs):
+        pass
 
     def save(self, path):
         pass

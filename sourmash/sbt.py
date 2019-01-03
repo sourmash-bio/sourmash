@@ -256,6 +256,12 @@ class SBT(Index):
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
 
+    def search(self, sig):
+        pass
+
+    def gather(self, sig):
+        pass
+
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).
 

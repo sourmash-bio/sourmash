@@ -265,6 +265,12 @@ class LCA_Database(Index):
     def find(self, search_fn, *args, **kwargs):
         pass
 
+    def search(self, sig):
+        pass
+
+    def gather(self, sig):
+        pass
+
     def insert(self, node):
         pass
 
