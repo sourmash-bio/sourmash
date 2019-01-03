@@ -181,7 +181,7 @@ Modulo hash (or 'scaled') signatures are specific to sourmash and they
 enable an expanded range of metagenome analyses, with the downside
 that they can become arbitrarily large.  The key parameter for modulo
 hash signatures is `scaled`, which specifies the average sampling rate
-for hashes for a given input data set.  A scaledfactor  of 1000 means that,
+for hashes for a given input data set.  A scaled factor  of 1000 means that,
 on average, 1 in 1000 k-mers will be turned into a hash for later
 comparisons; this is a sort of compression factor, in that a 5 Mbp
 genome will yield approximately 5000 hash values with a scaled factor
