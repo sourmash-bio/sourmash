@@ -1,0 +1,73 @@
+[package]
+name = "sourmash"
+version = "0.2.3"
+authors = ["Luiz Irber <luiz.irber@gmail.com>"]
+description = "MinHash sketches for genomic data"
+repository = "https://github.com/luizirber/sourmash-rust"
+keywords = ["minhash", "bioinformatics"]
+categories = ["science", "algorithms", "data-structures"]
+license = "BSD-3-Clause"
+edition = "2018"
+
+[lib]
+name = "sourmash"
+crate-type = ["cdylib", "rlib"]
+bench = false
+
+[profile.release]
+lto=true
+
+[[bin]]
+bench = false
+path = "src/main.rs"
+name = "smrs"
+
+[features]
+from-finch = ["finch", "needletail"]
+
+[workspace]
+
+#[build-dependencies]
+#cbindgen = "~0.6.7"
+
+[dependencies]
+backtrace = "=0.3.9" # https://github.com/alexcrichton/backtrace-rs/issues/147
+byteorder = "^1.2"
+cfg-if = "0.1"
+clap = { version = "~2.32", features = ["yaml"] }
+derive_builder = "^0.7"
+env_logger = "0.6.0"
+exitfailure = "0.5.1"
+failure = "0.1.3"
+failure_derive = "0.1.3"
+finch = { version = "~0.1.6", optional = true }
+fixedbitset = "^0.1.9"
+human-panic = "1.0.1"
+lazy_static = "1.0.0"
+lazy-init = "0.3.0"
+log = "0.4.0"
+md5 = "0.6.0"
+murmurhash3 = "~0.0.5"
+needletail = { version = "~0.2.1", optional = true }
+serde = "1.0"
+serde_derive = "~1.0.58"
+serde_json = "1.0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
+version = "^0.2"
+features = ["serde-serialize"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.ocf]
+version = "0.1"
+path = "ocf"
+default-features = false
+features = ["bz2"]
+
+[dev-dependencies]
+proptest = "^0.8"
+criterion = "^0.2"
+rand = "^0.5"
+
+[[bench]]
+name = "index"
+harness = false
