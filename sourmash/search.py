@@ -144,7 +144,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                     leaf_e = leaf.data.minhash
                     similarity = query.minhash.containment_ignore_maxhash(leaf_e)
                     if similarity > 0.0:
-                        results.append((similarity, leaf.data))
+                        results.append((similarity, leaf.data, filename))
             # or an LCA database
             elif filetype == 'LCA':
                 lca_db = obj
@@ -152,21 +152,21 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                                      containment=True, ignore_scaled=True):
                     (score, match_sig, md5, filename, name) = x
                     if score > 0.0:
-                        results.append((score, match_sig))
+                        results.append((score, match_sig, filename))
 
             # search a signature
             else:
                 for ss in obj:
                     similarity = query.minhash.containment_ignore_maxhash(ss.minhash)
                     if similarity > 0.0:
-                        results.append((similarity, ss))
+                        results.append((similarity, ss, filename))
 
         if not results:
             return None, None, None
 
         # take the best result
         results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
-        best_similarity, best_leaf = results[0]
+        best_similarity, best_leaf, filename = results[0]
 
         for x in results[1:]:
             remainder.add(x[1])
