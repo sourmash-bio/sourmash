@@ -67,7 +67,7 @@ def info(args):
 
         for k in this_siglist:
             siglist.append((k, sigfile))
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
+        notify('loaded {} signatures from {}...', len(siglist), sigfile,
                end='\r')
 
     notify('loaded {} signatures total.', len(siglist))
@@ -104,8 +104,7 @@ def info(args):
         if w:
             w.writerow(locals())
 
-        if not args.quiet:
-            print('''\
+        notify('''\
 ---
 signature filename: {signature_file}
 signature: {name}
@@ -114,6 +113,94 @@ md5: {md5}
 k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundance={with_abundance}
 size: {n_hashes}
 signature license: {license}
+''', **locals())
+
+
+def overlap(args):
+    """
+    provide detailed comparison of two signatures
+    """
+    p = argparse.ArgumentParser(prog='sourmash signature overlap')
+    p.add_argument('signature1')
+    p.add_argument('signature2')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+
+    moltype = sourmash_args.calculate_moltype(args)
+
+    sig1 = sourmash.load_one_signature(args.signature1, ksize=args.ksize,
+                                       select_moltype=moltype)
+    sig2 = sourmash.load_one_signature(args.signature2, ksize=args.ksize,
+                                       select_moltype=moltype)
+
+    notify('loaded one signature each from {} and {}', args.signature1,
+           args.signature2)
+
+    try:
+        similarity = sig1.similarity(sig2)
+    except ValueError:
+        raise
+
+    cont1 = sig1.contained_by(sig2)
+    cont2 = sig2.contained_by(sig1)
+
+    sig1_file = args.signature1
+    sig2_file = args.signature2
+
+    name1 = sig1.name()
+    name2 = sig2.name()
+
+    md5_1 = sig1.md5sum()
+    md5_2 = sig2.md5sum()
+
+    ksize = sig1.minhash.ksize
+    moltype = 'DNA'
+    if sig1.minhash.is_protein:
+        moltype = 'protein'
+
+    num = sig1.minhash.num
+    size1 = len(sig1.minhash)
+    size2 = len(sig2.minhash)
+
+    scaled = sig1.minhash.scaled
+
+    hashes_1 = set(sig1.minhash.get_mins())
+    hashes_2 = set(sig2.minhash.get_mins())
+
+    num_common = len(hashes_1.intersection(hashes_2))
+    disjoint_1 = len(hashes_1 - hashes_2)
+    disjoint_2 = len(hashes_2 - hashes_1)
+    num_union = len(hashes_1.union(hashes_2))
+
+    print('''\
+first signature:
+  signature filename: {sig1_file}
+  signature: {name1}
+  md5: {md5_1}
+  k={ksize} molecule={moltype} num={num} scaled={scaled}
+
+second signature:
+  signature filename: {sig2_file}
+  signature: {name2}
+  md5: {md5_2}
+  k={ksize} molecule={moltype} num={num} scaled={scaled}
+
+similarity:                  {similarity:.5f}
+first contained in second:   {cont1:.5f}
+second contained in first:   {cont2:.5f}
+
+number of hashes in first:   {size1}
+number of hashes in second:  {size2}
+
+number of hashes in common:  {num_common}
+only in first:               {disjoint_1}
+only in second:              {disjoint_2}
+total (union):               {num_union}
 '''.format(**locals()))
 
 
@@ -559,7 +646,8 @@ def main(sysv_args):
                 'subtract': subtract,
                 'import': sig_import,
                 'export': export,
-                'info': info}
+                'info': info,
+                'overlap': overlap}
 
     parser = argparse.ArgumentParser(
         description='signature file manipulation utilities', usage=usage)

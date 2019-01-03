@@ -579,7 +579,27 @@ will import the contents of `filename.msh.json` into `imported.sig`.
 Export signatures from sourmash format. Currently only supports
 mash dump format.
 
-For example
+For example,
 ```
 sourmash signature export filename.sig -o filename.sig.msh.json
 ```
+
+### `sourmash signature overlap`
+
+Display a detailed comparison of two signatures. This computes the
+Jaccard similarity (as in `sourmash compare` or `sourmash search`) and
+the Jaccard containment in both directions (as with `--containment`).
+It also displays the number of hash values in the union and
+intersection of the two signatures, as well as the number of disjoint
+hash values in each signature.
+
+This command has two uses - first, it is helpful for understanding how
+similarity and containment are calculated, and second, it is useful for
+analyzing signatures with very small overlaps, where the similarity
+and/or containment might be very close to zero.
+
+For example,
+```
+sourmash signature overlap file1.sig file2.sig
+```
+will display the detailed comparison of `file1.sig` and `file2.sig`.

@@ -475,6 +475,9 @@ def test_sig_info_1(c):
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'info', sig47)
 
+    out = c.last_result.out
+    print(out)
+
     expected_output = """\
 signature: NC_009665.1 Shewanella baltica OS185, complete genome
 source file: 47.fa
@@ -484,7 +487,7 @@ size: 5177
 signature license: CC0
 """.splitlines()
     for line in expected_output:
-        assert line.strip() in c.last_result.out
+        assert line.strip() in out
 
 
 @utils.in_tempdir
@@ -508,6 +511,24 @@ def test_sig_info_2(c):
             n += 1
 
         assert n == 2
+
+
+@utils.in_tempdir
+def test_sig_overlap(c):
+    # get overlap details
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'overlap', sig47, sig63)
+    out = c.last_result.out
+
+    print(out)
+
+    # md5s
+    assert '09a08691ce52952152f0e866a59f6261' in out
+    assert '38729c6374925585db28916b82a6f513' in out
+
+    assert 'similarity:                  0.32069' in out
+    assert 'number of hashes in common:  2529' in out
 
 
 @utils.in_tempdir
