@@ -522,7 +522,7 @@ sourmash signature downsample --num 500 scaled_file.sig -o downsampled.sig
 ```
 will try to convert a scaled MinHash to a num MinHash.
 
-## `sourmash signature extract`
+### `sourmash signature extract`
 
 Extract the specified signature(s) from a collection of signatures.
 
@@ -549,7 +549,7 @@ sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 will extract the same signature, which has an accession number of
 `NC_009665.1`.
 
-## `sourmash signature flatten`
+### `sourmash signature flatten`
 
 Flatten the specified signature(s), removing abundances and setting
 track_abundance to False.
@@ -563,7 +563,7 @@ directory.
 
 The `flatten` command accepts the same selectors as `extract`.
 
-## `sourmash signature import`
+### `sourmash signature import`
 
 Import signatures into sourmash format. Currently only supports mash,
 and can import mash sketches output by `mash info -d <filename.msh>`.
@@ -574,7 +574,7 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
-## `sourmash signature export`
+### `sourmash signature export`
 
 Export signatures from sourmash format. Currently only supports
 mash dump format.
