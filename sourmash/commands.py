@@ -112,7 +112,7 @@ def compute(args):
         sys.exit(-1)
 
     if args.input_is_protein and args.dna:
-        notify('WARNING: input is protein, turning off DNA hashing')
+        notify('WARNING: input is protein, turning off nucleotide hashing')
         args.dna = False
         args.protein = True
 
@@ -148,13 +148,13 @@ def compute(args):
 
     num_sigs = 0
     if args.dna and args.protein:
-        notify('Computing both DNA and protein signatures.')
+        notify('Computing both nucleotide and protein signatures.')
         num_sigs = 2*len(ksizes)
     elif args.dna:
-        notify('Computing only DNA (and not protein) signatures.')
+        notify('Computing only nucleotide (and not protein) signatures.')
         num_sigs = len(ksizes)
     elif args.protein:
-        notify('Computing only protein (and not DNA) signatures.')
+        notify('Computing only protein (and not nucleotide) signatures.')
         num_sigs = len(ksizes)
 
     if args.protein and not args.input_is_protein:
@@ -1304,12 +1304,12 @@ def watch(args):
     set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:
-        notify('WARNING: input is protein, turning off DNA hashing.')
+        notify('WARNING: input is protein, turning off nucleotide hashing.')
         args.dna = False
         args.protein = True
 
     if args.dna and args.protein:
-        notify('ERROR: cannot use "watch" with both DNA and protein.')
+        notify('ERROR: cannot use "watch" with both nucleotide and protein.')
 
     if args.dna:
         moltype = 'DNA'
