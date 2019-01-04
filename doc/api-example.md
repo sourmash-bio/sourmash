@@ -1,4 +1,4 @@
-# `sourmash` Python examples
+# `sourmash` Python API examples
 
 ## A first example: two k-mers
 
@@ -181,16 +181,21 @@ Modulo hash (or 'scaled') signatures are specific to sourmash and they
 enable an expanded range of metagenome analyses, with the downside
 that they can become arbitrarily large.  The key parameter for modulo
 hash signatures is `scaled`, which specifies the average sampling rate
-for hashes for a given input data set.  A scaled of 1000 means that,
+for hashes for a given input data set.  A scaled factor  of 1000 means that,
 on average, 1 in 1000 k-mers will be turned into a hash for later
 comparisons; this is a sort of compression factor, in that a 5 Mbp
 genome will yield approximately 5000 hash values with a scaled factor
-of 1000.
+of 1000 (5000 x 1000 = 5,000,000).
 
 ```
 >>> sigscaled = sourmash.MinHash(n=0, ksize=31, scaled=1000)
 
 ```
+Note also that with a scaled factor of 1, the signature will contain **all**
+of the k-mers.
+
+
+----
 
 You can differentiate between num signatures and scaled signatures by
 looking at the `num` and `scaled` attributes on a MinHash object:
