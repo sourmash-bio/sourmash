@@ -106,10 +106,8 @@ def _max_jaccard_underneath_internal_node(node, query):
     if min_n_below == -1:
         raise Exception('cannot do similarity search on this SBT; need to rebuild.')
 
-    score = node.data.similarity(query_bf)
-
     # count the maximum number of hash matches beneath this node
-    matches = score * len(query.minhash)
+    matches = query_bf.containment(node.data) * len(query.minhash)
 
     # max of numerator divided by min of denominator => max Jaccard
     max_score = matches / min_n_below
