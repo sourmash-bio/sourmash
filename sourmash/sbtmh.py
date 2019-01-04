@@ -79,7 +79,7 @@ class SigLeaf(Leaf):
 
 ### Search functionality.
 
-def _max_jaccard_underneath_internal_node(node, hashes):
+def _max_jaccard_underneath_internal_node(node, query):
     """\
     calculate the maximum possibility similarity score below
     this node, based on the number of matches in 'hashes' at this node,
@@ -88,12 +88,17 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     This should yield be an upper bound on the Jaccard similarity
     for any signature below this point.
     """
-    if len(hashes) == 0:
-        return 0.0
 
-    # count the maximum number of hash matches beneath this node
-    get = node.data.get
-    matches = sum(1 for value in hashes if get(value))
+    try:
+        query_bf = query.bf
+    except AttributeError:
+        query_bf = node._factory()
+        for v in query.minhash.get_mins():
+            query_bf.count(v)
+        query.bf = query_bf
+
+    if len(query.minhash) == 0:
+        return 0.0
 
     # get the size of the smallest collection of hashes below this point
     min_n_below = node.metadata.get('min_n_below', -1)
@@ -101,8 +106,13 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     if min_n_below == -1:
         raise Exception('cannot do similarity search on this SBT; need to rebuild.')
 
+    score = node.data.similarity(query_bf)
+
+    # count the maximum number of hash matches beneath this node
+    matches = score * len(query.minhash)
+
     # max of numerator divided by min of denominator => max Jaccard
-    max_score = float(matches) / min_n_below
+    max_score = matches / min_n_below
 
     return max_score
 
@@ -111,7 +121,6 @@ def search_minhashes(node, query, threshold, results=None, downsample=True):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
-    mins = query.minhash.get_mins()
     score = 0
 
     if isinstance(node, SigLeaf):
@@ -127,16 +136,7 @@ def search_minhashes(node, query, threshold, results=None, downsample=True):
                 raise
 
     else:  # Node minhash comparison
-        try:
-            query_bf = query.bf
-        except AttributeError:
-            query_bf = node._factory()
-            for v in query.minhash.get_mins():
-                query_bf.count(v)
-            query.bf = query_bf
-
-        #score = _max_jaccard_underneath_internal_node(node, mins)
-        score = node.data.similarity(query_bf)
+        score = _max_jaccard_underneath_internal_node(node, query)
 
     if results is not None:
         results[node.name] = score
@@ -152,23 +152,22 @@ class SearchMinHashesFindBest(object):
         self.best_match = 0.
         self.downsample = downsample
 
-    def search(self, node, sig, threshold, results=None):
-        mins = sig.minhash.get_mins()
+    def search(self, node, query, threshold, results=None):
         score = 0
 
         if isinstance(node, SigLeaf):
             try:
-                score = node.data.minhash.similarity(sig.minhash)
+                score = node.data.minhash.similarity(query.minhash)
             except Exception as e:
                 if 'mismatch in max_hash' in str(e) and self.downsample:
-                    xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                    yy = node.data.minhash.downsample_max_hash(sig.minhash)
+                    xx = query.minhash.downsample_max_hash(node.data.minhash)
+                    yy = node.data.minhash.downsample_max_hash(query.minhash)
 
                     score = yy.similarity(xx)
                 else:
                     raise
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, mins)
+            score = _max_jaccard_underneath_internal_node(node, query)
 
         if results is not None:
             results[node.name] = score
