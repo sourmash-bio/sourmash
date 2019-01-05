@@ -89,13 +89,7 @@ def _max_jaccard_underneath_internal_node(node, query):
     for any signature below this point.
     """
 
-    try:
-        query_bf = query.bf
-    except AttributeError:
-        query_bf = node._factory()
-        for v in query.minhash.get_mins():
-            query_bf.count(v)
-        query.bf = query_bf
+    query_bf = _get_bf(node, query)
 
     if len(query.minhash) == 0:
         return 0.0
@@ -181,32 +175,42 @@ class SearchMinHashesFindBest(object):
         return 0
 
 
-def search_minhashes_containment(node, sig, threshold,
+def search_minhashes_containment(node, query, threshold,
                                  results=None, downsample=True):
-    mins = sig.minhash.get_mins()
-
     if isinstance(node, SigLeaf):
         try:
-            matches = node.data.minhash.count_common(sig.minhash)
+            matches = node.data.minhash.count_common(query.minhash)
         except Exception as e:
             if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                yy = node.data.minhash.downsample_max_hash(sig.minhash)
+                xx = query.minhash.downsample_max_hash(node.data.minhash)
+                yy = node.data.minhash.downsample_max_hash(query.minhash)
 
                 matches = yy.count_common(xx)
             else:
                 raise
 
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        get = node.data.get
-        matches = sum(1 for value in mins if get(value))
+        bf = _get_bf(node, query)
+        matches = bf.containment(node.data) * len(query.minhash)
 
     if results is not None:
-        results[node.name] = float(matches) / len(mins)
+        results[node.name] = float(matches) / len(query.minhash)
 
-    if len(mins) and float(matches) / len(mins) >= threshold:
+    if len(query.minhash) and float(matches) / len(query.minhash) >= threshold:
         return 1
     return 0
+
+
+def _get_bf(node, query):
+    try:
+        query_bf = query.bf
+    except AttributeError:
+        query_bf = node._factory()
+        for v in query.minhash.get_mins():
+            query_bf.count(v)
+        query.bf = query_bf
+
+    return query_bf
 
 
 class GatherMinHashesFindBestIgnoreMaxHash(object):
@@ -230,12 +234,10 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
                 mh2 = query.minhash.downsample_scaled(max_scaled)
 
             matches = mh1.count_common(mh2)
+            score = float(matches) / len(query.minhash)
         else:  # Nodegraph by minhash comparison
-            mins = query.minhash.get_mins()
-            get = node.data.get
-            matches = sum(1 for value in mins if get(value))
-
-        score = float(matches) / len(query.minhash)
+            bf = _get_bf(node, query)
+            score = bf.containment(node.data)
 
         # store results if we have passed in an appropriate dictionary
         if results is not None:
