@@ -77,3 +77,32 @@ def test_linear_index_search():
     lidx.insert(ss2)
     lidx.insert(ss47)
     lidx.insert(ss63)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s.name for s in sr])
+    assert len(sr) == 1
+    assert sr[0].match_sig == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s.name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x.similarity)
+    assert sr[0].match_sig == ss47
+    assert sr[1].match_sig == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s.name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x.similarity)
+    assert sr[0].match_sig == ss63
+    assert sr[1].match_sig == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s.name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x.similarity)
+    assert sr[0].match_sig == ss63

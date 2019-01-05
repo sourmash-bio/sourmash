@@ -1,4 +1,11 @@
+"An Abstract Base Class for collections of signatures."
+
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+
+# @CTB copied out of search.py to deal with import order issues, #willfix
+SearchResult = namedtuple('SearchResult',
+                          'similarity, match_sig, md5, filename, name')
 
 
 # compatible with Python 2 *and* 3:
@@ -47,7 +54,7 @@ class LinearIndex(Index):
                 matches.append(node)
         return matches
 
-    def search(self, signature, *args, **kwargs):
+    def search(self, query, *args, **kwargs):
         """@@
 
         Note, the "best only" hint is ignored by LinearIndex.
@@ -56,6 +63,7 @@ class LinearIndex(Index):
         # check arguments
         if 'threshold' not in kwargs:
             raise TypeError("'search' requires 'threshold'")
+        threshold = kwargs['threshold']
 
         do_containment = kwargs.get('do_containment', False)
         ignore_abundance = kwargs.get('ignore_abundance', False)
