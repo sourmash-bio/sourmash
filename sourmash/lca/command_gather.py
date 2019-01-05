@@ -28,7 +28,9 @@ def format_lineage(lineage_tup):
     present = [ l.rank for l in lineage_tup if l.name ]
     d = dict(lineage_tup) # rank: value
 
-    if 'genus' in present:
+    if not present:
+        name = '- (match w/no lineage assignment)'
+    elif 'genus' in present:
         genus = d['genus']
         if 'strain' in present:
             name = d['strain']

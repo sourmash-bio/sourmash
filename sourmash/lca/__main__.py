@@ -6,6 +6,7 @@ import sys
 import argparse
 
 from . import classify, index, summarize_main, rankinfo_main, gather_main
+from . import revindex
 from .command_compare_csv import compare_csv
 from ..logging import set_quiet, error
 
@@ -31,6 +32,7 @@ def main(sysv_args):
 
     commands = {'classify': classify,
                 'index': index,
+                'revindex': revindex,
                 'summarize': summarize_main,
                 'rankinfo': rankinfo_main,
                 'gather': gather_main,
