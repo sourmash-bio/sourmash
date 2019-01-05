@@ -1,7 +1,9 @@
 from __future__ import print_function, unicode_literals
 
+import sourmash
 from sourmash.index import LinearIndex
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf
+from . import sourmash_tst_utils as utils
 
 
 def test_simple_index(n_children):
@@ -60,3 +62,18 @@ def test_simple_index(n_children):
     print([x.metadata for x in root.find(search_kmer, "AAAAG")])
     print([x.metadata for x in root.find(search_kmer, "CAAAA")])
     print([x.metadata for x in root.find(search_kmer, "GAAAA")])
+
+
+def test_linear_index_search():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)

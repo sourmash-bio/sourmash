@@ -48,11 +48,40 @@ class LinearIndex(Index):
         return matches
 
     def search(self, signature, *args, **kwargs):
+        """@@
+
+        Note, the "best only" hint is ignored by LinearIndex.
+        """
+
+        # check arguments
+        if 'threshold' not in kwargs:
+            raise TypeError("'search' requires 'threshold'")
+
+        do_containment = kwargs.get('do_containment', False)
+        ignore_abundance = kwargs.get('ignore_abundance', False)
+
+        # configure search - containment? ignore abundance?
+        if do_containment:
+            query_match = lambda x: query.contained_by(x, downsample=True)
+        else:
+            query_match = lambda x: query.similarity(
+                x, downsample=True, ignore_abundance=ignore_abundance)
+
+        # do the actual search:
         matches = []
 
-        for node in self.signatures:
-            if signature.similarity(node):
-                matches.append(node)
+        for ss in self.signatures:
+            similarity = query_match(ss)
+            if similarity >= threshold:
+                # @CTB: check duplicates via md5sum - here or ??
+                sr = SearchResult(similarity=similarity,
+                                  match_sig=ss,
+                                  md5=ss.md5sum(),
+                                  filename = None,
+                                  name=ss.name())
+                matches.append(sr)
+
+        # @CTB sort here or ??
         return matches
 
     def gather(self, signature, *args, **kwargs):
