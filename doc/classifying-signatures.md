@@ -82,13 +82,13 @@ output structured taxonomic information, and these are what you should look
 to if you are interested in doing classification.
 
 The command `lca gather` applies the `gather` algorithm to search an
-LCA database; it reports taxonomy.
+LCA database; it reports taxonomy where available.
 
 It's important to note that taxonomy based on k-mers is very, very
 specific and if you get a match, it's pretty reliable. On the
 converse, however, k-mer identification is very brittle with respect
 to evolutionary divergence, so if you don't get a match it may only mean
-that the particular species isn't known.
+that the particular species or genus isn't known.
 
 ## Abundance weighting
 
@@ -109,9 +109,9 @@ We suggest the following approach:
 * build some signatures and do some searches, to get some basic familiarity
   with sourmash;
 
-* explore the available databases;
+* explore the available databases using `search` and `gather`;
 
-* then ask questions [via the issue tracker](https://github.com/dib-lab/sourmash/issues) and we will do our best to help you out!
+* then ask questions [via the issue tracker](https://github.com/dib-lab/sourmash/issues) and we will do our best to help you out with your specific research question!
 
 This helps us figure out what people are actually interested in doing, and
 any help we provide via the issue tracker will eventually be added into the
