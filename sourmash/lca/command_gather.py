@@ -98,6 +98,9 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         if not assignments:
             break
 
+        # @CTB here would be where we could start looking at taxonomy
+        # instead of distinct signatures.
+
         # count the distinct signatures.
         counts = Counter()
         for hashval, match_set in assignments.items():
