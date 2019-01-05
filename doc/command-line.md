@@ -426,7 +426,7 @@ for an example use case.
 These commands manipulate signatures from the command line. Currently
 supported subcommands are `merge`, `rename`, `intersect`,
 `extract`, `downsample`, `subtract`, `import`, `export`, `info`, and
-`flattern`.
+`flatten`.
 
 All of the signature commands work only on compatible signatures, where
 the k-mer size and nucleotide/protein sequences match.  If working directly
