@@ -30,6 +30,7 @@ rename <signature> <name>                 - rename signature
 subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
+overlap <signature1> <signature2>         - see detailed comparison of sigs
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
