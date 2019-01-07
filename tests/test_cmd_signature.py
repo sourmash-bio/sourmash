@@ -44,6 +44,26 @@ def test_sig_merge_1(c):
 
 
 @utils.in_tempdir
+def test_sig_merge_1_multisig(c):
+    # merge of 47 & 63 should be union of mins; here, sigs are in same file.
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+    c.run_sourmash('sig', 'merge', multisig)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+@utils.in_tempdir
 def test_sig_merge_1_ksize_moltype(c):
     # check ksize, moltype args
     sig47 = utils.get_test_data('47.fa.sig')
@@ -226,6 +246,21 @@ def test_sig_subtract_1(c):
 
 
 @utils.in_tempdir
+def test_sig_subtract_1_multisig(c):
+    # subtract of everything from 47
+    sig47 = utils.get_test_data('47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'subtract', sig47, multisig)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_subtract_sig = sourmash.load_one_signature(out)
+
+    assert not set(actual_subtract_sig.minhash.get_mins())
+
+
+@utils.in_tempdir
 def test_sig_subtract_2(c):
     # subtract of 63 from 47 should fail if 47 has abund
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
@@ -262,6 +297,20 @@ def test_sig_intersect_2(c):
     print(out)
 
     assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_2_multisig(c):
+    # intersect of all the multisig stuff should be nothing
+    sig47 = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'intersect', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    assert not len(actual_intersect_sig.minhash)
 
 
 @utils.in_tempdir
@@ -322,11 +371,8 @@ def test_sig_extract_2(c):
 def test_sig_extract_3(c):
     # extract nothing (no md5 match)
     sig47 = utils.get_test_data('47.fa.sig')
-    c.run_sourmash('sig', 'extract', sig47, '--md5', 'FOO')
-
-    # stdout should be empty.
-    out = c.last_result.out
-    assert not out
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('sig', 'extract', sig47, '--md5', 'FOO')
 
 
 @utils.in_tempdir
@@ -352,11 +398,8 @@ def test_sig_extract_4(c):
 def test_sig_extract_5(c):
     # extract nothing (no name match)
     sig47 = utils.get_test_data('47.fa.sig')
-    c.run_sourmash('sig', 'extract', sig47, '--name', 'FOO')
-
-    # stdout should be empty.
-    out = c.last_result.out
-    assert not out
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('sig', 'extract', sig47, '--name', 'FOO')
 
 
 @utils.in_tempdir
@@ -409,6 +452,19 @@ def test_sig_downsample_1_scaled(c):
     test_mh = test_downsample_sig.minhash.downsample_scaled(10000)
 
     assert actual_downsample_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_downsample_1_scaled_downsample_multisig(c):
+    # downsample many scaled signatures in one file
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'downsample', '--scaled', '10000', multisig)
+
+    # stdout should be new signatures
+    out = c.last_result.out
+
+    for sig in sourmash.load_signatures(out):
+        assert sig.minhash.scaled == 10000
 
 
 @utils.in_tempdir
@@ -530,6 +586,26 @@ k=31 molecule=DNA num=0 scaled=1000 seed=42 track_abundance=0
 size: 5177
 signature license: CC0
 """.splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_info_1_multisig(c):
+    # get basic info on multiple signatures in a single file
+    sigs = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'info', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: NC_009665.1 Shewanella baltica OS185, complete genome
+signature: NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence
+signature: NC_011663.1 Shewanella baltica OS223, complete genome
+signature: NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence
+signature: NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence
+signature: NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence""".splitlines()
     for line in expected_output:
         assert line.strip() in out
 
