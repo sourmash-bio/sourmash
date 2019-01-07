@@ -255,8 +255,8 @@ def merge(args):
                       sigobj.name(), sigobj.md5sum()[:8], sigfile)
                 raise
 
-            notify('loaded and merged signature from {}...', sigfile, end='\r')
-        total_loaded += 1
+            total_loaded += 1
+        notify('loaded and merged signature from {}...', sigfile, end='\r')
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
@@ -284,18 +284,20 @@ def intersect(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    first_sigfile = args.signatures[0]
-    first_sig = sourmash.load_one_signature(first_sigfile, ksize=args.ksize, select_moltype=moltype)
-    notify('loaded signature from {}...', first_sigfile, end='\r')
-    total_loaded = 1
+    first_sig = None
+    mins = None
+    total_loaded = 0
 
-    mins = set(first_sig.minhash.get_mins())
+    for sigfile in args.signatures:
+        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+                                               select_moltype=moltype):
+            if first_sig is None:
+                first_sig = sigobj
+                mins = set(sigobj.minhash.get_mins())
 
-    for sigfile in args.signatures[1:]:
-        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        mins.intersection_update(sigobj.minhash.get_mins())
-        notify('loaded and intersected signature from {}...', sigfile, end='\r')
-        total_loaded += 1
+            mins.intersection_update(sigobj.minhash.get_mins())
+            total_loaded += 1
+        notify('loaded and intersected signatures from {}...', sigfile, end='\r')
 
     # forcibly turn off track_abundance
     intersect_mh = first_sig.minhash.copy_and_clear()
@@ -343,16 +345,17 @@ def subtract(args):
 
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
-        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
+        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+                                               select_moltype=moltype):
 
-        if sigobj.minhash.track_abundance:
-            error('Cannot use subtract on signatures with abundance tracking, sorry!')
-            sys.exit(1)
+            if sigobj.minhash.track_abundance:
+                error('Cannot use subtract on signatures with abundance tracking, sorry!')
+                sys.exit(1)
 
-        subtract_mins -= set(sigobj.minhash.get_mins())
+            subtract_mins -= set(sigobj.minhash.get_mins())
 
-        notify('loaded and subtracted signature from {}...', sigfile, end='\r')
-        total_loaded += 1
+            notify('loaded and subtracted signatures from {}...', sigfile, end='\r')
+            total_loaded += 1
 
     subtract_mh = from_sigobj.minhash.copy_and_clear()
     subtract_mh.add_many(subtract_mins)
