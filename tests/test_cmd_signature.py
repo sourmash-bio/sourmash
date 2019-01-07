@@ -476,7 +476,7 @@ def test_sig_info_1(c):
     c.run_sourmash('sig', 'info', sig47)
 
     out = c.last_result.out
-    print(out)
+    print(c.last_result)
 
     expected_output = """\
 signature: NC_009665.1 Shewanella baltica OS185, complete genome
@@ -496,7 +496,6 @@ def test_sig_info_2(c):
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
     c.run_sourmash('sig', 'info', sig47, sig63, '--csv', 'out.csv')
-
 
     expected_md5 = ['09a08691ce52952152f0e866a59f6261',
                     '38729c6374925585db28916b82a6f513']

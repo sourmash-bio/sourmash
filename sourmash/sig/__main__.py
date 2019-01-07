@@ -10,7 +10,7 @@ import json
 import sourmash
 import copy
 
-from ..logging import set_quiet, error, notify, set_quiet
+from ..logging import set_quiet, error, notify, set_quiet, print_results
 from .. import sourmash_args
 from ..sourmash_args import DEFAULT_LOAD_K
 from .._minhash import get_max_hash_for_scaled
@@ -105,7 +105,7 @@ def info(args):
         if w:
             w.writerow(locals())
 
-        notify('''\
+        print_results('''\
 ---
 signature filename: {signature_file}
 signature: {name}
