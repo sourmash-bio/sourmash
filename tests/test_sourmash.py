@@ -1179,7 +1179,7 @@ def test_gather_lca_db(c):
 
     c.run_sourmash('gather', query, lca_db)
     print(c)
-    assert 'NC_009665.1 Shewanella baltica OS185' in str(c)
+    assert 'NC_009665.1 Shewanella baltica OS185' in str(c.last_result.out)
 
 
 @utils.in_tempdir
