@@ -333,7 +333,7 @@ def test_sig_extract_6(c):
 
 @utils.in_tempdir
 def test_sig_flatten_1(c):
-    # extract matches to several names from among several signatures
+    # extract matches to several names from among several signatures & flatten
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'flatten', sig47abund, '--name', 'Shewanella')
