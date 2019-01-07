@@ -216,6 +216,8 @@ def merge(args):
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout,
                    help='output signature to this file')
+    p.add_argument('--flatten', action='store_true',
+                   help='Remove abundances from all signatures.')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
 
@@ -223,27 +225,37 @@ def merge(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    # load a first signature; record compatibility of with-abundance.
-    first_sigfile = args.signatures[0]
-    first_sig = sourmash.load_one_signature(first_sigfile, ksize=args.ksize, select_moltype=moltype)
-    notify('loaded signature from {}...', first_sigfile, end='\r')
-    total_loaded = 1
+    first_sig = None
+    mh = None
+    total_loaded = 0
 
-    mh = copy.copy(first_sig.minhash)
+    # iterate over all the sigs from all the files.
+    for sigfile in args.signatures:
+        notify('loading signatures from {}...', sigfile, end='\r')
+        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+                                               select_moltype=moltype):
+            # first signature? initialize a bunch of stuff
+            if first_sig is None:
+                first_sig = sigobj
+                mh = first_sig.minhash.copy_and_clear()
 
-    # merge each successive 
-    for sigfile in args.signatures[1:]:
-        sigobj = sourmash.load_one_signature(sigfile, ksize=args.ksize, select_moltype=moltype)
-        try:
-            _check_abundance_compatibility(first_sig, sigobj)
+                # forcibly remove abundance?
+                if mh.track_abundance and args.flatten:
+                    mh_params = list(mh.__getstate__())
+                    mh_params[5] = False
+                    mh.__setstate__(mh_params)
 
-            mh.merge(sigobj.minhash)
-        except:
-            error("ERROR when merging signature '{}' ({}) from file {}",
-                  sigobj.name(), sigobj.md5sum()[:8], sigfile)
-            raise
+            try:
+                if not args.flatten:
+                    _check_abundance_compatibility(first_sig, sigobj)
 
-        notify('loaded and merged signature from {}...', sigfile, end='\r')
+                mh.merge(sigobj.minhash)
+            except:
+                error("ERROR when merging signature '{}' ({}) from file {}",
+                      sigobj.name(), sigobj.md5sum()[:8], sigfile)
+                raise
+
+            notify('loaded and merged signature from {}...', sigfile, end='\r')
         total_loaded += 1
 
     merged_sigobj = sourmash.SourmashSignature(mh)

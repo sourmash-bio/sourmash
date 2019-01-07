@@ -453,9 +453,10 @@ will output the union of all the hashes in `file1.sig` and `file2.sig`
 to `merged.sig`.
 
 All of the signatures passed to merge must either have been computed
-with `--track-abundance`, or not; mixtures cannot be used.
-If they have `track_abundance` on, then the merged signature will have the
-sum of all abundances across the individual signatures.
+with `--track-abundance`, or not.  If they have `track_abundance` on,
+then the merged signature will have the sum of all abundances across
+the individual signatures.  The `--flatten` flag will override this
+behavior and allow merging of mixtures by removing all abundances.
 
 ### `sourmash signature rename`
 

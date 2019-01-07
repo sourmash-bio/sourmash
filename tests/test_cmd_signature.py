@@ -107,7 +107,7 @@ def test_sig_merge_3_abund_ab(c):
 
 @utils.in_tempdir
 def test_sig_merge_3_abund_ba(c):
-    # merge of 47 with abund, with 63 without, should fail; and vice versa
+    # merge of 47 without abund, with 63 with, should fail
     sig47 = utils.get_test_data('47.fa.sig')
     sig63abund = utils.get_test_data('track_abund/63.fa.sig')
 
@@ -116,6 +116,50 @@ def test_sig_merge_3_abund_ba(c):
 
     print(c.last_result)
     assert 'incompatible signatures: track_abundance is True in first sig, False in second' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_sig_merge_flatten(c):
+    # merge of 47 without abund, with 63 with, will succeed with --flatten
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63abund = utils.get_test_data('track_abund/63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('sig', 'merge', sig63abund, sig47, '--flatten')
+
+    print(c.last_result)
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_merge_flatten_2(c):
+    # merge of 47 with abund, with 63 with, will succeed with --flatten
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+
+    c.run_sourmash('sig', 'merge', sig63, sig47abund, '--flatten')
+
+    print(c.last_result)
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
 
 
 @utils.in_tempdir
