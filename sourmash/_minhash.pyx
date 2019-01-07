@@ -102,6 +102,9 @@ cdef class MinHash(object):
         if max_hash and n:
             raise ValueError('cannot set both n and max_hash')
 
+        if not n and not (max_hash or scaled):
+            raise ValueError("cannot omit both n and scaled")
+
         cdef KmerMinHash *mh = NULL
         if track_abundance:
             mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
