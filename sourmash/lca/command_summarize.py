@@ -9,7 +9,7 @@ import csv
 from collections import defaultdict, Counter
 
 from .. import sourmash_args, load_signatures
-from ..logging import notify, error, print_results, set_quiet
+from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 

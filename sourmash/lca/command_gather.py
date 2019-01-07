@@ -11,7 +11,7 @@ import csv
 from collections import Counter, defaultdict, namedtuple
 
 from .. import sourmash_args, save_signatures, SourmashSignature
-from ..logging import notify, error, print_results, set_quiet
+from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
@@ -186,7 +186,6 @@ def gather_main(args):
     p = argparse.ArgumentParser(prog="sourmash lca gather")
     p.add_argument('query')
     p.add_argument('db', nargs='+')
-    p.add_argument('-d', '--debug', action='store_true')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='output CSV containing matches to this file')
     p.add_argument('--output-unassigned', type=argparse.FileType('wt'),
