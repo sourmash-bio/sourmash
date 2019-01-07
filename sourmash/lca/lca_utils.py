@@ -1,7 +1,7 @@
 """
 Utility functions for lowest-common-ancestor analysis tools.
 """
-from __future__ import print_function
+from __future__ import print_function, division
 import sys
 import json
 import gzip
@@ -315,6 +315,9 @@ class LCA_Database(object):
 
             self.signatures = sigd
 
+        debug('=> {} signatures!', len(self.signatures))
+
+        # build idx_to_ident from ident_to_idx
         if not hasattr(self, 'idx_to_ident'):
             idx_to_ident = {}
             for k, v in self.ident_to_idx.items():
@@ -324,23 +327,32 @@ class LCA_Database(object):
 
         query_mins = set(minhash.get_mins())
 
+        # collect matching hashes:
         c = Counter()
         for hashval in query_mins:
             idx_list = self.hashval_to_idx.get(hashval, [])
             for idx in idx_list:
                 c[idx] += 1
 
+        debug('number of matching signatures for hashes: {}', len(c))
+
         for idx, count in c.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
+            debug('looking at {} ({})', ident, name)
 
             match_mh = self.signatures[idx]
             match_size = len(match_mh)
+
+            debug('count: {}; query_mins: {}; match size: {}',
+                  count, len(query_mins), match_size)
 
             if containment:
                 score = count / len(query_mins)
             else:
                 score = count / (len(query_mins) + match_size - count)
+
+            debug('score: {} (containment? {})', score, containment)
 
             if score >= threshold:
                 # reconstruct signature... ugh.
