@@ -19,7 +19,7 @@ except ImportError:
 import pprint
 
 from .._minhash import get_max_hash_for_scaled
-from ..logging import notify, error
+from ..logging import notify, error, debug
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
@@ -88,16 +88,6 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
 filter_null = lambda x: 'unassigned' if x.strip() in \
   ('[Blank]', 'na', 'null', '') else x
 null_names = set(['[Blank]', 'na', 'null'])
-
-
-_print_debug = False
-def set_debug(state):
-    global _print_debug
-    _print_debug = True
-
-def debug(*args):
-    if _print_debug:
-        pprint.pprint(args)
 
 
 def build_tree(assignments, initial=None):
@@ -316,6 +306,7 @@ class LCA_Database(object):
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         if not hasattr(self, 'signatures'):
+            debug('creating signatures for LCA DB...')
             sigd = defaultdict(minhash.copy_and_clear)
 
             for (k, v) in self.hashval_to_idx.items():

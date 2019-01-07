@@ -3,9 +3,11 @@ import sys
 from io import StringIO
 
 _quiet = False
-def set_quiet(val):
-    global _quiet
+_debug = False
+def set_quiet(val, print_debug=False):
+    global _quiet, _debug
     _quiet = bool(val)
+    _debug = bool(print_debug)
 
 
 def print_results(s, *args, **kwargs):
@@ -30,7 +32,7 @@ def notify(s, *args, **kwargs):
 
 def debug(s, *args, **kwargs):
     "A debug logging function => stderr."
-    if _quiet:
+    if _quiet or not _debug:
         return
 
     print(u'\r\033[K', end=u'', file=sys.stderr)
