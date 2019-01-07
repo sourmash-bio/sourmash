@@ -483,8 +483,8 @@ sourmash signature subtract file1.sig file2.sig file3.sig -o subtracted.sig
 will subtract all of the hashes in `file2.sig` and `file3.sig` from
 `file1.sig`, and save the new signature to `subtracted.sig`.
 
-Subtract does not currently work on signatures calculated with
-`--track-abundance`.
+To use `subtract` on signatures calculated with
+`--track-abundance`, you must specify `--flatten`.
 
 ### `sourmash signature intersect`
 

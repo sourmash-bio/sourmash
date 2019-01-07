@@ -338,6 +338,8 @@ def subtract(args):
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout,
                    help='output signature to this file')
+    p.add_argument('--flatten', action='store_true',
+                   help='remove abundance from signatures before subtracting')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -348,7 +350,7 @@ def subtract(args):
     from_sigobj = sourmash.load_one_signature(from_sigfile, ksize=args.ksize, select_moltype=moltype)
 
     from_mh = from_sigobj.minhash
-    if from_mh.track_abundance:
+    if from_mh.track_abundance and not args.flatten:
         error('Cannot use subtract on signatures with abundance tracking, sorry!')
         sys.exit(1)
 
@@ -362,7 +364,7 @@ def subtract(args):
                                                select_moltype=moltype,
                                                do_raise=True):
 
-            if sigobj.minhash.track_abundance:
+            if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
                 sys.exit(1)
 

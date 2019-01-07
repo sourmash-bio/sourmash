@@ -48,7 +48,7 @@ def test_sig_merge_1_multisig(c):
     # merge of 47 & 63 should be union of mins; here, sigs are in same file.
     multisig = utils.get_test_data('47+63-multisig.sig')
     sig47and63 = utils.get_test_data('47+63.fa.sig')
-    c.run_sourmash('sig', 'merge', multisig)
+    c.run_sourmash('sig', 'merge', multisig, '--flatten')
 
     # stdout should be new signature
     out = c.last_result.out
@@ -250,7 +250,7 @@ def test_sig_subtract_1_multisig(c):
     # subtract of everything from 47
     sig47 = utils.get_test_data('47.fa.sig')
     multisig = utils.get_test_data('47+63-multisig.sig')
-    c.run_sourmash('sig', 'subtract', sig47, multisig)
+    c.run_sourmash('sig', 'subtract', sig47, multisig, '--flatten')
 
     # stdout should be new signature
     out = c.last_result.out
