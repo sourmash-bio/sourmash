@@ -43,6 +43,27 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
+def _flatten(mh):
+    "turn off track_abundance on a MinHash object"
+    mh_params = list(mh.__getstate__())
+    mh_params[5] = False
+    mh.__setstate__(mh_params)
+    assert not mh.track_abundance
+
+
+def _set_num_scaled(mh, num, scaled):
+    "set num and scaled values on a MinHash object"
+    mh_params = list(mh.__getstate__())
+    mh_params[0] = num
+    mh_params[6] = get_max_hash_for_scaled(scaled)
+    mh.__setstate__(mh_params)
+    assert mh.num == num
+    assert mh.scaled == scaled
+
+
+##### actual command line functions
+
+
 def describe(args):
     """
     provide basic info on signatures
@@ -244,9 +265,7 @@ def merge(args):
 
                 # forcibly remove abundance?
                 if mh.track_abundance and args.flatten:
-                    mh_params = list(mh.__getstate__())
-                    mh_params[5] = False
-                    mh.__setstate__(mh_params)
+                    _flatten(mh)
 
             try:
                 if not args.flatten:
@@ -315,10 +334,7 @@ def intersect(args):
 
     # forcibly turn off track_abundance
     intersect_mh = first_sig.minhash.copy_and_clear()
-    new_mh_params = list(intersect_mh.__getstate__())
-    new_mh_params[5] = False
-    intersect_mh.__setstate__(new_mh_params)
-    assert not intersect_mh.track_abundance
+    _flatten(intersect_mh)
     intersect_mh.add_many(mins)
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
@@ -506,10 +522,7 @@ def flatten(args):
 
         for ss in siglist:
             flattened_mh = ss.minhash.copy_and_clear()
-            new_mh_params = list(flattened_mh.__getstate__())
-            new_mh_params[5] = False
-            flattened_mh.__setstate__(new_mh_params)
-            assert not flattened_mh.track_abundance
+            _flatten(flattened_mh)
             flattened_mh.add_many(ss.minhash.get_mins())
 
             ss.minhash = flattened_mh
@@ -574,11 +587,7 @@ def downsample(args):
                         raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
 
                     mh_new = copy.copy(mh)
-                    new_mh_params = list(mh_new.__getstate__())
-                    new_mh_params[0] = 0      # set num -> 0
-                    # set max_hash
-                    new_mh_params[6] = get_max_hash_for_scaled(args.scaled)
-                    mh_new.__setstate__(new_mh_params)
+                    _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
                 if mh.num:
                     mh_new = mh.downsample_n(args.num)
@@ -588,11 +597,7 @@ def downsample(args):
                         raise ValueError("this scaled MinHash has only {} hashes")
 
                     mh_new = copy.copy(mh)
-                    new_mh_params = list(mh_new.__getstate__())
-                    new_mh_params[0] = args.num      # set num -> args.num
-                    # set max_hash
-                    new_mh_params[6] = 0
-                    mh_new.__setstate__(new_mh_params)
+                    _set_num_scaled(mh_new, args.num, 0)
 
             sigobj.minhash = mh_new
 
