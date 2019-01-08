@@ -2,9 +2,9 @@ import sys
 import io
 import json
 import ijson
-import sourmash_lib
-from sourmash_lib.signature import SourmashSignature
-from sourmash_lib.signature_json import (_json_next_atomic_array,
+import sourmash
+from sourmash.signature import SourmashSignature
+from sourmash.signature_json import (_json_next_atomic_array,
                                          _json_next_signature,
                                          load_signature_json,
                                          load_signatures_json,
@@ -112,10 +112,10 @@ def test_load_signaturesset_json_iter():
 
 
 def test_save_load_multisig_json():
-    e1 = sourmash_lib.MinHash(n=1, ksize=20)
+    e1 = sourmash.MinHash(n=1, ksize=20)
     sig1 = SourmashSignature(e1)
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=25)
+    e2 = sourmash.MinHash(n=1, ksize=25)
     sig2 = SourmashSignature(e2)
 
     x = save_signatures_json([sig1, sig2])

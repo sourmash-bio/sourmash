@@ -6,7 +6,7 @@ objects.
 from __future__ import print_function, unicode_literals
 
 import pytest
-from sourmash_lib import MinHash
+from sourmash import MinHash
 from . import sourmash_tst_utils as utils
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
@@ -174,7 +174,7 @@ def test_abund_similarity_zero():
 ####
 
 def test_jaccard_on_real_data():
-    from sourmash_lib.signature import load_signatures
+    from sourmash.signature import load_signatures
 
     afile = 'n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
     a = utils.get_test_data(afile)
@@ -206,7 +206,7 @@ def test_jaccard_on_real_data():
 
 
 def test_scaled_on_real_data():
-    from sourmash_lib.signature import load_signatures
+    from sourmash.signature import load_signatures
 
     afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
     a = utils.get_test_data(afile)
@@ -244,7 +244,7 @@ def test_scaled_on_real_data():
 
 
 def test_scaled_on_real_data_2():
-    from sourmash_lib.signature import load_signatures
+    from sourmash.signature import load_signatures
 
     afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
     a = utils.get_test_data(afile)

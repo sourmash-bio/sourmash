@@ -7,9 +7,8 @@ import sys
 import argparse
 from collections import defaultdict
 
-from ..logging import error
+from ..logging import error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import debug, set_debug
 
 
 def make_lca_counts(dblist):
@@ -52,15 +51,17 @@ def rankinfo_main(args):
     p = argparse.ArgumentParser(prog="sourmash lca rankinfo")
     p.add_argument('db', nargs='+')
     p.add_argument('--scaled', type=float)
-    p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     args = p.parse_args(args)
 
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     if args.scaled:
         args.scaled = int(args.scaled)
