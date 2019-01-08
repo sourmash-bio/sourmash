@@ -1006,7 +1006,7 @@ def gather(args):
     sourmash_args.add_moltype_args(parser)
 
     args = parser.parse_args(args)
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
 
     # load the query signature & figure out all the things

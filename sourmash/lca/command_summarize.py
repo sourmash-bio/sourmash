@@ -9,9 +9,9 @@ import csv
 from collections import defaultdict, Counter
 
 from .. import sourmash_args, load_signatures
-from ..logging import notify, error, print_results
+from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
-from .lca_utils import debug, set_debug, check_files_exist
+from .lca_utils import check_files_exist
 
 DEFAULT_THRESHOLD=5
 
@@ -67,7 +67,10 @@ def summarize_main(args):
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='CSV output')
     p.add_argument('--scaled', type=float)
-    p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     args = p.parse_args(args)
 
     if not args.db:
@@ -78,8 +81,7 @@ def summarize_main(args):
         error('Error! must specify at least one query signature with --query')
         sys.exit(-1)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     if args.scaled:
         args.scaled = int(args.scaled)

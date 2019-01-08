@@ -321,10 +321,12 @@ The hashing function used is identical between num and scaled signatures,
 so the hash values themselves are compatible - it's the comparison between
 collections of them that doesn't work.
 
-But, in some circumstances, num signatures can be
-extracted from scaled signatures, and vice versa.  We haven't yet
-implemented nice shortcuts for this in sourmash, but you can hack it
-together yourself quite easily :).
+But, in some circumstances, num signatures can be extracted from
+scaled signatures, and vice versa.  We haven't yet implemented a
+Python API for this in sourmash, but you can hack it together yourself
+quite easily, and a conversion utility is implemented through the command
+line in `sourmash signature downsample`.
+
 
 To extract a num MinHash object from a scaled MinHash, first create or load
 your MinHash, and then extract the hash values:
@@ -366,6 +368,9 @@ more hash values in the scaled MinHash than num.
 
 Yoda sayeth: *When understand these two sentences you can, use this code may
 you.*
+
+(You can also take a look at the logic in `sourmash signature
+downsample` if you are interested.)
 
 ## Working with fast search trees (Sequence Bloom Trees, or SBTs)
 

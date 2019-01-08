@@ -11,6 +11,7 @@ from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
                        plot, watch, info, storage, migrate, multigather)
 from .lca import main as lca_main
+from .sig import main as sig_main
 
 usage='''
 sourmash <command> [<args>]
@@ -35,9 +36,10 @@ sbt_combine             Combine multiple SBTs into a new one.
 categorize              Identify best matches for many signatures using an SBT.
 watch                   Classify a stream of sequences.
 
-** Other information:
+** Other commands:
 
-info                        Sourmash version and other information.
+info                        Display sourmash version and other information.
+signature                   Sourmash signature manipulation utilities.
 
 Use '-h' to get subcommand-specific help, e.g.
 
@@ -59,7 +61,9 @@ def main():
                 'storage': storage,
                 'lca': lca_main,
                 'migrate': migrate,
-                'multigather': multigather}
+                'multigather': multigather,
+                'sig': sig_main,
+                'signature': sig_main}
     parser = argparse.ArgumentParser(
         description='work with compressed sequence representations')
     parser.add_argument('command', nargs='?')
