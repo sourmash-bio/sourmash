@@ -61,13 +61,14 @@ def describe(args):
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash.load_signatures(sigfile, quiet=True,
-                                                    do_raise=True)
-        except Exception as e:
-            error('Error reading signatures from {}; skipping'.format(sigfile))
+            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+            for k in this_siglist:
+                siglist.append((k, sigfile))
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(sigfile))
+            error(str(exc))
+            error('(continuing)')
 
-        for k in this_siglist:
-            siglist.append((k, sigfile))
         notify('loaded {} signatures from {}...', len(siglist), sigfile,
                end='\r')
 
