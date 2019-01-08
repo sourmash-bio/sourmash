@@ -20,7 +20,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
-info <signature> [<signature> ... ]       - provide basic info on signatures
+describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
 flatten <signature> [<signature> ... ]    - remove abundances
@@ -43,11 +43,11 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
-def info(args):
+def describe(args):
     """
     provide basic info on signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature info')
+    p = argparse.ArgumentParser(prog='sourmash signature describe')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -689,7 +689,7 @@ def main(sysv_args):
                 'subtract': subtract,
                 'import': sig_import,
                 'export': export,
-                'info': info,
+                'describe': describe,
                 'overlap': overlap}
 
     parser = argparse.ArgumentParser(

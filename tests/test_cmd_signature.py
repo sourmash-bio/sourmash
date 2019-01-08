@@ -570,10 +570,10 @@ def test_sig_downsample_2_num_empty(c):
 
 
 @utils.in_tempdir
-def test_sig_info_1(c):
+def test_sig_describe_1(c):
     # get basic info on a signature
     sig47 = utils.get_test_data('47.fa.sig')
-    c.run_sourmash('sig', 'info', sig47)
+    c.run_sourmash('sig', 'describe', sig47)
 
     out = c.last_result.out
     print(c.last_result)
@@ -591,10 +591,10 @@ signature license: CC0
 
 
 @utils.in_tempdir
-def test_sig_info_1_multisig(c):
+def test_sig_describe_1_multisig(c):
     # get basic info on multiple signatures in a single file
     sigs = utils.get_test_data('47+63-multisig.sig')
-    c.run_sourmash('sig', 'info', sigs)
+    c.run_sourmash('sig', 'describe', sigs)
 
     out = c.last_result.out
     print(c.last_result)
@@ -611,11 +611,11 @@ signature: NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequen
 
 
 @utils.in_tempdir
-def test_sig_info_2(c):
+def test_sig_describe_2(c):
     # get info in CSV spreadsheet
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
-    c.run_sourmash('sig', 'info', sig47, sig63, '--csv', 'out.csv')
+    c.run_sourmash('sig', 'describe', sig47, sig63, '--csv', 'out.csv')
 
     expected_md5 = ['09a08691ce52952152f0e866a59f6261',
                     '38729c6374925585db28916b82a6f513']
