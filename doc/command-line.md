@@ -233,7 +233,7 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` and `sourmash lca gather` to classify a metagenome
 using a collection of genomes with taxonomic information.
 
-## `sourmash lca` subcommands
+## `sourmash lca` subcommands for taxonomic classification
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
@@ -288,7 +288,7 @@ signature were classified as family *Shewanellaceae*, genus
 *Shewanella*, or species *Shewanella baltica*. Then the lowest
 compatible node (here species *Shewanella baltica*) would be reported,
 and the status of the classification would be `found`.  However, if a
-number of additional k-mers in the input signaturer were classified as
+number of additional k-mers in the input signature were classified as
 *Shewanella oneidensis*, sourmash would be unable to resolve the
 taxonomic assignment below genus *Shewanella* and it would report
 a status of `disagree` with the genus-level assignment of *Shewanella*;
@@ -343,7 +343,7 @@ and the following example summarize output to stdout:
 ```
 
 The output is space-separated and consists of three columns: the
-perrcentage of total k-mers that have this classification; the number of
+percentage of total k-mers that have this classification; the number of
 k-mers that have this classification; and the lineage classification.
 K-mer classifications are reported hierarchically, so the percentages
 and totals contain all assignments that are at a lower taxonomic level -
@@ -420,3 +420,188 @@ for an example use case.
 [1]:http://mash.readthedocs.io/en/latest/__
 [2]:http://biorxiv.org/content/early/2015/10/26/029827
 [3]:https://en.wikipedia.org/wiki/Jaccard_index
+
+## `sourmash signature` subcommands for signature manipulation
+
+These commands manipulate signatures from the command line. Currently
+supported subcommands are `merge`, `rename`, `intersect`,
+`extract`, `downsample`, `subtract`, `import`, `export`, `info`, and
+`flatten`.
+
+All of the signature commands work only on compatible signatures, where
+the k-mer size and nucleotide/protein sequences match.  If working directly
+with the hash values (e.g. `merge`, `intersect`, `subtract`) then the
+scaled values must also match; you can use `downsample` to convert a bunch
+of samples to the same scaled value.
+
+If there are multiple signatures in a file with different ksizes and/or
+from nucleotide and protein sequences, you can choose amongst them with
+`-k/--ksize` and `--dna` or `--protein`, as with other sourmash commands
+such as `search`, `gather`, and `compare`.
+
+Note, you can use `sourmash sig` as shorthand for all of these commands.
+
+### `sourmash signature merge`
+
+Merge two (or more) signatures.
+
+For example,
+```
+sourmash signature merge file1.sig file2.sig -o merged.sig
+```
+will output the union of all the hashes in `file1.sig` and `file2.sig`
+to `merged.sig`.
+
+All of the signatures passed to merge must either have been computed
+with `--track-abundance`, or not.  If they have `track_abundance` on,
+then the merged signature will have the sum of all abundances across
+the individual signatures.  The `--flatten` flag will override this
+behavior and allow merging of mixtures by removing all abundances.
+
+### `sourmash signature rename`
+
+Rename the display name for a signature - this is the name output for matches
+in `compare`, `search`, `gather`, etc.
+
+For example,
+```
+sourmash signature rename file1.sig "new name" -o renamed.sig
+```
+will place a renamed copy of the hashes in `file1.sig` in the file
+`renamed.sig`.
+
+### `sourmash signature subtract`
+
+Subtract all of the hash values from one signature that are in one or more
+of the others.
+
+For example,
+
+```
+sourmash signature subtract file1.sig file2.sig file3.sig -o subtracted.sig
+```
+will subtract all of the hashes in `file2.sig` and `file3.sig` from
+`file1.sig`, and save the new signature to `subtracted.sig`.
+
+To use `subtract` on signatures calculated with
+`--track-abundance`, you must specify `--flatten`.
+
+### `sourmash signature intersect`
+
+Output the intersection of the hash values in multiple signature files.
+
+For example,
+
+```
+sourmash signature intersect file1.sig file2.sig file3.sig -o intersect.sig
+```
+will output the intersection of all the hashes in those three files to
+`intersect.sig`.
+
+The `intersect` command flattens all signatures, i.e. the abundances
+in any signatures will be ignored and the output signature will have
+`track_abundance` turned off.
+
+### `sourmash signature downsample`
+
+Downsample one or more signatures.
+
+With `downsample`, you can --
+
+* increase the `--scaled` value for a signature computed with `--scaled`, shrinking it in size;
+* decrease the `num` value for a traditional num MinHash, shrinking it in size;
+* try to convert a `--scaled` signature to a `num` signature;
+* try to convert a `num` signature to a `--scaled` signature.
+
+For example,
+```
+sourmash signature downsample file1.sig file2.sig --scaled 100000 -o downsampled.sig
+```
+will output each signature, downsampled to a scaled value of 100000, to
+`downsampled.sig`; and
+```
+sourmash signature downsample --num 500 scaled_file.sig -o downsampled.sig
+```
+will try to convert a scaled MinHash to a num MinHash.
+
+### `sourmash signature extract`
+
+Extract the specified signature(s) from a collection of signatures.
+
+For example,
+```
+sourmash signature extract *.sig -k 21 --dna -o extracted.sig
+```
+will extract all nucleotide signatures calculated at k=21 from all
+.sig files in the current directory.
+
+There are currently two other useful selectors for `extract`: you can specify
+(part of) an md5sum, as output in the CSVs produced by `search` and `gather`;
+and you can specify (part of) a name.
+
+For example,
+```
+sourmash signature extract tests/test-data/*.fa.sig --md5 09a0869
+```
+will extract the signature from `47.fa.sig` which has an md5sum of
+`09a08691ce52952152f0e866a59f6261`; and 
+```
+sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
+```
+will extract the same signature, which has an accession number of
+`NC_009665.1`.
+
+### `sourmash signature flatten`
+
+Flatten the specified signature(s), removing abundances and setting
+track_abundance to False.
+
+For example,
+```
+sourmash signature flatten *.sig -o flattened.sig
+```
+will remove all abundances from all of the .sig files in the current
+directory.
+
+The `flatten` command accepts the same selectors as `extract`.
+
+### `sourmash signature import`
+
+Import signatures into sourmash format. Currently only supports mash,
+and can import mash sketches output by `mash info -d <filename.msh>`.
+
+For example,
+```
+sourmash signature import filename.msh.json -o imported.sig
+```
+will import the contents of `filename.msh.json` into `imported.sig`.
+
+### `sourmash signature export`
+
+Export signatures from sourmash format. Currently only supports
+mash dump format.
+
+For example,
+```
+sourmash signature export filename.sig -o filename.sig.msh.json
+```
+
+### `sourmash signature overlap`
+
+Display a detailed comparison of two signatures. This computes the
+Jaccard similarity (as in `sourmash compare` or `sourmash search`) and
+the Jaccard containment in both directions (as with `--containment`).
+It also displays the number of hash values in the union and
+intersection of the two signatures, as well as the number of disjoint
+hash values in each signature.
+
+This command has two uses - first, it is helpful for understanding how
+similarity and containment are calculated, and second, it is useful for
+analyzing signatures with very small overlaps, where the similarity
+and/or containment might be very close to zero.
+
+For example,
+```
+sourmash signature overlap file1.sig file2.sig
+```
+will display the detailed comparison of `file1.sig` and `file2.sig`.

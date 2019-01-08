@@ -13,7 +13,7 @@ import csv
 import pytest
 
 from . import sourmash_tst_utils as utils
-import sourmash_lib
+import sourmash
 
 from sourmash_lib.lca import lca_utils
 from sourmash_lib.lca.lca_utils import *
@@ -888,9 +888,26 @@ def test_gather_unknown_hashes():
         assert '88.5% (2.1 Mbp) of hashes have no assignment.' in out
 
 
-def test_gather_equiv_results():
+def test_gather_combined_results():
     with utils.TempDirectory() as location:
         query_sig = utils.get_test_data('47+63.fa.sig')
+        lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+        cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '5.5 Mbp      69.4%  100.0%      Shewanella baltica OS223' in out
+        assert '2.4 Mbp      30.6%   47.1%      Shewanella baltica OS185' in out
+
+
+def test_gather_equiv_results():
+    with utils.TempDirectory() as location:
+        query_sig = utils.get_test_data('47+63-intersect.fa.sig')
         lca_db = utils.get_test_data('lca/47+63.lca.json')
 
         cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']

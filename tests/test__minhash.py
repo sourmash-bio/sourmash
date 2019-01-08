@@ -41,11 +41,11 @@ import pickle
 
 import pytest
 
-from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
+from sourmash._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
 from . import sourmash_tst_utils as utils
-from sourmash_lib import signature
+from sourmash import signature
 
 # add:
 # * get default params from Python
@@ -172,6 +172,12 @@ def test_scaled(track_abundance):
     assert mh.get_mins() == [10, 20, 30]
     mh.add_hash(36)
     assert mh.get_mins() == [10, 20, 30]
+
+
+def test_no_scaled(track_abundance):
+    # no 'scaled', num=0 - should fail
+    with pytest.raises(ValueError):
+        mh = MinHash(0, 4, track_abundance=track_abundance)
 
 
 def test_max_hash_conversion():
@@ -889,7 +895,7 @@ def test_scaled_property(track_abundance):
 
 
 def test_mh_subtract(track_abundance):
-    # test merging two identically configured minhashes
+    # test subtracting two identically configured minhashes
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)

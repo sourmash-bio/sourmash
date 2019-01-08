@@ -46,7 +46,7 @@ You can also use pip to install sourmash:
 ```
 pip install sourmash
 ```
-    
+
 A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/tutorials.html).
 
 ### Requirements
