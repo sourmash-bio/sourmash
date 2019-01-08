@@ -9,9 +9,9 @@ import csv
 from collections import defaultdict
 
 from .. import sourmash_args, load_signatures
-from ..logging import notify, error
+from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import debug, set_debug, LineagePair
+from .lca_utils import LineagePair
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -118,7 +118,10 @@ def index(args):
                    help='one or more sourmash signatures')
     p.add_argument('--scaled', default=10000, type=float)
     p.add_argument('-k', '--ksize', default=31, type=int)
-    p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     p.add_argument('-C', '--start-column', default=2, type=int,
                    help='column at which taxonomic assignments start')
     p.add_argument('--tabs', action='store_true',
@@ -137,8 +140,7 @@ def index(args):
         error('error, --start-column cannot be less than 2')
         sys.exit(-1)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     args.scaled = int(args.scaled)
 
