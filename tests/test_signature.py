@@ -4,19 +4,19 @@ import os
 
 import pytest
 
-import sourmash_lib
-from sourmash_lib.signature import SourmashSignature, save_signatures, \
+import sourmash
+from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
 from . import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):
     # same content, same name -> equal
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
-    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     f.add("AT" * 10)
     sig2 = SourmashSignature(f, name='foo')
 
@@ -25,11 +25,11 @@ def test_compare(track_abundance):
 
 def test_compare_ne(track_abundance):
     # same content, different names -> different
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
-    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     f.add("AT" * 10)
     sig2 = SourmashSignature(f, name='bar')
 
@@ -38,11 +38,11 @@ def test_compare_ne(track_abundance):
 
 def test_compare_ne2(track_abundance):
     # same content, different filename -> different
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig1 = SourmashSignature(e, name='foo', filename='a')
 
-    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     f.add("AT" * 10)
     sig2 = SourmashSignature(f, name='foo', filename='b')
 
@@ -52,11 +52,11 @@ def test_compare_ne2(track_abundance):
 
 def test_compare_ne2_reverse(track_abundance):
     # same content, one has filename, other does not -> different
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
-    f = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     f.add("AT" * 10)
     sig2 = SourmashSignature(f, filename='b')
 
@@ -66,7 +66,7 @@ def test_compare_ne2_reverse(track_abundance):
 
 def test_hashable(track_abundance):
     # check: can we use signatures as keys in dictionaries and sets?
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
 
     sig = SourmashSignature(e)
@@ -77,7 +77,7 @@ def test_hashable(track_abundance):
 
 def test_str(track_abundance):
     # signatures should be printable
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
 
     sig = SourmashSignature(e)
@@ -92,7 +92,7 @@ def test_str(track_abundance):
 
 
 def test_roundtrip(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -105,7 +105,7 @@ def test_roundtrip(track_abundance):
 
 
 def test_load_signature_ksize_nonint(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -119,7 +119,7 @@ def test_load_signature_ksize_nonint(track_abundance):
 
 def test_roundtrip_empty(track_abundance):
     # edge case, but: empty minhash? :)
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
 
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -132,7 +132,7 @@ def test_roundtrip_empty(track_abundance):
 
 
 def test_roundtrip_max_hash(track_abundance):
-    e = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
+    e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
                              max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
@@ -148,7 +148,7 @@ def test_roundtrip_max_hash(track_abundance):
 
 
 def test_roundtrip_seed(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance,
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance,
                              seed=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
@@ -164,9 +164,9 @@ def test_roundtrip_seed(track_abundance):
 
 
 def test_similarity_downsample(track_abundance):
-    e = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
+    e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
                              max_hash=2**63)
-    f = sourmash_lib.MinHash(n=0, ksize=20, track_abundance=track_abundance,
+    f = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
                              max_hash=2**2)
 
     e.add_hash(1)
@@ -188,7 +188,7 @@ def test_similarity_downsample(track_abundance):
 
 
 def test_md5(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_hash(5)
     sig = SourmashSignature(e)
     print(sig._save())
@@ -196,35 +196,35 @@ def test_md5(track_abundance):
 
 
 def test_name(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, name='foo')
     assert sig.name() == 'foo'
 
 
 def test_name_2(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, filename='foo.txt')
     assert sig.name() == 'foo.txt'
 
 
 def test_name_3(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, name='foo',
                             filename='foo.txt')
     assert sig.name() == 'foo'
 
 
 def test_name_4(track_abundance):
-    e = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e)
     assert sig.name() == sig.md5sum()[:8]
 
 
 def test_save_load_multisig(track_abundance):
-    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=25, track_abundance=track_abundance)
+    e2 = sourmash.MinHash(n=1, ksize=25, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2)
 
     x = save_signatures([sig1, sig2])
@@ -246,7 +246,7 @@ def test_load_one_fail_nosig(track_abundance):
 
 
 def test_load_one_succeed(track_abundance):
-    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
     x = save_signatures([sig1])
@@ -256,10 +256,10 @@ def test_load_one_succeed(track_abundance):
 
 
 def test_load_one_fail_multisig(track_abundance):
-    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e2 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2)
 
     x = save_signatures([sig1, sig2])
@@ -269,10 +269,10 @@ def test_load_one_fail_multisig(track_abundance):
 
 
 def test_save_minified(track_abundance):
-    e1 = sourmash_lib.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1, name="foo")
 
-    e2 = sourmash_lib.MinHash(n=1, ksize=25, track_abundance=track_abundance)
+    e2 = sourmash.MinHash(n=1, ksize=25, track_abundance=track_abundance)
     sig2 = SourmashSignature(e2, name="bar baz")
 
     x = save_signatures([sig1, sig2])
