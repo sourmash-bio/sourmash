@@ -1018,7 +1018,7 @@ def gather(args):
                                              sourmash_args.get_moltype(query))
 
     # verify signature was computed right.
-    if query.minhash.max_hash == 0:
+    if query.minhash.scaled == 0:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
@@ -1043,6 +1043,8 @@ def gather(args):
 
     found = []
     weighted_missed = 1
+    new_max_hash = query.minhash.max_hash
+    next_query = query
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
@@ -1086,10 +1088,7 @@ def gather(args):
            (1 - weighted_missed) * 100)
     print_results('')
 
-    if not found:
-        sys.exit(0)
-
-    if args.output:
+    if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
@@ -1100,15 +1099,13 @@ def gather(args):
             del d['leaf']                 # actual signature not in CSV.
             w.writerow(d)
 
-    if args.save_matches:
+    if found and args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
         sig.save_signatures([ r.leaf for r in found ], args.save_matches)
 
     if args.output_unassigned:
-        if not found:
-            notify('nothing found - entire query signature unassigned.')
-        elif not len(query.minhash):
+        if not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
