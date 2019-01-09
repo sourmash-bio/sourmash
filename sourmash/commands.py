@@ -1043,6 +1043,8 @@ def gather(args):
 
     found = []
     weighted_missed = 1
+    new_max_hash = query.minhash.max_hash
+    next_query = query
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         # print interim result & save in a list for later use
         pct_query = '{:.1f}%'.format(result.f_orig_query*100)
@@ -1103,9 +1105,7 @@ def gather(args):
         sig.save_signatures([ r.leaf for r in found ], args.save_matches)
 
     if args.output_unassigned:
-        if not found:
-            notify('nothing found - entire query signature unassigned.')
-        elif not len(query.minhash):
+        if not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
             outname = args.output_unassigned.name
