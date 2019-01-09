@@ -1018,7 +1018,7 @@ def gather(args):
                                              sourmash_args.get_moltype(query))
 
     # verify signature was computed right.
-    if query.minhash.max_hash == 0:
+    if query.minhash.scaled == 0:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
@@ -1086,10 +1086,7 @@ def gather(args):
            (1 - weighted_missed) * 100)
     print_results('')
 
-    if not found:
-        sys.exit(0)
-
-    if args.output:
+    if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
@@ -1100,7 +1097,7 @@ def gather(args):
             del d['leaf']                 # actual signature not in CSV.
             w.writerow(d)
 
-    if args.save_matches:
+    if found and args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
         sig.save_signatures([ r.leaf for r in found ], args.save_matches)
