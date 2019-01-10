@@ -10,6 +10,7 @@ import sys
 import random
 
 import screed
+from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
@@ -27,7 +28,7 @@ WATERMARK_SIZE = 10000
 
 def info(args):
     "Report sourmash version + version of installed dependencies."
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser(no_citation=True)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='report versions of khmer and screed')
     args = parser.parse_args(args)
@@ -60,7 +61,7 @@ def compute(args):
             => creates one output file file.sig, with all sequences from
                file1.fa and file2.fa combined into one signature.
     """
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 

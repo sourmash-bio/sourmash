@@ -47,7 +47,6 @@ sourmash compute -h
 
 ** Documentation is available at https://sourmash.readthedocs.io/
 '''
-from . import sourmash_args
 
 
 def main():
@@ -66,7 +65,7 @@ def main():
                 'multigather': multigather,
                 'sig': sig_main,
                 'signature': sig_main}
-    parser = sourmash_args.SourmashArgumentParser(
+    parser = argparse.ArgumentParser(
         description='work with compressed biological sequence representations')
     parser.add_argument('command', nargs='?')
     args = parser.parse_args(sys.argv[1:2])
