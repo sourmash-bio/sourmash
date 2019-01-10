@@ -40,8 +40,8 @@ _citation_printed = False
 def citation():
     global _citation_printed
     if not _citation_printed:
-        notify("This is sourmash version {version}.", version=sourmash.VERSION)
-        notify("Please cite doi:10.21105/joss.00027.\n")
+        notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
+        notify("== Please cite Brown et al. (2016), doi:10.21105/joss.00027. ==\n")
         _citation_printed = True
 
 
