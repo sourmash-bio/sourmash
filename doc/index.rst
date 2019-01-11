@@ -33,6 +33,12 @@ We have two tutorials available: one on `genome and metagenome searching <tutori
 To use sourmash, you must be comfortable with the UNIX command line;
 programmers may find the Python library and API useful as well.
 
+If you use sourmash, please cite us!
+
+   Brown and Irber (2016),
+   **sourmash: a library for MinHash sketching of DNA**
+   Journal of Open Source Software, 1(5), 27, `doi:10.21105/joss.00027 <https://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9>`__
+
 sourmash in brief
 -----------------
 

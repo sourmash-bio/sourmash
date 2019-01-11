@@ -10,6 +10,7 @@ import sys
 import random
 
 import screed
+from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
@@ -23,11 +24,9 @@ DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 
-
-
 def info(args):
     "Report sourmash version + version of installed dependencies."
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser(no_citation=True)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='report versions of khmer and screed')
     args = parser.parse_args(args)
@@ -60,7 +59,7 @@ def compute(args):
             => creates one output file file.sig, with all sequences from
                file1.fa and file2.fa combined into one signature.
     """
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('filenames', nargs='+',
                         help='file(s) of sequences')
 
@@ -356,7 +355,7 @@ def compare(args):
     "Compare multiple signature files and create a distance matrix."
     import numpy
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('signatures', nargs='+', help='list of signatures')
     parser.add_argument('-o', '--output')
     parser.add_argument('--ignore-abundance', action='store_true',
@@ -499,7 +498,7 @@ def plot(args):
     from . import fig as sourmash_fig
 
     # set up cmd line arguments
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('distances', help="output from 'sourmash compare'")
     parser.add_argument('--pdf', action='store_true',
                         help='output PDF, not PNG.')
@@ -601,7 +600,7 @@ def plot(args):
 
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
-    p = argparse.ArgumentParser()
+    p = SourmashArgumentParser()
     p.add_argument('mash_csvfile')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout, help='(default: stdout)')
@@ -635,7 +634,7 @@ def import_csv(args):
 
 
 def dump(args):
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('filenames', nargs='+')
     parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_LOAD_K, help='k-mer size (default: %(default)i)')
     args = parser.parse_args(args)
@@ -654,7 +653,7 @@ def dump(args):
 
 
 def sbt_combine(args):
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('sbts', nargs='+',
                         help='SBTs to combine to a new SBT')
@@ -683,7 +682,7 @@ def index(args):
     """
     Build an Sequence Bloom Tree index of the given signatures.
     """
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
     parser.add_argument('signatures', nargs='+',
                         help='signatures to load into SBT')
@@ -791,7 +790,7 @@ def index(args):
 def search(args):
     from .search import search_databases
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('query', help='query signature')
     parser.add_argument('databases', help='signatures/SBTs to search',
                         nargs='+')
@@ -898,7 +897,7 @@ def search(args):
 
 
 def categorize(args):
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to load')
     parser.add_argument('queries', nargs='+',
                         help='list of signatures to categorize')
@@ -980,7 +979,7 @@ def categorize(args):
 def gather(args):
     from .search import gather_databases, format_bp
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('query', help='query signature')
     parser.add_argument('databases', help='signatures/SBTs to search',
                         nargs='+')
@@ -1120,7 +1119,7 @@ def gather(args):
 def multigather(args):
     from .search import gather_databases, format_bp
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('--db', nargs='+', action='append')
     parser.add_argument('--query', nargs='+', action='append')
     parser.add_argument('--traverse-directory', action='store_true',
@@ -1279,7 +1278,7 @@ def multigather(args):
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('sbt_name', help='name of SBT to search')
     parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -1376,7 +1375,7 @@ def watch(args):
 def storage(args):
     from .sbt import convert_cmd
 
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
 
@@ -1394,7 +1393,7 @@ def storage(args):
 
 
 def migrate(args):
-    parser = argparse.ArgumentParser()
+    parser = SourmashArgumentParser()
     parser.add_argument('sbt_name', help='name to save SBT into')
 
     args = parser.parse_args(args)
