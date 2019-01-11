@@ -334,6 +334,24 @@ def test_sig_rename_1(c):
 
 
 @utils.in_tempdir
+def test_sig_rename_1_multisig(c):
+    # set new name for multiple signatures/files
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    other_sig = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'rename', multisig, other_sig, 'fiz bar')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    n = 0
+    for sig in sourmash.load_signatures(out):
+        assert sig.name() == 'fiz bar'
+        n += 1
+
+    assert n == 9, n
+
+
+@utils.in_tempdir
 def test_sig_extract_1(c):
     # extract 47 from 47... :)
     sig47 = utils.get_test_data('47.fa.sig')

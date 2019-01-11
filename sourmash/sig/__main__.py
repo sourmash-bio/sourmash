@@ -407,10 +407,10 @@ def subtract(args):
 
 def rename(args):
     """
-    rename a signature.
+    rename one or more signatures.
     """
     p = argparse.ArgumentParser(prog='sourmash signature rename')
-    p.add_argument('signature')
+    p.add_argument('sigfiles', nargs='+')
     p.add_argument('name')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -423,11 +423,18 @@ def rename(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
-    sigobj.d['name'] = args.name
-    output_json = sourmash.save_signatures([sigobj], fp=args.output)
+    outlist = []
+    for filename in args.sigfiles:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype)
 
-    notify("set name to '{}'", args.name)
+        for sigobj in siglist:
+            sigobj.d['name'] = args.name
+            outlist.append(sigobj)
+
+    output_json = sourmash.save_signatures(outlist, fp=args.output)
+
+    notify("set name to '{}' on {} signatures", args.name, len(outlist))
 
 
 def extract(args):
