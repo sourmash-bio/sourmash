@@ -114,6 +114,14 @@ public:
         }
       }
     }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+        }
+    }
+
     void add_word(const std::string& word) {
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
@@ -341,6 +349,15 @@ class KmerMinAbundance: public KmerMinHash {
           }
         }
       }
+    }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+          size_t dist = std::distance(begin(mins), pos);
+          abunds.erase(begin(abunds) + dist);
+        }
     }
 
     virtual void merge(const KmerMinAbundance& other) {

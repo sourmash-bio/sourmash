@@ -207,24 +207,29 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
     def __init__(self, initial_best_match=0.0):
         self.best_match = initial_best_match
 
-    def search(self, node, sig, threshold, results=None):
-        mins = sig.minhash.get_mins()
-
+    def search(self, node, query, threshold, results=None):
         score = 0
-        if not len(mins):
+        if not len(query.minhash):
             return 0
 
         if isinstance(node, SigLeaf):
-            max_scaled = max(node.data.minhash.scaled, sig.minhash.scaled)
+            max_scaled = max(node.data.minhash.scaled, query.minhash.scaled)
 
-            mh1 = node.data.minhash.downsample_scaled(max_scaled)
-            mh2 = sig.minhash.downsample_scaled(max_scaled)
+            mh1 = node.data.minhash
+            if mh1.scaled != max_scaled:
+                mh1 = node.data.minhash.downsample_scaled(max_scaled)
+
+            mh2 = query.minhash
+            if mh2.scaled != max_scaled:
+                mh2 = query.minhash.downsample_scaled(max_scaled)
+
             matches = mh1.count_common(mh2)
         else:  # Nodegraph by minhash comparison
+            mins = query.minhash.get_mins()
             get = node.data.get
             matches = sum(1 for value in mins if get(value))
 
-        score = float(matches) / len(mins)
+        score = float(matches) / len(query.minhash)
 
         # store results if we have passed in an appropriate dictionary
         if results is not None:
