@@ -3,6 +3,7 @@ Tests for the 'sourmash signature' command line.
 """
 from __future__ import print_function, unicode_literals
 import csv
+import shutil
 
 import pytest
 
@@ -349,6 +350,21 @@ def test_sig_rename_1_multisig(c):
         n += 1
 
     assert n == 9, n
+
+
+@utils.in_tempdir
+def test_sig_rename_2_output_to_same(c):
+    # change name of signature "in place", same output file
+    sig47 = utils.get_test_data('47.fa.sig')
+    inplace = c.output('inplace.sig')
+    shutil.copyfile(sig47, inplace)
+
+    print(inplace)
+
+    c.run_sourmash('sig', 'rename', '-d', inplace, 'fiz bar', '-o', inplace)
+
+    actual_rename_sig = sourmash.load_one_signature(inplace)
+    assert actual_rename_sig.name() == 'fiz bar'
 
 
 @utils.in_tempdir

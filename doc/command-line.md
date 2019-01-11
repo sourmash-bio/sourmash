@@ -460,15 +460,16 @@ behavior and allow merging of mixtures by removing all abundances.
 
 ### `sourmash signature rename`
 
-Rename the display name for a signature - this is the name output for matches
-in `compare`, `search`, `gather`, etc.
+Rename the display name for one or more signatures - this is the name
+output for matches in `compare`, `search`, `gather`, etc.
 
 For example,
 ```
 sourmash signature rename file1.sig "new name" -o renamed.sig
 ```
 will place a renamed copy of the hashes in `file1.sig` in the file
-`renamed.sig`.
+`renamed.sig`. If you provide multiple signatures, all will be renamed
+to the same name.
 
 ### `sourmash signature subtract`
 
