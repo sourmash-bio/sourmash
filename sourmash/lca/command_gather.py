@@ -15,6 +15,8 @@ from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
+from ..sourmash_args import SourmashArgumentParser
+
 
 LCAGatherResult = namedtuple('LCAGatherResult',
                              'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name, n_equal_matches')
@@ -183,7 +185,7 @@ def gather_main(args):
     full lineage information for each known hash, as opposed to storing only
     the least-common-ancestor information for it.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca gather")
+    p = SourmashArgumentParser(prog="sourmash lca gather")
     p.add_argument('query')
     p.add_argument('db', nargs='+')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),

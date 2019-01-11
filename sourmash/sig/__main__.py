@@ -12,7 +12,7 @@ import copy
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results
 from .. import sourmash_args
-from ..sourmash_args import DEFAULT_LOAD_K
+from ..sourmash_args import DEFAULT_LOAD_K, SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
 
 usage='''
@@ -68,7 +68,7 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature describe')
+    p = SourmashArgumentParser(prog='sourmash signature describe')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -143,7 +143,7 @@ def overlap(args):
     """
     provide detailed comparison of two signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature overlap')
+    p = SourmashArgumentParser(prog='sourmash signature overlap')
     p.add_argument('signature1')
     p.add_argument('signature2')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -231,7 +231,7 @@ def merge(args):
     """
     merge one or more signatures.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p = SourmashArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -299,7 +299,7 @@ def intersect(args):
 
     This function always removes abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature intersect')
+    p = SourmashArgumentParser(prog='sourmash signature intersect')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -347,7 +347,7 @@ def subtract(args):
     """
     subtract one or more signatures from another
     """
-    p = argparse.ArgumentParser(prog='sourmash signature subtract')
+    p = SourmashArgumentParser(prog='sourmash signature subtract')
     p.add_argument('signature_from')
     p.add_argument('subtraction_sigs', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -409,7 +409,7 @@ def rename(args):
     """
     rename a signature.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature rename')
+    p = SourmashArgumentParser(prog='sourmash signature rename')
     p.add_argument('signature')
     p.add_argument('name')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -434,7 +434,7 @@ def extract(args):
     """
     extract signatures.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature extract')
+    p = SourmashArgumentParser(prog='sourmash signature extract')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -486,7 +486,7 @@ def flatten(args):
     """
     flatten a signature, removing abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature flatten')
+    p = SourmashArgumentParser(prog='sourmash signature flatten')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -541,7 +541,7 @@ def downsample(args):
     """
     downsample a scaled signature.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature downsample')
+    p = SourmashArgumentParser(prog='sourmash signature downsample')
     p.add_argument('signatures', nargs="+")
     p.add_argument('--scaled', type=int, default=0,
                    help='scaled value to downsample to')
@@ -612,7 +612,7 @@ def sig_import(args):
     """
     import a signature into sourmash format.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature import')
+    p = SourmashArgumentParser(prog='sourmash signature import')
     p.add_argument('filenames', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -650,7 +650,7 @@ def export(args):
     """
     export a signature to mash format
     """
-    p = argparse.ArgumentParser(prog='sourmash signature export')
+    p = SourmashArgumentParser(prog='sourmash signature export')
     p.add_argument('filename')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
