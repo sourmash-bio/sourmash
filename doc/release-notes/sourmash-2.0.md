@@ -1,14 +1,22 @@
 # sourmash v2.0 release notes
 
-We are pleased to announce release 2.0 of sourmash!  This release is the
-first full release of sourmash since 1.0, and provides much expanded
-core functionality as well as many more utility functions.
+We are pleased to announce release 2.0 of sourmash!  This release is
+the first full release of sourmash since 1.0, and provides much
+expanded core functionality as well as many more utility functions.
 
 The full documentation for this version is available at
 https://sourmash.readthedocs.io/en/v2.0/. Documentation for the latest
 released version is at http://sourmash.readthedocs.io/en/stable/.
 
-Major new features since 1.0:
+**This release breaks compatibility with sourmash 1.0: the sourmash
+Python API, command-line, and signature file formats have all changed
+substantially.** Please post questions about migrating to sourmash 2.0
+in the
+[sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/new).
+
+## Major new features since 1.0
+
+This is a list of substantial new features and functionality in sourmash 2.0.
 
 * Added Sequence Bloom Tree search to enable similarity and containment queries on very large collections of signatures in low memory; see `sourmash index`, `sourmash search`, and `sourmash gather` in [the command line documentation](../command-line.html).
 * Added "LCA databases" for fast searching of large databases in not-so-low memory; see [`sourmash lca index` in command-line docs](../command-line.html#sourmash-lca-subcommands-for-taxonomic-classification).
@@ -23,7 +31,7 @@ Major new features since 1.0:
 * Installation via bioconda is now recommended (and actively maintained :)
 * Support for building signatures from BAM files.
 
-Other features of note:
+## Other features of note
 
 * Renamed Python library to `sourmash` from `sourmash_lib`.
 * Signatures now default to a license of CC0.
