@@ -2976,6 +2976,25 @@ def test_gather_metagenome_output_unassigned():
         assert all(('1.3 Mbp       13.6%   28.2%' in out,
                 'NC_011294.1' in out))
 
+
+@utils.in_tempdir
+def test_gather_metagenome_output_unassigned_nomatches(c):
+    # test --output-unassigned when there are no matches
+    query_sig = utils.get_test_data('2.fa.sig')
+    against_sig = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('gather', query_sig, against_sig,
+                   '--output-unassigned', 'foo.sig')
+
+    print(c.last_result.out)
+    assert 'found 0 matches total;' in c.last_result.out
+
+    x = sourmash.load_one_signature(query_sig, ksize=31)
+    y = sourmash.load_one_signature(c.output('foo.sig'))
+
+    assert x.minhash == y.minhash
+
+
 def test_gather_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')

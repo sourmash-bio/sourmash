@@ -189,6 +189,11 @@ cdef class MinHash(object):
         for hash in hashes:
             self.add_hash(hash)
 
+    def remove_many(self, hashes):
+        "Remove many hashes at once."
+        for hash in hashes:
+            deref(self._this).remove_hash(hash)
+
     def update(self, other):
         "Update this estimator from all the hashes from the other."
         self.add_many(other.get_mins())

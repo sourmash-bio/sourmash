@@ -12,6 +12,7 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
+from ..sourmash_args import SourmashArgumentParser
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -79,7 +80,7 @@ def classify(args):
     """
     main single-genome classification function.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca classify")
+    p = SourmashArgumentParser(prog="sourmash lca classify")
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)

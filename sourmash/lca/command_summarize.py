@@ -12,6 +12,8 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
+from ..sourmash_args import SourmashArgumentParser
+
 
 DEFAULT_THRESHOLD=5
 
@@ -58,7 +60,7 @@ def summarize_main(args):
     """
     main summarization function.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca summarize")
+    p = SourmashArgumentParser(prog="sourmash lca summarize")
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
