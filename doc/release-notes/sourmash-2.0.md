@@ -1,4 +1,4 @@
-sourmash v2.0 release notes
+# sourmash v2.0 release notes
 
 We are pleased to announce release 2.0 of sourmash!  This release is the
 first full release of sourmash since 1.0, and provides much expanded
