@@ -15,8 +15,8 @@ import pytest
 from . import sourmash_tst_utils as utils
 import sourmash
 
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import *
+from sourmash.lca import lca_utils
+from sourmash.lca.lca_utils import *
 
 ## lca_utils tests
 
