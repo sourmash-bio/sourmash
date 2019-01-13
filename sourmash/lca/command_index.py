@@ -12,6 +12,7 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
+from ..sourmash_args import SourmashArgumentParser
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -111,7 +112,7 @@ def index(args):
     """
     main function for building an LCA database.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca index")
+    p = SourmashArgumentParser(prog="sourmash lca index")
     p.add_argument('csv', help='taxonomy spreadsheet')
     p.add_argument('lca_db_out', help='name to save database to')
     p.add_argument('signatures', nargs='+',

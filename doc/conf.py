@@ -300,3 +300,5 @@ try:
 except ImportError:
     raise
     pass
+
+autodoc_mock_imports = ["sourmash._minhash"]

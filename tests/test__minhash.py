@@ -1030,3 +1030,41 @@ def test_distance_matrix(track_abundance):
             D1[i][j] = E.similarity(E2, track_abundance)
 
     assert numpy.array_equal(D1, D2)
+
+
+def test_remove_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+
+    orig_sig = signature.SourmashSignature(a)
+    orig_md5 = orig_sig.md5sum()
+
+    a.remove_many(list(range(0, 100, 3)))
+    new_sig = signature.SourmashSignature(a)
+    new_md5 = new_sig.md5sum()
+
+    assert orig_md5 == "f1cc295157374f5c07cfca5f867188a1"
+    assert new_md5 == "dd93fa319ef57f4a019c59ee1a8c73e2"
+    assert orig_md5 != new_md5
+
+    assert len(a) == 33
+    assert all(c % 6 != 0 for c in a.get_mins())
+
+
+def test_add_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+    b = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+    a.add_many(list(range(0, 100, 2)))
+
+    assert len(a) == 50
+    assert all(c % 2 == 0 for c in a.get_mins())
+
+    for h in range(0, 100, 2):
+        b.add_hash(h)
+        b.add_hash(h)
+
+    assert len(b) == 50
+    assert a == b

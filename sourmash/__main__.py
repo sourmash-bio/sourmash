@@ -48,6 +48,7 @@ sourmash compute -h
 ** Documentation is available at https://sourmash.readthedocs.io/
 '''
 
+
 def main():
     set_quiet(False)
 
@@ -65,7 +66,7 @@ def main():
                 'sig': sig_main,
                 'signature': sig_main}
     parser = argparse.ArgumentParser(
-        description='work with compressed sequence representations')
+        description='work with compressed biological sequence representations')
     parser.add_argument('command', nargs='?')
     args = parser.parse_args(sys.argv[1:2])
 

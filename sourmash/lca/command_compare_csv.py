@@ -12,10 +12,11 @@ from ..logging import notify, error, print_results, set_quiet
 from . import lca_utils
 from .lca_utils import zip_lineage
 from .command_index import load_taxonomy_assignments
+from ..sourmash_args import SourmashArgumentParser
 
 
 def compare_csv(args):
-    p = argparse.ArgumentParser(prog="sourmash lca compare_csv")
+    p = SourmashArgumentParser(prog="sourmash lca compare_csv")
     p.add_argument('csv1', help='taxonomy spreadsheet output by classify')
     p.add_argument('csv2', help='custom taxonomy spreadsheet')
     p.add_argument('-q', '--quiet', action='store_true',

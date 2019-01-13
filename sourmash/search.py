@@ -107,8 +107,18 @@ def search_databases(query, databases, threshold, do_containment, best_only,
     return results
 
 
+# define a function to build new query object
+def build_new_query(to_remove, old_query, scaled=None):
+    e = old_query.minhash
+    e.remove_many(to_remove)
+    if scaled:
+        e = e.downsample_scaled(scaled)
+    return SourmashSignature(e)
+
+
 GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
+
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query = query
@@ -174,17 +184,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         return best_similarity, best_leaf, filename
 
 
-    # define a function to build new signature object from set of mins
-    def build_new_signature(mins, template_sig, scaled=None):
-        e = template_sig.minhash.copy_and_clear()
-        e.add_many(mins)
-        if scaled:
-            e = e.downsample_scaled(scaled)
-        return SourmashSignature(e)
-
     # construct a new query that doesn't have the max_hash attribute set.
-    new_mins = query.minhash.get_hashes()
-    query = build_new_signature(new_mins, orig_query)
+    query = build_new_query([], orig_query)
 
     cmp_scaled = 0
     remainder = set()
@@ -263,8 +264,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               leaf=best_leaf)
 
         # construct a new query, minus the previous one.
+        query = build_new_query(found_mins, orig_query, cmp_scaled)
         query_mins -= set(found_mins)
-        query = build_new_signature(query_mins, orig_query, cmp_scaled)
 
         weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
              / sum_abunds
