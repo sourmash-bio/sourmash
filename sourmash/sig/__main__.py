@@ -10,7 +10,7 @@ import json
 import sourmash
 import copy
 
-from ..logging import set_quiet, error, notify, set_quiet, print_results
+from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
 from ..sourmash_args import DEFAULT_LOAD_K, SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
@@ -407,27 +407,42 @@ def subtract(args):
 
 def rename(args):
     """
-    rename a signature.
+    rename one or more signatures.
     """
     p = SourmashArgumentParser(prog='sourmash signature rename')
-    p.add_argument('signature')
+    p.add_argument('sigfiles', nargs='+')
     p.add_argument('name')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
+    p.add_argument('-o', '--output', help='output to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
-    sigobj.d['name'] = args.name
-    output_json = sourmash.save_signatures([sigobj], fp=args.output)
+    outlist = []
+    for filename in args.sigfiles:
+        debug('loading {}', filename)
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype)
 
-    notify("set name to '{}'", args.name)
+        for sigobj in siglist:
+            sigobj.d['name'] = args.name
+            outlist.append(sigobj)
+
+    if args.output:
+        fp = open(args.output, 'wt')
+    else:
+        fp = sys.stdout
+
+    output_json = sourmash.save_signatures(outlist, fp=fp)
+    if args.output:
+        fp.close()
+
+    notify("set name to '{}' on {} signatures", args.name, len(outlist))
 
 
 def extract(args):
