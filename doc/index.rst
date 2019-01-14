@@ -150,6 +150,7 @@ Contents:
    requirements
    more-info
    support
+   test-notebook
 
 
 Indices and tables
