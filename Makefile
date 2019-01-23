@@ -35,4 +35,7 @@ wheel:
 	docker pull $${DOCKER_IMAGE} ; \
 	docker run --rm -v `pwd`:/io $${DOCKER_IMAGE} /io/travis/build-wheels.sh
 
+last-tag:
+	git fetch -p -q; git tag -l | sort -V | tail -1
+
 FORCE:

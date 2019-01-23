@@ -1,6 +1,5 @@
 from __future__ import print_function, unicode_literals
-
-import sourmash_lib as sourmash
+import sourmash
 
 
 def test_sourmash_signature_api():

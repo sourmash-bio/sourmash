@@ -4,11 +4,11 @@ import os
 
 import pytest
 
-from sourmash_lib import signature
-from sourmash_lib.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash_lib.sbtmh import (SigLeaf, search_minhashes,
+from sourmash import signature
+from sourmash.sbt import SBT, GraphFactory, Leaf, Node
+from sourmash.sbtmh import (SigLeaf, search_minhashes,
                                 search_minhashes_containment)
-from sourmash_lib.sbt_storage import (FSStorage, TarStorage,
+from sourmash.sbt_storage import (FSStorage, TarStorage,
                                       RedisStorage, IPFSStorage)
 
 from . import sourmash_tst_utils as utils

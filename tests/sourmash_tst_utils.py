@@ -6,6 +6,8 @@ import os
 import tempfile
 import shutil
 import subprocess
+import collections
+import pprint
 
 import pkg_resources
 from pkg_resources import Requirement, resource_filename, ResolutionError
@@ -65,8 +67,10 @@ def _runscript(scriptname):
     return -1
 
 
-def runscript(scriptname, args, in_directory=None,
-              fail_ok=False):
+ScriptResults = collections.namedtuple('ScriptResults',
+                                       ['status', 'out', 'err'])
+
+def runscript(scriptname, args, **kwargs):
     """Run a Python script using exec().
 
     Run the given Python script, with the given args, in the given directory,
@@ -80,6 +84,8 @@ def runscript(scriptname, args, in_directory=None,
     sysargs.extend(args)
 
     cwd = os.getcwd()
+    in_directory = kwargs.get('in_directory', cwd)
+    fail_ok = kwargs.get('fail_ok', False)
 
     try:
         status = -1
@@ -91,10 +97,7 @@ def runscript(scriptname, args, in_directory=None,
         sys.stdout.name = "StringIO"
         sys.stderr = StringIO()
 
-        if in_directory:
-            os.chdir(in_directory)
-        else:
-            in_directory = cwd
+        os.chdir(in_directory)
 
         try:
             print('running:', scriptname, 'in:', in_directory, file=oldout)
@@ -118,7 +121,7 @@ def runscript(scriptname, args, in_directory=None,
         print(err)
         assert False, (status, out, err)
 
-    return status, out, err
+    return ScriptResults(status, out, err)
 
 
 def get_test_data(filename):
@@ -150,6 +153,86 @@ class TempDirectory(object):
 
         if exc_type:
             return False
+
+
+class RunnerContext(object):
+    """
+    I am a RunnerContext object from sourmash_tst_utils.
+
+    I have methods 'run_sourmash' and 'run', which run Python scripts.
+
+    Take a look at my 'location', 'last_command' and 'last_result' attributes!
+
+    You can use the 'output' method to build filenames in my temp directory.
+    """
+    def __init__(self, location):
+        self.location = location
+        self.last_command = None
+        self.last_result = None
+
+    def run_sourmash(self, *args, **kwargs):
+        "Run the sourmash script with the given arguments."
+        kwargs['fail_ok'] = True
+        if 'in_directory' not in kwargs:
+            kwargs['in_directory'] = self.location
+
+        cmdlist = ['sourmash']
+        cmdlist.extend(args)
+        self.last_command = " ".join(cmdlist)
+        self.last_result = runscript('sourmash', args, **kwargs)
+
+        if self.last_result.status:
+            raise ValueError(self)
+
+        return self.last_result
+
+    def run(self, scriptname, *args, **kwargs):
+        "Run a script with the given arguments."
+        if 'in_directory' not in kwargs:
+            kwargs['in_directory'] = self.location
+        self.last_command = " ".join(args)
+        self.last_result = runscript(scriptname, args, **kwargs)
+        return self.last_result
+
+    def output(self, path):
+        return os.path.join(self.location, path)
+
+    def __str__(self):
+        s = ""
+        if self.last_command:
+            s += "Last command run:\n{}\n".format(repr(self.last_command))
+            if self.last_result:
+                s += "\nLAST RESULT:\n"
+                s += "- exit code: {}\n\n".format(self.last_result.status)
+                if self.last_result.out:
+                    s += "- stdout:\n---\n{}---\n".format(self.last_result.out)
+                else:
+                    s += '(no stdout)\n\n'
+                if self.last_result.err:
+                    s += "- stderr:\n---\n{}---\n".format(self.last_result.err)
+                else:
+                    s += '(no stderr)\n'
+
+        return s
+
+
+def in_tempdir(fn):
+    def wrapper(*args, **kwargs):
+        with TempDirectory() as location:
+            ctxt = RunnerContext(location)
+            newargs = [ctxt] + list(args)
+            return fn(*newargs, **kwargs)
+
+    return wrapper
+
+
+def in_thisdir(fn):
+    def wrapper(*args, **kwargs):
+        ctxt = RunnerContext(os.getcwd())
+        newargs = [ctxt] + list(args)
+        return fn(*newargs, **kwargs)
+
+    return wrapper
 
 
 def run_shell_cmd(cmd, fail_ok=False, in_directory=None):

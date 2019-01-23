@@ -7,9 +7,9 @@ import sys
 import argparse
 from collections import defaultdict
 
-from ..logging import error
+from ..logging import error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import debug, set_debug
+from ..sourmash_args import SourmashArgumentParser
 
 
 def make_lca_counts(dblist):
@@ -22,9 +22,11 @@ def make_lca_counts(dblist):
     # gather all hashvalue assignments from across all the databases
     assignments = defaultdict(set)
     for lca_db in dblist:
-        for hashval, lid_list in lca_db.hashval_to_lineage_id.items():
-            lineages = [lca_db.lineage_dict[lid] for lid in lid_list]
-            assignments[hashval].update(lineages)
+        for hashval, idx_list in lca_db.hashval_to_idx.items():
+            for idx in idx_list:
+                lid = lca_db.idx_to_lid[idx]
+                lineage = lca_db.lid_to_lineage[lid]
+                assignments[hashval].add(lineage)
 
     # now convert to trees -> do LCA & counts
     counts = defaultdict(int)
@@ -47,18 +49,20 @@ def rankinfo_main(args):
     """
     rankinfo!
     """
-    p = argparse.ArgumentParser(prog="sourmash lca rankinfo")
+    p = SourmashArgumentParser(prog="sourmash lca rankinfo")
     p.add_argument('db', nargs='+')
     p.add_argument('--scaled', type=float)
-    p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     args = p.parse_args(args)
 
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     if args.scaled:
         args.scaled = int(args.scaled)

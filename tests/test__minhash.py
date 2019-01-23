@@ -41,11 +41,11 @@ import pickle
 
 import pytest
 
-from sourmash_lib._minhash import (MinHash, hash_murmur, dotproduct,
+from sourmash._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
 from . import sourmash_tst_utils as utils
-from sourmash_lib import signature
+from sourmash import signature
 
 # add:
 # * get default params from Python
@@ -68,6 +68,26 @@ def test_basic_dna(track_abundance):
     print(a, b)
     assert a == b
     assert len(b) == 1
+
+
+def test_div_zero(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for similarity
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.similarity(mh2) == 0
+    assert mh2.similarity(mh) == 0
+
+
+def test_div_zero_contained(track_abundance):
+    # verify that empty MHs do not yield divide by zero errors for contained_by
+    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = mh.copy_and_clear()
+
+    mh.add_sequence('ATGC')
+    assert mh.contained_by(mh2) == 0
+    assert mh2.contained_by(mh) == 0
 
 
 def test_bytes_dna(track_abundance):
@@ -152,6 +172,12 @@ def test_scaled(track_abundance):
     assert mh.get_mins() == [10, 20, 30]
     mh.add_hash(36)
     assert mh.get_mins() == [10, 20, 30]
+
+
+def test_no_scaled(track_abundance):
+    # no 'scaled', num=0 - should fail
+    with pytest.raises(ValueError):
+        mh = MinHash(0, 4, track_abundance=track_abundance)
 
 
 def test_max_hash_conversion():
@@ -869,7 +895,7 @@ def test_scaled_property(track_abundance):
 
 
 def test_mh_subtract(track_abundance):
-    # test merging two identically configured minhashes
+    # test subtracting two identically configured minhashes
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -1004,3 +1030,41 @@ def test_distance_matrix(track_abundance):
             D1[i][j] = E.similarity(E2, track_abundance)
 
     assert numpy.array_equal(D1, D2)
+
+
+def test_remove_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+
+    orig_sig = signature.SourmashSignature(a)
+    orig_md5 = orig_sig.md5sum()
+
+    a.remove_many(list(range(0, 100, 3)))
+    new_sig = signature.SourmashSignature(a)
+    new_md5 = new_sig.md5sum()
+
+    assert orig_md5 == "f1cc295157374f5c07cfca5f867188a1"
+    assert new_md5 == "dd93fa319ef57f4a019c59ee1a8c73e2"
+    assert orig_md5 != new_md5
+
+    assert len(a) == 33
+    assert all(c % 6 != 0 for c in a.get_mins())
+
+
+def test_add_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+    b = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+    a.add_many(list(range(0, 100, 2)))
+
+    assert len(a) == 50
+    assert all(c % 2 == 0 for c in a.get_mins())
+
+    for h in range(0, 100, 2):
+        b.add_hash(h)
+        b.add_hash(h)
+
+    assert len(b) == 50
+    assert a == b
