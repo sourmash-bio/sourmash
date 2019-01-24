@@ -696,7 +696,7 @@ def test_do_basic_compare(c):
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
 
     sigs = []
     for fn in testsigs:
@@ -726,7 +726,7 @@ def test_do_basic_compare_using_rna_arg(c):
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
 
     sigs = []
     for fn in testsigs:
