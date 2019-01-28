@@ -121,7 +121,7 @@ class SBT(object):
     Notes
     -----
     We use two dicts to store the tree structure: One for the internal nodes,
-    and another for the leaves.
+    and another for the leaves (datasets).
     """
 
     def __init__(self, factory, d=2, storage=None):
@@ -640,7 +640,8 @@ class SBT(object):
         if not nodes:
             raise ValueError("Empty tree!")
 
-        sbt_nodes = defaultdict(lambda: None)
+        sbt_nodes = {}
+        sbt_leaves = {}
 
         klass = STORAGES[info['storage']['backend']]
         if info['storage']['backend'] == "FSStorage":
@@ -652,30 +653,27 @@ class SBT(object):
 
         max_node = 0
         for k, node in nodes.items():
-            if node is None:
-                continue
-
             if 'internal' in node['name']:
                 node['factory'] = factory
                 sbt_node = Node.load(node, storage)
+                sbt_nodes[k] = sbt_node
             else:
                 sbt_node = leaf_loader(node, storage)
+                sbt_leaves[k] = sbt_node
 
-            sbt_nodes[k] = sbt_node
             max_node = max(max_node, k)
 
         tree = cls(factory, d=info['d'], storage=storage)
-        tree.nodes = sbt_nodes
-        tree.missing_nodes = {i for i in range(max_node)
-                                if i not in sbt_nodes}
-        # TODO: this might not be true with combine...
+        tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                              if i not in sbt_nodes and i not in sbt_leaves}
+
         tree.next_node = max_node
 
         if print_version_warning:
             error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
             error("WARNING: proceeding with execution, but it will take longer to finish!")
-
-        tree._fill_min_n_below()
 
         return tree
 
