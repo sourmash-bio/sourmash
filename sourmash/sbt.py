@@ -411,7 +411,7 @@ class SBT(object):
         }
 
         if not self.is_ready and structure_only is False:
-            self._fill_internal_and_save(storage)
+            self._fill_internal_and_save(storage, sparseness)
 
         nodes = {}
         leaves = {}
@@ -445,8 +445,6 @@ class SBT(object):
 
                 data['filename'] = node.save(data['filename'])
 
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
             if isinstance(node, Node):
                 nodes[i] = data
             else:
@@ -770,23 +768,22 @@ class SBT(object):
 
         self._fill_up(fill_min_n_below)
 
-    def _fill_internal_and_save(self, storage):
+    def _fill_internal_and_save(self, storage, sparseness=0.0):
 
         def fill_nodegraphs_and_save(node, *args, **kwargs):
             children = kwargs['children']
-            storage0 = kwargs.get('storage', storage)
             for child in children:
                 if child.node is not None:
                     child.node.update(node)
 
-                    # TODO: this was copied from SBT.save
-                    child.node.storage = storage0
-                    child.node.save(os.path.basename(node.name))
+                    if isinstance(node, Node) and random() - sparseness > 0:
+                        child.node.storage = storage
+                        child.node.save(os.path.basename(node.name))
 
-                    child.node.unload()
+                        child.node.unload()
             return True
 
-        self._fill_up(fill_nodegraphs_and_save, storage=storage)
+        self._fill_up(fill_nodegraphs_and_save)
         self.is_ready = True
 
     def _fill_internal(self):
