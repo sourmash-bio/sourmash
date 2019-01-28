@@ -774,12 +774,13 @@ class SBT(object):
 
         def fill_nodegraphs_and_save(node, *args, **kwargs):
             children = kwargs['children']
-            storage = kwargs['storage']
+            storage0 = kwargs.get('storage', storage)
             for child in children:
                 if child.node is not None:
                     child.node.update(node)
 
                     # TODO: this was copied from SBT.save
+                    child.node.storage = storage0
                     child.node.save(os.path.basename(node.name))
 
                     child.node.unload()
@@ -989,6 +990,9 @@ class Node(object):
         new_node.metadata = info.get('metadata', {})
         return new_node
 
+    def unload(self):
+        pass
+
     def update(self, parent):
         parent.data.update(self.data)
         if 'min_n_below' in self.metadata:
@@ -1052,6 +1056,9 @@ class Leaf(object):
                    name=info['name'],
                    path=info['filename'],
                    storage=storage)
+
+    def unload(self):
+        pass
 
 
 def filter_distance(filter_a, filter_b, n=1000):
