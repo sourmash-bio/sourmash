@@ -8,8 +8,9 @@ import os
 import os.path
 import sys
 import random
+import shutil
 import tempfile
-import tarfile
+import zipfile
 
 import screed
 from .sourmash_args import SourmashArgumentParser
@@ -1423,41 +1424,28 @@ def prepare(args):
     backend, options = parse_backend_args(args.sbt_name, args.backend)
 
     with backend(*options) as storage:
-        is_tarfile = False
-        try:
-            tarfile.is_tarfile(args.sbt_name)
-            is_tarfile = True
-        except IOError:
-            pass
+        with open(args.sbt_name, 'r') as f:
+            import json
+            temptree = json.load(f)
 
-        if is_tarfile:
-            with tarfile.open(args.sbt_name, 'r') as t:
-                t.extractall('.')
-                args.sbt_name = next(f for f in t.getnames()
-                                       if f.endswith('.sbt.json'))
-        else:
-            with open(args.sbt_name, 'r:*') as f:
-                import json
-                temptree = json.load(f)
+        if ((temptree['storage']['backend'] == 'IPFSStorage') and
+            (backend == FSStorage) and
+            ('preload' in temptree['storage']['args'])):
+                # Let's take a shortcut... The preload multihash contains the
+                # directory in the same structure FSStorage expects.
+                ipfs_args = temptree['storage']['args']
+                multihash = ipfs_args.pop('preload')
 
-            if ((temptree['storage']['backend'] == 'IPFSStorage') and
-                (backend == FSStorage) and
-                ('preload' in temptree['storage']['args'])):
-                    # Let's take a shortcut... The preload multihash contains the
-                    # directory in the same structure FSStorage expects.
-                    ipfs_args = temptree['storage']['args']
-                    multihash = ipfs_args.pop('preload')
+                # TODO: in case the IPFS node is not available, need to
+                # fallback to read-only client
+                import ipfsapi
+                client = ipfsapi.connect(**ipfs_args)
 
-                    # TODO: in case the IPFS node is not available, need to
-                    # fallback to read-only client
-                    import ipfsapi
-                    client = ipfsapi.connect(**ipfs_args)
-
-                    dirpath = os.path.join(storage.location, storage.subdir)
-                    with tempfile.TemporaryDirectory() as temp:
-                        client.get(multihash, filepath=temp)
-                        shutil.rmtree(dirpath)
-                        shutil.move(os.path.join(temp, multihash), dirpath)
+                dirpath = os.path.join(storage.location, storage.subdir)
+                with tempfile.TemporaryDirectory() as temp:
+                    client.get(multihash, filepath=temp)
+                    shutil.rmtree(dirpath)
+                    shutil.move(os.path.join(temp, multihash), dirpath)
 
         sbt = load_sbt_index(args.sbt_name, print_version_warning=False)
         sbt.save(args.sbt_name, storage=storage)

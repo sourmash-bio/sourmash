@@ -56,6 +56,7 @@ import os
 from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
+import zipfile
 
 import khmer
 
@@ -64,7 +65,7 @@ try:
 except AttributeError:
     load_nodegraph = khmer.Nodegraph.load
 
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
+from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 
 
@@ -73,6 +74,7 @@ STORAGES = {
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
     'RedisStorage': RedisStorage,
+    'ZipStorage': ZipStorage,
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
