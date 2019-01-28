@@ -410,8 +410,8 @@ class SBT(object):
             'args': self.factory.init_args()
         }
 
-        if not self.is_ready:
-            self._fill_internal()
+        if not self.is_ready and structure_only is False:
+            self._fill_internal_and_save(storage, sparseness)
 
         nodes = {}
         leaves = {}
@@ -445,8 +445,6 @@ class SBT(object):
 
                 data['filename'] = node.save(data['filename'])
 
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
             if isinstance(node, Node):
                 nodes[i] = data
             else:
@@ -528,12 +526,15 @@ class SBT(object):
             raise ValueError("Empty tree!")
 
         sbt_nodes = {}
+        sbt_leaves = {}
+
+        max_node = 0
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
         ksize, tablesize, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(ksize, tablesize, ntables)
 
-        for i, jnode in enumerate(jnodes):
+        for k, jnode in enumerate(jnodes):
             if jnode is None:
                 continue
 
@@ -542,13 +543,24 @@ class SBT(object):
             if 'internal' in jnode['name']:
                 jnode['factory'] = factory
                 sbt_node = Node.load(jnode, storage)
+                sbt_nodes[k] = sbt_node
             else:
                 sbt_node = leaf_loader(jnode, storage)
+                sbt_leaves[k] = sbt_node
 
-            sbt_nodes[i] = sbt_node
+            max_node = max(max_node, k)
 
         tree = SBT(factory)
         tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                               if i not in sbt_nodes and i not in sbt_leaves}
+
+        if print_version_warning:
+            error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+            error("WARNING: proceeding with execution, but it will take longer to finish!")
+
+        tree._fill_min_n_below()
 
         return tree
 
@@ -561,6 +573,8 @@ class SBT(object):
 
         sbt_nodes = {}
         sbt_leaves = {}
+
+        max_node = 0
 
         sample_bf = os.path.join(dirname, nodes[0]['filename'])
         k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
@@ -580,9 +594,19 @@ class SBT(object):
                 sbt_node = leaf_loader(node, storage)
                 sbt_leaves[k] = sbt_node
 
+            max_node = max(max_node, k)
+
         tree = cls(factory, d=info['d'])
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                               if i not in sbt_nodes and i not in sbt_leaves}
+
+        if print_version_warning:
+            error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
+            error("WARNING: proceeding with execution, but it will take longer to finish!")
+
+        tree._fill_min_n_below()
 
         return tree
 
@@ -623,7 +647,7 @@ class SBT(object):
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
+                               if i not in sbt_nodes and i not in sbt_leaves}
 
         if print_version_warning:
             error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
@@ -667,9 +691,7 @@ class SBT(object):
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
-
-        tree.next_node = max_node
+                               if i not in sbt_nodes and i not in sbt_leaves}
 
         if print_version_warning:
             error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
@@ -679,7 +701,10 @@ class SBT(object):
 
     @classmethod
     def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
-        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+        nodes = {}
+        if 'nodes' in info:
+            nodes = {int(k): v for (k, v) in info['nodes'].items()}
+
         leaves = {int(k): v for (k, v) in info['leaves'].items()}
 
         if not leaves:
@@ -713,7 +738,7 @@ class SBT(object):
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
+                               if i not in sbt_nodes and i not in sbt_leaves}
 
         return tree
 
@@ -742,6 +767,24 @@ class SBT(object):
             return original_min_n_below != min_n_below
 
         self._fill_up(fill_min_n_below)
+
+    def _fill_internal_and_save(self, storage, sparseness=0.0):
+
+        def fill_nodegraphs_and_save(node, *args, **kwargs):
+            children = kwargs['children']
+            for child in children:
+                if child.node is not None:
+                    child.node.update(node)
+
+                    if isinstance(node, Node) and random() - sparseness > 0:
+                        child.node.storage = storage
+                        child.node.save(os.path.basename(node.name))
+
+                        child.node.unload()
+            return True
+
+        self._fill_up(fill_nodegraphs_and_save)
+        self.is_ready = True
 
     def _fill_internal(self):
 
@@ -944,6 +987,9 @@ class Node(object):
         new_node.metadata = info.get('metadata', {})
         return new_node
 
+    def unload(self):
+        pass
+
     def update(self, parent):
         parent.data.update(self.data)
         if 'min_n_below' in self.metadata:
@@ -1008,6 +1054,9 @@ class Leaf(object):
                    path=info['filename'],
                    storage=storage)
 
+    def unload(self):
+        pass
+
 
 def filter_distance(filter_a, filter_b, n=1000):
     """
@@ -1040,20 +1089,18 @@ def filter_distance(filter_a, filter_b, n=1000):
     return distance / (8.0 * len(A) * n)
 
 
-def convert_cmd(name, backend):
-    from .sbtmh import SigLeaf
-
+def parse_backend_args(name, backend):
     options = backend.split('(')
     backend = options.pop(0)
     backend = backend.lower().strip("'")
 
     if options:
-      print(options)
-      options = options[0].split(')')
-      options = [options.pop(0)]
-      #options = {}
+        print(options)
+        options = options[0].split(')')
+        options = [options.pop(0)]
+        #options = {}
     else:
-      options = []
+        options = []
 
     if backend.lower() in ('ipfs', 'ipfsstorage'):
         backend = IPFSStorage
@@ -1075,6 +1122,14 @@ def convert_cmd(name, backend):
 
     else:
         error('backend not recognized: {}'.format(backend))
+
+    return backend, options
+
+
+def convert_cmd(name, backend_args):
+    from .sbtmh import SigLeaf
+
+    backend, options = parse_backend_args(name, backend_args)
 
     with backend(*options) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)

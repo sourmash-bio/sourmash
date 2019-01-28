@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals, division
 import abc
 from io import BytesIO
 import os
+import urllib
 import tarfile
 
 
@@ -103,10 +104,23 @@ class IPFSStorage(Storage):
         import ipfshttpclient
         self.ipfs_args = kwargs
         self.pin_on_add = pin_on_add
-        self.api = ipfshttpclient.connect(**self.ipfs_args)
+        self.read_only = False
+
+        if 'preload' in self.ipfs_args:
+            del self.ipfs_args['preload']
+
+        try:
+            self.api = ipfshttpclient.connect(**self.ipfs_args)
+        except ipfsapi.exceptions.ConnectionError:
+            self.api = ipfsapi.connect('ipfs.io', 80)
+            self.read_only = True
 
     def save(self, path, content):
         # api.add_bytes(b"Mary had a little lamb")
+        if self.read_only:
+            raise NotImplementedError('This is a read-only client. '
+                                      'Start an IPFS node to be able to save '
+                                      'data.')
         new_obj = self.api.add_bytes(content)
         if self.pin_on_add:
             self.api.pin.add(new_obj)
