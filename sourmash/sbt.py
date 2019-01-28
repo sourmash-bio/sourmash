@@ -148,8 +148,8 @@ class SBT(object):
         next_internal_node = None
         if self.next_node <= min_leaf:
             for i in range(min_leaf):
-                if all((self._nodes.get(i, None) is None,
-                        self._leaves.get(i, None) is None,
+                if all((i not in self._nodes,
+                        i not in self._leaves,
                         i not in self._missing_nodes)):
                     next_internal_node = i
                     break
