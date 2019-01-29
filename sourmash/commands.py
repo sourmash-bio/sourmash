@@ -10,7 +10,6 @@ import sys
 import random
 import shutil
 import tempfile
-import zipfile
 
 import screed
 from .sourmash_args import SourmashArgumentParser

@@ -43,7 +43,7 @@ then define a search function, ::
 
 from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 try:
     from collections.abc import Mapping
 except ImportError:  # Python 2...
@@ -481,10 +481,21 @@ class SBT(object):
         SBT
             the SBT tree built from the description.
         """
-        dirname = os.path.dirname(os.path.abspath(location))
-        sbt_name = os.path.basename(location)
-        if sbt_name.endswith('.sbt.json'):
-            sbt_name = sbt_name[:-9]
+        tempfile = None
+        if zipfile.is_zipfile(location):
+            tempfile = NamedTemporaryFile()
+            with zipfile.ZipFile(location, 'r') as zf:
+                tempfile.write(zf.read('tree.sbt.json'))
+                tempfile.flush()
+
+            dirname = os.path.dirname(tempfile.name)
+            sbt_name = os.path.basename(tempfile.name)
+            storage = ZipStorage(location)
+        else:
+            dirname = os.path.dirname(os.path.abspath(location))
+            sbt_name = os.path.basename(location)
+            if sbt_name.endswith('.sbt.json'):
+                sbt_name = sbt_name[:-9]
 
         loaders = {
             1: cls._load_v1,
@@ -506,10 +517,13 @@ class SBT(object):
             leaf_loader = Leaf.load
 
         sbt_fn = os.path.join(dirname, sbt_name)
-        if not sbt_fn.endswith('.sbt.json'):
+        if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
+
+        if tempfile is not None:
+            tempfile.close()
 
         version = 1
         if isinstance(jnodes, Mapping):

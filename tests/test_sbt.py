@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import os
 
 import pytest
+import shutil
 
 from sourmash import signature
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
@@ -416,6 +417,23 @@ def test_sbt_redisstorage():
             print(*new_result, sep='\n')
 
             assert old_result == new_result
+
+
+def test_load_zip(tmpdir):
+    testdata = utils.get_test_data("v5.zip")
+    testsbt = tmpdir.join("v5.zip")
+
+    shutil.copyfile(testdata, str(testsbt))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+
+    to_search = signature.load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+    assert len(new_result) == 2
 
 
 def test_tree_repair():
