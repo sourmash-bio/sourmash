@@ -7,7 +7,7 @@ from sourmash.tenx import read_10x_folder, read_single_column, \
 def test_read_single_column():
     filename = utils.get_test_data('10x-example/barcodes.tsv')
     barcodes = read_single_column(filename)
-    assert len(barcodes) == 625
+    assert len(barcodes) == 10
 
 
 def test_read_10x_folder():
@@ -17,7 +17,7 @@ def test_read_10x_folder():
 
     barcodes, bam_file = read_10x_folder(tenx_folder)
 
-    assert len(barcodes) == 625
+    assert len(barcodes) == 10
     assert isinstance(bam_file, bs.AlignmentFile)
 
     total_alignments = sum(1 for _ in bam_file)
