@@ -11,4 +11,33 @@ def test_read_single_column():
 
 
 def test_read_10x_folder():
-    utils.get_test_data('10x-example')
+    import bamnostic as bs
+
+    tenx_folder = utils.get_test_data('10x-example')
+
+    barcodes, bam_file = read_10x_folder(tenx_folder)
+
+    assert len(barcodes) == 625
+    assert isinstance(bam_file, bs.AlignmentFile)
+
+    total_alignments = sum(1 for _ in bam_file)
+    assert total_alignments == 72140
+
+
+
+def test__pass_alignment_qc():
+    tenx_folder = utils.get_test_data('10x-example')
+
+    barcodes, bam_file = read_10x_folder(tenx_folder)
+
+    total_pass = sum(1 for alignment in bam_file if
+                     _pass_alignment_qc(alignment, barcodes))
+    assert total_pass == 0
+
+
+def test__parse_barcode_renamer():
+    pass
+
+
+def test_barcode_iterator():
+    pass
