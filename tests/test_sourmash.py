@@ -188,6 +188,7 @@ def test_do_sourmash_compute_10x():
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
 
+        # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
 
 
