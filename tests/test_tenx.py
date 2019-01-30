@@ -21,8 +21,7 @@ def test_read_10x_folder():
     assert isinstance(bam_file, bs.AlignmentFile)
 
     total_alignments = sum(1 for _ in bam_file)
-    assert total_alignments == 72140
-
+    assert total_alignments == 1714
 
 
 def test__pass_alignment_qc():
@@ -32,7 +31,7 @@ def test__pass_alignment_qc():
 
     total_pass = sum(1 for alignment in bam_file if
                      _pass_alignment_qc(alignment, barcodes))
-    assert total_pass == 0
+    assert total_pass == 1610
 
 
 def test__parse_barcode_renamer():
