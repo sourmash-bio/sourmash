@@ -1,0 +1,113 @@
+name: smrs
+version: "2.0.0"
+about: "tools for comparing DNA sequences with MinHash sketches"
+author: Luiz Irber <sourmash@luizirber.org>
+
+settings:
+    - SubcommandRequiredElseHelp
+
+subcommands:
+    - scaffold:
+        about: create SBT scaffold
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - current_sbt:
+                help: SBT (for reading leaves)
+                index: 1
+    - search:
+        about: Search a signature against a list of signatures
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - traverse-directory:
+                help: search all signatures underneath directories
+                long: "traverse-directory"
+                default_value: "false"
+                takes_value: false
+                required: false
+            - quiet:
+                help: suppress non-error output
+                short: q
+                default_value: "false"
+                takes_value: false
+                required: false
+            - threshold:
+                long: "threshold"
+                help: minimum threshold for reporting matches
+                default_value: "0.8"
+                takes_value: true
+                required: false
+            - save-matches:
+                help: output matching signatures to this file
+                long: "save-matches"
+                takes_value: true
+                required: false
+            - best-only:
+                help: report only the best match (with greater speed)
+                long: "best-only"
+                default_value: "false"
+                takes_value: false
+                required: false
+            - num-results:
+                help: number of results to report
+                long: "num-results"
+                short: n
+                default_value: "3"
+                takes_value: true
+                required: false
+            - containment:
+                help: evaluate containment rather than similarity
+                long: "containment"
+                takes_value: false
+                default_value: "false"
+                required: false
+            - ignore-abundance:
+                help: "do NOT use k-mer abundances if present. Note: has no effect if --containment is specified"
+                long: "ignore-abundance"
+                takes_value: false
+                default_value: "false"
+                required: false
+            - scaled:
+                help: "downsample query to this scaled factor (yields greater speed)"
+                long: "scaled"
+                default_value: "0"
+                takes_value: true
+                required: false
+            - output:
+                help: output CSV containing matches to this file
+                long: "output"
+                short: o
+                takes_value: true
+                required: false
+            - ksize:
+                help: "k-mer size"
+                short: k
+                long: "ksize"
+                takes_value: true
+                required: false
+            - query:
+                help: "query signature"
+                required: true
+                requires: databases
+            - databases:
+                help: "signatures/SBTs to search"
+                multiple: true
+
+# groups:
+#  - protein:
+#        args:
+#          - protein:
+#              conflicts_with:
+#                - "no-protein"
+#          - "no-protein":
+#              conflicts_with:
+#                - "protein"
+#    - dna:
+#        args:
+#          - dna:
+#              conflicts_with:
+#                - "no-dna"
+#          - "no-dna":
+#              conflicts_with:
+#                - "dna"

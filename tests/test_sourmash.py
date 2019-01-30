@@ -13,18 +13,18 @@ import csv
 import pytest
 
 from . import sourmash_tst_utils as utils
-import sourmash_lib
-from sourmash_lib import MinHash
-from sourmash_lib.sbt import SBT, Node
-from sourmash_lib.sbtmh import SigLeaf, load_sbt_index
+import sourmash
+from sourmash import MinHash
+from sourmash.sbt import SBT, Node
+from sourmash.sbtmh import SigLeaf, load_sbt_index
 try:
     import matplotlib
     matplotlib.use('Agg')
 except ImportError:
     pass
 
-from sourmash_lib import signature
-from sourmash_lib import VERSION
+from sourmash import signature
+from sourmash import VERSION
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -328,24 +328,55 @@ def test_do_sourmash_compute_multik_protein_bad_ksize():
         assert 'protein ksizes must be divisible by 3' in err
 
 
-def test_do_sourmash_compute_multik_only_protein():
+@utils.in_tempdir
+def test_do_sourmash_compute_multik_only_protein(c):
+    # check sourmash compute with only protein, no nucl
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '21,30',
+                   '--protein', '--no-dna', testdata1)
+    outfile = os.path.join(c.location, 'short.fa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 30 in ksizes
+
+
+def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
+        testdata1 = utils.get_test_data('short-protein.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
+                                           ['compute', '-k', '20,32',
                                             '--protein', '--no-dna',
+                                            '--input-is-protein',
                                             testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
+                                           in_directory=location,
+                                           fail_ok=True)
+        outfile = os.path.join(location, 'short-protein.fa.sig')
         assert os.path.exists(outfile)
 
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 2
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+
+@utils.in_tempdir
+def test_do_sourmash_compute_multik_only_protein_no_rna(c):
+    # test --no-rna as well (otherwise identical to previous test)
+    testdata1 = utils.get_test_data('short.fa')
+
+    c.run_sourmash('compute', '-k', '21,30',
+                   '--protein', '--no-rna', testdata1)
+    outfile = os.path.join(c.location, 'short.fa.sig')
+    assert os.path.exists(outfile)
+
+    with open(outfile, 'rt') as fp:
+        sigdata = fp.read()
+        siglist = list(signature.load_signatures(sigdata))
+        assert len(siglist) == 2
+        ksizes = set([ x.minhash.ksize for x in siglist ])
+        assert 21 in ksizes
+        assert 30 in ksizes
 
 
 def test_do_sourmash_compute_protein_bad_sequences():
@@ -427,7 +458,7 @@ def test_do_sourmash_compute_with_scaled_1():
 
         max_hashes = [ x.minhash.max_hash for x in siglist ]
         assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash_lib.MAX_HASH }
+        assert set(max_hashes) == { sourmash.MAX_HASH }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -571,26 +602,42 @@ def test_do_sourmash_check_protein_comparisons():
         assert round(sig2_aa.similarity(sig2_trans), 3) == 0.0
 
 
-def test_do_sourmash_check_knowngood_dna_comparisons():
+@utils.in_tempdir
+def test_do_sourmash_check_knowngood_dna_comparisons(c):
     # this test checks against a known good signature calculated
     # by utils/compute-dna-mh-another-way.py
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('ecoli.genes.fna')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--singleton', '--dna',
-                                            testdata1],
-                                           in_directory=location)
-        sig1 = os.path.join(location, 'ecoli.genes.fna.sig')
-        assert os.path.exists(sig1)
+    testdata1 = utils.get_test_data('ecoli.genes.fna')
+    c.run_sourmash('compute', '-k', '21',
+                   '--singleton', '--dna',
+                   testdata1)
+    sig1 = c.output('ecoli.genes.fna.sig')
+    assert os.path.exists(sig1)
 
-        x = list(signature.load_signatures(sig1))
-        sig1, sig2 = sorted(x, key=lambda x: x.name())
+    x = list(signature.load_signatures(sig1))
+    sig1, sig2 = sorted(x, key=lambda x: x.name())
 
-        knowngood = utils.get_test_data('benchmark.dna.sig')
-        good = list(signature.load_signatures(knowngood))[0]
+    knowngood = utils.get_test_data('benchmark.dna.sig')
+    good = list(signature.load_signatures(knowngood))[0]
 
-        assert sig2.similarity(good) == 1.0
+    assert sig2.similarity(good) == 1.0
+
+
+@utils.in_tempdir
+def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
+    # check the --rna flag; otherwise identical to previous test.
+    testdata1 = utils.get_test_data('ecoli.genes.fna')
+    c.run_sourmash('compute', '-k', '21', '--singleton', '--rna',
+                   testdata1)
+    sig1 = c.output('ecoli.genes.fna.sig')
+    assert os.path.exists(sig1)
+
+    x = list(signature.load_signatures(sig1))
+    sig1, sig2 = sorted(x, key=lambda x: x.name())
+
+    knowngood = utils.get_test_data('benchmark.dna.sig')
+    good = list(signature.load_signatures(knowngood))[0]
+
+    assert sig2.similarity(good) == 1.0
 
 
 def test_do_sourmash_check_knowngood_input_protein_comparisons():
@@ -639,31 +686,60 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert sig2_trans.similarity(good_trans) == 1.0
 
 
-def test_do_basic_compare():
+@utils.in_tempdir
+def test_do_basic_compare(c):
+    # try doing a basic compare
     import numpy
-    with utils.TempDirectory() as location:
-        testsigs = utils.get_test_data('genome-s1*.sig')
-        testsigs = glob.glob(testsigs)
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
 
-        args = ['compare', '-o', 'cmp', '-k', '21', '--dna'] + testsigs
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna', *testsigs)
 
-        cmp_outfile = os.path.join(location, 'cmp')
-        assert os.path.exists(cmp_outfile)
-        cmp_out = numpy.load(cmp_outfile)
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
 
         sigs = []
         for fn in testsigs:
-            sigs.append(sourmash_lib.load_one_signature(fn, ksize=21,
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
                                                         select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
 
-        cmp_calc = numpy.zeros([len(sigs), len(sigs)])
-        for i, si in enumerate(sigs):
-            for j, sj in enumerate(sigs):
-                cmp_calc[i][j] = si.similarity(sj)
 
-        assert (cmp_out == cmp_calc).all()
+@utils.in_tempdir
+def test_do_basic_compare_using_rna_arg(c):
+    # try doing a basic compare using --rna instead of --dna
+    import numpy
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--rna', *testsigs)
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
+
+    assert (cmp_out == cmp_calc).all()
 
 
 def test_do_compare_quiet():
@@ -1085,6 +1161,42 @@ def test_search_csv():
             assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
 
+@utils.in_tempdir
+def test_search_lca_db(c):
+    # can we do a 'sourmash search' on an LCA database?
+    query = utils.get_test_data('47.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    c.run_sourmash('search', query, lca_db)
+    print(c)
+    assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
+
+
+@utils.in_tempdir
+def test_gather_lca_db(c):
+    # can we do a 'sourmash gather' on an LCA database?
+    query = utils.get_test_data('47+63.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    c.run_sourmash('gather', query, lca_db)
+    print(c)
+    assert 'NC_009665.1 Shewanella baltica OS185' in str(c.last_result.out)
+
+
+@utils.in_tempdir
+def test_gather_csv_output_filename_bug(c):
+    # check a bug where the database filename in the output CSV was incorrect
+    query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db_1 = utils.get_test_data('lca/delmont-1.lca.json')
+    lca_db_2 = utils.get_test_data('lca/delmont-2.lca.json')
+
+    c.run_sourmash('gather', query, lca_db_1, lca_db_2, '-o', 'out.csv')
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        row = next(r)
+        assert row['filename'] == lca_db_1
+
+
 def test_compare_deduce_molecule():
     # deduce DNA vs protein from query, if it is unique
     with utils.TempDirectory() as location:
@@ -1305,6 +1417,45 @@ def test_do_sourmash_index_multiscaled_fail():
         print(status, out, err)
         assert status == -1
         assert 'trying to build an SBT with incompatible signatures.' in err
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_multiscaled_rescale(c):
+    # test sourmash index --scaled
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('compute', '--scaled', '10', testdata1)
+    c.run_sourmash('compute', '--scaled', '1', testdata2)
+
+    c.run_sourmash('index', '-k', '31', 'zzz',
+                   '--scaled', '10',
+                   'short.fa.sig',
+                   'short2.fa.sig')
+
+    print(c)
+    assert c.last_result.status == 0
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_multiscaled_rescale_fail(c):
+    # test sourmash index --scaled with invalid rescaling (10 -> 5)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('compute', '--scaled', '10', testdata1)
+    c.run_sourmash('compute', '--scaled', '1', testdata2)
+    # this should fail: cannot go from a scaled value of 10 to 5
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('index', '-k', '31', 'zzz',
+                       '--scaled', '5',
+                       'short.fa.sig',
+                       'short2.fa.sig')
+
+    print(e.value)
+    assert c.last_result.status == -1
+    assert 'new scaled 5 is lower than current sample scaled 10' in c.last_result.err
 
 
 def test_do_sourmash_sbt_search_output():
@@ -1670,6 +1821,9 @@ def test_search_metagenome_traverse():
         assert '13 matches; showing first 3:' in out
 
 
+# explanation: you cannot downsample a scaled SBT to match a scaled
+# signature, so make sure that when you try such a search, it fails!
+# (you *can* downsample a signature to match an SBT.)
 def test_search_metagenome_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1722,6 +1876,34 @@ def test_search_metagenome_downsample_containment():
         assert '12 matches; showing first 3:' in out
 
 
+@utils.in_tempdir
+def test_search_metagenome_downsample_index(c):
+    # does same search as search_metagenome_downsample_containment but
+    # rescales during indexing
+    #
+    # for now, this test should fail; we need to clean up some internal
+    # stuff before we can properly implement this!
+    #
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # downscale during indexing, rather than during search.
+    c.run_sourmash('index', 'gcf_all', '-k', '21', '--scaled', '100000',
+                   *testdata_sigs)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    c.run_sourmash('search', query_sig, 'gcf_all', '-k', '21',
+                       '--containment')
+    print(c)
+
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in str(c)
+    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(c)
+    assert '12 matches; showing first 3:' in str(c)
+
+
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
@@ -1761,7 +1943,8 @@ def test_do_sourmash_index_bad_args():
                                             '--dna', '--protein'],
                                            in_directory=location, fail_ok=True)
 
-        assert "cannot specify both --dna and --protein!" in err
+        print(out, err)
+        assert "cannot specify both --dna/--rna and --protein!" in err
         assert status != 0
 
 
@@ -2702,6 +2885,35 @@ def test_gather_metagenome():
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
 
+def test_multigather_metagenome():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'multigather --query {} --db gcf_all -k 21'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:
         # set up a directory $location/gather that contains
@@ -2764,6 +2976,25 @@ def test_gather_metagenome_output_unassigned():
         print(err)
         assert all(('1.3 Mbp       13.6%   28.2%' in out,
                 'NC_011294.1' in out))
+
+
+@utils.in_tempdir
+def test_gather_metagenome_output_unassigned_nomatches(c):
+    # test --output-unassigned when there are no matches
+    query_sig = utils.get_test_data('2.fa.sig')
+    against_sig = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('gather', query_sig, against_sig,
+                   '--output-unassigned', 'foo.sig')
+
+    print(c.last_result.out)
+    assert 'found 0 matches total;' in c.last_result.out
+
+    x = sourmash.load_one_signature(query_sig, ksize=31)
+    y = sourmash.load_one_signature(c.output('foo.sig'))
+
+    assert x.minhash == y.minhash
+
 
 def test_gather_metagenome_downsample():
     with utils.TempDirectory() as location:

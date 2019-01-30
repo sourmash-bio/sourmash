@@ -1,0 +1,13 @@
+cff-version: 1.0.3
+message: If you use this software, please cite it as below.
+title: sourmash: a library for MinHash sketching of DNA
+version: 2.0.0
+doi: 10.21105/joss.00027
+date-released: 2019-01-10
+authors:
+  - family-names: Brown
+    given-names: C. Titus
+    orcid: https://orcid.org/0000-0001-6001-2677
+  - family-names: Irber Junior
+    given-names: Luiz Carlos
+    orcid: https://orcid.org/0000-0003-4371-9659

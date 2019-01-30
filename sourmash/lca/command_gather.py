@@ -11,10 +11,12 @@ import csv
 from collections import Counter, defaultdict, namedtuple
 
 from .. import sourmash_args, save_signatures, SourmashSignature
-from ..logging import notify, error, print_results
+from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
-from .lca_utils import debug, set_debug, check_files_exist
+from .lca_utils import check_files_exist
 from ..search import format_bp
+from ..sourmash_args import SourmashArgumentParser
+
 
 LCAGatherResult = namedtuple('LCAGatherResult',
                              'intersect_bp, f_unique_to_query, f_unique_weighted, average_abund, lineage, f_match, name, n_equal_matches')
@@ -81,63 +83,48 @@ def gather_signature(query_sig, dblist, ignore_abundance):
     md5_to_lineage = {}
     md5_to_name = {}
 
-    x = set()
-    for hashval in query_mins:
-        for lca_db in dblist:
-            lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
-            for lid in lineage_ids:
-                md5 = lca_db.lineage_id_to_signature[lid]
-                x.add((lca_db, lid, md5))
-
-    for lca_db, lid, md5 in x:
-        md5_to_lineage[md5] = lca_db.lineage_dict[lid]
-        if lca_db.signature_to_name:
-            md5_to_name[md5] = lca_db.signature_to_name[md5]
-        else:
-            md5_to_name[md5] = ''
-
     # now! do the gather:
     while 1:
         # find all of the assignments for the current set of hashes
         assignments = defaultdict(set)
         for hashval in query_mins:
             for lca_db in dblist:
-                lineage_ids = lca_db.hashval_to_lineage_id.get(hashval, [])
-                for lid in lineage_ids:
-                    md5 = lca_db.lineage_id_to_signature[lid]
-                    signature_size = lca_db.lineage_id_counts[lid]
-                    assignments[hashval].add((md5, signature_size))
+                idx_list = lca_db.hashval_to_idx.get(hashval, [])
+
+                for idx in idx_list:
+                    assignments[hashval].add((lca_db, idx))
+
         # none? quit.
         if not assignments:
             break
 
         # count the distinct signatures.
         counts = Counter()
-        for hashval, md5_set in assignments.items():
-            for (md5, sigsize) in md5_set:
-                counts[(md5, sigsize)] += 1
+        for hashval, match_set in assignments.items():
+            for (lca_db, idx) in match_set:
+                counts[(lca_db, idx)] += 1
 
         # collect the most abundant assignments
         common_iter = iter(counts.most_common())
         best_list = []
-        (md5, sigsize), top_count = next(common_iter)
+        (best_lca_db, best_idx), top_count = next(common_iter)
 
-        best_list.append((md5_to_name[md5], md5, sigsize))
-        for (md5, sigsize), count in common_iter:
+        best_list.append((best_lca_db, best_idx))
+        for (lca_db, idx), count in common_iter:
             if count != top_count:
                 break
-            best_list.append((md5_to_name[md5], md5, sigsize))
+            best_list.append((lca_db, idx))
 
-        # sort on name and pick the top (for consistency).
-        best_list.sort()
-        _, top_md5, top_sigsize = best_list[0]
+        # sort on idx and pick the lowest (for consistency).
+        best_list.sort(key=lambda x: x[1])
+        best_lca_db, best_idx = best_list[0]
 
         equiv_counts = len(best_list) - 1
 
-        # now, remove from query mins.
+        # now, remove hashes from query mins.
         intersect_mins = set()
-        for hashval, md5_set in assignments.items():
-            if (top_md5, top_sigsize) in md5_set:
+        for hashval, match_set in assignments.items():
+            if (best_lca_db, best_idx) in match_set:
                 query_mins.remove(hashval)
                 intersect_mins.add(hashval)
 
@@ -145,7 +132,10 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         assert top_count == len(intersect_mins)
 
         # calculate size of match (# of hashvals belonging to that sig)
-        match_size = top_sigsize
+        match_size = 0
+        for hashval, idx_list in best_lca_db.hashval_to_idx.items():
+            if best_idx in idx_list:
+                match_size += 1
 
         # construct 'result' object
         intersect_bp = top_count * query_sig.minhash.scaled
@@ -155,13 +145,23 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                / len(intersect_mins)
         f_match = len(intersect_mins) / match_size
 
+        # XXX name and lineage
+        for ident, idx in best_lca_db.ident_to_idx.items():
+            if idx == best_idx:
+                name = best_lca_db.ident_to_name[ident]
+
+        lid = best_lca_db.idx_to_lid.get(best_idx)
+        lineage = ()
+        if lid is not None:
+            lineage = best_lca_db.lid_to_lineage[lid]
+
         result = LCAGatherResult(intersect_bp = intersect_bp,
                                  f_unique_to_query= top_count / n_mins,
                                  f_unique_weighted=f_unique_weighted,
                                  average_abund=average_abund,
                                  f_match=f_match,
-                                 lineage=md5_to_lineage[top_md5],
-                                 name=md5_to_name[top_md5],
+                                 lineage=lineage,
+                                 name=name,
                                  n_equal_matches=equiv_counts)
 
         f_unassigned = len(query_mins) / n_mins
@@ -185,20 +185,22 @@ def gather_main(args):
     full lineage information for each known hash, as opposed to storing only
     the least-common-ancestor information for it.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca gather")
+    p = SourmashArgumentParser(prog="sourmash lca gather")
     p.add_argument('query')
     p.add_argument('db', nargs='+')
-    p.add_argument('-d', '--debug', action='store_true')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    help='output CSV containing matches to this file')
     p.add_argument('--output-unassigned', type=argparse.FileType('wt'),
                    help='output unassigned portions of the query as a signature to this file')
     p.add_argument('--ignore-abundance',  action='store_true',
                    help='do NOT use k-mer abundances if present')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     args = p.parse_args(args)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     if not check_files_exist(args.query, *args.db):
         sys.exit(-1)

@@ -30,6 +30,7 @@ cdef extern from "kmer_min_hash.hh":
 
         KmerMinHash(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
+        void remove_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
         void add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
@@ -42,6 +43,7 @@ cdef extern from "kmer_min_hash.hh":
 
         KmerMinAbundance(unsigned int, unsigned int, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
+        void remove_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
         void add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinAbundance&) except +ValueError

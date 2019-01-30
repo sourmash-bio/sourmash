@@ -1,0 +1,9 @@
+header = "/* c bindings to the sourmash library */"
+include_guard = "SOURMASH_H_INCLUDED"
+language = "C"
+
+[parse]
+expand = ["sourmash"]
+
+[enum]
+rename_variants = "QualifiedScreamingSnakeCase"
