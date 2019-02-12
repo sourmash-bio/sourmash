@@ -4,8 +4,6 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
-use serde_json;
-
 use crate::cmd::ComputeParameters;
 use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
