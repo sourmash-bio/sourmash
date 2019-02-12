@@ -4,6 +4,7 @@ import abc
 from io import BytesIO
 import os
 import tarfile
+import zipfile
 
 
 class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
@@ -26,6 +27,9 @@ class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
 
     def __exit__(self, type, value, traceback):
         pass
+
+    def can_open(self, location):
+        return False
 
 
 class FSStorage(Storage):
@@ -76,6 +80,15 @@ class TarStorage(Storage):
         else:
             self.tarfile = tarfile.open(path, 'w:gz')
 
+        self.subdir = None
+        try:
+            # TODO: check more than one dir?
+            subdirs = next(f for f in self.tarfile.getmembers() if f.isdir())
+        except StopIteration:
+            pass
+        else:
+            self.subdir = subdirs.name
+
     def save(self, path, content):
         info = tarfile.TarInfo(path)
         info.size = len(content)
@@ -86,7 +99,10 @@ class TarStorage(Storage):
         return path
 
     def load(self, path):
-        content = self.tarfile.getmember(path)
+        try:
+            content = self.tarfile.getmember(path)
+        except KeyError:
+            content = self.tarfile.getmember(os.path.join(self.subdir, path))
         f = self.tarfile.extractfile(content)
         return f.read()
 
@@ -95,6 +111,67 @@ class TarStorage(Storage):
 
     def __exit__(self, type, value, traceback):
         self.tarfile.close()
+
+    @staticmethod
+    def can_open(location):
+        try:
+            return tarfile.is_tarfile(location)
+        except IOError:
+            return False
+
+    def list_sbts(self):
+        return [f for f in self.tarfile.getnames() if f.endswith(".sbt.json")]
+
+
+class ZipStorage(Storage):
+
+    def __init__(self, path=None):
+        # TODO: leave it open, or close/open every time?
+
+        if path is None:
+            # TODO: Open a temporary file?
+            pass
+
+        self.path = os.path.abspath(path)
+
+        dirname = os.path.dirname(self.path)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        if os.path.exists(self.path):
+            self.zipfile = zipfile.ZipFile(path, 'r')
+        else:
+            self.zipfile = zipfile.ZipFile(path, mode='w',
+                                           compression=zipfile.ZIP_BZIP2)
+
+        self.subdir = None
+        subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]
+        if len(subdirs) == 1:
+            self.subdir = subdirs[0]
+
+    def save(self, path, content):
+        self.zipfile.writestr(path, content)
+        return path
+
+    def load(self, path):
+        try:
+            return self.zipfile.read(path)
+        except KeyError:
+            path = os.path.join(self.subdir, path)
+            return self.zipfile.read(path)
+
+    def init_args(self):
+        return {'path': self.path}
+
+    def __exit__(self, type, value, traceback):
+        self.zipfile.close()
+
+    @staticmethod
+    def can_open(location):
+        return zipfile.is_zipfile(location)
+
+    def list_sbts(self):
+        return [f for f in self.zipfile.namelist() if f.endswith(".sbt.json")]
 
 
 class IPFSStorage(Storage):

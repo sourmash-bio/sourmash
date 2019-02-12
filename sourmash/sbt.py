@@ -55,10 +55,11 @@ import math
 import os
 from random import randint, random
 import sys
+from tempfile import NamedTemporaryFile
 
 from deprecation import deprecated
 
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
+from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
@@ -68,6 +69,7 @@ STORAGES = {
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
     'RedisStorage': RedisStorage,
+    'ZipStorage': ZipStorage,
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
@@ -653,10 +655,40 @@ class SBT(Index):
         SBT
             the SBT tree built from the description.
         """
-        dirname = os.path.dirname(os.path.abspath(location))
-        sbt_name = os.path.basename(location)
-        if sbt_name.endswith('.sbt.json'):
-            sbt_name = sbt_name[:-9]
+        tempfile = None
+        sbt_name = None
+        tree_data = None
+
+        ## TODO: keep it more compatible with FSStorage,
+        ## don't force tree.sbt.json
+
+        if storage is None:
+            if ZipStorage.can_open(location):
+                storage = ZipStorage(location)
+            elif TarStorage.can_open(location):
+                storage = TarStorage(location)
+
+            if storage is not None:
+                sbts = storage.list_sbts()
+                if len(sbts) != 1:
+                    print("no SBT, or too many SBTs!")
+                else:
+                    tree_data = storage.load(sbts[0])
+
+        if tree_data is not None:
+            tempfile = NamedTemporaryFile()
+
+            tempfile.write(tree_data)
+            tempfile.flush()
+
+            dirname = os.path.dirname(tempfile.name)
+            sbt_name = os.path.basename(tempfile.name)
+
+        if sbt_name is None:
+            dirname = os.path.dirname(os.path.abspath(location))
+            sbt_name = os.path.basename(location)
+            if sbt_name.endswith('.sbt.json'):
+                sbt_name = sbt_name[:-9]
 
         loaders = {
             1: cls._load_v1,
@@ -670,10 +702,13 @@ class SBT(Index):
             leaf_loader = Leaf.load
 
         sbt_fn = os.path.join(dirname, sbt_name)
-        if not sbt_fn.endswith('.sbt.json'):
+        if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
         with open(sbt_fn) as fp:
             jnodes = json.load(fp)
+
+        if tempfile is not None:
+            tempfile.close()
 
         version = 1
         if isinstance(jnodes, Mapping):
@@ -681,6 +716,12 @@ class SBT(Index):
 
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
+        elif storage is None:
+            klass = STORAGES[jnodes['storage']['backend']]
+            if jnodes['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, jnodes['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**jnodes['storage']['args'])
 
         return loaders[version](jnodes, leaf_loader, dirname, storage,
                                 print_version_warning)
@@ -760,12 +801,6 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
-
         factory = GraphFactory(*info['factory']['args'])
 
         max_node = 0
@@ -807,12 +842,6 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
-
         factory = GraphFactory(*info['factory']['args'])
 
         max_node = 0
@@ -848,11 +877,12 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
 
         factory = GraphFactory(*info['factory']['args'])
 

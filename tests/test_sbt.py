@@ -1,15 +1,16 @@
 from __future__ import print_function, unicode_literals
 
+import shutil
 import os
 
 import pytest
 
-from sourmash import load_one_signature, SourmashSignature
+from sourmash import load_one_signature, SourmashSignature, load_signatures
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
-from sourmash.sbt_storage import (FSStorage, TarStorage,
-                                  RedisStorage, IPFSStorage)
+from sourmash.sbt_storage import (FSStorage, TarStorage, RedisStorage,
+                                  IPFSStorage, ZipStorage)
 
 from . import sourmash_tst_utils as utils
 
@@ -442,6 +443,40 @@ def test_sbt_tarstorage():
             assert old_result == new_result
 
 
+def test_sbt_zipstorage(tmpdir):
+    factory = GraphFactory(31, 1e5, 4)
+
+    tree = SBT(factory)
+
+    for f in utils.SIG_FILES:
+        sig = next(load_signatures(utils.get_test_data(f)))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    old_result = {str(s) for s in tree.find(search_minhashes,
+                                            to_search.data, 0.1)}
+    print(*old_result, sep='\n')
+
+    with ZipStorage(tmpdir.join("tree.zip")) as storage:
+        tree.save(str(tmpdir.join("tree")), storage=storage)
+
+    with ZipStorage(tmpdir.join("tree.zip")) as storage:
+        tree = SBT.load(str(tmpdir.join("tree")),
+                        leaf_loader=SigLeaf.load,
+                        storage=storage)
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*new_result, sep='\n')
+
+        assert old_result == new_result
+
+
 def test_sbt_ipfsstorage():
     ipfshttpclient = pytest.importorskip('ipfshttpclient')
 
@@ -519,6 +554,79 @@ def test_sbt_redisstorage():
             print(*new_result, sep='\n')
 
             assert old_result == new_result
+
+
+def test_load_zip(tmpdir):
+    testdata = utils.get_test_data("v5.zip")
+    testsbt = tmpdir.join("v5.zip")
+
+    shutil.copyfile(testdata, str(testsbt))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+    assert len(new_result) == 2
+
+
+def test_load_zip_uncompressed(tmpdir):
+    import zipfile
+
+    testdata = utils.get_test_data("v5.zip")
+    testsbt = tmpdir.join("v5.sbt.json")
+
+    with zipfile.ZipFile(testdata, 'r') as z:
+        z.extractall(str(tmpdir))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+    assert len(new_result) == 2
+
+
+def test_load_tar(tmpdir):
+    testdata = utils.get_test_data("v5.tar.gz")
+    testsbt = tmpdir.join("v5.tar.gz")
+
+    shutil.copyfile(testdata, str(testsbt))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+    assert len(new_result) == 2
+
+
+def test_load_tar_uncompressed(tmpdir):
+    import tarfile
+
+    testdata = utils.get_test_data("v5.tar.gz")
+    testsbt = tmpdir.join("v5.sbt.json")
+    with tarfile.open(testdata, 'r') as t:
+        t.extractall(str(tmpdir))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+    assert len(new_result) == 2
 
 
 def test_tree_repair():

@@ -161,6 +161,8 @@ impl Signature {
     where
         R: io::Read,
     {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
         let sigs: Vec<Signature> = serde_json::from_reader(rdr)?;
         Ok(sigs)
     }

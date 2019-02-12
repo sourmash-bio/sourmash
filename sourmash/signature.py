@@ -314,7 +314,7 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     raise ValueError("expected to load exactly one signature")
 
 
-def save_signatures(siglist, fp=None):
+def save_signatures(siglist, fp=None, compressed=False):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     attached_refs = weakref.WeakKeyDictionary()
     collected = []

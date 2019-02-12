@@ -6,7 +6,6 @@ use std::slice;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use fixedbitset::FixedBitSet;
-use primal_check;
 
 use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;

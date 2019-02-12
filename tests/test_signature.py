@@ -297,6 +297,19 @@ def test_load_minified(track_abundance):
     assert '\n' not in minified
 
 
+def test_load_compressed(track_abundance):
+    e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    sig1 = SourmashSignature(e1)
+
+    x = save_signatures([sig1], compressed=True)
+
+    y = load_one_signature(x)
+    assert sig1 == y
+
+    sigfile = utils.get_test_data('genome-s10+s11.sig.gz')
+    sigs = load_signatures(sigfile)
+
+
 def test_binary_fp(tmpdir, track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add("AT" * 10)
