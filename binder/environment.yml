@@ -1,0 +1,12 @@
+channels:
+  - bioconda
+  - defaults
+  - conda-forge
+dependencies:
+  - sourmash
+  - screed
+  - matplotlib
+  - pandas
+  - pip:
+    - matplotlib_venn
+    - mmh3
