@@ -146,11 +146,11 @@ Contents:
    databases
    api
    api-example
+   notebooks
    other-languages
    requirements
    more-info
    support
-   test-notebook
 
 
 Indices and tables
