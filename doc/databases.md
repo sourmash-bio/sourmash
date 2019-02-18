@@ -3,8 +3,7 @@
 ## RefSeq microbial genomes - SBT
 
 These database are formatted for use with `sourmash search` and
-`sourmash gather`. They are calculated with a scaled value of
-2000.
+`sourmash gather`. They are calculated with a scaled value of 2000.
 
 Approximately 60,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
