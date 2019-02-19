@@ -1,4 +1,5 @@
-use sourmash::KmerMinHash;
+use sourmash::signature::SigsTrait;
+use sourmash::sketch::minhash::KmerMinHash;
 
 #[test]
 fn throws_error() {
@@ -15,13 +16,13 @@ fn merge() {
     let mut a = KmerMinHash::new(20, 10, false, 42, 0, false);
     let mut b = KmerMinHash::new(20, 10, false, 42, 0, false);
 
-    a.add_sequence(b"TGCCGCCCAGCA", false);
-    b.add_sequence(b"TGCCGCCCAGCA", false);
+    a.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
+    b.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
 
-    a.add_sequence(b"GTCCGCCCAGTGA", false);
-    b.add_sequence(b"GTCCGCCCAGTGG", false);
+    a.add_sequence(b"GTCCGCCCAGTGA", false).unwrap();
+    b.add_sequence(b"GTCCGCCCAGTGG", false).unwrap();
 
-    a.merge(&b);
+    a.merge(&b).unwrap();
     assert_eq!(
         a.to_vec(),
         vec![
@@ -42,20 +43,24 @@ fn compare() {
     let mut a = KmerMinHash::new(20, 10, false, 42, 0, false);
     let mut b = KmerMinHash::new(20, 10, false, 42, 0, false);
 
-    a.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false);
-    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false);
+    a.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
+        .unwrap();
+    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
+        .unwrap();
     assert_eq!(a.compare(&b).unwrap(), 1.0);
     //    assert_eq!(b.compare(&b).unwrap(), 1.0);
     assert_eq!(b.compare(&a).unwrap(), 1.0);
     //    assert_eq!(a.compare(&a).unwrap(), 1.0);
 
-    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false);
+    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
+        .unwrap();
     assert_eq!(a.compare(&b).unwrap(), 1.0);
     //    assert_eq!(b.compare(&b).unwrap(), 1.0);
     assert_eq!(b.compare(&a).unwrap(), 1.0);
     //    assert_eq!(a.compare(&a).unwrap(), 1.0);
 
-    b.add_sequence(b"GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT", false);
+    b.add_sequence(b"GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT", false)
+        .unwrap();
     assert!(a.compare(&b).unwrap() >= 0.3);
     assert!(b.compare(&a).unwrap() >= 0.3);
 }

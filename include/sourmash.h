@@ -51,6 +51,12 @@ void kmerminhash_add_sequence(KmerMinHash *ptr, const char *sequence, bool force
 
 void kmerminhash_add_word(KmerMinHash *ptr, const char *word);
 
+void kmerminhash_remove_hash(KmerMinHash *ptr, uint64_t h);
+
+void kmerminhash_remove_many(KmerMinHash *ptr,
+                             const uint64_t *hashes_ptr,
+                             uintptr_t insize);
+
 double kmerminhash_compare(KmerMinHash *ptr, const KmerMinHash *other);
 
 uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other);
