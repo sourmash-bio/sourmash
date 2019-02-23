@@ -190,6 +190,7 @@ databases; sourmash will happily ingest any taxonomy, whether or not
 it matches NCBI. See
 [the spreadsheet from Delmont et al., 2017](https://github.com/ctb/2017-sourmash-lca/blob/master/tara-delmont-SuppTable3.csv)
 for an example format.
+
 [Return to index][3]
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
