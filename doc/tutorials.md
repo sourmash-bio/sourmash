@@ -1,37 +1,52 @@
 # A sourmash tutorial
 
-This tutorial should run without modification on Ubuntu 15.10 ("wily");
-it was developed on AWS ami-05384865 (us-west region).
+This tutorial should run without modification on Linux or Mac OS X,
+under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 You'll need about 30 GB of free disk space to download the database,
 and about 1-2 GB of RAM to search it.  The tutorial should take about
 20 minutes total to run.
 
+## Install miniconda
+
+If you don't have the `conda` command installed, you'll need to install
+miniconda for Python 3.x.
+
+On Linux, this should work:
+```
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b
+echo export PATH="$HOME/miniconda3/bin:$PATH" >> ~/.bash_profile
+source ~/.bash_profile
+```
+otherwise, follow
+[the miniconda install](https://docs.conda.io/en/latest/miniconda.html).
+
+## Enable [bioconda](https://bioconda.github.io/)
+
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+
 ## Installing sourmash
 
-To install sourmash, run:
+To install sourmash, create a new environment named `smash` and install sourmash:
 
 ```
-sudo apt-get -y update && \
-sudo apt-get install -y python3.5-dev python3.5-venv make \
-    libc6-dev g++ zlib1g-dev
+conda create -y -n smash sourmash
 ```
 
-this installs Python 3.5.
-
-Now, create a local software install and populate it with Jupyter and
-other dependencies:
-
+and then activate:
+```
+conda activate smash
 ```
 
-python3.5 -m venv ~/py3
-. ~/py3/bin/activate
-pip install -U pip
-pip install -U Cython
-pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn khmer
+You should now be able to use the `sourmash` command:
 
-pip install -U https://github.com/dib-lab/sourmash/archive/master.zip
-
+```
+sourmash info
 ```
 
 ## Generate a signature for Illumina reads
@@ -45,13 +60,13 @@ wget https://s3.amazonaws.com/public.ged.msu.edu/ecoli_ref-5m.fastq.gz
 wget https://s3.amazonaws.com/public.ged.msu.edu/ecoliMG1655.fa.gz
 ```
 
-Compute a scaled MinHash signature from our reads:
+Compute a scaled signature from our reads:
 
 ```
 mkdir ~/sourmash
 cd ~/sourmash
 
-sourmash compute --scaled 10000 ~/data/ecoli_ref*pe*.fq.gz -o ecoli-reads.sig -k 31
+sourmash compute --scaled 10000 ~/data/ecoli_ref*.fastq.gz -o ecoli-reads.sig -k 31
 ```
 
 ## Compare reads to assemblies
@@ -61,7 +76,7 @@ Use case: how much of the read content is contained in the reference genome?
 Build a signature for an E. coli genome:
 
 ```
-sourmash compute --scaled 10000 -k 31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
+sourmash compute --scaled 1000 -k 31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
 ```
 
 and now evaluate *containment*, that is, what fraction of the read content is
@@ -80,7 +95,7 @@ loaded 1 signatures from ecoli-genome.sig
 1 matches:
 similarity   match
 ----------   -----
- 46.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
+ 10.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
 ```
 
 
@@ -111,7 +126,7 @@ cd ../
 
 ```
 
-This will produce 50 files named `ecoli-N.sig` in the `ecoli_many_sigs` --
+This will produce 50 files named `ecoli-N.sig` in the directory `ecoli_many_sigs/` --
 
 ```
 ls ecoli_many_sigs
@@ -139,26 +154,27 @@ loaded 0 signatures and 1 databases total.
 49 matches; showing first 20:
 similarity   match
 ----------   -----
- 75.4%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
- 72.2%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
- 71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
- 70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
- 69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
- 64.9%       NZ_JNLZ01000001.1 Escherichia coli 3-105-05_S1_C1 e310505...
- 63.0%       NZ_MOJK01000001.1 Escherichia coli strain 469 Cleandata-B...
- 62.9%       NZ_MOGK01000001.1 Escherichia coli strain 676 BN4_676_1_(...
- 62.0%       NZ_JHDG01000001.1 Escherichia coli 1-176-05_S3_C1 e117605...
- 59.9%       NZ_MIWF01000001.1 Escherichia coli strain AF7759-1 contig...
- 52.7%       NZ_KE700241.1 Escherichia coli HVH 147 (4-5893887) acYxy-...
- 51.7%       NZ_APWY01000001.1 Escherichia coli 178200 gec178200.conti...
- 49.3%       NZ_LVOV01000001.1 Escherichia coli strain swine72 swine72...
- 49.3%       NZ_MIWP01000001.1 Escherichia coli strain K6412 contig_00...
- 49.0%       NZ_LQWB01000001.1 Escherichia coli strain GN03624 GCID_EC...
- 48.9%       NZ_JHGJ01000001.1 Escherichia coli O45:H2 str. 2009C-4780...
- 48.1%       NZ_CP011331.1 Escherichia coli O104:H4 str. C227-11, comp...
- 47.7%       NZ_JHNB01000001.1 Escherichia coli O103:H25 str. 2010C-45...
- 47.7%       NZ_JHRE01000001.1 Escherichia coli strain 302014 302014_1...
- 47.6%       NZ_JHHE01000001.1 Escherichia coli O103:H2 str. 2009C-327...
+ 75.9%       NZ_JMGW01000001.1 Escherichia coli 1-176-05_S4_C2 e117605...
+ 73.0%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
+ 71.9%       NZ_GG774190.1 Escherichia coli MS 196-1 Scfld2538, whole ...
+ 70.5%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
+ 69.8%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
+ 59.9%       NZ_JNLZ01000001.1 Escherichia coli 3-105-05_S1_C1 e310505...
+ 58.3%       NZ_JHDG01000001.1 Escherichia coli 1-176-05_S3_C1 e117605...
+ 56.5%       NZ_MIWF01000001.1 Escherichia coli strain AF7759-1 contig...
+ 56.1%       NZ_MOJK01000001.1 Escherichia coli strain 469 Cleandata-B...
+ 56.1%       NZ_MOGK01000001.1 Escherichia coli strain 676 BN4_676_1_(...
+ 50.5%       NZ_KE700241.1 Escherichia coli HVH 147 (4-5893887) acYxy-...
+ 50.3%       NZ_APWY01000001.1 Escherichia coli 178200 gec178200.conti...
+ 48.8%       NZ_LVOV01000001.1 Escherichia coli strain swine72 swine72...
+ 48.8%       NZ_MIWP01000001.1 Escherichia coli strain K6412 contig_00...
+ 48.7%       NZ_AIGC01000068.1 Escherichia coli DEC7C gecDEC7C.contig....
+ 48.2%       NZ_LQWB01000001.1 Escherichia coli strain GN03624 GCID_EC...
+ 48.0%       NZ_CCQJ01000001.1 Escherichia coli strain E. coli, whole ...
+ 47.3%       NZ_JHMG01000001.1 Escherichia coli O121:H19 str. 2010EL10...
+ 47.2%       NZ_JHGJ01000001.1 Escherichia coli O45:H2 str. 2009C-4780...
+ 46.5%       NZ_JHHE01000001.1 Escherichia coli O103:H2 str. 2009C-327...
+
 ```
 
 ## Compare many signatures and build a tree.
@@ -175,9 +191,8 @@ and then plot:
 sourmash plot --pdf --labels ecoli_cmp
 ```
 
-which will produce a file `ecoli_cmp.matrix.pdf` and `ecoli_cmp.dendro.pdf`
-which you can then download via your file browser and view on your local
-computer.
+which will produce files named `ecoli_cmp.matrix.pdf` and
+`ecoli_cmp.dendro.pdf`.
 
 Here's a PNG version:
 
@@ -192,16 +207,16 @@ in
 [available databases][1] for more information.)
 
 ```
-curl -O https://s3-us-west-1.amazonaws.com/spacegraphcats.ucdavis.edu/microbe-genbank-sbt-k31-2017.05.09.tar.gz
-tar xzf microbe-genbank-sbt-k31-2017.05.09.tar.gz
+curl https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k31.tar.gz | \
+    tar xzf -
 ```
 
-This produces a file `genbank-k31.sbt.json` and a whole bunch of hidden
-files in the directory `.sbt.genbank-k31`.
+This produces a file `genbank-d2-k31.sbt.json` and a whole bunch of hidden
+files in the directory `.sbt.genbank-d2-k31`.
 
 Next, run the 'gather' command to see what's in your ecoli genome --
 ```
-sourmash gather -k 31 ecoli-genome.sig genbank-k31.sbt.json
+sourmash gather -k 31 ecoli-genome.sig genbank-d2-k31.sbt.json
 ```
 
 and you should get:
@@ -229,7 +244,7 @@ from the
 
 ```
 wget https://github.com/dib-lab/sourmash/raw/master/doc/_static/shakya-unaligned-contigs.sig
-sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-k31.sbt.json
+sourmash gather -k 31 shakya-unaligned-contigs.sig genbank-d2-k31.sbt.json
 ```
 
 This should yield:
