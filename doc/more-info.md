@@ -32,6 +32,8 @@ code in sourmash, [utils/compute-dna-mh-another-way.py][4]
 [sourmash: a library for MinHash sketching of DNA.][22], Brown and Irber, 2017.
 
 [Improving MinHash via the Containment Index with Applications to Metagenomic Analysis][23], Koslicki and Zabeti, 2017.
+
+[Ultra-fast search of all deposited bacterial and viral genomic data](http://dx.doi.org/10.1038/s41587-018-0010-1), Bradley et al., 2019.
  
 [Streaming histogram sketching for rapid microbiome analytics](https://www.biorxiv.org/content/10.1101/408070v1), Rowe et al., 2019.
 
