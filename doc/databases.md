@@ -44,7 +44,7 @@ sourmash compute -k 21,31,51 \
                  {input}
 ```
 
-See https://github.com/dib-lab/sourmash_databases for a Snakemake workflow
+See [github.com/dib-lab/sourmash_databases](https://github.com/dib-lab/sourmash_databases) for a Snakemake workflow
 to build the databases.
 
 [0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k21.tar.gz
