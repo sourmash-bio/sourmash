@@ -1,5 +1,12 @@
 # Additional information on sourmash
 
+## Computational requirements
+
+Read more about the [compute requirements, here.](requirements.html)
+
+## Prepared search database
+
+We offer a number of [prepared search databases.](databases.html)
 
 ## Other MinHash implementations for DNA
 

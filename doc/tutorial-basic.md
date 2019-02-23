@@ -1,4 +1,4 @@
-# A sourmash tutorial
+# The first sourmash tutorial - making signatures, comparing, and searching
 
 This tutorial should run without modification on Linux or Mac OS X,
 under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
