@@ -29,7 +29,7 @@ software and the `mash paper (Ondov et al., 2016)
 <http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
 information on how and why MinHash sketches work.
 
-**Questions? Thoughts?** Ask us on the `sourmash issue tracker <https://github.com/dib-lab/sourmash/issues/>`__.
+**Questions? Thoughts?** Ask us on the `sourmash issue tracker <https://github.com/dib-lab/sourmash/issues/>`__!
 
 ----
 
