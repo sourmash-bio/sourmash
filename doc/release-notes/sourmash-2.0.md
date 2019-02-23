@@ -23,7 +23,7 @@ This is a list of substantial new features and functionality in sourmash 2.0.
 * Created [precomputed databases](../databases.html) for most of GenBank genomes.
 * Added taxonomic reporting functionality in the `sourmash lca` submodule - [see command-line docs](../command-line.html#sourmash-lca-subcommands-for-taxonomic-classification).
 * Added signature manipulation utilities in the `sourmash signature` submodule - [see command-line docs](../command-line.html#sourmash-signature-subcommands-for-signature-manipulation)
-* Introduced new modulo hash or "scaled" signatures for containment analysis; see [Using sourmash: a practical guide](../using-sourmash-a-guide.html#what-resolution-should-my-signatures-be-how-should-i-compute-them) and [../api-example.html#sourmash-minhash-objects-and-manipulations](more details in the Python API examples).
+* Introduced new modulo hash or "scaled" signatures for containment analysis; see [Using sourmash: a practical guide](../using-sourmash-a-guide.html#what-resolution-should-my-signatures-be-how-should-i-compute-them) and [more details in the Python API examples](../api-example.html#sourmash-minhash-objects-and-manipulations).
 * Switched to using JSON instead of YAML for signatures.
 * Many performance optimizations!
 * Many more tests!
