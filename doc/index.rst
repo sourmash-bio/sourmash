@@ -83,7 +83,7 @@ be stored, searched, explored, and taxonomically annotated.
 
 You can take a look at sourmash analyses on real data `in a saved
 Jupyter notebook
-<https://github.com/dib-lab/sourmash/blob/master/doc/sourmash-examples.ipynb>`__,
+<https://github.com/dib-lab/sourmash/blob/add/nbsphinx/doc/sourmash-examples.ipynb>`__,
 and experiment with it yourself `interactively in a Jupyter Notebook
 <https://mybinder.org/v2/gh/dib-lab/sourmash/add/nbsphinx?filepath=doc%2Fsourmash-examples.ipynb>`__ at `mybinder.org
 <http://mybinder.org>`__.
