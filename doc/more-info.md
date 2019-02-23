@@ -25,13 +25,17 @@ code in sourmash, [utils/compute-dna-mh-another-way.py][4]
 
 ## Papers and references
 
- [On the resemblance and containment of documents][20],  Broder, 1997. The original MinHash paper!
+[On the resemblance and containment of documents][20],  Broder, 1997. The original MinHash paper!
 
- [Mash: fast genome and metagenome distance estimation using MinHash.][21], Ondov et al. 2016.
+[Mash: fast genome and metagenome distance estimation using MinHash.][21], Ondov et al. 2016.
 
- [sourmash: a library for MinHash sketching of DNA.][22], Brown and Irber, 2017.
+[sourmash: a library for MinHash sketching of DNA.][22], Brown and Irber, 2017.
 
- [Improving MinHash via the Containment Index with Applications to Metagenomic Analysis][23], Koslicki and Zabeti, 2017.
+[Improving MinHash via the Containment Index with Applications to Metagenomic Analysis][23], Koslicki and Zabeti, 2017.
+ 
+[Streaming histogram sketching for rapid microbiome analytics](https://www.biorxiv.org/content/10.1101/408070v1), Rowe et al., 2019.
+
+[Dashing: Fast and Accurate Genomic Distances with HyperLogLog](https://www.biorxiv.org/content/10.1101/501726v2), Baker and Langmead, 2019.
 
 ## Presentations and posters
 
