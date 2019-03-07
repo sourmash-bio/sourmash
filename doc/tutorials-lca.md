@@ -4,15 +4,56 @@ The `sourmash lca` sub-commands do k-mer classification using an
 "lowest common ancestor" approach.  See "Some discussion" below for
 links and details.
 
-## Quickstart
+This tutorial should run without modification on Linux or Mac OS X,
+under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-(These `sourmash lca classify` and `sourmash lca summarize` steps require
-about 4 GB of RAM when using the genbank database, as below.)
+You'll need about 5 GB of free disk space to download the database,
+and about 5 GB of RAM to search it.  The tutorial should take about
+20 minutes total to run.
 
-First, install sourmash 2.0a4 or later.
+## Install miniconda
+
+If you don't have the `conda` command installed, you'll need to install
+miniconda for Python 3.x.
+
+On Linux, this should work:
 ```
-pip install -U https://github.com/dib-lab/sourmash/archive/master.zip
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b
+echo export PATH="$HOME/miniconda3/bin:$PATH" >> ~/.bash_profile
+source ~/.bash_profile
 ```
+otherwise, follow
+[the miniconda install](https://docs.conda.io/en/latest/miniconda.html).
+
+## Enable [bioconda](https://bioconda.github.io/)
+
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+
+## Install sourmash
+
+To install sourmash, create a new environment named `smash` and install sourmash:
+
+```
+conda create -y -n smash sourmash
+```
+
+and then activate:
+```
+conda activate smash
+```
+
+You should now be able to use the `sourmash` command:
+
+```
+sourmash info
+```
+
+## Download some files
 
 Next, download a genbank LCA database for k=31:
 
@@ -27,7 +68,7 @@ curl -L -o some-genome.fa.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/178/
 
 Compute a signature for this genome:
 ```
-sourmash compute -k 31 --scaled=1000 some-genome.fa.gz
+sourmash compute -k 31 --scaled=1000 --name-from-first some-genome.fa.gz
 ```
 
 Now, classify the signature with sourmash `lca classify`,
@@ -36,7 +77,16 @@ sourmash lca classify --db genbank-k31.lca.json.gz \
     --query some-genome.fa.gz.sig
 ```
 and this will give you a taxonomic identification of your genome bin,
-classify using all of the genbank microbial genomes.
+classified using all of the genbank microbial genomes:
+
+```
+loaded 1 LCA databases. ksize=31, scaled=10000
+finding query signatures...
+outputting classifications to stdout
+ID,status,superkingdom,phylum,class,order,family,genus,species,strain
+... classifying NC_016901.1 Shewanella baltica OS678, complete genome (file 1 of"NC_016901.1 Shewanella baltica OS678, complete genome",found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Shewanellaceae,Shewanella,Shewanella baltica,
+classified 1 signatures total
+```
 
 You can also summarize the taxonomic distribution of the content with
 `lca summarize`:
@@ -45,17 +95,25 @@ sourmash lca summarize --db genbank-k31.lca.json.gz \
     --query some-genome.fa.gz.sig
 ```
 
+which will show you:
+```
+loaded 1 LCA databases. ksize=31, scaled=10000
+finding query signatures...
+loaded 1 signatures from 1 files total.
+97.9%   520   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
+97.9%   520   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
+97.9%   520   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
+99.6%   529   Bacteria;Proteobacteria;Gammaproteobacteria
+99.6%   529   Bacteria;Proteobacteria
+99.6%   529   Bacteria
+45.4%   241   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
+```
+
 To apply this to your own genome(s), replace `some-genome.fa.gz` above
 with your own filename(s).
 
 You can also specify multiple databases and multiple query signatures
 on the command line; separate them with `--db` or `--query`.
-
-## A longer tutorial
-
-Install sourmash as above; see Appendix (below) for dependencies.
-
-Let's start by building your own LCA database, using your own taxonomy.
 
 ### Building your own LCA database
 
@@ -132,36 +190,6 @@ databases; sourmash will happily ingest any taxonomy, whether or not
 it matches NCBI. See
 [the spreadsheet from Delmont et al., 2017](https://github.com/ctb/2017-sourmash-lca/blob/master/tara-delmont-SuppTable3.csv)
 for an example format.
-
-## Appendix: Installing sourmash from scratch
-
-To install sourmash on an Ubuntu or Debian system, run:
-
-```
-sudo apt-get -y update && \
-sudo apt-get install -y python3.5-dev python3.5-venv make \
-    libc6-dev g++ zlib1g-dev
-```
-
-this installs Python 3.5.
-
-Now, create a local software install and populate it with Jupyter and
-other dependencies:
-
-```
-python3.5 -m venv ~/py3
-. ~/py3/bin/activate
-pip install -U pip
-pip install -U Cython
-pip install -U jupyter jupyter_client ipython pandas matplotlib scipy scikit-learn khmer
-```
-
-Last but not least, install `sourmash` from the LCA branch:
-
-```
-pip install -U https://github.com/dib-lab/sourmash/archive/add/lca.zip
-```
-
 
 [Return to index][3]
 
