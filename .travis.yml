@@ -53,7 +53,7 @@ jobs:
         - CIBW_SKIP='*-manylinux1_i686'
       install: skip
       script:
-        - $PIP install cibuildwheel==0.10.1
+        - sudo $PIP install cibuildwheel==0.10.1
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
@@ -69,7 +69,7 @@ jobs:
       osx_image: xcode10.1
       language: generic
       before_script:
-        - $PIP install -U pip setuptools
+        - sudo $PIP install -U pip setuptools
       env:
         - PIP=pip2
         - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
