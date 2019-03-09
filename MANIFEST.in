@@ -6,3 +6,4 @@ recursive-include third-party *.cc *.h
 global-exclude *.orig
 global-exclude *.pyc
 global-exclude *.so
+prune tests/test-data/
