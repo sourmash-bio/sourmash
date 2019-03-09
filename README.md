@@ -1,7 +1,7 @@
 # sourmash
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
-[![Build Status](https://travis-ci.org/dib-lab/sourmash.svg?branch=master)](https://travis-ci.org/dib-lab/sourmash)
+[![Build Status](https://travis-ci.com/dib-lab/sourmash.svg?branch=master)](https://travis-ci.com/dib-lab/sourmash)
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 
@@ -12,10 +12,6 @@ Usage:
     sourmash compute *.fq.gz
     sourmash compare *.sig -o distances
     sourmash plot distances
-
-We have demo notebooks on binder that you can interact with:
-
-[![Binder](http://mybinder.org/badge.svg)](http://mybinder.org/repo/dib-lab/sourmash)
 
 Sourmash 1.0 is [published on JOSS](https://doi.org/10.21105/joss.00027); please cite that paper if you use sourmash (`doi: 10.21105/joss.00027`):.
 
