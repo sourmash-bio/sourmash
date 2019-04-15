@@ -25,7 +25,7 @@ def _compare_serial(siglist, ignore_abundance):
     return values
 
 
-def _memmap_siglist(siglist):
+def memmap_siglist(siglist):
     """Write a memory-mapped array of signatures"""
     temp_folder = tempfile.mkdtemp()
     filename = os.path.join(temp_folder, 'siglist.mmap')
@@ -42,7 +42,7 @@ def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
         values = _compare_serial(siglist, ignore_abundance)
     else:
         # Create a memory-mapped array
-        memmapped = _memmap_siglist(siglist)
+        memmapped = memmap_siglist(siglist)
         sig_iterator = combinations(memmapped, 2)
 
         # This creates a condensed distance matrix
