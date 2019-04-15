@@ -14,15 +14,15 @@ def _compare_serial(siglist, ignore_abundance):
     # Combinations makes all unique sets of pairs, e.g. (A, B) but not (B, A)
     iterator = combinations(range(n), 2)
 
-    values = np.ones((n, n))
+    similarities = np.ones((n, n))
 
     for i, j in iterator:
         sig1 = siglist[i]
         similarity = sig1.similarity(siglist[j], ignore_abundance)
-        values[i][j] = similarity
-        values[j][i] = similarity
+        similarities[i][j] = similarity
+        similarities[j][i] = similarity
 
-    return values
+    return similarities
 
 
 def memmap_siglist(siglist):
@@ -39,7 +39,7 @@ def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
     n = len(siglist)
 
     if n_jobs is None or n_jobs == 1:
-        values = _compare_serial(siglist, ignore_abundance)
+        similarities = _compare_serial(siglist, ignore_abundance)
     else:
         # Create a memory-mapped array
         memmapped = memmap_siglist(siglist)
@@ -49,5 +49,10 @@ def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
         condensed = Parallel(n_jobs=n_jobs, require='sharedmem',
                              backend='threading')(
             delayed(sig1.similarity)(sig2, ignore_abundance) for sig1, sig2 in sig_iterator)
-        values = squareform(condensed)
-    return values
+        similarities = squareform(condensed)
+
+        # 'squareform' was made for *distance* matrices not *similarity*
+        # so need to replace diagonal values with 1.
+        # np.fill_digonal modifies 'similarities' in-place
+        np.fill_diagonal(similarities, 1)
+    return similarities
