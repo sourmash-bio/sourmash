@@ -1,7 +1,7 @@
 from . import sourmash_tst_utils as utils
 
 from sourmash.tenx import read_10x_folder, read_single_column, \
-    _pass_alignment_qc, _parse_barcode_renamer, barcode_iterator
+    _pass_alignment_qc, _parse_barcode_renamer, barcode_iterator, bam_to_fasta
 
 
 def test_read_single_column():
@@ -27,9 +27,9 @@ def test_read_10x_folder():
 def test__pass_alignment_qc():
     tenx_folder = utils.get_test_data('10x-example')
 
-    barcodes, bam_file = read_10x_folder(tenx_folder)
+    barcodes, bam = read_10x_folder(tenx_folder)
 
-    total_pass = sum(1 for alignment in bam_file if
+    total_pass = sum(1 for alignment in bam if
                      _pass_alignment_qc(alignment, barcodes))
     assert total_pass == 1610
 
@@ -40,3 +40,12 @@ def test__parse_barcode_renamer():
 
 def test_barcode_iterator():
     pass
+
+
+def test_bam_to_fasta():
+    tenx_folder = utils.get_test_data('10x-example')
+
+    barcodes, bam = read_10x_folder(tenx_folder)
+
+    fastas = bam_to_fasta(bam, barcodes, barcode_renamer=None)
+    assert len(list(fastas)) == 8
