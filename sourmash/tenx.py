@@ -161,4 +161,3 @@ def write_cell_sequences(cell_sequences):
         with open(filename, "w") as f:
             f.write(f">{cell}\n{seq}")
         yield filename
-    shutil.rmtree(temp_folder)
