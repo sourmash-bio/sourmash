@@ -295,6 +295,7 @@ def compute(args):
                 fastas = bam_to_fasta(bam, barcodes, barcode_renamer=None)
 
                 # TODO: Maybe parallelize this
+                siglist = []
                 for n, filename in enumerate(fastas):
                     Elist = make_minhashes()
                     if n % 10000 == 0:
@@ -307,6 +308,9 @@ def compute(args):
                                 args.input_is_protein,
                                 args.check_sequence)
                     siglist += build_siglist(Elist, filename, name)
+                    # Remove the file once we're done because there's
+                    # potentially ~700,000 files per 10x bam
+                    os.remove(filename)
 
                 notify('...{} {} sequences', filename, n, end='')
 
