@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import tempfile
 
 CELL_BARCODE = 'CB'
 UMI = 'UB'
@@ -143,7 +144,9 @@ def bam_to_fasta(bam, barcodes, barcode_renamer, delimiter="X",
             # by a non-alphabet letter
             cell_sequences[renamed] += alignment.seq + delimiter
 
-    write_cell_sequences(cell_sequences, output_folder, one_file_per_cell)
+    temp_folder = tempfile.mkdtemp()
+    write_cell_sequences(cell_sequences, temp_folder, one_file_per_cell)
+    return temp_folder
 
 
 def _write_one_file_per_cell(cell_sequences, output_folder):
@@ -152,7 +155,7 @@ def _write_one_file_per_cell(cell_sequences, output_folder):
 
     with open(filename, "w") as f:
         for cell, seq in cell_sequences.items():
-            f.write(f">{cell}\n{seq}")
+            f.write(f">{cell}\n{seq}\n")
     return filename
 
 
