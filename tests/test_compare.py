@@ -59,5 +59,5 @@ def test_memmap_siglist(siglist):
 
 def test_compare_all_pairs(siglist, ignore_abundance):
     similarities_parallel = compare_all_pairs(siglist, ignore_abundance, n_jobs=2)
-    similarities_serial = str(_compare_serial(siglist, ignore_abundance))
+    similarities_serial = _compare_serial(siglist, ignore_abundance)
     assert np.array_equal(similarities_parallel, similarities_serial)
