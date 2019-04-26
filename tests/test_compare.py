@@ -32,6 +32,11 @@ def test__compare_serial(siglist, ignore_abundance):
  [0.    0.364 0.    0.386 1.    0.    0.   ]
  [0.078 0.    0.072 0.    0.    1.    0.356]
  [0.086 0.    0.078 0.    0.    0.356 1.   ]]'''
+    names = ['SRR2255622_1.fastq.gz', 'SRR453566_1.fastq.gz',
+             'SRR2241509_1.fastq.gz', 'SRR453569_1.fastq.gz',
+             'SRR453570_1.fastq.gz', 'SRR2060939_2.fastq.gz',
+             'SRR2060939_1.fastq.gz']
+    assert names == [x.name() for x in siglist]
     assert str(similarities) == true_similarities
 
 
