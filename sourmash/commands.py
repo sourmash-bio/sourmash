@@ -294,6 +294,7 @@ def compute(args):
                 # Create a per-cell generator of fastas
                 fastas = bam_to_fasta(bam, barcodes, barcode_renamer=None)
 
+                # TODO: Maybe parallelize this
                 for n, filename in enumerate(fastas):
                     Elist = make_minhashes()
                     if n % 10000 == 0:
