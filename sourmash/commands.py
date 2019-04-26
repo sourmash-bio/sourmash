@@ -221,42 +221,27 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def maybe_add_barcode(barcode, cell_seqs):
-        if barcode not in cell_seqs:
-            cell_seqs[barcode] = make_minhashes()
-
-    def add_barcode_seqs(barcode_sequences):
+    def get_barcode_siglist(filename):
         """Add all a barcodes' sequences to a signature
 
         :param barcode: str
         :param sequences: [str]
         :return: [sig.SourmashSignature]
         """
-        barcode, sequences = barcode_sequences
-
-        from .tenx import BAM_FILENAME
-
         Elist = make_minhashes()
-        for sequence in sequences:
-            add_seq(Elist, sequence, args.input_is_protein,
+        if n % 10000 == 0:
+            if n:
+                notify('\r...{} {}', filename, n, end='')
+        for record in screed.open(filename):
+            name = record.name
+
+            add_seq(Elist, record.sequence,
+                    args.input_is_protein,
                     args.check_sequence)
-        return build_siglist(Elist, BAM_FILENAME, name=barcode)
-
-    def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
-        high_quality_mapping = alignment.mapq == 255
-        good_barcode = 'CB' in alignment.tags and \
-                       alignment.get_tag('CB') in barcodes
-        good_umi = 'UB' in alignment.tags
-
-        pass_qc = high_quality_mapping and good_barcode and \
-                  good_umi
-        if pass_qc:
-            barcode = alignment.get_tag('CB')
-            # if this isn't marked a duplicate, count it as a UMI
-            if not alignment.is_duplicate:
-                maybe_add_barcode(barcode, cell_seqs)
-                add_seq(cell_seqs[barcode], alignment.seq,
-                        args.input_is_protein, args.check_sequence)
+        # Remove the file once we're done because there's
+        # potentially ~700,000 files per 10x bam
+        os.remove(filename)
+        return build_siglist(Elist, filename, name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
