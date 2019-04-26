@@ -285,24 +285,32 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
-                import pathos.multiprocessing as mp
-                from .tenx import read_10x_folder, barcode_iterator
+                from .tenx import read_10x_folder, bam_to_fasta
 
-                barcodes, bam_file = read_10x_folder(filename)
+                barcodes, bam = read_10x_folder(filename)
 
                 notify('... reading sequences from {}', filename)
 
-                barcode_sequences = barcode_iterator(bam_file, barcodes,
-                                                     args.rename_10x_barcodes)
+                # Create a per-cell generator of fastas
+                fastas = bam_to_fasta(bam, barcodes, barcode_renamer=None)
 
-                pool = mp.Pool(processes=args.processes)
-                cell_signatures = pool.map(add_barcode_seqs, barcode_sequences)
+                for n, filename in enumerate(fastas):
+                    Elist = make_minhashes()
+                    if n % 10000 == 0:
+                        if n:
+                            notify('\r...{} {}', filename, n, end='')
+                    for record in screed.open(filename):
+                        name = record.name
 
-                sigs = list(itertools.chain(*cell_signatures))
-                if args.output:
-                    siglist += sigs
-                else:
-                    siglist = sigs
+                        add_seq(Elist, record.sequence,
+                                args.input_is_protein,
+                                args.check_sequence)
+                    siglist += build_siglist(Elist, filename, name)
+
+                notify('...{} {} sequences', filename, n, end='')
+
+                notify('calculated {} signatures for {} barcodes in {}',
+                       len(siglist), n + 1, filename)
 
             else:
                 # make minhashes for the whole file
