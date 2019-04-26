@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import shutil
 import tempfile
 
 CELL_BARCODE = 'CB'
@@ -120,7 +121,10 @@ def bam_to_fasta(bam, barcodes, barcode_renamer, delimiter="X",
         Tab-separated filename mapping a barcode to a new name, e.g.
         AAATGCCCAAACTGCT-1    lung_epithelial_cell|AAATGCCCAAACTGCT-1
     delimiter : str, default "X"
-        Non-DNA or protein alphabet character to be ignored
+        Non-DNA or protein alphabet character to be ignored, e.g. if a cell
+        has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
+        concatenated as 'AAAAAAAAAXCCCCCCCC'.
+
 
     Returns
     -------
@@ -144,41 +148,17 @@ def bam_to_fasta(bam, barcodes, barcode_renamer, delimiter="X",
             # by a non-alphabet letter
             cell_sequences[renamed] += alignment.seq + delimiter
 
+    filenames = write_cell_sequences(cell_sequences)
+    return filenames
+
+
+def write_cell_sequences(cell_sequences):
+    """Write each cell's sequences to an individual file"""
     temp_folder = tempfile.mkdtemp()
-    write_cell_sequences(cell_sequences, temp_folder, one_file_per_cell)
-    return temp_folder
-
-
-def _write_one_file_per_cell(cell_sequences, output_folder):
-    filename = os.path.join(output_folder,
-                            "per_cell_aligned_sequences.fasta")
-
-    with open(filename, "w") as f:
-        for cell, seq in cell_sequences.items():
-            f.write(f">{cell}\n{seq}\n")
-    return filename
-
-
-def _write_all_cells_in_one_file(cell_sequences, output_folder):
-    output_folder = os.path.join(output_folder,
-                                 "per_cell_aligned_sequences")
-    os.makedirs(output_folder, exist_ok=True)
-
-    filenames = []
 
     for cell, seq in cell_sequences.items():
-        filename = os.path.join(output_folder, cell + '.fasta')
-        with open(filename, "w"):
+        filename = os.path.join(temp_folder, cell + '.fasta')
+        with open(filename, "w") as f:
             f.write(f">{cell}\n{seq}")
-        filenames.append(filename)
-    return filenames
-
-
-def write_cell_sequences(cell_sequences, output_folder, one_file_per_cell=False):
-    if one_file_per_cell:
-        filenames = _write_one_file_per_cell(cell_sequences, output_folder)
-    else:
-        filename = _write_all_cells_in_one_file(cell_sequences, output_folder)
-        filenames = [filename]
-    return filenames
-
+        yield filename
+    shutil.rmtree(temp_folder)
