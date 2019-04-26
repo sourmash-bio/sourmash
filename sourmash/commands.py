@@ -367,7 +367,7 @@ def compare(args):
                         help='compare all signatures underneath directories.')
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
-    parser.add_argument('-p', '--processes', type=argparse.FileType('w'),
+    parser.add_argument('-p', '--processes', type=int,
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
