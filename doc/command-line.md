@@ -33,6 +33,13 @@ Next, compare all the signatures to each other:
 ```
 sourmash compare *.sig -o cmp
 ```
+
+Optionally, parallelize compare to 8 threads with `-p 8`:
+
+```
+sourmash compare -p 8 *.sig -o cmp
+```
+
 Finally, plot a dendrogram:
 ```
 sourmash plot cmp
