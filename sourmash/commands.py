@@ -221,7 +221,7 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def get_barcode_siglist(filename):
+    def build_siglist_fasta(fasta):
         """Add all a barcodes' sequences to a signature
 
         :param barcode: str
@@ -229,10 +229,7 @@ def compute(args):
         :return: [sig.SourmashSignature]
         """
         Elist = make_minhashes()
-        if n % 10000 == 0:
-            if n:
-                notify('\r...{} {}', filename, n, end='')
-        for record in screed.open(filename):
+        for record in screed.open(fasta):
             name = record.name
 
             add_seq(Elist, record.sequence,
@@ -240,8 +237,8 @@ def compute(args):
                     args.check_sequence)
         # Remove the file once we're done because there's
         # potentially ~700,000 files per 10x bam
-        os.remove(filename)
-        return build_siglist(Elist, filename, name)
+        os.remove(fasta)
+        return build_siglist(Elist, fasta, name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -270,6 +267,7 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                from joblib import Parallel, delayed
                 from .tenx import read_10x_folder, bam_to_fasta
 
                 barcodes, bam = read_10x_folder(filename)
@@ -280,27 +278,12 @@ def compute(args):
                 fastas = bam_to_fasta(bam, barcodes, barcode_renamer=None)
 
                 # TODO: Maybe parallelize this
-                siglist = []
-                for n, filename in enumerate(fastas):
-                    Elist = make_minhashes()
-                    if n % 10000 == 0:
-                        if n:
-                            notify('\r...{} {}', filename, n, end='')
-                    for record in screed.open(filename):
-                        name = record.name
-
-                        add_seq(Elist, record.sequence,
-                                args.input_is_protein,
-                                args.check_sequence)
-                    siglist += build_siglist(Elist, filename, name)
-                    # Remove the file once we're done because there's
-                    # potentially ~700,000 files per 10x bam
-                    os.remove(filename)
-
-                notify('...{} {} sequences', filename, n, end='')
+                siglists = Parallel(n_jobs=args.processes)(
+                    delayed(build_siglist_fasta)(fasta) for fasta in fastas)
+                siglist = list(itertools.chain(*siglists))
 
                 notify('calculated {} signatures for {} barcodes in {}',
-                       len(siglist), n + 1, filename)
+                       len(siglist), len(siglist)/num_sigs, filename)
 
             else:
                 # make minhashes for the whole file
