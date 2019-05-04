@@ -54,7 +54,7 @@ jobs:
       install: skip
       script:
         - sudo $PIP install cibuildwheel==0.10.2
-        - cibuildwheel --output-dir wheelhouse
+        - travis_retry cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
         api_key:
