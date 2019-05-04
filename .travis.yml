@@ -53,7 +53,7 @@ jobs:
         - CIBW_SKIP='*-manylinux1_i686'
       install: skip
       script:
-        - sudo $PIP install cibuildwheel==0.10.1
+        - sudo $PIP install cibuildwheel==0.10.2
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
