@@ -1,9 +1,3 @@
-.. note::
-    We are working on releasing sourmash 2.0,
-    and this documentation reflects changes not released officially yet.
-    If you want to see the documentation for sourmash 1.0 check
-    the `stable version <https://sourmash.readthedocs.io/en/stable/>`__.
-
 Welcome to sourmash!
 ====================
 
