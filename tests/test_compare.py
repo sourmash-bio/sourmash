@@ -52,7 +52,7 @@ def test__compare_serial(siglist, ignore_abundance):
              'SRR2241509_1.fastq.gz', 'SRR453569_1.fastq.gz',
              'SRR453570_1.fastq.gz', 'SRR2060939_2.fastq.gz',
              'SRR2060939_1.fastq.gz']
-    order = [true_names.index(name) for name in names]
+    order = [names.index(name) for name in true_names]
     # from https://scicomp.stackexchange.com/a/3232
     similarities[:, :] = similarities[:, order]
     similarities[:, :] = similarities[order, :]
