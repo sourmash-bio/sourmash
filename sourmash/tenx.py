@@ -139,15 +139,13 @@ def bam_to_fasta(bam, barcodes, barcode_renamer, delimiter="X",
     cell_sequences = defaultdict(str)
 
     for alignment in bam_filtered:
+        # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
+        barcode = alignment.get_tag(CELL_BARCODE)
+        renamed = renamer[barcode]
 
-        if _pass_alignment_qc(alignment, barcodes):
-            # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
-            barcode = alignment.get_tag(CELL_BARCODE)
-            renamed = renamer[barcode]
-
-            # Make a long string of all the cell sequences, separated
-            # by a non-alphabet letter
-            cell_sequences[renamed] += alignment.seq + delimiter
+        # Make a long string of all the cell sequences, separated
+        # by a non-alphabet letter
+        cell_sequences[renamed] += alignment.seq + delimiter
 
     filenames = write_cell_sequences(cell_sequences)
     return filenames
