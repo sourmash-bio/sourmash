@@ -31,7 +31,7 @@ def test__pass_alignment_qc():
 
     total_pass = sum(1 for alignment in bam if
                      _pass_alignment_qc(alignment, barcodes))
-    assert total_pass == 1610
+    assert total_pass == 439
 
 
 def test__parse_barcode_renamer():
