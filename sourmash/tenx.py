@@ -48,9 +48,10 @@ def _pass_alignment_qc(alignment, barcodes):
     good_barcode = CELL_BARCODE in alignment.tags and \
                    alignment.get_tag(CELL_BARCODE) in barcodes
     good_umi = UMI in alignment.tags
+    not_duplicate = not alignment.is_duplicate
 
     pass_qc = high_quality_mapping and good_barcode and \
-              good_umi
+              good_umi and not_duplicate
     return pass_qc
 
 
