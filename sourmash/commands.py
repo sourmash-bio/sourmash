@@ -355,6 +355,7 @@ def compute(args):
 def compare(args):
     "Compare multiple signature files and create a distance matrix."
     import numpy
+    from . import signature as sig
 
     parser = SourmashArgumentParser()
     parser.add_argument('signatures', nargs='+', help='list of signatures')
