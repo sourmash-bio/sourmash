@@ -154,7 +154,7 @@ def calculate_moltype(args, default=None):
 
 def load_query_signature(filename, ksize, select_moltype):
     try:
-        sl = signature.load_signatures(
+        sl = sig.load_signatures(
             filename, ksize=ksize, select_moltype=select_moltype, do_raise=True
         )
         sl = list(sl)
@@ -201,7 +201,7 @@ class LoadSingleSignatures(object):
                 self.skipped_ignore += 1
                 continue
 
-            sl = signature.load_signatures(
+            sl = sig.load_signatures(
                 filename, ksize=self.ksize, select_moltype=self.select_moltype
             )
             sl = list(sl)

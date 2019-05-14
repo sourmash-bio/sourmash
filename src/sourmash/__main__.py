@@ -6,9 +6,23 @@ from __future__ import print_function
 import argparse
 import sys
 
-from .commands import (categorize, compare, compute, dump, gather, import_csv,
-                       index, info, migrate, multigather, plot, sbt_combine,
-                       search, storage, watch)
+from .commands import (
+    categorize,
+    compare,
+    compute,
+    dump,
+    gather,
+    import_csv,
+    index,
+    info,
+    migrate,
+    multigather,
+    plot,
+    sbt_combine,
+    search,
+    storage,
+    watch,
+)
 from .lca import main as lca_main
 from .logging import error, set_quiet
 from .sig import main as sig_main

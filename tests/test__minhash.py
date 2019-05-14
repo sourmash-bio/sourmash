@@ -39,10 +39,14 @@ import math
 import pickle
 
 import pytest
-
 from sourmash import signature
-from sourmash._minhash import (MinHash, dotproduct, get_max_hash_for_scaled,
-                               get_scaled_for_max_hash, hash_murmur)
+from sourmash._minhash import (
+    MinHash,
+    dotproduct,
+    get_max_hash_for_scaled,
+    get_scaled_for_max_hash,
+    hash_murmur,
+)
 
 from . import sourmash_tst_utils as utils
 

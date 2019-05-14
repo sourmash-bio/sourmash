@@ -5,9 +5,12 @@ from collections import namedtuple
 
 from ._minhash import get_max_hash_for_scaled
 from .logging import error, notify
-from .sbtmh import (GatherMinHashesFindBestIgnoreMaxHash,
-                    SearchMinHashesFindBest, search_minhashes,
-                    search_minhashes_containment)
+from .sbtmh import (
+    GatherMinHashesFindBestIgnoreMaxHash,
+    SearchMinHashesFindBest,
+    search_minhashes,
+    search_minhashes_containment,
+)
 from .signature import SourmashSignature
 
 # generic SearchResult across individual signatures + SBTs.
