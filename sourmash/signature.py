@@ -3,33 +3,33 @@
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 from __future__ import print_function
-import hashlib
 
 import gzip
-import bz2file
+import hashlib
 import io
 import sys
+
+import bz2file
 
 from . import signature_json
 from .logging import error
 
-
-SIGNATURE_VERSION=0.4
+SIGNATURE_VERSION = 0.4
 
 
 class SourmashSignature(object):
     "Main class for signature information."
 
-    def __init__(self, minhash, name='', filename=''):
+    def __init__(self, minhash, name="", filename=""):
         self.d = {}
-        self.d['class'] = 'sourmash_signature'
+        self.d["class"] = "sourmash_signature"
         if name:
-            self.d['name'] = name
+            self.d["name"] = name
         if filename:
-            self.d['filename'] = filename
+            self.d["filename"] = filename
 
         self.minhash = minhash
-        self.d['license'] = 'CC0'
+        self.d["license"] = "CC0"
 
     def __hash__(self):
         return hash(self.md5sum())
@@ -40,14 +40,15 @@ class SourmashSignature(object):
         if name != md5pref:
             return "SourmashSignature('{}', {})".format(name, md5pref)
         return "SourmashSignature({})".format(md5pref)
+
     __repr__ = __str__
 
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
         m = hashlib.md5()
-        m.update(str(self.minhash.ksize).encode('ascii'))
+        m.update(str(self.minhash.ksize).encode("ascii"))
         for k in self.minhash.get_mins():
-            m.update(str(k).encode('utf-8'))
+            m.update(str(k).encode("utf-8"))
         return m.hexdigest()
 
     def __eq__(self, other):
@@ -60,22 +61,22 @@ class SourmashSignature(object):
 
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
-        if 'name' in self.d:
-            return self.d.get('name')
-        elif 'filename' in self.d:
-            return self.d.get('filename')
+        if "name" in self.d:
+            return self.d.get("name")
+        elif "filename" in self.d:
+            return self.d.get("filename")
         else:
             return self.md5sum()[:8]
 
     def _display_name(self, max_length):
-        if 'name' in self.d:
-            name = self.d['name']
+        if "name" in self.d:
+            name = self.d["name"]
             if len(name) > max_length:
-                name = name[:max_length - 3] + '...'
-        elif 'filename' in self.d:
-            name = self.d['filename']
+                name = name[: max_length - 3] + "..."
+        elif "filename" in self.d:
+            name = self.d["filename"]
             if len(name) > max_length:
-                name = '...' + name[-max_length + 3:]
+                name = "..." + name[-max_length + 3 :]
         else:
             name = self.md5sum()[:8]
         assert len(name) <= max_length
@@ -87,33 +88,33 @@ class SourmashSignature(object):
         minhash = self.minhash
 
         sketch = {}
-        sketch['ksize'] = int(minhash.ksize)
-        sketch['num'] = minhash.num
-        sketch['max_hash'] = minhash.max_hash
-        sketch['seed'] = int(minhash.seed)
+        sketch["ksize"] = int(minhash.ksize)
+        sketch["num"] = minhash.num
+        sketch["max_hash"] = minhash.max_hash
+        sketch["seed"] = int(minhash.seed)
         if self.minhash.track_abundance:
             values = minhash.get_mins(with_abundance=True)
-            sketch['mins'] = list(map(int, values.keys()))
-            sketch['abundances'] = list(map(int, values.values()))
+            sketch["mins"] = list(map(int, values.keys()))
+            sketch["abundances"] = list(map(int, values.values()))
         else:
-            sketch['mins'] = list(map(int, minhash.get_mins()))
-        sketch['md5sum'] = self.md5sum()
+            sketch["mins"] = list(map(int, minhash.get_mins()))
+        sketch["md5sum"] = self.md5sum()
 
         if minhash.is_protein:
-            sketch['molecule'] = 'protein'
+            sketch["molecule"] = "protein"
         else:
-            sketch['molecule'] = 'DNA'
+            sketch["molecule"] = "DNA"
 
-        e['signature'] = sketch
+        e["signature"] = sketch
 
-        return self.d.get('name'), self.d.get('filename'), sketch
+        return self.d.get("name"), self.d.get("filename"), sketch
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."
         try:
             return self.minhash.similarity(other.minhash, ignore_abundance)
         except ValueError as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
+            if "mismatch in max_hash" in str(e) and downsample:
                 xx = self.minhash.downsample_max_hash(other.minhash)
                 yy = other.minhash.downsample_max_hash(self.minhash)
                 return xx.similarity(yy, ignore_abundance)
@@ -129,7 +130,7 @@ class SourmashSignature(object):
         try:
             return self.minhash.contained_by(other.minhash)
         except ValueError as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
+            if "mismatch in max_hash" in str(e) and downsample:
                 xx = self.minhash.downsample_max_hash(other.minhash)
                 yy = other.minhash.downsample_max_hash(self.minhash)
                 return xx.contained_by(yy)
@@ -149,10 +150,10 @@ def _guess_open(filename):
         b"\x42\x5a\x68": "bz2",
     }  # Inspired by http://stackoverflow.com/a/13044946/1585509
 
-    if filename == '-':
-        filename = '/dev/stdin'
+    if filename == "-":
+        filename = "/dev/stdin"
 
-    bufferedfile = io.open(file=filename, mode='rb', buffering=8192)
+    bufferedfile = io.open(file=filename, mode="rb", buffering=8192)
     num_bytes_to_peek = max(len(x) for x in magic_dict)
     file_start = bufferedfile.peek(num_bytes_to_peek)
     compression = None
@@ -160,13 +161,15 @@ def _guess_open(filename):
         if file_start.startswith(magic):
             compression = ftype
             break
-    if compression is 'bz2':
+    if compression is "bz2":
         sigfile = bz2file.BZ2File(filename=bufferedfile)
-    elif compression is 'gz':
+    elif compression is "gz":
         if not bufferedfile.seekable():
             bufferedfile.close()
-            raise ValueError("gziped data not streamable, pipe through zcat \
-                            first")
+            raise ValueError(
+                "gziped data not streamable, pipe through zcat \
+                            first"
+            )
         sigfile = gzip.GzipFile(filename=filename)
     else:
         sigfile = bufferedfile
@@ -174,8 +177,14 @@ def _guess_open(filename):
     return sigfile
 
 
-def load_signatures(data, ksize=None, select_moltype=None,
-                    ignore_md5sum=False, do_raise=False, quiet=False):
+def load_signatures(
+    data,
+    ksize=None,
+    select_moltype=None,
+    ignore_md5sum=False,
+    do_raise=False,
+    quiet=False,
+):
     """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
@@ -189,9 +198,9 @@ def load_signatures(data, ksize=None, select_moltype=None,
         return
 
     is_fp = False
-    if hasattr(data, 'find') and data.find('sourmash_signature') == -1:   # filename
+    if hasattr(data, "find") and data.find("sourmash_signature") == -1:  # filename
         done = False
-        try:                                  # is it a file handle?
+        try:  # is it a file handle?
             data.read
             is_fp = True
             done = True
@@ -205,23 +214,24 @@ def load_signatures(data, ksize=None, select_moltype=None,
                 is_fp = True
                 done = True
             except OSError as excinfo:
-                if not quiet: error(str(excinfo))
+                if not quiet:
+                    error(str(excinfo))
                 if do_raise:
                     raise
                 return
     else:  # file-like
-        if hasattr(data, 'mode'):  # file handler
-            if 't' in data.mode:  # need to reopen handler as binary
-                if sys.version_info >= (3, ):
+        if hasattr(data, "mode"):  # file handler
+            if "t" in data.mode:  # need to reopen handler as binary
+                if sys.version_info >= (3,):
                     data = data.buffer
 
     try:
         # JSON format
-        for sig in signature_json.load_signatures_json(data,
-                                                     ignore_md5sum=ignore_md5sum):
+        for sig in signature_json.load_signatures_json(
+            data, ignore_md5sum=ignore_md5sum
+        ):
             if not ksize or ksize == sig.minhash.ksize:
-                if not select_moltype or \
-                     sig.minhash.is_molecule_type(select_moltype):
+                if not select_moltype or sig.minhash.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
         if not quiet:
@@ -234,11 +244,10 @@ def load_signatures(data, ksize=None, select_moltype=None,
             data.close()
 
 
-def load_one_signature(data, ksize=None, select_moltype=None,
-                       ignore_md5sum=False):
-    sigiter = load_signatures(data, ksize=ksize,
-                              select_moltype=select_moltype,
-                              ignore_md5sum=ignore_md5sum)
+def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=False):
+    sigiter = load_signatures(
+        data, ksize=ksize, select_moltype=select_moltype, ignore_md5sum=ignore_md5sum
+    )
 
     try:
         first_sig = next(sigiter)

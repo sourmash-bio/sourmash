@@ -7,8 +7,18 @@ external check on our C++ implementation.
 The output of this is used in test_sourmash.py to verify our C++ code.
 """
 import ctypes
+import sys
 
-__complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
+import mmh3
+import screed
+
+import sourmash
+import sourmash.signature
+from sourmash import MinHash
+
+__complementTranslation = {"A": "T", "C": "G", "G": "C", "T": "A", "N": "N"}
+
+
 def complement(s):
     """
     Return complement of 's'.
@@ -27,21 +37,18 @@ def reverse(s):
 
 def kmers(seq, k):
     for start in range(len(seq) - k + 1):
-        yield seq[start:start + k]
+        yield seq[start : start + k]
+
 
 ###
 
 K = 21
 
-import sys, screed
-import mmh3
-import sourmash
-print('imported sourmash:', sourmash, file=sys.stderr)
-from sourmash import MinHash
-import sourmash.signature
+
+print("imported sourmash:", sourmash, file=sys.stderr)
 
 record = next(iter(screed.open(sys.argv[1])))
-print('loaded', record.name, file=sys.stderr)
+print("loaded", record.name, file=sys.stderr)
 revcomp = reverse(complement((record.sequence)))
 
 mh = sourmash.MinHash(ksize=K, n=500, is_protein=False)
@@ -67,9 +74,9 @@ for fwd_kmer in kmers(record.sequence, K):
 
     # convert to unsigned int if negative
     if hash < 0:
-        hash += 2**64
+        hash += 2 ** 64
 
     mh.add_hash(hash)
 
-s = sourmash.signature.SourmashSignature('', mh, name=record.name)
+s = sourmash.signature.SourmashSignature("", mh, name=record.name)
 print(sourmash.signature.save_signatures([s]))

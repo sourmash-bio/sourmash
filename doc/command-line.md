@@ -189,7 +189,7 @@ similarity   match
  71.4%       NZ_JMGU01000001.1 Escherichia coli 2-011-08_S3_C2 e201108...
  70.1%       NZ_JHRU01000001.1 Escherichia coli strain 100854 100854_1...
  69.0%       NZ_JH659569.1 Escherichia coli M919 supercont2.1, whole g...
-...    
+...
 ```
 
 ### `sourmash gather`
@@ -217,7 +217,7 @@ sourmash gather query.sig [ list of signatures or SBTs ]
 
 Example output:
 ```
-overlap     p_query p_match 
+overlap     p_query p_match
 ---------   ------- --------
 1.4 Mbp      11.0%   58.0%      JANA01000001.1 Fusobacterium sp. OBRC...
 1.0 Mbp       7.7%   25.9%      CP001957.1 Haloferax volcanii DS2 pla...
@@ -255,7 +255,7 @@ For example, the command
 
 ```
 sourmash lca classify --query tests/test-data/63.fa.sig \
-    --db podar-ref.lca.json 
+    --db podar-ref.lca.json
 ```
 
 will produce the following logging to stderr:
@@ -310,7 +310,7 @@ This may be changed in the future.
 Usage:
 
 ```
-sourmash lca summarize --query query.sig [query2.sig ...] 
+sourmash lca summarize --query query.sig [query2.sig ...]
     --db <lca db> [<lca db2> ...]
 ```
 
@@ -318,7 +318,7 @@ For example, the command line:
 
 ```
 sourmash lca summarize --query tests/test-data/63.fa.sig \
-    --db tests/test-data/podar-ref.lca.json 
+    --db tests/test-data/podar-ref.lca.json
 ```
 
 will produce the following log output to stderr:
@@ -416,7 +416,7 @@ agreement/disagreement.  Please see the blog post
 [Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
 for an example use case.
 
-[0]:https://en.wikipedia.org/wiki/MinHash   
+[0]:https://en.wikipedia.org/wiki/MinHash
 [1]:http://mash.readthedocs.io/en/latest/__
 [2]:http://biorxiv.org/content/early/2015/10/26/029827
 [3]:https://en.wikipedia.org/wiki/Jaccard_index
@@ -545,7 +545,7 @@ For example,
 sourmash signature extract tests/test-data/*.fa.sig --md5 09a0869
 ```
 will extract the signature from `47.fa.sig` which has an md5sum of
-`09a08691ce52952152f0e866a59f6261`; and 
+`09a08691ce52952152f0e866a59f6261`; and
 ```
 sourmash signature extract tests/test-data/*.fa.sig --name NC_009665
 ```

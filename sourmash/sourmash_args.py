@@ -1,19 +1,19 @@
 """
 Utility functions for dealing with input args to the sourmash command line.
 """
-import sys
-import os
 import argparse
-from . import signature
-from .logging import notify, error
+import os
+import sys
 
-from . import signature as sig
-from .sbt import SBT
-from .sbtmh import SigLeaf
-from .lca import lca_utils
 import sourmash
 
-DEFAULT_LOAD_K=31
+from . import signature as sig
+from .lca import lca_utils
+from .logging import error, notify
+from .sbt import SBT
+from .sbtmh import SigLeaf
+
+DEFAULT_LOAD_K = 31
 
 
 class SourmashArgumentParser(argparse.ArgumentParser):
@@ -21,22 +21,26 @@ class SourmashArgumentParser(argparse.ArgumentParser):
 
     In particular, set up printing of citation information.
     """
+
     def __init__(self, no_citation=False, **kwargs):
         super(SourmashArgumentParser, self).__init__(add_help=False, **kwargs)
         self.no_citation = no_citation
 
     def parse_args(self, args=None, namespace=None):
-        args = super(SourmashArgumentParser, self).parse_args(args=args,
-                                                              namespace=namespace)
+        args = super(SourmashArgumentParser, self).parse_args(
+            args=args, namespace=namespace
+        )
 
         # some scripts do not have a quiet flag, assume quiet=False for those
-        if ('quiet' not in args or not args.quiet) and not self.no_citation:
+        if ("quiet" not in args or not args.quiet) and not self.no_citation:
             citation()
 
         return args
 
 
 _citation_printed = False
+
+
 def citation():
     global _citation_printed
     if not _citation_printed:
@@ -46,51 +50,88 @@ def citation():
 
 
 def add_moltype_args(parser):
-    parser.add_argument('--protein', dest='protein', action='store_true',
-                        help='choose a protein signature (default: False)')
-    parser.add_argument('--no-protein', dest='protein',
-                        action='store_false',
-                        help='do not choose a protein signature')
+    parser.add_argument(
+        "--protein",
+        dest="protein",
+        action="store_true",
+        help="choose a protein signature (default: False)",
+    )
+    parser.add_argument(
+        "--no-protein",
+        dest="protein",
+        action="store_false",
+        help="do not choose a protein signature",
+    )
     parser.set_defaults(protein=False)
 
-    parser.add_argument('--dna', '--rna', dest='dna', default=None,
-                        action='store_true',
-                        help='choose a nucleotide signature (default: True)')
-    parser.add_argument('--no-dna', '--no-rna', dest='dna',
-                        action='store_false',
-                        help='do not choose a nucleotide signature')
+    parser.add_argument(
+        "--dna",
+        "--rna",
+        dest="dna",
+        default=None,
+        action="store_true",
+        help="choose a nucleotide signature (default: True)",
+    )
+    parser.add_argument(
+        "--no-dna",
+        "--no-rna",
+        dest="dna",
+        action="store_false",
+        help="do not choose a nucleotide signature",
+    )
     parser.set_defaults(dna=None)
 
 
 def add_construct_moltype_args(parser):
-    parser.add_argument('--protein', dest='protein', action='store_true',
-                        help='build protein signatures (default: False)')
-    parser.add_argument('--no-protein', dest='protein',
-                        action='store_false',
-                        help='do not build protein signatures')
+    parser.add_argument(
+        "--protein",
+        dest="protein",
+        action="store_true",
+        help="build protein signatures (default: False)",
+    )
+    parser.add_argument(
+        "--no-protein",
+        dest="protein",
+        action="store_false",
+        help="do not build protein signatures",
+    )
     parser.set_defaults(protein=False)
 
-    parser.add_argument('--dna', '--rna', dest='dna', default=None,
-                        action='store_true',
-                        help='build nucleotide signatures (default: True)')
-    parser.add_argument('--no-dna', '--no-rna', dest='dna',
-                        action='store_false',
-                        help='do not build nucleotide signatures')
+    parser.add_argument(
+        "--dna",
+        "--rna",
+        dest="dna",
+        default=None,
+        action="store_true",
+        help="build nucleotide signatures (default: True)",
+    )
+    parser.add_argument(
+        "--no-dna",
+        "--no-rna",
+        dest="dna",
+        action="store_false",
+        help="do not build nucleotide signatures",
+    )
     parser.set_defaults(dna=True)
 
 
 def add_ksize_arg(parser, default):
-    parser.add_argument('-k', '--ksize', default=None, type=int,
-                        help='k-mer size (default: {d})'.format(d=default))
+    parser.add_argument(
+        "-k",
+        "--ksize",
+        default=None,
+        type=int,
+        help="k-mer size (default: {d})".format(d=default),
+    )
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('DNA'):
-        moltype = 'DNA'
-    elif sig.minhash.is_molecule_type('protein'):
-        moltype = 'protein'
+    if sig.minhash.is_molecule_type("DNA"):
+        moltype = "DNA"
+    elif sig.minhash.is_molecule_type("protein"):
+        moltype = "protein"
     else:
-        raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
+        raise ValueError("unknown molecule type for sig {}".format(sig.name()))
 
     return moltype
 
@@ -98,54 +139,52 @@ def get_moltype(sig, require=False):
 def calculate_moltype(args, default=None):
     if args.protein:
         if args.dna is True:
-            error('cannot specify both --dna/--rna and --protein!')
+            error("cannot specify both --dna/--rna and --protein!")
             sys.exit(-1)
         args.dna = False
 
     moltype = default
     if args.protein:
-        moltype = 'protein'
+        moltype = "protein"
     elif args.dna:
-        moltype = 'DNA'
+        moltype = "DNA"
 
     return moltype
 
 
 def load_query_signature(filename, ksize, select_moltype):
     try:
-        sl = signature.load_signatures(filename,
-                                       ksize=ksize,
-                                       select_moltype=select_moltype,
-                                       do_raise=True)
+        sl = signature.load_signatures(
+            filename, ksize=ksize, select_moltype=select_moltype, do_raise=True
+        )
         sl = list(sl)
     except IOError:
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
 
     if len(sl) and ksize is None:
-        ksizes = set([ ss.minhash.ksize for ss in sl ])
+        ksizes = {ss.minhash.ksize for ss in sl}
         if len(ksizes) == 1:
             ksize = ksizes.pop()
-            sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
-            notify('select query k={} automatically.', ksize)
+            sl = [ss for ss in sl if ss.minhash.ksize == ksize]
+            notify("select query k={} automatically.", ksize)
         elif DEFAULT_LOAD_K in ksizes:
-            sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
-            notify('selecting default query k={}.', DEFAULT_LOAD_K)
+            sl = [ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K]
+            notify("selecting default query k={}.", DEFAULT_LOAD_K)
         elif ksize:
-            notify('selecting specified query k={}', ksize)
+            notify("selecting specified query k={}", ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
-        error('{} signatures matching ksize and molecule type;', len(sl))
-        error('need exactly one. Specify --ksize or --dna, --rna, or --protein.')
+        error("{} signatures matching ksize and molecule type;", len(sl))
+        error("need exactly one. Specify --ksize or --dna, --rna, or --protein.")
         sys.exit(-1)
 
     return sl[0]
 
 
 class LoadSingleSignatures(object):
-    def __init__(self, filelist,  ksize=None, select_moltype=None,
-                 ignore_files=set()):
+    def __init__(self, filelist, ksize=None, select_moltype=None, ignore_files=set()):
         self.filelist = filelist
         self.ksize = ksize
         self.select_moltype = select_moltype
@@ -162,9 +201,9 @@ class LoadSingleSignatures(object):
                 self.skipped_ignore += 1
                 continue
 
-            sl = signature.load_signatures(filename,
-                                           ksize=self.ksize,
-                                           select_moltype=self.select_moltype)
+            sl = signature.load_signatures(
+                filename, ksize=self.ksize, select_moltype=self.select_moltype
+            )
             sl = list(sl)
             if len(sl) == 0:
                 self.skipped_nosig += 1
@@ -180,18 +219,18 @@ class LoadSingleSignatures(object):
                 yield filename, query, query_moltype, query_ksize
 
             if len(self.ksizes) > 1 or len(self.moltypes) > 1:
-                raise ValueError('multiple k-mer sizes/molecule types present')
+                raise ValueError("multiple k-mer sizes/molecule types present")
 
 
 def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
-        if (dirname.endswith('.sig') or yield_all_files) and os.path.isfile(dirname):
+        if (dirname.endswith(".sig") or yield_all_files) and os.path.isfile(dirname):
             yield dirname
             continue
 
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                if name.endswith('.sig') or yield_all_files:
+                if name.endswith(".sig") or yield_all_files:
                     fullname = os.path.join(root, name)
                     yield fullname
 
@@ -207,17 +246,30 @@ def filter_compatible_signatures(query, siglist, force=False):
 
 def check_signatures_are_compatible(query, subject):
     # is one scaled, and the other not? cannot do search
-    if query.minhash.scaled and not subject.minhash.scaled or \
-       not query.minhash.scaled and subject.minhash.scaled:
-       error("signature {} and {} are incompatible - cannot compare.",
-             query.name(), subject.name())
-       if query.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 query.name(), subject.name())
-       if subject.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 subject.name(), query.name())
-       return 0
+    if (
+        query.minhash.scaled
+        and not subject.minhash.scaled
+        or not query.minhash.scaled
+        and subject.minhash.scaled
+    ):
+        error(
+            "signature {} and {} are incompatible - cannot compare.",
+            query.name(),
+            subject.name(),
+        )
+        if query.minhash.scaled:
+            error(
+                "{} was calculated with --scaled, {} was not.",
+                query.name(),
+                subject.name(),
+            )
+        if subject.minhash.scaled:
+            error(
+                "{} was calculated with --scaled, {} was not.",
+                subject.name(),
+                query.name(),
+            )
+        return 0
 
     return 1
 
@@ -231,14 +283,14 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 
     if tree_mh.ksize != query_mh.ksize:
         error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
-        error('this is different from query ksize of {}.', query_mh.ksize)
+        error("this is different from query ksize of {}.", query_mh.ksize)
         return 0
 
     # is one scaled, and the other not? cannot do search.
-    if (tree_mh.scaled and not query_mh.scaled) or \
-       (query_mh.scaled and not tree_mh.scaled):
-        error("for tree '{}', tree and query are incompatible for search.",
-              treename)
+    if (tree_mh.scaled and not query_mh.scaled) or (
+        query_mh.scaled and not tree_mh.scaled
+    ):
+        error("for tree '{}', tree and query are incompatible for search.", treename)
         if tree_mh.scaled:
             error("tree was calculated with scaled, query was not.")
         else:
@@ -246,11 +298,13 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
         return 0
 
     # are the scaled values incompatible? cannot downsample tree for similarity
-    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
-      is_similarity_query:
+    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and is_similarity_query:
         error("for tree '{}', scaled value is smaller than query.", treename)
-        error("tree scaled: {}; query scaled: {}. Cannot do similarity search.",
-              tree_mh.scaled, query_mh.scaled)
+        error(
+            "tree scaled: {}; query scaled: {}. Cannot do similarity search.",
+            tree_mh.scaled,
+            query_mh.scaled,
+        )
         return 0
 
     return 1
@@ -269,21 +323,22 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     n_databases = 0
     databases = []
     for sbt_or_sigfile in filenames:
-        notify('loading from {}...', sbt_or_sigfile, end='\r')
+        notify("loading from {}...", sbt_or_sigfile, end="\r")
         # are we collecting signatures from a directory/path?
         if traverse and os.path.isdir(sbt_or_sigfile):
             for sigfile in traverse_find_sigs([sbt_or_sigfile]):
                 try:
-                    siglist = sig.load_signatures(sigfile,
-                                                  ksize=query_ksize,
-                                                  select_moltype=query_moltype)
+                    siglist = sig.load_signatures(
+                        sigfile, ksize=query_ksize, select_moltype=query_moltype
+                    )
                     siglist = filter_compatible_signatures(query, siglist, 1)
                     siglist = list(siglist)
                     databases.append((siglist, sbt_or_sigfile, False))
-                    notify('loaded {} signatures from {}', len(siglist),
-                           sigfile, end='\r')
+                    notify(
+                        "loaded {} signatures from {}", len(siglist), sigfile, end="\r"
+                    )
                     n_signatures += len(siglist)
-                except:                       # ignore errors with traverse
+                except:  # ignore errors with traverse
                     pass
 
             # done! jump to beginning of main 'for' loop
@@ -293,12 +348,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         try:
             tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
 
-            if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
-                                            is_similarity_query):
+            if not check_tree_is_compatible(
+                sbt_or_sigfile, tree, query, is_similarity_query
+            ):
                 sys.exit(-1)
 
-            databases.append((tree, sbt_or_sigfile, 'SBT'))
-            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
+            databases.append((tree, sbt_or_sigfile, "SBT"))
+            notify("loaded SBT {}", sbt_or_sigfile, end="\r")
             n_databases += 1
 
             # done! jump to beginning of main 'for' loop
@@ -316,10 +372,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             query_scaled = query.minhash.scaled
             assert query_scaled and query_scaled <= lca_db.scaled
 
-            notify('loaded LCA {}', sbt_or_sigfile, end='\r')
+            notify("loaded LCA {}", sbt_or_sigfile, end="\r")
             n_databases += 1
 
-            databases.append((lca_db, sbt_or_sigfile, 'LCA'))
+            databases.append((lca_db, sbt_or_sigfile, "LCA"))
 
             continue
         except (ValueError, TypeError, EnvironmentError):
@@ -328,36 +384,38 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
         # not a tree? try loading as a signature.
         try:
-            siglist = sig.load_signatures(sbt_or_sigfile,
-                                          ksize=query_ksize,
-                                          select_moltype=query_moltype)
+            siglist = sig.load_signatures(
+                sbt_or_sigfile, ksize=query_ksize, select_moltype=query_moltype
+            )
             siglist = list(siglist)
-            if len(siglist) == 0:         # file not found, or parse error?
+            if len(siglist) == 0:  # file not found, or parse error?
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
             siglist = list(siglist)
 
-            databases.append((siglist, sbt_or_sigfile, 'signature'))
-            notify('loaded {} signatures from {}', len(siglist),
-                   sbt_or_sigfile, end='\r')
+            databases.append((siglist, sbt_or_sigfile, "signature"))
+            notify(
+                "loaded {} signatures from {}", len(siglist), sbt_or_sigfile, end="\r"
+            )
             n_signatures += len(siglist)
         except (EnvironmentError, ValueError):
             error("\nCannot open file '{}'", sbt_or_sigfile)
             sys.exit(-1)
 
-    notify(' '*79, end='\r')
+    notify(" " * 79, end="\r")
     if n_signatures and n_databases:
-        notify('loaded {} signatures and {} databases total.', n_signatures, 
-                                                               n_databases)
+        notify(
+            "loaded {} signatures and {} databases total.", n_signatures, n_databases
+        )
     elif n_signatures:
-        notify('loaded {} signatures.', n_signatures)
+        notify("loaded {} signatures.", n_signatures)
     elif n_databases:
-        notify('loaded {} databases.', n_databases)
+        notify("loaded {} databases.", n_databases)
     else:
         sys.exit(-1)
 
     if databases:
-        print('')
+        print("")
 
     return databases

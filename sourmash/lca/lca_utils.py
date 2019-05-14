@@ -1,28 +1,38 @@
 """
 Utility functions for lowest-common-ancestor analysis tools.
 """
-from __future__ import print_function, division
-import sys
-import json
+from __future__ import division, print_function
+
 import gzip
+import json
+import pprint
+import sys
+from collections import Counter, OrderedDict, defaultdict, namedtuple
 from os.path import exists
-from collections import OrderedDict, namedtuple, defaultdict, Counter
 
-__all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
-           'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair']
+from .._minhash import get_max_hash_for_scaled
+from ..logging import debug, error, notify
 
-try:                                      # py2/py3 compat
+__all__ = [
+    "taxlist",
+    "zip_lineage",
+    "build_tree",
+    "find_lca",
+    "load_single_database",
+    "load_databases",
+    "gather_assignments",
+    "count_lca_for_assignments",
+    "LineagePair",
+]
+
+try:  # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
     from itertools import izip_longest as zip_longest
-import pprint
 
-from .._minhash import get_max_hash_for_scaled
-from ..logging import notify, error, debug
 
 # type to store an element in a taxonomic lineage
-LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+LineagePair = namedtuple("LineagePair", ["rank", "name"])
 
 
 def check_files_exist(*files):
@@ -34,8 +44,12 @@ def check_files_exist(*files):
             ret = False
 
     if len(not_found):
-        error('Error! Could not find the following files.'
-              ' Make sure the file paths are specified correctly.\n{}'.format('\n'.join(not_found)))
+        error(
+            "Error! Could not find the following files."
+            " Make sure the file paths are specified correctly.\n{}".format(
+                "\n".join(not_found)
+            )
+        )
 
     return ret
 
@@ -45,11 +59,10 @@ def taxlist(include_strain=True):
     """
     Provide an ordered list of taxonomic ranks.
     """
-    for k in ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus',
-              'species']:
+    for k in ["superkingdom", "phylum", "class", "order", "family", "genus", "species"]:
         yield k
     if include_strain:
-        yield 'strain'
+        yield "strain"
 
 
 # produce an ordered list of tax names from lineage
@@ -70,24 +83,31 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
     """
 
     row = []
-    empty = LineagePair(None, '')
-    for taxrank, lineage_tup in zip_longest(taxlist(include_strain=include_strain), lineage, fillvalue=empty):
+    empty = LineagePair(None, "")
+    for taxrank, lineage_tup in zip_longest(
+        taxlist(include_strain=include_strain), lineage, fillvalue=empty
+    ):
         if lineage_tup == empty:
             if truncate_empty:
                 break
         else:
             # validate non-empty tax, e.g. superkingdom/phylum/class in order.
             if lineage_tup.rank != taxrank:
-                raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
+                raise ValueError(
+                    "incomplete lineage at {} - is {} instead".format(
+                        taxrank, lineage_tup.rank
+                    )
+                )
 
         row.append(lineage_tup.name)
     return row
 
 
 # filter function toreplace blank/na/null with 'unassigned'
-filter_null = lambda x: 'unassigned' if x.strip() in \
-  ('[Blank]', 'na', 'null', '') else x
-null_names = set(['[Blank]', 'na', 'null'])
+filter_null = (
+    lambda x: "unassigned" if x.strip() in ("[Blank]", "na", "null", "") else x
+)
+null_names = {"[Blank]", "na", "null"}
 
 
 def build_tree(assignments, initial=None):
@@ -129,13 +149,13 @@ def find_lca(tree):
     node = tree
     lineage = []
     while 1:
-        if len(node) == 1:                # descend to only child; track path
+        if len(node) == 1:  # descend to only child; track path
             lineage_tup = next(iter(node.keys()))
             lineage.append(lineage_tup)
             node = node[lineage_tup]
-        elif len(node) == 0:              # at leaf; end
+        elif len(node) == 0:  # at leaf; end
             return tuple(lineage), 0
-        else:                             # len(node) > 1 => confusion!!
+        else:  # len(node) > 1 => confusion!!
             return tuple(lineage), len(node)
 
 
@@ -149,16 +169,17 @@ class LCA_Database(object):
     obj.hashval_to_idx: key 'hashval' => set('idx')
     obj.lineage_to_lid: key (tuple of LineagePair objects) to 'lid'
     """
+
     def __init__(self):
         self.ksize = None
         self.scaled = None
-        
+
         self.ident_to_idx = None
         self.idx_to_lid = None
         self.lineage_to_lid = None
         self.lid_to_lineage = None
         self.hashval_to_idx = None
-    
+
         self.filename = None
 
     def __repr__(self):
@@ -167,10 +188,10 @@ class LCA_Database(object):
     def load(self, db_name):
         "Load from a JSON file."
         xopen = open
-        if db_name.endswith('.gz'):
+        if db_name.endswith(".gz"):
             xopen = gzip.open
 
-        with xopen(db_name, 'rt') as fp:
+        with xopen(db_name, "rt") as fp:
             load_d = {}
             try:
                 load_d = json.load(fp)
@@ -178,35 +199,39 @@ class LCA_Database(object):
                 pass
 
             if not load_d:
-                raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
+                raise ValueError(
+                    "cannot parse database file '{}' as JSON; invalid format."
+                )
 
             version = None
             db_type = None
             try:
-                version = load_d.get('version')
-                db_type = load_d.get('type')
+                version = load_d.get("version")
+                db_type = load_d.get("type")
             except AttributeError:
                 pass
 
-            if db_type != 'sourmash_lca':
+            if db_type != "sourmash_lca":
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
-            if version != '2.0' or 'lid_to_lineage' not in load_d:
-                raise ValueError("Error! This is an old-style LCA DB. You'll need to build or download a newer one.")
+            if version != "2.0" or "lid_to_lineage" not in load_d:
+                raise ValueError(
+                    "Error! This is an old-style LCA DB. You'll need to build or download a newer one."
+                )
 
-            ksize = int(load_d['ksize'])
-            scaled = int(load_d['scaled'])
+            ksize = int(load_d["ksize"])
+            scaled = int(load_d["scaled"])
             self.ksize = ksize
             self.scaled = scaled
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
-            lid_to_lineage_2 = load_d['lid_to_lineage']
+            lid_to_lineage_2 = load_d["lid_to_lineage"]
             lid_to_lineage = {}
             for k, v in lid_to_lineage_2.items():
                 v = dict(v)
                 vv = []
                 for rank in taxlist():
-                    name = v.get(rank, '')
+                    name = v.get(rank, "")
                     vv.append(LineagePair(rank, name))
 
                 lid_to_lineage[int(k)] = tuple(vv)
@@ -214,18 +239,18 @@ class LCA_Database(object):
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
-            hashval_to_idx_2 = load_d['hashval_to_idx']
+            hashval_to_idx_2 = load_d["hashval_to_idx"]
             hashval_to_idx = {}
 
             for k, v in hashval_to_idx_2.items():
                 hashval_to_idx[int(k)] = v
             self.hashval_to_idx = hashval_to_idx
 
-            self.ident_to_name = load_d['ident_to_name']
-            self.ident_to_idx = load_d['ident_to_idx']
+            self.ident_to_name = load_d["ident_to_name"]
+            self.ident_to_idx = load_d["ident_to_idx"]
 
             self.idx_to_lid = {}
-            for k, v in load_d['idx_to_lid'].items():
+            for k, v in load_d["idx_to_lid"].items():
                 self.idx_to_lid[int(k)] = v
 
         self.filename = db_name
@@ -233,33 +258,34 @@ class LCA_Database(object):
     def save(self, db_name):
         "Save to a JSON file."
         xopen = open
-        if db_name.endswith('.gz'):
+        if db_name.endswith(".gz"):
             xopen = gzip.open
 
-        with xopen(db_name, 'wt') as fp:
+        with xopen(db_name, "wt") as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '2.0'
-            save_d['type'] = 'sourmash_lca'
-            save_d['license'] = 'CC0'
-            save_d['ksize'] = self.ksize
-            save_d['scaled'] = self.scaled
+            save_d["version"] = "2.0"
+            save_d["type"] = "sourmash_lca"
+            save_d["license"] = "CC0"
+            save_d["ksize"] = self.ksize
+            save_d["scaled"] = self.scaled
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
             for k, v in self.lid_to_lineage.items():
-                d[k] = dict([ (vv.rank, vv.name) for vv in v ])
-            save_d['lid_to_lineage'] = d
+                d[k] = {vv.rank: vv.name for vv in v}
+            save_d["lid_to_lineage"] = d
 
             # convert values from sets to lists, so that JSON knows how to save
-            save_d['hashval_to_idx'] = \
-               dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
+            save_d["hashval_to_idx"] = {
+                k: list(v) for (k, v) in self.hashval_to_idx.items()
+            }
 
-            save_d['ident_to_name'] = self.ident_to_name
-            save_d['ident_to_idx'] = self.ident_to_idx
-            save_d['idx_to_lid'] = self.idx_to_lid
-            save_d['lid_to_lineage'] = self.lid_to_lineage
-            
+            save_d["ident_to_name"] = self.ident_to_name
+            save_d["ident_to_idx"] = self.ident_to_idx
+            save_d["idx_to_lid"] = self.idx_to_lid
+            save_d["lid_to_lineage"] = self.lid_to_lineage
+
             json.dump(save_d, fp)
 
     def downsample_scaled(self, scaled):
@@ -270,7 +296,9 @@ class LCA_Database(object):
         if scaled == self.scaled:
             return
         elif scaled < self.scaled:
-            raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
+            raise ValueError(
+                "cannot decrease scaled from {} to {}".format(self.scaled, scaled)
+            )
 
         max_hash = get_max_hash_for_scaled(scaled)
         new_hashvals = {}
@@ -303,10 +331,14 @@ class LCA_Database(object):
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample_scaled(self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+            raise ValueError(
+                "lca db scaled is {} vs query {}; must downsample".format(
+                    self.scaled, minhash.scaled
+                )
+            )
 
-        if not hasattr(self, 'signatures'):
-            debug('creating signatures for LCA DB...')
+        if not hasattr(self, "signatures"):
+            debug("creating signatures for LCA DB...")
             sigd = defaultdict(minhash.copy_and_clear)
 
             for (k, v) in self.hashval_to_idx.items():
@@ -315,10 +347,10 @@ class LCA_Database(object):
 
             self.signatures = sigd
 
-        debug('=> {} signatures!', len(self.signatures))
+        debug("=> {} signatures!", len(self.signatures))
 
         # build idx_to_ident from ident_to_idx
-        if not hasattr(self, 'idx_to_ident'):
+        if not hasattr(self, "idx_to_ident"):
             idx_to_ident = {}
             for k, v in self.ident_to_idx.items():
                 idx_to_ident[v] = k
@@ -334,29 +366,34 @@ class LCA_Database(object):
             for idx in idx_list:
                 c[idx] += 1
 
-        debug('number of matching signatures for hashes: {}', len(c))
+        debug("number of matching signatures for hashes: {}", len(c))
 
         for idx, count in c.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
-            debug('looking at {} ({})', ident, name)
+            debug("looking at {} ({})", ident, name)
 
             match_mh = self.signatures[idx]
             match_size = len(match_mh)
 
-            debug('count: {}; query_mins: {}; match size: {}',
-                  count, len(query_mins), match_size)
+            debug(
+                "count: {}; query_mins: {}; match size: {}",
+                count,
+                len(query_mins),
+                match_size,
+            )
 
             if containment:
                 score = count / len(query_mins)
             else:
                 score = count / (len(query_mins) + match_size - count)
 
-            debug('score: {} (containment? {})', score, containment)
+            debug("score: {} (containment? {})", score, containment)
 
             if score >= threshold:
                 # reconstruct signature... ugh.
                 from .. import SourmashSignature
+
                 match_sig = SourmashSignature(match_mh, name=name)
 
                 yield score, match_sig, match_sig.md5sum(), self.filename, name
@@ -377,16 +414,15 @@ def load_databases(filenames, scaled=None, verbose=True):
     # load all the databases
     for db_name in filenames:
         if verbose:
-            notify(u'\r\033[K', end=u'', file=sys.stderr)
-            notify('... loading database {}'.format(db_name), end='\r',
-                  file=sys.stderr)
+            notify(u"\r\033[K", end=u"", file=sys.stderr)
+            notify("... loading database {}".format(db_name), end="\r", file=sys.stderr)
 
         lca_db = LCA_Database()
         lca_db.load(db_name)
 
         ksize_vals.add(lca_db.ksize)
         if len(ksize_vals) > 1:
-            raise Exception('multiple ksizes, quitting')
+            raise Exception("multiple ksizes, quitting")
 
         if scaled and scaled > lca_db.scaled:
             lca_db.downsample_scaled(scaled)
@@ -398,9 +434,10 @@ def load_databases(filenames, scaled=None, verbose=True):
     scaled = scaled_vals.pop()
 
     if verbose:
-        notify(u'\r\033[K', end=u'')
-        notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
-               ksize, scaled)
+        notify(u"\r\033[K", end=u"")
+        notify(
+            "loaded {} LCA databases. ksize={}, scaled={}", len(dblist), ksize, scaled
+        )
 
     return dblist, ksize, scaled
 

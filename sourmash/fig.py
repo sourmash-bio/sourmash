@@ -3,6 +3,7 @@
 Make plots using the distance matrix+labels output by ``sourmash compare``.
 """
 from .logging import error, notify
+
 try:
     import numpy
     import pylab
@@ -10,27 +11,33 @@ try:
 except (RuntimeError, ImportError):
     pass
 
+
 def load_matrix_and_labels(basefile):
     """Load the comparison matrix and associated labels.
 
     Returns a square numpy matrix & list of labels.
     """
-    D = numpy.load(open(basefile, 'rb'))
-    labeltext = [x.strip() for x in open(basefile + '.labels.txt')]
+    D = numpy.load(open(basefile, "rb"))
+    labeltext = [x.strip() for x in open(basefile + ".labels.txt")]
     return (D, labeltext)
 
 
-def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
-                          vmax=1.0, vmin=0.0, force=False):
+def plot_composite_matrix(
+    D, labeltext, show_labels=True, show_indices=True, vmax=1.0, vmin=0.0, force=False
+):
     """Build a composite plot showing dendrogram + distance matrix/heatmap.
 
     Returns a matplotlib figure."""
     if D.max() > 1.0 or D.min() < 0.0:
-        error('This matrix doesn\'t look like a distance matrix - min value {}, max value {}', D.min(), D.max())
+        error(
+            "This matrix doesn't look like a distance matrix - min value {}, max value {}",
+            D.min(),
+            D.max(),
+        )
         if not force:
             raise ValueError("not a distance matrix")
         else:
-            notify('force is set; scaling to [0, 1]')
+            notify("force is set; scaling to [0, 1]")
             D -= D.min()
             D /= D.max()
 
@@ -41,14 +48,15 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
 
     # plot dendrogram
-    Y = sch.linkage(D, method='single')  # centroid
+    Y = sch.linkage(D, method="single")  # centroid
 
     dendrolabels = labeltext
     if not show_labels:
         dendrolabels = [str(i) for i in range(len(labeltext))]
 
-    Z1 = sch.dendrogram(Y, orientation='left', labels=dendrolabels,
-                        no_labels=not show_indices)
+    Z1 = sch.dendrogram(
+        Y, orientation="left", labels=dendrolabels, no_labels=not show_indices
+    )
     ax1.set_xticks([])
 
     xstart = 0.45
@@ -61,13 +69,14 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
 
     # (this reorders D by the clustering in Z1)
-    idx1 = Z1['leaves']
+    idx1 = Z1["leaves"]
     D = D[idx1, :]
     D = D[:, idx1]
 
     # show matrix
-    im = axmatrix.matshow(D, aspect='auto', origin='lower',
-                          cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax)
+    im = axmatrix.matshow(
+        D, aspect="auto", origin="lower", cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax
+    )
     axmatrix.set_xticks([])
     axmatrix.set_yticks([])
 

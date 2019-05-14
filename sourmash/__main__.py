@@ -2,18 +2,18 @@
 sourmash command line.
 """
 from __future__ import print_function
-import sys
+
 import argparse
+import sys
 
-from .logging import error, set_quiet
-
-from .commands import (categorize, compare, compute, dump, import_csv,
-                       gather, index, sbt_combine, search,
-                       plot, watch, info, storage, migrate, multigather)
+from .commands import (categorize, compare, compute, dump, gather, import_csv,
+                       index, info, migrate, multigather, plot, sbt_combine,
+                       search, storage, watch)
 from .lca import main as lca_main
+from .logging import error, set_quiet
 from .sig import main as sig_main
 
-usage='''
+usage = """
 sourmash <command> [<args>]
 
 ** Commands include:
@@ -46,28 +46,36 @@ Use '-h' to get subcommand-specific help, e.g.
 sourmash compute -h
 
 ** Documentation is available at https://sourmash.readthedocs.io/
-'''
+"""
 
 
 def main():
     set_quiet(False)
 
-    commands = {'search': search, 'compute': compute,
-                'compare': compare, 'plot': plot,
-                'import_csv': import_csv, 'dump': dump,
-                'index': index,
-                'categorize': categorize, 'gather': gather,
-                'watch': watch,
-                'sbt_combine': sbt_combine, 'info': info,
-                'storage': storage,
-                'lca': lca_main,
-                'migrate': migrate,
-                'multigather': multigather,
-                'sig': sig_main,
-                'signature': sig_main}
+    commands = {
+        "search": search,
+        "compute": compute,
+        "compare": compare,
+        "plot": plot,
+        "import_csv": import_csv,
+        "dump": dump,
+        "index": index,
+        "categorize": categorize,
+        "gather": gather,
+        "watch": watch,
+        "sbt_combine": sbt_combine,
+        "info": info,
+        "storage": storage,
+        "lca": lca_main,
+        "migrate": migrate,
+        "multigather": multigather,
+        "sig": sig_main,
+        "signature": sig_main,
+    }
     parser = argparse.ArgumentParser(
-        description='work with compressed biological sequence representations')
-    parser.add_argument('command', nargs='?')
+        description="work with compressed biological sequence representations"
+    )
+    parser.add_argument("command", nargs="?")
     args = parser.parse_args(sys.argv[1:2])
 
     if not args.command:
@@ -75,12 +83,13 @@ def main():
         sys.exit(1)
 
     if args.command not in commands:
-        error('Unrecognized command')
+        error("Unrecognized command")
         print(usage)
         sys.exit(1)
 
     cmd = commands.get(args.command)
     cmd(sys.argv[2:])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

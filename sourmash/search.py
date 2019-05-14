@@ -1,39 +1,41 @@
 from __future__ import division
-from collections import namedtuple
+
 import sys
+from collections import namedtuple
 
-from .logging import notify, error
-from .signature import SourmashSignature
-from .sbtmh import search_minhashes, search_minhashes_containment
-from .sbtmh import SearchMinHashesFindBest, GatherMinHashesFindBestIgnoreMaxHash
 from ._minhash import get_max_hash_for_scaled
-
+from .logging import error, notify
+from .sbtmh import (GatherMinHashesFindBestIgnoreMaxHash,
+                    SearchMinHashesFindBest, search_minhashes,
+                    search_minhashes_containment)
+from .signature import SourmashSignature
 
 # generic SearchResult across individual signatures + SBTs.
-SearchResult = namedtuple('SearchResult',
-                          'similarity, match_sig, md5, filename, name')
+SearchResult = namedtuple("SearchResult", "similarity, match_sig, md5, filename, name")
 
 
 def format_bp(bp):
     "Pretty-print bp information."
     bp = float(bp)
     if bp < 500:
-        return '{:.0f} bp '.format(bp)
+        return "{:.0f} bp ".format(bp)
     elif bp <= 500e3:
-        return '{:.1f} kbp'.format(round(bp / 1e3, 1))
+        return "{:.1f} kbp".format(round(bp / 1e3, 1))
     elif bp < 500e6:
-        return '{:.1f} Mbp'.format(round(bp / 1e6, 1))
+        return "{:.1f} Mbp".format(round(bp / 1e6, 1))
     elif bp < 500e9:
-        return '{:.1f} Gbp'.format(round(bp / 1e9, 1))
-    return '???'
+        return "{:.1f} Gbp".format(round(bp / 1e9, 1))
+    return "???"
 
 
-def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance):
+def search_databases(
+    query, databases, threshold, do_containment, best_only, ignore_abundance
+):
     # set up the search & score function(s) - similarity vs containment
     search_fn = search_minhashes
     query_match = lambda x: query.similarity(
-        x, downsample=True, ignore_abundance=ignore_abundance)
+        x, downsample=True, ignore_abundance=ignore_abundance
+    )
     if do_containment:
         search_fn = search_minhashes_containment
         query_match = lambda x: query.contained_by(x, downsample=True)
@@ -41,8 +43,8 @@ def search_databases(query, databases, threshold, do_containment, best_only,
     results = []
     found_md5 = set()
     for (obj, filename, filetype) in databases:
-        if filetype == 'SBT':
-            if best_only:            # this needs to be reset for each SBT
+        if filetype == "SBT":
+            if best_only:  # this needs to be reset for each SBT
                 search_fn = SearchMinHashesFindBest().search
 
             tree = obj
@@ -52,10 +54,15 @@ def search_databases(query, databases, threshold, do_containment, best_only,
             tree_mh = leaf.data.minhash
 
             tree_query = query
-            if tree_mh.scaled and query.minhash.scaled and \
-              tree_mh.scaled > query.minhash.scaled:
+            if (
+                tree_mh.scaled
+                and query.minhash.scaled
+                and tree_mh.scaled > query.minhash.scaled
+            ):
                 resampled_query_mh = tree_query.minhash
-                resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+                resampled_query_mh = resampled_query_mh.downsample_scaled(
+                    tree_mh.scaled
+                )
                 tree_query = SourmashSignature(resampled_query_mh)
 
             # now, search!
@@ -66,40 +73,44 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                 assert similarity >= threshold
 
                 if leaf.data.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=leaf.data,
-                                      md5=leaf.data.md5sum(),
-                                      filename=filename,
-                                      name=leaf.data.name())
+                    sr = SearchResult(
+                        similarity=similarity,
+                        match_sig=leaf.data,
+                        md5=leaf.data.md5sum(),
+                        filename=filename,
+                        name=leaf.data.name(),
+                    )
                     found_md5.add(sr.md5)
                     results.append(sr)
 
-        elif filetype == 'LCA':
+        elif filetype == "LCA":
             lca_db = obj
             for x in lca_db.find(query.minhash, threshold, do_containment):
                 (score, match_sig, md5, filename, name) = x
                 if md5 not in found_md5:
-                    sr = SearchResult(similarity=score,
-                                      match_sig=match_sig,
-                                      md5=md5,
-                                      filename=filename,
-                                      name=name)
+                    sr = SearchResult(
+                        similarity=score,
+                        match_sig=match_sig,
+                        md5=md5,
+                        filename=filename,
+                        name=name,
+                    )
                     found_md5.add(sr.md5)
                     results.append(sr)
 
-        else: # list of signatures
+        else:  # list of signatures
             for ss in obj:
                 similarity = query_match(ss)
-                if similarity >= threshold and \
-                       ss.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=ss,
-                                      md5=ss.md5sum(),
-                                      filename=filename,
-                                      name=ss.name())
+                if similarity >= threshold and ss.md5sum() not in found_md5:
+                    sr = SearchResult(
+                        similarity=similarity,
+                        match_sig=ss,
+                        md5=ss.md5sum(),
+                        filename=filename,
+                        name=ss.name(),
+                    )
                     found_md5.add(sr.md5)
                     results.append(sr)
-
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x.similarity)
@@ -116,18 +127,21 @@ def build_new_query(to_remove, old_query, scaled=None):
     return SourmashSignature(e)
 
 
-GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
+GatherResult = namedtuple(
+    "GatherResult",
+    "intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf",
+)
 
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query = query
     orig_mins = orig_query.minhash.get_hashes()
-    orig_abunds = { k: 1 for k in orig_mins }
+    orig_abunds = {k: 1 for k in orig_mins}
 
     # do we pay attention to abundances?
     if orig_query.minhash.track_abundance and not ignore_abundance:
         import numpy as np
+
         orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
 
     # store the scaled value for the query
@@ -146,7 +160,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         results = []
         for (obj, filename, filetype) in dblist:
             # search a tree
-            if filetype == 'SBT':
+            if filetype == "SBT":
                 tree = obj
                 search_fn = GatherMinHashesFindBestIgnoreMaxHash(best_ctn_sofar).search
 
@@ -156,10 +170,11 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                     if similarity > 0.0:
                         results.append((similarity, leaf.data, filename))
             # or an LCA database
-            elif filetype == 'LCA':
+            elif filetype == "LCA":
                 lca_db = obj
-                for x in lca_db.find(query.minhash, 0.0,
-                                     containment=True, ignore_scaled=True):
+                for x in lca_db.find(
+                    query.minhash, 0.0, containment=True, ignore_scaled=True
+                ):
                     (score, match_sig, md5, filename, name) = x
                     if score > 0.0:
                         results.append((score, match_sig, filename))
@@ -175,14 +190,15 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             return None, None, None
 
         # take the best result
-        results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
+        results.sort(
+            key=lambda x: (-x[0], x[1].name())
+        )  # reverse sort on similarity, and then on name
         best_similarity, best_leaf, filename = results[0]
 
         for x in results[1:]:
             remainder.add(x[1])
 
         return best_similarity, best_leaf, filename
-
 
     # construct a new query that doesn't have the max_hash attribute set.
     query = build_new_query([], orig_query)
@@ -191,7 +207,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     remainder = set()
     while 1:
         best_similarity, best_leaf, filename = find_best(databases, query, remainder)
-        if not best_leaf:          # no matches at all!
+        if not best_leaf:  # no matches at all!
             break
 
         # subtract found hashes from search hashes, construct new search
@@ -200,8 +216,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # figure out what the resolution of the banding on the subject is
         if not best_leaf.minhash.max_hash:
-            error('Best hash match in sbt_gather has no max_hash')
-            error('Please prepare database of sequences with --scaled')
+            error("Best hash match in sbt_gather has no max_hash")
+            error("Please prepare database of sequences with --scaled")
             sys.exit(-1)
 
         match_scaled = best_leaf.minhash.scaled
@@ -213,19 +229,18 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
         new_max_hash = get_max_hash_for_scaled(cmp_scaled)
-        query_mins = set([ i for i in query_mins if i < new_max_hash ])
-        found_mins = set([ i for i in found_mins if i < new_max_hash ])
-        orig_mins = set([ i for i in orig_mins if i < new_max_hash ])
-        sum_abunds = sum([ v for (k,v) in orig_abunds.items() if k < new_max_hash ])
+        query_mins = {i for i in query_mins if i < new_max_hash}
+        found_mins = {i for i in found_mins if i < new_max_hash}
+        orig_mins = {i for i in orig_mins if i < new_max_hash}
+        sum_abunds = sum([v for (k, v) in orig_abunds.items() if k < new_max_hash])
 
         # calculate intersection:
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_mins = orig_mins.intersection(found_mins)
         intersect_bp = cmp_scaled * len(intersect_orig_mins)
 
-        if intersect_bp < threshold_bp:   # hard cutoff for now
-            notify('found less than {} in common. => exiting',
-                   format_bp(intersect_bp))
+        if intersect_bp < threshold_bp:  # hard cutoff for now
+            notify("found less than {} in common. => exiting", format_bp(intersect_bp))
             break
 
         # calculate fractions wrt first denominator - genome size
@@ -239,8 +254,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         # calculate scores weighted by abundances
-        f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
-               / sum_abunds
+        f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) / sum_abunds
 
         intersect_abunds = list(sorted(orig_abunds[k] for k in intersect_mins))
         average_abund, median_abund, std_abund = 0, 0, 0
@@ -250,24 +264,25 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             std_abund = np.std(intersect_abunds)
 
         # build a result namedtuple
-        result = GatherResult(intersect_bp=intersect_bp,
-                              f_orig_query=f_orig_query,
-                              f_match=f_match,
-                              f_unique_to_query=f_unique_to_query,
-                              f_unique_weighted=f_unique_weighted,
-                              average_abund=average_abund,
-                              median_abund=median_abund,
-                              std_abund=std_abund,
-                              filename=filename,
-                              md5=best_leaf.md5sum(),
-                              name=best_leaf.name(),
-                              leaf=best_leaf)
+        result = GatherResult(
+            intersect_bp=intersect_bp,
+            f_orig_query=f_orig_query,
+            f_match=f_match,
+            f_unique_to_query=f_unique_to_query,
+            f_unique_weighted=f_unique_weighted,
+            average_abund=average_abund,
+            median_abund=median_abund,
+            std_abund=std_abund,
+            filename=filename,
+            md5=best_leaf.md5sum(),
+            name=best_leaf.name(),
+            leaf=best_leaf,
+        )
 
         # construct a new query, minus the previous one.
         query = build_new_query(found_mins, orig_query, cmp_scaled)
         query_mins -= set(found_mins)
 
-        weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
-             / sum_abunds
+        weighted_missed = sum((orig_abunds[k] for k in query_mins)) / sum_abunds
 
         yield result, weighted_missed, new_max_hash, query

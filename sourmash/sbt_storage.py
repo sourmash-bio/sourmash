@@ -1,12 +1,12 @@
-from __future__ import print_function, unicode_literals, division
+from __future__ import division, print_function, unicode_literals
 
 import abc
-from io import BytesIO
 import os
 import tarfile
+from io import BytesIO
 
 
-class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
+class Storage(abc.ABCMeta(str("ABC"), (object,), {"__slots__": ()})):
     # this weird baseclass is compatible with Python 2 *and* 3,
     # we can remove once we support only py3.4+
 
@@ -29,7 +29,6 @@ class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
 
 
 class FSStorage(Storage):
-
     def __init__(self, location, subdir):
         self.location = location
         self.subdir = subdir
@@ -39,25 +38,24 @@ class FSStorage(Storage):
             os.makedirs(fullpath)
 
     def init_args(self):
-        return {'path': self.subdir}
+        return {"path": self.subdir}
 
     def save(self, path, content):
         "Save a node/leaf."
-        with open(os.path.join(self.location, self.subdir, path), 'wb') as f:
+        with open(os.path.join(self.location, self.subdir, path), "wb") as f:
             f.write(content)
 
         return path
 
     def load(self, path):
         out = BytesIO()
-        with open(os.path.join(self.location, self.subdir, path), 'rb') as f:
+        with open(os.path.join(self.location, self.subdir, path), "rb") as f:
             out.write(f.read())
 
         return out.getvalue()
 
 
 class TarStorage(Storage):
-
     def __init__(self, path=None):
         # TODO: leave it open, or close/open every time?
 
@@ -72,9 +70,9 @@ class TarStorage(Storage):
             os.makedirs(dirname)
 
         if os.path.exists(self.path):
-            self.tarfile = tarfile.open(path, 'r')
+            self.tarfile = tarfile.open(path, "r")
         else:
-            self.tarfile = tarfile.open(path, 'w:gz')
+            self.tarfile = tarfile.open(path, "w:gz")
 
     def save(self, path, content):
         info = tarfile.TarInfo(path)
@@ -91,16 +89,16 @@ class TarStorage(Storage):
         return f.read()
 
     def init_args(self):
-        return {'path': self.path}
+        return {"path": self.path}
 
     def __exit__(self, type, value, traceback):
         self.tarfile.close()
 
 
 class IPFSStorage(Storage):
-
     def __init__(self, pin_on_add=True, **kwargs):
         import ipfshttpclient
+
         self.ipfs_args = kwargs
         self.pin_on_add = pin_on_add
         self.api = ipfshttpclient.connect(**self.ipfs_args)
@@ -135,9 +133,9 @@ class IPFSStorage(Storage):
 
 
 class RedisStorage(Storage):
-
     def __init__(self, **kwargs):
         import redis
+
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
 

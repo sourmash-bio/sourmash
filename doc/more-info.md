@@ -34,7 +34,7 @@ code in sourmash, [utils/compute-dna-mh-another-way.py][4]
 [Improving MinHash via the Containment Index with Applications to Metagenomic Analysis][23], Koslicki and Zabeti, 2017.
 
 [Ultra-fast search of all deposited bacterial and viral genomic data](http://dx.doi.org/10.1038/s41587-018-0010-1), Bradley et al., 2019.
- 
+
 [Streaming histogram sketching for rapid microbiome analytics](https://www.biorxiv.org/content/10.1101/408070v1), Rowe et al., 2019.
 
 [Dashing: Fast and Accurate Genomic Distances with HyperLogLog](https://www.biorxiv.org/content/10.1101/501726v2), Baker and Langmead, 2019.

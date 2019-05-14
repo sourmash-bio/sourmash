@@ -96,9 +96,9 @@ And now the minhashes can be compared against each other:
 ...       x = e.jaccard(minhashes[j])
 ...       _ = sys.stdout.write(str(round(x, 3)) + ' ')
 ...    _= sys.stdout.write('\n')
-data/GCF_000005845.2 1.0 0.0 0.0 
-data/GCF_000006945.1 0.0 1.0 0.0 
-data/GCF_000783305.1 0.0 0.0 1.0 
+data/GCF_000005845.2 1.0 0.0 0.0
+data/GCF_000006945.1 0.0 1.0 0.0
+data/GCF_000783305.1 0.0 0.0 1.0
 
 ```
 
@@ -464,7 +464,7 @@ Now do a search --
 
 ```
 >>> threshold = 0.1
-                                           
+
 >>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
 ...    print(query_sig.name())
 ...    print(found_sig.name())

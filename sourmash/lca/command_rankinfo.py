@@ -3,13 +3,14 @@
 Summarize rank-specific information from LCAs in one or more databases.
 """
 from __future__ import print_function
-import sys
+
 import argparse
+import sys
 from collections import defaultdict
 
-from ..logging import error, debug, set_quiet
-from . import lca_utils
+from ..logging import debug, error, set_quiet
 from ..sourmash_args import SourmashArgumentParser
+from . import lca_utils
 
 
 def make_lca_counts(dblist):
@@ -50,16 +51,16 @@ def rankinfo_main(args):
     rankinfo!
     """
     p = SourmashArgumentParser(prog="sourmash lca rankinfo")
-    p.add_argument('db', nargs='+')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
+    p.add_argument("db", nargs="+")
+    p.add_argument("--scaled", type=float)
+    p.add_argument(
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
+    )
+    p.add_argument("-d", "--debug", action="store_true", help="output debugging output")
     args = p.parse_args(args)
 
     if not args.db:
-        error('Error! must specify at least one LCA database with --db')
+        error("Error! must specify at least one LCA database with --db")
         sys.exit(-1)
 
     set_quiet(args.quiet, args.debug)
@@ -84,8 +85,8 @@ def rankinfo_main(args):
     total = float(sum(counts_by_rank.values()))
     for rank in lca_utils.taxlist():
         count = counts_by_rank.get(rank, 0)
-        print('{}: {} ({:.1f}%)'.format(rank, count, count / total * 100.))
+        print("{}: {} ({:.1f}%)".format(rank, count, count / total * 100.0))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(rankinfo_main(sys.argv[1:]))

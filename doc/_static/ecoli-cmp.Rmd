@@ -37,7 +37,7 @@ plot(fit[ , 1], fit[ , 2], xlab = "Dimension 1", ylab = "Dimension 2")
 ```{r tSNE}
 library(Rtsne)
 tsne_model <- Rtsne(sourmash_comp_matrix, check_duplicates=FALSE, pca=TRUE, perplexity=5, theta=0.5, dims=2)
-d_tsne = as.data.frame(tsne_model$Y) 
+d_tsne = as.data.frame(tsne_model$Y)
 plot(d_tsne$V1, d_tsne$V2)
 ```
 

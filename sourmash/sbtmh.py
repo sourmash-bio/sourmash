@@ -1,17 +1,17 @@
-from __future__ import print_function
-from __future__ import division
+from __future__ import division, print_function
 
-from io import BytesIO, TextIOWrapper
 import sys
+from io import BytesIO, TextIOWrapper
 
-from .sbt import Leaf, SBT, GraphFactory
 from . import signature
+from .sbt import SBT, GraphFactory, Leaf
 
 
 def load_sbt_index(filename, print_version_warning=True):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load,
-                    print_version_warning=print_version_warning)
+    return SBT.load(
+        filename, leaf_loader=SigLeaf.load, print_version_warning=print_version_warning
+    )
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
@@ -38,8 +38,9 @@ def search_sbt_index(tree, query, threshold):
 
 class SigLeaf(Leaf):
     def __str__(self):
-        return '**Leaf:{name} -> {metadata}'.format(
-                name=self.name, metadata=self.metadata)
+        return "**Leaf:{name} -> {metadata}".format(
+            name=self.name, metadata=self.metadata
+        )
 
     def save(self, path):
         # this is here only for triggering the property load
@@ -56,14 +57,13 @@ class SigLeaf(Leaf):
     def update(self, parent):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
-        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
-        min_n_below = min(len(self.data.minhash.get_mins()),
-                          min_n_below)
+        min_n_below = parent.metadata.get("min_n_below", sys.maxsize)
+        min_n_below = min(len(self.data.minhash.get_mins()), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
 
-        parent.metadata['min_n_below'] = min_n_below
+        parent.metadata["min_n_below"] = min_n_below
 
     @property
     def data(self):
@@ -78,6 +78,7 @@ class SigLeaf(Leaf):
 
 
 ### Search functionality.
+
 
 def _max_jaccard_underneath_internal_node(node, hashes):
     """\
@@ -96,10 +97,10 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     matches = sum(1 for value in hashes if get(value))
 
     # get the size of the smallest collection of hashes below this point
-    min_n_below = node.metadata.get('min_n_below', -1)
+    min_n_below = node.metadata.get("min_n_below", -1)
 
     if min_n_below == -1:
-        raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+        raise Exception("cannot do similarity search on this SBT; need to rebuild.")
 
     # max of numerator divided by min of denominator => max Jaccard
     max_score = float(matches) / min_n_below
@@ -118,7 +119,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
         try:
             score = node.data.minhash.similarity(sig.minhash)
         except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
+            if "mismatch in max_hash" in str(e) and downsample:
                 xx = sig.minhash.downsample_max_hash(node.data.minhash)
                 yy = node.data.minhash.downsample_max_hash(sig.minhash)
 
@@ -140,7 +141,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
 
 class SearchMinHashesFindBest(object):
     def __init__(self, downsample=True):
-        self.best_match = 0.
+        self.best_match = 0.0
         self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
@@ -151,7 +152,7 @@ class SearchMinHashesFindBest(object):
             try:
                 score = node.data.minhash.similarity(sig.minhash)
             except Exception as e:
-                if 'mismatch in max_hash' in str(e) and self.downsample:
+                if "mismatch in max_hash" in str(e) and self.downsample:
                     xx = sig.minhash.downsample_max_hash(node.data.minhash)
                     yy = node.data.minhash.downsample_max_hash(sig.minhash)
 
@@ -175,15 +176,14 @@ class SearchMinHashesFindBest(object):
         return 0
 
 
-def search_minhashes_containment(node, sig, threshold,
-                                 results=None, downsample=True):
+def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
         try:
             matches = node.data.minhash.count_common(sig.minhash)
         except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
+            if "mismatch in max_hash" in str(e) and downsample:
                 xx = sig.minhash.downsample_max_hash(node.data.minhash)
                 yy = node.data.minhash.downsample_max_hash(sig.minhash)
 

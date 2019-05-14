@@ -1,22 +1,23 @@
 from __future__ import unicode_literals
 
 from screed.fasta import fasta_iter
+
 from sourmash._minhash import MinHash
 from tests.sourmash_tst_utils import get_test_data
 
 
 def load_sequences(filepath):
     sequences = []
-    with open(filepath, 'rb') as f:
+    with open(filepath, "rb") as f:
         for s in fasta_iter(f):
-            sequences.append(s['sequence'])
+            sequences.append(s["sequence"])
     return sequences
 
 
 class TimeMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=False)
-        self.sequences = load_sequences(get_test_data('ecoli.genes.fna')) * 10
+        self.sequences = load_sequences(get_test_data("ecoli.genes.fna")) * 10
 
         self.populated_mh = MinHash(500, 21, track_abundance=False)
         for seq in self.sequences:
@@ -73,7 +74,7 @@ class TimeMinHashSuite:
 class PeakmemMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=True)
-        self.sequences = load_sequences(get_test_data('ecoli.genes.fna'))
+        self.sequences = load_sequences(get_test_data("ecoli.genes.fna"))
 
     def peakmem_add_sequence(self):
         mh = self.mh
@@ -104,6 +105,7 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
         mins = self.populated_mh.get_mins(with_abundance=True)
         for i in range(500):
             mh.set_abundances(mins)
+
 
 class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):

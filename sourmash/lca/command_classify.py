@@ -3,18 +3,19 @@
 Classify individual signature files down to deepest possible node.
 """
 from __future__ import print_function
-import sys
+
 import argparse
 import csv
+import sys
 from collections import Counter
 
-from .. import sourmash_args, load_signatures
-from ..logging import notify, error, debug, set_quiet
+from .. import load_signatures, sourmash_args
+from ..logging import debug, error, notify, set_quiet
+from ..sourmash_args import SourmashArgumentParser
 from . import lca_utils
 from .lca_utils import check_files_exist
-from ..sourmash_args import SourmashArgumentParser
 
-DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
+DEFAULT_THRESHOLD = 5  # how many counts of a taxid at min
 
 
 def classify_signature(query_sig, dblist, threshold):
@@ -38,8 +39,7 @@ def classify_signature(query_sig, dblist, threshold):
 
       """
     # gather assignments from across all the databases
-    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(),
-                                               dblist)
+    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(), dblist)
 
     # now convert to trees -> do LCA & counts
     counts = lca_utils.count_lca_for_assignments(assignments)
@@ -58,20 +58,20 @@ def classify_signature(query_sig, dblist, threshold):
         # update tree with this set of assignments
         lca_utils.build_tree([lca], tree)
 
-    status = 'nomatch'
+    status = "nomatch"
     if not tree:
         return [], status
 
     # now find lowest-common-ancestor of the resulting tree.
     lca, reason = lca_utils.find_lca(tree)
-    if reason == 0:               # leaf node
-        debug('END', lca)
-        status = 'found'
-    else:                         # internal node => disagreement
-        debug('MULTI', lca)
-        status = 'disagree'
+    if reason == 0:  # leaf node
+        debug("END", lca)
+        status = "found"
+    else:  # internal node => disagreement
+        debug("MULTI", lca)
+        status = "disagree"
 
-    debug('lineage is:', lca)
+    debug("lineage is:", lca)
 
     return lca, status
 
@@ -81,26 +81,33 @@ def classify(args):
     main single-genome classification function.
     """
     p = SourmashArgumentParser(prog="sourmash lca classify")
-    p.add_argument('--db', nargs='+', action='append')
-    p.add_argument('--query', nargs='+', action='append')
-    p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='output CSV to this file instead of stdout')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
+    p.add_argument("--db", nargs="+", action="append")
+    p.add_argument("--query", nargs="+", action="append")
+    p.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
+    p.add_argument(
+        "-o",
+        "--output",
+        type=argparse.FileType("wt"),
+        help="output CSV to this file instead of stdout",
+    )
+    p.add_argument("--scaled", type=float)
+    p.add_argument(
+        "--traverse-directory",
+        action="store_true",
+        help="load all signatures underneath directories.",
+    )
+    p.add_argument(
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
+    )
+    p.add_argument("-d", "--debug", action="store_true", help="output debugging output")
     args = p.parse_args(args)
 
     if not args.db:
-        error('Error! must specify at least one LCA database with --db')
+        error("Error! must specify at least one LCA database with --db")
         sys.exit(-1)
 
     if not args.query:
-        error('Error! must specify at least one query signature with --query')
+        error("Error! must specify at least one query signature with --query")
         sys.exit(-1)
 
     set_quiet(args.quiet, args.debug)
@@ -120,7 +127,7 @@ def classify(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
 
     # find all the queries
-    notify('finding query signatures...')
+    notify("finding query signatures...")
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.query))
     else:
@@ -133,7 +140,7 @@ def classify(args):
         csvfp = csv.writer(args.output)
     else:
         notify("outputting classifications to stdout")
-    csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
+    csvfp.writerow(["ID", "status"] + list(lca_utils.taxlist()))
 
     # for each query, gather all the matches across databases
     total_count = 0
@@ -142,18 +149,22 @@ def classify(args):
     for query_filename in inp_files:
         n += 1
         for query_sig in load_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... classifying {} (file {} of {})', query_sig.name(),
-                   n, total_n, end='\r')
-            debug('classifying', query_sig.name())
+            notify(u"\r\033[K", end=u"")
+            notify(
+                "... classifying {} (file {} of {})",
+                query_sig.name(),
+                n,
+                total_n,
+                end="\r",
+            )
+            debug("classifying", query_sig.name())
             total_count += 1
 
             # make sure we're looking at the same scaled value as database
             query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
 
             # do the classification
-            lineage, status = classify_signature(query_sig, dblist,
-                                                 args.threshold)
+            lineage, status = classify_signature(query_sig, dblist, args.threshold)
             debug(lineage)
 
             # output each classification to the spreadsheet
@@ -162,12 +173,12 @@ def classify(args):
 
             # when outputting to stdout, make output intelligible
             if not args.output:
-                notify(u'\r\033[K', end=u'')
+                notify(u"\r\033[K", end=u"")
             csvfp.writerow(row)
 
-    notify(u'\r\033[K', end=u'')
-    notify('classified {} signatures total', total_count)
+    notify(u"\r\033[K", end=u"")
+    notify("classified {} signatures total", total_count)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(classify(sys.argv[1:]))

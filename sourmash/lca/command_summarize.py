@@ -3,19 +3,19 @@
 Summarize the taxonomic content of the given signatures, combined.
 """
 from __future__ import print_function
-import sys
+
 import argparse
 import csv
-from collections import defaultdict, Counter
+import sys
+from collections import Counter, defaultdict
 
-from .. import sourmash_args, load_signatures
-from ..logging import notify, error, print_results, set_quiet, debug
+from .. import load_signatures, sourmash_args
+from ..logging import debug, error, notify, print_results, set_quiet
+from ..sourmash_args import SourmashArgumentParser
 from . import lca_utils
 from .lca_utils import check_files_exist
-from ..sourmash_args import SourmashArgumentParser
 
-
-DEFAULT_THRESHOLD=5
+DEFAULT_THRESHOLD = 5
 
 
 def summarize(hashvals, dblist, threshold):
@@ -61,26 +61,28 @@ def summarize_main(args):
     main summarization function.
     """
     p = SourmashArgumentParser(prog="sourmash lca summarize")
-    p.add_argument('--db', nargs='+', action='append')
-    p.add_argument('--query', nargs='+', action='append')
-    p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='CSV output')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
+    p.add_argument("--db", nargs="+", action="append")
+    p.add_argument("--query", nargs="+", action="append")
+    p.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
+    p.add_argument(
+        "--traverse-directory",
+        action="store_true",
+        help="load all signatures underneath directories.",
+    )
+    p.add_argument("-o", "--output", type=argparse.FileType("wt"), help="CSV output")
+    p.add_argument("--scaled", type=float)
+    p.add_argument(
+        "-q", "--quiet", action="store_true", help="suppress non-error output"
+    )
+    p.add_argument("-d", "--debug", action="store_true", help="output debugging output")
     args = p.parse_args(args)
 
     if not args.db:
-        error('Error! must specify at least one LCA database with --db')
+        error("Error! must specify at least one LCA database with --db")
         sys.exit(-1)
 
     if not args.query:
-        error('Error! must specify at least one query signature with --query')
+        error("Error! must specify at least one query signature with --query")
         sys.exit(-1)
 
     set_quiet(args.quiet, args.debug)
@@ -103,7 +105,7 @@ def summarize_main(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
 
     # find all the queries
-    notify('finding query signatures...')
+    notify("finding query signatures...")
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.query))
     else:
@@ -117,17 +119,18 @@ def summarize_main(args):
     for query_filename in inp_files:
         n += 1
         for query_sig in load_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
+            notify(u"\r\033[K", end=u"")
+            notify(
+                "... loading {} (file {} of {})", query_sig.name(), n, total_n, end="\r"
+            )
             total_count += 1
 
             mh = query_sig.minhash.downsample_scaled(scaled)
             for hashval in mh.get_mins():
                 hashvals[hashval] += 1
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
+    notify(u"\r\033[K", end=u"")
+    notify("loaded {} signatures from {} files total.", total_count, n)
 
     # get the full counted list of lineage counts in this signature
     lineage_counts = summarize(hashvals, dblist, args.threshold)
@@ -137,26 +140,26 @@ def summarize_main(args):
     for (lineage, count) in lineage_counts.items():
         if lineage:
             lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
-            lineage = ';'.join(lineage)
+            lineage = ";".join(lineage)
         else:
-            lineage = '(root)'
+            lineage = "(root)"
 
-        p = count / total * 100.
-        p = '{:.1f}%'.format(p)
+        p = count / total * 100.0
+        p = "{:.1f}%".format(p)
 
-        print_results('{:5} {:>5}   {}'.format(p, count, lineage))
+        print_results("{:5} {:>5}   {}".format(p, count, lineage))
 
     # CSV:
     if args.output:
         w = csv.writer(args.output)
-        headers = ['count'] + list(lca_utils.taxlist())
+        headers = ["count"] + list(lca_utils.taxlist())
         w.writerow(headers)
 
         for (lineage, count) in lineage_counts.items():
-            debug('lineage:', lineage)
+            debug("lineage:", lineage)
             row = [count] + lca_utils.zip_lineage(lineage)
             w.writerow(row)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(summarize_main(sys.argv[1:]))

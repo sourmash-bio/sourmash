@@ -10,7 +10,7 @@ of your questions, and explain why we can't answer others.
 
 You can build signatures at a variety of k-mer sizes all at once, and
 (unless you are working with very large metagenomes) the resulting
-signature files will still be quite small.  
+signature files will still be quite small.
 
 We suggest including k=31 and k=51.  k=51 gives you the most stringent
 matches, and has very few false positives. k=31 may be more sensitive

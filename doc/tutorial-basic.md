@@ -149,7 +149,7 @@ You should see output like this:
 ```
 select query k=31 automatically.
 loaded query: /home/ubuntu/data/ecoliMG1655.... (k=31, DNA)
-loaded 0 signatures and 1 databases total.                                     
+loaded 0 signatures and 1 databases total.
 
 49 matches; showing first 20:
 similarity   match
@@ -279,13 +279,13 @@ the recovered matches hit 73.1% of the query
 
 ```
 
-If you use the `-o` flag, gather will write out a csv that contains additional information. The column headers and their meanings are:  
+If you use the `-o` flag, gather will write out a csv that contains additional information. The column headers and their meanings are:
 
-+ intersect_bp: the approximate number of base pairs in common between the query and the match  
-+ f_orig_query: fraction of original query; the fraction of the original query that is contained within the match  
-+ f_match: fraction of match; the fraction of the match that is contained within the query  
-+ f_unique_to_query: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
-+ f_unique_weighted: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
++ intersect_bp: the approximate number of base pairs in common between the query and the match
++ f_orig_query: fraction of original query; the fraction of the original query that is contained within the match
++ f_match: fraction of match; the fraction of the match that is contained within the query
++ f_unique_to_query: fraction unique to query; the fraction of the query that uniquely overlaps with the match
++ f_unique_weighted: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query
 
 It is straightforward to build your own databases for use with `search`
 and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
