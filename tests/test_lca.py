@@ -13,6 +13,7 @@ import time
 
 import pytest
 import screed
+
 import sourmash
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import *

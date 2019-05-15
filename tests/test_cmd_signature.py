@@ -7,6 +7,7 @@ import csv
 import shutil
 
 import pytest
+
 import sourmash
 
 from . import sourmash_tst_utils as utils

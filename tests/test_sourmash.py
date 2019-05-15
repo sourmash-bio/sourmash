@@ -13,6 +13,7 @@ import time
 
 import pytest
 import screed
+
 import sourmash
 from sourmash import VERSION, MinHash, signature
 from sourmash.sbt import SBT, Node

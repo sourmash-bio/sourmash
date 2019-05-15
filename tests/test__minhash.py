@@ -39,6 +39,7 @@ import math
 import pickle
 
 import pytest
+
 from sourmash import signature
 from sourmash._minhash import (
     MinHash,

@@ -1,8 +1,8 @@
 from __future__ import unicode_literals
 
 from screed.fasta import fasta_iter
-from sourmash._minhash import MinHash
 
+from sourmash._minhash import MinHash
 from tests.sourmash_tst_utils import get_test_data
 
 

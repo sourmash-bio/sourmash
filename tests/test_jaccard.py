@@ -6,6 +6,7 @@ objects.
 from __future__ import print_function, unicode_literals
 
 import pytest
+
 from sourmash import MinHash
 
 from . import sourmash_tst_utils as utils

@@ -1,6 +1,9 @@
 language: python
 os: linux
 dist: xenial
+addons:
+  apt_packages:
+    - pandoc
 
 cache:
   directories:

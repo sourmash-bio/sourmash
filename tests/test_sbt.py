@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import os
 
 import pytest
+
 from sourmash import signature
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbt_storage import FSStorage, IPFSStorage, RedisStorage, TarStorage
@@ -355,7 +356,7 @@ def test_sbt_tarstorage():
 
 
 def test_sbt_ipfsstorage():
-    ipfshttpclient = pytest.importorskip('ipfshttpclient')
+    ipfshttpclient = pytest.importorskip("ipfshttpclient")
 
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:

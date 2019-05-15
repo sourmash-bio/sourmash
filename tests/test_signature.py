@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import os
 
 import pytest
+
 import sourmash
 from sourmash.signature import (
     SourmashSignature,

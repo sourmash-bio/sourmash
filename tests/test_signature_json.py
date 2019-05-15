@@ -4,6 +4,7 @@ import sys
 from collections import OrderedDict
 
 import ijson
+
 import sourmash
 from sourmash.signature import SourmashSignature
 from sourmash.signature_json import (
