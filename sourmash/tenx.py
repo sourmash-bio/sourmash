@@ -1,7 +1,7 @@
 from collections import defaultdict
 import os
-import shutil
 import tempfile
+import warnings
 
 CELL_BARCODE = 'CB'
 UMI = 'UB'
@@ -36,6 +36,13 @@ def read_10x_folder(folder):
     import bamnostic as bs
 
     barcodes = read_single_column(os.path.join(folder, BARCODES_TSV))
+    if len(barcodes) > 1e5:
+        warnings.warn(f"This barcode file contains {len(barcodes)} total " \
+                       "number of barcodes, which is far greater than " \
+                       "typical single-cell experiments as of 2019. Counting " \
+                       "min-hashes on this file will take >2TB of memory. " \
+                       "Is this barcode list filtered by gene, read, or UMI " \
+                       "count?")
 
     bam_file = bs.AlignmentFile(os.path.join(folder, BAM_FILENAME), mode='rb')
 
