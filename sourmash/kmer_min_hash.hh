@@ -182,6 +182,8 @@ public:
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
+            // TODO: Add degenerate bases when last codon can be different
+            // TOOD: Add dayhoff encoding as an option
             auto translated = _codon_table.find(codon);
             if (translated != _codon_table.end()) {
                 // "second" is the element mapped to by the codon
@@ -260,6 +262,51 @@ public:
 
 private:
     std::map<std::string, std::string> _codon_table = {
+        {"TTT", "F"}, {"TTC", "F"},
+        {"TTA", "L"}, {"TTG", "L"},
+
+        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"},
+
+        {"TAT", "Y"}, {"TAC", "Y"},
+        {"TAA", "*"}, {"TAG", "*"},
+
+        {"TGT", "C"}, {"TGC", "C"},
+        {"TGA", "*"},
+        {"TGG", "W"},
+
+        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"},
+
+        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"},
+
+        {"CAT", "H"}, {"CAC", "H"},
+        {"CAA", "Q"}, {"CAG", "Q"},
+
+        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"},
+
+        {"ATT", "I"}, {"ATC", "I"}, {"ATA", "I"},
+        {"ATG", "M"},
+
+        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"},
+
+        {"AAT", "N"}, {"AAC", "N"},
+        {"AAA", "K"}, {"AAG", "K"},
+
+        {"AGT", "S"}, {"AGC", "S"},
+        {"AGA", "R"}, {"AGG", "R"},
+
+        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"},
+
+        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"},
+
+        {"GAT", "D"}, {"GAC", "D"},
+        {"GAA", "E"}, {"GAG", "E"},
+
+        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
+    };
+};
+
+private:
+    std::map<std::string, std::string> _dayhoff_table = {
         {"TTT", "F"}, {"TTC", "F"},
         {"TTA", "L"}, {"TTG", "L"},
 
