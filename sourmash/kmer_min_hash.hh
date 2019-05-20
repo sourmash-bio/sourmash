@@ -184,6 +184,9 @@ public:
             std::string codon = dna.substr(j, 3);
             // TODO: Add degenerate bases when last codon can be different
             // TOOD: Add dayhoff encoding as an option
+            if (codon.length() < 3) {
+                codon += "N"*(3-codon.length())
+            }
             auto translated = _codon_table.find(codon);
             if (translated != _codon_table.end()) {
                 // "second" is the element mapped to by the codon
