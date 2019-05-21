@@ -63,7 +63,7 @@ For `search` and `gather` you also need `khmer` version 2.1+.
 Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install sourmash by running:
 
 ```bash
-$ conda create -n sourmash_env sourmash python=3.6.4
+$ conda create -n sourmash_env -c conda-forge -c bioconda sourmash python=3.7
 $ source activate sourmash_env
 $ sourmash compute -h
 ```
