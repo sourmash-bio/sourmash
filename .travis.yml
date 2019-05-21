@@ -16,6 +16,8 @@ script: tox
 install: pip install tox-travis
 
 jobs:
+  allow_failures:
+    - name: integration (ipfs/redis)
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
@@ -34,6 +36,7 @@ jobs:
       name: integration (ipfs/redis)
       before_install:
         - sudo snap install ipfs
+        - "/snap/bin/ipfs --version"
         - "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
       services:
         - redis-server
@@ -53,7 +56,7 @@ jobs:
         - CIBW_SKIP='*-manylinux1_i686'
       install: skip
       script:
-        - sudo $PIP install cibuildwheel==0.10.1
+        - sudo $PIP install cibuildwheel==0.10.2
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
