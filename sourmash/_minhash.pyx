@@ -324,7 +324,10 @@ cdef class MinHash(object):
         common.intersection_update(other.get_mins())
         common.intersection_update(combined_mh.mins)
 
-        return common, max(combined_mh.size(), 1)
+        size = max(combined_mh.size(), 1)
+        del combined_mh
+
+        return common, size
 
     def compare(self, MinHash other):
         common, size = self.intersection(other)
