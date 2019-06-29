@@ -96,6 +96,8 @@ def get_moltype(sig, require=False):
         moltype = 'DNA'
     elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
+    elif sig.minhash.is_molecule_type('dayhoff'):
+        moltype = 'dayhoff'
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
@@ -114,6 +116,8 @@ def calculate_moltype(args, default=None):
         moltype = 'protein'
     elif args.dna:
         moltype = 'DNA'
+    elif args.dayhoff:
+        moltype = 'dayhoff'
 
     return moltype
 

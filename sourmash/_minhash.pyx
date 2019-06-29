@@ -240,6 +240,10 @@ cdef class MinHash(object):
         return deref(self._this).is_protein
 
     @property
+    def dayhoff(self):
+        return deref(self._this).dayhoff
+
+    @property
     def ksize(self):
         return deref(self._this).ksize
 
@@ -440,5 +444,7 @@ cdef class MinHash(object):
         if molecule.upper() == 'DNA' and not self.is_protein:
             return True
         if molecule == 'protein' and self.is_protein:
+            return True
+        if molecule == 'dayhoff' and self.dayhoff:
             return True
         return False
