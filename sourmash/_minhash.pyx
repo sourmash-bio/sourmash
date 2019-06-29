@@ -88,6 +88,7 @@ cdef class MinHash(object):
 
     def __init__(self, unsigned int n, unsigned int ksize,
                        bool is_protein=False,
+                       bool dayhoff=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0,
@@ -107,9 +108,9 @@ cdef class MinHash(object):
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
-            mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, seed, max_hash)
         else:
-            mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, seed, max_hash)
 
         self._this.reset(mh)
 
@@ -122,7 +123,8 @@ cdef class MinHash(object):
 
     def __copy__(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
-                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).is_protein, deref(self._this).dayhoff,
+                    self.track_abundance,
                     deref(self._this).seed, deref(self._this).max_hash)
         a.merge(self)
         return a
@@ -135,23 +137,24 @@ cdef class MinHash(object):
         return (deref(self._this).num,
                 deref(self._this).ksize,
                 deref(self._this).is_protein,
+                deref(self._this).dayhoff,
                 self.get_mins(with_abundance=with_abundance),
                 None, self.track_abundance, deref(self._this).max_hash,
                 deref(self._this).seed)
 
     def __setstate__(self, tup):
-        (n, ksize, is_protein, mins, _, track_abundance, max_hash, seed) =\
+        (n, ksize, is_protein, dayhoff, mins, _, track_abundance, max_hash, seed) =\
           tup
 
         self.track_abundance = track_abundance
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
-            mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, seed, max_hash)
             self._this.reset(mh)
             self.set_abundances(mins)
         else:
-            mh = new KmerMinHash(n, ksize, is_protein, seed, max_hash)
+            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, seed, max_hash)
             self._this.reset(mh)
             self.add_many(mins)
 
@@ -160,6 +163,7 @@ cdef class MinHash(object):
                (deref(self._this).num,
                 deref(self._this).ksize,
                 deref(self._this).is_protein,
+                deref(self._this).dayhoff,
                 self.track_abundance,
                 deref(self._this).seed,
                 deref(self._this).max_hash,
@@ -173,12 +177,13 @@ cdef class MinHash(object):
 
     def copy_and_clear(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
-                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).is_protein, deref(self._this).dayhoff,
+                    self.track_abundance,
                     deref(self._this).seed, deref(self._this).max_hash)
         return a
 
-    def add_sequence(self, sequence, bool force=False):
-        deref(self._this).add_sequence(to_bytes(sequence), force)
+    def add_sequence(self, sequence, bool force=False, bool dayhoff=False):
+        deref(self._this).add_sequence(to_bytes(sequence), force, dayhoff)
 
     def add(self, kmer):
         "Add kmer into sketch."
@@ -255,7 +260,8 @@ cdef class MinHash(object):
             raise ValueError('new sample n is higher than current sample n')
 
         a = MinHash(new_num, deref(self._this).ksize,
-                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).is_protein, deref(self._this).dayhoff,
+                    self.track_abundance,
                     deref(self._this).seed, 0)
         if self.track_abundance:
             a.set_abundances(self.get_mins(with_abundance=True))
@@ -286,7 +292,8 @@ cdef class MinHash(object):
         new_max_hash = get_max_hash_for_scaled(new_num)
 
         a = MinHash(0, deref(self._this).ksize,
-                    deref(self._this).is_protein, self.track_abundance,
+                    deref(self._this).is_protein, deref(self._this).dayhoff,
+                    self.track_abundance,
                     deref(self._this).seed, new_max_hash)
         if self.track_abundance:
             a.set_abundances(self.get_mins(with_abundance=True))
@@ -307,6 +314,7 @@ cdef class MinHash(object):
             combined_mh = new KmerMinAbundance(num,
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
+                                          deref(self._this).dayhoff,
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
 
@@ -314,6 +322,7 @@ cdef class MinHash(object):
             combined_mh = new KmerMinHash(num,
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
+                                          deref(self._this).dayhoff,
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
 

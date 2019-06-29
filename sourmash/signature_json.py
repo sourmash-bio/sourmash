@@ -82,16 +82,23 @@ def _json_next_signature(iterable,
     molecule = d.get('molecule', 'DNA')
     if molecule == 'protein':
         is_protein = True
+        dayhoff = False
+    elif molecule == "protein_dayhoff":
+        is_protein = True
+        dayhoff = True
     elif molecule.upper() == 'DNA':
         is_protein = False
+        dayhoff = False
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
+
 
     track_abundance = False
     if 'abundances' in d:
         track_abundance = True
 
     e = MinHash(ksize=ksize, n=n, is_protein=is_protein,
+                dayhoff=dayhoff,
                 track_abundance=track_abundance,
                 max_hash=max_hash, seed=seed)
 

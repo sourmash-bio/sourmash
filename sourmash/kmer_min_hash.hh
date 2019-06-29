@@ -2,6 +2,7 @@
 #define KMER_MIN_HASH_HH
 
 #include <algorithm>
+#include <iostream>
 #include <set>
 #include <map>
 #include <queue>
@@ -59,13 +60,14 @@ public:
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
+    const bool dayhoff;
     const uint32_t seed;
     const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
+        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -126,7 +128,7 @@ public:
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence, bool force=false) {
+    void add_sequence(const char * sequence, bool force=false, bool dayhoff=false) {
         if (strlen(sequence) < ksize) {
             return;
         }
@@ -157,7 +159,7 @@ public:
         } else {                      // protein
             std::string rc = _revcomp(seq);
             for (unsigned int i = 0; i < 3; i++) {
-                std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i));
+                std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i), dayhoff);
                 unsigned int aa_ksize = int(ksize / 3);
                 std::string kmer;
 
@@ -166,7 +168,7 @@ public:
                     add_word(kmer);
                 }
 
-                aa = _dna_to_aa(rc.substr(i, rc.length() - i));
+                aa = _dna_to_aa(rc.substr(i, rc.length() - i), dayhoff);
                 aa_ksize = int(ksize / 3);
 
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
@@ -177,24 +179,36 @@ public:
         }
     }
 
-    std::string _dna_to_aa(const std::string& dna) {
+    std::string _dna_to_aa(const std::string& dna, const bool dayhoff) {
         std::string aa;
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
-            // TODO: Add degenerate bases when last codon can be different
-            // TOOD: Add dayhoff encoding as an option
-            if (codon.length() < 3) {
-                codon += "N"*(3-codon.length())
+            if (codon.length() == 2) {
+                codon += "N";
             }
             auto translated = _codon_table.find(codon);
-            if (translated != _codon_table.end()) {
-                // "second" is the element mapped to by the codon
-                aa += translated -> second;
+
+            // Use dayhoff encoding of amino acids
+            if (dayhoff) {
+                auto dayhoff_encoded = _dayhoff_table.find(translated);
+                if (dayhoff_encoded != _dayhoff_table.end()) {
+                    // "second" is the element mapped to by the codon
+                    aa += dayhoff_encoded -> second;
+                } else {
+                    // Otherwise, assign the "X" or "unknown" amino acid
+                    aa += "X";
+                }
             } else {
-                // Otherwise, assign the "X" or "unknown" amino acid
-                aa += "X";
+                if (translated != _codon_table.end()) {
+                    // "second" is the element mapped to by the codon
+                    aa += translated -> second;
+                } else {
+                    // Otherwise, assign the "X" or "unknown" amino acid
+                    aa += "X";
+                }
             }
+
         }
         return aa;
     }
@@ -268,7 +282,7 @@ private:
         {"TTT", "F"}, {"TTC", "F"},
         {"TTA", "L"}, {"TTG", "L"},
 
-        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"}, {"TCN", "S"}
+        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"}, {"TCN", "S"},
 
         {"TAT", "Y"}, {"TAC", "Y"},
         {"TAA", "*"}, {"TAG", "*"},
@@ -279,17 +293,17 @@ private:
 
         {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"}, {"CTN", "L"},
 
-        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"}, {"CCN", "P"}
+        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"}, {"CCN", "P"},
 
         {"CAT", "H"}, {"CAC", "H"},
         {"CAA", "Q"}, {"CAG", "Q"},
 
-        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"}, {"CGN", "R"}
+        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"}, {"CGN", "R"},
 
         {"ATT", "I"}, {"ATC", "I"}, {"ATA", "I"},
         {"ATG", "M"},
 
-        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"}, {"ACN", "T"}
+        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"}, {"ACN", "T"},
 
         {"AAT", "N"}, {"AAC", "N"},
         {"AAA", "K"}, {"AAG", "K"},
@@ -297,69 +311,62 @@ private:
         {"AGT", "S"}, {"AGC", "S"},
         {"AGA", "R"}, {"AGG", "R"},
 
-        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GCN", "V"}
+        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GCN", "V"},
 
-        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"}, {"GCN", "A"}
+        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"}, {"GCN", "A"},
 
         {"GAT", "D"}, {"GAC", "D"},
         {"GAA", "E"}, {"GAG", "E"},
 
-        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}, {"GGN": "G"}
+        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}, {"GGN", "G"}
     };
-};
 
-private:
+
+// Dayhoff table from
+// Peris, P., López, D., & Campos, M. (2008).
+// IgTM: An algorithm to predict transmembrane domains and topology in
+// proteins. BMC Bioinformatics, 9(1), 1029–11.
+// http://doi.org/10.1186/1471-2105-9-367
+//
+// Original source:
+// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
+// A model of evolutionary change in proteins,
+// in Atlas of Protein Sequence and Structure,
+// ed Dayhoff M. O., editor.
+// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
+//
+// | Amino acid    | Property              | Dayhoff |
+// |---------------|-----------------------|---------|
+// | C             | Sulfur polymerization | a       |
+// | A, G, P, S, T | Small                 | b       |
+// | D, E, N, Q    | Acid and amide        | c       |
+// | H, K, R       | Basic                 | d       |
+// | I, L, M, V    | Hydrophobic           | e       |
+// | F, W, Y       | Aromatic              | f       |
     std::map<std::string, std::string> _dayhoff_table = {
-        {"TTT", "F"}, {"TTC", "F"},
-        {"TTA", "L"}, {"TTG", "L"},
+        {"C", "a"},
 
-        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"},
+        {"A", "b"}, {"G", "b"}, {"P", "b"}, {"S", "b"}, {"T", "b"},
 
-        {"TAT", "Y"}, {"TAC", "Y"},
-        {"TAA", "*"}, {"TAG", "*"},
+        {"D", "c"}, {"E", "c"}, {"N", "c"}, {"Q", "c"},
 
-        {"TGT", "C"}, {"TGC", "C"},
-        {"TGA", "*"},
-        {"TGG", "W"},
+        {"H", "d"}, {"K", "d"}, {"R", "d"},
 
-        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"},
+        {"I", "e"}, {"L", "e"}, {"M", "e"}, {"V", "e"},
 
-        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"},
+        {"F", "f"}, {"W", "f"}, {"Y", "f"}
 
-        {"CAT", "H"}, {"CAC", "H"},
-        {"CAA", "Q"}, {"CAG", "Q"},
-
-        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"},
-
-        {"ATT", "I"}, {"ATC", "I"}, {"ATA", "I"},
-        {"ATG", "M"},
-
-        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"},
-
-        {"AAT", "N"}, {"AAC", "N"},
-        {"AAA", "K"}, {"AAG", "K"},
-
-        {"AGT", "S"}, {"AGC", "S"},
-        {"AGA", "R"}, {"AGG", "R"},
-
-        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"},
-
-        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"},
-
-        {"GAT", "D"}, {"GAC", "D"},
-        {"GAA", "E"}, {"GAG", "E"},
-
-        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
     };
+
 };
 
 class KmerMinAbundance: public KmerMinHash {
  public:
     CMinHashType abunds;
 
-    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed,
-                     HashIntoType mx) :
-        KmerMinHash(n, k, prot, seed, mx) { };
+    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, bool dayhoff,
+                     uint32_t seed, HashIntoType mx) :
+        KmerMinHash(n, k, prot, dayhoff, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {

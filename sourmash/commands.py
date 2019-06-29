@@ -182,6 +182,7 @@ def compute(args):
             if args.protein:
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=True,
+                            dayhoff=args.dayhoff,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
@@ -189,6 +190,7 @@ def compute(args):
             if args.dna:
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=False,
+                            dayhoff=args.dayhoff,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
