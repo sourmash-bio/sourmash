@@ -447,7 +447,7 @@ def compare(args):
 
     # do all-by-all calculation
 
-    labeltext = [sig.name() for sig in siglist]
+    labeltext = [item.name() for item in siglist]
     similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                    args.processes)
 
