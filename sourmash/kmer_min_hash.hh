@@ -188,10 +188,11 @@ public:
                 codon += "N";
             }
             auto translated = _codon_table.find(codon);
+            std::string residue = translated -> second;
 
             // Use dayhoff encoding of amino acids
             if (dayhoff) {
-                auto dayhoff_encoded = _dayhoff_table.find(translated);
+                auto dayhoff_encoded = _dayhoff_table.find(residue);
                 if (dayhoff_encoded != _dayhoff_table.end()) {
                     // "second" is the element mapped to by the codon
                     aa += dayhoff_encoded -> second;
@@ -202,7 +203,7 @@ public:
             } else {
                 if (translated != _codon_table.end()) {
                     // "second" is the element mapped to by the codon
-                    aa += translated -> second;
+                    aa += residue;
                 } else {
                     // Otherwise, assign the "X" or "unknown" amino acid
                     aa += "X";
