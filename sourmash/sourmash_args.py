@@ -72,7 +72,7 @@ def add_construct_moltype_args(parser):
 
     parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
                         help='build Dayhoff-encoded amino acid signatures (default: False)')
-    parser.add_argument('--no-protein', dest='protein',
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
                         action='store_false',
                         help='do not build Dayhoff-encoded amino acid signatures')
     parser.set_defaults(protein=False)
