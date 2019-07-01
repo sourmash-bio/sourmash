@@ -306,7 +306,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21,30',
-                                            '--dayhoff',
+                                            '--dayhoff', '--no-dna',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -315,10 +315,11 @@ def test_do_sourmash_compute_multik_with_dayhoff():
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 4
+            assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
+            assert all(x.minhash.dayhoff for x in siglist)
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -884,6 +885,28 @@ def test_do_compare_output_multiple_moltype():
 
         assert status == -1
         assert 'multiple molecule types loaded;' in err
+
+
+
+def test_do_compare_dayhoff():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dayhoff',
+                                            '--no-dna', testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dayhoff',
+                                            '--no-dna', testdata2],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--dayhoff',
+                                            '--csv', 'xxx'],
+                                           in_directory=location)
+
 
 
 def test_do_plot_comparison():
