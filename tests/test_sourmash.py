@@ -343,6 +343,30 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
             assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
             assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
 
+
+def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff', '--protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 6
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
+
+
 def test_do_sourmash_compute_multik_with_nothing():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
