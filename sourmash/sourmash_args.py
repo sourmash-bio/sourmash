@@ -53,6 +53,13 @@ def add_moltype_args(parser):
                         help='do not choose a protein signature')
     parser.set_defaults(protein=False)
 
+    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
+                        help='build Dayhoff-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
+                        action='store_false',
+                        help='do not build Dayhoff-encoded amino acid signatures')
+    parser.set_defaults(dayhoff=False)
+
     parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
                         help='choose a nucleotide signature (default: True)')
