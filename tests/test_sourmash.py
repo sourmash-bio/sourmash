@@ -301,6 +301,26 @@ def test_do_sourmash_compute_multik_with_protein():
             assert 30 in ksizes
 
 
+def test_do_sourmash_compute_multik_with_dayhoff():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 4
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+
+
 def test_do_sourmash_compute_multik_with_nothing():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
