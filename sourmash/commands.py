@@ -149,14 +149,22 @@ def compute(args):
     if args.dna and args.protein:
         notify('Computing both nucleotide and protein signatures.')
         num_sigs = 2*len(ksizes)
+    elif args.dna and args.dayhoff:
+        notify('Computing both nucleotide and Dayhoff-encoded protein '
+               'signatures.')
+        num_sigs = 2*len(ksizes)
     elif args.dna:
         notify('Computing only nucleotide (and not protein) signatures.')
         num_sigs = len(ksizes)
     elif args.protein:
         notify('Computing only protein (and not nucleotide) signatures.')
         num_sigs = len(ksizes)
+    elif args.dayhoff:
+        notify('Computing only Dayhoff-encoded protein (and not nucleotide) '
+               'signatures.')
+        num_sigs = len(ksizes)
 
-    if args.protein and not args.input_is_protein:
+    if (args.protein or args.dayhoff) and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
@@ -182,7 +190,15 @@ def compute(args):
             if args.protein:
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=True,
-                            dayhoff=args.dayhoff,
+                            dayhoff=False,
+                            track_abundance=args.track_abundance,
+                            scaled=args.scaled,
+                            seed=seed)
+                Elist.append(E)
+            if args.dayhoff:
+                E = MinHash(ksize=k, n=args.num_hashes,
+                            is_protein=True,
+                            dayhoff=True,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
@@ -190,7 +206,7 @@ def compute(args):
             if args.dna:
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=False,
-                            dayhoff=args.dayhoff,
+                            dayhoff=False,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
