@@ -83,7 +83,7 @@ def _json_next_signature(iterable,
     if molecule == 'protein':
         is_protein = True
         dayhoff = False
-    elif molecule == "protein_dayhoff":
+    elif molecule == "dayhoff":
         is_protein = True
         dayhoff = True
     elif molecule.upper() == 'DNA':
