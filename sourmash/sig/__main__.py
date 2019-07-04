@@ -114,7 +114,10 @@ def describe(args):
         ksize = mh.ksize
         moltype = 'DNA'
         if mh.is_protein:
-            moltype = 'protein'
+            if mh.dayhoff:
+                moltype = 'dayhoff'
+            else:
+                moltype = 'protein'
         scaled = mh.scaled
         num = mh.num
         seed = mh.seed

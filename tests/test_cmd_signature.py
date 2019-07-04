@@ -4,6 +4,7 @@ Tests for the 'sourmash signature' command line.
 from __future__ import print_function, unicode_literals
 import csv
 import shutil
+import os
 
 import pytest
 
@@ -622,6 +623,85 @@ signature license: CC0
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
+
+@utils.in_tempdir
+def test_sig_describe_1_dayhoff(c):
+    # get basic info on a signature
+    testdata = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '21,30',
+                   '--dayhoff', '--protein',
+                   '--dna',
+                   testdata)
+    # stdout should be new signature
+    computed_sig = os.path.join(c.location, 'short.fa.sig')
+    c.run_sourmash('sig', 'describe', computed_sig)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    # Add final trailing slash for this OS
+    testdata_dirname = os.path.dirname(testdata) + os.sep
+    location = c.location + os.sep
+
+    expected_output = """\
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: e45a080101751e044d6df861d3d0f3fd
+k=21 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: e45a080101751e044d6df861d3d0f3fd
+k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 1136a8a68420bd93683e45cdaf109b80
+k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 4244d1612598af044e799587132f007e
+k=30 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 4244d1612598af044e799587132f007e
+k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 71f7c111c01785e5f38efad45b00a0e1
+k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+""".splitlines()
+    for line in out.splitlines():
+        cleaned_line = line.strip().replace(
+            testdata_dirname, '').replace(location, '')
+        assert cleaned_line in expected_output
 
 
 @utils.in_tempdir
