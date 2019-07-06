@@ -49,7 +49,7 @@ from sourmash.minhash import (
 )
 from sourmash import signature
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 # add:
 # * get default params from Python

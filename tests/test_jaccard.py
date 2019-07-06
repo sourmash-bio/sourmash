@@ -5,7 +5,8 @@ objects.
 
 import pytest
 from sourmash import MinHash
-from . import sourmash_tst_utils as utils
+
+import sourmash_tst_utils as utils
 
 # below, 'track_abundance' is toggled to both True and False by py.test --
 # see conftest.py.

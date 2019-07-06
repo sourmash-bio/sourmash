@@ -11,7 +11,7 @@ import csv
 import pytest
 import screed
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node

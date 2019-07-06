@@ -1,5 +1,5 @@
 from sourmash import signature
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 def test_load_textmode(track_abundance):
     # ijson required a file in binary mode or bytes,

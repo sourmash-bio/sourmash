@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 import sourmash
 
 ## command line tests

@@ -1,5 +1,8 @@
 import os
 
+import matplotlib.pyplot as plt
+plt.rcParams.update({'figure.max_open_warning': 0})
+
 from hypothesis import settings, Verbosity
 import pytest
 
