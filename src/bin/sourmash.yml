@@ -7,6 +7,14 @@ settings:
     - SubcommandRequiredElseHelp
 
 subcommands:
+    - count_unique:
+        about: count unique k-mers in an Index
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - index:
+                help: index to search
+                required: true
     - scaffold:
         about: create SBT scaffold
         settings:
@@ -35,7 +43,7 @@ subcommands:
             - threshold:
                 long: "threshold"
                 help: minimum threshold for reporting matches
-                default_value: "0.8"
+                default_value: "0.08"
                 takes_value: true
                 required: false
             - save-matches:
@@ -93,6 +101,13 @@ subcommands:
             - databases:
                 help: "signatures/SBTs to search"
                 multiple: true
+    - prepare:
+        about: prepare an index
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - index:
+                help: SBT index
 
 # groups:
 #  - protein:

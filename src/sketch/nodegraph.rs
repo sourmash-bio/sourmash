@@ -5,12 +5,13 @@ use std::path::Path;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use fixedbitset::FixedBitSet;
+use primal;
 
-type HashIntoType = u64;
+use crate::HashIntoType;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Nodegraph {
-    bs: Vec<FixedBitSet>,
+    pub(crate) bs: Vec<FixedBitSet>,
     ksize: usize,
     occupied_bins: usize,
     unique_kmers: usize,
@@ -29,6 +30,16 @@ impl Nodegraph {
             occupied_bins: 0,
             unique_kmers: 0,
         }
+    }
+
+    pub fn with_tables(tablesize: usize, n_tables: usize, ksize: usize) -> Nodegraph {
+        // TODO: cache the Sieve somewhere for repeated calls?
+        let tablesizes: Vec<usize> = primal::Primes::all()
+            .filter(|p| *p >= tablesize)
+            .take(n_tables)
+            .collect();
+
+        Nodegraph::new(&tablesizes, ksize)
     }
 
     pub fn count(&mut self, hash: HashIntoType) -> bool {
@@ -231,7 +242,7 @@ mod test {
     use std::path::PathBuf;
 
     use proptest::num::u64;
-    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
+    use proptest::{proptest, proptest_helper};
 
     proptest! {
       #[test]
@@ -262,16 +273,11 @@ mod test {
         let mut buf = Vec::new();
         {
             let mut writer = BufWriter::new(&mut buf);
-            ng.save_to_writer(&mut writer);
+            ng.save_to_writer(&mut writer).unwrap();
         }
 
         let chunk_size = 8;
-        for (i, (c1, c2)) in data
-            .to_vec()
-            .chunks(chunk_size)
-            .zip(buf.chunks(chunk_size))
-            .enumerate()
-        {
+        for (c1, c2) in data.to_vec().chunks(chunk_size).zip(buf.chunks(chunk_size)) {
             assert_eq!(c1, c2);
         }
     }

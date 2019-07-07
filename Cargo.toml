@@ -1,6 +1,6 @@
 [package]
 name = "sourmash"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Luiz Irber <luiz.irber@gmail.com>"]
 description = "MinHash sketches for genomic data"
 repository = "https://github.com/luizirber/sourmash-rust"
@@ -17,11 +17,6 @@ bench = false
 [profile.release]
 lto=true
 
-[[bin]]
-bench = false
-path = "src/main.rs"
-name = "smrs"
-
 [features]
 from-finch = ["finch", "needletail"]
 
@@ -31,11 +26,9 @@ from-finch = ["finch", "needletail"]
 #cbindgen = "~0.6.7"
 
 [dependencies]
-backtrace = "=0.3.9" # https://github.com/alexcrichton/backtrace-rs/issues/147
 byteorder = "^1.2"
 cfg-if = "0.1"
 clap = { version = "~2.32", features = ["yaml"] }
-derive_builder = "^0.7"
 env_logger = "0.6.0"
 exitfailure = "0.5.1"
 failure = "0.1.3"
@@ -52,6 +45,13 @@ needletail = { version = "~0.2.1", optional = true }
 serde = "1.0"
 serde_derive = "~1.0.58"
 serde_json = "1.0.2"
+ukhs = "0.3.4"
+bio = { git = "https://github.com/luizirber/rust-bio", branch = "feature/fastx_reader" }
+primal = "0.2.3"
+pdatastructs = "0.5.0"
+itertools = "0.8.0"
+typed-builder = "0.3.0"
+csv = "1.0.7"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
 version = "^0.2"
@@ -67,6 +67,8 @@ features = ["bz2"]
 proptest = "^0.8"
 criterion = "^0.2"
 rand = "^0.5"
+tempfile = "3"
+assert_matches = "1.2"
 
 [[bench]]
 name = "index"
