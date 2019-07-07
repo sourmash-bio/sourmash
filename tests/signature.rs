@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use sourmash::{KmerMinHash, Signature};
+use sourmash::signature::Signature;
 
 #[test]
 fn load_signature() {
