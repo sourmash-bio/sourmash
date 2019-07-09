@@ -84,6 +84,9 @@ public:
         if (is_protein != other.is_protein) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
+        if (dayhoff != other.dayhoff) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
         if (max_hash != other.max_hash) {
             throw minhash_exception("mismatch in max_hash; comparison fail");
         }
