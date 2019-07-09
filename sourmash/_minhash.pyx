@@ -437,8 +437,14 @@ cdef class MinHash(object):
         if not deref(self._this).is_protein:
             raise ValueError("cannot add amino acid sequence to DNA MinHash!")
 
-        for i in range(0, len(sequence) - ksize + 1):
-            deref(self._this).add_word(to_bytes(sequence[i:i + ksize]))
+        aa_kmers = (sequence[i:i + ksize] i in range(0, len(sequence) - ksize + 1))
+        if not self.dayhoff:
+            for aa_kmer in aa_kmers:
+                deref(self._this).add_word(to_bytes(aa_kmer))
+        else:
+            for aa_kmer in aa_kmers:
+                dayhoff_kmer = ''.join(deref(self._this)._dayhoff_table.find(aa) for aa in aa_kmer)
+                deref(self._this).add_word(to_bytes(dayhoff_kmer))
 
     def is_molecule_type(self, molecule):
         if molecule.upper() == 'DNA' and not self.is_protein:
