@@ -247,7 +247,7 @@ public:
         return out;
     }
 
-    std::string aa_to_dayhoff(const std::string& aa) {
+    std::string aa_to_dayhoff(const std::string& aa) const {
         // Convert an amino acid letter to dayhoff encoding
 
         auto dayhoff_encoded = _dayhoff_table.find(aa);
