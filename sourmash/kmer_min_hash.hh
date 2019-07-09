@@ -249,17 +249,18 @@ public:
 
     std::string aa_to_dayhoff(const std::string& aa) const {
         // Convert an amino acid letter to dayhoff encoding
+        std::string new_letter;
 
         auto dayhoff_encoded = _dayhoff_table.find(aa);
         if (dayhoff_encoded != _dayhoff_table.end()) {
             // "second" is the element mapped to by the codon
             // Because .find returns an iterator
-            return dayhoff_encoded -> second;
+            new_letter = dayhoff_encoded -> second;
         } else {
             // Otherwise, assign the "X" or "unknown" amino acid
-            return "X";
+            new_letter = "X";
         }
-
+        return new_letter;
     }
 
     virtual void merge(const KmerMinHash& other) {
