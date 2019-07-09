@@ -218,7 +218,7 @@ def compute(args):
             if input_is_protein:
                 E.add_protein(seq)
             else:
-                E.add_sequence(seq, not check_sequence, dayhoff=args.dayhoff)
+                E.add_sequence(seq, not check_sequence)
 
     def build_siglist(Elist, filename, name=None):
         return [ sig.SourmashSignature(E, filename=filename,
