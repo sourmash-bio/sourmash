@@ -184,14 +184,17 @@ public:
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
-            if (codon.length() == 2) {
-                codon += "N";
-            }
             auto translated = _codon_table.find(codon);
-            std::string residue = translated -> second;
 
             // Use dayhoff encoding of amino acids
             if (dayhoff) {
+                if (codon.length() == 2) {
+                    codon += "N";
+                    codon = dna.substr(j, 3);
+                    translated = _codon_table.find(codon);
+                }
+                std::string residue = translated -> second;
+
                 auto dayhoff_encoded = _dayhoff_table.find(residue);
                 if (dayhoff_encoded != _dayhoff_table.end()) {
                     // "second" is the element mapped to by the codon
@@ -203,7 +206,7 @@ public:
             } else {
                 if (translated != _codon_table.end()) {
                     // "second" is the element mapped to by the codon
-                    aa += residue;
+                    aa += translated -> second;
                 } else {
                     // Otherwise, assign the "X" or "unknown" amino acid
                     aa += "X";
@@ -312,7 +315,7 @@ private:
         {"AGT", "S"}, {"AGC", "S"},
         {"AGA", "R"}, {"AGG", "R"},
 
-        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GCN", "V"},
+        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GTN", "V"},
 
         {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"}, {"GCN", "A"},
 
