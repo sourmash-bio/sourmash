@@ -437,7 +437,7 @@ cdef class MinHash(object):
         if not deref(self._this).is_protein:
             raise ValueError("cannot add amino acid sequence to DNA MinHash!")
 
-        aa_kmers = (sequence[i:i + ksize] i in range(0, len(sequence) - ksize + 1))
+        aa_kmers = (sequence[i:i + ksize] for i in range(0, len(sequence) - ksize + 1))
         if not self.dayhoff:
             for aa_kmer in aa_kmers:
                 deref(self._this).add_word(to_bytes(aa_kmer))
