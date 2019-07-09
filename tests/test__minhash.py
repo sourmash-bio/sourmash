@@ -126,23 +126,18 @@ def test_protein(track_abundance, dayhoff):
 
 
 def test_dayhoff(track_abundance):
-    # verify that we can hash protein/aa sequences
+    # verify that we can hash to dayhoff-encoded protein/aa sequences
     mh_dayhoff = MinHash(10, 6, is_protein=True,
-                         dayhoff=True,
-                 track_abundance=track_abundance)
-    mh_dayhoff.add_sequence('ACTGACGTA')
+                         dayhoff=True, track_abundance=track_abundance)
+    mh_dayhoff.add_sequence('ACTGAC')
 
-    assert len(mh_dayhoff.get_mins()) == 4
-    assert mh_dayhoff.get_mins() == [1148471399428095311, 2856496437829947536,
-                             6297896655479819658, 9902891763432131349]
-   # verify that we can hash protein/aa sequences
-    mh_protein = MinHash(10, 6, is_protein=True,
-                 track_abundance=track_abundance)
-    mh_protein.add_sequence('ACTGACGTA')
+    assert len(mh_dayhoff.get_mins()) == 2
+    # verify that dayhoff-encoded hashes are different from protein/aa hashes
+    mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
+    mh_protein.add_sequence('ACTGAC')
 
-    assert len(mh_protein.get_mins()) == 4
-    assert mh_protein.get_mins() == [1148471399428095311, 2856496437829947536,
-                             6297896655479819658, 9902891763432131349]
+    assert len(mh_protein.get_mins()) == 2
+    assert mh_protein.get_mins() != mh_dayhoff.get_mins()
 
 
 def test_protein_short(track_abundance):
