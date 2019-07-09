@@ -128,7 +128,7 @@ public:
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence, bool force=false, bool dayhoff=false) {
+    void add_sequence(const char * sequence, bool force=false) {
         if (strlen(sequence) < ksize) {
             return;
         }
