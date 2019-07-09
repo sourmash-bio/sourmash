@@ -162,7 +162,7 @@ public:
         } else {                      // protein
             std::string rc = _revcomp(seq);
             for (unsigned int i = 0; i < 3; i++) {
-                std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i), dayhoff);
+                std::string aa = _dna_to_aa(seq.substr(i, seq.length() - i));
                 unsigned int aa_ksize = int(ksize / 3);
                 std::string kmer;
 
@@ -171,7 +171,7 @@ public:
                     add_word(kmer);
                 }
 
-                aa = _dna_to_aa(rc.substr(i, rc.length() - i), dayhoff);
+                aa = _dna_to_aa(rc.substr(i, rc.length() - i));
                 aa_ksize = int(ksize / 3);
 
                 for (unsigned int j = 0; j < aa.length() - aa_ksize + 1; j++) {
@@ -182,7 +182,7 @@ public:
         }
     }
 
-    std::string _dna_to_aa(const std::string& dna, const bool dayhoff) {
+    std::string _dna_to_aa(const std::string& dna) {
         std::string aa;
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
