@@ -443,7 +443,11 @@ cdef class MinHash(object):
                 deref(self._this).add_word(to_bytes(aa_kmer))
         else:
             for aa_kmer in aa_kmers:
-                dayhoff_kmer = ''.join(deref(self._this)._dayhoff_table.find(aa) for aa in aa_kmer)
+                dayhoff_kmer = ''
+                for aa in aa_kmer:
+                    dayhoff_letter = deref(self._this).aa_to_dayhoff(aa)
+                    dayhoff_kmer += dayhoff_letter
+                # dayhoff_kmer = ''.join( for aa in aa_kmer)
                 deref(self._this).add_word(to_bytes(dayhoff_kmer))
 
     def is_molecule_type(self, molecule):
