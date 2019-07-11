@@ -188,7 +188,6 @@ public:
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
             auto translated = _codon_table.find(codon);
-            printf("dayhoff: %s\n", dayhoff);
 
             // Use dayhoff encoding of amino acids
             if (dayhoff) {
@@ -197,13 +196,15 @@ public:
                     codon = dna.substr(j, 3);
                     translated = _codon_table.find(codon);
                 }
+                // .find returns an iterator so need to get second item
                 std::string residue = translated -> second;
 
-                new_letter = aa_to_dayhoff(residue);
+                std::string new_letter = aa_to_dayhoff(residue);
                 aa += new_letter;
             } else {
                 if (translated != _codon_table.end()) {
                     // "second" is the element mapped to by the codon
+                    // Because .find returns an iterator
                     aa += translated -> second;
                 } else {
                     // Otherwise, assign the "X" or "unknown" amino acid
@@ -340,7 +341,41 @@ private:
     };
 
 
+// Dayhoff table from
+// Peris, P., López, D., & Campos, M. (2008).
+// IgTM: An algorithm to predict transmembrane domains and topology in
+// proteins. BMC Bioinformatics, 9(1), 1029–11.
+// http://doi.org/10.1186/1471-2105-9-367
+//
+// Original source:
+// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
+// A model of evolutionary change in proteins,
+// in Atlas of Protein Sequence and Structure,
+// ed Dayhoff M. O., editor.
+// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
+//
+// | Amino acid    | Property              | Dayhoff |
+// |---------------|-----------------------|---------|
+// | C             | Sulfur polymerization | a       |
+// | A, G, P, S, T | Small                 | b       |
+// | D, E, N, Q    | Acid and amide        | c       |
+// | H, K, R       | Basic                 | d       |
+// | I, L, M, V    | Hydrophobic           | e       |
+// | F, W, Y       | Aromatic              | f       |
+    std::map<std::string, std::string> _dayhoff_table = {
+        {"C", "a"},
 
+        {"A", "b"}, {"G", "b"}, {"P", "b"}, {"S", "b"}, {"T", "b"},
+
+        {"D", "c"}, {"E", "c"}, {"N", "c"}, {"Q", "c"},
+
+        {"H", "d"}, {"K", "d"}, {"R", "d"},
+
+        {"I", "e"}, {"L", "e"}, {"M", "e"}, {"V", "e"},
+
+        {"F", "f"}, {"W", "f"}, {"Y", "f"}
+
+    };
 
 };
 

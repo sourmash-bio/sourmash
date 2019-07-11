@@ -35,6 +35,7 @@ cdef extern from "kmer_min_hash.hh":
         void add_word(string word) except +ValueError
         void add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
+        str aa_to_dayhoff(string aa) except +ValueError
         unsigned int count_common(const KmerMinHash&) except +ValueError
         unsigned long size()
 
@@ -49,6 +50,7 @@ cdef extern from "kmer_min_hash.hh":
         void add_sequence(const char *, bool) except +ValueError
         void merge(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
+        str aa_to_dayhoff(string aa) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
         unsigned long size()
 
