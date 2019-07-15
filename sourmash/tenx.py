@@ -24,7 +24,8 @@ def read_10x_folder(folder):
     ----------
     folder : str
         Name of a 10x cellranger output folder containing
-        'possorted_genome_bam.bam' and 'barcodes.tsv' files
+        'possorted_genome_bam.bam', 'possorted_genome_bam.bam.bai'
+        and 'barcodes.tsv' files
 
     Returns
     -------
@@ -52,13 +53,13 @@ def read_10x_folder(folder):
 def _pass_alignment_qc(alignment, barcodes):
     """Assert high quality mapping, QC-passing barcode and UMI of alignment"""
     high_quality_mapping = alignment.mapq == 255
-    good_barcode = CELL_BARCODE in alignment.tags and \
+    good_cell_barcode = CELL_BARCODE in alignment.tags and \
                    alignment.get_tag(CELL_BARCODE) in barcodes
-    good_umi = UMI in alignment.tags
+    good_molecular_barcode = UMI in alignment.tags
     not_duplicate = not alignment.is_duplicate
 
-    pass_qc = high_quality_mapping and good_barcode and \
-              good_umi and not_duplicate
+    pass_qc = high_quality_mapping and good_cell_barcode and \
+              good_molecular_barcode and not_duplicate
     return pass_qc
 
 
