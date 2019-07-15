@@ -445,7 +445,7 @@ cdef class MinHash(object):
             for aa_kmer in aa_kmers:
                 dayhoff_kmer = ''
                 for aa in aa_kmer:
-                    dayhoff_letter = deref(self._this).aa_to_dayhoff(aa)
+                    dayhoff_letter = deref(self._this).aa_to_dayhoff(to_bytes(aa))
                     dayhoff_kmer += dayhoff_letter
                 # dayhoff_kmer = ''.join( for aa in aa_kmer)
                 deref(self._this).add_word(to_bytes(dayhoff_kmer))
