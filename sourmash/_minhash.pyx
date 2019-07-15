@@ -45,11 +45,15 @@ def get_scaled_for_max_hash(max_hash):
 
 
 cdef bytes to_bytes(s):
-    if not isinstance(s, (basestring, bytes)):
+    # Allow for strings, bytes or int
+    # Single item of byte string = int
+    if not isinstance(s, (basestring, bytes, int)):
         raise TypeError("Requires a string-like sequence")
 
     if isinstance(s, unicode):
         s = s.encode('utf-8')
+    if isinstance(s, int):
+        s = bytes([s])
     return s
 
 
