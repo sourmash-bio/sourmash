@@ -657,7 +657,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: short.fa
 source file: short.fa
-md5: e45a080101751e044d6df861d3d0f3fd
+md5: ef4fa1f3a90f3873187370f1eacc0d9a
 k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
@@ -684,7 +684,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: short.fa
 source file: short.fa
-md5: 4244d1612598af044e799587132f007e
+md5: 5647819f2eac913e04af51c8d548ad56
 k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
