@@ -309,6 +309,8 @@ def test_do_sourmash_compute_multik_with_dayhoff():
                                             '--dayhoff', '--no-dna',
                                             testdata1],
                                            in_directory=location)
+        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
+               'signatures.' in out
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -941,16 +943,27 @@ def test_do_compare_dayhoff():
                                            ['compute', '-k', '21', '--dayhoff',
                                             '--no-dna', testdata1],
                                            in_directory=location)
+        assert status == 0
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21', '--dayhoff',
                                             '--no-dna', testdata2],
                                            in_directory=location)
+        assert status == 0
 
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--dayhoff',
                                             '--csv', 'xxx'],
                                            in_directory=location)
+        true_out = '''[1.   0.94]
+[0.94 1.  ]
+min similarity in matrix: 0.940'''.splitlines()
+        for line in out:
+            cleaned_line = line.split('...')[-1].strip()
+            cleaned_line in true_out
+        assert status == 0
+
 
 
 
