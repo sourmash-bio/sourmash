@@ -310,7 +310,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
                                             testdata1],
                                            in_directory=location)
         assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
-               'signatures.' in out
+               'signatures.' in err
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
