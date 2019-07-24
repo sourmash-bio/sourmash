@@ -125,6 +125,18 @@ def test_protein(track_abundance, dayhoff):
     assert len(mh.get_mins()) == 4
 
 
+def test_translate_codon(track_abundance):
+    # Ensure that translation occurs properly
+    mh = MinHash(10, 6, is_protein=True)
+    assert "S" == mh.translate_codon('TCT')
+    assert "S" == mh.translate_codon('TC')
+    assert "X" == mh.translate_codon("T")
+
+    with pytest.raises(ValueError):
+        mh.translate_codon("")
+        mh.translate_codon("TCTA")
+
+
 def test_dayhoff(track_abundance):
     # verify that we can hash to dayhoff-encoded protein/aa sequences
     mh_dayhoff = MinHash(10, 6, is_protein=True,

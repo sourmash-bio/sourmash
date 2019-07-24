@@ -260,6 +260,9 @@ cdef class MinHash(object):
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
 
+    def translate_codon(self, codon):
+        return deref(self._this).translate_codon(to_bytes(codon))
+
     def count_common(self, MinHash other):
         return deref(self._this).count_common(deref(other._this))
 

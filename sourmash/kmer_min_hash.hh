@@ -182,38 +182,45 @@ public:
         }
     }
 
+    std::string translate_codon(std::string& codon) {
+        std::string residue;
+
+        if (codon.length() >= 2 && codon.length() <= 3){
+            // If codon is length 2, pad with an N for ambiguous codon amino acids
+            if (codon.length() == 2) {
+                codon += "N";
+            }
+            auto translated = _codon_table.find(codon);
+
+            if (translated != _codon_table.end()) {
+                // "second" is the element mapped to by the codon
+                // Because .find returns an iterator
+                residue = translated -> second;
+            } else {
+                // Otherwise, assign the "X" or "unknown" amino acid
+                residue = "X";
+            }
+        } else if (codon.length() == 1){
+            // Then we only have one nucleotides and the amino acid is unknown
+            residue = "X";
+        } else {
+            std::string msg = "Codon is invalid length: ";
+            msg += codon;
+            throw minhash_exception(msg);
+        }
+        return residue;
+    }
+
     std::string _dna_to_aa(const std::string& dna) {
         std::string aa;
+        std::string codon;
         std::string residue;
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
 
-            std::string codon = dna.substr(j, 3);
+            codon = dna.substr(j, 3);
 
-            // If codon is length 2, pad with an N for ambiguous codon amino acids
-            if (codon.length() >= 2){
-                if (codon.length() == 2) {
-                    codon += "N";
-//                    codon = dna.substr(j, 3);
-                }
-                auto translated = _codon_table.find(codon);
-
-                if (translated != _codon_table.end()) {
-                    // "second" is the element mapped to by the codon
-                    // Because .find returns an iterator
-                    residue = translated -> second;
-                } else {
-                    // Otherwise, assign the "X" or "unknown" amino acid
-                    residue = "X";
-                }
-            } else if (codon.length() == 1){
-                // Then we only have one nucleotides and the amino acid is unknown
-                residue = "X";
-            } else {
-                std::string msg = "Empty codon?? In k-mer: ";
-                msg += dna;
-                throw minhash_exception(msg);
-            }
+            residue = translate_codon(codon);
 
             // Use dayhoff encoding of amino acids
             if (dayhoff) {
