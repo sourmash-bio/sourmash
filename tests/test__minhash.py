@@ -206,7 +206,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample_scaled(100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo)
+    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
 
 
 def test_scaled(track_abundance):
@@ -223,7 +223,7 @@ def test_basic_dna_bad(track_abundance):
         mh.add_sequence('ATGR')
     print(e)
 
-    assert 'invalid DNA character in input k-mer: ATGR' in str(e)
+    assert 'invalid DNA character in input k-mer: ATGR' in str(e.value)
 
 
 def test_basic_dna_bad_2(track_abundance):

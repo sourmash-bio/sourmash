@@ -49,7 +49,7 @@ def test_zip_lineage_4():
     with pytest.raises(ValueError) as e:
         zip_lineage(x)
 
-    assert 'incomplete lineage at phylum - is class instead' in str(e)
+    assert 'incomplete lineage at phylum - is class instead' in str(e.value)
 
 
 def test_build_tree():
