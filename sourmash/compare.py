@@ -4,8 +4,9 @@ import os
 import tempfile
 from multiprocessing.pool import ThreadPool
 from scipy.spatial.distance import squareform
-
 import numpy as np
+
+from .logging import notify, error, print_results
 
 
 def _compare_serial(siglist, ignore_abundance):
@@ -42,6 +43,8 @@ def memmap_siglist(siglist):
 
 def similarity(ignore_abundance, downsample, sig1, sig2):
     "Compute similarity with the other MinHash signature."
+
+    notify("calculating similarity")
     try:
         return sig1.minhash.similarity(sig2.minhash, ignore_abundance)
     except ValueError as e:
@@ -65,14 +68,20 @@ def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
     else:
         # Create a memory-mapped array
         memmapped = memmap_siglist(siglist)
+        notify("memory mapped complete")
         sig_iterator = combinations(memmapped, 2)
-
+        notify("starting sig iterator")
         condensed = []
         # do some other stuff in the main process
         pool = ThreadPool(processes=n_jobs)
         func = partial(similarity, ignore_abundance, False)
-        for sig1, sig2 in sig_iterator:
-            pool.apply_async(func, args=(sig1, sig2), callback=partial(log_result, condensed))
+
+        pool.map_async(
+            func,
+            sig_iterator,
+            callback=partial(log_result, condensed)
+        )
+            
         pool.close()
         pool.join()
         similarities = squareform(condensed)
