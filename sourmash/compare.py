@@ -2,6 +2,7 @@ from itertools import combinations
 from functools import partial
 import os
 import tempfile
+import multiprocessing
 from multiprocessing.pool import ThreadPool
 from scipy.spatial.distance import squareform
 import numpy as np
@@ -56,12 +57,6 @@ def similarity(ignore_abundance, downsample, sig1, sig2):
             raise
 
 
-def log_result(condensed, result):
-    # This is called whenever similarity() returns a result.
-    # condensed is modified only by the compare_all_pairs, not the pool workers.
-    condensed.append(result)
-
-
 def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
@@ -76,11 +71,9 @@ def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
         pool = ThreadPool(processes=n_jobs)
         func = partial(similarity, ignore_abundance, False)
 
-        pool.map_async(
+        condensed = pool.starmap(
             func,
-            sig_iterator,
-            callback=partial(log_result, condensed)
-        )
+            [(arg1, arg2) for arg1, arg2 in sig_iterator])
             
         pool.close()
         pool.join()
