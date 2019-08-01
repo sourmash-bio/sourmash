@@ -26,7 +26,6 @@ def ignore_abundance(track_abundance):
 
 def test__compare_serial(siglist, ignore_abundance):
     similarities = _compare_serial(siglist, ignore_abundance)
-    names = [x.name() for x in siglist]
 
     true_similarities = np.array(
         [[1., 0.356, 0.078, 0.086, 0., 0., 0.],
@@ -42,9 +41,8 @@ def test__compare_serial(siglist, ignore_abundance):
 
 def test_memmap_siglist(siglist):
     memmapped = memmap_siglist(siglist)
-
     # Assert that the data didn't change as a result of memory-mapping
-    assert memmapped == siglist
+    np.testing.assert_array_equal(memmapped, siglist)
 
 
 def test_compare_all_pairs(siglist, ignore_abundance):
