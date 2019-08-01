@@ -45,7 +45,7 @@ def memmap_siglist(siglist):
 def similarity(ignore_abundance, downsample, sig1, sig2):
     "Compute similarity with the other MinHash signature."
 
-    notify("calculating similarity")
+    print("calculating similarity")
     try:
         return sig1.minhash.similarity(sig2.minhash, ignore_abundance)
     except ValueError as e:
@@ -57,19 +57,24 @@ def similarity(ignore_abundance, downsample, sig1, sig2):
             raise
 
 
-def compare_all_pairs(siglist, ignore_abundance, n_jobs=None):
+def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
+    print("in compare_all_pairs jobs {}", n_jobs)
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
         # Create a memory-mapped array
+        print("memory mapping initialized")
         memmapped = memmap_siglist(siglist)
-        notify("memory mapped complete")
+        del siglist
+        print("memory mapped complete")
         sig_iterator = combinations(memmapped, 2)
-        notify("starting sig iterator")
-        condensed = []
+        print("combinations sig iterator created")
+
         # do some other stuff in the main process
         pool = ThreadPool(processes=n_jobs)
-        func = partial(similarity, ignore_abundance, False)
+        print("ThreadPool initialized")
+        func = partial(similarity, ignore_abundance, downsample)
+        print("partial func initialized")
 
         condensed = pool.starmap(
             func,

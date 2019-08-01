@@ -448,8 +448,10 @@ def compare(args):
     # do all-by-all calculation
 
     labeltext = [item.name() for item in siglist]
+    notify("similarity before")
     similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                    args.processes)
+    notify("similarity after")
 
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
