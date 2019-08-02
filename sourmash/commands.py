@@ -450,7 +450,7 @@ def compare(args):
     labeltext = [item.name() for item in siglist]
     notify("similarity before")
     similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                   args.processes)
+                                   n_jobs=args.processes)
     notify("similarity after")
 
     if len(siglist) < 30:
