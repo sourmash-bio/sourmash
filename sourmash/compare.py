@@ -3,7 +3,6 @@ from functools import partial
 import os
 import tempfile
 import multiprocessing
-from multiprocessing.pool import ThreadPool
 from scipy.spatial.distance import squareform
 import numpy as np
 
@@ -45,7 +44,7 @@ def memmap_siglist(siglist):
 def similarity(ignore_abundance, downsample, sig1, sig2):
     "Compute similarity with the other MinHash signature."
 
-    print("calculating similarity")
+    print("calculating similarity", flush=True)
     try:
         return sig1.minhash.similarity(sig2.minhash, ignore_abundance)
     except ValueError as e:
@@ -62,17 +61,14 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
-        # Create a memory-mapped array
-        print("memory mapping initialized")
         memmapped = memmap_siglist(siglist)
-        del siglist
-        print("memory mapped complete")
         sig_iterator = combinations(memmapped, 2)
+        del siglist
         print("combinations sig iterator created")
 
         # do some other stuff in the main process
-        pool = ThreadPool(processes=n_jobs)
-        print("ThreadPool initialized")
+        pool = multiprocessing.Pool(processes=n_jobs)
+        print("pool initialized")
         func = partial(similarity, ignore_abundance, downsample)
         print("partial func initialized")
 
