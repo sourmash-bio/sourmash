@@ -73,8 +73,13 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
+        startt = time.time()
         sig_iterator = itertools.combinations(siglist, 2)
         notify("Created combinations list")
+        length_combinations = nCr(len(siglist), 2)
+        chunksize, extra = divmod(length_combinations, n_jobs) 
+        if extra: 
+            chunksize += 1
         del siglist
         func = partial(
             similarity_args_unpack,
@@ -82,13 +87,16 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             downsample=downsample)
         notify("similarity func initialized")
         with multiprocessing.Pool(n_jobs) as pool:
-            condensed = list(pool.imap(func, sig_iterator))
+            condensed = list(pool.imap(func, sig_iterator, chunksize=chunksize))
         notify("condensed list done")
         similarities = squareform(condensed)
+        del condensed
+        del sig_iterator
         # 'squareform' was made for *distance* matrices not *similarity*
         # so need to replace diagonal values with 1.
         # np.fill_digonal modifies 'similarities' in-place
         notify("squareformed")
         np.fill_diagonal(similarities, 1)
         notify("filled diagonal")
+        notify("time taken to compare all pairs parallely is {} seconds ", time.time() - startt)
     return similarities
