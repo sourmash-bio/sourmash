@@ -2,13 +2,12 @@ from itertools import combinations, islice
 from functools import partial
 import os
 import tempfile
-from multiprocessing.pool import ThreadPool
 import time
 import multiprocessing
 from scipy.spatial.distance import squareform
 import numpy as np
 
-from .logging import notify
+from .logging import notify, error, print_results
 
 
 def _compare_serial(siglist, ignore_abundance):
@@ -43,13 +42,8 @@ def memmap_siglist(siglist):
     return large_memmap
 
 
-def similarity(ignore_abundance, downsample, sig1, sig2):
+def similarity(sig1, sig2, ignore_abundance, downsample):
     "Compute similarity with the other MinHash signature."
-    notify("calculating similarity")
-    created = multiprocessing.Process()
-    current = multiprocessing.current_process()
-    notify('running:', current.name, current._identity)
-    notify('created:', created.name, created._identity)
     try:
         return sig1.minhash.similarity(sig2.minhash, ignore_abundance)
     except ValueError as e:
@@ -61,27 +55,29 @@ def similarity(ignore_abundance, downsample, sig1, sig2):
             raise
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
+
+    def nCr(n,r): 
+        import math
+        f = math.factorial 
+        return f(n) // (f(r) * f(n-r))
+
+    print("in compare_all_pairs jobs", n_jobs)
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
-        notify("Parallel")
-        # Create a memory-mapped array
+
         memmapped = memmap_siglist(siglist)
-        notify("Memmapped created")
         del siglist
         sig_iterator = combinations(memmapped, 2)
-        notify("Created combinations")
-        del memmapped
-        # do some other stuff in the main process
-        pool = ThreadPool(processes=n_jobs)
-        func = partial(similarity, ignore_abundance, False)
-        notify("ThreadPool and func initialized")
-        condensed = pool.starmap(func, sig_iterator)
-        notify("pool completed")
-        pool.close()
-        pool.join()
+        condensed = []
+        for sig1, sig2 in sig_iterator:
+            startt = time.time()
+            condensed.append(
+                similarity(sig1, sig2, ignore_abundance, downsample))
+            print("time taken is {} seconds".format(time.time() - startt))
+            
         similarities = squareform(condensed)
-        del condensed
+
         # 'squareform' was made for *distance* matrices not *similarity*
         # so need to replace diagonal values with 1.
         # np.fill_digonal modifies 'similarities' in-place
