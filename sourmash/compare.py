@@ -42,32 +42,26 @@ def memmap_siglist(siglist):
     return large_memmap
 
 
-class MultiprocessCompare():
-    sig_iterator = None
-
-    @classmethod
-    def set_sig_iterator(cls, sig_iterator):
-        cls.sig_iterator = sig_iterator
-
-    @classmethod
-    def similarity(cls, ignore_abundance, downsample, index):
-        "Compute similarity with the other MinHash signature."
-        startt = time.time()
-        sig1, sig2 = cls.sig_iterator[index]
-        try:
-            sig = sig1.minhash.similarity(sig2.minhash, ignore_abundance)
+def similarity(sig1, sig2, ignore_abundance, downsample):
+    "Compute similarity with the other MinHash signature."
+    startt = time.time()
+    try:
+        sig = sig1.minhash.similarity(sig2.minhash, ignore_abundance)
+        notify("time taken in calculating similarity is {} seconds ", time.time() - startt)
+        return sig
+    except ValueError as e:
+        if 'mismatch in max_hash' in str(e) and downsample:
+            xx = sig1.minhash.downsample_max_hash(sig2.minhash)
+            yy = sig2.minhash.downsample_max_hash(sig1.minhash)
+            sig = similarity(xx, yy, ignore_abundance)
             notify("time taken in calculating similarity is {} seconds ", time.time() - startt)
             return sig
-        except ValueError as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig1.minhash.downsample_max_hash(sig2.minhash)
-                yy = sig2.minhash.downsample_max_hash(sig1.minhash)
-                sig = similarity(xx, yy, ignore_abundance)
-                notify("time taken in calculating similarity is {} seconds ", time.time() - startt)
-                return sig
-            else:
-                raise
+        else:
+            raise
 
+
+def similarity_args_unpack(args, ignore_abundance, downsample):
+    return similarity(*args, ignore_abundance, downsample)
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
 
@@ -79,18 +73,16 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
-        length_combinations = nCr(len(siglist), 2)
-        sig_iterator = list(itertools.combinations(siglist, 2))
+        sig_iterator = itertools.combinations(siglist, 2)
         notify("Created combinations list")
         del siglist
-        multiprocess_compare = MultiprocessCompare()
-        multiprocess_compare.set_sig_iterator(sig_iterator)
-        notify("Created MultiprocessCompare class and set sig iterator")
-        del sig_iterator
-        func = partial(multiprocess_compare.similarity, ignore_abundance, downsample)
+        func = partial(
+            similarity_args_unpack,
+            ignore_abundance=ignore_abundance,
+            downsample=downsample)
         notify("similarity func initialized")
         with multiprocessing.Pool(n_jobs) as pool:
-            condensed = list(pool.imap(func, range(length_combinations)))
+            condensed = list(pool.imap(func, sig_iterator))
         notify("condensed list done")
         similarities = squareform(condensed)
         # 'squareform' was made for *distance* matrices not *similarity*
