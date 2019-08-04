@@ -72,7 +72,6 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
     else:
         startt = time.time()
         sig_iterator = itertools.combinations(siglist, 2)
-        length_combinations = nCr(len(siglist), 2)
         notify("Created combinations list")
         del siglist
         func = partial(
@@ -80,26 +79,13 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             ignore_abundance=ignore_abundance,
             downsample=downsample)
         notify("similarity func initialized")
-        condensed = []
-        chunksize, extra = divmod(length_combinations, n_jobs) 
-        if extra: 
-            chunksize += 1
-        chunk = 0
-        while True:
-            pool = multiprocessing.Pool(n_jobs)
-            imapchunksize, extra = divmod(length_combinations, n_jobs) 
-            if extra: 
-                imapchunksize += 1
-            result = list(pool.imap(func, itertools.islice(sig_iterator, chunksize), chunksize=imapchunksize))
-            chunk += 1
-            if result:
-                condensed.extend(result)
-                notify("{} chunk done", chunk)
-            else:
-                break
-
-        similarities = squareform(condensed)
+        from dask import compute, delayed
+        values = [delayed(func)(x) for x in sig_iterator]
+        notify("Created func list")
+        import dask.threaded
+        condensed = compute(*values, scheduler='threads')
         notify("condensed list done")
+        similarities = squareform(condensed)
         del sig_iterator
         # 'squareform' was made for *distance* matrices not *similarity*
         # so need to replace diagonal values with 1.

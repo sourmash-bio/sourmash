@@ -11,5 +11,5 @@ recommonmark
 sphinxcontrib-napoleon
 setuptools_scm
 setuptools_scm_git_archive
-joblib
+dask==2.1.0
 nbsphinx
