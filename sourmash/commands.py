@@ -461,8 +461,6 @@ def compare(args):
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
 
-    print_results('min similarity in matrix: {:.3f}', numpy.min(similarity))
-
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'

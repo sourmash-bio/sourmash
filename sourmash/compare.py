@@ -44,17 +44,14 @@ def memmap_siglist(siglist):
 
 def similarity(sig1, sig2, ignore_abundance, downsample):
     "Compute similarity with the other MinHash signature."
-    startt = time.time()
     try:
         sig = sig1.minhash.similarity(sig2.minhash, ignore_abundance)
-        notify("time taken in calculating similarity is {} seconds ", time.time() - startt)
         return sig
     except ValueError as e:
         if 'mismatch in max_hash' in str(e) and downsample:
             xx = sig1.minhash.downsample_max_hash(sig2.minhash)
             yy = sig2.minhash.downsample_max_hash(sig1.minhash)
             sig = similarity(xx, yy, ignore_abundance)
-            notify("time taken in calculating similarity is {} seconds ", time.time() - startt)
             return sig
         else:
             raise
@@ -75,22 +72,35 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
     else:
         startt = time.time()
         sig_iterator = itertools.combinations(siglist, 2)
-        notify("Created combinations list")
         length_combinations = nCr(len(siglist), 2)
-        chunksize, extra = divmod(length_combinations, n_jobs) 
-        if extra: 
-            chunksize += 1
+        notify("Created combinations list")
         del siglist
         func = partial(
             similarity_args_unpack,
             ignore_abundance=ignore_abundance,
             downsample=downsample)
         notify("similarity func initialized")
-        with multiprocessing.Pool(n_jobs) as pool:
-            condensed = list(pool.imap(func, sig_iterator, chunksize=chunksize))
-        notify("condensed list done")
+        condensed = []
+        chunksize, extra = divmod(length_combinations, n_jobs) 
+        if extra: 
+            chunksize += 1
+        chunk = 0
+        while True:
+            pool = multiprocessing.Pool(n_jobs)
+            imapchunksize, extra = divmod(length_combinations, n_jobs) 
+            if extra: 
+                imapchunksize += 1
+            result = list(pool.map(func, itertools.islice(sig_iterator, chunksize), chunksize=imapchunksize))
+            chunk += 1
+            if result:
+                condensed.extend(result)
+                notify("{} chunk done", chunk)
+                time.sleep(1)
+            else:
+                break
+
         similarities = squareform(condensed)
-        del condensed
+        notify("condensed list done")
         del sig_iterator
         # 'squareform' was made for *distance* matrices not *similarity*
         # so need to replace diagonal values with 1.
