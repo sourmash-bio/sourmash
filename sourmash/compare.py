@@ -90,12 +90,11 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             imapchunksize, extra = divmod(length_combinations, n_jobs) 
             if extra: 
                 imapchunksize += 1
-            result = list(pool.map(func, itertools.islice(sig_iterator, chunksize), chunksize=imapchunksize))
+            result = list(pool.imap(func, itertools.islice(sig_iterator, chunksize), chunksize=imapchunksize))
             chunk += 1
             if result:
                 condensed.extend(result)
                 notify("{} chunk done", chunk)
-                time.sleep(1)
             else:
                 break
 
