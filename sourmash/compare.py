@@ -73,6 +73,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             similarity_args_unpack,
             ignore_abundance=ignore_abundance,
             downsample=downsample)
+        notify("Created similarity func")
         condensed = []
         startt = time.time()
         with multiprocessing.Pool(n_jobs) as pool:
@@ -81,6 +82,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
                 chunksize, extra = divmod(length_siglist, n_jobs)
                 if extra:
                     chunksize += 1
+                notify("Created sig iterator")
                 condensed.extend(list(pool.imap(func, sig_iterator, chunksize=chunksize)))
                 notify("comparison for {} sigs completed in {:.5f} seconds", length_siglist, time.time() - startt)
                 length_siglist = length_siglist - 1
