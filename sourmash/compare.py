@@ -82,8 +82,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
                 if extra:
                     chunksize += 1
                 condensed.extend(list(pool.imap(func, sig_iterator, chunksize=chunksize)))
-                notify("comparison for {} sigs completed", length_siglist, end='\r')
-                notify("time taken to complete comparison of {} sigs is {:.5f} seconds", length_siglist, time.time() - startt, end='\r')
+                notify("comparison for {} sigs completed in {:.5f} seconds", length_siglist, time.time() - startt)
                 length_siglist = length_siglist - 1
         del siglist
         notify("condensed list done")
