@@ -1,10 +1,10 @@
 import itertools
+import math
 from functools import partial
 import os
 import tempfile
 import time
 import multiprocessing
-from scipy.spatial.distance import squareform
 import numpy as np
 
 from .logging import notify, error, print_results
@@ -64,13 +64,17 @@ def similarity_args(args, ignore_abundance, downsample):
 def similarity_args_unpack(index, ignore_abundance, downsample, siglist):
     startt = time.time()
     sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
-    func = partial(
-            similarity_args,
-            ignore_abundance=ignore_abundance,
-            downsample=downsample)
+    func = partial(similarity_args,
+                   ignore_abundance=ignore_abundance,
+                   downsample=downsample)
     ret = list(map(func, sig_iterator))
     notify("comparison for index {} done in {:.5f} seconds", index, time.time() - startt)
     return ret
+
+
+def nCr(n, r):
+    f = math.factorial
+    return f(n) // (f(r) * f(n - r))
 
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
@@ -88,21 +92,42 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             ignore_abundance=ignore_abundance,
             downsample=downsample)
         notify("Created similarity func")
-        condensed = []
+
+        length_combinations = nCr(length_siglist, 2)
+        d = int(np.ceil(np.sqrt(length_combinations * 2)))
+
+        # Check that v is of valid dimensions.
+        if d * (d - 1) != length_combinations * 2:
+            raise ValueError('Incompatible vector size. It must be a binomial '
+                             'coefficient n choose 2 for some integer n >= 2.')
+        similarities = np.eye(d, dtype=np.float64)
+        temp_folder = tempfile.mkdtemp()
+        filename = os.path.join(temp_folder, 'similarities.mmap')
+        if os.path.exists(filename):
+            os.unlink(filename)
+        shape = (d, d)
+        memmap_similarities = np.memmap(filename, mode='w+', shape=shape, dtype=np.float64)
+        for i in range(d):
+            memmap_similarities[i, i] = similarities[i, i]
+        notify("Initialized memmapped similarities matrix")
+
         with multiprocessing.Pool(n_jobs) as pool:
             chunksize, extra = divmod(length_siglist, n_jobs)
             if extra:
                 chunksize += 1
-            for l in pool.imap(func, range(length_siglist), chunksize=chunksize):
-                condensed.extend(l)
+            notify("Calculated chunk size")
+            result = pool.imap(func, range(length_siglist), chunksize=chunksize)
+            notify("Pool.imap completed")
+            for index, l in enumerate(result):
+                startt = time.time()
+                col_idx = index + 1
+                for idx_condensed, item in enumerate(l):
+                    memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
+                notify("setting similarities matrix for index {} done in {:.5f} seconds", index, time.time() - startt)
+            notify("Setting similarities completed")
+
         del siglist
-        notify("condensed list done")
-        similarities = squareform(condensed)
-        # 'squareform' was made for *distance* matrices not *similarity*
-        # so need to replace diagonal values with 1.
-        # np.fill_digonal modifies 'similarities' in-place
-        notify("squareformed")
-        np.fill_diagonal(similarities, 1)
-        notify("filled diagonal")
-        notify("time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - startt)
-    return similarities
+        del memmap_similarities
+    large_memmap = np.memmap(filename, dtype=np.float64, shape=shape)
+    notify("time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - startt)
+    return large_memmap
