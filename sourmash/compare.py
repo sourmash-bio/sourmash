@@ -57,8 +57,21 @@ def similarity(sig1, sig2, ignore_abundance, downsample):
             raise
 
 
-def similarity_args_unpack(args, ignore_abundance, downsample):
+def similarity_args(args, ignore_abundance, downsample):
     return similarity(*args, ignore_abundance, downsample)
+
+
+def similarity_args_unpack(index, ignore_abundance, downsample, siglist):
+    startt = time.time()
+    sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
+    func = partial(
+            similarity_args,
+            ignore_abundance=ignore_abundance,
+            downsample=downsample)
+    ret = list(map(func, sig_iterator))
+    notify("comparison for index {} done in {:.5f} seconds", index, time.time() - startt)
+    return ret
+
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
 
@@ -71,25 +84,20 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
         notify("Created memmapped siglist")
         func = partial(
             similarity_args_unpack,
+            siglist=siglist,
             ignore_abundance=ignore_abundance,
             downsample=downsample)
         notify("Created similarity func")
         condensed = []
-        startt = time.time()
         with multiprocessing.Pool(n_jobs) as pool:
-            for index, sig in enumerate(siglist):
-                sig_iterator = itertools.product([sig], siglist[index + 1:])
-                chunksize, extra = divmod(length_siglist, n_jobs)
-                if extra:
-                    chunksize += 1
-                notify("Created sig iterator")
-                condensed.extend(list(pool.imap(func, sig_iterator, chunksize=chunksize)))
-                notify("comparison for {} sigs completed in {:.5f} seconds", length_siglist, time.time() - startt)
-                length_siglist = length_siglist - 1
+            chunksize, extra = divmod(length_siglist, n_jobs)
+            if extra:
+                chunksize += 1
+            for l in pool.imap(func, range(length_siglist), chunksize=chunksize):
+                condensed.extend(l)
         del siglist
         notify("condensed list done")
         similarities = squareform(condensed)
-        del sig_iterator
         # 'squareform' was made for *distance* matrices not *similarity*
         # so need to replace diagonal values with 1.
         # np.fill_digonal modifies 'similarities' in-place
