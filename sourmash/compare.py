@@ -62,28 +62,28 @@ def similarity_args_unpack(args, ignore_abundance, downsample):
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
 
-    def nCr(n,r): 
-        import math
-        f = math.factorial 
-        return f(n) // (f(r) * f(n-r))
-
     if n_jobs is None or n_jobs == 1:
         similarities = _compare_serial(siglist, ignore_abundance)
     else:
         startt = time.time()
-        sig_iterator = itertools.combinations(siglist, 2)
-        notify("Created combinations list")
-        del siglist
+        length_siglist = len(siglist)
+        siglist = memmap_siglist(siglist)
+        notify("Created memmapped siglist")
         func = partial(
             similarity_args_unpack,
             ignore_abundance=ignore_abundance,
             downsample=downsample)
-        notify("similarity func initialized")
-        from dask import compute, delayed
-        values = [delayed(func)(x) for x in sig_iterator]
-        notify("Created func list")
-        import dask.threaded
-        condensed = compute(*values, scheduler='threads')
+        condensed = []
+        with multiprocessing.Pool(n_jobs) as pool:
+            for index, sig in enumerate(siglist):
+                sig_iterator = itertools.product([sig], siglist[index + 1:])
+                chunksize, extra = divmod(length_siglist, n_jobs)
+                if extra:
+                    chunksize += 1
+                condensed.extend(list(pool.imap(func, sig_iterator, chunksize=chunksize)))
+                notify("comparison for {} sigs completed", length_siglist, end='\r')
+                length_siglist = length_siglist - 1
+        del siglist
         notify("condensed list done")
         similarities = squareform(condensed)
         del sig_iterator
