@@ -83,7 +83,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
                     chunksize += 1
                 condensed.extend(list(pool.imap(func, sig_iterator, chunksize=chunksize)))
                 notify("comparison for {} sigs completed", length_siglist, end='\r')
-                notify("time taken to complete comparison of {} sigs is {:.3f} seconds", length_siglist, time.time() - startt, end='\r')
+                notify("time taken to complete comparison of {} sigs is {:.5f} seconds", length_siglist, time.time() - startt, end='\r')
                 length_siglist = length_siglist - 1
         del siglist
         notify("condensed list done")
@@ -95,5 +95,5 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
         notify("squareformed")
         np.fill_diagonal(similarities, 1)
         notify("filled diagonal")
-        notify("time taken to compare all pairs parallely is {:.3f} seconds ", time.time() - startt)
+        notify("time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - startt)
     return similarities
