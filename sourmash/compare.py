@@ -4,7 +4,7 @@ from functools import partial
 import os
 import tempfile
 import time
-import multiprocessing
+from multiprocessing import get_context
 import numpy as np
 
 from .logging import notify, error, print_results
@@ -111,7 +111,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             memmap_similarities[i, i] = similarities[i, i]
         notify("Initialized memmapped similarities matrix")
 
-        with multiprocessing.Pool(n_jobs) as pool:
+        with get_context("spawn").Pool(n_jobs) as pool:
             chunksize, extra = divmod(length_siglist, n_jobs)
             if extra:
                 chunksize += 1
@@ -119,6 +119,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
             result = pool.imap(func, range(length_siglist), chunksize=chunksize)
             notify("Pool.imap completed")
             for index, l in enumerate(result):
+                notify("enumerating result {}", index)
                 startt = time.time()
                 col_idx = index + 1
                 for idx_condensed, item in enumerate(l):
