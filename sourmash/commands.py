@@ -448,11 +448,8 @@ def compare(args):
     # do all-by-all calculation
 
     labeltext = [item.name() for item in siglist]
-    notify("similarity before")
     similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                    n_jobs=args.processes)
-    notify("similarity after")
-
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
@@ -461,6 +458,7 @@ def compare(args):
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
 
+    print_results('min similarity in matrix: {:.3f}', numpy.min(similarity))
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'
@@ -571,7 +569,6 @@ def plot(args):
         np_idx = numpy.array(sample_idx)
         D = D[numpy.ix_(np_idx, np_idx)]
         labeltext = [ labeltext[idx] for idx in sample_idx ]
-
     ### do clustering
     Y = sch.linkage(D, method='single')
     Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)

@@ -182,7 +182,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     memmap_similarities, filename = to_memmap(similarities)
     notify("Initialized memmapped similarities matrix")
 
-    # Initialize the function using func.paritla with the common arguments like
+    # Initialize the function using func.partial with the common arguments like
     # siglist, ignore_abundance, downsample, for computing all the signatures
     # The only changing parameter that will be mapped from the pool is the index
     func = partial(
@@ -197,7 +197,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     # processes
     with multiprocessing.Pool(n_jobs) as pool:
 
-        # Calculate chunksize, by default pool.imap chunk size is 1
+        # Calculate chunk size, by default pool.imap chunk size is 1
         chunksize, extra = divmod(length_siglist, n_jobs)
         if extra:
             chunksize += 1
@@ -247,4 +247,4 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
         similarities = compare_serial(siglist, ignore_abundance, downsample)
     else:
         similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs)
-        return similarities
+    return similarities
