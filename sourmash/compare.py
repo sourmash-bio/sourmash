@@ -193,7 +193,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     notify("Created similarity func")
 
     # Initialize multiprocess.pool
-    pool = multiprocessing.Pool(n_jobs)
+    pool = multiprocessing.Pool(processes=n_jobs)
 
     # Calculate chunk size, by default pool.imap chunk size is 1
     chunksize, extra = divmod(length_siglist, n_jobs)
