@@ -192,35 +192,36 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         downsample=downsample)
     notify("Created similarity func")
 
-    # Initialize multiprocess.pool in a context to
-    # efficiently join and close pool of
-    # processes
-    with multiprocessing.Pool(n_jobs) as pool:
+    # Initialize multiprocess.pool
+    pool = multiprocessing.Pool(n_jobs)
 
-        # Calculate chunk size, by default pool.imap chunk size is 1
-        chunksize, extra = divmod(length_siglist, n_jobs)
-        if extra:
-            chunksize += 1
-        notify("Calculated chunk size for multiprocessing")
+    # Calculate chunk size, by default pool.imap chunk size is 1
+    chunksize, extra = divmod(length_siglist, n_jobs)
+    if extra:
+        chunksize += 1
+    notify("Calculated chunk size for multiprocessing")
 
-        # This will not generate the results yet, since pool.imap returns a generator
-        result = pool.imap(func, range(length_siglist), chunksize=chunksize)
-        notify("Initialized multiprocessing pool.imap")
+    # This will not generate the results yet, since pool.imap returns a generator
+    result = pool.imap(func, range(length_siglist), chunksize=chunksize)
+    notify("Initialized multiprocessing pool.imap")
 
-        # Enumerate and calculate similarities at each of the indices
-        # and set the results at the appropriate combination coordinate
-        # locations inside the similarity matrix
-        for index, l in enumerate(result):
-            startt = time.time()
-            col_idx = index + 1
-            for idx_condensed, item in enumerate(l):
-                memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
-            notify(
-                "Setting similarities matrix for index {} done in {:.5f} seconds",
-                index,
-                time.time() - startt,
-                end='\r')
-        notify("Setting similarities completed")
+    # Enumerate and calculate similarities at each of the indices
+    # and set the results at the appropriate combination coordinate
+    # locations inside the similarity matrix
+    for index, l in enumerate(result):
+        startt = time.time()
+        col_idx = index + 1
+        for idx_condensed, item in enumerate(l):
+            memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
+        notify(
+            "Setting similarities matrix for index {} done in {:.5f} seconds",
+            index,
+            time.time() - startt,
+            end='\r')
+    notify("Setting similarities completed")
+
+    pool.close()
+    pool.join()
 
     notify("Time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - start_initial)
     return np.memmap(filename, dtype=np.float64, shape=(d, d))
