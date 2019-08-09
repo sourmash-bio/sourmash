@@ -178,7 +178,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
 
     # Initialize with ones in the diagonal as the similarity of a signature with
     # itself is one
-    similarities = np.eye(d, dtype=np.float64)
+    similarities = np.eye(length_siglist, dtype=np.float64)
     memmap_similarities, filename = to_memmap(similarities)
     notify("Initialized memmapped similarities matrix")
 
@@ -224,7 +224,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     pool.join()
 
     notify("Time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - start_initial)
-    return np.memmap(filename, dtype=np.float64, shape=(d, d))
+    return np.memmap(filename, dtype=np.float64, shape=(length_siglist, length_siglist))
 
 
 def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
