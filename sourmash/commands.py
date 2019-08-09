@@ -208,6 +208,7 @@ def compute(args):
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
+        notify("Saving initialized")
         if output_fp:
             sig.save_signatures(siglist, args.output)
         else:
@@ -222,6 +223,7 @@ def compute(args):
             cell_seqs[barcode] = make_minhashes()
 
     def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
+        notify("adding alignment", end='\r')
         high_quality_mapping = alignment.mapq == 255
         good_barcode = 'CB' in alignment.tags and \
                        alignment.get_tag('CB') in barcodes
@@ -275,21 +277,25 @@ def compute(args):
                 notify('... reading sequences from {}', filename)
 
                 pool = mp.Pool(processes=args.processes)
+                notify('multiprocessing pool processes initialized {}', args.processes)
+
                 pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
                 # for n, alignment in enumerate(bam_file):
                 #     if n % 10000 == 0:
                 #         if n:
                 #             notify('\r...{} {}', filename, n, end='')
                 #     maybe_add_alignment(alignment, cell_seqs)
-
+                notify("built cell sequences")
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
                     for barcode, seqs in cell_seqs.items()]
+                notify("built cell signatures")
                 sigs = list(itertools.chain(*cell_signatures))
                 if args.output:
                     siglist += sigs
                 else:
                     siglist = sigs
+                notify("assigned siglist")
 
             else:
                 # make minhashes for the whole file
@@ -320,6 +326,7 @@ def compute(args):
                        len(sigs), n + 1, filename)
 
             if not args.output:
+                notify("saving siglist")
                 save_siglist(siglist, args.output, sigfile)
 
         if args.output:
