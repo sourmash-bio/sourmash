@@ -729,6 +729,19 @@ class SBT(object):
                 if pos in self._parents(i):
                     yield (i, node)
 
+    def leaves_under(self, node_position):
+        """Generator for all leaf nodes under this position"""
+        visited, queue = set(), [node_position]
+
+        while queue:
+            position = queue.pop(0)
+            node = self.nodes.get(position, None)
+
+            if isinstance(node, Leaf):
+                yield node
+            else:
+                queue.extend(c.pos for c in self.children(position))
+
     def leaves(self):
         for c in self.nodes.values():
             if isinstance(c, Leaf):
@@ -771,6 +784,65 @@ class SBT(object):
         self.nodes = new_nodes
         return self
 
+    def nearest_neighbor_adjacencies(self, n_neighbors, ignore_abundance,
+                                     downsample):
+        adjacencies = []
+
+        n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
+        n_parent_levels
+
+        # initialize search queue with top node of tree
+        visited, queue = set(), [0]
+
+        # while the queue is not empty, load each node and apply search
+        # function.
+        while queue:
+            position = queue.pop(0)
+            node = self.nodes.get(position, None)
+
+            # repair while searching.
+            if node is None:
+                notify("repairing missing nodes...")
+                if position in self.missing_nodes:
+                    self._rebuild_node(node)
+                    node = self.nodes[position]
+                else:
+                    continue
+
+            # if we have not visited this node before,
+            if position not in visited:
+                visited.add(position)
+
+            # Add
+            if isinstance(node, Leaf):
+                #         print(node.data)
+                n = 1
+                upper_internal_node = self.parent(position)
+                while n < n_parent_levels:
+                    upper_internal_node = self.parent(upper_internal_node.pos)
+                    n += 1
+                print("upper_internal_node:", upper_internal_node)
+                leaves = self.leaves_under(upper_internal_node.pos)
+
+                similarities = []
+                for leaf in leaves:
+                    # Ignore self-similarity
+                    if leaf == node:
+                        continue
+                    similarity = node.data.similarity(
+                        leaf.data, ignore_abundance=ignore_abundance,
+                        downsample=downsample)
+                    similarities.append(
+                        [node.data.name(), leaf.data.name(), similarity])
+                adjacent = sorted(similarities, key=lambda x: x[1])[
+                           -n_neighbors:]
+                adjacencies.extend(adjacent)
+
+            else:
+                queue.extend(c.pos for c in self.children(position))
+        return adjacencies
+
+            visited.add(node)
 
 class Node(object):
     "Internal node of SBT."
