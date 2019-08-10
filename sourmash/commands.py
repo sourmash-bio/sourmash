@@ -248,6 +248,7 @@ def compute(args):
                         maybe_add_barcode(barcode, cell_seqs)
                         add_seq(cell_seqs[barcode], alignment.seq,
                                 args.input_is_protein, args.check_sequence)
+        os.unlink(filename)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -257,7 +258,7 @@ def compute(args):
             siglist = []
 
         for filename in args.filenames:
-            sigfile = os.path.basename(filename) + '.sig'
+            sigfile = os.path.basename(filename) + 'output.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
                 notify('skipping {} - already done', filename)
@@ -342,7 +343,7 @@ def compute(args):
                        len(sigs), n + 1, filename)
 
             if not args.output:
-                notify("saving siglist")
+                notify("saving siglist to {}", sigfile)
                 save_siglist(siglist, args.output, sigfile)
 
         if args.output:
