@@ -279,7 +279,10 @@ def compute(args):
                 pool = mp.Pool(processes=args.processes)
                 notify('multiprocessing pool processes initialized {}', args.processes)
 
-                pool.map(lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes), bam_file)
+                _ = list(
+                    pool.imap(
+                        lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes),
+                        bam_file))
                 # for n, alignment in enumerate(bam_file):
                 #     if n % 10000 == 0:
                 #         if n:
