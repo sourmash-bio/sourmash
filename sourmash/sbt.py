@@ -821,7 +821,6 @@ class SBT(object):
                 while n < n_parent_levels:
                     upper_internal_node = self.parent(upper_internal_node.pos)
                     n += 1
-                print("upper_internal_node:", upper_internal_node)
                 leaves = self.leaves_under(upper_internal_node.pos)
 
                 similarities = []
@@ -834,15 +833,17 @@ class SBT(object):
                         downsample=downsample)
                     similarities.append(
                         [node.data.name(), leaf.data.name(), similarity])
+
+                # take `n_neighbors` leaves with largest similarities
                 adjacent = sorted(similarities, key=lambda x: x[1])[
                            -n_neighbors:]
                 adjacencies.extend(adjacent)
 
             else:
                 queue.extend(c.pos for c in self.children(position))
+            visited.add(node)
         return adjacencies
 
-            visited.add(node)
 
 class Node(object):
     "Internal node of SBT."
