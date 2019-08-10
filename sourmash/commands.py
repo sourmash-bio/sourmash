@@ -22,6 +22,7 @@ DEFAULT_COMPUTE_K = '21,31,51'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
+DEFAULT_LINE_COUNT = 1500
 
 
 def info(args):
@@ -45,6 +46,7 @@ def info(args):
         import screed
         notify('screed version {}', screed.__version__)
         notify('- loaded from path: {}', os.path.dirname(screed.__file__))
+
 
 def compute(args):
     """Compute the signature for one or more files.
@@ -98,6 +100,9 @@ def compute(args):
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
                         default=DEFAULT_SEED)
+    parser.add_argument('--line_count', type=int,
+                        help='line count for each split bam tile',
+                        default=DEFAULT_LINE_COUNT)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
     parser.add_argument('--license', default='CC0', type=str,
@@ -222,22 +227,25 @@ def compute(args):
         if barcode not in cell_seqs:
             cell_seqs[barcode] = make_minhashes()
 
-    def maybe_add_alignment(alignment, cell_seqs, args, barcodes):
-        notify("adding alignment", end='\r')
-        high_quality_mapping = alignment.mapq == 255
-        good_barcode = 'CB' in alignment.tags and \
-                       alignment.get_tag('CB') in barcodes
-        good_umi = 'UB' in alignment.tags
+    def maybe_add_alignment(filename, cell_seqs, args, barcodes):
+        from .tenx import read_bam_file
+        with read_bam_file(filename) as bam:
+            for alignment in bam:
+                notify("adding alignment", end='\r')
+                high_quality_mapping = alignment.mapq == 255
+                good_barcode = 'CB' in alignment.tags and \
+                               alignment.get_tag('CB') in barcodes
+                good_umi = 'UB' in alignment.tags
 
-        pass_qc = high_quality_mapping and good_barcode and \
-                  good_umi
-        if pass_qc:
-            barcode = alignment.get_tag('CB')
-            # if this isn't marked a duplicate, count it as a UMI
-            if not alignment.is_duplicate:
-                maybe_add_barcode(barcode, cell_seqs)
-                add_seq(cell_seqs[barcode], alignment.seq,
-                        args.input_is_protein, args.check_sequence)
+                pass_qc = high_quality_mapping and good_barcode and \
+                          good_umi
+                if pass_qc:
+                    barcode = alignment.get_tag('CB')
+                    # if this isn't marked a duplicate, count it as a UMI
+                    if not alignment.is_duplicate:
+                        maybe_add_barcode(barcode, cell_seqs)
+                        add_seq(cell_seqs[barcode], alignment.seq,
+                                args.input_is_protein, args.check_sequence)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -267,7 +275,7 @@ def compute(args):
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
                 import pathos.multiprocessing as mp
-                from .tenx import read_10x_folder
+                from .tenx import read_10x_folder, tile, BAM_FILENAME
 
                 barcodes, bam_file = read_10x_folder(filename)
                 manager = multiprocessing.Manager()
@@ -275,20 +283,24 @@ def compute(args):
                 cell_seqs = manager.dict()
 
                 notify('... reading sequences from {}', filename)
-
-                pool = mp.Pool(processes=args.processes)
+                n_jobs = args.processes
+                pool = mp.Pool(processes=n_jobs)
                 notify('multiprocessing pool processes initialized {}', args.processes)
+                bam_file_name = os.path.join(filename, BAM_FILENAME)
+                filenames = tile(bam_file_name, args.line_count)
 
-                _ = list(
+                chunksize, extra = divmod(len(filenames), n_jobs)
+                if extra:
+                    chunksize += 1
+                notify("Calculated chunk size for multiprocessing {}", chunksize)
+
+                list(
                     pool.imap(
                         lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes),
-                        bam_file))
-                # for n, alignment in enumerate(bam_file):
-                #     if n % 10000 == 0:
-                #         if n:
-                #             notify('\r...{} {}', filename, n, end='')
-                #     maybe_add_alignment(alignment, cell_seqs)
+                        filenames,
+                        chunksize=chunksize))
                 notify("built cell sequences")
+                print(cell_seqs)
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
                     for barcode, seqs in cell_seqs.items()]

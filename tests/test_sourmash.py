@@ -5,7 +5,6 @@ from __future__ import print_function, unicode_literals
 import os
 import gzip
 import shutil
-import time
 import screed
 import glob
 import json
@@ -25,6 +24,7 @@ except ImportError:
 
 from sourmash import signature
 from sourmash import VERSION
+
 
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
@@ -167,7 +167,8 @@ def test_do_sourmash_compute_singleton():
 
 
 def test_do_sourmash_compute_10x():
-    bamnostic = pytest.importorskip('bamnostic')
+    pytest.importorskip('pysam')
+    pytest.importorskip('pathos')
 
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example')
