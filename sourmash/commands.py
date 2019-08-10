@@ -19,6 +19,8 @@ from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
+CELL_BARCODE = 'CB'
+UMI = 'UB'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -233,14 +235,14 @@ def compute(args):
             for alignment in bam:
                 notify("adding alignment", end='\r')
                 high_quality_mapping = alignment.mapq == 255
-                good_barcode = 'CB' in alignment.tags and \
-                               alignment.get_tag('CB') in barcodes
-                good_umi = 'UB' in alignment.tags
+                good_barcode = alignment.has_tag(CELL_BARCODE) and \
+                               alignment.get_tag(CELL_BARCODE) in barcodes
+                good_umi = alignment.has_tag(UMI)
 
                 pass_qc = high_quality_mapping and good_barcode and \
                           good_umi
                 if pass_qc:
-                    barcode = alignment.get_tag('CB')
+                    barcode = alignment.get_tag(CELL_BARCODE)
                     # if this isn't marked a duplicate, count it as a UMI
                     if not alignment.is_duplicate:
                         maybe_add_barcode(barcode, cell_seqs)
@@ -300,7 +302,6 @@ def compute(args):
                         filenames,
                         chunksize=chunksize))
                 notify("built cell sequences")
-                print(cell_seqs)
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
                     for barcode, seqs in cell_seqs.items()]

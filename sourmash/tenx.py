@@ -6,9 +6,6 @@ import warnings
 import pysam
 
 
-CELL_BARCODE = 'CB'
-UMI = 'UB'
-
 BAM_FILENAME = 'possorted_genome_bam.bam'
 BARCODES_TSV = 'barcodes.tsv'
 
@@ -98,7 +95,7 @@ def write_bam_file(bam_file, bam_write_path, line_count=None):
 
 
 def tile(bam_file_path, chunked_file_line_count):
-    notify("Tiling")
+    notify("Tiling a bam file")
     startt = time.time()
     file_names = []
     with pysam.AlignmentFile(bam_file_path, "rb") as bam_file:
@@ -115,10 +112,10 @@ def tile(bam_file_path, chunked_file_line_count):
                 line_count = 0
                 outf.close()
                 tmpfilename.close()
-                notify("===== Spliting file ====== {}".format(file_count), end="\r")
+                notify("===== Tiling bam file ====== {}".format(file_count), end="\r")
             else:
                 outf.write(alignment)
                 line_count = line_count + 1
 
-    notify("time taken is {:.5f} seconds".format(time.time() - startt))
+    notify("time taken to tile the large bam file is {:.5f} seconds".format(time.time() - startt))
     return file_names
