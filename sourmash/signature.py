@@ -11,7 +11,7 @@ import io
 import sys
 
 from . import signature_json
-from .logging import error
+from .logging import error, notify
 
 
 SIGNATURE_VERSION=0.4
@@ -97,6 +97,7 @@ class SourmashSignature(object):
             sketch['abundances'] = list(map(int, values.values()))
         else:
             sketch['mins'] = list(map(int, minhash.get_mins()))
+            notify("in save {}", sketch['mins'])
         sketch['md5sum'] = self.md5sum()
 
         if minhash.is_protein:

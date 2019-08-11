@@ -185,6 +185,9 @@ def compute(args):
 
         # one minhash for each ksize
         Elist = []
+        notify("making minhashes", end='\r')
+        notify("args in make_minhashes {}", args, end='\r')
+
         for k in ksizes:
             if args.protein:
                 E = MinHash(ksize=k, n=args.num_hashes,
@@ -203,15 +206,19 @@ def compute(args):
         return Elist
 
     def add_seq(Elist, seq, input_is_protein, check_sequence):
+        notify("add_seq", end='\r')
         for E in Elist:
             if input_is_protein:
                 E.add_protein(seq)
+                notify("input_is_protein", end='\r')
             else:
                 E.add_sequence(seq, not check_sequence)
+                notify("other than input_is_protein", end='\r')
 
     def build_siglist(Elist, filename, name=None):
-        return [ sig.SourmashSignature(E, filename=filename,
-                                       name=name) for E in Elist ]
+        notify("build_siglist")
+        return [sig.SourmashSignature(E, filename=filename,
+                                      name=name) for E in Elist]
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -226,6 +233,7 @@ def compute(args):
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
     def maybe_add_barcode(barcode, cell_seqs):
+        notify("maybe_add_barcode", end='\r')
         if barcode not in cell_seqs:
             cell_seqs[barcode] = make_minhashes()
 
@@ -242,13 +250,14 @@ def compute(args):
                 pass_qc = high_quality_mapping and good_barcode and \
                           good_umi
                 if pass_qc:
+                    notify("passed qc", end='\r')
                     barcode = alignment.get_tag(CELL_BARCODE)
                     # if this isn't marked a duplicate, count it as a UMI
                     if not alignment.is_duplicate:
+                        notify("not duplicate alignment", end='\r')
                         maybe_add_barcode(barcode, cell_seqs)
                         add_seq(cell_seqs[barcode], alignment.seq,
                                 args.input_is_protein, args.check_sequence)
-        os.unlink(filename)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -258,7 +267,7 @@ def compute(args):
             siglist = []
 
         for filename in args.filenames:
-            sigfile = os.path.basename(filename) + 'output.sig'
+            sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
                 notify('skipping {} - already done', filename)
@@ -302,6 +311,15 @@ def compute(args):
                         lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes),
                         filenames,
                         chunksize=chunksize))
+                pool.close()
+                pool.join()
+                # cell_seqs = {}
+                # for n, alignment in enumerate(bam_file):
+                #     if n % 10000 == 0:
+                #         if n:
+                #             notify('\r...{} {}', filename, n, end='')
+                #     maybe_add_alignment(bam_file_name, cell_seqs, args, barcodes)
+                notify("cell_seqs {}", cell_seqs)
                 notify("built cell sequences")
                 cell_signatures = [
                     build_siglist(seqs, filename=filename, name=barcode)
