@@ -9,6 +9,7 @@ from __future__ import print_function, unicode_literals
 import io
 import json
 import sys
+import time
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
@@ -257,6 +258,7 @@ def save_signatures_json(
     """
     from .signature import SIGNATURE_VERSION
     if n_jobs is not None and is_large_siglist:
+        startt = time.time()
         notify("parallel processing to save siglist")
         import multiprocessing
 
@@ -267,6 +269,7 @@ def save_signatures_json(
         pool = multiprocessing.Pool(processes=n_jobs)
         notify("multiprocessing pool processes initialized {}", n_jobs)
         records = pool.imap(add_meta_save, siglist, chunksize=chunksize)
+        notify("multiprocessing pool record mapped")
         if fp:
             try:
                 fp.write(
@@ -278,10 +281,11 @@ def save_signatures_json(
                     '[' +
                     ',\n'.join(json.dumps(record, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':'))) for record in records) +
                     ']\n'))
+            notify("time taken to save signatures is {:.5f} seconds".format(time.time() - startt))
             return None
-            notify("Created and saved records to json")
         pool.close()
         pool.join()
+        return None
     else:
         notify("serial processing to save siglist")
         top_records = {}
@@ -312,12 +316,12 @@ def save_signatures_json(
 
             records.append(record)
 
-    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
-    if fp:
-        try:
-            fp.write(s)
-        except TypeError:
-            fp.write(unicode(s))
-        return None
+        s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
+        if fp:
+            try:
+                fp.write(s)
+            except TypeError:
+                fp.write(unicode(s))
+            return None
 
-    return s
+        return s
