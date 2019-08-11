@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 from .logging import notify
 import time
@@ -5,9 +6,42 @@ import tempfile
 import warnings
 import pysam
 
-
+CELL_BARCODE = 'CB'
+UMI = 'UB'
 BAM_FILENAME = 'possorted_genome_bam.bam'
 BARCODES_TSV = 'barcodes.tsv'
+
+
+def pass_alignment_qc(alignment, barcodes):
+    """Assert high quality mapping, QC-passing barcode and UMI of alignment"""
+    high_quality_mapping = alignment.mapq == 255
+    good_cell_barcode = alignment.has_tag(CELL_BARCODE) and \
+                   alignment.get_tag(CELL_BARCODE) in barcodes
+    good_molecular_barcode = alignment.has_tag(UMI)
+    not_duplicate = not alignment.is_duplicate
+
+    pass_qc = high_quality_mapping and good_cell_barcode and \
+              good_molecular_barcode and not_duplicate
+    return pass_qc
+
+
+def parse_barcode_renamer(barcodes, barcode_renamer):
+    """
+    :param barcodes:
+    :param barcode_renamer:
+    :return:
+    """
+    if barcode_renamer is not None:
+        renamer = {}
+
+        with open(barcode_renamer) as f:
+            for line in f.readlines():
+                barcode, renamed = line.split()
+                assert barcode in barcodes
+                renamer[barcode] = renamed
+    else:
+        renamer = dict(zip(barcodes, barcodes))
+    return renamer
 
 
 def read_barcodes_file(barcode_path):
@@ -119,3 +153,50 @@ def tile(bam_file_path, chunked_file_line_count):
 
     notify("time taken to tile the large bam file is {:.5f} seconds".format(time.time() - startt))
     return file_names
+
+
+def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
+    """Convert 10x bam to one-record-per-cell fasta
+    Parameters
+    ----------
+    bam : bamnostic.AlignmentFile
+    barcodes : list of str
+        QC-passing barcodes
+    barcode_renamer : str or None
+        Tab-separated filename mapping a barcode to a new name, e.g.
+        AAATGCCCAAACTGCT-1    lung_epithelial_cell|AAATGCCCAAACTGCT-1
+    delimiter : str, default "X"
+        Non-DNA or protein alphabet character to be ignored, e.g. if a cell
+        has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
+        concatenated as 'AAAAAAAAAXCCCCCCCC'.
+    Returns
+    -------
+    """
+    bam = read_bam_file(bam_file)
+    bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
+
+    renamer = parse_barcode_renamer(barcodes, barcode_renamer)
+
+    cell_sequences = defaultdict(str)
+    for alignment in bam_filtered:
+        # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
+        barcode = alignment.get_tag(CELL_BARCODE)
+        renamed = renamer[barcode]
+
+        # Make a long string of all the cell sequences, separated
+        # by a non-alphabet letter
+        cell_sequences[renamed] += alignment.seq + delimiter
+
+    filenames = list(write_cell_sequences(cell_sequences))
+    return filenames
+
+
+def write_cell_sequences(cell_sequences):
+    """Write each cell's sequences to an individual file"""
+    temp_folder = tempfile.mkdtemp()
+
+    for cell, seq in cell_sequences.items():
+        filename = os.path.join(temp_folder, cell + '.fasta')
+        with open(filename, "w") as f:
+            f.write(">{}\n{}".format(cell, seq))
+        yield filename

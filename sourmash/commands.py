@@ -3,7 +3,6 @@ from __future__ import print_function, division
 import argparse
 import csv
 import itertools
-import multiprocessing
 import os
 import os.path
 import sys
@@ -19,8 +18,6 @@ from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K
 DEFAULT_COMPUTE_K = '21,31,51'
-CELL_BARCODE = 'CB'
-UMI = 'UB'
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -109,6 +106,10 @@ def compute(args):
                         help='shuffle the list of input filenames randomly')
     parser.add_argument('--license', default='CC0', type=str,
                         help='signature license. Currently only CC0 is supported.')
+    parser.add_argument('--rename-10x-barcodes', type=str,
+                        help="Tab-separated file mapping 10x barcode name "
+                        "to new name, e.g. with channel or cell "
+                        "annotation label", required=False)
 
     args = parser.parse_args(args)
     set_quiet(args.quiet)
@@ -185,9 +186,6 @@ def compute(args):
 
         # one minhash for each ksize
         Elist = []
-        notify("making minhashes", end='\r')
-        notify("args in make_minhashes {}", args, end='\r')
-
         for k in ksizes:
             if args.protein:
                 E = MinHash(ksize=k, n=args.num_hashes,
@@ -206,17 +204,13 @@ def compute(args):
         return Elist
 
     def add_seq(Elist, seq, input_is_protein, check_sequence):
-        notify("add_seq", end='\r')
         for E in Elist:
             if input_is_protein:
                 E.add_protein(seq)
-                notify("input_is_protein", end='\r')
             else:
                 E.add_sequence(seq, not check_sequence)
-                notify("other than input_is_protein", end='\r')
 
     def build_siglist(Elist, filename, name=None):
-        notify("build_siglist")
         return [sig.SourmashSignature(E, filename=filename,
                                       name=name) for E in Elist]
 
@@ -232,32 +226,21 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def maybe_add_barcode(barcode, cell_seqs):
-        notify("maybe_add_barcode", end='\r')
-        if barcode not in cell_seqs:
-            cell_seqs[barcode] = make_minhashes()
+    def build_siglist_fasta(input_is_protein, check_sequence, fasta):
+        """Add all a barcodes' sequences to a signature
+        :param barcode: str
+        :param sequences: [str]
+        :return: [sig.SourmashSignature]
+        """
+        notify("Convert fasta to siglist", end="\r")
+        Elist = make_minhashes()
+        for record in screed.open(fasta):
+            name = record.name
 
-    def maybe_add_alignment(filename, cell_seqs, args, barcodes):
-        from .tenx import read_bam_file
-        with read_bam_file(filename) as bam:
-            for alignment in bam:
-                notify("adding alignment", end='\r')
-                high_quality_mapping = alignment.mapq == 255
-                good_barcode = alignment.has_tag(CELL_BARCODE) and \
-                               alignment.get_tag(CELL_BARCODE) in barcodes
-                good_umi = alignment.has_tag(UMI)
-
-                pass_qc = high_quality_mapping and good_barcode and \
-                          good_umi
-                if pass_qc:
-                    notify("passed qc", end='\r')
-                    barcode = alignment.get_tag(CELL_BARCODE)
-                    # if this isn't marked a duplicate, count it as a UMI
-                    if not alignment.is_duplicate:
-                        notify("not duplicate alignment", end='\r')
-                        maybe_add_barcode(barcode, cell_seqs)
-                        add_seq(cell_seqs[barcode], alignment.seq,
-                                args.input_is_protein, args.check_sequence)
+            add_seq(Elist, record.sequence, input_is_protein, check_sequence)
+        # Remove the file once we're done because there's
+        # potentially ~700,000 files per 10x bam
+        return build_siglist(Elist, fasta, name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -286,51 +269,51 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
-                import pathos.multiprocessing as mp
-                from .tenx import read_10x_folder, tile, BAM_FILENAME
+                import pathos.multiprocessing as multiprocessing
+                from .tenx import read_10x_folder, tile, BAM_FILENAME, bam_to_fasta
+                from functools import partial
 
-                barcodes, bam_file = read_10x_folder(filename)
-                manager = multiprocessing.Manager()
-
-                cell_seqs = manager.dict()
+                barcodes, bam = read_10x_folder(filename)
 
                 notify('... reading sequences from {}', filename)
                 n_jobs = args.processes
-                pool = mp.Pool(processes=n_jobs)
-                notify('multiprocessing pool processes initialized {}', args.processes)
                 bam_file_name = os.path.join(filename, BAM_FILENAME)
                 filenames = tile(bam_file_name, args.line_count)
 
+                notify('... reading sequences from {}', filename)
+                func = partial(
+                    bam_to_fasta,
+                    barcodes,
+                    args.rename_10x_barcodes,
+                    "X",
+                    False)
+                # Create a per-cell generator of fastas
                 chunksize, extra = divmod(len(filenames), n_jobs)
-                if extra:
-                    chunksize += 1
-                notify("Calculated chunk size for multiprocessing {}", chunksize)
-
-                list(
-                    pool.imap(
-                        lambda x: maybe_add_alignment(x, cell_seqs, args, barcodes),
-                        filenames,
-                        chunksize=chunksize))
+                if extra: chunksize += 1
+                notify("Calculated chunk size for parallel processing bam to fastas {}", chunksize)
+                pool = multiprocessing.Pool(processes=n_jobs)
+                notify("multiprocessing pool processes initialized {}", args.processes)
+                fastas = list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
+                fastas = list(itertools.chain(*fastas))
+                notify("created fastas")
                 pool.close()
                 pool.join()
-                # cell_seqs = {}
-                # for n, alignment in enumerate(bam_file):
-                #     if n % 10000 == 0:
-                #         if n:
-                #             notify('\r...{} {}', filename, n, end='')
-                #     maybe_add_alignment(bam_file_name, cell_seqs, args, barcodes)
-                notify("cell_seqs {}", cell_seqs)
-                notify("built cell sequences")
-                cell_signatures = [
-                    build_siglist(seqs, filename=filename, name=barcode)
-                    for barcode, seqs in cell_seqs.items()]
-                notify("built cell signatures")
-                sigs = list(itertools.chain(*cell_signatures))
-                if args.output:
-                    siglist += sigs
-                else:
-                    siglist = sigs
-                notify("assigned siglist")
+
+                func = partial(
+                    build_siglist_fasta,
+                    args.input_is_protein,
+                    args.check_sequence)
+                chunksize, extra = divmod(len(fastas), n_jobs)
+                if extra: chunksize += 1
+                pool = multiprocessing.Pool(processes=n_jobs)
+                notify("multiprocessing pool processes initialized {}", args.processes)
+                notify("Calculated chunk size for parallel processing fastas to siglists {}", chunksize)
+                siglists = list(pool.imap(lambda x: func(x), fastas, chunksize=chunksize))
+                siglist = list(itertools.chain(*siglists))
+                notify("calculated {} signatures for {} barcodes in {}",
+                       len(siglist), len(siglist) / num_sigs, filename)
+                pool.close()
+                pool.join()
 
             else:
                 # make minhashes for the whole file

@@ -97,7 +97,6 @@ class SourmashSignature(object):
             sketch['abundances'] = list(map(int, values.values()))
         else:
             sketch['mins'] = list(map(int, minhash.get_mins()))
-            notify("in save {}", sketch['mins'])
         sketch['md5sum'] = self.md5sum()
 
         if minhash.is_protein:

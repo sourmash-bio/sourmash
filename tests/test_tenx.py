@@ -48,3 +48,25 @@ def test_tile():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
     bam_tile_files = sourmash_tenx.tile(filename, 1714 // 2)
     assert len(bam_tile_files) == 2
+
+
+def test_pass_alignment_qc():
+    tenx_folder = utils.get_test_data('10x-example')
+
+    barcodes, bam = sourmash_tenx.read_10x_folder(tenx_folder)
+
+    total_pass = sum(1 for alignment in bam if
+                     sourmash_tenx.pass_alignment_qc(alignment, barcodes))
+    assert total_pass == 439
+
+
+def test_parse_barcode_renamer():
+    pass
+
+
+def test_bam_to_fasta():
+    filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+    tenx_folder = utils.get_test_data('10x-example')
+    barcodes, _ = sourmash_tenx.read_10x_folder(tenx_folder)
+    fastas = sourmash_tenx.bam_to_fasta(barcodes, barcode_renamer=None, delimiter='X', one_file_per_cell=None, bam_file=filename)
+    assert len(list(fastas)) == 8
