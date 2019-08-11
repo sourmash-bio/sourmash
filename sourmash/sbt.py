@@ -790,7 +790,8 @@ class SBT(object):
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
 
-        for position, leaf in self._leaves():
+        for position in self.leaves():
+            leaf = self.nodes.get(position)
 
             n = 1
             upper_internal_node = self.parent(position)
