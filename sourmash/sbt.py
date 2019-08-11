@@ -805,7 +805,7 @@ class SBT(object):
                 if other_leaf == leaf:
                     continue
                 similarity = leaf.data.similarity(
-                    leaf.data, ignore_abundance=ignore_abundance,
+                    other_leaf.data, ignore_abundance=ignore_abundance,
                     downsample=downsample)
                 if similarity > min_similarity:
                     similarities.append(
