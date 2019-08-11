@@ -725,7 +725,7 @@ class SBT(object):
 
     def _leaves(self, pos=0):
         for i, node in self:
-            if isinstance(node, Leaf):
+            if isinstance(node, Leaf):  
                 if pos in self._parents(i):
                     yield (i, node)
 
@@ -785,38 +785,62 @@ class SBT(object):
         return self
 
     def nearest_neighbor_adjacencies(self, n_neighbors, ignore_abundance,
-                                     downsample, min_similarity=0.0):
+                                     downsample):
         adjacencies = []
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
 
-        for position in self.leaves():
-            leaf = self.nodes.get(position)
+        # initialize search queue with top node of tree
+        visited, queue = set(), [0]
 
-            n = 1
-            upper_internal_node = self.parent(position)
-            while n < n_parent_levels:
-                upper_internal_node = self.parent(upper_internal_node.pos)
-                n += 1
-            leaves = self.leaves_under(upper_internal_node.pos)
+        # while the queue is not empty, load each node and apply search
+        # function.
+        while queue:
+            position = queue.pop(0)
+            node = self.nodes.get(position, None)
 
-            similarities = []
-            for other_leaf in leaves:
-                # Ignore self-similarity
-                if other_leaf == leaf:
+            # repair while searching.
+            if node is None:
+                notify("repairing missing nodes...")
+                if position in self.missing_nodes:
+                    self._rebuild_node(node)
+                    node = self.nodes[position]
+                else:
                     continue
-                similarity = leaf.data.similarity(
-                    other_leaf.data, ignore_abundance=ignore_abundance,
-                    downsample=downsample)
-                if similarity > min_similarity:
+
+            # if we have not visited this node before,
+            if position not in visited:
+                visited.add(position)
+
+            # Add
+            if isinstance(node, Leaf):
+                #         print(node.data)
+                n = 1
+                upper_internal_node = self.parent(position)
+                while n < n_parent_levels:
+                    upper_internal_node = self.parent(upper_internal_node.pos)
+                    n += 1
+                leaves = self.leaves_under(upper_internal_node.pos)
+
+                similarities = []
+                for leaf in leaves:
+                    # Ignore self-similarity
+                    if leaf == node:
+                        continue
+                    similarity = node.data.similarity(
+                        leaf.data, ignore_abundance=ignore_abundance,
+                        downsample=downsample)
                     similarities.append(
-                        [leaf.data.name(), other_leaf.data.name(), similarity])
+                        [node.data.name(), leaf.data.name(), similarity])
 
-            # take `n_neighbors` leaves with largest similarities
-            adjacent = sorted(similarities, key=lambda x: x[1])[
-                       -n_neighbors:]
-            adjacencies.extend(adjacent)
+                # take `n_neighbors` leaves with largest similarities
+                adjacent = sorted(similarities, key=lambda x: x[1])[
+                           -n_neighbors:]
+                adjacencies.extend(adjacent)
 
+            else:
+                queue.extend(c.pos for c in self.children(position))
+            visited.add(node)
         return adjacencies
 
 
