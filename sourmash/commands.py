@@ -155,6 +155,7 @@ def compute(args):
     notify('Computing signature for ksizes: {}', str(ksizes))
     is_one_moltype = False
     is_one_ksize = False
+    is_large_siglist = False
     num_sigs = 0
     if args.dna and args.protein:
         notify('Computing both nucleotide and protein signatures.')
@@ -221,16 +222,16 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                                       name=name) for E in Elist]
 
-    def save_siglist(siglist, output_fp, filename=None, n_jobs=None, is_one_ksize=False, is_one_moltype=False):
+    def save_siglist(siglist, output_fp, filename=None, n_jobs=None, is_large_siglist=False):
         # save!
         notify("Saving initialized")
         if output_fp:
-            sig.save_signatures(siglist, args.output, n_jobs, is_one_ksize, is_one_moltype)
+            sig.save_signatures(siglist, args.output, n_jobs, is_large_siglist)
         else:
             if filename is None:
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
-                sig.save_signatures(siglist, fp, n_jobs, is_one_ksize, is_one_moltype)
+                sig.save_signatures(siglist, fp, n_jobs, is_large_siglist)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
     def build_siglist_fasta(input_is_protein, check_sequence, fasta):
@@ -322,6 +323,8 @@ def compute(args):
                 pool.close()
                 pool.join()
                 notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))
+                if is_one_ksize and is_one_moltype and n_jobs > 0:
+                    is_large_siglist = True
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -352,10 +355,10 @@ def compute(args):
 
             if not args.output:
                 notify("saving siglist to {}", sigfile)
-                save_siglist(siglist, args.output, sigfile, args.processes, is_one_ksize, is_one_moltype)
+                save_siglist(siglist, args.output, sigfile, args.processes, is_large_siglist)
 
         if args.output:
-            save_siglist(siglist, args.output, sigfile, args.processes, is_one_ksize, is_one_moltype)
+            save_siglist(siglist, args.output, sigfile, args.processes, is_large_siglist)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
         Elist = make_minhashes()

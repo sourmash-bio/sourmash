@@ -248,7 +248,7 @@ def add_meta_save(sig):
 
 
 def save_signatures_json(
-        siglist, fp=None, indent=None, sort_keys=True, n_jobs=None, is_one_ksize=False, is_one_moltype=False):
+        siglist, fp=None, indent=None, sort_keys=True, n_jobs=None, is_large_siglist=False):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp:
@@ -256,7 +256,7 @@ def save_signatures_json(
     - sort_keys: sort the keys in mappings before writting to JSON
     """
     from .signature import SIGNATURE_VERSION
-    if n_jobs is not None and is_one_moltype and is_one_ksize:
+    if n_jobs is not None and is_large_siglist:
         notify("parallel processing to save siglist")
         import multiprocessing
 
