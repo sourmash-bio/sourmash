@@ -801,7 +801,7 @@ class SBT(object):
 
             # repair while searching.
             if node is None:
-                notify("repairing missing nodes...")
+                notify("repairing missing nodes...", end='\r')
                 if position in self.missing_nodes:
                     self._rebuild_node(node)
                     node = self.nodes[position]
