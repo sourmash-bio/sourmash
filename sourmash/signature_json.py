@@ -8,6 +8,7 @@ from __future__ import print_function, unicode_literals
 
 import io
 import json
+import sys
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
