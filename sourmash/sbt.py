@@ -785,7 +785,7 @@ class SBT(object):
         return self
 
     def nearest_neighbor_adjacencies(self, n_neighbors, ignore_abundance,
-                                     downsample):
+                                     downsample, min_similarity=0):
         adjacencies = []
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
@@ -814,7 +814,7 @@ class SBT(object):
 
             # Add
             if isinstance(node, Leaf):
-                #         print(node.data)
+                print(node.data)
                 n = 1
                 upper_internal_node = self.parent(position)
                 while n < n_parent_levels:
@@ -830,8 +830,9 @@ class SBT(object):
                     similarity = node.data.similarity(
                         leaf.data, ignore_abundance=ignore_abundance,
                         downsample=downsample)
-                    similarities.append(
-                        [node.data.name(), leaf.data.name(), similarity])
+                    if similarity > min_similarity:
+                        similarities.append(
+                            [node.data.name(), leaf.data.name(), similarity])
 
                 # take `n_neighbors` leaves with largest similarities
                 adjacent = sorted(similarities, key=lambda x: x[1])[
