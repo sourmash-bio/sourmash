@@ -83,6 +83,7 @@ class SourmashSignature(object):
 
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
+        notify("in _save", end="\r")
         e = dict(self.d)
         minhash = self.minhash
 
@@ -107,6 +108,7 @@ class SourmashSignature(object):
         e['signature'] = sketch
 
         return self.d.get('name'), self.d.get('filename'), sketch
+
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."
@@ -253,6 +255,6 @@ def load_one_signature(data, ksize=None, select_moltype=None,
     raise ValueError("expected to load exactly one signature")
 
 
-def save_signatures(siglist, fp=None):
+def save_signatures(siglist, fp=None, n_jobs=None, is_one_ksize=False, is_one_moltype=False):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
-    return signature_json.save_signatures_json(siglist, fp)
+    return signature_json.save_signatures_json(siglist, fp, n_jobs=n_jobs, is_one_ksize=is_one_ksize, is_one_moltype=is_one_moltype)

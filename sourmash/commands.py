@@ -7,6 +7,7 @@ import os
 import os.path
 import sys
 import random
+import time
 
 import screed
 from .sourmash_args import SourmashArgumentParser
@@ -152,7 +153,8 @@ def compute(args):
         ksizes = [int(ksizes)]
 
     notify('Computing signature for ksizes: {}', str(ksizes))
-
+    is_one_moltype = False
+    is_one_ksize = False
     num_sigs = 0
     if args.dna and args.protein:
         notify('Computing both nucleotide and protein signatures.')
@@ -160,9 +162,14 @@ def compute(args):
     elif args.dna:
         notify('Computing only nucleotide (and not protein) signatures.')
         num_sigs = len(ksizes)
+        is_one_moltype = True
     elif args.protein:
         notify('Computing only protein (and not nucleotide) signatures.')
         num_sigs = len(ksizes)
+        is_one_moltype = True
+
+    if len(ksizes) == 1:
+        is_one_ksize = True
 
     if args.protein and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
@@ -214,16 +221,16 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                                       name=name) for E in Elist]
 
-    def save_siglist(siglist, output_fp, filename=None):
+    def save_siglist(siglist, output_fp, filename=None, n_jobs=None, is_one_ksize=False, is_one_moltype=False):
         # save!
         notify("Saving initialized")
         if output_fp:
-            sig.save_signatures(siglist, args.output)
+            sig.save_signatures(siglist, args.output, n_jobs, is_one_ksize, is_one_moltype)
         else:
             if filename is None:
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
-                sig.save_signatures(siglist, fp)
+                sig.save_signatures(siglist, fp, n_jobs, is_one_ksize, is_one_moltype)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
     def build_siglist_fasta(input_is_protein, check_sequence, fasta):
@@ -269,6 +276,7 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                startt = time.time()
                 import pathos.multiprocessing as multiprocessing
                 from .tenx import read_10x_folder, tile, BAM_FILENAME, bam_to_fasta
                 from functools import partial
@@ -310,11 +318,10 @@ def compute(args):
                 notify("Calculated chunk size for parallel processing fastas to siglists {}", chunksize)
                 siglists = list(pool.imap(lambda x: func(x), fastas, chunksize=chunksize))
                 siglist = list(itertools.chain(*siglists))
-                notify("calculated {} signatures for {} barcodes in {}",
-                       len(siglist), len(siglist) / num_sigs, filename)
+                notify("calculated signatures for barcodes in {}", filename)
                 pool.close()
                 pool.join()
-
+                notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -345,10 +352,10 @@ def compute(args):
 
             if not args.output:
                 notify("saving siglist to {}", sigfile)
-                save_siglist(siglist, args.output, sigfile)
+                save_siglist(siglist, args.output, sigfile, args.processes, is_one_ksize, is_one_moltype)
 
         if args.output:
-            save_siglist(siglist, args.output, sigfile)
+            save_siglist(siglist, args.output, sigfile, args.processes, is_one_ksize, is_one_moltype)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
         Elist = make_minhashes()

@@ -193,6 +193,29 @@ def test_do_sourmash_compute_10x():
         assert all(bc in true_barcodes for bc in barcode_signatures)
 
 
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--dna',
+                                            '--input-is-10x',
+                                            testdata1,
+                                            '-o', '10x-example_dna.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example_dna.sig')
+        assert os.path.exists(sigfile)
+
+        with open(sigfile) as f:
+            data = json.load(f)
+
+        barcode_signatures = [sig['name'] for sig in data]
+
+        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
+            true_barcodes = set(x.strip() for x in f.readlines())
+
+        # Ensure that every cell barcode in barcodes.tsv has a signature
+        assert all(bc in true_barcodes for bc in barcode_signatures)
+
+
 def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -213,7 +236,7 @@ def test_do_sourmash_compute_name():
                                            in_directory=location)
 
         sigfile2 = os.path.join(location, 'foo2.sig')
-        assert os.path.exists(sigfile)
+        assert os.path.exists(sigfile2)
 
         sig2 = next(signature.load_signatures(sigfile))
         assert sig2.name() == 'foo'

@@ -6,8 +6,6 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 # This was written for Python 3, may be there is a chance it will work with Python 2...
 from __future__ import print_function, unicode_literals
 
-import sys
-
 import io
 import json
 try:
@@ -229,7 +227,27 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
+def add_meta_save(sig):
+    from .signature import SIGNATURE_VERSION
+    notify("in add_meta_save", end="\r")
+    name, filename, sketch = sig._save()
+    record = {}
+    if name:
+        record['name'] = name
+    if filename:
+        record['filename'] = filename
+    record['signatures'] = sketch
+
+    record['version'] = SIGNATURE_VERSION
+    record['class'] = 'sourmash_signature'
+    record['hash_function'] = '0.murmur64'
+    record['license'] = 'CC0'
+    record['email'] = ''
+    return record
+
+
+def save_signatures_json(
+        siglist, fp=None, indent=None, sort_keys=True, n_jobs=None, is_one_ksize=False, is_one_moltype=False):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp:
@@ -237,34 +255,61 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
     - sort_keys: sort the keys in mappings before writting to JSON
     """
     from .signature import SIGNATURE_VERSION
+    if n_jobs is not None and is_one_moltype and is_one_ksize:
+        notify("parallel processing to save siglist")
+        import multiprocessing
 
-    top_records = {}
-    for sig in siglist:
-        name, filename, sketch = sig._save()
-        k = (name, filename)
-        x = top_records.get(k, [])
-        x.append(sketch)
-        top_records[k] = x
+        # Create a per-cell generator of fastas
+        chunksize, extra = divmod(len(siglist), n_jobs)
+        if extra: chunksize += 1
+        notify("Saving siglist records {}", chunksize)
+        pool = multiprocessing.Pool(processes=n_jobs)
+        notify("multiprocessing pool processes initialized {}", n_jobs)
+        records = pool.imap(add_meta_save, siglist, chunksize=chunksize)
+        if fp:
+            try:
+                fp.write(
+                    '[' +
+                    ',\n'.join(json.dumps(record, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':'))) for record in records) +
+                    ']\n')
+            except TypeError:
+                fp.write(unicode(
+                    '[' +
+                    ',\n'.join(json.dumps(record, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':'))) for record in records) +
+                    ']\n'))
+            return None
+            notify("Created and saved records to json")
+        pool.close()
+        pool.join()
+    else:
+        notify("serial processing to save siglist")
+        top_records = {}
+        for sig in siglist:
+            name, filename, sketch = sig._save()
+            k = (name, filename)
+            x = top_records.get(k, [])
+            x.append(sketch)
+            top_records[k] = x
 
-    if not top_records:
-        return ""
+        if not top_records:
+            return ""
 
-    records = []
-    for (name, filename), sketches in top_records.items():
-        record = {}
-        if name:
-            record['name'] = name
-        if filename:
-            record['filename'] = filename
-        record['signatures'] = sketches
+        records = []
+        for (name, filename), sketches in top_records.items():
+            record = {}
+            if name:
+                record['name'] = name
+            if filename:
+                record['filename'] = filename
+            record['signatures'] = sketches
 
-        record['version'] = SIGNATURE_VERSION
-        record['class'] = 'sourmash_signature'
-        record['hash_function'] = '0.murmur64'
-        record['license'] = 'CC0'
-        record['email'] = ''
+            record['version'] = SIGNATURE_VERSION
+            record['class'] = 'sourmash_signature'
+            record['hash_function'] = '0.murmur64'
+            record['license'] = 'CC0'
+            record['email'] = ''
 
-        records.append(record)
+            records.append(record)
 
     s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
