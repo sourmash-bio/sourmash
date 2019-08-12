@@ -61,7 +61,20 @@ def test_pass_alignment_qc():
 
 
 def test_parse_barcode_renamer():
-    pass
+    filename = utils.get_test_data('10x-example/barcodes.tsv')
+    barcodes = sourmash_tenx.read_barcodes_file(filename)
+    renamer = sourmash_tenx.parse_barcode_renamer(barcodes, None)
+    for key, value in renamer.items():
+        assert key == value
+    assert len(renamer) == len(barcodes)
+
+
+def test_write_sequences():
+    cell_sequences = {'AAATGCCCAAACTGCT-1': "atgc", 'AAATGCCCAAAGTGCT-1': "gtga"}
+    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences))
+    assert len(fastas) == len(cell_sequences)
+    for fasta in fastas:
+        assert fasta.endswith(".fasta")
 
 
 def test_bam_to_fasta():
