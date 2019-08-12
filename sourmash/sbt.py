@@ -814,7 +814,7 @@ class SBT(object):
 
             # Add
             if isinstance(node, Leaf):
-                print(node.data)
+                notify("Visiting {}", node.data, end='\r')
                 n = 1
                 upper_internal_node = self.parent(position)
                 while n < n_parent_levels:
