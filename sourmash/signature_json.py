@@ -8,7 +8,6 @@ from __future__ import print_function, unicode_literals
 
 import io
 import json
-import sys
 import time
 try:
     import ijson.backends.yajl2 as ijson
@@ -214,12 +213,10 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
 
     if isinstance(data, str):
         data = io.BytesIO(data.encode('utf-8'))
-    print(data)
 
     it = load_signatureset_json_iter(data, ksize=ksize,
                                      ignore_md5sum=ignore_md5sum,
                                      ijson=ijson)
-    print(it)
 
     for n, sigset in enumerate(it):
         if n > 0 and n % 100 == 0:
