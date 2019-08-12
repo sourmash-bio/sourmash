@@ -732,15 +732,17 @@ class SBT(object):
     def leaves_under(self, node_position):
         """Generator for all leaf nodes under this position"""
         visited, queue = set(), [node_position]
+        leaves = []
 
         while queue:
             position = queue.pop(0)
             node = self.nodes.get(position, None)
 
             if isinstance(node, Leaf):
-                yield node
+                leaves.append(node)
             else:
                 queue.extend(c.pos for c in self.children(position))
+        return leaves
 
     def leaves(self):
         for c in self.nodes.values():
@@ -785,13 +787,13 @@ class SBT(object):
         return self
 
     def nearest_neighbor_adjacencies(self, n_neighbors, ignore_abundance,
-                                     downsample, min_similarity=0):
+                                     downsample, min_similarity=0.0):
         adjacencies = []
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
 
         # initialize search queue with top node of tree
-        visited, queue = set(), [0]
+        queue = [0]
 
         # while the queue is not empty, load each node and apply search
         # function.
@@ -807,10 +809,6 @@ class SBT(object):
                     node = self.nodes[position]
                 else:
                     continue
-
-            # if we have not visited this node before,
-            if position not in visited:
-                visited.add(position)
 
             # Add
             if isinstance(node, Leaf):
@@ -841,7 +839,6 @@ class SBT(object):
 
             else:
                 queue.extend(c.pos for c in self.children(position))
-            visited.add(node)
         return adjacencies
 
 
