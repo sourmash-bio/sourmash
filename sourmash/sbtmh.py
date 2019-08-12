@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 
+import math
 from io import BytesIO, TextIOWrapper
 import sys
 
@@ -244,3 +245,56 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
                 return 1
 
         return 0
+
+
+### --- Nearest Neighbor Functionality ---
+
+def get_leaves(tree):
+    for i, node in tree.nodes.items():
+        if isinstance(node, SigLeaf) or isinstance(node, Leaf):
+            yield i, node
+
+
+def nearest_neighbors(tree, n_neighbors, ignore_abundance, downsample,
+                      min_similarity=0.0):
+    n_parent_levels = math.log2(n_neighbors) + 1
+
+    for position1, leaf1 in get_leaves(tree):
+        n = 1
+        upper_internal_node = tree.parent(position1)
+        while n < n_parent_levels:
+            upper_internal_node = tree.parent(upper_internal_node.pos)
+            n += 1
+        #         print("upper_internal_node:", upper_internal_node)
+        leaves = tree.get_leaves_under(upper_internal_node.pos)
+
+        similarities = []
+        for leaf2 in leaves:
+            if leaf2 == leaf1:
+                continue
+            similarity = leaf1.data.similarity(leaf2.data,
+                                              ignore_abundance=ignore_abundance,
+                                              downsample=downsample)
+            if similarity > min_similarity:
+                similarities.append(
+                    [leaf1.data.name(), leaf2.data.name(), similarity])
+        adjacent = sorted(similarities, key=lambda x: x[1])[-n_neighbors:]
+        for adjacency in adjacent:
+            yield adjacency
+
+
+def adjacency_to_knn(adjacencies, tree):
+    leaf_to_index = dict(
+        (node.data.name(), i) for i, node in enumerate(get_leaves(tree)))
+    index_to_leaf = dict(zip(leaf_to_index.values(), leaf_to_index.keys()))
+    knn_indices = []
+    knn_dists = []
+
+    for u, items in itertools.groupby(adjacencies, key=lambda x: x[0]):
+        knn_indices_line = []
+        knn_dists_line = []
+        for u, v, similarity in items:
+            knn_indices_line.append(leaf_to_index[v])
+            knn_dists_line.append(1 - similarity)
+        knn_indices.append(knn_indices_line)
+        knn_dists.append(knn_dists_line)
