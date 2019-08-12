@@ -1,14 +1,17 @@
 """
 Compute nearest neighbor graphs on SBTs for clustering and 2d embedding
 """
-
+import copy
 from itertools import groupby
 import math
+from warnings import warn
 
 import numpy as np
 import scipy.sparse
+from sklearn.manifold import SpectralEmbedding
 from umap.umap_ import smooth_knn_dist, compute_membership_strengths, spectral_layout
 
+from .compare import compare_all_pairs
 from .sbt import Leaf
 from .sbtmh import SigLeaf
 
@@ -18,7 +21,7 @@ from .sbtmh import SigLeaf
 
 def get_leaves(tree):
     for i, node in tree.nodes.items():
-        if isinstance(node, SigLeaf) or isinstance(node, Leaf):
+        if isinstance(node, (Leaf, SigLeaf)):
             yield i, node
 
 
@@ -27,6 +30,8 @@ def nearest_neighbors(tree, n_neighbors, ignore_abundance, downsample,
     """Yield leaf1, leaf2, 1-similarity"""
     n_parent_levels = math.log2(n_neighbors) + 1
 
+    adjacencies = []
+
     for position1, leaf1 in get_leaves(tree):
         n = 1
         upper_internal_node = tree.parent(position1)
@@ -34,7 +39,7 @@ def nearest_neighbors(tree, n_neighbors, ignore_abundance, downsample,
             upper_internal_node = tree.parent(upper_internal_node.pos)
             n += 1
         #         print("upper_internal_node:", upper_internal_node)
-        leaves = tree.get_leaves_under(upper_internal_node.pos)
+        leaves = tree.leaves_under(upper_internal_node.pos)
 
         similarities = []
         for leaf2 in leaves:
@@ -43,12 +48,12 @@ def nearest_neighbors(tree, n_neighbors, ignore_abundance, downsample,
             similarity = leaf1.data.similarity(leaf2.data,
                                               ignore_abundance=ignore_abundance,
                                               downsample=downsample)
-            if similarity > min_similarity:
-                similarities.append(
-                    [leaf1.data.name(), leaf2.data.name(), similarity])
+            # if similarity > min_similarity:
+            similarities.append(
+                [leaf1.data.name(), leaf2.data.name(), similarity])
         adjacent = sorted(similarities, key=lambda x: x[1])[-n_neighbors:]
-        for adjacency in adjacent:
-            yield adjacency
+        adjacencies.extend(adjacent)
+    return adjacencies
 
 
 def similarity_adjacency_to_knn(adjacencies, tree):
@@ -61,8 +66,13 @@ def similarity_adjacency_to_knn(adjacencies, tree):
     :return:
     """
     # Make arbitrary index integers for each leaf
-    leaf_to_index = dict(
-        (node.data.name(), i) for i, node in enumerate(get_leaves(tree)))
+    leaf_to_position = dict(
+        (node.data.name(), position) for position, node in tree.nodes.items()
+        if isinstance(node, Leaf))
+    leaf_to_index = dict((name, i) for i, name in enumerate(leaf_to_position.keys()))
+    if len(leaf_to_index) > 0:
+        raise ValueError("leaf_to_index dictionary not properly constructed! "
+                         "Length is zero :(")
     knn_indices = []
     knn_dists = []
 
@@ -125,6 +135,15 @@ def fuzzy_simplicial_set(knn_indices, knn_dists, n_neighbors,
 
 
 def make_search_graph(knn_indices, knn_dists):
+    """Create graph for searching (??)
+
+    From UMAP
+    https://github.com/lmcinnes/umap/blob/834184f9c0455f26db13ab148c0abd2d3767d968//umap/umap_.py#L1451
+
+    :param knn_indices:
+    :param knn_dists:
+    :return:
+    """
     _search_graph = scipy.sparse.lil_matrix(
         (knn_indices.shape[0], knn_indices.shape[0]), dtype=np.int8
     )
@@ -136,13 +155,9 @@ def make_search_graph(knn_indices, knn_dists):
     return _search_graph
 
 
-
-def simplicial_set_embedding(sbt, graph, n_components, random_state,
-                            ignore_abundance, downsample,
-                             init='spectral', n_epochs=0, ):
+def _clean_graph(graph, n_epochs):
     graph = graph.tocoo()
     graph.sum_duplicates()
-    n_vertices = graph.shape[1]
 
     if n_epochs <= 0:
         # For smaller datasets we can use more epochs
@@ -153,57 +168,136 @@ def simplicial_set_embedding(sbt, graph, n_components, random_state,
 
     graph.data[graph.data < (graph.data.max() / float(n_epochs))] = 0.0
     graph.eliminate_zeros()
+    return graph, n_epochs
 
-    if isinstance(init, str) and init == "random":
-        embedding = random_state.uniform(
-            low=-10.0, high=10.0, size=(graph.shape[0], n_components)
-        ).astype(np.float32)
-    elif isinstance(init, str) and init == "spectral":
-        # We add a little noise to avoid local minima for optimization to come
-        initialisation = spectral_layout(
-            sbt,
-            graph,
-            n_components,
-            random_state,
-            ignore_abundance=ignore_abundance,
-            downsample=downsample,
-        )
-        expansion = 10.0 / np.abs(initialisation).max()
-        embedding = (initialisation * expansion).astype(
-            np.float32
-        ) + random_state.normal(
-            scale=0.0001, size=[graph.shape[0], n_components]
-        ).astype(
-            np.float32
-        )
-
-
-def spectral_layout(sbt, graph, dim, random_state, ):
-    n_samples = graph.shape[0]
-    n_connected_components, labels = scipy.sparse.csgraph.connected_components(graph)
-    n_connected_components
-
-
-
-def multi_connected_component_layout(sbt, graph, n_components, labels, dim,
-                                     random_state):
-    if n_components > 2 * dim:
+#
+# def simplicial_set_embedding(sbt, graph, n_components, random_state,
+#                             ignore_abundance, downsample,
+#                              init='spectral', n_epochs=0, ):
+#     graph, n_epochs = _clean_graph(graph, n_epochs)
+#
+#     if isinstance(init, str) and init == "random":
+#         embedding = random_state.uniform(
+#             low=-10.0, high=10.0, size=(graph.shape[0], n_components)
+#         ).astype(np.float32)
+#     elif isinstance(init, str) and init == "spectral":
+#         # We add a little noise to avoid local minima for optimization to come
+#         initialisation = spectral_layout(
+#             sbt,
+#             graph,
+#             n_components,
+#             random_state,
+#             ignore_abundance=ignore_abundance,
+#             downsample=downsample,
+#         )
+#         expansion = 10.0 / np.abs(initialisation).max()
+#         embedding = (initialisation * expansion).astype(
+#             np.float32
+#         ) + random_state.normal(
+#             scale=0.0001, size=[graph.shape[0], n_components]
+#         ).astype(
+#             np.float32
+#         )
+#
+#
+# def spectral_layout(sbt, graph, dim, random_state, ):
+#     n_samples = graph.shape[0]
+#     n_connected_components, labels = scipy.sparse.csgraph.connected_components(graph)
+#     n_connected_components
+#
+#
+#
+#
+#
+def multi_connected_component_layout(tree, graph, n_connected_components,
+                                     component_labels, dim, random_state,
+                                     ignore_abundance, downsample):
+    result = np.empty((graph.shape[0], dim), dtype=np.float32)
+    if n_connected_components > 2 * dim:
         meta_embedding = component_layout(
-            data,
-            n_components,
+            tree,
+            n_connected_components,
             component_labels,
             dim,
-            metric=metric,
-            metric_kwds=metric_kwds,
+            ignore_abundance,
+            downsample,
         )
     else:
-        k = int(np.ceil(n_components / 2.0))
+        k = int(np.ceil(n_connected_components / 2.0))
         base = np.hstack([np.eye(k), np.zeros((k, dim - k))])
-        meta_embedding = np.vstack([base, -base])[:n_components]
+        meta_embedding = np.vstack([base, -base])[:n_connected_components]
 
+    for label in range(n_connected_components):
+        component_graph = graph.tocsr()[component_labels == label, :].tocsc()
+        component_graph = component_graph[:, component_labels == label].tocoo()
 
+        distances = pairwise_distances([meta_embedding[label]], meta_embedding)
+        data_range = distances[distances > 0.0].min() / 2.0
 
-def component_layout(sbt, n_connected_components, component_labels, dim,
+        if component_graph.shape[0] < 2 * dim:
+            result[component_labels == label] = (
+                    random_state.uniform(
+                        low=-data_range,
+                        high=data_range,
+                        size=(component_graph.shape[0], dim),
+                    )
+                    + meta_embedding[label]
+            )
+            continue
+
+        diag_data = np.asarray(component_graph.sum(axis=0))
+        # standard Laplacian
+        # D = scipy.sparse.spdiags(diag_data, 0, graph.shape[0], graph.shape[0])
+        # L = D - graph
+        # Normalized Laplacian
+        I = scipy.sparse.identity(component_graph.shape[0], dtype=np.float64)
+        D = scipy.sparse.spdiags(
+            1.0 / np.sqrt(diag_data),
+            0,
+            component_graph.shape[0],
+            component_graph.shape[0],
+        )
+        L = I - D * component_graph * D
+
+        k = dim + 1
+        num_lanczos_vectors = max(2 * k + 1,
+                                  int(np.sqrt(component_graph.shape[0])))
+        try:
+            eigenvalues, eigenvectors = scipy.sparse.linalg.eigsh(
+                L,
+                k,
+                which="SM",
+                ncv=num_lanczos_vectors,
+                tol=1e-4,
+                v0=np.ones(L.shape[0]),
+                maxiter=graph.shape[0] * 5,
+            )
+            order = np.argsort(eigenvalues)[1:k]
+            component_embedding = eigenvectors[:, order]
+            expansion = data_range / np.max(np.abs(component_embedding))
+            component_embedding *= expansion
+            result[component_labels == label] = (
+                    component_embedding + meta_embedding[label]
+            )
+        except scipy.sparse.linalg.ArpackError:
+            warn(
+                "WARNING: spectral initialisation failed! The eigenvector solver\n"
+                "failed. This is likely due to too small an eigengap. Consider\n"
+                "adding some noise or jitter to your data.\n\n"
+                "Falling back to random initialisation!"
+            )
+            result[component_labels == label] = (
+                    random_state.uniform(
+                        low=-data_range,
+                        high=data_range,
+                        size=(component_graph.shape[0], dim),
+                    )
+                    + meta_embedding[label]
+            )
+
+    return result
+
+def component_layout(tree, n_connected_components, component_labels, dim,
                      ignore_abundance=False, downsample=False):
     """Provide a layout relating the separate connected components. This is done
     by taking the centroid of each component and then performing a spectral embedding
@@ -231,15 +325,28 @@ def component_layout(sbt, n_connected_components, component_labels, dim,
         connected components.
     """
 
-    component_centroids = np.empty((n_connected_components, data.shape[1]), dtype=np.float64)
+    centroid_signatures = []
 
-    for label in range(n_components):
-        component_centroids[label] = data[component_labels == label].mean(axis=0)
+    leaf_to_index = dict((node.data.name(), i) for i, (position, node) in
+                         enumerate(get_leaves(tree)))
+    leaf_to_position = dict(
+        (node.data.name(), position) for position, node in get_leaves(tree))
+    index_to_leaf = dict(zip(leaf_to_index.values(), leaf_to_index.keys()))
 
-    distance_matrix = pairwise_distances(
-        component_centroids, metric=metric, **metric_kwds
-    )
-    affinity_matrix = np.exp(-distance_matrix ** 2)
+    for label in range(n_connected_components):
+        graph_indexes = np.where(component_labels == label)[0]
+        signatures = [tree.nodes.get(leaf_to_position[index_to_leaf[i]]).data
+                      for i in graph_indexes]
+
+        first_sig = signatures[0]
+        merged_minhashes = copy.copy(first_sig.minhash)
+        for sig in signatures[1:]:
+            merged_minhashes = merged_minhashes.merge(sig.minhash)
+        centroid_signatures.append(merged_minhashes)
+
+    affinity_matrix = compare_all_pairs(centroid_signatures,
+                                        ignore_abundance=ignore_abundance,
+                                        downsample=downsample)
 
     component_embedding = SpectralEmbedding(
         n_components=dim, affinity="precomputed"
