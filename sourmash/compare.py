@@ -1,5 +1,4 @@
 import itertools
-import math
 from functools import partial
 import os
 import tempfile
@@ -10,7 +9,7 @@ import numpy as np
 from .logging import notify
 
 
-def compare_serial(siglist, ignore_abundance, downsample):
+def compare_serial(siglist, ignore_abundance, downsample=False):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations serially on a single
     process. Best to use when there is few signatures.
@@ -34,7 +33,7 @@ def compare_serial(siglist, ignore_abundance, downsample):
     similarities = np.ones((n, n))
 
     for i, j in iterator:
-        similarities[i][j] = similarities[j][i] =  siglist[i].similarity(siglist[j], ignore_abundance)
+        similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance, downsample)
 
     return similarities
 
