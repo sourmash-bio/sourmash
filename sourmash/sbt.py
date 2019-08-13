@@ -828,9 +828,12 @@ class SBT(object):
                     similarity = node.data.similarity(
                         leaf.data, ignore_abundance=ignore_abundance,
                         downsample=downsample)
-                    if similarity > min_similarity:
-                        similarities.append(
-                            [node.data.name(), leaf.data.name(), similarity])
+                    # Don't filter for minimum similarity as some samples are bad
+                    # and don't have many neighbors, and arrays containing lists
+                    # of multiple sizes won't cast to int/float in numpy, so
+                    # similarity_adjacency_to_knn won't work on the adjacencies
+                    similarities.append(
+                        [node.data.name(), leaf.data.name(), similarity])
 
                 # take `n_neighbors` leaves with largest similarities
                 adjacent = sorted(similarities, key=lambda x: x[1])[
