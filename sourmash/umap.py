@@ -32,13 +32,16 @@ from umap.umap_ import (
     compute_membership_strengths,
     make_epochs_per_sample,
     optimize_layout,
-    find_ab_params
+    find_ab_params,
+    general_simplicial_set_intersection,
+    reset_local_connectivity,
+    init_transform
 )
 
 from .compare import compare_all_pairs
 from .logging import notify
 from .signature import SourmashSignature
-
+from .knn import get_leaves
 
 import locale
 
@@ -1022,7 +1025,7 @@ class UMAP(BaseEstimator):
         self.fit(X, y)
         return self.embedding_
 
-    def transform(self, X):
+    def transform(self, tree):
         """Transform X into the existing embedded space and return that
         transformed output.
         Parameters
