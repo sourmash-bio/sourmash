@@ -50,6 +50,7 @@ except ImportError:  # Python 2...
     from collections import Mapping
 
 from copy import copy
+from itertools import groupby
 import json
 import math
 import os
@@ -58,6 +59,7 @@ import sys
 from tempfile import NamedTemporaryFile
 
 import khmer
+import numpy as np
 
 try:
     load_nodegraph = khmer.load_nodegraph
@@ -786,8 +788,8 @@ class SBT(object):
         self.nodes = new_nodes
         return self
 
-    def nearest_neighbor_adjacencies(self, n_neighbors, ignore_abundance,
-                                     downsample, min_similarity=0.0):
+    def nearest_neighbors(self, n_neighbors, ignore_abundance, downsample,
+                          verbose=False):
         adjacencies = []
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
@@ -803,7 +805,8 @@ class SBT(object):
 
             # repair while searching.
             if node is None:
-                # notify("repairing missing nodes...", end='\r')
+                if verbose:
+                    notify("repairing missing node {} ...", position, end='\r')
                 if position in self.missing_nodes:
                     self._rebuild_node(node)
                     node = self.nodes[position]
@@ -812,7 +815,8 @@ class SBT(object):
 
             # Add
             if isinstance(node, Leaf):
-                notify("Visiting {}", node.data, end='\r')
+                if verbose:
+                    notify("Visiting {}", node.data, end='\r')
                 n = 1
                 upper_internal_node = self.parent(position)
                 while n < n_parent_levels:
@@ -843,6 +847,46 @@ class SBT(object):
             else:
                 queue.extend(c.pos for c in self.children(position))
         return adjacencies
+
+    def similarity_adjacency_to_knn(self, adjacencies):
+        """Convert adjacency list to k-nearest neighbor indices and distances
+
+        "distance" = dissimilarity = 1-similarity
+
+        :param adjacencies:
+        :param tree:
+        :return:
+        """
+        # Make arbitrary index integers for each leaf
+        self.leaf_to_position = dict(
+            (node.data.name(), position) for position, node in
+            self.nodes.items()
+            if isinstance(node, Leaf))
+        self.leaf_to_index = dict((name, i) for i, name in enumerate(
+            self.leaf_to_position.keys()))
+        if len(self.leaf_to_index) == 0:
+            raise ValueError(
+                "leaf_to_index dictionary not properly constructed! "
+                "Length is zero :(")
+        knn_indices = []
+        knn_dists = []
+
+        for u, items in groupby(adjacencies, key=lambda x: x[0]):
+            knn_indices_line = []
+            knn_dists_line = []
+            for u, v, similarity in items:
+                knn_indices_line.append(self.leaf_to_index[v])
+
+                # Dissimilarity = 1-similarity
+                knn_dists_line.append(1 - similarity)
+            knn_indices.append(knn_indices_line)
+            knn_dists.append(knn_dists_line)
+        knn_indices = np.array(knn_indices)
+        knn_dists = np.array(knn_dists)
+
+        rp_forest = []
+
+        return knn_indices, knn_dists, rp_forest
 
 
 class Node(object):

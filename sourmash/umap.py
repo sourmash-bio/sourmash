@@ -1,5 +1,6 @@
 from __future__ import print_function
 from itertools import groupby
+from warnings import warn
 
 from sklearn.base import BaseEstimator
 from sklearn.utils import check_random_state, check_array
@@ -35,13 +36,15 @@ from umap.umap_ import (
     find_ab_params,
     general_simplicial_set_intersection,
     reset_local_connectivity,
-    init_transform
+    init_transform,
+    categorical_simplicial_set_intersection,
+    fuzzy_simplicial_set
 )
 
 from .compare import compare_all_pairs
 from .logging import notify
 from .signature import SourmashSignature
-from .knn import get_leaves
+from .sbt import Leaf
 
 import locale
 
@@ -55,44 +58,8 @@ MIN_K_DIST_SCALE = 1e-3
 NPY_INFINITY = np.inf
 
 
-def similarity_adjacency_to_knn(adjacencies, tree):
-    """Convert adjacency list to k-nearest neighbor indices and distances
 
-    "distance" = dissimilarity = 1-similarity
-
-    :param adjacencies:
-    :param tree:
-    :return:
-    """
-    # Make arbitrary index integers for each leaf
-    leaf_to_position = dict(
-        (node.data.name(), position) for position, node in tree.nodes.items()
-        if isinstance(node, Leaf))
-    leaf_to_index = dict((name, i) for i, name in enumerate(
-        leaf_to_position.keys()))
-    if len(leaf_to_index) > 0:
-        raise ValueError("leaf_to_index dictionary not properly constructed! "
-                         "Length is zero :(")
-    knn_indices = []
-    knn_dists = []
-
-    for u, items in groupby(adjacencies, key=lambda x: x[0]):
-        knn_indices_line = []
-        knn_dists_line = []
-        for u, v, similarity in items:
-            knn_indices_line.append(leaf_to_index[v])
-
-            # Dissimilarity = 1-similarity
-            knn_dists_line.append(1 - similarity)
-        knn_indices.append(knn_indices_line)
-        knn_dists.append(knn_dists_line)
-    knn_indices = np.array(knn_indices)
-    knn_dists = np.array(knn_dists)
-
-    return knn_indices, knn_dists, leaf_to_index
-
-
-def fuzzy_simplicial_set(knn_indices, knn_dists, n_neighbors,
+def fuzzy_simplicial_set_from_knn(knn_indices, knn_dists, n_neighbors,
                          local_connectivity=1,
                          set_op_mix_ratio=1):
     """Compute probabalistic existence of edges based on distances
@@ -537,9 +504,9 @@ def merge_connected_component_signatures(tree, n_connected_components,
                                          component_labels):
     centroid_signatures = [None for _ in range(n_connected_components)]
     leaf_to_index = dict((node.data.name(), i) for i, (position, node) in
-                         enumerate(get_leaves(tree)))
+                         enumerate(tree._leaves()))
     leaf_to_position = dict(
-        (node.data.name(), position) for position, node in get_leaves(tree))
+        (node.data.name(), position) for position, node in tree._leaves())
     index_to_leaf = dict(zip(leaf_to_index.values(), leaf_to_index.keys()))
 
     for label in range(n_connected_components):
@@ -673,6 +640,8 @@ class UMAP(BaseEstimator):
         init="spectral",
         min_dist=0.1,
         spread=1.0,
+            metric='cosine',
+            metric_kwds=None,
         set_op_mix_ratio=1.0,
         local_connectivity=1.0,
         repulsion_strength=1.0,
@@ -688,6 +657,8 @@ class UMAP(BaseEstimator):
         target_weight=0.5,
         transform_seed=42,
         verbose=False,
+        ignore_abundance=False,
+        downsample=False,
     ):
 
         self.n_neighbors = n_neighbors
@@ -696,6 +667,9 @@ class UMAP(BaseEstimator):
         self.n_components = n_components
         self.repulsion_strength = repulsion_strength
         self.learning_rate = learning_rate
+
+        self.metric = metric
+        self.metric_kwds = metric_kwds
 
         self.spread = spread
         self.min_dist = min_dist
@@ -714,6 +688,10 @@ class UMAP(BaseEstimator):
 
         self.a = a
         self.b = b
+
+        # Signature comparison parameters
+        self.ignore_abundance = ignore_abundance
+        self.downsample = downsample
 
     def _validate_parameters(self):
         if self.set_op_mix_ratio < 0.0 or self.set_op_mix_ratio > 1.0:
@@ -752,7 +730,7 @@ class UMAP(BaseEstimator):
         ):
             raise ValueError("n_epochs must be a positive integer " "larger than 10")
 
-    def fit(self, X, y=None):
+    def fit(self, tree, y=None):
         """Fit X into an embedded space.
         Optionally use y for supervised dimension reduction.
         Parameters
@@ -769,8 +747,7 @@ class UMAP(BaseEstimator):
             ``target_metric_kwds``.
         """
 
-        X = check_array(X, dtype=np.float32, accept_sparse="csr")
-        self._raw_data = X
+        self._raw_tree = tree
 
         # Handle all the optional arguments, setting default
         if self.a is None or self.b is None:
@@ -802,8 +779,12 @@ class UMAP(BaseEstimator):
             print(str(self))
 
         # Error check n_neighbors based on data size
-        if X.shape[0] <= self.n_neighbors:
-            if X.shape[0] == 1:
+        self._n_leaves = sum(1 for _ in tree.leaves())
+        if self._n_leaves == 0:
+            raise ValueError("Tree has zero leaves")
+
+        if self._n_leaves <= self.n_neighbors:
+            if self._n_leaves == 1:
                 self.embedding_ = np.zeros(
                     (1, self.n_components)
                 )  # needed to sklearn comparability
@@ -811,105 +792,69 @@ class UMAP(BaseEstimator):
 
             warn(
                 "n_neighbors is larger than the dataset size; truncating to "
-                "X.shape[0] - 1"
+                "n_leaves - 1"
             )
-            self._n_neighbors = X.shape[0] - 1
+            self._n_neighbors = self._n_leaves - 1
         else:
             self._n_neighbors = self.n_neighbors
 
-        if scipy.sparse.isspmatrix_csr(X):
-            if not X.has_sorted_indices:
-                X.sort_indices()
-            self._sparse_data = True
-        else:
-            self._sparse_data = False
+        # if scipy.sparse.isspmatrix_csr(X):
+        #     if not X.has_sorted_indices:
+        #         X.sort_indices()
+        #     self._sparse_data = True
+        # else:
+        #     self._sparse_data = False
 
         random_state = check_random_state(self.random_state)
 
         if self.verbose:
             print("Construct fuzzy simplicial set")
 
-        # Handle small cases efficiently by computing all distances
-        if X.shape[0] < 4096:
-            self._small_data = True
-            dmat = pairwise_distances(X, metric=self.metric, **self._metric_kwds)
-            self.graph_ = fuzzy_simplicial_set(
-                dmat,
-                self._n_neighbors,
-                random_state,
-                "precomputed",
-                self._metric_kwds,
-                None,
-                None,
-                self.angular_rp_forest,
-                self.set_op_mix_ratio,
-                self.local_connectivity,
-                self.verbose,
-            )
-        else:
-            self._small_data = False
-            # Standard case
-            (self._knn_indices, self._knn_dists, self._rp_forest) = nearest_neighbors(
-                X,
-                self._n_neighbors,
-                self.metric,
-                self._metric_kwds,
-                self.angular_rp_forest,
-                random_state,
-                self.verbose,
-            )
+        # # Handle small cases efficiently by computing all distances
+        # if self._n_leaves < 500:
+        #     self._small_data = True
+        #     signatures = [node.data for node in tree.nodes.values() if isinstance(node, Leaf)]
+        #
+        #     dmat = compare_all_pairs(signatures,
+        #                              ignore_abundance=self.ignore_abundance,
+        #                              downsample=self.downsample)
+        #     self.graph_ = fuzzy_simplicial_set(
+        #         dmat,
+        #         self._n_neighbors,
+        #         random_state,
+        #         "precomputed",
+        #         self._metric_kwds,
+        #         None,
+        #         None,
+        #         self.angular_rp_forest,
+        #         self.set_op_mix_ratio,
+        #         self.local_connectivity,
+        #         self.verbose,
+        #     )
+        # else:
+        self._small_data = False
+        # Standard case
+        adjacencies = tree.nearest_neighbors(self._n_neighbors,
+                                             self.ignore_abundance,
+                                             self.downsample)
+        (self._knn_indices, self._knn_dists, self._rp_forest) = \
+            tree.similarity_adjacency_to_knn(adjacencies)
 
-            self.graph_ = fuzzy_simplicial_set(
-                X,
-                self.n_neighbors,
-                random_state,
-                self.metric,
-                self._metric_kwds,
-                self._knn_indices,
-                self._knn_dists,
-                self.angular_rp_forest,
-                self.set_op_mix_ratio,
-                self.local_connectivity,
-                self.verbose,
-            )
-
-            self._search_graph = scipy.sparse.lil_matrix(
-                (X.shape[0], X.shape[0]), dtype=np.int8
-            )
-            self._search_graph.rows = self._knn_indices
-            self._search_graph.data = (self._knn_dists != 0).astype(np.int8)
-            self._search_graph = self._search_graph.maximum(
-                self._search_graph.transpose()
-            ).tocsr()
-
-            if callable(self.metric):
-                self._distance_func = self.metric
-            elif self.metric in dist.named_distances:
-                self._distance_func = dist.named_distances[self.metric]
-            elif self.metric == "precomputed":
-                warn(
-                    "Using precomputed metric; transform will be unavailable for new data"
-                )
-            else:
-                raise ValueError(
-                    "Metric is neither callable, " + "nor a recognised string"
-                )
-
-            if self.metric != "precomputed":
-                self._dist_args = tuple(self._metric_kwds.values())
-
-                self._random_init, self._tree_init = make_initialisations(
-                    self._distance_func, self._dist_args
-                )
-                self._search = make_initialized_nnd_search(
-                    self._distance_func, self._dist_args
-                )
+        self.graph_ = fuzzy_simplicial_set_from_knn(
+            self._knn_indices,
+            self._knn_dists,
+            self.n_neighbors,
+            self.set_op_mix_ratio,
+            self.local_connectivity,
+        )
+        self._search_graph = make_search_graph(self._knn_indices,
+                                               self._knn_dists)
 
         if y is not None:
-            if len(X) != len(y):
+            if self._n_leaves != len(y):
                 raise ValueError(
-                    "Length of x = {len_x}, length of y = {len_y}, while it must be equal.".format(
-                        len_x=len(X), len_y=len(y)
+                    "Number of leaves = {n_leaves}, length of y = {len_y}, while it must be equal.".format(
+                        n_leaves=self._n_leaves, len_y=len(y)
                     )
                 )
             y_ = check_array(y, ensure_2d=False)
@@ -939,7 +884,7 @@ class UMAP(BaseEstimator):
                         target_n_neighbors,
                         random_state,
                         "precomputed",
-                        self._target_metric_kwds,
+                        None,
                         None,
                         None,
                         False,
@@ -981,7 +926,7 @@ class UMAP(BaseEstimator):
             print(ts(), "Construct embedding")
 
         self.embedding_ = simplicial_set_embedding(
-            self._raw_data,
+            self._raw_tree,
             self.graph_,
             self.n_components,
             self._initial_alpha,
@@ -1000,11 +945,11 @@ class UMAP(BaseEstimator):
         if self.verbose:
             print(ts() + " Finished embedding")
 
-        self._input_hash = joblib.hash(self._raw_data)
+        # self._input_hash = joblib.hash(self._raw_tree)
 
         return self
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(self, tree, y=None):
         """Fit X into an embedded space and return that transformed
         output.
         Parameters
@@ -1022,7 +967,7 @@ class UMAP(BaseEstimator):
         X_new : array, shape (n_samples, n_components)
             Embedding of the training data in low-dimensional space.
         """
-        self.fit(X, y)
+        self.fit(tree, y)
         return self.embedding_
 
     def transform(self, tree):
