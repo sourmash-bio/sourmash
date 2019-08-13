@@ -9,6 +9,9 @@ from __future__ import print_function, unicode_literals
 import io
 import json
 import time
+import tempfile
+import os
+import numpy as np
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
@@ -247,6 +250,27 @@ def add_meta_save(sig):
     return record
 
 
+def to_memmap(array):
+    """Write a memory mapped array
+    Create a memory-map to an array stored in a binary file on disk.
+    Memory-mapped files are used for accessing small segments of
+    large files on disk, without reading the entire file into memory.
+    :param np.array array to memory map
+    :return: np.array large_memmap memory mapped array
+    :return: str filename name of the file that memory mapped array is written to
+    """
+    temp_folder = tempfile.mkdtemp()
+    filename = os.path.join(temp_folder, 'array.mmap')
+    if os.path.exists(filename):
+        os.unlink(filename)
+    shape = array.shape
+    f = np.memmap(filename, mode='w+', shape=shape, dtype=array.dtype)
+    f[:] = array[:]
+    del f
+    large_memmap = np.memmap(filename, dtype=array.dtype, shape=shape)
+    return large_memmap, filename
+
+
 def save_signatures_json(
         siglist, fp=None, indent=None, sort_keys=True, n_jobs=None, is_large_siglist=False):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
@@ -259,8 +283,11 @@ def save_signatures_json(
     if n_jobs is not None and is_large_siglist:
         startt = time.time()
         notify("parallel processing to save siglist")
-        import multiprocessing
-
+        import pathos.multiprocessing as multiprocessing
+        # Create a memory map of the siglist using numpy to avoid memory burden
+        # while accessing small parts in it
+        siglist, _ = to_memmap(np.array(siglist))
+        notify("Created memmapped siglist")
         # Create a per-cell generator of fastas
         chunksize, extra = divmod(len(siglist), n_jobs)
         if extra: chunksize += 1
@@ -282,6 +309,8 @@ def save_signatures_json(
                     ']\n'))
             notify("time taken to save signatures is {:.5f} seconds".format(time.time() - startt))
             return None
+        del siglist
+        del records
         pool.close()
         pool.join()
         return None

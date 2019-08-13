@@ -250,6 +250,21 @@ def compute(args):
         # potentially ~700,000 files per 10x bam
         return build_siglist(Elist, fasta, name)
 
+    def bam_to_siglist(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
+        """Conver alignments in bam file to a barcodes' sequences to a signature
+        :param barcodes: str
+        :param barcode_renamer: [str]
+        :param delimiter
+        :param one_file_per_cell
+        :param bam_file
+        :return: [sig.SourmashSignature]
+        """
+        notify("Convert bam to fasta to siglist", end="\r")
+        siglist = []
+        for fasta in bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
+            siglist.append(build_siglist_fasta(args.input_is_protein, args.check_sequence, fasta))
+        return siglist
+
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
@@ -288,38 +303,22 @@ def compute(args):
                 n_jobs = args.processes
                 bam_file_name = os.path.join(filename, BAM_FILENAME)
                 filenames = tile(bam_file_name, args.line_count)
-
                 notify('... reading sequences from {}', filename)
                 func = partial(
-                    bam_to_fasta,
+                    bam_to_siglist,
                     barcodes,
                     args.rename_10x_barcodes,
-                    "X",
-                    False)
+                    delimiter="X",
+                    one_file_per_cell=False)
                 # Create a per-cell generator of fastas
                 chunksize, extra = divmod(len(filenames), n_jobs)
                 if extra: chunksize += 1
-                notify("Calculated chunk size for parallel processing bam to fastas {}", chunksize)
+                notify("Calculated chunk size for parallel processing bam to siglist {}", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify("multiprocessing pool processes initialized {}", args.processes)
-                fastas = list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
-                fastas = list(itertools.chain(*fastas))
-                notify("created fastas")
-                pool.close()
-                pool.join()
-
-                func = partial(
-                    build_siglist_fasta,
-                    args.input_is_protein,
-                    args.check_sequence)
-                chunksize, extra = divmod(len(fastas), n_jobs)
-                if extra: chunksize += 1
-                pool = multiprocessing.Pool(processes=n_jobs)
-                notify("multiprocessing pool processes initialized {}", args.processes)
-                notify("Calculated chunk size for parallel processing fastas to siglists {}", chunksize)
-                siglists = list(pool.imap(lambda x: func(x), fastas, chunksize=chunksize))
-                siglist = list(itertools.chain(*siglists))
-                notify("calculated signatures for barcodes in {}", filename)
+                siglist = list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
+                siglist = list(itertools.chain(*siglist))
+                notify("created siglist")
                 pool.close()
                 pool.join()
                 notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))

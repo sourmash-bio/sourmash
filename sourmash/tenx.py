@@ -187,7 +187,7 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         # by a non-alphabet letter
         cell_sequences[renamed] += alignment.seq + delimiter
 
-    filenames = list(write_cell_sequences(cell_sequences))
+    filenames = write_cell_sequences(cell_sequences)
     return filenames
 
 
