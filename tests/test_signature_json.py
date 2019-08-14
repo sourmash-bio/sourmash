@@ -165,7 +165,14 @@ def test_save_load_multisig_json_processes():
     assert y[0] != y[1]
 
 
-def test_memmap(siglist):
+def test_memmap():
+
+    e1 = sourmash.MinHash(n=1, ksize=20)
+    sig1 = SourmashSignature(e1)
+
+    e2 = sourmash.MinHash(n=1, ksize=25)
+    sig2 = SourmashSignature(e2)
+    siglist = [sig1, sig2]
     memmapped, filename = to_memmap(np.array(siglist))
     # Assert that the data didn't change as a result of memory-mapping
     np.testing.assert_array_equal(memmapped, siglist)
