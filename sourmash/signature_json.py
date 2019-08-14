@@ -233,13 +233,14 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
 
 
 def add_meta_save(siglist, index):
+    """ Convert one signatures into a JSON dict
+    - siglist: sequence of SourmashSignature objects
+    - index: index of siglist to save
+    """
     from .signature import SIGNATURE_VERSION
-    notify("siglist in add_meta_save {}", siglist)
     sig = siglist[index]
-    if type(sig) is list:
+    if type(sig) is list or type(sig) is np.ndarray:
         sig = sig[0]
-    notify("in add_meta_save")
-    notify("sig {} index {}", sig, index)
     name, filename, sketch = sig._save()
     record = {}
     if name:
@@ -298,13 +299,12 @@ def save_signatures_json(
         # while accessing small parts in it
         siglist, _ = to_memmap(np.array(siglist))
         notify("Created memmapped siglist")
-        # Create a per-cell generator of fastas
         length_siglist = len(siglist)
         chunksize, extra = divmod(length_siglist, n_jobs)
         if extra: chunksize += 1
-        notify("Saving siglist records {}", chunksize)
+        notify("Chunk size {} for saving siglist records", chunksize)
         pool = multiprocessing.Pool(processes=n_jobs)
-        notify("multiprocessing pool processes initialized {}", n_jobs)
+        notify("multiprocessing pool {} processes initialized", n_jobs)
         func = partial(add_meta_save, siglist)
         records = list(pool.imap(lambda x: func(x), range(length_siglist), chunksize=chunksize))
         notify("multiprocessing pool record mapped")

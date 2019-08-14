@@ -102,7 +102,7 @@ def compute(args):
                         help='seed used by MurmurHash (default: 42)',
                         default=DEFAULT_SEED)
     parser.add_argument('--line_count', type=int,
-                        help='line count for each split bam tile',
+                        help='line count for each bam shard',
                         default=DEFAULT_LINE_COUNT)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
@@ -237,8 +237,7 @@ def compute(args):
 
     def build_siglist_fasta(input_is_protein, check_sequence, fasta):
         """Add all a barcodes' sequences to a signature
-        :param barcode: str
-        :param sequences: [str]
+        :fasta  barcode: str sequences: [str]
         :return: [sig.SourmashSignature]
         """
         notify("Convert fasta to siglist", end="\r")
@@ -256,8 +255,8 @@ def compute(args):
         :param barcodes: str
         :param barcode_renamer: [str]
         :param delimiter
-        :param one_file_per_cell
-        :param bam_file
+        :param one_file_per_cell one fasta file per cell true
+        :param bam_file bam file
         :return: [sig.SourmashSignature]
         """
         notify("Convert bam to fasta to siglist", end="\r")
@@ -303,16 +302,15 @@ def compute(args):
                         "is serially processed and takes a long time", bam_file_size)
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
-                from .tenx import read_10x_folder, tile, BAM_FILENAME, bam_to_fasta
+                from .tenx import read_barcodes_file, shard_bam_file, BAM_FILENAME, BARCODES_TSV, bam_to_fasta
                 from functools import partial
 
-                barcodes, bam = read_10x_folder(filename)
-
+                barcodes = read_barcodes_file(os.path.join(filename, BARCODES_TSV))
                 notify('... reading sequences from {}', filename)
+
                 n_jobs = args.processes
                 bam_file_name = os.path.join(filename, BAM_FILENAME)
-                filenames = tile(bam_file_name, args.line_count)
-                notify('... reading sequences from {}', filename)
+                filenames = shard_bam_file(bam_file_name, args.line_count)
                 func = partial(
                     bam_to_siglist,
                     barcodes,

@@ -44,9 +44,9 @@ def test_read_10x_folder():
     assert total_alignments == 1714
 
 
-def test_tile():
+def test_shard_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    bam_tile_files = sourmash_tenx.tile(filename, 1714 // 2)
+    bam_tile_files = sourmash_tenx.shard_bam_file(filename, 1714 // 2)
     assert len(bam_tile_files) == 2
 
 

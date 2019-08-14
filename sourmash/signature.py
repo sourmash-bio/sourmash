@@ -83,7 +83,7 @@ class SourmashSignature(object):
 
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
-        notify("in _save", end="\r")
+        notify("in signature._save", end="\r")
         e = dict(self.d)
         minhash = self.minhash
 

@@ -72,7 +72,7 @@ SETUP_METADATA = \
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
-        '10x': ['pathos', 'pysam'],  # Python 3.4 requires cython 0.20.2 or later for pysam to compile
+        '10x': ['pathos', 'pysam']
         },
     "include_package_data": True,
     "package_data": {

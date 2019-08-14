@@ -27,9 +27,12 @@ def pass_alignment_qc(alignment, barcodes):
 
 def parse_barcode_renamer(barcodes, barcode_renamer):
     """
-    :param barcodes:
-    :param barcode_renamer:
-    :return:
+    Return a dictionary with cell barcode and the renamed barcode
+    :param barcodes: 10x barcodes list
+    :param barcode_renamer: Tab-separated file mapping
+        10x barcode name to new name, e.g. with channel or cell "
+        "annotation label"
+    :return: barcode renamer dictionary
     """
     if barcode_renamer is not None:
         renamer = {}
@@ -105,31 +108,39 @@ def read_10x_folder(tenx_folder):
     return barcodes, bam_file
 
 
-def write_bam_file(bam_file, bam_write_path, line_count=None):
-    """Write a part of QC-pass bam file to bam_write_path
+def write_bam_file(bam_file, bam_write_path):
+    """Write QC-pass bam file to bam_write_path
     Parameters
     ----------
     bam_write_path : str
-        Name of a 10x cellranger bam file
-        'possorted_genome_bam.bam'
+        Name of a 10x cellranger bam file to write to
     Returns
     -------
     bam_file : pysam.AlignmentFile
         Iterator over possorted_genome_bam.bam file
     """
-    line_count = 0
-    with pysam.AlignmentFile(bam_write_path, "wb", template=bam_file, header=bam_file.header) as outf:
+    with pysam.AlignmentFile(
+            bam_write_path,
+            "wb",
+            template=bam_file, header=bam_file.header) as outf:
         for index, alignment in enumerate(bam_file):
-            if line_count is not None:
-                if index == line_count:
-                    outf.write(alignment)
-            else:
-                outf.write(alignment)
+            outf.write(alignment)
     return read_bam_file(bam_write_path)
 
 
-def tile(bam_file_path, chunked_file_line_count):
-    notify("Tiling a bam file")
+def shard_bam_file(bam_file_path, chunked_file_line_count):
+    """Shard QC-pass bam file with the given line count and save them to tmp dir
+    Parameters
+    ----------
+    bam_file_path : str
+        Bam file to shard
+    chunked_file_line_count: int
+        number of lines/alignment reads in each sharded bam file
+    Returns
+    -------
+    list of sharded bam files
+    """
+    notify("Sharding a bam file")
     startt = time.time()
     file_names = []
     with pysam.AlignmentFile(bam_file_path, "rb") as bam_file:
@@ -146,7 +157,7 @@ def tile(bam_file_path, chunked_file_line_count):
                 line_count = 0
                 outf.close()
                 tmpfilename.close()
-                notify("===== Tiling bam file ====== {}".format(file_count), end="\r")
+                notify("===== Sharding bam file ====== {}".format(file_count), end="\r")
             else:
                 outf.write(alignment)
                 line_count = line_count + 1
@@ -171,6 +182,8 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         concatenated as 'AAAAAAAAAXCCCCCCCC'.
     Returns
     -------
+    filenames: list
+        list of fasta file for each cell sequence
     """
     bam = read_bam_file(bam_file)
     bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
@@ -192,7 +205,17 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
 
 
 def write_cell_sequences(cell_sequences):
-    """Write each cell's sequences to an individual file"""
+    """Write each cell sequence to a fasta file
+    Parameters
+    ----------
+    cell_sequences : str
+        Name of a 10x cellranger bam file
+        'possorted_genome_bam.bam'
+    Returns
+    -------
+    fasta_file : pysam.AlignmentFile
+        Iterator over possorted_genome_bam.bam file
+    """
     temp_folder = tempfile.mkdtemp()
 
     for cell, seq in cell_sequences.items():
