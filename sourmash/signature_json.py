@@ -8,6 +8,7 @@ from __future__ import print_function, unicode_literals
 
 import io
 import json
+import warnings
 import time
 import tempfile
 import os
@@ -231,9 +232,14 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def add_meta_save(sig):
+def add_meta_save(siglist, index):
     from .signature import SIGNATURE_VERSION
-    notify("in add_meta_save", end="\r")
+    notify("siglist in add_meta_save {}", siglist)
+    sig = siglist[index]
+    if type(sig) is list:
+        sig = sig[0]
+    notify("in add_meta_save")
+    notify("sig {} index {}", sig, index)
     name, filename, sketch = sig._save()
     record = {}
     if name:
@@ -281,20 +287,26 @@ def save_signatures_json(
     """
     from .signature import SIGNATURE_VERSION
     if n_jobs is not None and is_large_siglist:
+        warnings.warn(
+            "Parallel processing to save the results into a sig file "
+            "is correct provided only if there one ksize and one moltype")
         startt = time.time()
         notify("parallel processing to save siglist")
         import pathos.multiprocessing as multiprocessing
+        from functools import partial
         # Create a memory map of the siglist using numpy to avoid memory burden
         # while accessing small parts in it
         siglist, _ = to_memmap(np.array(siglist))
         notify("Created memmapped siglist")
         # Create a per-cell generator of fastas
-        chunksize, extra = divmod(len(siglist), n_jobs)
+        length_siglist = len(siglist)
+        chunksize, extra = divmod(length_siglist, n_jobs)
         if extra: chunksize += 1
         notify("Saving siglist records {}", chunksize)
         pool = multiprocessing.Pool(processes=n_jobs)
         notify("multiprocessing pool processes initialized {}", n_jobs)
-        records = pool.imap(add_meta_save, siglist, chunksize=chunksize)
+        func = partial(add_meta_save, siglist)
+        records = list(pool.imap(lambda x: func(x), range(length_siglist), chunksize=chunksize))
         notify("multiprocessing pool record mapped")
         if fp:
             try:

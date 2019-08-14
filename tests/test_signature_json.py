@@ -135,7 +135,7 @@ def test_add_meta_save():
     ksize = 20
     e1 = sourmash.MinHash(n=n, ksize=ksize)
     sig1 = SourmashSignature(e1)
-    record = add_meta_save(sig1)
+    record = add_meta_save([sig1], 0)
     name, filename, sketch = sig1._save()
     assert record['signatures'] == sketch
 

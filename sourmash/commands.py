@@ -7,6 +7,7 @@ import os
 import os.path
 import sys
 import random
+import warnings
 import time
 
 import screed
@@ -292,6 +293,14 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                # add a warning saying ideally one ksize for a large file is better
+                bam_file_size = os.path.getsize(filename)
+                if bam_file_size > 1e9:
+                    warnings.warn(
+                        "Large bam file size {} make sure only one"
+                        "ksize and one molecule type are provided,"
+                        "otherwise saving the signatures into a .sig"
+                        "is serially processed and takes a long time", bam_file_size)
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
                 from .tenx import read_10x_folder, tile, BAM_FILENAME, bam_to_fasta
@@ -308,8 +317,8 @@ def compute(args):
                     bam_to_siglist,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimiter="X",
-                    one_file_per_cell=False)
+                    "X",
+                    False)
                 # Create a per-cell generator of fastas
                 chunksize, extra = divmod(len(filenames), n_jobs)
                 if extra: chunksize += 1
@@ -318,7 +327,6 @@ def compute(args):
                 notify("multiprocessing pool processes initialized {}", args.processes)
                 siglist = list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
                 siglist = list(itertools.chain(*siglist))
-                notify("created siglist")
                 pool.close()
                 pool.join()
                 notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))
