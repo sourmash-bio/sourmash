@@ -110,12 +110,11 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
         header = bam_file.header
         for alignment in bam_file:
             if line_count == 0:
+                # TODO Change this to tmp dir again
                 file_name = os.path.join(
                     os.path.dirname(bam_file_path),
                     "temp_bam_shard_{}.bam".format(file_count))
                 file_names.append(file_name)
-                if os.path.exists(file_name):
-                    line_count = chunked_file_line_count
                 outf = pysam.AlignmentFile(file_name, "wb", header=header)
             if line_count == chunked_file_line_count:
                 file_count = file_count + 1

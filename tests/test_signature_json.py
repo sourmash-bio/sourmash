@@ -138,15 +138,19 @@ def test_add_meta_save():
     n = 1
     ksize = 20
     e1 = sourmash.MinHash(n=n, ksize=ksize)
-    sig1 = SourmashSignature(e1)
-    record = add_meta_save([sig1], 0)
-    name, filename, sketch = sig1._save()
-    assert record['signatures'] == sketch
+    sig1 = SourmashSignature(e1, name="AGCTTEST", filename="test_temp.fasta")
+    e2 = sourmash.MinHash(n=1, ksize=25)
+    sig2 = SourmashSignature(e2)
 
-    assert record['class'] == 'sourmash_signature'
-    assert record['hash_function'] == '0.murmur64'
-    assert record['license'] == 'CC0'
-    assert record['email'] == ''
+    for siglist in [[[sig1, sig2]], [sig1, sig2], [np.array([sig1, sig2])]]:
+        record = add_meta_save(siglist, 0)
+        name, filename, sketch = sig1._save()
+        assert record['signatures'] == sketch
+
+        assert record['class'] == 'sourmash_signature'
+        assert record['hash_function'] == '0.murmur64'
+        assert record['license'] == 'CC0'
+        assert record['email'] == ''
 
 
 def test_save_load_multisig_json_processes():
