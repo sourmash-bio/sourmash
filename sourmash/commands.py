@@ -266,7 +266,7 @@ def compute(args):
                                              bam_file)
             if os.path.exists(bam_file):
                 os.unlink(bam_file)
-            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
+            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
             return siglist
         else:
             if os.path.exists(bam_file):
