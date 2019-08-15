@@ -112,6 +112,8 @@ def compute(args):
                         help="Tab-separated file mapping 10x barcode name "
                         "to new name, e.g. with channel or cell "
                         "annotation label", required=False)
+    parser.add_argument('--barcodes-file', type=str,
+                        help="Barcoces file if the input is unfiltered 10x bam file", required=False)
 
     args = parser.parse_args(args)
     set_quiet(args.quiet)
@@ -254,15 +256,17 @@ def compute(args):
         """Conver alignments in bam file to a barcodes' sequences to a signature
         :param barcodes: str
         :param barcode_renamer: [str]
-        :param delimiter
-        :param one_file_per_cell one fasta file per cell true
-        :param bam_file bam file
+        :param delimiter str
+        :param one_file_per_cell bool one fasta file per cell true
+        :param bam_file str path to bam file
         :return: [sig.SourmashSignature]
         """
         notify("Convert bam to fasta to siglist", end="\r")
         siglist = []
         for fasta in bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
             siglist.append(build_siglist_fasta(args.input_is_protein, args.check_sequence, fasta))
+            if os.path.exists(bam_file):
+                os.unlink(bam_file)
         return siglist
 
     if args.track_abundance:
@@ -293,6 +297,8 @@ def compute(args):
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
                 # add a warning saying ideally one ksize for a large file is better
+                if args.output is None:
+                    sigfile = os.path.basename(os.path.dirname(filename)) + '.sig'
                 bam_file_size = os.path.getsize(filename)
                 if bam_file_size > 1e9:
                     warnings.warn(
@@ -302,15 +308,17 @@ def compute(args):
                         "is serially processed and takes a long time", bam_file_size)
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
-                from .tenx import read_barcodes_file, shard_bam_file, BAM_FILENAME, BARCODES_TSV, bam_to_fasta
+                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
                 from functools import partial
 
-                barcodes = read_barcodes_file(os.path.join(filename, BARCODES_TSV))
-                notify('... reading sequences from {}', filename)
+                if args.barcodes_file is not None:
+                    barcodes = read_barcodes_file(os.path.join(args.barcodes_file))
+                else:
+                    barcodes = None
+                notify('... reading bam file from {}', filename)
 
                 n_jobs = args.processes
-                bam_file_name = os.path.join(filename, BAM_FILENAME)
-                filenames = shard_bam_file(bam_file_name, args.line_count)
+                filenames = shard_bam_file(filename, args.line_count)
                 func = partial(
                     bam_to_siglist,
                     barcodes,

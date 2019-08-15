@@ -171,14 +171,21 @@ def test_do_sourmash_compute_10x():
     # pytest.importorskip('pathos')
 
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example')
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+        print(testdata1)
+        barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
+        print(barcodes_file)
+        print(location)
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--input-is-10x',
+                                            '--barcodes-file',
+                                            barcodes_file,
                                             testdata1],
                                            in_directory=location)
 
         sigfile = os.path.join(location, '10x-example.sig')
+        print(sigfile)
         assert os.path.exists(sigfile)
 
         with open(sigfile) as f:

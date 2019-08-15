@@ -6,8 +6,8 @@ import tempfile
 import warnings
 import pysam
 
-CELL_BARCODE = 'CB'
-UMI = 'UB'
+CELL_BARCODES = ['CB', 'XC']
+UMIS = ['UB', 'XB']
 BAM_FILENAME = 'possorted_genome_bam.bam'
 BARCODES_TSV = 'barcodes.tsv'
 
@@ -15,9 +15,12 @@ BARCODES_TSV = 'barcodes.tsv'
 def pass_alignment_qc(alignment, barcodes):
     """Assert high quality mapping, QC-passing barcode and UMI of alignment"""
     high_quality_mapping = alignment.mapq == 255
-    good_cell_barcode = alignment.has_tag(CELL_BARCODE) and \
-                   alignment.get_tag(CELL_BARCODE) in barcodes
-    good_molecular_barcode = alignment.has_tag(UMI)
+    if barcodes is not None:
+        good_cell_barcode = any([alignment.has_tag(cb) and alignment.get_tag(cb) in barcodes
+                                 for cb in CELL_BARCODES])
+    else:
+        good_cell_barcode = any([alignment.has_tag(cb) for cb in CELL_BARCODES])
+    good_molecular_barcode = any([alignment.has_tag(umi) for umi in UMIS])
     not_duplicate = not alignment.is_duplicate
 
     pass_qc = high_quality_mapping and good_cell_barcode and \
@@ -186,15 +189,26 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         list of fasta file for each cell sequence
     """
     bam = read_bam_file(bam_file)
-    bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
+    if barcodes is not None:
+        bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
+    else:
+        bam_filtered = bam
 
-    renamer = parse_barcode_renamer(barcodes, barcode_renamer)
+    if barcodes is not None:
+        renamer = parse_barcode_renamer(barcodes, barcode_renamer)
+    else:
+        renamer = None
 
     cell_sequences = defaultdict(str)
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
-        barcode = alignment.get_tag(CELL_BARCODE)
-        renamed = renamer[barcode]
+        for cb in CELL_BARCODES:
+            if alignment.has_tag(cb):
+                barcode = alignment.get_tag(cb)
+        if renamer is not None:
+            renamed = renamer[barcode]
+        else:
+            renamed = barcode
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
