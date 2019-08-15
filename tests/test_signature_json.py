@@ -11,8 +11,7 @@ from sourmash.signature_json import (_json_next_atomic_array,
                                      load_signatures_json,
                                      load_signatureset_json_iter,
                                      save_signatures_json,
-                                     add_meta_save,
-                                     to_memmap)
+                                     add_meta_save)
 from collections import OrderedDict
 
 
@@ -169,17 +168,3 @@ def test_save_load_multisig_json_processes():
         y = json.load(fp)
     assert len(y) == 2
     assert y[0] != y[1]
-
-
-def test_memmap():
-
-    e1 = sourmash.MinHash(n=1, ksize=20)
-    sig1 = SourmashSignature(e1)
-
-    e2 = sourmash.MinHash(n=1, ksize=25)
-    sig2 = SourmashSignature(e2)
-    siglist = [sig1, sig2]
-    memmapped, filename = to_memmap(np.array(siglist))
-    # Assert that the data didn't change as a result of memory-mapping
-    np.testing.assert_array_equal(memmapped, siglist)
-    assert filename.endswith(".mmap")

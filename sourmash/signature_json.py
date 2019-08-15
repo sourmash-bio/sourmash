@@ -10,7 +10,6 @@ import io
 import json
 import warnings
 import time
-import tempfile
 import os
 import numpy as np
 try:
@@ -21,6 +20,7 @@ except ImportError:
 
 from . import DEFAULT_SEED, MinHash
 from .logging import notify
+from sourmash.np_utils import to_memmap
 
 
 def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
@@ -255,24 +255,6 @@ def add_meta_save(siglist, index):
     record['license'] = 'CC0'
     record['email'] = ''
     return record
-
-
-def to_memmap(array):
-    """Write a memory mapped array
-    Create a memory-map to an array stored in a binary file on disk.
-    Memory-mapped files are used for accessing small segments of
-    large files on disk, without reading the entire file into memory.
-    :param np.array array to memory map
-    :return: np.array large_memmap memory mapped array
-    :return: str filename name of the file that memory mapped array is written to
-    """
-    filename = tempfile.NamedTemporaryFile(prefix="array", suffix=".mmap", delete=False).name
-    shape = array.shape
-    f = np.memmap(filename, mode='w+', shape=shape, dtype=array.dtype)
-    f[:] = array[:]
-    del f
-    large_memmap = np.memmap(filename, dtype=array.dtype, shape=shape)
-    return large_memmap, filename
 
 
 def save_signatures_json(

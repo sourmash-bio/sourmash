@@ -267,9 +267,8 @@ def compute(args):
                                              cell_sequences,
                                              bam_file)
         if os.path.exists(bam_file):
-            notify("Removing bam file {} ", bam_file)
             os.unlink(bam_file)
-        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
+        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
         return siglist
 
     if args.track_abundance:
