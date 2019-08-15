@@ -145,6 +145,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     notify("Sharding a bam file")
     startt = time.time()
     file_names = []
+
     with pysam.AlignmentFile(bam_file_path, "rb") as bam_file:
         line_count = 0
         file_count = 0
@@ -155,6 +156,8 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
                     os.path.dirname(bam_file_path),
                     "temp_bam_shard_{}.bam".format(file_count))
                 file_names.append(file_name)
+                if os.path.exists(file_name):
+                    line_count = chunked_file_line_count
                 outf = pysam.AlignmentFile(file_name, "wb", header=header)
             if line_count == chunked_file_line_count:
                 file_count = file_count + 1
