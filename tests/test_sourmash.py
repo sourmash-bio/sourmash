@@ -221,6 +221,11 @@ def test_do_sourmash_compute_10x():
         assert all(bc in true_barcodes for bc in barcode_signatures)
         assert all(sig["signatures"]["mins"] != [] for sig in data)
 
+        folder = utils.get_test_data('10x-example/')
+        for file_name in os.listdir(folder):
+            if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
+                os.unlink(file_name)
+
 
 def test_do_sourmash_compute_name():
     with utils.TempDirectory() as location:

@@ -48,6 +48,9 @@ def test_shard_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
     bam_tile_files = sourmash_tenx.shard_bam_file(filename, 1714 // 2)
     assert len(bam_tile_files) == 2
+    for bam_file in bam_tile_files:
+        if os.path.exists(bam_file):
+            os.unlink(bam_file)
 
 
 def test_pass_alignment_qc():
