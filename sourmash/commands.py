@@ -305,7 +305,7 @@ def compute(args):
                         "Large bam file size {} make sure only one"
                         "ksize and one molecule type are provided,"
                         "otherwise saving the signatures into a .sig"
-                        "is serially processed and takes a long time", bam_file_size)
+                        "is serially processed and takes a long time".format(bam_file_size))
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
                 from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
