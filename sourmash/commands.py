@@ -304,9 +304,9 @@ def compute(args):
                 bam_file_size = os.path.getsize(filename)
                 if bam_file_size > 1e9:
                     warnings.warn(
-                        "Large bam file size {} GB make sure only one"
+                        "Large bam file size {} GB make sure only one "
                         "ksize and one molecule type are provided,"
-                        "otherwise saving the signatures into a .sig"
+                        "otherwise saving the signatures into a .sig "
                         "is serially processed and takes a long time".format(bam_file_size >> 30))
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
@@ -332,9 +332,9 @@ def compute(args):
                 length_sharded_bam_files = len(filenames)
                 chunksize, extra = divmod(length_sharded_bam_files, n_jobs)
                 if extra: chunksize += 1
-                notify("Calculated chunk size for parallel processing bam to siglist {}", chunksize)
+                notify("Calculated chunk size as {} for parallel processing bam to siglist", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
-                notify("multiprocessing pool processes initialized {}", args.processes)
+                notify("multiprocessing pool {} processes initialized", args.processes)
                 siglist = list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
                 siglist = list(itertools.chain(*siglist))
                 pool.close()

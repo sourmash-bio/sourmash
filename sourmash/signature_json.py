@@ -293,7 +293,7 @@ def save_signatures_json(
         pool = multiprocessing.Pool(processes=n_jobs)
         notify("multiprocessing pool {} processes initialized", n_jobs)
         func = partial(add_meta_save, siglist)
-        records = list(pool.imap(lambda x: func(x), range(length_siglist), chunksize=chunksize))
+        records = pool.imap(lambda x: func(x), range(length_siglist), chunksize=chunksize)
         notify("multiprocessing pool record mapped")
 
         # Write records into sig file directly from the generator of records
