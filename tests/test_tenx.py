@@ -2,7 +2,6 @@ from . import sourmash_tst_utils as utils
 import sourmash.tenx as sourmash_tenx
 
 import pysam as bs
-import tempfile
 import os
 
 
@@ -16,51 +15,43 @@ def test_read_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
     bam_file = sourmash_tenx.read_bam_file(filename)
     assert isinstance(bam_file, bs.AlignmentFile)
-
-
-def test_write_bam_file():
-    filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    read_bam_file = sourmash_tenx.read_bam_file(filename)
-    temp_folder = tempfile.mkdtemp()
-    temp_file_name = os.path.join(temp_folder, 'temp.bam')
-    write_bam_file = sourmash_tenx.write_bam_file(read_bam_file, temp_file_name)
-    assert isinstance(read_bam_file, bs.AlignmentFile)
-    assert isinstance(write_bam_file, bs.AlignmentFile)
-    assert read_bam_file.header.to_dict() == write_bam_file.header.to_dict()
-    for alignment1, alignment2 in zip(read_bam_file, write_bam_file):
-        assert alignment1 == alignment2
-
-
-def test_read_10x_folder():
-
-    tenx_folder = utils.get_test_data('10x-example')
-
-    barcodes, bam_file = sourmash_tenx.read_10x_folder(tenx_folder)
-
-    assert len(barcodes) == 10
-    assert isinstance(bam_file, bs.AlignmentFile)
-
     total_alignments = sum(1 for _ in bam_file)
     assert total_alignments == 1714
 
 
 def test_shard_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    bam_tile_files = sourmash_tenx.shard_bam_file(filename, 1714 // 2)
-    assert len(bam_tile_files) == 2
-    for bam_file in bam_tile_files:
+    length_alignment = 1714
+    num_shards = 2
+    bam_shard_files = sourmash_tenx.shard_bam_file(filename, length_alignment // num_shards)
+    assert len(bam_shard_files) == 2
+    for bam_file in bam_shard_files:
+        if os.path.exists(bam_file):
+            os.unlink(bam_file)
+    bam_shard_files = sourmash_tenx.shard_bam_file(filename, length_alignment)
+    assert len(bam_shard_files) == 1
+    for bam_file in bam_shard_files:
         if os.path.exists(bam_file):
             os.unlink(bam_file)
 
 
 def test_pass_alignment_qc():
-    tenx_folder = utils.get_test_data('10x-example')
-
-    barcodes, bam = sourmash_tenx.read_10x_folder(tenx_folder)
+    barcodes = sourmash_tenx.read_barcodes_file(
+        utils.get_test_data('10x-example/barcodes.tsv'))
+    bam = sourmash_tenx.read_bam_file(
+        utils.get_test_data('10x-example/possorted_genome_bam.bam'))
 
     total_pass = sum(1 for alignment in bam if
                      sourmash_tenx.pass_alignment_qc(alignment, barcodes))
     assert total_pass == 439
+
+
+def test_pass_alignment_qc_filtered():
+    bam = sourmash_tenx.read_bam_file(
+        utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam'))
+    total_pass = sum(1 for alignment in bam if
+                     sourmash_tenx.pass_alignment_qc(alignment, None))
+    assert total_pass == 192
 
 
 def test_parse_barcode_renamer():
@@ -72,17 +63,17 @@ def test_parse_barcode_renamer():
     assert len(renamer) == len(barcodes)
 
 
-def test_write_sequences():
-    cell_sequences = {'AAATGCCCAAACTGCT-1': "atgc", 'AAATGCCCAAAGTGCT-1': "gtga"}
-    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences))
-    assert len(fastas) == len(cell_sequences)
-    for fasta in fastas:
-        assert fasta.endswith(".fasta")
+def test_bam_to_cell_sequences():
+    bam_file = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+    barcodes = sourmash_tenx.read_barcodes_file(
+        utils.get_test_data('10x-example/barcodes.tsv'))
+    cell_sequences = sourmash_tenx.bam_to_cell_sequences(
+        barcodes, barcode_renamer=None, delimiter='X', bam_file=bam_file)
+    assert len(cell_sequences) == 8
 
 
-def test_bam_to_fasta():
-    filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    tenx_folder = utils.get_test_data('10x-example')
-    barcodes, _ = sourmash_tenx.read_10x_folder(tenx_folder)
-    cell_sequences = sourmash_tenx.bam_to_fasta(barcodes, barcode_renamer=None, delimiter='X', bam_file=filename)
-    assert len(list(cell_sequences)) == 8
+def test_filtered_bam_to_cell_sequences():
+    bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
+    cell_sequences = sourmash_tenx.bam_to_cell_sequences(
+        barcodes=None, barcode_renamer=None, delimiter='X', bam_file=bam_file)
+    assert len(cell_sequences) == 156

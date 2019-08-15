@@ -1,12 +1,11 @@
 import os
 from .logging import notify
 import time
-import tempfile
 import warnings
 import pysam
 
 CELL_BARCODES = ['CB', 'XC']
-UMIS = ['UB', 'XB']
+UMIS = ['UB', 'XM']
 BAM_FILENAME = 'possorted_genome_bam.bam'
 BARCODES_TSV = 'barcodes.tsv'
 
@@ -61,8 +60,17 @@ def read_barcodes_file(barcode_path):
         List of QC-passing barcodes from 'barcodes.tsv'
     """
     with open(barcode_path) as f:
-        lines = set(line.strip() for line in f)
-    return lines
+        barcodes = set(line.strip() for line in f)
+    length_barcodes = len(barcodes)
+    if length_barcodes > 1e5:
+        warnings.warn(
+            "This barcode file contains {} total "
+            "number of barcodes, which is far greater than "
+            "typical single-cell experiments as of 2019. Counting "
+            "min-hashes on this file will take >2TB of memory. "
+            "Is this barcode list filtered by gene, read, or UMI "
+            "count?".format(length_barcodes))
+    return barcodes
 
 
 def read_bam_file(bam_path):
@@ -78,56 +86,6 @@ def read_bam_file(bam_path):
         Iterator over possorted_genome_bam.bam file
     """
     return pysam.AlignmentFile(bam_path, mode='rb')
-
-
-def read_10x_folder(tenx_folder):
-    """Get QC-pass barcodes, genes, and bam file from a 10x folder
-    Parameters
-    ----------
-    folder : str
-        Name of a 10x cellranger output folder containing
-        'possorted_genome_bam.bam', 'possorted_genome_bam.bam.bai'
-        and 'barcodes.tsv' files
-    Returns
-    -------
-    barcodes : list
-        List of QC-passing barcodes from 'barcodes.tsv'
-    bam_file : pysam.AlignmentFile
-        Iterator over possorted_genome_bam.bam file
-    """
-    barcodes = read_barcodes_file(os.path.join(tenx_folder, BARCODES_TSV))
-    if len(barcodes) > 1e5:
-        warnings.warn(
-            "This barcode file contains {} total "
-            "number of barcodes, which is far greater than "
-            "typical single-cell experiments as of 2019. Counting "
-            "min-hashes on this file will take >2TB of memory. "
-            "Is this barcode list filtered by gene, read, or UMI "
-            "count?".format(len(barcodes)))
-
-    bam_file = read_bam_file(os.path.join(tenx_folder, BAM_FILENAME))
-
-    return barcodes, bam_file
-
-
-def write_bam_file(bam_file, bam_write_path):
-    """Write QC-pass bam file to bam_write_path
-    Parameters
-    ----------
-    bam_write_path : str
-        Name of a 10x cellranger bam file to write to
-    Returns
-    -------
-    bam_file : pysam.AlignmentFile
-        Iterator over possorted_genome_bam.bam file
-    """
-    with pysam.AlignmentFile(
-            bam_write_path,
-            "wb",
-            template=bam_file, header=bam_file.header) as outf:
-        for index, alignment in enumerate(bam_file):
-            outf.write(alignment)
-    return read_bam_file(bam_write_path)
 
 
 def shard_bam_file(bam_file_path, chunked_file_line_count):
@@ -168,11 +126,12 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
                 outf.write(alignment)
                 line_count = line_count + 1
 
-    notify("time taken to tile the large bam file is {:.5f} seconds".format(time.time() - startt))
+    notify(
+        "time taken to shard the large bam file into {} shards is {:.5f} seconds".format(file_count + 1, time.time() - startt))
     return file_names
 
 
-def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
+def bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file):
     """Convert 10x bam to one-record-per-cell fasta
     Parameters
     ----------
@@ -216,24 +175,3 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
         value += alignment.seq + delimiter
         cell_sequences.update({renamed: value})
     return cell_sequences
-
-
-def write_cell_sequences(cell_sequences):
-    """Write each cell sequence to a fasta file
-    Parameters
-    ----------
-    cell_sequences : str
-        Name of a 10x cellranger bam file
-        'possorted_genome_bam.bam'
-    Returns
-    -------
-    fasta_file : pysam.AlignmentFile
-        Iterator over possorted_genome_bam.bam file
-    """
-    temp_folder = tempfile.mkdtemp()
-
-    for cell, seq in cell_sequences.items():
-        filename = os.path.join(temp_folder, cell + '.fasta')
-        with open(filename, "w") as f:
-            f.write(">{}\n{}".format(cell, seq))
-        yield filename

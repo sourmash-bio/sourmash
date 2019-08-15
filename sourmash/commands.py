@@ -256,18 +256,20 @@ def compute(args):
         :param bam_file str path to bam file
         :return: [sig.SourmashSignature]
         """
+        from .tenx import bam_to_cell_sequences
         notify("Convert bam to cell sequence to siglist", end="\r")
         bam_file = bam_files[index]
         siglist = []
-        cell_sequences = bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file)
+        cell_sequences = bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file)
         if cell_sequences != {}:
             siglist = build_siglist_cell_seq(args.input_is_protein,
                                              args.check_sequence,
                                              cell_sequences,
                                              bam_file)
-            if os.path.exists(bam_file):
-                os.unlink(bam_file)
-        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
+        if os.path.exists(bam_file):
+            notify("Removing bam file {} ", bam_file)
+            os.unlink(bam_file)
+        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
         return siglist
 
     if args.track_abundance:
@@ -303,13 +305,13 @@ def compute(args):
                 bam_file_size = os.path.getsize(filename)
                 if bam_file_size > 1e9:
                     warnings.warn(
-                        "Large bam file size {} make sure only one"
+                        "Large bam file size {} GB make sure only one"
                         "ksize and one molecule type are provided,"
                         "otherwise saving the signatures into a .sig"
-                        "is serially processed and takes a long time".format(bam_file_size))
+                        "is serially processed and takes a long time".format(bam_file_size >> 30))
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
-                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
+                from .tenx import read_barcodes_file, shard_bam_file
                 from functools import partial
 
                 if args.barcodes_file is not None:
@@ -340,7 +342,7 @@ def compute(args):
                 pool.join()
                 del filenames
 
-                notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))
+                notify("time taken to calculate signatures for 10x folder is {:.5f} seconds", (time.time() - startt))
                 if is_one_ksize and is_one_moltype and n_jobs > 0:
                     is_large_siglist = True
             else:
