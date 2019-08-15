@@ -258,6 +258,7 @@ def compute(args):
         """
         notify("Convert bam to cell sequence to siglist", end="\r")
         bam_file = bam_files[index]
+        siglist = []
         cell_sequences = bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file)
         if cell_sequences != {}:
             siglist = build_siglist_cell_seq(args.input_is_protein,
@@ -266,13 +267,8 @@ def compute(args):
                                              bam_file)
             if os.path.exists(bam_file):
                 os.unlink(bam_file)
-            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
-            return siglist
-        else:
-            if os.path.exists(bam_file):
-                os.unlink(bam_file)
-            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
-            return []
+        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
+        return siglist
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
