@@ -189,26 +189,23 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         list of fasta file for each cell sequence
     """
     bam = read_bam_file(bam_file)
+
+    # If bam file is filtered already by barcodes, barcodes is None
     if barcodes is not None:
         bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
-    else:
-        bam_filtered = bam
-
-    if barcodes is not None:
         renamer = parse_barcode_renamer(barcodes, barcode_renamer)
     else:
+        bam_filtered = bam
         renamer = None
 
     cell_sequences = defaultdict(str)
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
+        # a bam file might have good cell barcode as any of the tags in CELL_BARCODES
         for cb in CELL_BARCODES:
             if alignment.has_tag(cb):
                 barcode = alignment.get_tag(cb)
-        if renamer is not None:
-            renamed = renamer[barcode]
-        else:
-            renamed = barcode
+        renamed = renamer[barcode] if renamer is not None else barcode
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter

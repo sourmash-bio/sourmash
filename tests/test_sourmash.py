@@ -167,15 +167,12 @@ def test_do_sourmash_compute_singleton():
 
 
 def test_do_sourmash_compute_10x():
-    # pytest.importorskip('pysam')
-    # pytest.importorskip('pathos')
+    pytest.importorskip('pysam')
+    pytest.importorskip('pathos')
 
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        print(testdata1)
         barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
-        print(barcodes_file)
-        print(location)
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--input-is-10x',
@@ -185,7 +182,6 @@ def test_do_sourmash_compute_10x():
                                            in_directory=location)
 
         sigfile = os.path.join(location, '10x-example.sig')
-        print(sigfile)
         assert os.path.exists(sigfile)
 
         with open(sigfile) as f:
@@ -198,8 +194,10 @@ def test_do_sourmash_compute_10x():
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
+        assert all(sig["signatures"]["mins"] != [] for sig in data)
 
-
+        # Filtered bam file with no barcodes file
+        # should run sourmash compute successfully
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--dna',
@@ -221,6 +219,7 @@ def test_do_sourmash_compute_10x():
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
+        assert all(sig["signatures"]["mins"] != [] for sig in data)
 
 
 def test_do_sourmash_compute_name():
