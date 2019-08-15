@@ -198,6 +198,7 @@ def test_do_sourmash_compute_10x():
 
         # Filtered bam file with no barcodes file
         # should run sourmash compute successfully
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--dna',
@@ -212,13 +213,7 @@ def test_do_sourmash_compute_10x():
         with open(sigfile) as f:
             data = json.load(f)
 
-        barcode_signatures = [sig['name'] for sig in data]
-
-        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
-            true_barcodes = set(x.strip() for x in f.readlines())
-
         # Ensure that every cell barcode in barcodes.tsv has a signature
-        assert all(bc in true_barcodes for bc in barcode_signatures)
         assert all(sig["signatures"]["mins"] != [] for sig in data)
 
         folder = utils.get_test_data('10x-example/')
