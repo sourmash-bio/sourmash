@@ -84,5 +84,5 @@ def test_bam_to_fasta():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
     tenx_folder = utils.get_test_data('10x-example')
     barcodes, _ = sourmash_tenx.read_10x_folder(tenx_folder)
-    fastas = sourmash_tenx.bam_to_fasta(barcodes, barcode_renamer=None, delimiter='X', one_file_per_cell=None, bam_file=filename)
-    assert len(list(fastas)) == 8
+    cell_sequences = sourmash_tenx.bam_to_fasta(barcodes, barcode_renamer=None, delimiter='X', bam_file=filename)
+    assert len(list(cell_sequences)) == 8

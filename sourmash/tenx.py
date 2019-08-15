@@ -1,4 +1,3 @@
-from collections import defaultdict
 import os
 from .logging import notify
 import time
@@ -170,7 +169,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     return file_names
 
 
-def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
+def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
     """Convert 10x bam to one-record-per-cell fasta
     Parameters
     ----------
@@ -186,8 +185,8 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         concatenated as 'AAAAAAAAAXCCCCCCCC'.
     Returns
     -------
-    filenames: list
-        list of fasta file for each cell sequence
+    cell_sequences: dict
+        all the cell sequences for a given barcode
     """
     bam = read_bam_file(bam_file)
 
@@ -199,7 +198,7 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
         bam_filtered = bam
         renamer = None
 
-    cell_sequences = defaultdict(str)
+    cell_sequences = {}
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
         # a bam file might have good cell barcode as any of the tags in CELL_BARCODES
@@ -210,10 +209,10 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_fi
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
-        cell_sequences[renamed] += alignment.seq + delimiter
-
-    filenames = write_cell_sequences(cell_sequences)
-    return filenames
+        value = cell_sequences.get(renamed, "")
+        value += alignment.seq + delimiter
+        cell_sequences.update({renamed: value})
+    return cell_sequences
 
 
 def write_cell_sequences(cell_sequences):

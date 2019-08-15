@@ -237,36 +237,35 @@ def compute(args):
                 sig.save_signatures(siglist, fp, n_jobs, is_large_siglist)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def build_siglist_fasta(input_is_protein, check_sequence, fasta):
+    def build_siglist_cell_seq(input_is_protein, check_sequence, cell_sequences, bam_file_name):
         """Add all a barcodes' sequences to a signature
         :fasta  barcode: str sequences: [str]
         :return: [sig.SourmashSignature]
         """
-        notify("Convert fasta to siglist", end="\r")
+        notify("Convert cell sequence to siglist", end="\r")
         Elist = make_minhashes()
-        for record in screed.open(fasta):
-            name = record.name
-
-            add_seq(Elist, record.sequence, input_is_protein, check_sequence)
+        for name, sequence in cell_sequences.items():
+            add_seq(Elist, sequence, input_is_protein, check_sequence)
         # Remove the file once we're done because there's
         # potentially ~700,000 files per 10x bam
-        return build_siglist(Elist, fasta, name)
+        return build_siglist(Elist, bam_file_name, name)
 
-    def bam_to_siglist(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
+    def bam_to_siglist(barcodes, barcode_renamer, delimiter, bam_files, index):
         """Conver alignments in bam file to a barcodes' sequences to a signature
         :param barcodes: str
         :param barcode_renamer: [str]
         :param delimiter str
-        :param one_file_per_cell bool one fasta file per cell true
         :param bam_file str path to bam file
         :return: [sig.SourmashSignature]
         """
-        notify("Convert bam to fasta to siglist", end="\r")
-        siglist = []
-        for fasta in bam_to_fasta(barcodes, barcode_renamer, delimiter, one_file_per_cell, bam_file):
-            siglist.append(build_siglist_fasta(args.input_is_protein, args.check_sequence, fasta))
-            if os.path.exists(bam_file):
-                os.unlink(bam_file)
+        notify("Convert bam to cell sequence to siglist", end="\r")
+        bam_file = bam_files[index]
+        siglist = build_siglist_cell_seq(args.input_is_protein,
+                                         args.check_sequence,
+                                         bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file),
+                                         bam_file)
+        if os.path.exists(bam_file):
+            os.unlink(bam_file)
         return siglist
 
     if args.track_abundance:
@@ -318,23 +317,27 @@ def compute(args):
                 notify('... reading bam file from {}', filename)
 
                 n_jobs = args.processes
+                # memory map filenames?
                 filenames = shard_bam_file(filename, args.line_count)
                 func = partial(
                     bam_to_siglist,
                     barcodes,
                     args.rename_10x_barcodes,
                     "X",
-                    False)
-                # Create a per-cell generator of fastas
-                chunksize, extra = divmod(len(filenames), n_jobs)
+                    filenames)
+                # Create a per-cell generator of sequences
+                length_sharded_bam_files = len(filenames)
+                chunksize, extra = divmod(length_sharded_bam_files, n_jobs)
                 if extra: chunksize += 1
                 notify("Calculated chunk size for parallel processing bam to siglist {}", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify("multiprocessing pool processes initialized {}", args.processes)
-                siglist = list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
+                siglist = list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
                 siglist = list(itertools.chain(*siglist))
                 pool.close()
                 pool.join()
+                del filenames
+
                 notify("time taken to calculate signatures for 10x folder is {:.5f} seconds".format(time.time() - startt))
                 if is_one_ksize and is_one_moltype and n_jobs > 0:
                     is_large_siglist = True
