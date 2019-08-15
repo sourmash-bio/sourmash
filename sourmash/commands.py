@@ -246,8 +246,6 @@ def compute(args):
         Elist = make_minhashes()
         for name, sequence in cell_sequences.items():
             add_seq(Elist, sequence, input_is_protein, check_sequence)
-        # Remove the file once we're done because there's
-        # potentially ~700,000 files per 10x bam
         return build_siglist(Elist, bam_file_name, name)
 
     def bam_to_siglist(barcodes, barcode_renamer, delimiter, bam_files, index):
@@ -260,13 +258,15 @@ def compute(args):
         """
         notify("Convert bam to cell sequence to siglist", end="\r")
         bam_file = bam_files[index]
-        siglist = build_siglist_cell_seq(args.input_is_protein,
-                                         args.check_sequence,
-                                         bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file),
-                                         bam_file)
-        if os.path.exists(bam_file):
-            os.unlink(bam_file)
-        return siglist
+        cell_sequences = bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file)
+        if cell_sequences != {}:
+            siglist = build_siglist_cell_seq(args.input_is_protein,
+                                             args.check_sequence,
+                                             cell_sequences,
+                                             bam_file)
+            if os.path.exists(bam_file):
+                os.unlink(bam_file)
+            return siglist
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
