@@ -266,7 +266,13 @@ def compute(args):
                                              bam_file)
             if os.path.exists(bam_file):
                 os.unlink(bam_file)
+            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
             return siglist
+        else:
+            if os.path.exists(bam_file):
+                os.unlink(bam_file)
+            notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist))
+            return []
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
