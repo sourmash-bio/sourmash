@@ -237,6 +237,7 @@ def add_meta_save(siglist, index):
     - siglist: sequence of SourmashSignature objects
     - index: index of siglist to save
     """
+    startt = time.time()
     from .signature import SIGNATURE_VERSION
     sig = siglist[index]
     if type(sig) is list or type(sig) is np.ndarray:
@@ -254,31 +255,26 @@ def add_meta_save(siglist, index):
     record['hash_function'] = '0.murmur64'
     record['license'] = 'CC0'
     record['email'] = ''
+    notify("time taken to save signatures is {:.5f} seconds".format(time.time() - startt))
     return record
 
 
 def save_signatures_json(
-        siglist, fp=None, indent=None, sort_keys=True, n_jobs=None, is_large_siglist=False):
+        siglist, fp=None, indent=None, sort_keys=True, is_large_siglist=False):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp: file handle to the location of a sig file
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
-    - n_jobs: number of processes to run the parallel saving on
-    - is_large_siglist: set this to true if you want to parallely save the siglist incase of a
-    length siglist. If number of jobs and is_large_siglist is None and True respectively,
-    parallel processing to save the siglist takes place, The list of records is not returned as
+    - is_large_siglist: set this to true if you want to map and save the siglist incase of a
+    length siglist.  The list of records is not returned as
     they are pretty huge in memory
     """
     from .signature import SIGNATURE_VERSION
-    if n_jobs is not None and is_large_siglist:
-        warnings.warn(
-            "Parallel processing to save the results into a sig file "
-            "is correct provided only if there one ksize and one moltype")
+    if is_large_siglist:
 
         startt = time.time()
-        notify("parallel processing to save siglist")
-        import pathos.multiprocessing as multiprocessing
+        notify("mapping to save siglist")
         from functools import partial
         # Create a memory map of the siglist using numpy to avoid memory burden
         # while accessing small parts in it
@@ -286,14 +282,8 @@ def save_signatures_json(
         notify("Created memmapped siglist")
 
         # Set chunksize, imap's default chunksize is one
-        length_siglist = len(siglist)
-        chunksize, extra = divmod(length_siglist, n_jobs)
-        if extra: chunksize += 1
-        notify("Chunk size {} for saving siglist records", chunksize)
-        pool = multiprocessing.Pool(processes=n_jobs)
-        notify("multiprocessing pool {} processes initialized", n_jobs)
         func = partial(add_meta_save, siglist)
-        records = pool.imap(lambda x: func(x), range(length_siglist), chunksize=chunksize)
+        records = map(func, range(len(siglist)))
         notify("multiprocessing pool record mapped")
 
         # Write records into sig file directly from the generator of records
@@ -316,9 +306,6 @@ def save_signatures_json(
         del records
         if os.path.exists(memmapped_sigfile_name):
             os.unlink(memmapped_sigfile_name)
-
-        pool.close()
-        pool.join()
 
         # Not returing the appended record as a json string as it is about several GB
         return None

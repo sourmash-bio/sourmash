@@ -152,7 +152,7 @@ def test_add_meta_save():
         assert record['email'] == ''
 
 
-def test_save_load_multisig_json_processes():
+def test_save_load_multisig_json_map():
     import tempfile
 
     e1 = sourmash.MinHash(n=1, ksize=20)
@@ -162,7 +162,7 @@ def test_save_load_multisig_json_processes():
     sig2 = SourmashSignature(e2)
     temp_file_name = tempfile.NamedTemporaryFile(suffix=".sig", delete=False).name
     with open(temp_file_name, 'w') as fp:
-        x = save_signatures_json([sig1, sig2], fp, n_jobs=2, is_large_siglist=True)
+        x = save_signatures_json([sig1, sig2], fp, is_large_siglist=True)
     assert x is None
     with open(temp_file_name) as fp:
         y = json.load(fp)
