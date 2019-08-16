@@ -129,6 +129,19 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
     return similarity_list
 
 
+def nCr(n, r):
+    """Return number of combinations according to its formula
+    nCr = n! / r! (n-r)!
+
+    :param n integer
+    :param r integer
+    :return: number of combinations
+    """
+    f = math.factorial
+    return f(n) // (f(r) * f(n - r))
+
+
+
 def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations parallely on number of processes
@@ -199,6 +212,12 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
             time.time() - startt,
             end='\r')
     notify("Setting similarities completed")
+
+    length_combinations = nCr(length_siglist, 2)
+    d = int(np.ceil(np.sqrt(length_combinations * 2)))
+    if d * (d - 1) != length_combinations * 2:
+        raise ValueError('Incompatible vector size. It must be a binomial '
+                         'coefficient n choose 2 for some integer n >= 2.')
 
     pool.close()
     pool.join()
