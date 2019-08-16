@@ -817,7 +817,7 @@ class SBT(object):
             if isinstance(node, Leaf):
                 if verbose:
                     notify("Visiting {}", node.data, end='\r')
-                n = 1
+                n = 0
                 upper_internal_node = self.parent(position)
                 while n < n_parent_levels:
                     upper_internal_node = self.parent(upper_internal_node.pos)
@@ -840,7 +840,7 @@ class SBT(object):
                         [node.data.name(), leaf.data.name(), similarity])
 
                 # take `n_neighbors` leaves with largest similarities
-                adjacent = sorted(similarities, key=lambda x: x[1])[
+                adjacent = sorted(similarities, key=lambda x: x[2])[
                            -n_neighbors:]
                 adjacencies.extend(adjacent)
 
