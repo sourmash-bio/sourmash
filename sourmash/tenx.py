@@ -1,5 +1,7 @@
+from collections import defaultdict
 import os
 from .logging import notify
+import tempfile
 import time
 import warnings
 import pysam
@@ -130,7 +132,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     return file_names
 
 
-def bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file):
+def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
     """Convert 10x bam to one-record-per-cell fasta
     Parameters
     ----------
@@ -146,8 +148,8 @@ def bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file):
         concatenated as 'AAAAAAAAAXCCCCCCCC'.
     Returns
     -------
-    cell_sequences: dict
-        all the cell sequences for a given barcode
+    fasta: str
+        one temp fasta filename for one cell sequence
     """
     bam = read_bam_file(bam_file)
 
@@ -159,7 +161,8 @@ def bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file):
         bam_filtered = bam
         renamer = None
 
-    cell_sequences = {}
+    cell_sequences = defaultdict(str)
+
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
         # a bam file might have good cell barcode as any of the tags in CELL_BARCODES
@@ -170,7 +173,19 @@ def bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file):
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
-        value = cell_sequences.get(renamed, "")
-        value += alignment.seq + delimiter
-        cell_sequences.update({renamed: value})
-    return cell_sequences
+        cell_sequences[renamed] += alignment.seq + delimiter
+
+    filenames = write_cell_sequences(cell_sequences)
+    return filenames
+
+
+def write_cell_sequences(cell_sequences):
+    """Write each cell's sequences to an individual file"""
+    temp_folder = tempfile.mkdtemp()
+
+    for cell, seq in cell_sequences.items():
+        filename = os.path.join(temp_folder, cell + '.fasta')
+        with open(filename, "w") as f:
+            f.write(">{}\n{}".format(cell, seq))
+        yield filename
+

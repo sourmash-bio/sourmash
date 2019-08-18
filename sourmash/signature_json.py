@@ -8,10 +8,6 @@ from __future__ import print_function, unicode_literals
 
 import io
 import json
-import warnings
-import time
-import os
-import numpy as np
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
@@ -20,7 +16,6 @@ except ImportError:
 
 from . import DEFAULT_SEED, MinHash
 from .logging import notify
-from sourmash.np_utils import to_memmap
 
 
 def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
@@ -232,119 +227,71 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def add_meta_save(siglist, index):
+def get_top_records(siglist):
+    notify("in get_top_records", end="\r")
+    top_records = {}
+    for sig in siglist:
+        name, filename, sketch = sig._save()
+        k = (name, filename)
+        x = top_records.get(k, [])
+        x.append(sketch)
+        top_records[k] = x
+
+    return top_records
+
+
+def add_meta_save(top_records):
     """ Convert one signatures into a JSON dict
     - siglist: sequence of SourmashSignature objects
     - index: index of siglist to save
     """
-    startt = time.time()
+    notify("in add_meta_save", end="\r")
     from .signature import SIGNATURE_VERSION
-    sig = siglist[index]
-    if type(sig) is list or type(sig) is np.ndarray:
-        sig = sig[0]
-    name, filename, sketch = sig._save()
-    record = {}
-    if name:
-        record['name'] = name
-    if filename:
-        record['filename'] = filename
-    record['signatures'] = sketch
+    records = []
+    for (name, filename), sketches in top_records.items():
+        record = {}
+        if name:
+            record["name"] = name
+        if filename:
+            record["filename"] = filename
+        record["signatures"] = sketches
 
-    record['version'] = SIGNATURE_VERSION
-    record['class'] = 'sourmash_signature'
-    record['hash_function'] = '0.murmur64'
-    record['license'] = 'CC0'
-    record['email'] = ''
-    notify("time taken to save signatures is {:.5f} seconds".format(time.time() - startt))
-    return record
+        record["version"] = SIGNATURE_VERSION
+        record["class"] = "sourmash_signature"
+        record["hash_function"] = "0.murmur64"
+        record["license"] = "CC0"
+        record["email"] = ""
+        records.append(record)
+    return records
+
+
+def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
+    notify("in write_records_to_json", end="\r")
+    s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
+    if fp:
+        try:
+            fp.write(s)
+        except TypeError:
+            fp.write(unicode(s))
+        return None
+    return s
 
 
 def save_signatures_json(
-        siglist, fp=None, indent=None, sort_keys=True, is_large_siglist=False):
+        siglist, fp=None, indent=None, sort_keys=True):
     """ Save multiple signatures into a JSON string (or into file handle 'fp')
     - siglist: sequence of SourmashSignature objects
     - fp: file handle to the location of a sig file
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
-    - is_large_siglist: set this to true if you want to map and save the siglist incase of a
-    length siglist.  The list of records is not returned as
-    they are pretty huge in memory
     """
-    from .signature import SIGNATURE_VERSION
-    if is_large_siglist:
+    top_records = get_top_records(siglist)
 
-        startt = time.time()
-        notify("mapping to save siglist")
-        from functools import partial
-        # Create a memory map of the siglist using numpy to avoid memory burden
-        # while accessing small parts in it
-        siglist, memmapped_sigfile_name = to_memmap(np.array(siglist))
-        notify("Created memmapped siglist")
+    if not top_records:
+        return ""
 
-        # Set chunksize, imap's default chunksize is one
-        func = partial(add_meta_save, siglist)
-        records = map(func, range(len(siglist)))
-        notify("multiprocessing pool record mapped")
+    records = add_meta_save(top_records)
 
-        # Write records into sig file directly from the generator of records
-        if fp:
-            try:
-                fp.write(
-                    '[' +
-                    ',\n'.join(json.dumps(record, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':'))) for record in records) +
-                    ']\n')
-            except TypeError:
-                fp.write(unicode(
-                    '[' +
-                    ',\n'.join(json.dumps(record, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':'))) for record in records) +
-                    ']\n'))
-            notify("time taken to save signatures is {:.5f} seconds".format(time.time() - startt))
-            return None
+    s = write_records_to_json(records, fp, indent, sort_keys)
 
-        # Delete traces of big files and variables
-        del siglist
-        del records
-        if os.path.exists(memmapped_sigfile_name):
-            os.unlink(memmapped_sigfile_name)
-
-        # Not returing the appended record as a json string as it is about several GB
-        return None
-    else:
-        notify("serial processing to save siglist")
-        top_records = {}
-        for sig in siglist:
-            name, filename, sketch = sig._save()
-            k = (name, filename)
-            x = top_records.get(k, [])
-            x.append(sketch)
-            top_records[k] = x
-
-        if not top_records:
-            return ""
-
-        records = []
-        for (name, filename), sketches in top_records.items():
-            record = {}
-            if name:
-                record['name'] = name
-            if filename:
-                record['filename'] = filename
-            record['signatures'] = sketches
-
-            record['version'] = SIGNATURE_VERSION
-            record['class'] = 'sourmash_signature'
-            record['hash_function'] = '0.murmur64'
-            record['license'] = 'CC0'
-            record['email'] = ''
-
-            records.append(record)
-
-        s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
-        if fp:
-            try:
-                fp.write(s)
-            except TypeError:
-                fp.write(unicode(s))
-            return None
-
-        return s
+    return s

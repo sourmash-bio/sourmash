@@ -63,17 +63,27 @@ def test_parse_barcode_renamer():
     assert len(renamer) == len(barcodes)
 
 
-def test_bam_to_cell_sequences():
+def test_bam_to_fasta():
+    filename = utils.get_test_data('10x-example/barcodes.tsv')
     bam_file = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    barcodes = sourmash_tenx.read_barcodes_file(
-        utils.get_test_data('10x-example/barcodes.tsv'))
-    cell_sequences = sourmash_tenx.bam_to_cell_sequences(
-        barcodes, barcode_renamer=None, delimiter='X', bam_file=bam_file)
-    assert len(cell_sequences) == 8
+    barcodes = sourmash_tenx.read_barcodes_file(filename)
+
+    fastas = sourmash_tenx.bam_to_fasta(
+        barcodes=barcodes, barcode_renamer=None, delimiter="X", bam_file=bam_file)
+    assert len(list(fastas)) == 8
 
 
-def test_filtered_bam_to_cell_sequences():
+def test_filtered_bam_to_FASTA():
     bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-    cell_sequences = sourmash_tenx.bam_to_cell_sequences(
+    fastas = sourmash_tenx.bam_to_fasta(
         barcodes=None, barcode_renamer=None, delimiter='X', bam_file=bam_file)
-    assert len(cell_sequences) == 156
+    assert len(list(fastas)) == 156
+
+
+def test_write_sequences():
+    cell_sequences = {'AAATGCCCAAACTGCT-1': "atgc", 'AAATGCCCAAAGTGCT-1': "gtga"}
+    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences))
+    assert len(fastas) == len(cell_sequences)
+    for fasta in fastas:
+        assert fasta.endswith(".fasta")
+

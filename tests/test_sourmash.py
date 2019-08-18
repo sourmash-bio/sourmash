@@ -7,6 +7,7 @@ import gzip
 import shutil
 import screed
 import glob
+import itertools
 import json
 import csv
 import pytest
@@ -174,8 +175,9 @@ def test_do_sourmash_compute_10x():
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
         barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
+                                           ['compute', '-k', '21',
                                             '--input-is-10x',
+                                            '--protein',
                                             '--barcodes-file',
                                             barcodes_file,
                                             testdata1],
@@ -183,10 +185,8 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, '10x-example.sig')
         assert os.path.exists(sigfile)
-
-        with open(sigfile) as f:
-            data = json.load(f)
-
+        with open(sigfile) as fp:
+            data = json.load(fp)
         barcode_signatures = [sig['name'] for sig in data]
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
@@ -194,7 +194,8 @@ def test_do_sourmash_compute_10x():
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
-        assert all(sig["signatures"]["mins"] != [] for sig in data)
+        assert all(
+            sig["signatures"][i]["mins"] != [] for i in range(2) for sig in data)
 
         # Filtered bam file with no barcodes file
         # should run sourmash compute successfully
@@ -209,12 +210,10 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, '10x-example_dna.sig')
         assert os.path.exists(sigfile)
-
-        with open(sigfile) as f:
-            data = json.load(f)
-
-        # Ensure that every cell barcode in barcodes.tsv has a signature
-        assert all(sig["signatures"]["mins"] != [] for sig in data)
+        with open(sigfile) as fp:
+            data = json.load(fp)
+        assert any(
+            sig["signatures"][0]["mins"] != [] for sig in data)
 
         folder = utils.get_test_data('10x-example/')
         for file_name in os.listdir(folder):
@@ -791,7 +790,6 @@ def test_do_compare_quiet():
 
 
 def test_do_traverse_directory_compare():
-    import numpy
     with utils.TempDirectory() as location:
         status, out, err = utils.runscript('sourmash',
                                            ['compare', '--traverse-directory',

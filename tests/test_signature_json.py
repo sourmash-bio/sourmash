@@ -3,7 +3,6 @@ import io
 import json
 import ijson
 import sourmash
-import numpy as np
 from sourmash.signature import SourmashSignature
 from sourmash.signature_json import (_json_next_atomic_array,
                                      _json_next_signature,
@@ -131,40 +130,3 @@ def test_save_load_multisig_json():
     assert sig1 in y                      # order not guaranteed, note.
     assert sig2 in y
     assert sig1 != sig2
-
-
-def test_add_meta_save():
-    n = 1
-    ksize = 20
-    e1 = sourmash.MinHash(n=n, ksize=ksize)
-    sig1 = SourmashSignature(e1, name="AGCTTEST", filename="test_temp.fasta")
-    e2 = sourmash.MinHash(n=1, ksize=25)
-    sig2 = SourmashSignature(e2)
-
-    for siglist in [[[sig1, sig2]], [sig1, sig2], [np.array([sig1, sig2])]]:
-        record = add_meta_save(siglist, 0)
-        name, filename, sketch = sig1._save()
-        assert record['signatures'] == sketch
-
-        assert record['class'] == 'sourmash_signature'
-        assert record['hash_function'] == '0.murmur64'
-        assert record['license'] == 'CC0'
-        assert record['email'] == ''
-
-
-def test_save_load_multisig_json_map():
-    import tempfile
-
-    e1 = sourmash.MinHash(n=1, ksize=20)
-    sig1 = SourmashSignature(e1)
-
-    e2 = sourmash.MinHash(n=1, ksize=25)
-    sig2 = SourmashSignature(e2)
-    temp_file_name = tempfile.NamedTemporaryFile(suffix=".sig", delete=False).name
-    with open(temp_file_name, 'w') as fp:
-        x = save_signatures_json([sig1, sig2], fp, is_large_siglist=True)
-    assert x is None
-    with open(temp_file_name) as fp:
-        y = json.load(fp)
-    assert len(y) == 2
-    assert y[0] != y[1]

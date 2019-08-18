@@ -14,6 +14,7 @@ import screed
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
+from . import signature_json as signature_json
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
@@ -156,9 +157,6 @@ def compute(args):
         ksizes = [int(ksizes)]
 
     notify('Computing signature for ksizes: {}', str(ksizes))
-    is_one_moltype = False
-    is_one_ksize = False
-    is_large_siglist = False
     num_sigs = 0
     if args.dna and args.protein:
         notify('Computing both nucleotide and protein signatures.')
@@ -166,14 +164,9 @@ def compute(args):
     elif args.dna:
         notify('Computing only nucleotide (and not protein) signatures.')
         num_sigs = len(ksizes)
-        is_one_moltype = True
     elif args.protein:
         notify('Computing only protein (and not nucleotide) signatures.')
         num_sigs = len(ksizes)
-        is_one_moltype = True
-
-    if len(ksizes) == 1:
-        is_one_ksize = True
 
     if args.protein and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
@@ -223,53 +216,56 @@ def compute(args):
 
     def build_siglist(Elist, filename, name=None):
         return [sig.SourmashSignature(E, filename=filename,
-                                      name=name) for E in Elist]
+                                       name=name) for E in Elist ]
 
-    def save_siglist(siglist, output_fp, filename=None, n_jobs=None, is_large_siglist=False):
+    def save_siglist(siglist, output_fp, filename=None):
         # save!
-        notify("Saving initialized")
         if output_fp:
-            sig.save_signatures(siglist, args.output, n_jobs, is_large_siglist)
+            sig.save_signatures(siglist, args.output)
         else:
             if filename is None:
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
-                sig.save_signatures(siglist, fp, n_jobs, is_large_siglist)
+                sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def build_siglist_cell_seq(input_is_protein, check_sequence, cell_sequences, bam_file_name):
-        """Add all a barcodes' sequences to a signature
-        :fasta  barcode: str sequences: [str]
-        :return: [sig.SourmashSignature]
-        """
-        notify("Convert cell sequence to siglist", end="\r")
-        Elist = make_minhashes()
-        for name, sequence in cell_sequences.items():
-            add_seq(Elist, sequence, input_is_protein, check_sequence)
-        return build_siglist(Elist, bam_file_name, name)
-
-    def bam_to_siglist(barcodes, barcode_renamer, delimiter, bam_files, index):
+    def bam_to_records(barcodes, barcode_renamer, delimiter, bam_files, index):
         """Conver alignments in bam file to a barcodes' sequences to a signature
         :param barcodes: str
         :param barcode_renamer: [str]
         :param delimiter str
         :param bam_file str path to bam file
-        :return: [sig.SourmashSignature]
+        :return: signature records
         """
-        from .tenx import bam_to_cell_sequences
-        notify("Convert bam to cell sequence to siglist", end="\r")
+        notify("Convert bam to records started", end="\r")
         bam_file = bam_files[index]
-        siglist = []
-        cell_sequences = bam_to_cell_sequences(barcodes, barcode_renamer, delimiter, bam_file)
-        if cell_sequences != {}:
-            siglist = build_siglist_cell_seq(args.input_is_protein,
-                                             args.check_sequence,
-                                             cell_sequences,
-                                             bam_file)
+        records = []
+        for fasta in bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
+            records.append(build_siglist_records_fasta(fasta))
         if os.path.exists(bam_file):
             os.unlink(bam_file)
-        notify("Converted indexed {} bam to cell sequence to siglist {}", index, len(siglist), end="\r")
-        return siglist
+        return list(itertools.chain(*records))
+
+    def build_siglist_records_fasta(fasta):
+        """Add all a barcodes' sequences to a signature
+        :param barcode: str
+        :param sequences: [str]
+        :return: [sig.SourmashSignature]
+        """
+        notify("build_siglist_records_fasta started", end="\r")
+        Elist = make_minhashes()
+        for record in screed.open(fasta):
+            name = record.name
+
+            add_seq(Elist, record.sequence,
+                    args.input_is_protein,
+                    args.check_sequence)
+        # Remove the file once we're done because there's
+        # potentially ~700,000 files per 10x bam
+        os.remove(fasta)
+        return signature_json.add_meta_save(
+            signature_json.get_top_records(
+                build_siglist(Elist, fasta, name)))
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -310,7 +306,7 @@ def compute(args):
                         "is serially processed and takes a long time".format(bam_file_size >> 30))
                 startt = time.time()
                 import pathos.multiprocessing as multiprocessing
-                from .tenx import read_barcodes_file, shard_bam_file
+                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
                 from functools import partial
 
                 if args.barcodes_file is not None:
@@ -318,12 +314,10 @@ def compute(args):
                 else:
                     barcodes = None
                 notify('... reading bam file from {}', filename)
-
                 n_jobs = args.processes
-                # memory map filenames?
                 filenames = shard_bam_file(filename, args.line_count)
                 func = partial(
-                    bam_to_siglist,
+                    bam_to_records,
                     barcodes,
                     args.rename_10x_barcodes,
                     "X",
@@ -332,18 +326,25 @@ def compute(args):
                 length_sharded_bam_files = len(filenames)
                 chunksize, extra = divmod(length_sharded_bam_files, n_jobs)
                 if extra: chunksize += 1
-                notify("Calculated chunk size as {} for parallel processing bam to siglist", chunksize)
+                notify("Calculated chunk size as {} for parallel processing bam to sig records", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify("multiprocessing pool {} processes initialized", args.processes)
-                siglist = list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
-                siglist = list(itertools.chain(*siglist))
+                records = list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
+                records = list(itertools.chain(*records))
                 pool.close()
                 pool.join()
                 del filenames
-
-                notify("time taken to calculate signatures for 10x folder is {:.5f} seconds", (time.time() - startt))
-                if is_one_ksize and is_one_moltype and n_jobs > 0:
-                    is_large_siglist = True
+                notify("time taken to calculate signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
+                startt = time.time()
+                if args.output:
+                    notify("saving signature records to ", args.output)
+                    signature_json.write_records_to_json(records, args.output)
+                if sigfile is None:
+                    raise Exception("internal error, filename is None")
+                with open(sigfile, 'w') as fp:
+                    notify("saving signature records to {}", sigfile)
+                    signature_json.write_records_to_json(records, fp)
+                notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -372,12 +373,12 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(sigs), n + 1, filename)
 
-            if not args.output:
+            if not args.output and not args.input_is_10x:
                 notify("saving siglist to {}", sigfile)
-                save_siglist(siglist, args.output, sigfile, args.processes, is_large_siglist)
+                save_siglist(siglist, args.output, sigfile)
 
-        if args.output:
-            save_siglist(siglist, args.output, sigfile, args.processes, is_large_siglist)
+        if args.output and not args.input_is_10x:
+            save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
         Elist = make_minhashes()
