@@ -62,6 +62,13 @@ def test_parse_barcode_renamer():
         assert key == value
     assert len(renamer) == len(barcodes)
 
+    renamer = sourmash_tenx.parse_barcode_renamer(
+        barcodes, utils.get_test_data('10x-example/barcodes_renamer.tsv'))
+    for key, value in renamer.items():
+        assert key in value
+        assert "epithelial_cell" in value
+    assert len(renamer) == len(barcodes)
+
 
 def test_bam_to_fasta():
     filename = utils.get_test_data('10x-example/barcodes.tsv')

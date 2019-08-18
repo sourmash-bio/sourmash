@@ -3,7 +3,6 @@ import os
 from .logging import notify
 import tempfile
 import time
-import warnings
 import pysam
 
 CELL_BARCODES = ['CB', 'XC']
@@ -63,15 +62,6 @@ def read_barcodes_file(barcode_path):
     """
     with open(barcode_path) as f:
         barcodes = set(line.strip() for line in f)
-    length_barcodes = len(barcodes)
-    if length_barcodes > 1e5:
-        warnings.warn(
-            "This barcode file contains {} total "
-            "number of barcodes, which is far greater than "
-            "typical single-cell experiments as of 2019. Counting "
-            "min-hashes on this file will take >2TB of memory. "
-            "Is this barcode list filtered by gene, read, or UMI "
-            "count?".format(length_barcodes))
     return barcodes
 
 
