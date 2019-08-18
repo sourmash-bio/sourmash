@@ -9,13 +9,16 @@ import sys
 import random
 import warnings
 import time
+from functools import partial
+import numpy as np
 
 import screed
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
-from . import signature_json as signature_json
+from . import signature_json
 from . import sourmash_args
+from . import np_utils
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
@@ -229,7 +232,7 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
 
-    def bam_to_records(barcodes, barcode_renamer, delimiter, bam_files, index):
+    def bam_to_records(barcodes, barcode_renamer, delimiter, output, sigfile, bam_files, index):
         """Conver alignments in bam file to a barcodes' sequences to a signature
         :param barcodes: str
         :param barcode_renamer: [str]
@@ -244,7 +247,15 @@ def compute(args):
             records.append(build_siglist_records_fasta(fasta))
         if os.path.exists(bam_file):
             os.unlink(bam_file)
-        return list(itertools.chain(*records))
+        records = list(itertools.chain(*records))
+        if output:
+            notify("saving signature records to ", output)
+            signature_json.write_records_to_json(records, output)
+        if sigfile is None:
+            raise Exception("internal error, filename is None")
+        with open(sigfile, 'w') as fp:
+            notify("saving signature records to {}", sigfile)
+            signature_json.write_records_to_json(records, fp)
 
     def build_siglist_records_fasta(fasta):
         """Add all a barcodes' sequences to a signature
@@ -294,7 +305,8 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
-                # add a warning saying ideally one ksize for a large file is better
+                import pathos.multiprocessing as multiprocessing
+                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
                 if args.output is None:
                     sigfile = os.path.basename(os.path.dirname(filename)) + '.sig'
                 bam_file_size = os.path.getsize(filename)
@@ -305,9 +317,6 @@ def compute(args):
                         "otherwise saving the signatures into a .sig "
                         "is serially processed and takes a long time".format(bam_file_size >> 30))
                 startt = time.time()
-                import pathos.multiprocessing as multiprocessing
-                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
-                from functools import partial
 
                 if args.barcodes_file is not None:
                     barcodes = read_barcodes_file(os.path.join(args.barcodes_file))
@@ -315,12 +324,15 @@ def compute(args):
                     barcodes = None
                 notify('... reading bam file from {}', filename)
                 n_jobs = args.processes
-                filenames = shard_bam_file(filename, args.line_count)
+                filenames, _ = np_utils.to_memmap(np.array(
+                    shard_bam_file(filename, args.line_count)))
                 func = partial(
                     bam_to_records,
                     barcodes,
                     args.rename_10x_barcodes,
                     "X",
+                    args.output,
+                    sigfile,
                     filenames)
                 # Create a per-cell generator of sequences
                 length_sharded_bam_files = len(filenames)
@@ -329,21 +341,10 @@ def compute(args):
                 notify("Calculated chunk size as {} for parallel processing bam to sig records", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify("multiprocessing pool {} processes initialized", args.processes)
-                records = list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
-                records = list(itertools.chain(*records))
+                list(pool.imap(lambda x: func(x), range(length_sharded_bam_files), chunksize=chunksize))
                 pool.close()
                 pool.join()
                 del filenames
-                notify("time taken to calculate signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
-                startt = time.time()
-                if args.output:
-                    notify("saving signature records to ", args.output)
-                    signature_json.write_records_to_json(records, args.output)
-                if sigfile is None:
-                    raise Exception("internal error, filename is None")
-                with open(sigfile, 'w') as fp:
-                    notify("saving signature records to {}", sigfile)
-                    signature_json.write_records_to_json(records, fp)
                 notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
             else:
                 # make minhashes for the whole file
