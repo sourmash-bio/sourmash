@@ -174,6 +174,7 @@ def load_signature_json(iterable,
 
     sig.d['license'] = d.get('license', 'CC0')
 
+    # import pdb; pdb.set_trace()
     return d
 
 
