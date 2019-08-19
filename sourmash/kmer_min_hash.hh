@@ -2,6 +2,7 @@
 #define KMER_MIN_HASH_HH
 
 #include <algorithm>
+#include <iostream>
 #include <set>
 #include <map>
 #include <queue>
@@ -59,13 +60,14 @@ public:
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
+    const bool dayhoff;
     const uint32_t seed;
     const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
+        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -80,6 +82,9 @@ public:
             throw minhash_exception("different ksizes cannot be compared");
         }
         if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (dayhoff != other.dayhoff) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
         if (max_hash != other.max_hash) {
@@ -177,19 +182,54 @@ public:
         }
     }
 
-    std::string _dna_to_aa(const std::string& dna) {
-        std::string aa;
-        unsigned int dna_size = (dna.size() / 3) * 3; // floor it
-        for (unsigned int j = 0; j < dna_size; j += 3) {
-            std::string codon = dna.substr(j, 3);
+    std::string translate_codon(std::string& codon) {
+        std::string residue;
+
+        if (codon.length() >= 2 && codon.length() <= 3){
+            // If codon is length 2, pad with an N for ambiguous codon amino acids
+            if (codon.length() == 2) {
+                codon += "N";
+            }
             auto translated = _codon_table.find(codon);
+
             if (translated != _codon_table.end()) {
                 // "second" is the element mapped to by the codon
-                aa += translated -> second;
+                // Because .find returns an iterator
+                residue = translated -> second;
             } else {
                 // Otherwise, assign the "X" or "unknown" amino acid
-                aa += "X";
+                residue = "X";
             }
+        } else if (codon.length() == 1){
+            // Then we only have one nucleotides and the amino acid is unknown
+            residue = "X";
+        } else {
+            std::string msg = "Codon is invalid length: ";
+            msg += codon;
+            throw minhash_exception(msg);
+        }
+        return residue;
+    }
+
+    std::string _dna_to_aa(const std::string& dna) {
+        std::string aa;
+        std::string codon;
+        std::string residue;
+        unsigned int dna_size = (dna.size() / 3) * 3; // floor it
+        for (unsigned int j = 0; j < dna_size; j += 3) {
+
+            codon = dna.substr(j, 3);
+
+            residue = translate_codon(codon);
+
+            // Use dayhoff encoding of amino acids
+            if (dayhoff) {
+                std::string new_letter = aa_to_dayhoff(residue);
+                aa += new_letter;
+            } else {
+                aa += residue;
+            }
+
         }
         return aa;
     }
@@ -224,6 +264,22 @@ public:
         }
 
         return out;
+    }
+
+    std::string aa_to_dayhoff(const std::string& aa) const {
+        // Convert an amino acid letter to dayhoff encoding
+        std::string new_letter;
+
+        auto dayhoff_encoded = _dayhoff_table.find(aa);
+        if (dayhoff_encoded != _dayhoff_table.end()) {
+            // "second" is the element mapped to by the codon
+            // Because .find returns an iterator
+            new_letter = dayhoff_encoded -> second;
+        } else {
+            // Otherwise, assign the "X" or "unknown" amino acid
+            new_letter = "X";
+        }
+        return new_letter;
     }
 
     virtual void merge(const KmerMinHash& other) {
@@ -263,7 +319,7 @@ private:
         {"TTT", "F"}, {"TTC", "F"},
         {"TTA", "L"}, {"TTG", "L"},
 
-        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"},
+        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"}, {"TCN", "S"},
 
         {"TAT", "Y"}, {"TAC", "Y"},
         {"TAA", "*"}, {"TAG", "*"},
@@ -272,19 +328,19 @@ private:
         {"TGA", "*"},
         {"TGG", "W"},
 
-        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"},
+        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"}, {"CTN", "L"},
 
-        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"},
+        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"}, {"CCN", "P"},
 
         {"CAT", "H"}, {"CAC", "H"},
         {"CAA", "Q"}, {"CAG", "Q"},
 
-        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"},
+        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"}, {"CGN", "R"},
 
         {"ATT", "I"}, {"ATC", "I"}, {"ATA", "I"},
         {"ATG", "M"},
 
-        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"},
+        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"}, {"ACN", "T"},
 
         {"AAT", "N"}, {"AAC", "N"},
         {"AAA", "K"}, {"AAG", "K"},
@@ -292,24 +348,62 @@ private:
         {"AGT", "S"}, {"AGC", "S"},
         {"AGA", "R"}, {"AGG", "R"},
 
-        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"},
+        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GTN", "V"},
 
-        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"},
+        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"}, {"GCN", "A"},
 
         {"GAT", "D"}, {"GAC", "D"},
         {"GAA", "E"}, {"GAG", "E"},
 
-        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
+        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}, {"GGN", "G"}
     };
+
+
+// Dayhoff table from
+// Peris, P., López, D., & Campos, M. (2008).
+// IgTM: An algorithm to predict transmembrane domains and topology in
+// proteins. BMC Bioinformatics, 9(1), 1029–11.
+// http://doi.org/10.1186/1471-2105-9-367
+//
+// Original source:
+// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
+// A model of evolutionary change in proteins,
+// in Atlas of Protein Sequence and Structure,
+// ed Dayhoff M. O., editor.
+// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
+//
+// | Amino acid    | Property              | Dayhoff |
+// |---------------|-----------------------|---------|
+// | C             | Sulfur polymerization | a       |
+// | A, G, P, S, T | Small                 | b       |
+// | D, E, N, Q    | Acid and amide        | c       |
+// | H, K, R       | Basic                 | d       |
+// | I, L, M, V    | Hydrophobic           | e       |
+// | F, W, Y       | Aromatic              | f       |
+    std::map<std::string, std::string> _dayhoff_table = {
+        {"C", "a"},
+
+        {"A", "b"}, {"G", "b"}, {"P", "b"}, {"S", "b"}, {"T", "b"},
+
+        {"D", "c"}, {"E", "c"}, {"N", "c"}, {"Q", "c"},
+
+        {"H", "d"}, {"K", "d"}, {"R", "d"},
+
+        {"I", "e"}, {"L", "e"}, {"M", "e"}, {"V", "e"},
+
+        {"F", "f"}, {"W", "f"}, {"Y", "f"}
+
+    };
+
 };
 
 class KmerMinAbundance: public KmerMinHash {
  public:
     CMinHashType abunds;
 
-    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed,
-                     HashIntoType mx) :
-        KmerMinHash(n, k, prot, seed, mx) { };
+    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, bool dayhoff,
+                     uint32_t seed, HashIntoType mx) :
+        KmerMinHash(n, k, prot, dayhoff, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {

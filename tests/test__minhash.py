@@ -107,9 +107,9 @@ def test_bytes_dna(track_abundance):
     assert len(b) == 1
 
 
-def test_bytes_protein(track_abundance):
+def test_bytes_protein(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
     mh.add_protein(u'AGYYG')
     mh.add_protein(b'AGYYG')
@@ -117,12 +117,39 @@ def test_bytes_protein(track_abundance):
     assert len(mh.get_mins()) == 4
 
 
-def test_protein(track_abundance):
+def test_protein(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.get_mins()) == 4
+
+
+def test_translate_codon(track_abundance):
+    # Ensure that translation occurs properly
+    mh = MinHash(10, 6, is_protein=True)
+    assert "S" == mh.translate_codon('TCT')
+    assert "S" == mh.translate_codon('TC')
+    assert "X" == mh.translate_codon("T")
+
+    with pytest.raises(ValueError):
+        mh.translate_codon("")
+        mh.translate_codon("TCTA")
+
+
+def test_dayhoff(track_abundance):
+    # verify that we can hash to dayhoff-encoded protein/aa sequences
+    mh_dayhoff = MinHash(10, 6, is_protein=True,
+                         dayhoff=True, track_abundance=track_abundance)
+    mh_dayhoff.add_sequence('ACTGAC')
+
+    assert len(mh_dayhoff.get_mins()) == 2
+    # verify that dayhoff-encoded hashes are different from protein/aa hashes
+    mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
+    mh_protein.add_sequence('ACTGAC')
+
+    assert len(mh_protein.get_mins()) == 2
+    assert mh_protein.get_mins() != mh_dayhoff.get_mins()
 
 
 def test_protein_short(track_abundance):
