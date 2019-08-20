@@ -8,6 +8,7 @@ from __future__ import print_function, unicode_literals
 
 import io
 import json
+import time
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
@@ -285,6 +286,7 @@ def save_signatures_json(
     - indent: indentation spaces (an integer) or if None no indentation
     - sort_keys: sort the keys in mappings before writting to JSON
     """
+    startt = time.time()
     top_records = get_top_records(siglist)
 
     if not top_records:
@@ -293,5 +295,5 @@ def save_signatures_json(
     records = add_meta_save(top_records)
 
     s = write_records_to_json(records, fp, indent, sort_keys)
-
+    notify("time taken to save signatures is {:.5f} seconds", time.time() - startt)
     return s

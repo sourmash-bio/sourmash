@@ -245,7 +245,6 @@ def compute(args):
             if filename is None:
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
-                notify("signatures saved to {}", filename)
                 sigfile_name = filename
                 sig.save_signatures(siglist, fp)
         notify(
@@ -265,7 +264,6 @@ def compute(args):
             siglist = []
 
         for filename in args.filenames:
-            notify("file name {} basename {}", filename, os.path.basename(filename))
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
@@ -306,7 +304,6 @@ def compute(args):
                 # Create a per-cell generator of sequences
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files, n_jobs)
-                notify("Calculated chunk size as {} for parallel processing bam to sig records", chunksize)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 fastas = list(itertools.chain(*(
                     pool.imap(
@@ -342,7 +339,7 @@ def compute(args):
                         chunksize=1))))
                 pool.close()
                 pool.join()
-                notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
+                notify("time taken to build signatures list for 10x folder is {:.5f} seconds", (time.time() - startt))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -372,7 +369,6 @@ def compute(args):
                        len(sigs), n + 1, filename)
 
             if not args.output:
-                notify("saving siglist to {}", sigfile)
                 save_siglist(siglist, args.output, sigfile)
 
         if args.output:

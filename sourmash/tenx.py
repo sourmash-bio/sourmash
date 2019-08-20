@@ -92,7 +92,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     -------
     list of sharded bam files
     """
-    notify("Sharding a bam file")
+    notify("Sharding the bam file")
     startt = time.time()
     file_names = []
 
