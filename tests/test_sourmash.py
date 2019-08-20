@@ -174,6 +174,7 @@ def test_do_sourmash_compute_10x():
         barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21',
+                                            '--line-count 50',
                                             '--input-is-10x',
                                             '--protein',
                                             '--barcodes-file',

@@ -1,6 +1,6 @@
-from collections import defaultdict
 import os
 from .logging import notify
+from collections import defaultdict
 import tempfile
 import time
 import pysam
@@ -100,7 +100,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
         line_count = 0
         file_count = 0
         header = bam_file.header
-        for alignment in bam_file:
+        for index, alignment in enumerate(bam_file):
             if line_count == 0:
                 # TODO Change this to tmp dir again
                 file_name = os.path.join(
@@ -111,14 +111,16 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
             if line_count == chunked_file_line_count:
                 file_count = file_count + 1
                 line_count = 0
+                outf.write(alignment)
                 outf.close()
                 notify("===== Sharding bam file ====== {}".format(file_count), end="\r")
             else:
                 outf.write(alignment)
                 line_count = line_count + 1
+        outf.close()
 
     notify(
-        "time taken to shard the large bam file into {} shards is {:.5f} seconds".format(file_count + 1, time.time() - startt))
+        "time taken to shard the large bam file into {} shards is {:.5f} seconds".format(file_count, time.time() - startt))
     return file_names
 
 
@@ -163,9 +165,11 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
+        # Make a long string of all the cell sequences, separated
+        # by a non-alphabet letter
         cell_sequences[renamed] += alignment.seq + delimiter
 
-    filenames = write_cell_sequences(cell_sequences)
+    filenames = list(write_cell_sequences(cell_sequences))
     return filenames
 
 

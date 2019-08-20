@@ -21,14 +21,22 @@ def test_read_bam_file():
 
 def test_shard_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-    length_alignment = 1714
+    bam_file = sourmash_tenx.read_bam_file(filename)
+    assert isinstance(bam_file, bs.AlignmentFile)
+    expected_alignments = sum(1 for _ in bam_file)
     num_shards = 2
-    bam_shard_files = sourmash_tenx.shard_bam_file(filename, length_alignment // num_shards)
+    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments // num_shards)
     assert len(bam_shard_files) == 2
+
+    total_alignments = 0
+    for bam_file in bam_shard_files:
+        total_alignments += sum(1 for _ in sourmash_tenx.read_bam_file(bam_file))
+    assert total_alignments == expected_alignments
     for bam_file in bam_shard_files:
         if os.path.exists(bam_file):
             os.unlink(bam_file)
-    bam_shard_files = sourmash_tenx.shard_bam_file(filename, length_alignment)
+
+    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments)
     assert len(bam_shard_files) == 1
     for bam_file in bam_shard_files:
         if os.path.exists(bam_file):
@@ -49,6 +57,10 @@ def test_pass_alignment_qc():
 def test_pass_alignment_qc_filtered():
     bam = sourmash_tenx.read_bam_file(
         utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam'))
+    total_alignments = sum(1 for _ in bam)
+    bam = sourmash_tenx.read_bam_file(
+        utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam'))
+    assert total_alignments == 1500
     total_pass = sum(1 for alignment in bam if
                      sourmash_tenx.pass_alignment_qc(alignment, None))
     assert total_pass == 192
