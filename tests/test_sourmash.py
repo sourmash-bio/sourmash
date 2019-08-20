@@ -174,7 +174,7 @@ def test_do_sourmash_compute_10x():
         barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21',
-                                            '--line-count 50',
+                                            '--line-count', '50',
                                             '--input-is-10x',
                                             '--protein',
                                             '--barcodes-file',
@@ -182,7 +182,7 @@ def test_do_sourmash_compute_10x():
                                             testdata1],
                                            in_directory=location)
 
-        sigfile = os.path.join(location, '10x-example.sig')
+        sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
         assert os.path.exists(sigfile)
         with open(sigfile) as fp:
             data = json.load(fp)

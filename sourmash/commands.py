@@ -220,7 +220,7 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_sig(Elist, sigfile, barcode_files):
+    def fasta_to_sig(Elist, barcode_files):
 
         for sub_barcode_file in barcode_files:
             # consume & calculate signatures
@@ -234,20 +234,23 @@ def compute(args):
                         args.input_is_protein, args.check_sequence)
             notify('... {} {} sequences', filename, n + 1, end="\r")
 
-            siglist = build_siglist(Elist, sub_barcode_file, name=record.name)
-        save_siglist(siglist, sigfile, quiet=True)
+        return build_siglist(Elist, sub_barcode_file, name=record.name)
 
-    def save_siglist(siglist, output_fp, filename=None, quiet=False):
+    def save_siglist(siglist, output_fp, filename=None):
         # save!
         if output_fp:
+            sigfile_name = args.output.name
             sig.save_signatures(siglist, args.output)
         else:
             if filename is None:
                 raise Exception("internal error, filename is None")
             with open(filename, 'w') as fp:
+                notify("signatures saved to {}", filename)
+                sigfile_name = filename
                 sig.save_signatures(siglist, fp)
-        if not quiet:
-            notify('saved {} signature(s). Note: signature license is CC0.'.format(len(siglist)))
+        notify(
+            'saved {} signature(s) to {}. Note: signature license is CC0.',
+            len(siglist), sigfile_name)
 
     def calculate_chunksize(length, num_jobs):
         chunksize, extra = divmod(length, num_jobs)
@@ -257,12 +260,12 @@ def compute(args):
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
-
     if not args.merge:
         if args.output:
             siglist = []
 
         for filename in args.filenames:
+            notify("file name {} basename {}", filename, os.path.basename(filename))
             sigfile = os.path.basename(filename) + '.sig'
             if not args.output and os.path.exists(sigfile) and not \
                 args.force:
@@ -283,10 +286,6 @@ def compute(args):
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
                 from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
-                if args.output is None:
-                    sigfile = open(os.path.dirname(filename) + '.sig', 'w')
-                else:
-                    sigfile = args.output
 
                 startt = time.time()
 
@@ -315,6 +314,7 @@ def compute(args):
                 pool.close()
                 pool.join()
                 # clean up
+                [os.unlink(file) for file in filenames if os.path.exists(file)]
                 del filenames
                 if os.path.exists(mmap_file):
                     os.unlink(mmap_file)
@@ -333,14 +333,13 @@ def compute(args):
 
                 func = partial(
                     fasta_to_sig,
-                    Elist,
-                    sigfile)
+                    Elist)
                 pool = multiprocessing.Pool(processes=n_jobs)
-                list(
+                siglist = list(itertools.chain(*(
                     pool.imap(
                         lambda barcode_files: func(barcode_files),
                         unique_fasta_files,
-                        chunksize=1))
+                        chunksize=1))))
                 pool.close()
                 pool.join()
                 notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
@@ -372,11 +371,11 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(sigs), n + 1, filename)
 
-            if not args.output and not args.input_is_10x:
+            if not args.output:
                 notify("saving siglist to {}", sigfile)
                 save_siglist(siglist, args.output, sigfile)
 
-        if args.output and not args.input_is_10x:
+        if args.output:
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
