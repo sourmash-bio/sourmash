@@ -1,8 +1,13 @@
 //! # Foreign Function Interface for calling sourmash from a C API
 //!
 //! Primary client for now is the Python version, using CFFI and milksnake.
+#![allow(clippy::missing_safety_doc)]
+
+#[macro_use]
+pub mod utils;
 
 pub mod minhash;
+pub mod nodegraph;
 pub mod signature;
 
 use std::ffi::CStr;
