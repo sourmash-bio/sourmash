@@ -124,25 +124,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     return file_names
 
 
-def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
-    """Convert 10x bam to one-record-per-cell fasta
-    Parameters
-    ----------
-    bam : bamnostic.AlignmentFile
-    barcodes : list of str
-        QC-passing barcodes
-    barcode_renamer : str or None
-        Tab-separated filename mapping a barcode to a new name, e.g.
-        AAATGCCCAAACTGCT-1    lung_epithelial_cell|AAATGCCCAAACTGCT-1
-    delimiter : str, default "X"
-        Non-DNA or protein alphabet character to be ignored, e.g. if a cell
-        has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
-        concatenated as 'AAAAAAAAAXCCCCCCCC'.
-    Returns
-    -------
-    fasta: str
-        one temp fasta filename for one cell sequence
-    """
+def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file):
     bam = read_bam_file(bam_file)
 
     # If bam file is filtered already by barcodes, barcodes is None
@@ -168,6 +150,30 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
         cell_sequences[renamed] += alignment.seq + delimiter
+    notify("bam_to_cell_seq conversion completed on {}", bam_file, end='\r')
+    return cell_sequences
+
+
+def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
+    """Convert 10x bam to one-record-per-cell fasta
+    Parameters
+    ----------
+    bam : bamnostic.AlignmentFile
+    barcodes : list of str
+        QC-passing barcodes
+    barcode_renamer : str or None
+        Tab-separated filename mapping a barcode to a new name, e.g.
+        AAATGCCCAAACTGCT-1    lung_epithelial_cell|AAATGCCCAAACTGCT-1
+    delimiter : str, default "X"
+        Non-DNA or protein alphabet character to be ignored, e.g. if a cell
+        has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
+        concatenated as 'AAAAAAAAAXCCCCCCCC'.
+    Returns
+    -------
+    fasta: str
+        one temp fasta filename for one cell sequence
+    """
+    cell_sequences = bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file)
 
     filenames = list(write_cell_sequences(cell_sequences))
     notify("bam_to_fasta conversion completed on {}", bam_file, end="\r")

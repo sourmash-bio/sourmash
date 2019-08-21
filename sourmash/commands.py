@@ -8,6 +8,7 @@ import sys
 import random
 import itertools
 import time
+from collections import defaultdict
 from functools import partial
 import numpy as np
 import pathos.multiprocessing as multiprocessing
@@ -220,21 +221,12 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_sig(Elist, barcode_files):
+    def cell_seq_to_sig(Elist, bam_file, name, sequence):
+        # consume & calculate signatures
+        add_seq(Elist, sequence,
+                args.input_is_protein, args.check_sequence)
 
-        for sub_barcode_file in barcode_files:
-            # consume & calculate signatures
-            notify('... reading sequences from {}', sub_barcode_file, end="\r")
-
-            for n, record in enumerate(screed.open(sub_barcode_file)):
-                if n % 10000 == 0 and n:
-                    notify('\r... {} {}', filename, n, end='')
-
-                add_seq(Elist, record.sequence,
-                        args.input_is_protein, args.check_sequence)
-            notify('... {} {} sequences', filename, n + 1, end="\r")
-
-        return build_siglist(Elist, sub_barcode_file, name=record.name)
+        return build_siglist(Elist, bam_file, name=name)
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -283,9 +275,7 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
-                from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
-
-                startt = time.time()
+                from .tenx import read_barcodes_file, shard_bam_file, bam_to_cell_seq
 
                 if args.barcodes_file is not None:
                     barcodes = read_barcodes_file(os.path.join(args.barcodes_file))
@@ -295,9 +285,11 @@ def compute(args):
                 n_jobs = args.processes
                 filenames, mmap_file = np_utils.to_memmap(np.array(
                     shard_bam_file(filename, args.line_count)))
+
+                startt_cell_seq = time.time()
                 delimeter = "X"
                 func = partial(
-                    bam_to_fasta,
+                    bam_to_cell_seq,
                     barcodes,
                     args.rename_10x_barcodes,
                     delimeter)
@@ -307,9 +299,13 @@ def compute(args):
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify(
                     "multiprocessing pool processes {} and chunksize {} calculated", n_jobs, chunksize)
-                fastas = list(itertools.chain(*(
-                    pool.imap(
-                        lambda x: func(x), filenames, chunksize=chunksize))))
+                result = pool.imap(lambda x: func(x), filenames, chunksize=chunksize)
+                cell_seq_dict_combined = defaultdict(str)
+
+                for cell_seq_dict in result:
+                    for key, value in cell_seq_dict.items():
+                        cell_seq_dict_combined[key] += value
+
                 pool.close()
                 pool.join()
 
@@ -321,32 +317,26 @@ def compute(args):
                 notify("Deleted intermediatary bam and memmap files")
 
                 # make minhashes for the whole file
-                Elist = make_minhashes()
-                unique_fastas = set([
-                    os.path.basename(fasta) for fasta in fastas])
-                unique_fasta_files = []
-                for unique in unique_fastas:
-                    unique_barcode_files = []
-                    for fasta in fastas:
-                        if fasta.endswith(unique):
-                            unique_barcode_files.append(fasta)
-                    if unique_barcode_files != []:
-                        unique_fasta_files.append(unique_barcode_files)
+                number_barcodes = len(cell_seq_dict_combined)
+                notify("Found {} unique barcodes", number_barcodes)
+                notify(
+                    "time taken to find unique cell barcodes and their sequences is {:.5f} seconds", (time.time() - startt_cell_seq))
 
-                notify("Found {} unique barcodes", len(unique_fasta_files))
-
+                startt = time.time()
                 func = partial(
-                    fasta_to_sig,
-                    Elist)
+                    cell_seq_to_sig,
+                    make_minhashes(),
+                    filename)
                 pool = multiprocessing.Pool(processes=n_jobs)
-                siglist = list(itertools.chain(*(
+                chunksize = calculate_chunksize(number_barcodes, n_jobs)
+                siglist, _ = np_utils.to_memmap(np.array(list(itertools.chain(*(
                     pool.imap(
-                        lambda barcode_files: func(barcode_files),
-                        unique_fasta_files,
-                        chunksize=1))))
+                        lambda cell_seq_dict: func(cell_seq_dict[0], cell_seq_dict[1]),
+                        cell_seq_dict_combined.items(),
+                        chunksize=1))))))
                 pool.close()
                 pool.join()
-                notify("time taken to build signatures list for 10x folder is {:.5f} seconds", (time.time() - startt))
+                notify("time taken to build signatures list from cell seq is {:.5f} seconds", (time.time() - startt))
 
             else:
                 # make minhashes for the whole file
