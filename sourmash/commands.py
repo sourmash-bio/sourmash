@@ -305,16 +305,21 @@ def compute(args):
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files, n_jobs)
                 pool = multiprocessing.Pool(processes=n_jobs)
+                notify(
+                    "multiprocessing pool processes {} and chunksize {} calculated", n_jobs, chunksize)
                 fastas = list(itertools.chain(*(
                     pool.imap(
                         lambda x: func(x), filenames, chunksize=chunksize))))
                 pool.close()
                 pool.join()
+
                 # clean up
                 [os.unlink(file) for file in filenames if os.path.exists(file)]
                 del filenames
                 if os.path.exists(mmap_file):
                     os.unlink(mmap_file)
+                notify("Deleted intermediatary bam and memmap files")
+
                 # make minhashes for the whole file
                 Elist = make_minhashes()
                 unique_fastas = set([
@@ -328,6 +333,8 @@ def compute(args):
                     if unique_barcode_files != []:
                         unique_fasta_files.append(unique_barcode_files)
 
+                notify("Found {} unique barcodes", len(unique_fasta_files))
+
                 func = partial(
                     fasta_to_sig,
                     Elist)
@@ -340,6 +347,7 @@ def compute(args):
                 pool.close()
                 pool.join()
                 notify("time taken to build signatures list for 10x folder is {:.5f} seconds", (time.time() - startt))
+
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
