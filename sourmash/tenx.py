@@ -1,6 +1,5 @@
 import os
 from .logging import notify
-from collections import defaultdict
 import tempfile
 import time
 import pysam
@@ -124,7 +123,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     return file_names
 
 
-def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file):
+def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, cell_sequences, bam_file):
     bam = read_bam_file(bam_file)
 
     # If bam file is filtered already by barcodes, barcodes is None
@@ -134,8 +133,6 @@ def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file):
     else:
         bam_filtered = bam
         renamer = None
-
-    cell_sequences = defaultdict(str)
 
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
@@ -149,8 +146,11 @@ def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file):
         # by a non-alphabet letter
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
-        cell_sequences[renamed] += alignment.seq + delimiter
-    notify("bam_to_cell_seq conversion completed on {}", bam_file, end='\r')
+        if renamed not in cell_sequences:
+            cell_sequences[renamed] = alignment.seq + delimiter
+        else:
+            cell_sequences[renamed] += alignment.seq + delimiter
+    notify("bam_to_cell_seq conversion completed on {}", bam_file, end='')
     return cell_sequences
 
 
@@ -173,10 +173,11 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
     fasta: str
         one temp fasta filename for one cell sequence
     """
-    cell_sequences = bam_to_cell_seq(barcodes, barcode_renamer, delimiter, bam_file)
+    cell_sequences = {}
+    bam_to_cell_seq(barcodes, barcode_renamer, delimiter, cell_sequences, bam_file)
 
     filenames = list(write_cell_sequences(cell_sequences))
-    notify("bam_to_fasta conversion completed on {}", bam_file, end="\r")
+    notify("bam_to_fasta conversion completed on {}", bam_file, end='')
     return filenames
 
 

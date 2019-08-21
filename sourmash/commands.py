@@ -8,10 +8,10 @@ import sys
 import random
 import itertools
 import time
-from collections import defaultdict
 from functools import partial
 import numpy as np
-import pathos.multiprocessing as multiprocessing
+import multiprocessing
+import pathos.multiprocessing as pathos_mp
 
 import screed
 from .sourmash_args import SourmashArgumentParser
@@ -288,23 +288,22 @@ def compute(args):
 
                 startt_cell_seq = time.time()
                 delimeter = "X"
+                manager = multiprocessing.Manager()
+                cell_seqs = manager.dict()
                 func = partial(
                     bam_to_cell_seq,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimeter)
+                    delimeter,
+                    cell_seqs)
                 # Create a per-cell generator of sequences
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files, n_jobs)
-                pool = multiprocessing.Pool(processes=n_jobs)
+                pool = pathos_mp.Pool(processes=n_jobs)
+
                 notify(
                     "multiprocessing pool processes {} and chunksize {} calculated", n_jobs, chunksize)
-                result = pool.imap(lambda x: func(x), filenames, chunksize=chunksize)
-                cell_seq_dict_combined = defaultdict(str)
-
-                for cell_seq_dict in result:
-                    for key, value in cell_seq_dict.items():
-                        cell_seq_dict_combined[key] += value
+                list(pool.imap(lambda x: func(x), filenames, chunksize=chunksize))
 
                 pool.close()
                 pool.join()
@@ -317,25 +316,17 @@ def compute(args):
                 notify("Deleted intermediatary bam and memmap files")
 
                 # make minhashes for the whole file
-                number_barcodes = len(cell_seq_dict_combined)
+                number_barcodes = len(cell_seqs)
                 notify("Found {} unique barcodes", number_barcodes)
                 notify(
                     "time taken to find unique cell barcodes and their sequences is {:.5f} seconds", (time.time() - startt_cell_seq))
 
                 startt = time.time()
-                func = partial(
-                    cell_seq_to_sig,
-                    make_minhashes(),
-                    filename)
-                pool = multiprocessing.Pool(processes=n_jobs)
-                chunksize = calculate_chunksize(number_barcodes, n_jobs)
-                siglist, _ = np_utils.to_memmap(np.array(list(itertools.chain(*(
-                    pool.imap(
-                        lambda cell_seq_dict: func(cell_seq_dict[0], cell_seq_dict[1]),
-                        cell_seq_dict_combined.items(),
-                        chunksize=1))))))
-                pool.close()
-                pool.join()
+
+                cell_signatures = [
+                    cell_seq_to_sig(make_minhashes(), filename, barcode, seqs)
+                    for barcode, seqs in cell_seqs.items()]
+                siglist = list(itertools.chain(*cell_signatures))
                 notify("time taken to build signatures list from cell seq is {:.5f} seconds", (time.time() - startt))
 
             else:
