@@ -220,21 +220,22 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_sig(Elist, barcode_files):
+    def fasta_to_sig(Elist, unique_fastas, all_fastas, index):
+        unique_fasta = unique_fastas[index]
+        for fasta in all_fastas:
+            if os.path.basename(fasta) == unique_fasta:
+                # consume & calculate signatures
+                notify('... reading sequences from {}', fasta, end="\r")
 
-        for sub_barcode_file in barcode_files:
-            # consume & calculate signatures
-            notify('... reading sequences from {}', sub_barcode_file, end="\r")
+                for n, record in enumerate(screed.open(fasta)):
+                    if n % 10000 == 0 and n:
+                        notify('\r... {} {}', filename, n, end='')
 
-            for n, record in enumerate(screed.open(sub_barcode_file)):
-                if n % 10000 == 0 and n:
-                    notify('\r... {} {}', filename, n, end='')
+                    add_seq(Elist, record.sequence,
+                            args.input_is_protein, args.check_sequence)
+                notify('... {} {} sequences', filename, n + 1, end="\r")
 
-                add_seq(Elist, record.sequence,
-                        args.input_is_protein, args.check_sequence)
-            notify('... {} {} sequences', filename, n + 1, end="\r")
-
-        return build_siglist(Elist, sub_barcode_file, name=record.name)
+        return build_siglist(Elist, fasta, name=record.name)
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -248,8 +249,8 @@ def compute(args):
                 sigfile_name = filename
                 sig.save_signatures(siglist, fp)
         notify(
-            'saved {} signature(s) to {}. Note: signature license is CC0.',
-            len(siglist), sigfile_name)
+            'saved signature(s) to {}. Note: signature license is CC0.',
+            sigfile_name)
 
     def calculate_chunksize(length, num_jobs):
         chunksize, extra = divmod(length, num_jobs)
@@ -322,28 +323,23 @@ def compute(args):
 
                 # make minhashes for the whole file
                 Elist = make_minhashes()
-                unique_fastas = set([
-                    os.path.basename(fasta) for fasta in fastas])
-                unique_fasta_files = []
-                for unique in unique_fastas:
-                    unique_barcode_files = []
-                    for fasta in fastas:
-                        if fasta.endswith(unique):
-                            unique_barcode_files.append(fasta)
-                    if unique_barcode_files != []:
-                        unique_fasta_files.append(unique_barcode_files)
-
-                notify("Found {} unique barcodes", len(unique_fasta_files))
+                unique_fastas = list(set([
+                    os.path.basename(fasta) for fasta in fastas]))
+                unique_barcodes = len(unique_fastas)
+                notify("Found {} unique barcodes", unique_barcodes)
 
                 func = partial(
                     fasta_to_sig,
-                    Elist)
+                    Elist,
+                    unique_fastas,
+                    fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
-                siglist = list(itertools.chain(*(
+                chunksize = calculate_chunksize(unique_barcodes, n_jobs)
+                siglist = itertools.chain(*(
                     pool.imap(
-                        lambda barcode_files: func(barcode_files),
-                        unique_fasta_files,
-                        chunksize=1))))
+                        lambda index: func(index),
+                        range(unique_barcodes),
+                        chunksize=chunksize)))
                 pool.close()
                 pool.join()
                 notify("time taken to build signatures list for 10x folder is {:.5f} seconds", (time.time() - startt))
