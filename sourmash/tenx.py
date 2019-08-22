@@ -150,7 +150,7 @@ def bam_to_cell_seq(barcodes, barcode_renamer, delimiter, cell_sequences, bam_fi
             cell_sequences[renamed] = alignment.seq + delimiter
         else:
             cell_sequences[renamed] += alignment.seq + delimiter
-    notify("bam_to_cell_seq conversion completed on {}", bam_file, end='')
+    notify("bam_to_cell_seq conversion completed on {}", bam_file, end="\r")
     return cell_sequences
 
 
