@@ -16,6 +16,7 @@ import screed
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
+from . import signature_json
 from . import sourmash_args
 from . import np_utils
 from .logging import notify, error, print_results, set_quiet
@@ -220,7 +221,7 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_sig(Elist, unique_fastas, all_fastas, index):
+    def fasta_to_sig_record(Elist, unique_fastas, all_fastas, index):
         unique_fasta = unique_fastas[index]
         for fasta in all_fastas:
             if os.path.basename(fasta) == unique_fasta:
@@ -235,7 +236,10 @@ def compute(args):
                             args.input_is_protein, args.check_sequence)
                 notify('... {} {} sequences', filename, n + 1, end="\r")
 
-        return build_siglist(Elist, fasta, name=record.name)
+        siglist = build_siglist(Elist, fasta, name=record.name)
+
+        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        return records
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -325,25 +329,33 @@ def compute(args):
                 Elist = make_minhashes()
                 unique_fastas = list(set([
                     os.path.basename(fasta) for fasta in fastas]))
+                fastas, memmap_file1 = np_utils.to_memmap(np.array(fastas))
+                unique_fastas, memmap_file2 = np_utils.to_memmap(np.array(unique_fastas))
                 unique_barcodes = len(unique_fastas)
                 notify("Found {} unique barcodes", unique_barcodes)
 
                 func = partial(
-                    fasta_to_sig,
+                    fasta_to_sig_record,
                     Elist,
                     unique_fastas,
                     fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
-                siglist = itertools.chain(*(
+                records = list(itertools.chain(*(
                     pool.imap(
                         lambda index: func(index),
                         range(unique_barcodes),
-                        chunksize=chunksize)))
+                        chunksize=chunksize))))
                 pool.close()
                 pool.join()
-                notify("time taken to build signatures list for 10x folder is {:.5f} seconds", (time.time() - startt))
-
+                for mmap_file in [memmap_file1, memmap_file2]:
+                    if os.path.exists(mmap_file):
+                        os.unlink(mmap_file)
+                if args.output is not None:
+                    signature_json.write_records_to_json(records, args.output)
+                else:
+                    signature_json.write_records_to_json(records, open(sigfile, "w"))
+                notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -372,10 +384,10 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(sigs), n + 1, filename)
 
-            if not args.output:
+            if not args.output and not args.input_is_10x:
                 save_siglist(siglist, args.output, sigfile)
 
-        if args.output:
+        if args.output and not args.input_is_10x:
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
