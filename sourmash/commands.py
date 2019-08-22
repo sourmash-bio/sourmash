@@ -236,6 +236,9 @@ def compute(args):
                             args.input_is_protein, args.check_sequence)
                 notify('... {} {} sequences', filename, n + 1, end="\r")
 
+                if os.path.exists(fasta):
+                    os.unlink(fasta)
+
         siglist = build_siglist(Elist, fasta, name=record.name)
 
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
