@@ -87,7 +87,8 @@ pub fn get_readable(input_name: &str) -> Box<dyn io::Read> {
     match input_name {
         "-" => Box::new(BufReader::new(io::stdin())),
         _ => Box::new(BufReader::new(
-            File::open(input_name).expect(&format!("Can't open input file {}", input_name)),
+            File::open(input_name)
+                .unwrap_or_else(|_| panic!("Can't open input file {}", input_name)),
         )),
     }
 }
@@ -100,16 +101,16 @@ fn get_compression(mut in_stream: Box<dyn io::Read>) -> CompressionFormat {
         .expect("Error durring reading first bit of file");
 
     let mut five_bit_val: u64 = 0;
-    for i in 0..5 {
-        five_bit_val |= (buf[i] as u64) << 8 * (4 - i);
+    for (i, item) in buf.iter().enumerate().take(5) {
+        five_bit_val |= (u64::from(*item)) << (8 * (4 - i));
     }
     if CompressionFormat::from_u64(five_bit_val) == Some(CompressionFormat::Lzma) {
         return CompressionFormat::Lzma;
     }
 
     let mut two_bit_val: u64 = 0;
-    for i in 0..2 {
-        two_bit_val |= (buf[i] as u64) << 8 * (1 - i);
+    for (i, item) in buf.iter().enumerate().take(2) {
+        two_bit_val |= (u64::from(*item)) << (8 * (1 - i));
     }
 
     match CompressionFormat::from_u64(two_bit_val) {
@@ -213,7 +214,8 @@ fn get_writable(output_name: &str) -> Box<dyn io::Write> {
     match output_name {
         "-" => Box::new(BufWriter::new(io::stdout())),
         _ => Box::new(BufWriter::new(
-            File::create(output_name).expect(&format!("Can't open output file {}", output_name)),
+            File::create(output_name)
+                .unwrap_or_else(|_| panic!("Can't open output file {}", output_name)),
         )),
     }
 }

@@ -1,0 +1,66 @@
+name: draff
+version: "0.0.1"
+about: "draff signature commands"
+author: Luiz Irber <sourmash@luizirber.org>
+
+settings:
+    - SubcommandRequiredElseHelp
+
+subcommands:
+    - compute:
+        about: create a draff signature
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - ksize:
+                help: ksize
+                short: K
+                default_value: "9"
+                takes_value: true
+                required: false
+            - wsize:
+                help: window size
+                short: W
+                default_value: "31"
+                takes_value: true
+                required: false
+            - output:
+                help: alternative output file
+                short: o
+                takes_value: true
+                required: false
+            - inputs:
+                help: FASTA files
+                multiple: true
+    - index:
+        about: create a draff index
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - output:
+                help: alternative output file
+                short: o
+                takes_value: true
+                required: false
+            - inputs:
+                help: draff signatures
+                multiple: true
+    - compare:
+        about: compare draff signatures
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - inputs:
+                help: draff signatures
+                multiple: true
+    - search:
+        about: search a draff index
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - index:
+                help: index to search
+                required: true
+            - query:
+                help: draff signature to search
+                required: true

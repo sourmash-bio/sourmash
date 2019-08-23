@@ -18,11 +18,17 @@ pub enum SourmashError {
     #[fail(display = "mismatch in seed; comparison fail")]
     MismatchSeed,
 
+    #[fail(display = "different signatures cannot be compared")]
+    MismatchSignatureType,
+
     #[fail(display = "invalid DNA character in input k-mer: {}", message)]
     InvalidDNA { message: String },
 
     #[fail(display = "invalid protein character in input: {}", message)]
     InvalidProt { message: String },
+
+    #[fail(display = "Error from deserialization")]
+    SerdeError,
 }
 
 #[repr(u32)]
@@ -39,6 +45,7 @@ pub enum SourmashErrorCode {
     MismatchDNAProt = 1_02,
     MismatchMaxHash = 1_03,
     MismatchSeed = 1_04,
+    MismatchSignatureType = 1_05,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -64,8 +71,12 @@ impl SourmashErrorCode {
                     SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
                     SourmashError::MismatchMaxHash => SourmashErrorCode::MismatchMaxHash,
                     SourmashError::MismatchSeed => SourmashErrorCode::MismatchSeed,
+                    SourmashError::MismatchSignatureType => {
+                        SourmashErrorCode::MismatchSignatureType
+                    }
                     SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
+                    SourmashError::SerdeError => SourmashErrorCode::SerdeError,
                 };
             }
         }
