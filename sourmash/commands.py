@@ -100,6 +100,8 @@ def compute(args):
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
+    parser.add_argument('--save-fastas', action='store_true',
+                        help='save merged fastas for the unique barcodes (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
     parser.add_argument('--seed', type=int,
@@ -221,8 +223,11 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_sig_record(Elist, unique_fastas, all_fastas, index):
+    def fasta_to_sig_record(Elist, save_fastas, unique_fastas, all_fastas, index):
         unique_fasta = unique_fastas[index]
+        if save_fastas:
+            f = open(unique_fasta, "w")
+
         for fasta in all_fastas:
             if os.path.basename(fasta) == unique_fasta:
                 # consume & calculate signatures
@@ -235,10 +240,12 @@ def compute(args):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
                 notify('... {} {} sequences', filename, n + 1, end="\r")
-
+                if save_fastas:
+                    f.write(">{}\n{}".format(unique_fasta.replace(".fasta", ""), record.sequence))
                 if os.path.exists(fasta):
                     os.unlink(fasta)
-
+        if save_fastas:
+            f.close()
         siglist = build_siglist(Elist, fasta, name=record.name)
 
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
@@ -340,6 +347,7 @@ def compute(args):
                 func = partial(
                     fasta_to_sig_record,
                     Elist,
+                    args.save_fastas,
                     unique_fastas,
                     fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
