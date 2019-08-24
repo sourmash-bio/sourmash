@@ -102,6 +102,9 @@ cdef class MinHash(object):
         if max_hash and n:
             raise ValueError('cannot set both n and max_hash')
 
+        if not n and not (max_hash or scaled):
+            raise ValueError("cannot omit both n and scaled")
+
         cdef KmerMinHash *mh = NULL
         if track_abundance:
             mh = new KmerMinAbundance(n, ksize, is_protein, seed, max_hash)
@@ -186,6 +189,11 @@ cdef class MinHash(object):
         for hash in hashes:
             self.add_hash(hash)
 
+    def remove_many(self, hashes):
+        "Remove many hashes at once."
+        for hash in hashes:
+            deref(self._this).remove_hash(hash)
+
     def update(self, other):
         "Update this estimator from all the hashes from the other."
         self.add_many(other.get_mins())
@@ -198,7 +206,7 @@ cdef class MinHash(object):
         if with_abundance and self.track_abundance:
             return dict(zip(mh.mins, mh.abunds))
         else:
-            return [it for it in sorted(deref(self._this).mins)]
+            return deref(self._this).mins
 
     def get_hashes(self):
         return self.get_mins()
@@ -273,7 +281,7 @@ cdef class MinHash(object):
 
         old_scaled = get_scaled_for_max_hash(self.max_hash)
         if old_scaled > new_num:
-            raise ValueError('new scaled is lower than current sample scaled')
+            raise ValueError('new scaled {} is lower than current sample scaled {}'.format(new_num, old_scaled))
 
         new_max_hash = get_max_hash_for_scaled(new_num)
 
@@ -316,7 +324,10 @@ cdef class MinHash(object):
         common.intersection_update(other.get_mins())
         common.intersection_update(combined_mh.mins)
 
-        return common, max(combined_mh.size(), 1)
+        size = max(combined_mh.size(), 1)
+        del combined_mh
+
+        return common, size
 
     def compare(self, MinHash other):
         common, size = self.intersection(other)
@@ -364,9 +375,11 @@ cdef class MinHash(object):
         """\
         Calculate how much of self is contained by other.
         """
+        if not len(self):
+            return 0.0
         return self.count_common(other) / len(self.get_mins())
 
-    def similarity_ignore_maxhash(self, MinHash other):
+    def containment_ignore_maxhash(self, MinHash other):
         a = set(self.get_mins())
         if not a:
             return 0.0

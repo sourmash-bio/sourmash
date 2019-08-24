@@ -43,7 +43,12 @@ then define a search function, ::
 
 from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple, Mapping, defaultdict
+from collections import namedtuple, defaultdict
+try:
+    from collections.abc import Mapping
+except ImportError:  # Python 2...
+    from collections import Mapping
+
 from copy import copy
 import json
 import math
@@ -180,11 +185,19 @@ class SBT(object):
             p = self.parent(p.pos)
 
     def find(self, search_fn, *args, **kwargs):
+        "Search the tree using `search_fn`."
+
+        # initialize search queue with top node of tree
         matches = []
         visited, queue = set(), [0]
+
+        # while the queue is not empty, load each node and apply search
+        # function.
         while queue:
             node_p = queue.pop(0)
             node_g = self.nodes.get(node_p, None)
+
+            # repair while searching.
             if node_g is None:
                 if node_p in self.missing_nodes:
                     self._rebuild_node(node_p)
@@ -192,11 +205,17 @@ class SBT(object):
                 else:
                     continue
 
+            # if we have not visited this node before,
             if node_p not in visited:
                 visited.add(node_p)
+
+                # apply search fn. If return false, truncate search.
                 if search_fn(node_g, *args):
+
+                    # leaf node? it's a match!
                     if isinstance(node_g, Leaf):
                         matches.append(node_g)
+                    # internal node? descend.
                     elif isinstance(node_g, Node):
                         if kwargs.get('dfs', True):  # defaults search to dfs
                             for c in self.children(node_p):

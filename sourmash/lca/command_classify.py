@@ -9,9 +9,10 @@ import csv
 from collections import Counter
 
 from .. import sourmash_args, load_signatures
-from ..logging import notify, error
+from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import debug, set_debug, check_files_exist
+from .lca_utils import check_files_exist
+from ..sourmash_args import SourmashArgumentParser
 
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
@@ -79,7 +80,7 @@ def classify(args):
     """
     main single-genome classification function.
     """
-    p = argparse.ArgumentParser(prog="sourmash lca classify")
+    p = SourmashArgumentParser(prog="sourmash lca classify")
     p.add_argument('--db', nargs='+', action='append')
     p.add_argument('--query', nargs='+', action='append')
     p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
@@ -88,7 +89,10 @@ def classify(args):
     p.add_argument('--scaled', type=float)
     p.add_argument('--traverse-directory', action='store_true',
                         help='load all signatures underneath directories.')
-    p.add_argument('-d', '--debug', action='store_true')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
     args = p.parse_args(args)
 
     if not args.db:
@@ -99,8 +103,7 @@ def classify(args):
         error('Error! must specify at least one query signature with --query')
         sys.exit(-1)
 
-    if args.debug:
-        set_debug(args.debug)
+    set_quiet(args.quiet, args.debug)
 
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]

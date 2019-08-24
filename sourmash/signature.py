@@ -4,12 +4,15 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 """
 from __future__ import print_function
 import hashlib
+
+import gzip
+import bz2file
+import io
+import sys
+
 from . import signature_json
 from .logging import error
 
-import io
-import gzip
-import bz2file
 
 SIGNATURE_VERSION=0.4
 
@@ -172,7 +175,7 @@ def _guess_open(filename):
 
 
 def load_signatures(data, ksize=None, select_moltype=None,
-                    ignore_md5sum=False, do_raise=False):
+                    ignore_md5sum=False, do_raise=False, quiet=False):
     """Load a JSON string with signatures into classes.
 
     Returns list of SourmashSignature objects.
@@ -202,10 +205,15 @@ def load_signatures(data, ksize=None, select_moltype=None,
                 is_fp = True
                 done = True
             except OSError as excinfo:
-                error(str(excinfo))
+                if not quiet: error(str(excinfo))
                 if do_raise:
                     raise
                 return
+    else:  # file-like
+        if hasattr(data, 'mode'):  # file handler
+            if 't' in data.mode:  # need to reopen handler as binary
+                if sys.version_info >= (3, ):
+                    data = data.buffer
 
     try:
         # JSON format
@@ -216,8 +224,9 @@ def load_signatures(data, ksize=None, select_moltype=None,
                      sig.minhash.is_molecule_type(select_moltype):
                     yield sig
     except Exception as e:
-        error("Error in parsing signature; quitting.")
-        error("Exception: {}", str(e))
+        if not quiet:
+            error("Error in parsing signature; quitting.")
+            error("Exception: {}", str(e))
         if do_raise:
             raise
     finally:

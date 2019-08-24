@@ -4,11 +4,11 @@ import os
 
 import pytest
 
-from sourmash_lib import signature
-from sourmash_lib.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash_lib.sbtmh import (SigLeaf, search_minhashes,
+from sourmash import signature
+from sourmash.sbt import SBT, GraphFactory, Leaf, Node
+from sourmash.sbtmh import (SigLeaf, search_minhashes,
                                 search_minhashes_containment)
-from sourmash_lib.sbt_storage import (FSStorage, TarStorage,
+from sourmash.sbt_storage import (FSStorage, TarStorage,
                                       RedisStorage, IPFSStorage)
 
 from . import sourmash_tst_utils as utils
@@ -364,7 +364,7 @@ def test_sbt_tarstorage():
 
 
 def test_sbt_ipfsstorage():
-    ipfsapi = pytest.importorskip('ipfsapi')
+    ipfshttpclient = pytest.importorskip('ipfshttpclient')
 
     factory = GraphFactory(31, 1e5, 4)
     with utils.TempDirectory() as location:
@@ -385,7 +385,7 @@ def test_sbt_ipfsstorage():
         try:
             with IPFSStorage() as storage:
                 tree.save(os.path.join(location, 'tree'), storage=storage)
-        except ipfsapi.exceptions.ConnectionError:
+        except ipfshttpclient.exceptions.ConnectionError:
             pytest.xfail("ipfs not installed/functioning probably")
 
         with IPFSStorage() as storage:

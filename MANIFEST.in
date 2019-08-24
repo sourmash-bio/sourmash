@@ -9,3 +9,4 @@ global-exclude *.so
 graft tests
 global-exclude *.orig
 global-exclude *.pyc
+prune tests/test-data/

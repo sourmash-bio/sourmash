@@ -114,6 +114,14 @@ public:
         }
       }
     }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+        }
+    }
+
     void add_word(const std::string& word) {
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
@@ -174,7 +182,14 @@ public:
         unsigned int dna_size = (dna.size() / 3) * 3; // floor it
         for (unsigned int j = 0; j < dna_size; j += 3) {
             std::string codon = dna.substr(j, 3);
-            aa += (_codon_table)[codon];
+            auto translated = _codon_table.find(codon);
+            if (translated != _codon_table.end()) {
+                // "second" is the element mapped to by the codon
+                aa += translated -> second;
+            } else {
+                // Otherwise, assign the "X" or "unknown" amino acid
+                aa += "X";
+            }
         }
         return aa;
     }
@@ -334,6 +349,15 @@ class KmerMinAbundance: public KmerMinHash {
           }
         }
       }
+    }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+          size_t dist = std::distance(begin(mins), pos);
+          abunds.erase(begin(abunds) + dist);
+        }
     }
 
     virtual void merge(const KmerMinAbundance& other) {

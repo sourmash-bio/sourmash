@@ -9,8 +9,9 @@ from .logging import error, set_quiet
 
 from .commands import (categorize, compare, compute, dump, import_csv,
                        gather, index, sbt_combine, search,
-                       plot, watch, info, storage, migrate)
+                       plot, watch, info, storage, migrate, multigather)
 from .lca import main as lca_main
+from .sig import main as sig_main
 
 try:
     from sourmash_utils.__main__ import main as utils_main
@@ -42,9 +43,10 @@ sbt_combine             Combine multiple SBTs into a new one.
 categorize              Identify best matches for many signatures using an SBT.
 watch                   Classify a stream of sequences.
 
-** Other information:
+** Other commands:
 
-info                        Sourmash version and other information.
+info                        Display sourmash version and other information.
+signature                   Sourmash signature manipulation utilities.
 
 Use '-h' to get subcommand-specific help, e.g.
 
@@ -52,6 +54,7 @@ sourmash compute -h
 
 ** Documentation is available at https://sourmash.readthedocs.io/
 '''
+
 
 def main():
     set_quiet(False)
@@ -65,14 +68,18 @@ def main():
                 'sbt_combine': sbt_combine, 'info': info,
                 'storage': storage,
                 'lca': lca_main,
-                'migrate': migrate}
+                'migrate': migrate,
+                'multigather': multigather,
+                'sig': sig_main,
+                'signature': sig_main}
+
     loadable_cmds = {'compute'}
 
     if UTILS_AVAILABLE:
         commands['utils'] = utils_main
 
     parser = argparse.ArgumentParser(
-        description='work with compressed sequence representations')
+        description='work with compressed biological sequence representations')
     parser.add_argument('command', nargs='?')
     args = parser.parse_args(sys.argv[1:2])
 
