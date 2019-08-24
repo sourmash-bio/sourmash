@@ -246,6 +246,9 @@ def compute(args):
                         f.write(">{}\n{}".format(unique_fasta.replace(".fasta", ""), record.sequence))
                 if os.path.exists(fasta):
                     os.unlink(filename)
+                all_fastas[i] = ""
+                all_fastas_basenames[i] = ""
+        unique_fastas_basenames[index] = ""
         if save_fastas:
             f.close()
         siglist = build_siglist(Elist, fasta, name=record.name)
