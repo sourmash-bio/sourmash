@@ -236,24 +236,25 @@ def compute(args):
     def fasta_to_sig_record(Elist, save_fastas, index):
         unique_fasta = unique_fastas_basenames[index]
         if save_fastas:
-            f = open(unique_fasta, "w")
+            unique_fasta_file = unique_fasta + ".fasta"
+            f = open(unique_fasta_file, "w")
         for fasta in iter_split(all_fastas, ','):
-            filename = os.path.basename(fasta)
+            filename = os.path.basename(fasta).replace(".fasta", "")
             if filename == unique_fasta:
                 # consume & calculate signatures
-                notify('... reading sequences from {}', filename, end="\r")
+                notify('... reading sequences for {}', filename, end="\r")
 
-                for n, record in enumerate(screed.open(fasta)):
+                for record in screed.open(fasta):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
                     if save_fastas:
-                        f.write(">{}\n{}".format(unique_fasta.replace(".fasta", ""), record.sequence))
+                        f.write(">{}\n{}".format(filename, record.sequence))
                 if os.path.exists(fasta):
                     os.unlink(fasta)
         unique_fastas_basenames[index] = ""
         if save_fastas:
             f.close()
-        siglist = build_siglist(Elist, unique_fasta, name=record.name)
+        siglist = build_siglist(Elist, unique_fasta + ".fasta", name=unique_fasta)
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
         return records
 
@@ -343,8 +344,11 @@ def compute(args):
 
                 # make minhashes for the whole file
                 Elist = make_minhashes()
-                unique_fastas_basenames = list(
-                    x.group(0) for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas))
+                if barcodes is None:
+                    unique_fastas_basenames = list(
+                        set(x.group(0).replace(".fasta", "") for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas)))
+                else:
+                    unique_fastas_basenames = list(barcodes)
                 unique_barcodes = len(unique_fastas_basenames)
                 notify("Found {} unique barcodes", unique_barcodes)
                 func = partial(
@@ -353,6 +357,7 @@ def compute(args):
                     args.save_fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
+                notify("pooled and chunksize mapped", chunksize)
                 records = list(itertools.chain(*(
                     pool.imap(
                         lambda index: func(index),

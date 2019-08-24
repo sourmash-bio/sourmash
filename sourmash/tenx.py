@@ -170,7 +170,7 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
         cell_sequences[renamed] += alignment.seq + delimiter
 
     filenames = list(write_cell_sequences(cell_sequences))
-    notify("bam_to_fasta conversion completed on {}", bam_file, end="\r", flush=True)
+    notify("bam_to_fasta conversion completed on {}", bam_file, end='\r', flush=True)
     return filenames
 
 
