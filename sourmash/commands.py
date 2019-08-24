@@ -16,7 +16,6 @@ import screed
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
-from . import signature_json
 from . import sourmash_args
 from . import np_utils
 from .logging import notify, error, print_results, set_quiet
@@ -223,27 +222,27 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
-    def fasta_to_siglist(Elist, save_fastas, unique_fastas, all_fastas, index):
-        unique_fasta = unique_fastas[index]
+    def fasta_to_siglist(Elist, save_fastas, unique_fasta_files):
+        unique_fasta = os.path.basename(unique_fasta_files[0])
+        cell = unique_fasta.replace(".fasta", "")
         if save_fastas:
             f = open(unique_fasta, "w")
 
-        for fasta in all_fastas:
-            if os.path.basename(fasta) == unique_fasta:
-                # consume & calculate signatures
-                notify('... reading sequences from {}', fasta, end="\r")
+        for fasta in unique_fasta_files:
+            # consume & calculate signatures
+            notify('... reading sequences from {}', fasta, end="\r")
 
-                for n, record in enumerate(screed.open(fasta)):
-                    if n % 10000 == 0 and n:
-                        notify('\r... {} {}', filename, n, end='')
+            for n, record in enumerate(screed.open(fasta)):
+                if n % 10000 == 0 and n:
+                    notify('\r... {} {}', filename, n, end='')
 
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+                add_seq(Elist, record.sequence,
+                        args.input_is_protein, args.check_sequence)
                 notify('... {} {} sequences', filename, n + 1, end="\r")
                 if save_fastas:
-                    f.write(">{}\n{}".format(unique_fasta.replace(".fasta", ""), record.sequence))
-                if os.path.exists(fasta):
-                    os.unlink(fasta)
+                    f.write(">{}\n{}".format(cell, record.sequence))
+            if os.path.exists(fasta):
+                os.unlink(fasta)
         if save_fastas:
             f.close()
         sigfile_name = unique_fasta.replace(".fasta", ".sig")
@@ -266,7 +265,8 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify(
             'saved signature(s) to {}. Note: signature license is CC0.',
-            sigfile_name)
+            sigfile_name,
+            end="\r")
 
     def calculate_chunksize(length, num_jobs):
         chunksize, extra = divmod(length, num_jobs)
@@ -345,18 +345,26 @@ def compute(args):
                 unique_barcodes = len(unique_fastas)
                 notify("Found {} unique barcodes", unique_barcodes)
                 notify("sigfile {}", sigfile)
+
+                unique_fasta_files = []
+                for unique in unique_fastas:
+                    unique_barcode_files = []
+                    for fasta in fastas:
+                        if fasta.endswith(unique):
+                            unique_barcode_files.append(fasta)
+                    if unique_barcode_files != []:
+                        unique_fasta_files.append(unique_barcode_files)
+
                 func = partial(
                     fasta_to_siglist,
                     Elist,
-                    args.save_fastas,
-                    unique_fastas,
-                    fastas)
+                    args.save_fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
                 notify("fasta_to_siglist pooled chunksize {}", chunksize)
                 siglist = []
                 for i in pool.imap(lambda index: func(index),
-                                   range(unique_barcodes),
+                                   unique_fasta_files,
                                    chunksize=chunksize):
                     notify('loading {}', i, end='\r')
                     loaded = list(sig.load_signatures(i))

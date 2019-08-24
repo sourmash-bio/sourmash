@@ -295,5 +295,5 @@ def save_signatures_json(
     records = add_meta_save(top_records)
 
     s = write_records_to_json(records, fp, indent, sort_keys)
-    notify("time taken to save signatures is {:.5f} seconds", time.time() - startt)
+    notify("time taken to save signatures is {:.5f} seconds", time.time() - startt, end="\r")
     return s
