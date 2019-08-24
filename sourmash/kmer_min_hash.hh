@@ -415,7 +415,7 @@ class KmerMinAbundance: public KmerMinHash {
         std::copy(it2_m, other.mins.end(), out_m);
         std::copy(it2_a, other.abunds.end(), out_a);
 
-        if (merged_mins.size() < num) {
+        if (merged_mins.size() < num || !num) {
           mins = merged_mins;
           abunds = merged_abunds;
         } else {
