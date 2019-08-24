@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 
 import argparse
+import re
 import csv
 import os
 import os.path
@@ -191,9 +192,8 @@ def compute(args):
         sys.exit(-1)
 
     if args.input_is_10x:
-        unique_fastas_basenames = []
-        all_fastas = []
-        all_fastas_basenames = []
+        unique_fastas_basenames = ""
+        all_fastas = ""
 
     def make_minhashes():
         seed = args.seed
@@ -228,31 +228,32 @@ def compute(args):
         return [sig.SourmashSignature(E, filename=filename,
                 name=name) for E in Elist]
 
+    def iter_split(string, sep=None):
+        sep = sep or ' '
+        groups = itertools.groupby(string, lambda s: s != sep)
+        return (''.join(g) for k, g in groups if k)
+
     def fasta_to_sig_record(Elist, save_fastas, index):
         unique_fasta = unique_fastas_basenames[index]
         if save_fastas:
             f = open(unique_fasta, "w")
-
-        for i, fasta in enumerate(all_fastas_basenames):
-            if fasta == unique_fasta:
+        for fasta in iter_split(all_fastas, ','):
+            filename = os.path.basename(fasta)
+            if filename == unique_fasta:
                 # consume & calculate signatures
-                filename = all_fastas[i]
                 notify('... reading sequences from {}', filename, end="\r")
 
-                for n, record in enumerate(screed.open(filename)):
+                for n, record in enumerate(screed.open(fasta)):
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
                     if save_fastas:
                         f.write(">{}\n{}".format(unique_fasta.replace(".fasta", ""), record.sequence))
                 if os.path.exists(fasta):
-                    os.unlink(filename)
-                all_fastas[i] = ""
-                all_fastas_basenames[i] = ""
+                    os.unlink(fasta)
         unique_fastas_basenames[index] = ""
         if save_fastas:
             f.close()
-        siglist = build_siglist(Elist, fasta, name=record.name)
-
+        siglist = build_siglist(Elist, unique_fasta, name=record.name)
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
         return records
 
@@ -327,7 +328,7 @@ def compute(args):
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify(
                     "multiprocessing pool processes {} and chunksize {} calculated", n_jobs, chunksize)
-                all_fastas = list(itertools.chain(*(
+                all_fastas = "," .join(itertools.chain(*(
                     pool.imap(
                         lambda x: func(x), filenames, chunksize=chunksize))))
                 pool.close()
@@ -342,15 +343,10 @@ def compute(args):
 
                 # make minhashes for the whole file
                 Elist = make_minhashes()
-                all_fastas_basenames = [
-                    os.path.basename(fasta) for fasta in all_fastas]
-                unique_fastas_basenames = list(set(all_fastas_basenames))
-                all_fastas, memmap_file1 = np_utils.to_memmap(np.array(all_fastas))
-                all_fastas_basenames, memmap_file2 = np_utils.to_memmap(np.array(all_fastas_basenames))
-                unique_fastas_basenames, memmap_file3 = np_utils.to_memmap(np.array(unique_fastas_basenames))
+                unique_fastas_basenames = list(
+                    x.group(0) for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas))
                 unique_barcodes = len(unique_fastas_basenames)
                 notify("Found {} unique barcodes", unique_barcodes)
-                notify("sigfile {}", sigfile)
                 func = partial(
                     fasta_to_sig_record,
                     Elist,
@@ -364,9 +360,6 @@ def compute(args):
                         chunksize=chunksize))))
                 pool.close()
                 pool.join()
-                for mmap_file in [memmap_file1, memmap_file2, memmap_file3]:
-                    if os.path.exists(mmap_file):
-                        os.unlink(mmap_file)
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
