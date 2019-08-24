@@ -45,10 +45,10 @@ needletail = { version = "~0.2.1", optional = true }
 serde = "1.0"
 serde_derive = "~1.0.58"
 serde_json = "1.0.2"
-ukhs = "0.3.4"
+ukhs = { git = "https://github.com/luizirber/ukhs", branch = "feature/alternative_backends", features = ["boomphf_mphf"], default-features = false}
 bio = { git = "https://github.com/luizirber/rust-bio", branch = "feature/fastx_reader" }
 primal = "0.2.3"
-pdatastructs = "0.5.0"
+pdatastructs = { git = "https://github.com/luizirber/pdatastructs.rs", branch = "succinct_wasm" }
 itertools = "0.8.0"
 typed-builder = "0.3.0"
 csv = "1.0.7"
