@@ -109,7 +109,8 @@ def compute_add_args(parser):
 def compute(filenames=None, check_sequence=False, ksizes=(21, 31, 51), dna=True, singleton=False,
             email='', scaled=10000, force=False, output=None, num_hashes=500, protein=False,
             name_from_first=False, seed=42, input_is_protein=False, merge=None, quiet=False,
-            track_abundance=False, randomize=False, license='CC0', **kwargs):
+            track_abundance=False, randomize=False, license='CC0',
+            input_is_10x=False, processes=2, **kwargs):
     """Compute the signature for one or more files.
 
     Use cases:
@@ -123,8 +124,6 @@ def compute(filenames=None, check_sequence=False, ksizes=(21, 31, 51), dna=True,
                file1.fa and file2.fa combined into one signature.
     """
     set_quiet(quiet)
-
-    input_is_10x=False # @CTB fixme
 
     if license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
