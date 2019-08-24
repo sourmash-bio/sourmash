@@ -246,8 +246,12 @@ def compute(args):
                     os.unlink(fasta)
         if save_fastas:
             f.close()
-        return build_siglist(Elist, fasta, name=record.name)
-
+        sigfile_name = unique_fasta.replace(".fasta", ".sig")
+        save_siglist(
+            build_siglist(Elist, fasta, name=record.name),
+            None,
+            filename=sigfile_name)
+        return sigfile_name
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -350,10 +354,15 @@ def compute(args):
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
                 notify("fasta_to_siglist pooled chunksize {}", chunksize)
-                siglist = list(
-                    itertools.chain(*pool.imap(lambda index: func(index),
-                                               range(unique_barcodes),
-                                               chunksize=chunksize)))
+                siglist = []
+                for i in pool.imap(lambda index: func(index),
+                                   range(unique_barcodes),
+                                   chunksize=chunksize):
+                    notify('loading {}', i, end='\r')
+                    loaded = list(sig.load_signatures(i))
+                    loaded = list(loaded)
+                    siglist.extend(loaded)
+                    os.unlink(i)
                 pool.close()
                 pool.join()
                 for mmap_file in [memmap_file1, memmap_file2]:
