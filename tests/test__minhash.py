@@ -510,6 +510,42 @@ def test_mh_merge(track_abundance):
     assert d.compare(c) == 1.0
 
 
+def test_mh_merge_empty_num(track_abundance):
+    # test merging two identically configured minhashes, one empty
+    a = MinHash(20, 10, track_abundance=track_abundance)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(c)
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0
+
+
+def test_mh_merge_empty_scaled(track_abundance):
+    # test merging two identically configured minhashes, one empty
+    a = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
+
+    b = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(c)
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0
+
+
 def test_mh_merge_check_length(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
