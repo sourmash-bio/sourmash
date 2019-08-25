@@ -2,7 +2,8 @@ use wasm_bindgen::prelude::*;
 
 use serde_json;
 
-use crate::KmerMinHash;
+use crate::signature::SigsTrait;
+use crate::sketch::minhash::KmerMinHash;
 
 #[wasm_bindgen]
 impl KmerMinHash {

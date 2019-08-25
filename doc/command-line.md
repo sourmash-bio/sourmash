@@ -20,12 +20,12 @@ taken.
 Grab three bacterial genomes from NCBI:
 ```
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.1_ASM694v1/GCF_000006945.1_ASM694v1_genomic.fna.gz
+curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Sphingobacteriaceae_bacterium_DW12/latest_assembly_versions/GCF_000783305.1_ASM78330v1/GCF_000783305.1_ASM78330v1_genomic.fna.gz
 ```
 Compute signatures for each:
 ```
-   sourmash compute *.fna.gz
+   sourmash compute -k 31 *.fna.gz
 ```
 This will produce three `.sig` files containing MinHash signatures at k=31.
 
@@ -35,7 +35,7 @@ sourmash compare *.sig -o cmp
 ```
 Finally, plot a dendrogram:
 ```
-sourmash plot cmp
+sourmash plot cmp --labels
 ```
 This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a

@@ -29,8 +29,6 @@ pub mod sketch;
 #[cfg(feature = "from-finch")]
 pub mod from;
 
-pub mod cmd;
-
 use cfg_if::cfg_if;
 use murmurhash3::murmurhash3_x64_128;
 
@@ -39,6 +37,8 @@ cfg_if! {
         pub mod wasm;
     } else {
         pub mod ffi;
+
+        pub mod cmd;
     }
 }
 
