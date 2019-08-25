@@ -234,11 +234,12 @@ def compute(args):
         return (''.join(g) for k, g in groups if k)
 
     def fasta_to_sig_record(Elist, save_fastas, index):
+        notify("unique_fastas_basenames {}", unique_fastas_basenames)
         unique_fasta = unique_fastas_basenames[index]
         if save_fastas:
             unique_fasta_file = unique_fasta + ".fasta"
             f = open(unique_fasta_file, "w")
-        for fasta in iter_split(all_fastas, ','):
+        for fasta in iter_split(all_fastas, ","):
             filename = os.path.basename(fasta).replace(".fasta", "")
             if filename == unique_fasta:
                 # consume & calculate signatures
@@ -345,10 +346,11 @@ def compute(args):
                 # make minhashes for the whole file
                 Elist = make_minhashes()
                 if barcodes is None:
-                    unique_fastas_basenames = list(
-                        set(x.group(0).replace(".fasta", "") for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas)))
+                    unique_fastas_basenames = np.unique([
+                        x.group(0).replace(".fasta", "") for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas)])
                 else:
-                    unique_fastas_basenames = list(barcodes)
+                    unique_fastas_basenames = barcodes
+
                 unique_barcodes = len(unique_fastas_basenames)
                 notify("Found {} unique barcodes", unique_barcodes)
                 func = partial(

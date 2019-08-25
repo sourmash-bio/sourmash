@@ -3,6 +3,7 @@ from .logging import notify
 from collections import defaultdict
 import tempfile
 import time
+import numpy as np
 import pysam
 
 CELL_BARCODES = ['CB', 'XC']
@@ -61,7 +62,7 @@ def read_barcodes_file(barcode_path):
         List of QC-passing barcodes from 'barcodes.tsv'
     """
     with open(barcode_path) as f:
-        barcodes = set(line.strip() for line in f)
+        barcodes = np.unique([line.strip() for line in f])
     return barcodes
 
 
