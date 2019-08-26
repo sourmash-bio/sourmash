@@ -607,6 +607,7 @@ def plot(args):
                         help="random seed for --subsample; default=1")
     parser.add_argument('-f', '--force', action='store_true',
                         help='forcibly plot non-distance matrices')
+    parser.add_argument('--output-dir', help='directory for output plots')
 
     args = parser.parse_args(args)
 
@@ -642,6 +643,14 @@ def plot(args):
         hist_out += '.pdf'
     else:
         hist_out += '.png'
+
+    # output to a different directory?
+    if args.output_dir:
+        if not os.path.isdir(args.output_dir):
+            os.mkdir(args.output_dir)
+        dendrogram_out = os.path.join(args.output_dir, dendrogram_out)
+        matrix_out = os.path.join(args.output_dir, matrix_out)
+        hist_out = os.path.join(args.output_dir, hist_out)
 
     # make the histogram
     notify('saving histogram of matrix values => {}', hist_out)
