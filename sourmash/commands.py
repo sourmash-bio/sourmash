@@ -375,7 +375,6 @@ def compute(args):
                 pool.close()
                 pool.join()
                 notify("Records created")
-                del all_fastas_sorted
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
