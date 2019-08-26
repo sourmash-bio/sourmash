@@ -1031,6 +1031,31 @@ def test_do_plot_comparison_3():
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
 
 
+def test_do_plot_comparison_4_output_dir():
+    with utils.TempDirectory() as location:
+        output_dir = os.path.join(location, 'xyz_test')
+
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1, testdata2],
+                                           in_directory=location)
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'cmp'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--labels',
+                                            '--output-dir', output_dir],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
+        assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
+
+
 def test_do_plot_comparison_5_force():
     import numpy
     with utils.TempDirectory() as location:
