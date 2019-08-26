@@ -46,7 +46,8 @@ def _check_abundance_compatibility(sig1, sig2):
 def _flatten(mh):
     "turn off track_abundance on a MinHash object"
     mh_params = list(mh.__getstate__())
-    mh_params[5] = False
+    # Abundance is 6th parameter
+    mh_params[6] = False
     mh.__setstate__(mh_params)
     assert not mh.track_abundance
 
@@ -54,8 +55,10 @@ def _flatten(mh):
 def _set_num_scaled(mh, num, scaled):
     "set num and scaled values on a MinHash object"
     mh_params = list(mh.__getstate__())
+    # Number of hashes is 0th parameter
     mh_params[0] = num
-    mh_params[6] = get_max_hash_for_scaled(scaled)
+    # Scale is 7th parameter
+    mh_params[7] = get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -111,7 +114,10 @@ def describe(args):
         ksize = mh.ksize
         moltype = 'DNA'
         if mh.is_protein:
-            moltype = 'protein'
+            if mh.dayhoff:
+                moltype = 'dayhoff'
+            else:
+                moltype = 'protein'
         scaled = mh.scaled
         num = mh.num
         seed = mh.seed
