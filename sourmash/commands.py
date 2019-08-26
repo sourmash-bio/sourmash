@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 
 import argparse
-import re
 import csv
 import os
 import os.path
@@ -9,6 +8,7 @@ import sys
 import random
 import itertools
 import time
+import collections
 from functools import partial
 import numpy as np
 import pathos.multiprocessing as multiprocessing
@@ -191,10 +191,6 @@ def compute(args):
         error("must specify -o with --merge")
         sys.exit(-1)
 
-    if args.input_is_10x:
-        unique_fastas_basenames = ""
-        all_fastas = ""
-
     def make_minhashes():
         seed = args.seed
 
@@ -233,30 +229,38 @@ def compute(args):
         groups = itertools.groupby(string, lambda s: s != sep)
         return (''.join(g) for k, g in groups if k)
 
-    def fasta_to_sig_record(Elist, save_fastas, index):
-        notify("unique_fastas_basenames {}", unique_fastas_basenames)
-        unique_fasta = unique_fastas_basenames[index]
-        if save_fastas:
-            unique_fasta_file = unique_fasta + ".fasta"
-            f = open(unique_fasta_file, "w")
-        for fasta in iter_split(all_fastas, ","):
-            filename = os.path.basename(fasta).replace(".fasta", "")
-            if filename == unique_fasta:
-                # consume & calculate signatures
-                notify('... reading sequences for {}', filename, end="\r")
+    def fasta_to_sig_record(index):
+        startt = time.time()
+        single_barcode_fastas = all_fastas_sorted[index]
 
-                for record in screed.open(fasta):
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
-                    if save_fastas:
-                        f.write(">{}\n{}".format(filename, record.sequence))
-                if os.path.exists(fasta):
-                    os.unlink(fasta)
-        unique_fastas_basenames[index] = ""
-        if save_fastas:
+        index = 0
+        for fasta in iter_split(single_barcode_fastas, ","):
+            if index == 0:
+                index += 1
+                unique_fasta_file = os.path.basename(fasta)
+                if args.save_fastas:
+                    f = open(unique_fasta_file, "w")
+                # consume & calculate signatures
+
+            for record in screed.open(fasta):
+                add_seq(Elist, record.sequence,
+                        args.input_is_protein, args.check_sequence)
+                if args.save_fastas:
+                    f.write(">{}\n{}".format(filename, record.sequence))
+            if os.path.exists(fasta):
+                os.unlink(fasta)
+        if args.save_fastas:
             f.close()
-        siglist = build_siglist(Elist, unique_fasta + ".fasta", name=unique_fasta)
+
+        siglist = build_siglist(
+            Elist,
+            os.path.join(args.filenames[0], unique_fasta_file),
+            name=unique_fasta_file.replace(".fasta", ""))
+
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        notify(
+            "time taken to build signature records for a barcode {} is {:.5f} seconds",
+            unique_fasta_file, time.time() - startt, end='\r')
         return records
 
     def save_siglist(siglist, output_fp, filename=None):
@@ -280,6 +284,10 @@ def compute(args):
         if extra:
             chunksize += 1
         return chunksize
+
+    if args.input_is_10x:
+        all_fastas_sorted = []
+        Elist = make_minhashes()
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -343,34 +351,36 @@ def compute(args):
                     os.unlink(mmap_file)
                 notify("Deleted intermediatary bam and memmap files")
 
-                # make minhashes for the whole file
-                Elist = make_minhashes()
-                if barcodes is None:
-                    unique_fastas_basenames = np.unique([
-                        x.group(0).replace(".fasta", "") for x in re.finditer(r"[A-Za-z']+.fasta", all_fastas)])
-                else:
-                    unique_fastas_basenames = barcodes
+                fasta_files_dict = collections.OrderedDict()
+                for fasta in iter_split(all_fastas, ","):
+                    barcode = os.path.basename(fasta).replace(".fasta", "")
+                    value = fasta_files_dict.get(barcode, "")
+                    fasta_files_dict[barcode] = value + fasta + ","
 
-                unique_barcodes = len(unique_fastas_basenames)
+                del all_fastas
+                notify("Created fasta_files_dict")
+
+                all_fastas_sorted = list(fasta_files_dict.values())
+                unique_barcodes = len(all_fastas_sorted)
+                del fasta_files_dict
                 notify("Found {} unique barcodes", unique_barcodes)
-                func = partial(
-                    fasta_to_sig_record,
-                    Elist,
-                    args.save_fastas)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
-                notify("pooled and chunksize mapped", chunksize)
+                notify("Pooled {} and chunksize {} mapped", n_jobs, chunksize)
                 records = list(itertools.chain(*(
                     pool.imap(
-                        lambda index: func(index),
+                        lambda index: fasta_to_sig_record(index),
                         range(unique_barcodes),
                         chunksize=chunksize))))
                 pool.close()
                 pool.join()
+                notify("Records created")
+                del all_fastas_sorted
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
                     signature_json.write_records_to_json(records, open(sigfile, "w"))
+                del records
                 notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
             else:
                 # make minhashes for the whole file
