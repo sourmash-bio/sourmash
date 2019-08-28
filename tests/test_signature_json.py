@@ -114,6 +114,40 @@ def test_load_signaturesset_json_iter():
     assert len(sig_entries) == 2
 
 
+# integration test more than a unit test
+def test_load_signaturesset_json_iter_molecules():
+
+    t = list()
+    molecules = 'DNA', 'protein', 'dayhoff'
+    names = "Foo", 'Bar', "Biz"
+    filenames = '/tmp/foo', '/tmp/bar', '/tmp/biz'
+
+    for molecule, name, filename in zip(molecules, names, filenames):
+        minhash = (2,3,4,5,6)
+        t.append(OrderedDict((
+            ('class', 'sourmash_signature'),
+            ('name', name),
+            ('filename', filename),
+            ('signatures',
+             (
+                 OrderedDict((('ksize', 21),
+                              ('num', len(minhash)),
+                              #('md5sum', ),
+                              ('molecule', molecule),
+                              ('cardinality', 123456),
+                              ('mins', minhash))),
+             )))))
+
+    s = json.dumps(t)
+    if sys.version_info[0] < 3:
+        s = unicode(s)
+    # no MD5SUM
+    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
+                                                    ignore_md5sum=True,
+                                                    ijson=ijson))
+    # Ensure all molecule types were read properly
+    assert len(sig_entries) == 3
+
 def test_save_load_multisig_json():
     e1 = sourmash.MinHash(n=1, ksize=20)
     sig1 = SourmashSignature(e1)

@@ -53,6 +53,13 @@ def add_moltype_args(parser):
                         help='do not choose a protein signature')
     parser.set_defaults(protein=False)
 
+    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
+                        help='build Dayhoff-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
+                        action='store_false',
+                        help='do not build Dayhoff-encoded amino acid signatures')
+    parser.set_defaults(dayhoff=False)
+
     parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
                         help='choose a nucleotide signature (default: True)')
@@ -69,6 +76,13 @@ def add_construct_moltype_args(parser):
                         action='store_false',
                         help='do not build protein signatures')
     parser.set_defaults(protein=False)
+
+    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
+                        help='build Dayhoff-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
+                        action='store_false',
+                        help='do not build Dayhoff-encoded amino acid signatures')
+    parser.set_defaults(dayhoff=False)
 
     parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
@@ -89,6 +103,8 @@ def get_moltype(sig, require=False):
         moltype = 'DNA'
     elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
+    elif sig.minhash.is_molecule_type('dayhoff'):
+        moltype = 'dayhoff'
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
@@ -107,6 +123,8 @@ def calculate_moltype(args, default=None):
         moltype = 'protein'
     elif args.dna:
         moltype = 'DNA'
+    elif args.dayhoff:
+        moltype = 'dayhoff'
 
     return moltype
 
