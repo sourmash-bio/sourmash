@@ -404,7 +404,7 @@ def compute(args):
                 notify("Records created")
                 if args.plot_hist:
                     import matplotlib.pyplot as plt
-                    _ = plt.hist(counts, bins=range(len(all_fastas_sorted)))
+                    _ = plt.hist(counts, bins=range(unique_barcodes))
                     plt.title("Histogram of barcodes and reads")
                     plt.savefig("histogram.png")
                 if args.output is not None:
