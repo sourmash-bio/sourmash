@@ -398,7 +398,6 @@ def compute(args):
                 for result in results:
                     records.append(result[0])
                     counts.append(result[1])
-                records = records[0]
                 pool.close()
                 pool.join()
                 notify("Records created")
