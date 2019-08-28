@@ -23,7 +23,14 @@ def test_shard_bam_file():
     filename = utils.get_test_data('10x-example/possorted_genome_bam.bam')
     bam_file = sourmash_tenx.read_bam_file(filename)
     assert isinstance(bam_file, bs.AlignmentFile)
+
     expected_alignments = sum(1 for _ in bam_file)
+    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments)
+    assert len(bam_shard_files) == 1
+    for bam_file in bam_shard_files:
+        if os.path.exists(bam_file):
+            os.unlink(bam_file)
+
     num_shards = 2
     bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments // num_shards)
     assert len(bam_shard_files) == 2
@@ -32,13 +39,11 @@ def test_shard_bam_file():
     for bam_file in bam_shard_files:
         total_alignments += sum(1 for _ in sourmash_tenx.read_bam_file(bam_file))
     assert total_alignments == expected_alignments
-    for bam_file in bam_shard_files:
-        if os.path.exists(bam_file):
-            os.unlink(bam_file)
 
-    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments)
-    assert len(bam_shard_files) == 1
+    whole_bam_file = sourmash_tenx.read_bam_file(filename)
     for bam_file in bam_shard_files:
+        for line in sourmash_tenx.read_bam_file(bam_file):
+            assert line == next(whole_bam_file)
         if os.path.exists(bam_file):
             os.unlink(bam_file)
 

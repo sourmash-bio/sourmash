@@ -97,6 +97,8 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
+    parser.add_argument('--plot-hist', action='store_true',
+                        help="Plot histogram of cell barcodes and the count of reads")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -233,10 +235,9 @@ def compute(args):
         startt = time.time()
         single_barcode_fastas = all_fastas_sorted[index]
 
-        index = 0
+        count = 0
         for fasta in iter_split(single_barcode_fastas, ","):
-            if index == 0:
-                index += 1
+            if count == 0:
                 unique_fasta_file = os.path.basename(fasta)
                 if args.save_fastas:
                     f = open(unique_fasta_file, "w")
@@ -245,6 +246,7 @@ def compute(args):
             for record in screed.open(fasta):
                 add_seq(Elist, record.sequence,
                         args.input_is_protein, args.check_sequence)
+                count += 1
                 if args.save_fastas:
                     f.write(">{}\n{}".format(filename, record.sequence))
             if os.path.exists(fasta):
@@ -252,15 +254,27 @@ def compute(args):
         if args.save_fastas:
             f.close()
 
+        barcode_name = unique_fasta_file.replace(".fasta", "")
+        barcodes_count_histogram[barcode_name] = count
         siglist = build_siglist(
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
-            name=unique_fasta_file.replace(".fasta", ""))
+            name=barcode_name)
 
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
         notify(
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
             unique_fasta_file, time.time() - startt, end='\r')
+
+        if args.plot_hist:
+            notify("{} {}", index, len(all_fastas_sorted))
+            if index == len(all_fastas_sorted) - 1:
+                import matplotlib.pyplot as plt
+                notify("{} {}", index, barcodes_count_histogram)
+                _ = plt.hist(list(barcodes_count_histogram.values()), bins='auto')  # arguments are passed to np.histogram
+                plt.title("Histogram of barcodes and reads")
+                plt.savefig("histogram.png")
+
         return records
 
     def save_siglist(siglist, output_fp, filename=None):
@@ -287,6 +301,7 @@ def compute(args):
 
     if args.input_is_10x:
         all_fastas_sorted = []
+        barcodes_count_histogram = {}
         Elist = make_minhashes()
 
     if args.track_abundance:

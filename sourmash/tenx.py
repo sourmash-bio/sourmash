@@ -16,8 +16,9 @@ def pass_alignment_qc(alignment, barcodes):
     """Assert high quality mapping, QC-passing barcode and UMI of alignment"""
     high_quality_mapping = alignment.mapq == 255
     if barcodes is not None:
-        good_cell_barcode = any([alignment.has_tag(cb) and alignment.get_tag(cb) in barcodes
-                                 for cb in CELL_BARCODES])
+        good_cell_barcode = any(
+            [alignment.has_tag(cb) and alignment.get_tag(cb) in barcodes
+             for cb in CELL_BARCODES])
     else:
         good_cell_barcode = any([alignment.has_tag(cb) for cb in CELL_BARCODES])
     good_molecular_barcode = any([alignment.has_tag(umi) for umi in UMIS])
@@ -25,6 +26,7 @@ def pass_alignment_qc(alignment, barcodes):
 
     pass_qc = high_quality_mapping and good_cell_barcode and \
               good_molecular_barcode and not_duplicate
+    # notify("{} {} {} {}", high_quality_mapping, good_cell_barcode, good_molecular_barcode, not_duplicate)
     return pass_qc
 
 
