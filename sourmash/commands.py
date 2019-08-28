@@ -255,7 +255,6 @@ def compute(args):
             f.close()
 
         barcode_name = unique_fasta_file.replace(".fasta", "")
-        barcodes_count_histogram[barcode_name] = count
         siglist = build_siglist(
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
@@ -266,16 +265,7 @@ def compute(args):
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
             unique_fasta_file, time.time() - startt, end='\r')
 
-        if args.plot_hist:
-            notify("{} {}", index, len(all_fastas_sorted))
-            if index == len(all_fastas_sorted) - 1:
-                import matplotlib.pyplot as plt
-                notify("{} {}", index, barcodes_count_histogram)
-                _ = plt.hist(list(barcodes_count_histogram.values()), bins='auto')  # arguments are passed to np.histogram
-                plt.title("Histogram of barcodes and reads")
-                plt.savefig("histogram.png")
-
-        return records
+        return (records, count)
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -301,7 +291,6 @@ def compute(args):
 
     if args.input_is_10x:
         all_fastas_sorted = []
-        barcodes_count_histogram = {}
         Elist = make_minhashes()
 
     if args.track_abundance:
@@ -382,14 +371,24 @@ def compute(args):
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
                 notify("Pooled {} and chunksize {} mapped", n_jobs, chunksize)
-                records = list(itertools.chain(*(
-                    pool.imap(
-                        lambda index: fasta_to_sig_record(index),
-                        range(unique_barcodes),
-                        chunksize=chunksize))))
+                results = pool.imap(
+                    lambda index: fasta_to_sig_record(index),
+                    range(unique_barcodes),
+                    chunksize=chunksize)
+                records = []
+                counts = []
+                for result in results:
+                    records.append(result[0])
+                    counts.append(result[1])
+                records = records[0]
                 pool.close()
                 pool.join()
                 notify("Records created")
+                if args.plot_hist:
+                    import matplotlib.pyplot as plt
+                    _ = plt.plot(range(len(all_fastas_sorted)), counts)
+                    plt.title("Histogram of barcodes and reads")
+                    plt.savefig("histogram.png")
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
