@@ -232,7 +232,8 @@ where
         // add a function to build a Storage from a StorageInfo
         let mut basepath = PathBuf::new();
         basepath.push(path);
-        basepath.canonicalize()?;
+        // TODO: canonicalize doesn't work on wasm32-wasi
+        //basepath.canonicalize()?;
 
         let sbt =
             SBT::<Node<U>, Dataset<T>>::from_reader(&mut reader, &basepath.parent().unwrap())?;

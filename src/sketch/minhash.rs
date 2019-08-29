@@ -14,10 +14,10 @@ use crate::_hash_murmur;
 use crate::errors::SourmashError;
 use crate::signature::SigsTrait;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct KmerMinHash {
     num: u32,

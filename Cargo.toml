@@ -53,15 +53,14 @@ itertools = "0.8.0"
 typed-builder = "0.3.0"
 csv = "1.0.7"
 
-[target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
+[target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.wasm-bindgen]
 version = "^0.2"
 features = ["serde-serialize"]
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies.ocf]
+[target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies.ocf]
 version = "0.1"
 path = "ocf"
 default-features = false
-features = ["bz2"]
 
 [dev-dependencies]
 proptest = "^0.8"
