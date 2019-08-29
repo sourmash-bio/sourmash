@@ -385,7 +385,6 @@ def compute(args):
 
                 all_fastas_sorted = list(fasta_files_dict.values())
                 unique_barcodes = len(all_fastas_sorted)
-                del fasta_files_dict
                 notify("Found {} unique barcodes", unique_barcodes)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
@@ -404,7 +403,12 @@ def compute(args):
                 notify("Records created")
                 if args.plot_hist:
                     hist, bin_edges = np.histogram(counts, bins=range(unique_barcodes))
-                    np.savez_compressed('histogram', hist=hist, bin_edges=bin_edges)
+                    np.savez_compressed(
+                        'histogram',
+                        barcodes=list(fasta_files_dict.keys()),
+                        hist=hist,
+                        bin_edges=bin_edges)
+                del fasta_files_dict
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
