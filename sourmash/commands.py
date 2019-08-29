@@ -262,9 +262,10 @@ def compute(args):
                 # consume & calculate signatures
 
             for record in screed.open(fasta):
-                add_seq(Elist, record.sequence,
+                string = record.sequence
+                add_seq(Elist, string,
                         args.input_is_protein, args.check_sequence)
-                count += 1
+                count = count + string.count("X") + 1
                 if args.save_fastas:
                     f.write(">{}\n{}".format(filename, record.sequence))
             if os.path.exists(fasta):
@@ -402,10 +403,8 @@ def compute(args):
                 pool.join()
                 notify("Records created")
                 if args.plot_hist:
-                    import matplotlib.pyplot as plt
-                    _ = plt.hist(counts, bins=range(unique_barcodes))
-                    plt.title("Histogram of barcodes and reads")
-                    plt.savefig("histogram.png")
+                    hist, bin_edges = np.histogram(counts, bins=range(unique_barcodes))
+                    np.savez_compressed('histogram', hist=hist, bin_edges=bin_edges)
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:

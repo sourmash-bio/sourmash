@@ -97,7 +97,7 @@ def test_bam_to_fasta():
     assert len(list(fastas)) == 8
 
 
-def test_filtered_bam_to_FASTA():
+def test_filtered_bam_to_fasta():
     bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
     fastas = sourmash_tenx.bam_to_fasta(
         barcodes=None, barcode_renamer=None, delimiter='X', bam_file=bam_file)
