@@ -185,7 +185,7 @@ def test_do_sourmash_compute_10x():
         sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
         assert os.path.exists(sigfile)
         with open(sigfile) as fp:
-            data = json.load(fp)[0]
+            data = json.load(fp)
         barcode_signatures = [sig['name'] for sig in data]
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
@@ -210,7 +210,30 @@ def test_do_sourmash_compute_10x():
         sigfile = os.path.join(location, '10x-example_dna.sig')
         assert os.path.exists(sigfile)
         with open(sigfile) as fp:
-            data = json.load(fp)[0]
+            data = json.load(fp)
+        assert len(data) == 156
+        assert any(
+            sig["signatures"][0]["mins"] != [] for sig in data)
+
+        folder = utils.get_test_data('10x-example/')
+        for file_name in os.listdir(folder):
+            if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
+                os.unlink(file_name)
+
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--dna', '--count-valid-reads', '10',
+                                            '--input-is-10x',
+                                            testdata1,
+                                            '-o', '10x-example_dna.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example_dna.sig')
+        assert os.path.exists(sigfile)
+        with open(sigfile) as fp:
+            data = json.load(fp)
+        assert len(data) == 38
         assert any(
             sig["signatures"][0]["mins"] != [] for sig in data)
 

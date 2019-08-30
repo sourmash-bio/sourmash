@@ -97,8 +97,11 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('--plot-hist', action='store_true',
-                        help="Plot histogram of cell barcodes and the count of reads")
+    parser.add_argument('--count-valid-reads', default=0, type=int,
+                        help="Average number of reads per valid unique cell barcodes, "
+                        "Only considered a valid barcode if number of reads are greater "
+                        " than count-valid-reads. It is used to weed out cell barcodes"
+                        "with few reads that might have been due to false rna enzyme reactions")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -273,18 +276,21 @@ def compute(args):
         if args.save_fastas:
             f.close()
 
-        barcode_name = unique_fasta_file.replace(".fasta", "")
-        siglist = build_siglist(
-            Elist,
-            os.path.join(args.filenames[0], unique_fasta_file),
-            name=barcode_name)
+        if count > args.count_valid_reads:
+            barcode_name = unique_fasta_file.replace(".fasta", "")
+            siglist = build_siglist(
+                Elist,
+                os.path.join(args.filenames[0], unique_fasta_file),
+                name=barcode_name)
+            records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+            notify(
+                "time taken to build signature records for a barcode {} is {:.5f} seconds",
+                unique_fasta_file, time.time() - startt, end='\r')
 
-        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
-        notify(
-            "time taken to build signature records for a barcode {} is {:.5f} seconds",
-            unique_fasta_file, time.time() - startt, end='\r')
+            return records
+        else:
+            return []
 
-        return (records, count)
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -384,31 +390,19 @@ def compute(args):
                 notify("Created fasta_files_dict")
 
                 all_fastas_sorted = list(fasta_files_dict.values())
+                del fasta_files_dict
                 unique_barcodes = len(all_fastas_sorted)
                 notify("Found {} unique barcodes", unique_barcodes)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
                 notify("Pooled {} and chunksize {} mapped", n_jobs, chunksize)
-                results = pool.imap(
+                records = list(itertools.chain(*pool.imap(
                     lambda index: fasta_to_sig_record(index),
                     range(unique_barcodes),
-                    chunksize=chunksize)
-                records = []
-                counts = []
-                for result in results:
-                    records.append(result[0])
-                    counts.append(result[1])
+                    chunksize=chunksize)))
                 pool.close()
                 pool.join()
                 notify("Records created")
-                if args.plot_hist:
-                    hist, bin_edges = np.histogram(counts, bins=range(unique_barcodes))
-                    np.savez_compressed(
-                        'histogram',
-                        barcodes=list(fasta_files_dict.keys()),
-                        hist=hist,
-                        bin_edges=bin_edges)
-                del fasta_files_dict
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
