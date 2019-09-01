@@ -9,7 +9,7 @@ import argparse
 import sourmash
 from sourmash import MinHash, SourmashSignature
 from sourmash import sourmash_args
-from sourmash.logging import notify, error, print_results, set_quiet
+from sourmash.logging import notify, error
 
 
 def main():
@@ -65,8 +65,7 @@ def main():
     minhash = MinHash(n=num, ksize=args.ksize, scaled=scaled)
 
     # add hashes into!
-    for hashval in hashes:
-        minhash.add_hash(hashval)
+    minhash.add_many(hashval)
 
     if len(minhash) < len(hashes):
         notify("WARNING: loaded {} hashes, but only {} made it into MinHash.",
