@@ -9,6 +9,7 @@ import random
 import itertools
 import time
 import collections
+from collections import defaultdict
 from functools import partial
 import numpy as np
 import pathos.multiprocessing as multiprocessing
@@ -98,10 +99,11 @@ def compute(args):
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
     parser.add_argument('--count-valid-reads', default=0, type=int,
-                        help="Average number of reads per valid unique cell barcodes, "
-                        "Only considered a valid barcode if number of reads are greater "
+                        help="Number of umis per one cell barcode, "
+                        "A barcode is only considered a valid barcode read"
+                        "and its signature is written  read if number of umis are greater "
                         " than count-valid-reads. It is used to weed out cell barcodes"
-                        "with few reads that might have been due to false rna enzyme reactions")
+                        "with few umis that might have been due to false rna enzyme reactions")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -248,49 +250,133 @@ def compute(args):
                 name=name) for E in Elist]
 
     def iter_split(string, sep=None):
+        """Split a string by the given separator and
+        return the results in a generator"""
         sep = sep or ' '
         groups = itertools.groupby(string, lambda s: s != sep)
         return (''.join(g) for k, g in groups if k)
 
     def fasta_to_sig_record(index):
+        """Convert fasta to sig record"""
+        if umi_filter:
+            return filtered_umi_to_sig(index)
+        else:
+            return unfiltered_umi_to_sig(index)
+
+    def unfiltered_umi_to_sig(index):
+        """Returns signature records for all the fasta files for a unique barcode"""
+        # Initializing time
         startt = time.time()
+
+        # Getting all fastas for a given barcode
+        # from different shards
         single_barcode_fastas = all_fastas_sorted[index]
 
         count = 0
+        # Iterating through fasta files for single barcode from different fastas
         for fasta in iter_split(single_barcode_fastas, ","):
+
+            # Initializing the fasta file to write
+            # all the sequences from all bam shards to
             if count == 0:
                 unique_fasta_file = os.path.basename(fasta)
                 if args.save_fastas:
                     f = open(unique_fasta_file, "w")
-                # consume & calculate signatures
 
+            # Add sequence
             for record in screed.open(fasta):
-                string = record.sequence
-                add_seq(Elist, string,
+                sequence = record.sequence
+                add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
-                count = count + string.count("X") + 1
+
+                # Updating the fasta file with each of the sequences
                 if args.save_fastas:
                     f.write(">{}\n{}".format(filename, record.sequence))
+
+            # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
+
+            count += 1
+
+        # Close the opened fasta file
         if args.save_fastas:
             f.close()
 
-        if count > args.count_valid_reads:
-            barcode_name = unique_fasta_file.replace(".fasta", "")
-            siglist = build_siglist(
-                Elist,
-                os.path.join(args.filenames[0], unique_fasta_file),
-                name=barcode_name)
-            records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
-            notify(
-                "time taken to build signature records for a barcode {} is {:.5f} seconds",
-                unique_fasta_file, time.time() - startt, end='\r')
+        # Build signature records
+        barcode_name = unique_fasta_file.replace(".fasta", "")
+        siglist = build_siglist(
+            Elist,
+            os.path.join(args.filenames[0], unique_fasta_file),
+            name=barcode_name)
+        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        notify(
+            "time taken to build signature records for a barcode {} is {:.5f} seconds",
+            unique_fasta_file, time.time() - startt, end='\r')
+        return records
 
-            return records
-        else:
+    def filtered_umi_to_sig(index):
+        """Returns signature records for all the fasta files for a unique barcode
+        only if it has more than count-valid-reads number of umis"""
+        # Initializing time
+        startt = time.time()
+
+        # Getting all fastas for a given barcode
+        # from different shards
+        single_barcode_fastas = all_fastas_sorted[index]
+
+        # Tracking UMI Counts
+        umis = defaultdict(int)
+        # Iterating through fasta files for single barcode from different fastas
+        for fasta in iter_split(single_barcode_fastas, ","):
+            # calculate unique umi, barcode counts
+            for record in screed.open(fasta):
+                umis[record.name] += record.sequence.count(delimeter)
+
+        umis = {key: value for key, value in umis.items() if value > args.count_valid_reads}
+
+        if umis == {}:
             return []
+        count = 0
+        for fasta in iter_split(single_barcode_fastas, ","):
 
+            # Initializing fasta file to save the sequence to
+            if count == 0:
+                unique_fasta_file = os.path.basename(fasta)
+                if args.save_fastas:
+                    f = open(unique_fasta_file, "w")
+
+            # Add sequences of barcodes with more than count-valid-reads umis
+            for record in screed.open(fasta):
+                if record.name in umis:
+                    sequence = record.sequence
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+
+                    # Updating the fasta file with each of the sequences
+                    if args.save_fastas:
+                        f.write(">{}\n{}".format(filename, record.sequence))
+
+            # Delete fasta file in tmp folder
+            if os.path.exists(fasta):
+                os.unlink(fasta)
+            count += 1
+
+        # Close the opened fasta file
+        if args.save_fastas:
+            f.close()
+
+        # Build signature records
+        barcode_name = unique_fasta_file.replace(".fasta", "")
+        siglist = build_siglist(
+            Elist,
+            os.path.join(args.filenames[0], unique_fasta_file),
+            name=barcode_name)
+        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        notify(
+            "time taken to build signature records for a barcode {} is {:.5f} seconds",
+            unique_fasta_file, time.time() - startt, end="\r")
+        return records
 
     def save_siglist(siglist, output_fp, filename=None):
         # save!
@@ -316,6 +402,8 @@ def compute(args):
 
     if args.input_is_10x:
         all_fastas_sorted = []
+        delimeter = "X"
+        umi_filter = True if args.count_valid_reads != 0 else False
         Elist = make_minhashes()
 
     if args.track_abundance:
@@ -346,69 +434,111 @@ def compute(args):
             elif args.input_is_10x:
                 from .tenx import read_barcodes_file, shard_bam_file, bam_to_fasta
 
+                # Initializing time
                 startt = time.time()
+
+                # Setting barcodes file, some 10x files don't have a filtered barcode file
                 if args.barcodes_file is not None:
                     barcodes = read_barcodes_file(os.path.join(args.barcodes_file))
                 else:
                     barcodes = None
+
+                # Shard bam file to smaller bam file
                 notify('... reading bam file from {}', filename)
                 n_jobs = args.processes
                 filenames, mmap_file = np_utils.to_memmap(np.array(
                     shard_bam_file(filename, args.line_count)))
-                delimeter = "X"
+
+                # Create a per-cell fasta generator of sequences
+                # If the reads should be filtered by barcodes and umis
+                # umis are saved in fasta file as record name and name of
+                # the fasta file is the barcode
                 func = partial(
                     bam_to_fasta,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimeter)
-                # Create a per-cell generator of sequences
+                    delimeter,
+                    umi_filter)
+
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files, n_jobs)
                 pool = multiprocessing.Pool(processes=n_jobs)
                 notify(
                     "multiprocessing pool processes {} and chunksize {} calculated", n_jobs, chunksize)
+                # All the fastas are stored in a string instead of a list
+                # This saves memory per element of the list by 8 bits
+                # If we have unique barcodes in the order of 10^6 before filtering
+                # that would result in a huge list if each barcode is saved as
+                # a separate element, hence the string
                 all_fastas = "," .join(itertools.chain(*(
                     pool.imap(
                         lambda x: func(x), filenames, chunksize=chunksize))))
                 pool.close()
                 pool.join()
 
-                # clean up
+                # clean up the memmap and sharded intermediatary bam files
                 [os.unlink(file) for file in filenames if os.path.exists(file)]
                 del filenames
                 if os.path.exists(mmap_file):
                     os.unlink(mmap_file)
                 notify("Deleted intermediatary bam and memmap files")
 
+                # Build a dictionary with each unique barcode as key and
+                # their fasta files from different shards
                 fasta_files_dict = collections.OrderedDict()
                 for fasta in iter_split(all_fastas, ","):
                     barcode = os.path.basename(fasta).replace(".fasta", "")
                     value = fasta_files_dict.get(barcode, "")
                     fasta_files_dict[barcode] = value + fasta + ","
 
+                # Cleaning up to retrieve memory from unused large variables
                 del all_fastas
                 notify("Created fasta_files_dict")
 
+                # Find unique barcodes
                 all_fastas_sorted = list(fasta_files_dict.values())
                 del fasta_files_dict
                 unique_barcodes = len(all_fastas_sorted)
                 notify("Found {} unique barcodes", unique_barcodes)
+
+                # For each barcode, add all their sequences, find minhash
+                # and convert them to signature
+                # The below fasta_to_sig_record also takes into consideration
+                # if umi_filter is True and acts accordingly to create
+                # records for barcodes with considerable number of umis as
+                # provided in count-valid-reads
+                # This allows us to save unique barcodes with valid reads
+                # and significant umis, otherwise signature files save every
+                # barcode even with one umi/one read resulting in passing every
+                # alignment in bam file without file i.e resulting in a signature
+                # file in GB, whereas the expected .sig file should be in the order
+                # of MB
                 pool = multiprocessing.Pool(processes=n_jobs)
                 chunksize = calculate_chunksize(unique_barcodes, n_jobs)
                 notify("Pooled {} and chunksize {} mapped", n_jobs, chunksize)
+
                 records = list(itertools.chain(*pool.imap(
                     lambda index: fasta_to_sig_record(index),
                     range(unique_barcodes),
                     chunksize=chunksize)))
+
                 pool.close()
                 pool.join()
-                notify("Records created")
+
+                filtered_barcode_signatures = len(records)
+                notify(
+                    "Signature records created for {}",
+                    filtered_barcode_signatures)
+
+                # Save the signature records in .sig file
                 if args.output is not None:
                     signature_json.write_records_to_json(records, args.output)
                 else:
                     signature_json.write_records_to_json(records, open(sigfile, "w"))
                 del records
-                notify("time taken to save signature records for 10x folder is {:.5f} seconds", (time.time() - startt))
+                notify(
+                    "time taken to save {} signature records for 10x folder is {:.5f} seconds",
+                    filtered_barcode_signatures, time.time() - startt)
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()

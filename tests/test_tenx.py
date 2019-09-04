@@ -93,15 +93,22 @@ def test_bam_to_fasta():
     barcodes = sourmash_tenx.read_barcodes_file(filename)
 
     fastas = sourmash_tenx.bam_to_fasta(
-        barcodes=barcodes, barcode_renamer=None, delimiter="X", bam_file=bam_file)
+        barcodes=barcodes, barcode_renamer=None, delimiter="X", umi_filter=False, bam_file=bam_file)
     assert len(list(fastas)) == 8
 
 
 def test_filtered_bam_to_fasta():
     bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
     fastas = sourmash_tenx.bam_to_fasta(
-        barcodes=None, barcode_renamer=None, delimiter='X', bam_file=bam_file)
-    assert len(list(fastas)) == 156
+        barcodes=None, barcode_renamer=None, delimiter='X', umi_filter=False, bam_file=bam_file)
+    assert len(list(fastas)) == 32
+
+
+def test_filtered_bam_to_umi_fasta():
+    bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
+    fastas = sourmash_tenx.bam_to_fasta(
+        barcodes=None, barcode_renamer=None, delimiter='X', umi_filter=True, bam_file=bam_file)
+    assert len(list(fastas)) == 32
 
 
 def test_write_sequences():
