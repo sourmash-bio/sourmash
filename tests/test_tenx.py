@@ -118,3 +118,11 @@ def test_write_sequences():
     for fasta in fastas:
         assert fasta.endswith(".fasta")
 
+
+def test_write_sequences_umi():
+    cell_sequences = {'AAATGCCCAXAACTGCT-1': "atgc", 'AAATGCCXCAAAGTGCT-1': "gtga", 'AAATGCCXCAAAGTGCT-2': "gtgc"}
+    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences, True))
+    assert len(fastas) == len(cell_sequences)
+    for fasta in fastas:
+        assert fasta.endswith(".fasta")
+
