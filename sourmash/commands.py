@@ -2,9 +2,11 @@ from __future__ import print_function, division
 
 import argparse
 import csv
+import glob
 import os
 import os.path
 import sys
+import json
 import random
 import itertools
 import time
@@ -104,6 +106,10 @@ def compute(args):
                         "and its signature is written  read if number of umis are greater "
                         " than count-valid-reads. It is used to weed out cell barcodes"
                         "with few umis that might have been due to false rna enzyme reactions")
+    parser.add_argument('--write-barcode-meta', action='store_true',
+                        help="For 10x bam file, for each of the unique barcodes,"
+                        "Write all_barcodes_metadata.csv file containing number"
+                        "of reads and number of umis. (default: False)")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='Number of processes to use for reading 10x bam file')
     parser.add_argument('--track-abundance', action='store_true',
@@ -310,6 +316,7 @@ def compute(args):
             os.path.join(args.filenames[0], unique_fasta_file),
             name=barcode_name)
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+
         notify(
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
             unique_fasta_file, time.time() - startt, end='\r')
@@ -333,6 +340,11 @@ def compute(args):
             # calculate unique umi, barcode counts
             for record in screed.open(fasta):
                 umis[record.name] += record.sequence.count(delimeter)
+
+        if args.write_barcode_meta:
+            unique_fasta_file = os.path.basename(fasta).replace(".fasta", "_meta.txt")
+            with open(unique_fasta_file, "w") as f:
+                f.write("{} {}".format(len(umis), sum(list(umis.values()))))
 
         umis = {key: value for key, value in umis.items() if value > args.count_valid_reads}
 
@@ -407,6 +419,9 @@ def compute(args):
         delimeter = "X"
         umi_filter = True if args.count_valid_reads != 0 else False
         Elist = make_minhashes()
+        CELL_BARCODE = "CELL_BARCODE"
+        UMI_COUNT = "UMI_COUNT"
+        READ_COUNT = "READ_COUNT"
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -527,6 +542,22 @@ def compute(args):
                 pool.close()
                 pool.join()
 
+                if args.write_barcode_meta:
+
+                    barcodes_meta_txts = glob.glob("*_meta.txt")
+
+                    with open("all_barcodes_metadata.csv", "w") as fp:
+                        fp.write("{},{},{}".format(CELL_BARCODE, UMI_COUNT, READ_COUNT))
+                        fp.write('\n')
+                        for barcode_meta_txt in barcodes_meta_txts:
+                            with open(barcode_meta_txt, 'r') as f:
+                                umi_count, read_count = [int(x) for x in next(f).split()]
+                                fp.write("{},{},{}".format(
+                                    barcode_meta_txt.replace('_meta.txt', ''), umi_count, read_count))
+                                fp.write('\n')
+                            if os.path.exists(barcode_meta_txt):
+                                os.unlink(barcode_meta_txt)
+
                 filtered_barcode_signatures = len(records)
                 notify(
                     "Signature records created for {}",
@@ -538,6 +569,7 @@ def compute(args):
                 else:
                     signature_json.write_records_to_json(records, open(sigfile, "w"))
                 del records
+
                 notify(
                     "time taken to save {} signature records for 10x folder is {:.5f} seconds",
                     filtered_barcode_signatures, time.time() - startt)
