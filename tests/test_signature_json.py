@@ -5,14 +5,12 @@ import ijson
 import sourmash
 from sourmash.signature import SourmashSignature
 from sourmash.signature_json import (_json_next_atomic_array,
-                                     _json_next_signature,
-                                     load_signature_json,
-                                     load_signatures_json,
-                                     load_signatureset_json_iter,
-                                     save_signatures_json,
-                                     add_meta_save)
+                                         _json_next_signature,
+                                         load_signature_json,
+                                         load_signatures_json,
+                                         load_signatureset_json_iter,
+                                         save_signatures_json)
 from collections import OrderedDict
-
 
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
@@ -23,7 +21,6 @@ def test__json_next_atomic_array():
     a = _json_next_atomic_array(it)
     assert len(t) == len(a)
     assert all(x == y for x,y in zip(t, a))
-
 
 # integration test more than a unit test...
 def test__json_next_signature():

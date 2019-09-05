@@ -25,7 +25,6 @@ except ImportError:
 from sourmash import signature
 from sourmash import VERSION
 
-
 def test_run_sourmash():
     status, out, err = utils.runscript('sourmash', [], fail_ok=True)
     assert status != 0                    # no args provided, ok ;)

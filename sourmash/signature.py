@@ -11,7 +11,7 @@ import io
 import sys
 
 from . import signature_json
-from .logging import error, notify
+from .logging import error
 
 
 SIGNATURE_VERSION=0.4
@@ -83,7 +83,6 @@ class SourmashSignature(object):
 
     def _save(self):
         "Return metadata and a dictionary containing the sketch info."
-        notify("in signature._save", end="\r")
         e = dict(self.d)
         minhash = self.minhash
 

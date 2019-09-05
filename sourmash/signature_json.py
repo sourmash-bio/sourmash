@@ -236,7 +236,6 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
 
 
 def get_top_records(siglist):
-    notify("in get_top_records", end="\r")
     top_records = {}
     for sig in siglist:
         name, filename, sketch = sig._save()
@@ -253,7 +252,6 @@ def add_meta_save(top_records):
     - siglist: sequence of SourmashSignature objects
     - index: index of siglist to save
     """
-    notify("in add_meta_save", end="\r")
     from .signature import SIGNATURE_VERSION
     records = []
     for (name, filename), sketches in top_records.items():
@@ -261,20 +259,19 @@ def add_meta_save(top_records):
         if name:
             record["name"] = name
         if filename:
-            record["filename"] = filename
-        record["signatures"] = sketches
+            record['filename'] = filename
+        record['signatures'] = sketches
 
-        record["version"] = SIGNATURE_VERSION
-        record["class"] = "sourmash_signature"
-        record["hash_function"] = "0.murmur64"
-        record["license"] = "CC0"
-        record["email"] = ""
+        record['version'] = SIGNATURE_VERSION
+        record['class'] = 'sourmash_signature'
+        record['hash_function'] = '0.murmur64'
+        record['license'] = 'CC0'
+        record['email'] = ''
         records.append(record)
     return records
 
 
 def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
-    notify("in write_records_to_json", end="\r")
     s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
         try:

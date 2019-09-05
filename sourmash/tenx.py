@@ -15,9 +15,14 @@ BARCODES_TSV = 'barcodes.tsv'
 def pass_alignment_qc(alignment, barcodes):
     """
     Assert high quality mapping, QC-passing barcode and UMI of alignment
-    :param alignment aligned bam segment
-    :param barcodes: 10x barcodes list
-    :return: boolean, true if a high quality, QC passing barcode with a UMI
+    alignment :
+        aligned bam segment
+    barcodes : list
+        List of cellular barcode strings
+    Returns
+    -------
+    pass_qc : boolean
+        true if a high quality, QC passing barcode with a UMI, false otherwise
     """
     high_quality_mapping = alignment.mapq == 255
     if barcodes is not None:
@@ -37,11 +42,16 @@ def pass_alignment_qc(alignment, barcodes):
 def parse_barcode_renamer(barcodes, barcode_renamer):
     """
     Return a dictionary with cell barcode and the renamed barcode
-    :param barcodes: 10x barcodes list
-    :param barcode_renamer: Tab-separated file mapping
-        10x barcode name to new name, e.g. with channel or cell "
-        "annotation label"
-    :return: barcode renamer dictionary
+    barcodes : list
+        List of cellular barcode strings
+    barcode_renamer : str
+        Path to tab-separated file mapping barcodes to their new name
+        e.g. with channel or cell annotation label,
+        e.g. AAATGCCCAAACTGCT-1    lung_epithelial_cell|AAATGCCCAAACTGCT-1
+    Returns
+    -------
+    barcode_renamer : dict
+        A (str, str) mapping of the original barcode to its new name
     """
     if barcode_renamer is not None:
         renamer = {}
@@ -97,7 +107,9 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
         number of lines/alignment reads in each sharded bam file
     Returns
     -------
-    list of sharded bam files
+
+    shards : list
+        list of sharded bam filenames
     """
     notify("Sharding the bam file")
     startt = time.time()
@@ -127,7 +139,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
         outf.close()
 
     notify(
-        "time taken to shard the large bam file into {} shards is {:.5f} seconds".format(file_count, time.time() - startt))
+        "time taken to shard the bam file into {} shards is {:.5f} seconds".format(file_count, time.time() - startt))
     return file_names
 
 
@@ -151,7 +163,8 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
     Returns
     -------
     filenames: list
-        one temp fasta filename for one cell sequence
+        one temp fasta filename for one cell's high-quality, non-duplicate reads
+
     """
     bam = read_bam_file(bam_file)
 
