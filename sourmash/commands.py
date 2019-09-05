@@ -325,6 +325,7 @@ def compute(args):
         # from different shards
         single_barcode_fastas = all_fastas_sorted[index]
 
+        notify("tracking umi counts", end="\r", flush=True)
         # Tracking UMI Counts
         umis = defaultdict(int)
         # Iterating through fasta files for single barcode from different fastas
@@ -335,6 +336,7 @@ def compute(args):
 
         umis = {key: value for key, value in umis.items() if value > args.count_valid_reads}
 
+        notify("Completed tracking umi counts", end="\r", flush=True)
         if umis == {}:
             return []
         count = 0
@@ -362,10 +364,10 @@ def compute(args):
                 os.unlink(fasta)
             count += 1
 
+        notify("Added sequences of unique barcode,umi to Elist", end="\r", flush=True)
         # Close the opened fasta file
         if args.save_fastas:
             f.close()
-
         # Build signature records
         barcode_name = unique_fasta_file.replace(".fasta", "")
         siglist = build_siglist(
@@ -375,7 +377,7 @@ def compute(args):
         records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
         notify(
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
-            unique_fasta_file, time.time() - startt, end="\r")
+            unique_fasta_file, time.time() - startt, end="\r", flush=True)
         return records
 
     def save_siglist(siglist, output_fp, filename=None):
