@@ -497,7 +497,7 @@ impl SigsTrait for KmerMinHash {
                 for kmer in sequence.windows(self.ksize as usize) {
                     if _checkdna(kmer) {
                         let rc = revcomp(kmer);
-                        if kmer < &rc {
+                        if kmer < rc.as_slice() {
                             self.add_word(kmer);
                         } else {
                             self.add_word(&rc);
