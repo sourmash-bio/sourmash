@@ -338,7 +338,7 @@ def compute(args):
         umis = defaultdict(int)
         # Iterating through fasta files for single barcode from different fastas
         for fasta in iter_split(single_barcode_fastas, ","):
-            # calculate unique umi, barcode counts
+            # calculate unique umi, sequence counts
             for record in screed.open(fasta):
                 umis[record.name] += record.sequence.count(delimeter)
 
@@ -347,10 +347,8 @@ def compute(args):
             with open(unique_fasta_file, "w") as f:
                 f.write("{} {}".format(len(umis), sum(list(umis.values()))))
 
-        umis = {key: value for key, value in umis.items() if value > args.count_valid_reads}
-
         debug("Completed tracking umi counts", end="\r", flush=True)
-        if umis == {}:
+        if len(umis) < args.count_valid_reads:
             return []
         count = 0
         for fasta in iter_split(single_barcode_fastas, ","):
@@ -363,14 +361,13 @@ def compute(args):
 
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
-                if record.name in umis:
-                    sequence = record.sequence
-                    add_seq(Elist, sequence,
-                            args.input_is_protein, args.check_sequence)
+                sequence = record.sequence
+                add_seq(Elist, sequence,
+                        args.input_is_protein, args.check_sequence)
 
-                    # Updating the fasta file with each of the sequences
-                    if args.save_fastas:
-                        f.write(">{}\n{}".format(filename, record.sequence))
+                # Updating the fasta file with each of the sequences
+                if args.save_fastas:
+                    f.write(">{}\n{}".format(filename, record.sequence))
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):

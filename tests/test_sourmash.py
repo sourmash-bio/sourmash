@@ -233,7 +233,7 @@ def test_do_sourmash_compute_10x():
         assert os.path.exists(sigfile)
         with open(sigfile) as fp:
             data = json.load(fp)
-        assert len(data) == 4
+        assert len(data) == 1
         assert any(
             sig["signatures"][0]["mins"] != [] for sig in data)
 
