@@ -42,37 +42,15 @@ def search_databases(query, databases, threshold, do_containment, best_only,
     found_md5 = set()
     for (obj, filename, filetype) in databases:
         if filetype == 'SBT':
-            if best_only:            # this needs to be reset for each SBT
-                search_fn = SearchMinHashesFindBest().search
-
             tree = obj
-
-            # figure out scaled value of tree, downsample query if needed.
-            leaf = next(iter(tree.leaves()))
-            tree_mh = leaf.data.minhash
-
-            tree_query = query
-            if tree_mh.scaled and query.minhash.scaled and \
-              tree_mh.scaled > query.minhash.scaled:
-                resampled_query_mh = tree_query.minhash
-                resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
-                tree_query = SourmashSignature(resampled_query_mh)
-
-            # now, search!
-            for leaf in tree.find(search_fn, tree_query, threshold):
-                similarity = query_match(leaf.data)
-
-                # tree search should always/only return matches above threshold
-                assert similarity >= threshold
-
-                if leaf.data.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=leaf.data,
-                                      md5=leaf.data.md5sum(),
-                                      filename=filename,
-                                      name=leaf.data.name())
-                    found_md5.add(sr.md5)
+            search_iter = tree.search(query, threshold=threshold,
+                                      do_containment=do_containment,
+                                      ignore_abundance=ignore_abundance,
+                                      best_only=best_only)
+            for sr in search_iter:
+                if sr.md5 not in found_md5:
                     results.append(sr)
+                    found_md5.add(sr.md5)
 
         elif filetype == 'LCA':
             lca_db = obj

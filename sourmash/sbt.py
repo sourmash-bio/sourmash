@@ -77,6 +77,9 @@ STORAGES = {
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
+# @CTB copied out of search.py to deal with import order issues, #willfix
+SearchResult = namedtuple('SearchResult',
+                          'similarity, match_sig, md5, filename, name')
 
 class GraphFactory(object):
     """Build new nodegraphs (Bloom filters) of a specific (fixed) size.
@@ -256,8 +259,54 @@ class SBT(Index):
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
 
-    def search(self, sig):
-        pass
+    def search(self, query, *args, **kwargs):
+        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import SearchMinHashesFindBest
+        from .signature import SourmashSignature
+
+        threshold = kwargs['threshold']
+        ignore_abundance = kwargs['ignore_abundance']
+        do_containment = kwargs['do_containment']
+        best_only = kwargs['best_only']
+
+        search_fn = search_minhashes
+        query_match = lambda x: query.similarity(
+            x, downsample=True, ignore_abundance=ignore_abundance)
+        if do_containment:
+            search_fn = search_minhashes_containment
+            query_match = lambda x: query.contained_by(x, downsample=True)
+        
+        if best_only:            # this needs to be reset for each SBT
+            search_fn = SearchMinHashesFindBest().search
+
+        # figure out scaled value of tree, downsample query if needed.
+        leaf = next(iter(self.leaves()))
+        tree_mh = leaf.data.minhash
+
+        tree_query = query
+        if tree_mh.scaled and query.minhash.scaled and \
+          tree_mh.scaled > query.minhash.scaled:
+            resampled_query_mh = tree_query.minhash
+            resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+            tree_query = SourmashSignature(resampled_query_mh)
+
+        # now, search!
+        results = []
+        for leaf in self.find(search_fn, tree_query, threshold):
+            similarity = query_match(leaf.data)
+
+            # tree search should always/only return matches above threshold
+            assert similarity >= threshold
+
+            sr = SearchResult(similarity=similarity,
+                              match_sig=leaf.data,
+                              md5=leaf.data.md5sum(),
+                              name=leaf.data.name(),
+                              filename=None)
+            results.append(sr)
+
+        return results
+        
 
     def gather(self, query, *args, **kwargs):
         from .sbtmh import GatherMinHashesFindBestIgnoreMaxHash
