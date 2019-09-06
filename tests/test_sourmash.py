@@ -300,6 +300,74 @@ def test_do_sourmash_compute_multik_with_protein():
             assert 30 in ksizes
 
 
+def test_do_sourmash_compute_multik_with_dayhoff():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff', '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
+               'signatures.' in err
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert all(x.minhash.dayhoff for x in siglist)
+
+
+def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 4
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+
+
+def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff', '--protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 6
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
+
+
 def test_do_sourmash_compute_multik_with_nothing():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -896,6 +964,39 @@ def test_do_compare_output_multiple_moltype():
         assert 'multiple molecule types loaded;' in err
 
 
+
+def test_do_compare_dayhoff():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dayhoff',
+                                            '--no-dna', testdata1],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--dayhoff',
+                                            '--no-dna', testdata2],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--dayhoff',
+                                            '--csv', 'xxx'],
+                                           in_directory=location)
+        true_out = '''[1.   0.94]
+[0.94 1.  ]
+min similarity in matrix: 0.940'''.splitlines()
+        for line in out:
+            cleaned_line = line.split('...')[-1].strip()
+            cleaned_line in true_out
+        assert status == 0
+
+
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -958,6 +1059,31 @@ def test_do_plot_comparison_3():
 
         assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
         assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
+
+
+def test_do_plot_comparison_4_output_dir():
+    with utils.TempDirectory() as location:
+        output_dir = os.path.join(location, 'xyz_test')
+
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31', testdata1, testdata2],
+                                           in_directory=location)
+
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '-o', 'cmp'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp', '--labels',
+                                            '--output-dir', output_dir],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
+        assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
 
 
 def test_do_plot_comparison_5_force():

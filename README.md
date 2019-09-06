@@ -33,7 +33,7 @@ sourmash is a product of the
 We recommend using bioconda to install sourmash:
 
 ```
-conda install sourmash
+conda install -c conda-forge -c bioconda sourmash
 ```
 This will install the latest stable version of sourmash 2.
 

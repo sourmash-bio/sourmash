@@ -99,8 +99,10 @@ class SourmashSignature(object):
             sketch['mins'] = list(map(int, minhash.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
-        if minhash.is_protein:
+        if minhash.is_protein and not minhash.dayhoff:
             sketch['molecule'] = 'protein'
+        elif minhash.dayhoff:
+            sketch['molecule'] = 'dayhoff'
         else:
             sketch['molecule'] = 'DNA'
 
