@@ -368,7 +368,7 @@ def compare(args):
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-p', '--processes', type=int,
-                        help='save matrix in CSV format (with column headers)')
+                        help='Number of processes to parallely calculate similarity')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     args = parser.parse_args(args)

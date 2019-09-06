@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import sourmash
-from sourmash.compare import compare_all_pairs, compare_parallel, compare_serial, to_memmap
+from sourmash.compare import compare_all_pairs, compare_parallel, compare_serial
 from . import sourmash_tst_utils as utils
 
 
@@ -52,13 +52,6 @@ def test_compare_parallel(siglist, ignore_abundance):
          [0., 0., 0., 0., 0.364, 0.386, 1.]])
 
     np.testing.assert_array_equal(similarities, true_similarities)
-
-
-def test_memmap(siglist):
-    memmapped, filename = to_memmap(np.array(siglist))
-    # Assert that the data didn't change as a result of memory-mapping
-    np.testing.assert_array_equal(memmapped, siglist)
-    assert filename.endswith(".mmap")
 
 
 def test_compare_all_pairs(siglist, ignore_abundance):

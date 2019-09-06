@@ -5,7 +5,6 @@ from __future__ import print_function, unicode_literals
 import os
 import gzip
 import shutil
-import time
 import screed
 import glob
 import json
@@ -688,7 +687,7 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
 
 @utils.in_tempdir
 def test_do_basic_compare(c):
-    # try doing a basic compare
+    # try doing a compare parallely
     import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)

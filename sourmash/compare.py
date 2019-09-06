@@ -1,12 +1,13 @@
+"""Functionality for comparing many signatures, used in sourmash compare."""
+
 import itertools
 from functools import partial
-import os
-import tempfile
 import time
 import multiprocessing
 import numpy as np
 
 from .logging import notify
+from sourmash.np_utils import to_memmap
 
 
 def compare_serial(siglist, ignore_abundance, downsample=False):
@@ -36,29 +37,6 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
         similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance, downsample)
 
     return similarities
-
-
-def to_memmap(array):
-    """Write a memory mapped array
-    Create a memory-map to an array stored in a binary file on disk.
-    Memory-mapped files are used for accessing small segments of
-    large files on disk, without reading the entire file into memory.
-
-    :param np.array array to memory map
-    :return: np.array large_memmap memory mapped array
-    :return: str filename name of the file that memory mapped array is written to
-    """
-
-    temp_folder = tempfile.mkdtemp()
-    filename = os.path.join(temp_folder, 'array.mmap')
-    if os.path.exists(filename):
-        os.unlink(filename)
-    shape = array.shape
-    f = np.memmap(filename, mode='w+', shape=shape, dtype=array.dtype)
-    f[:] = array[:]
-    del f
-    large_memmap = np.memmap(filename, dtype=array.dtype, shape=shape)
-    return large_memmap, filename
 
 
 def similarity(sig1, sig2, ignore_abundance, downsample):
