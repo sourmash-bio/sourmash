@@ -754,8 +754,8 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
 
 
 @utils.in_tempdir
-def test_do_basic_compare(c):
-    # try doing a compare parallely
+def test_do_serial_compare(c):
+    # try doing a compare serial
     import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
@@ -784,8 +784,8 @@ def test_do_basic_compare(c):
 
 
 @utils.in_tempdir
-def test_do_basic_compare_parallel(c):
-    # try doing a basic compare
+def test_do_compare_parallel(c):
+    # try doing a compare parallel
     import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
     testsigs = glob.glob(testsigs)
