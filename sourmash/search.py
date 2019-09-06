@@ -151,11 +151,9 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             # or an LCA database
             elif filetype == 'LCA':
                 lca_db = obj
-                for x in lca_db.find(query.minhash, 0.0,
-                                     containment=True, ignore_scaled=True):
-                    (score, match_sig, md5, filename, name) = x
-                    if score > 0.0:
-                        results.append((score, match_sig, filename))
+                gather_iter = lca_db.gather(query)
+                for similarity, ss, filename in gather_iter:
+                    results.append((similarity, ss, filename))
 
             # search a signature
             else:

@@ -286,8 +286,15 @@ class LCA_Database(Index):
         results.sort(key=lambda x: -x.similarity)
         return results
 
-    def gather(self, sig):
-        pass
+    def gather(self, query, *args, **kwargs):
+        results = []
+        for x in self.find(query.minhash, 0.0,
+                           containment=True, ignore_scaled=True):
+            (score, match_sig, md5, filename, name) = x
+            if score > 0.0:
+                results.append((score, match_sig, filename))
+
+        return results
 
     def insert(self, node):
         pass
