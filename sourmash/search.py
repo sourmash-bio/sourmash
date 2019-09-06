@@ -141,13 +141,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             # search a tree
             if filetype == 'SBT':
                 tree = obj
-                search_fn = GatherMinHashesFindBestIgnoreMaxHash(best_ctn_sofar).search
+                gather_iter = tree.gather(query, threshold=best_ctn_sofar)
+                for similarity, ss in gather_iter:
+                    results.append((similarity, ss, filename))
 
-                for leaf in tree.find(search_fn, query, best_ctn_sofar):
-                    leaf_e = leaf.data.minhash
-                    similarity = query.minhash.containment_ignore_maxhash(leaf_e)
-                    if similarity > 0.0:
-                        results.append((similarity, leaf.data, filename))
             # or an LCA database
             elif filetype == 'LCA':
                 lca_db = obj

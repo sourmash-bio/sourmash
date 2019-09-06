@@ -259,8 +259,20 @@ class SBT(Index):
     def search(self, sig):
         pass
 
-    def gather(self, sig):
-        pass
+    def gather(self, query, *args, **kwargs):
+        from .sbtmh import GatherMinHashesFindBestIgnoreMaxHash
+        threshold = kwargs['threshold']
+
+        search_fn = GatherMinHashesFindBestIgnoreMaxHash(threshold).search
+
+        results = []
+        for leaf in self.find(search_fn, query, threshold):
+            leaf_e = leaf.data.minhash
+            similarity = query.minhash.containment_ignore_maxhash(leaf_e)
+            if similarity > 0.0:
+                results.append((similarity, leaf.data))
+
+        return results
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).
