@@ -92,8 +92,18 @@ class LinearIndex(Index):
         # @CTB sort here or ??
         return matches
 
-    def gather(self, signature, *args, **kwargs):
-        pass
+    def gather(self, query, *args, **kwargs):
+        # check arguments
+        threshold = kwargs.get('threshold', 0)
+
+        results = []
+        for ss in self.signatures:
+            cont = query.minhash.containment_ignore_maxhash(ss.minhash)
+            if cont > threshold:
+                results.append((cont, ss))
+        results.sort(reverse=True)
+
+        return results
 
     def save(self, path):
         from .signature import save_signatures

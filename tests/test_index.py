@@ -109,6 +109,33 @@ def test_linear_index_search():
     assert sr[0].match_sig == ss63
 
 
+def test_linear_index_gather():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss2
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 2
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+    assert round(matches[1][0], 2) == 0.49
+    assert matches[1][1] == ss63
+
+
 def test_linear_index_save():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
