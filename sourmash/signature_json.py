@@ -257,7 +257,7 @@ def add_meta_save(top_records):
     for (name, filename), sketches in top_records.items():
         record = {}
         if name:
-            record["name"] = name
+            record['name'] = name
         if filename:
             record['filename'] = filename
         record['signatures'] = sketches

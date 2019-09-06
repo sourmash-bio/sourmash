@@ -110,7 +110,6 @@ class SourmashSignature(object):
 
         return self.d.get('name'), self.d.get('filename'), sketch
 
-
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other MinHash signature."
         try:

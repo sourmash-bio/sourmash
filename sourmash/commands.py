@@ -6,7 +6,6 @@ import glob
 import os
 import os.path
 import sys
-import json
 import random
 import itertools
 import time
@@ -23,7 +22,7 @@ from . import signature as sig
 from . import signature_json
 from . import sourmash_args
 from . import np_utils
-from .logging import notify, error, print_results, set_quiet
+from .logging import notify, error, print_results, set_quiet, debug
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K
@@ -101,29 +100,32 @@ def compute(args):
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
     parser.add_argument('--count-valid-reads', default=0, type=int,
-                        help="Number of umis per one cell barcode, "
-                        "A barcode is only considered a valid barcode read"
-                        "and its signature is written  read if number of umis are greater "
-                        " than count-valid-reads. It is used to weed out cell barcodes"
-                        "with few umis that might have been due to false rna enzyme reactions")
+                        help="For 10x input only (i.e input-is-10x flag is True),"
+                        "Number of reads per (umi, barcode) unique pair"
+                        "A read is only considered a valid barcode read"
+                        "and its signature is written if number of reads per umi, barcode are greater "
+                        " than count-valid-reads. It is used to weed out cell umi,barcodes"
+                        "with few reads that might have been due to false rna enzyme reactions")
     parser.add_argument('--write-barcode-meta', action='store_true',
-                        help="For 10x bam file, for each of the unique barcodes,"
+                        help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes,"
                         "Write all_barcodes_metadata.csv file containing number"
-                        "of reads and number of umis. (default: False)")
+                        "of reads and number of umis to {all_barcodes_metadata}.csv file. (default: False)")
     parser.add_argument('-p', '--processes', default=2, type=int,
-                        help='Number of processes to use for reading 10x bam file')
+                        help='For 10x input only (i.e input-is-10x flag is True,'
+                        'Number of processes to use for reading 10x bam file')
+    parser.add_argument('--save-fastas', action='store_true',
+                        help='For 10x input only (i.e input-is-10x flag is True),'
+                        'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta (default: False)')
+    parser.add_argument('--line-count', type=int,
+                        help='For 10x input only (i.e input-is-10x flag is True), line count for each bam shard',
+                        default=DEFAULT_LINE_COUNT)
     parser.add_argument('--track-abundance', action='store_true',
                         help='track k-mer abundances in the generated signature (default: False)')
-    parser.add_argument('--save-fastas', action='store_true',
-                        help='save merged fastas for the unique barcodes (default: False)')
     parser.add_argument('--scaled', type=float, default=0,
                         help='choose number of hashes as 1 in FRACTION of input k-mers')
     parser.add_argument('--seed', type=int,
                         help='seed used by MurmurHash (default: 42)',
                         default=DEFAULT_SEED)
-    parser.add_argument('--line-count', type=int,
-                        help='line count for each bam shard',
-                        default=DEFAULT_LINE_COUNT)
     parser.add_argument('--randomize', action='store_true',
                         help='shuffle the list of input filenames randomly')
     parser.add_argument('--license', default='CC0', type=str,
@@ -252,8 +254,8 @@ def compute(args):
                 E.add_sequence(seq, not check_sequence)
 
     def build_siglist(Elist, filename, name=None):
-        return [sig.SourmashSignature(E, filename=filename,
-                name=name) for E in Elist]
+        return [ sig.SourmashSignature(E, filename=filename,
+                                       name=name) for E in Elist ]
 
     def iter_split(string, sep=None):
         """Split a string by the given separator and
@@ -332,7 +334,7 @@ def compute(args):
         # from different shards
         single_barcode_fastas = all_fastas_sorted[index]
 
-        notify("tracking umi counts", end="\r", flush=True)
+        debug("calculating umi counts", end="\r", flush=True)
         # Tracking UMI Counts
         umis = defaultdict(int)
         # Iterating through fasta files for single barcode from different fastas
@@ -348,7 +350,7 @@ def compute(args):
 
         umis = {key: value for key, value in umis.items() if value > args.count_valid_reads}
 
-        notify("Completed tracking umi counts", end="\r", flush=True)
+        debug("Completed tracking umi counts", end="\r", flush=True)
         if umis == {}:
             return []
         count = 0
@@ -376,7 +378,7 @@ def compute(args):
                 os.unlink(fasta)
             count += 1
 
-        notify("Added sequences of unique barcode,umi to Elist", end="\r", flush=True)
+        debug("Added sequences of unique barcode,umi to Elist", end="\r", flush=True)
         # Close the opened fasta file
         if args.save_fastas:
             f.close()
@@ -425,6 +427,7 @@ def compute(args):
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
+
     if not args.merge:
         if args.output:
             siglist = []
