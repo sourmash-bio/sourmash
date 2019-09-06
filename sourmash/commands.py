@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import argparse
 import csv
@@ -10,6 +10,7 @@ import sys
 import random
 
 import screed
+from .compare import compare_all_pairs
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -384,6 +385,8 @@ def compare(args):
                         help='compare all signatures underneath directories.')
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
+    parser.add_argument('-p', '--processes', type=int,
+                        help='Number of processes to parallely calculate similarity')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     args = parser.parse_args(args)
@@ -458,31 +461,22 @@ def compare(args):
     notify('')
 
     # build the distance matrix
-    D = numpy.zeros([len(siglist), len(siglist)])
     numpy.set_printoptions(precision=3, suppress=True)
 
     # do all-by-all calculation
-    labeltext = []
-    for i, E in enumerate(siglist):
-        for j, E2 in enumerate(siglist):
-            if i < j:
-                continue
-            similarity = E.similarity(E2, args.ignore_abundance)
-            D[i][j] = similarity
-            D[j][i] = similarity
 
-        labeltext.append(E.name())
-
+    labeltext = [item.name() for item in siglist]
+    similarity = compare_all_pairs(siglist, args.ignore_abundance,
+                                   n_jobs=args.processes)
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
             name_num = '{}-{}'.format(i, E.name())
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
-            print_results('{:20s}\t{}'.format(name_num, D[i, :, ],))
+            print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
 
-    print_results('min similarity in matrix: {:.3f}', numpy.min(D))
-
+    print_results('min similarity in matrix: {:.3f}', numpy.min(similarity))
     # shall we output a matrix?
     if args.output:
         labeloutname = args.output + '.labels.txt'
@@ -492,7 +486,7 @@ def compare(args):
 
         notify('saving distance matrix to: {}', args.output)
         with open(args.output, 'wb') as fp:
-            numpy.save(fp, D)
+            numpy.save(fp, similarity)
 
     # output CSV?
     if args.csv:
@@ -502,7 +496,7 @@ def compare(args):
         for i in range(len(labeltext)):
             y = []
             for j in range(len(labeltext)):
-                y.append('{}'.format(D[i][j]))
+                y.append('{}'.format(similarity[i][j]))
             args.csv.write(','.join(y) + '\n')
 
 
@@ -602,7 +596,6 @@ def plot(args):
         np_idx = numpy.array(sample_idx)
         D = D[numpy.ix_(np_idx, np_idx)]
         labeltext = [ labeltext[idx] for idx in sample_idx ]
-
     ### do clustering
     Y = sch.linkage(D, method='single')
     Z1 = sch.dendrogram(Y, orientation='right', labels=labeltext)
