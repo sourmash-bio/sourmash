@@ -104,7 +104,7 @@ class LinearIndex(Index):
         for ss in self.signatures:
             cont = query.minhash.containment_ignore_maxhash(ss.minhash)
             if cont > threshold:
-                results.append((cont, ss))
+                results.append((cont, ss, self.filename))
         results.sort(reverse=True)
 
         return results

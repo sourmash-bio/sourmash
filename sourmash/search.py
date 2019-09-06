@@ -162,10 +162,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
             # search a signature
             else:
-                for ss in obj:
-                    similarity = query.minhash.containment_ignore_maxhash(ss.minhash)
-                    if similarity > 0.0:
-                        results.append((similarity, ss, filename))
+                linear = obj
+                gather_iter = linear.gather(query)
+                for similarity, ss, filename in gather_iter:
+                    results.append((similarity, ss, filename))
 
         if not results:
             return None, None, None
