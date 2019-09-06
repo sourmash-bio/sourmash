@@ -138,6 +138,28 @@ def test_linear_index_save():
     assert si == x
 
 
+def test_linear_index_load():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    with utils.TempDirectory() as location:
+        from sourmash import save_signatures
+
+        filename = os.path.join(location, 'foo')
+        with open(filename, 'wt') as fp:
+            sourmash.save_signatures([ss2, ss47, ss63], fp)
+
+        linear = LinearIndex.load(filename)
+
+    x = { ss2, ss47, ss63}
+    assert linear.signatures == x
+
+
 def test_linear_index_save_load():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
