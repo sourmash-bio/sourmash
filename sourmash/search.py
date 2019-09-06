@@ -86,19 +86,23 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     # define a function to do a 'best' search and get only top match.
     def find_best(dblist, query, remainder):
 
+        # @CTB this is a tree-specific optimization, I think - should fix.
         # precompute best containment from all of the remainders
         best_ctn_sofar = 0.0
-        for x in remainder:
-            ctn = query.minhash.containment_ignore_maxhash(x.minhash)
-            if ctn > best_ctn_sofar:
-                best_ctn_sofar = ctn
+#        for x in remainder:
+#            ctn = query.minhash.containment_ignore_maxhash(x.minhash)
+#            if ctn > best_ctn_sofar:
+#                best_ctn_sofar = ctn
 
         results = []
         for (obj, filename, filetype) in dblist:
-            # search a tree
-            tree = obj
-            gather_iter = tree.gather(query, threshold=best_ctn_sofar)
-            for similarity, ss, filename in gather_iter:
+            # search a tree!
+            gather_iter = obj.gather(query, threshold=best_ctn_sofar)
+            for similarity, ss, fname in gather_iter:
+                # @CTB hackity-hack hack, this is because trees don't have
+                # filenames at the moment.
+                if fname is None and filename:
+                    fname = filename
                 results.append((similarity, ss, filename))
 
 
