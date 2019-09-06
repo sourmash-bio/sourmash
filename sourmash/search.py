@@ -41,36 +41,15 @@ def search_databases(query, databases, threshold, do_containment, best_only,
     results = []
     found_md5 = set()
     for (obj, filename, filetype) in databases:
-        if filetype == 'SBT':
-            tree = obj
-            search_iter = tree.search(query, threshold=threshold,
-                                      do_containment=do_containment,
-                                      ignore_abundance=ignore_abundance,
-                                      best_only=best_only)
-            for sr in search_iter:
-                if sr.md5 not in found_md5:
-                    results.append(sr)
-                    found_md5.add(sr.md5)
+        search_iter = obj.search(query, threshold=threshold,
+                                 do_containment=do_containment,
+                                 ignore_abundance=ignore_abundance,
+                                 best_only=best_only)
+        for sr in search_iter:
+            if sr.md5 not in found_md5:
+                results.append(sr)
+                found_md5.add(sr.md5)
 
-        elif filetype == 'LCA':
-            lca_db = obj
-            search_iter = lca_db.search(query, threshold=threshold,
-                                        do_containment=do_containment,
-                                        ignore_abundance=ignore_abundance)
-            for sr in search_iter:
-                if sr.md5 not in found_md5:
-                    results.append(sr)
-                    found_md5.add(sr.md5)
-
-        else: # list of signatures
-            linear = obj
-            search_iter = linear.search(query, threshold=threshold,
-                                        do_containment=do_containment,
-                                        ignore_abundance=ignore_abundance)
-            for sr in search_iter:
-                if sr.md5 not in found_md5:
-                    results.append(sr)
-                    found_md5.add(sr.md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x.similarity)
@@ -117,25 +96,11 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         results = []
         for (obj, filename, filetype) in dblist:
             # search a tree
-            if filetype == 'SBT':
-                tree = obj
-                gather_iter = tree.gather(query, threshold=best_ctn_sofar)
-                for similarity, ss in gather_iter:
-                    results.append((similarity, ss, filename))
+            tree = obj
+            gather_iter = tree.gather(query, threshold=best_ctn_sofar)
+            for similarity, ss, filename in gather_iter:
+                results.append((similarity, ss, filename))
 
-            # or an LCA database
-            elif filetype == 'LCA':
-                lca_db = obj
-                gather_iter = lca_db.gather(query)
-                for similarity, ss, filename in gather_iter:
-                    results.append((similarity, ss, filename))
-
-            # search a signature
-            else:
-                linear = obj
-                gather_iter = linear.gather(query)
-                for similarity, ss, filename in gather_iter:
-                    results.append((similarity, ss, filename))
 
         if not results:
             return None, None, None

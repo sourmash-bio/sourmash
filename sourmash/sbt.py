@@ -319,7 +319,7 @@ class SBT(Index):
             leaf_e = leaf.data.minhash
             similarity = query.minhash.containment_ignore_maxhash(leaf_e)
             if similarity > 0.0:
-                results.append((similarity, leaf.data))
+                results.append((similarity, leaf.data, None))
 
         return results
 
