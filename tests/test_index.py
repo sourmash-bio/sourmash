@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 
+import os
 import sourmash
 from sourmash.index import LinearIndex
 from sourmash_lib.sbt import SBT, GraphFactory, Leaf
@@ -106,3 +107,58 @@ def test_linear_index_search():
     assert len(sr) == 1
     sr.sort(key=lambda x: -x.similarity)
     assert sr[0].match_sig == ss63
+
+
+def test_linear_index_save():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    linear = LinearIndex()
+    linear.insert(ss2)
+    linear.insert(ss47)
+    linear.insert(ss63)
+    
+    with utils.TempDirectory() as location:
+        filename = os.path.join(location, 'foo')
+        linear.save(filename)
+
+        from sourmash import load_signatures
+        si = set(load_signatures(filename))
+
+    x = { ss2, ss47, ss63}
+
+    print(len(si))
+    print(len(x))
+
+    assert si == x
+
+
+def test_linear_index_save_load():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    linear = LinearIndex()
+    linear.insert(ss2)
+    linear.insert(ss47)
+    linear.insert(ss63)
+    
+    with utils.TempDirectory() as location:
+        filename = os.path.join(location, 'foo')
+        linear.save(filename)
+        linear2 = LinearIndex.load(filename)
+        
+    # now, search for sig2
+    sr = linear2.search(ss2, threshold=1.0)
+    print([s.name for s in sr])
+    assert len(sr) == 1
+    assert sr[0].match_sig == ss2

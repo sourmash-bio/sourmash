@@ -96,8 +96,15 @@ class LinearIndex(Index):
         pass
 
     def save(self, path):
-        pass
+        from .signature import save_signatures
+        with open(path, 'wt') as fp:
+            save_signatures(self.signatures, fp)
 
     @classmethod
     def load(cls, location):
-        pass
+        from .signature import load_signatures
+        si = load_signatures(location)
+
+        lidx = LinearIndex()
+        lidx.signatures.update(si)
+        return lidx
