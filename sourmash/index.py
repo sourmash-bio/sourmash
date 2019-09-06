@@ -40,11 +40,15 @@ class Index(ABC):
 
 
 class LinearIndex(Index):
-    def __init__(self):
-        self.signatures = set()
+    def __init__(self, signatures=[], filename=None):
+        self.signatures = list(signatures)
+        self.filename = filename
+
+    def __len__(self):
+        return len(self.signatures)
 
     def insert(self, node):
-        self.signatures.add(node)
+        self.signatures.append(node)
 
     def find(self, search_fn, *args, **kwargs):
         matches = []
@@ -85,11 +89,11 @@ class LinearIndex(Index):
                 sr = SearchResult(similarity=similarity,
                                   match_sig=ss,
                                   md5=ss.md5sum(),
-                                  filename = None,
+                                  filename = self.filename,
                                   name=ss.name())
                 matches.append(sr)
 
-        # @CTB sort here or ??
+        matches.sort(key=lambda x: -x.similarity)
         return matches
 
     def gather(self, query, *args, **kwargs):
@@ -115,6 +119,5 @@ class LinearIndex(Index):
         from .signature import load_signatures
         si = load_signatures(location)
 
-        lidx = LinearIndex()
-        lidx.signatures.update(si)
+        lidx = LinearIndex(si, filename=location)
         return lidx

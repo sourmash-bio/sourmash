@@ -88,18 +88,14 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                     results.append(sr)
 
         else: # list of signatures
-            for ss in obj:
-                similarity = query_match(ss)
-                if similarity >= threshold and \
-                       ss.md5sum() not in found_md5:
-                    sr = SearchResult(similarity=similarity,
-                                      match_sig=ss,
-                                      md5=ss.md5sum(),
-                                      filename=filename,
-                                      name=ss.name())
-                    found_md5.add(sr.md5)
+            linear = obj
+            search_iter = linear.search(query, threshold=threshold,
+                                        do_containment=do_containment,
+                                        ignore_abundance=ignore_abundance)
+            for sr in search_iter:
+                if sr.md5 not in found_md5:
                     results.append(sr)
-
+                    found_md5.add(sr.md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x.similarity)

@@ -155,12 +155,15 @@ def test_linear_index_save():
         linear.save(filename)
 
         from sourmash import load_signatures
-        si = set(load_signatures(filename))
+        si = list(load_signatures(filename))
 
-    x = { ss2, ss47, ss63}
+    x = [ ss2, ss47, ss63 ]
 
     print(len(si))
     print(len(x))
+
+    print(si)
+    print(x)
 
     assert si == x
 
@@ -183,8 +186,9 @@ def test_linear_index_load():
 
         linear = LinearIndex.load(filename)
 
-    x = { ss2, ss47, ss63}
+    x = [ ss2, ss47, ss63 ]
     assert linear.signatures == x
+    assert linear.filename == filename
 
 
 def test_linear_index_save_load():

@@ -7,6 +7,7 @@ import argparse
 from . import signature
 from .logging import notify, error
 
+from .index import LinearIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
@@ -297,12 +298,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                                                   ksize=query_ksize,
                                                   select_moltype=query_moltype)
                     siglist = filter_compatible_signatures(query, siglist, 1)
-                    siglist = list(siglist)
-                    databases.append((siglist, sbt_or_sigfile, False))
-                    notify('loaded {} signatures from {}', len(siglist),
+                    linear = LinearIndex(siglist, filename=sigfile)
+                    databases.append((linear, sbt_or_sigfile, False))
+                    notify('loaded {} signatures from {}', len(linear),
                            sigfile, end='\r')
-                    n_signatures += len(siglist)
-                except Exception:  # ignore errors with traverse
+                    n_signatures += len(linear)
+                except Exception:                       # ignore errors with traverse
                     pass
 
             # done! jump to beginning of main 'for' loop
@@ -355,12 +356,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
-            siglist = list(siglist)
+            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
+            databases.append((linear, sbt_or_sigfile, 'signature'))
 
-            databases.append((siglist, sbt_or_sigfile, 'signature'))
-            notify('loaded {} signatures from {}', len(siglist),
+            notify('loaded {} signatures from {}', len(linear),
                    sbt_or_sigfile, end='\r')
-            n_signatures += len(siglist)
+            n_signatures += len(linear)
         except (EnvironmentError, ValueError):
             error("\nCannot open file '{}'", sbt_or_sigfile)
             sys.exit(-1)

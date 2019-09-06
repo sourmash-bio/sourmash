@@ -613,9 +613,10 @@ def test_search_csv():
         with open(csv_file) as fp:
             reader = csv.DictReader(fp)
             row = next(reader)
+            print('xxx', row)
             assert float(row['similarity']) == 0.93
             assert row['name'].endswith('short2.fa')
-            assert row['filename'].endswith('short2.fa.sig')
+            assert row['filename'].endswith('short2.fa.sig'), row['filename']
             assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
 
