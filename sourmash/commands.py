@@ -101,11 +101,10 @@ def compute(args):
                         help="Input is 10x single cell output folder (default: False)")
     parser.add_argument('--count-valid-reads', default=0, type=int,
                         help="For 10x input only (i.e input-is-10x flag is True),"
-                        "Number of reads per (umi, barcode) unique pair"
-                        "A read is only considered a valid barcode read"
-                        "and its signature is written if number of reads per umi, barcode are greater "
-                        " than count-valid-reads. It is used to weed out cell umi,barcodes"
-                        "with few reads that might have been due to false rna enzyme reactions")
+                        "A barcode is only considered a valid barcode read"
+                        "and its signature is written if number of umis are greater "
+                        " than count-valid-reads. It is used to weed out cell barcodes"
+                        "with few umis that might have been due to false rna enzyme reactions")
     parser.add_argument('--write-barcode-meta', action='store_true',
                         help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes,"
                         "Write all_barcodes_metadata.csv file containing number"
