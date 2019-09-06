@@ -76,16 +76,13 @@ def search_databases(query, databases, threshold, do_containment, best_only,
 
         elif filetype == 'LCA':
             lca_db = obj
-            for x in lca_db.find(query.minhash, threshold, do_containment):
-                (score, match_sig, md5, filename, name) = x
-                if md5 not in found_md5:
-                    sr = SearchResult(similarity=score,
-                                      match_sig=match_sig,
-                                      md5=md5,
-                                      filename=filename,
-                                      name=name)
-                    found_md5.add(sr.md5)
+            search_iter = lca_db.search(query, threshold=threshold,
+                                        do_containment=do_containment,
+                                        ignore_abundance=ignore_abundance)
+            for sr in search_iter:
+                if sr.md5 not in found_md5:
                     results.append(sr)
+                    found_md5.add(sr.md5)
 
         else: # list of signatures
             linear = obj

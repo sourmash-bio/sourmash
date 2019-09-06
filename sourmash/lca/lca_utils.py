@@ -24,6 +24,9 @@ from ..index import Index
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
 
+# @CTB copied out of search.py to deal with import order issues, #willfix
+SearchResult = namedtuple('SearchResult',
+                          'similarity, match_sig, md5, filename, name')
 
 def check_files_exist(*files):
     ret = True
@@ -262,11 +265,26 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def find(self, search_fn, *args, **kwargs):
-        pass
+    def search(self, query, *args, **kwargs):
+        # check arguments
+        if 'threshold' not in kwargs:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = kwargs['threshold']
+        do_containment = kwargs.get('do_containment', False)
+        # @CTB ignore_abundance?
 
-    def search(self, sig):
-        pass
+        results = []
+        for x in self.find(query.minhash, threshold, do_containment):
+            (score, match_sig, md5, filename, name) = x
+            sr = SearchResult(similarity=score,
+                              match_sig=match_sig,
+                              md5=md5,
+                              filename=filename,
+                              name=name)
+            results.append(sr)
+
+        results.sort(key=lambda x: -x.similarity)
+        return results
 
     def gather(self, sig):
         pass
