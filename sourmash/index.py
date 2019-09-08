@@ -40,8 +40,10 @@ class Index(ABC):
 
 
 class LinearIndex(Index):
-    def __init__(self, signatures=[], filename=None):
-        self.signatures = list(signatures)
+    def __init__(self, signatures=None, filename=None):
+        self.signatures = []
+        if signatures:
+            self.signatures = list(signatures)
         self.filename = filename
 
     def __len__(self):
