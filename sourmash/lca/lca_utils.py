@@ -291,7 +291,7 @@ class LCA_Database(Index):
         for x in self.find(query.minhash, 0.0,
                            containment=True, ignore_scaled=True):
             (score, match_sig, md5, filename, name) = x
-            if score > 0.0:
+            if score:
                 results.append((score, match_sig, filename))
 
         return results

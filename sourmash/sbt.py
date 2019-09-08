@@ -310,12 +310,11 @@ class SBT(Index):
 
     def gather(self, query, *args, **kwargs):
         from .sbtmh import GatherMinHashesFindBestIgnoreMaxHash
-        threshold = kwargs['threshold']
-
-        search_fn = GatherMinHashesFindBestIgnoreMaxHash(threshold).search
+        # use a tree search function that keeps track of its best match.
+        search_fn = GatherMinHashesFindBestIgnoreMaxHash().search
 
         results = []
-        for leaf in self.find(search_fn, query, threshold):
+        for leaf in self.find(search_fn, query, 0.0):
             leaf_e = leaf.data.minhash
             similarity = query.minhash.containment_ignore_maxhash(leaf_e)
             if similarity > 0.0:

@@ -99,13 +99,10 @@ class LinearIndex(Index):
         return matches
 
     def gather(self, query, *args, **kwargs):
-        # check arguments
-        threshold = kwargs.get('threshold', 0)
-
         results = []
         for ss in self.signatures:
             cont = query.minhash.containment_ignore_maxhash(ss.minhash)
-            if cont > threshold:
+            if cont:
                 results.append((cont, ss, self.filename))
         results.sort(reverse=True)
 

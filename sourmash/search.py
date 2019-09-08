@@ -84,27 +84,17 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_scaled = orig_query.minhash.scaled
 
     # define a function to do a 'best' search and get only top match.
-    def find_best(dblist, query, remainder):
-
-        # @CTB this is a tree-specific optimization, I think - should fix.
-        # precompute best containment from all of the remainders
-        best_ctn_sofar = 0.0
-#        for x in remainder:
-#            ctn = query.minhash.containment_ignore_maxhash(x.minhash)
-#            if ctn > best_ctn_sofar:
-#                best_ctn_sofar = ctn
-
+    def find_best(dblist, query):
         results = []
         for (obj, filename, filetype) in dblist:
             # search a tree!
-            gather_iter = obj.gather(query, threshold=best_ctn_sofar)
+            gather_iter = obj.gather(query)
             for similarity, ss, fname in gather_iter:
                 # @CTB hackity-hack hack, this is because trees don't have
                 # filenames at the moment.
                 if fname is None and filename:
                     fname = filename
                 results.append((similarity, ss, filename))
-
 
         if not results:
             return None, None, None
@@ -113,19 +103,14 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
         best_similarity, best_leaf, filename = results[0]
 
-        for x in results[1:]:
-            remainder.add(x[1])
-
         return best_similarity, best_leaf, filename
-
 
     # construct a new query that doesn't have the max_hash attribute set.
     query = build_new_query([], orig_query)
 
     cmp_scaled = 0
-    remainder = set()
     while 1:
-        best_similarity, best_leaf, filename = find_best(databases, query, remainder)
+        best_similarity, best_leaf, filename = find_best(databases, query)
         if not best_leaf:          # no matches at all!
             break
 
@@ -136,7 +121,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # figure out what the resolution of the banding on the subject is
         if not best_leaf.minhash.max_hash:
             error('Best hash match in sbt_gather has no max_hash')
-            error('Please prepare database of sequences with --scaled')
+            error('Please prepare gather databases with --scaled')
             sys.exit(-1)
 
         match_scaled = best_leaf.minhash.scaled
