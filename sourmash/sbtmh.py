@@ -203,7 +203,7 @@ def search_minhashes_containment(node, sig, threshold,
     return 0
 
 
-class GatherMinHashesFindBestIgnoreMaxHash(object):
+class GatherMinHashes(object):
     def __init__(self):
         self.best_match = 0
 

@@ -4,12 +4,10 @@ import sys
 
 from .logging import notify, error
 from .signature import SourmashSignature
-from .sbtmh import search_minhashes, search_minhashes_containment
-from .sbtmh import SearchMinHashesFindBest, GatherMinHashesFindBestIgnoreMaxHash
 from ._minhash import get_max_hash_for_scaled
 
 
-# generic SearchResult across individual signatures + SBTs.
+# generic SearchResult.
 SearchResult = namedtuple('SearchResult',
                           'similarity, match_sig, md5, filename, name')
 
@@ -30,14 +28,6 @@ def format_bp(bp):
 
 def search_databases(query, databases, threshold, do_containment, best_only,
                      ignore_abundance):
-    # set up the search & score function(s) - similarity vs containment
-    search_fn = search_minhashes
-    query_match = lambda x: query.similarity(
-        x, downsample=True, ignore_abundance=ignore_abundance)
-    if do_containment:
-        search_fn = search_minhashes_containment
-        query_match = lambda x: query.contained_by(x, downsample=True)
-
     results = []
     found_md5 = set()
     for (obj, filename, filetype) in databases:
@@ -50,24 +40,26 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                 results.append(sr)
                 found_md5.add(sr.md5)
 
-
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x.similarity)
 
     return results
 
-
-# build a new query object, subtracting found mins and downsampling if needed.
-def _build_new_query(to_remove, old_query, scaled=None):
-    e = old_query.minhash
-    e.remove_many(to_remove)
-    if scaled:
-        e = e.downsample_scaled(scaled)
-    return SourmashSignature(e)
-
+###
+### gather code
+###
 
 GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
+
+
+# build a new query object, subtracting found mins and downsampling
+def _subtract_and_downsample(to_remove, old_query, scaled=None):
+    mh = old_query.minhash
+    mh = mh.downsample_scaled(scaled)
+    mh.remove_many(to_remove)
+
+    return SourmashSignature(mh)
 
 
 def _find_best(dblist, query):
@@ -114,10 +106,6 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     if track_abundance:
         import numpy as np
         orig_abunds = orig_mh.get_mins(with_abundance=True)
-
-    # construct a new query object for later modification.
-    # @CTB note this doesn't actually construct a new query object...
-    query = _build_new_query([], query)
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while 1:
@@ -195,7 +183,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               leaf=best_match)
 
         # construct a new query, subtracting hashes found in previous one.
-        query = _build_new_query(found_mins, query, cmp_scaled)
+        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
 
         # compute weighted_missed:
         query_mins -= set(found_mins)

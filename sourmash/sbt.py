@@ -309,9 +309,9 @@ class SBT(Index):
         
 
     def gather(self, query, *args, **kwargs):
-        from .sbtmh import GatherMinHashesFindBestIgnoreMaxHash
+        from .sbtmh import GatherMinHashes
         # use a tree search function that keeps track of its best match.
-        search_fn = GatherMinHashesFindBestIgnoreMaxHash().search
+        search_fn = GatherMinHashes().search
 
         results = []
         for leaf in self.find(search_fn, query, 0.0):
