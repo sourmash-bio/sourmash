@@ -74,16 +74,17 @@ def _find_best(dblist, query):
     # search across all databases
     for (obj, filename, filetype) in dblist:
         for cont, match, fname in obj.gather(query):
-            if cont:
-                # note, break ties based on name, to ensure consistent order.
-                if (cont == best_cont and match.name() < best_match.name()) or\
-                   cont > best_cont:
-                    # update best match.
-                    best_cont = cont
-                    best_match = match
+            assert cont
 
-                    # some objects may not have associated filename (e.g. SBTs)
-                    best_filename = fname or filename
+            # note, break ties based on name, to ensure consistent order.
+            if (cont == best_cont and match.name() < best_match.name()) or \
+               cont > best_cont:
+                # update best match.
+                best_cont = cont
+                best_match = match
+
+                # some objects may not have associated filename (e.g. SBTs)
+                best_filename = fname or filename
 
     if not best_match:
         return None, None, None
