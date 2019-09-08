@@ -165,7 +165,7 @@ def test_linear_index_save():
     print(si)
     print(x)
 
-    assert si == x
+    assert si == x, si
 
 
 def test_linear_index_load():
@@ -187,7 +187,7 @@ def test_linear_index_load():
         linear = LinearIndex.load(filename)
 
     x = [ ss2, ss47, ss63 ]
-    assert linear.signatures == x
+    assert linear.signatures == x, linear.signatures
     assert linear.filename == filename
 
 
