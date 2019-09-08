@@ -9,7 +9,7 @@ from ._minhash import get_max_hash_for_scaled
 
 # generic SearchResult.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match_sig, md5, filename, name')
+                          'similarity, match, md5, filename, name')
 
 
 def format_bp(bp):
@@ -35,22 +35,30 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
                                  best_only=best_only)
-        for sr in search_iter:
-            if sr.md5 not in found_md5:
-                results.append(sr)
-                found_md5.add(sr.md5)
+        for (similarity, match, filename) in search_iter:
+            md5 = match.md5sum()
+            if md5 not in found_md5:
+                results.append((similarity, match, filename))
+                found_md5.add(md5)
 
     # sort results on similarity (reverse)
-    results.sort(key=lambda x: -x.similarity)
+    results.sort(key=lambda x: -x[0])
 
-    return results
+    x = []
+    for (similarity, match, filename) in results:
+        x.append(SearchResult(similarity=similarity,
+                              match=match,
+                              md5=match.md5sum(),
+                              filename=filename,
+                              name=match.name()))
+    return x
 
 ###
 ### gather code
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match')
 
 
 # build a new query object, subtracting found mins and downsampling
@@ -181,7 +189,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               filename=filename,
                               md5=best_match.md5sum(),
                               name=best_match.name(),
-                              leaf=best_match)
+                              match=best_match)
 
         # construct a new query, subtracting hashes found in previous one.
         query = _subtract_and_downsample(found_mins, query, cmp_scaled)

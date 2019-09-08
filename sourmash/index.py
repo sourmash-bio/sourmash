@@ -3,11 +3,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
-# @CTB copied out of search.py to deal with import order issues, #willfix
-SearchResult = namedtuple('SearchResult',
-                          'similarity, match_sig, md5, filename, name')
-
-
 # compatible with Python 2 *and* 3:
 ABC = ABCMeta("ABC", (object,), {"__slots__": ()})
 
@@ -87,15 +82,11 @@ class LinearIndex(Index):
         for ss in self.signatures:
             similarity = query_match(ss)
             if similarity >= threshold:
-                # @CTB: check duplicates via md5sum - here or ??
-                sr = SearchResult(similarity=similarity,
-                                  match_sig=ss,
-                                  md5=ss.md5sum(),
-                                  filename = self.filename,
-                                  name=ss.name())
-                matches.append(sr)
+                # @CTB: check duplicates via md5sum - here or later?
+                matches.append((similarity, ss, self.filename))
 
-        matches.sort(key=lambda x: -x.similarity)
+        # sort!
+        matches.sort(key=lambda x: -x[0])
         return matches
 
     def gather(self, query, *args, **kwargs):

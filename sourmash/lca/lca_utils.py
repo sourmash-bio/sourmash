@@ -24,9 +24,6 @@ from ..index import Index
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
 
-# @CTB copied out of search.py to deal with import order issues, #willfix
-SearchResult = namedtuple('SearchResult',
-                          'similarity, match_sig, md5, filename, name')
 
 def check_files_exist(*files):
     ret = True
@@ -275,24 +272,19 @@ class LCA_Database(Index):
 
         results = []
         for x in self.find(query.minhash, threshold, do_containment):
-            (score, match_sig, md5, filename, name) = x
-            sr = SearchResult(similarity=score,
-                              match_sig=match_sig,
-                              md5=md5,
-                              filename=filename,
-                              name=name)
-            results.append(sr)
+            (score, match, filename) = x
+            results.append((score, match, filename))
 
-        results.sort(key=lambda x: -x.similarity)
+        results.sort(key=lambda x: -x[0])
         return results
 
     def gather(self, query, *args, **kwargs):
         results = []
         for x in self.find(query.minhash, 0.0,
                            containment=True, ignore_scaled=True):
-            (score, match_sig, md5, filename, name) = x
+            (score, match, filename) = x
             if score:
-                results.append((score, match_sig, filename))
+                results.append((score, match, filename))
 
         return results
 
@@ -396,7 +388,7 @@ class LCA_Database(Index):
                 from .. import SourmashSignature
                 match_sig = SourmashSignature(match_mh, name=name)
 
-                yield score, match_sig, match_sig.md5sum(), self.filename, name
+                yield score, match_sig, self.filename
 
 
 def load_single_database(filename, verbose=False):

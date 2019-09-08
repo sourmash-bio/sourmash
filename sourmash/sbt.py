@@ -77,9 +77,6 @@ STORAGES = {
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
-# @CTB copied out of search.py to deal with import order issues, #willfix
-SearchResult = namedtuple('SearchResult',
-                          'similarity, match_sig, md5, filename, name')
 
 class GraphFactory(object):
     """Build new nodegraphs (Bloom filters) of a specific (fixed) size.
@@ -298,12 +295,7 @@ class SBT(Index):
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            sr = SearchResult(similarity=similarity,
-                              match_sig=leaf.data,
-                              md5=leaf.data.md5sum(),
-                              name=leaf.data.name(),
-                              filename=None)
-            results.append(sr)
+            results.append((similarity, leaf.data, None))
 
         return results
         
