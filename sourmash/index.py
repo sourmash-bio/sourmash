@@ -99,12 +99,14 @@ class LinearIndex(Index):
         return matches
 
     def gather(self, query, *args, **kwargs):
+        "Return the best containment in the list."
         results = []
         for ss in self.signatures:
             cont = query.minhash.containment_ignore_maxhash(ss.minhash)
             if cont:
                 results.append((cont, ss, self.filename))
-        results.sort(reverse=True)
+
+        results.sort(reverse=True)        # CTB: sort on ss.name() too?
 
         return results
 

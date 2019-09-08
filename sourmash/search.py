@@ -57,8 +57,8 @@ def search_databases(query, databases, threshold, do_containment, best_only,
     return results
 
 
-# define a function to build new query object
-def build_new_query(to_remove, old_query, scaled=None):
+# build a new query object, subtracting found mins and downsampling if needed.
+def _build_new_query(to_remove, old_query, scaled=None):
     e = old_query.minhash
     e.remove_many(to_remove)
     if scaled:
@@ -70,64 +70,74 @@ GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, leaf')
 
 
+def _find_best(dblist, query):
+    """
+    Search for the best containment, return precisely one match.
+    """
+
+    best_cont = 0.0
+    best_match = None
+    best_filename = None
+
+    # search across all databases
+    for (obj, filename, filetype) in dblist:
+        for cont, match, fname in obj.gather(query):
+            if cont:
+                # note, break ties based on name, to ensure consistent order.
+                if (cont == best_cont and match.name() < best_match.name()) or\
+                   cont > best_cont:
+                    # update best match.
+                    best_cont = cont
+                    best_match = match
+
+                    # some objects may not have associated filename (e.g. SBTs)
+                    best_filename = fname or filename
+
+    if not best_match:
+        return None, None, None
+
+    return best_cont, best_match, best_filename
+
+
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
-    orig_query = query
-    orig_mins = orig_query.minhash.get_hashes()
+    """
+    Iteratively find the best containment of `query` in all the `databases`,
+    until we find fewer than `threshold_bp` (estimated) bp in common.
+    """
+    # track original query information for later usage.
+    track_abundance = query.minhash.track_abundance and not ignore_abundance
+    orig_mh = query.minhash
+    orig_mins = orig_mh.get_hashes()
     orig_abunds = { k: 1 for k in orig_mins }
 
     # do we pay attention to abundances?
-    if orig_query.minhash.track_abundance and not ignore_abundance:
+    if track_abundance:
         import numpy as np
-        orig_abunds = orig_query.minhash.get_mins(with_abundance=True)
+        orig_abunds = orig_mh.get_mins(with_abundance=True)
 
-    # store the scaled value for the query
-    orig_scaled = orig_query.minhash.scaled
+    # construct a new query object for later modification.
+    # @CTB note this doesn't actually construct a new query object...
+    query = _build_new_query([], query)
 
-    # define a function to do a 'best' search and get only top match.
-    def find_best(dblist, query):
-        results = []
-        for (obj, filename, filetype) in dblist:
-            # search a tree!
-            gather_iter = obj.gather(query)
-            for similarity, ss, fname in gather_iter:
-                # @CTB hackity-hack hack, this is because trees don't have
-                # filenames at the moment.
-                if fname is None and filename:
-                    fname = filename
-                results.append((similarity, ss, filename))
-
-        if not results:
-            return None, None, None
-
-        # take the best result
-        results.sort(key=lambda x: (-x[0], x[1].name()))   # reverse sort on similarity, and then on name
-        best_similarity, best_leaf, filename = results[0]
-
-        return best_similarity, best_leaf, filename
-
-    # construct a new query that doesn't have the max_hash attribute set.
-    query = build_new_query([], orig_query)
-
-    cmp_scaled = 0
+    cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while 1:
-        best_similarity, best_leaf, filename = find_best(databases, query)
-        if not best_leaf:          # no matches at all!
+        best_cont, best_match, filename = _find_best(databases, query)
+        if not best_match:          # no matches at all!
             break
 
         # subtract found hashes from search hashes, construct new search
         query_mins = set(query.minhash.get_hashes())
-        found_mins = best_leaf.minhash.get_hashes()
+        found_mins = best_match.minhash.get_hashes()
 
-        # figure out what the resolution of the banding on the subject is
-        if not best_leaf.minhash.max_hash:
-            error('Best hash match in sbt_gather has no max_hash')
+        # Is the best match computed with scaled? Die if not.
+        match_scaled = best_match.minhash.scaled
+        if not match_scaled:
+            error('Best match in gather is not scaled.')
             error('Please prepare gather databases with --scaled')
-            sys.exit(-1)
-
-        match_scaled = best_leaf.minhash.scaled
+            raise Exception
 
         # pick the highest scaled / lowest resolution
-        cmp_scaled = max(cmp_scaled, match_scaled, orig_scaled)
+        cmp_scaled = max(cmp_scaled, match_scaled)
 
         # eliminate mins under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
@@ -154,7 +164,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_orig_query = len(intersect_orig_mins) / float(len(orig_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        orig_mh = orig_query.minhash.downsample_scaled(cmp_scaled)
+        orig_mh = orig_mh.downsample_scaled(cmp_scaled)
         query_n_mins = len(orig_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
@@ -162,9 +172,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_unique_weighted = sum((orig_abunds[k] for k in intersect_mins)) \
                / sum_abunds
 
-        intersect_abunds = list(sorted(orig_abunds[k] for k in intersect_mins))
+        # calculate stats on abundances, if desired.
         average_abund, median_abund, std_abund = 0, 0, 0
-        if orig_query.minhash.track_abundance and not ignore_abundance:
+        if track_abundance:
+            intersect_abunds = list((orig_abunds[k] for k in intersect_mins))
             average_abund = np.mean(intersect_abunds)
             median_abund = np.median(intersect_abunds)
             std_abund = np.std(intersect_abunds)
@@ -179,14 +190,15 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               median_abund=median_abund,
                               std_abund=std_abund,
                               filename=filename,
-                              md5=best_leaf.md5sum(),
-                              name=best_leaf.name(),
-                              leaf=best_leaf)
+                              md5=best_match.md5sum(),
+                              name=best_match.name(),
+                              leaf=best_match)
 
-        # construct a new query, minus the previous one.
-        query = build_new_query(found_mins, orig_query, cmp_scaled)
+        # construct a new query, subtracting hashes found in previous one.
+        query = _build_new_query(found_mins, query, cmp_scaled)
+
+        # compute weighted_missed:
         query_mins -= set(found_mins)
-
         weighted_missed = sum((orig_abunds[k] for k in query_mins)) \
              / sum_abunds
 
