@@ -65,7 +65,7 @@ def main():
     minhash = MinHash(n=num, ksize=args.ksize, scaled=scaled)
 
     # add hashes into!
-    minhash.add_many(hashval)
+    minhash.add_many(hashes)
 
     if len(minhash) < len(hashes):
         notify("WARNING: loaded {} hashes, but only {} made it into MinHash.",
