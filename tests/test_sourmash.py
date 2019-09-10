@@ -3488,6 +3488,20 @@ def test_gather_abund_10_1_ignore_abundance():
         assert 'genome-s12.fa.gz' not in out
 
 
+@utils.in_tempdir
+def test_gather_output_unassigned_with_abundance(c):
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
+
+    c.run_sourmash('gather', query, against, '--output-unassigned',
+                   c.output('unassigned.sig'))
+
+    assert os.path.exists(c.output('unassigned.sig'))
+
+    ss = sourmash.load_one_signature(c.output('unassigned.sig'))
+    assert ss.minhash.track_abundance
+
+
 def test_sbt_categorize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')

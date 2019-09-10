@@ -1,3 +1,6 @@
+"""
+Functions implementing the main command-line subcommands.
+"""
 from __future__ import print_function, division, absolute_import
 
 import argparse
@@ -976,7 +979,7 @@ def index(args):
     parser.add_argument('-d', '--n_children', type=int, default=2,
                         help='Number of children for internal nodes')
     parser.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath this directory.')
+                        help='load all signatures underneath any directories.')
     parser.add_argument('--append', action='store_true', default=False,
                         help='add signatures to an existing SBT.')
     parser.add_argument('-x', '--bf-size', type=float, default=1e5,
@@ -1393,8 +1396,15 @@ def gather(args):
             outname = args.output_unassigned.name
             notify('saving unassigned hashes to "{}"', outname)
 
-            e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
-            e.add_many(next_query.minhash.get_mins())
+            with_abundance = next_query.minhash.track_abundance
+            e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
+                        track_abundance=with_abundance)
+            if with_abundance:
+                abunds = next_query.minhash.get_mins(with_abundance=True)
+                e.set_abundances(abunds)
+            else:
+                e.add_many(next_query.minhash.get_mins())
+
             sig.save_signatures([ sig.SourmashSignature(e) ],
                                 args.output_unassigned)
 
