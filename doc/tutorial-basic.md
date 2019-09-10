@@ -185,6 +185,12 @@ Compare all the things:
 sourmash compare ecoli_many_sigs/* -o ecoli_cmp
 ```
 
+Optionally, parallelize to 8 threads using `-p 8`:
+
+```
+sourmash compare -p 8 ecoli_many_sigs/* -o ecoli_cmp
+```
+
 and then plot:
 
 ```
