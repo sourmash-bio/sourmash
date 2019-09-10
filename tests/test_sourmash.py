@@ -221,11 +221,14 @@ def test_do_sourmash_compute_10x():
                 os.unlink(file_name)
 
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+        csv_path = os.path.join(location, "all_barcodes_meta.csv")
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--dna', '--count-valid-reads', '10',
                                             '--input-is-10x',
                                             testdata1,
+                                            '--write-barcode-meta-csv', csv_path,
+                                            '--save-fastas', location,
                                             '-o', '10x-example_dna.sig'],
                                            in_directory=location)
 
@@ -241,6 +244,13 @@ def test_do_sourmash_compute_10x():
         for file_name in os.listdir(folder):
             if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
                 os.unlink(file_name)
+
+        with open(csv_path, 'rb') as f:
+            data = [line.split() for line in f]
+        assert len(data) == 9
+        barcodes = [file_name.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
+        assert len(list(bc in true_barcodes for bc in barcodes)) == 1
+        os.unlink(csv_path)
 
 
 def test_do_sourmash_compute_name():

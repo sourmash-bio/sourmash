@@ -105,16 +105,16 @@ def compute(args):
                         "and its signature is written if number of umis are greater "
                         " than count-valid-reads. It is used to weed out cell barcodes"
                         "with few umis that might have been due to false rna enzyme reactions")
-    parser.add_argument('--write-barcode-meta', action='store_true',
+    parser.add_argument('--write-barcode-meta-csv', type=str,
                         help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes,"
-                        "Write all_barcodes_metadata.csv file containing number"
-                        "of reads and number of umis to {all_barcodes_metadata}.csv file. (default: False)")
+                        "Write to a given path, number of reads and number of umis per barcode, ")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='For 10x input only (i.e input-is-10x flag is True,'
                         'Number of processes to use for reading 10x bam file')
-    parser.add_argument('--save-fastas', action='store_true',
+    parser.add_argument('--save-fastas', type=str,
                         help='For 10x input only (i.e input-is-10x flag is True),'
-                        'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta (default: False)')
+                        'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta'
+                        'save by default in the same directory from which the command is run')
     parser.add_argument('--line-count', type=int,
                         help='For 10x input only (i.e input-is-10x flag is True), line count for each bam shard',
                         default=DEFAULT_LINE_COUNT)
@@ -161,7 +161,7 @@ def compute(args):
         if args.num_hashes != 0:
             notify('setting num_hashes to 0 because --scaled is set')
             args.num_hashes = 0
-
+ 
     notify('computing signatures for files: {}', ", ".join(args.filenames))
 
     if args.randomize:
@@ -342,7 +342,7 @@ def compute(args):
             for record in screed.open(fasta):
                 umis[record.name] += record.sequence.count(delimeter)
 
-        if args.write_barcode_meta:
+        if args.write_barcode_meta_csv:
             unique_fasta_file = os.path.basename(fasta).replace(".fasta", "_meta.txt")
             with open(unique_fasta_file, "w") as f:
                 f.write("{} {}".format(len(umis), sum(list(umis.values()))))
@@ -541,11 +541,11 @@ def compute(args):
                 pool.close()
                 pool.join()
 
-                if args.write_barcode_meta:
+                if args.write_barcode_meta_csv:
 
                     barcodes_meta_txts = glob.glob("*_meta.txt")
 
-                    with open("all_barcodes_metadata.csv", "w") as fp:
+                    with open(args.write_barcode_meta_csv, "w") as fp:
                         fp.write("{},{},{}".format(CELL_BARCODE, UMI_COUNT, READ_COUNT))
                         fp.write('\n')
                         for barcode_meta_txt in barcodes_meta_txts:

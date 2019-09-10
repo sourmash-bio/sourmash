@@ -8,8 +8,6 @@ import pysam
 
 CELL_BARCODES = ['CB', 'XC']
 UMIS = ['UB', 'XM']
-BAM_FILENAME = 'possorted_genome_bam.bam'
-BARCODES_TSV = 'barcodes.tsv'
 
 
 def pass_alignment_qc(alignment, barcodes):
