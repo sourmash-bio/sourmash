@@ -3,6 +3,7 @@
 Given a list of hash values, create a sourmash signature.
 
 CTB: Should eventually be added to sourmash signature import/export.
+CTB: recommend people use scaled=1; make default?
 """
 import sys
 import argparse

@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
 """
-Given a signature file and a collection of sequences, output all of the
-k-mers and sequences that match a hashval in the signature file.
+Given a list of hash values and a collection of sequences, output
+all of the k-mers that match a hashval.
 
-NOTE: for now, only works for DNA.
+NOTE: for now, only implemented for DNA & for seed=42.
 """
 import sys
 import argparse
@@ -36,12 +36,13 @@ def get_kmers_for_hashvals(sequence, hashvals, ksize):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('query') 					# signature file
+    p.add_argument('hashfile') 					# file that contains hashes
     p.add_argument('seqfiles', nargs='+')		# sequence files from which to look for matches
     p.add_argument('--output-sequences', type=str, default=None,
                    help='save matching sequences to this file.')
     p.add_argument('--output-kmers', type=str, default=None,
                    help='save matching kmers to this file.')
+    p.add_argument('-k', '--ksize', default=None, type=int)
     args = p.parse_args()
 
     # set up the outputs.
@@ -59,13 +60,22 @@ def main():
         error("No output options given!")
         return(-1)
 
-    # first, load the signature and extract the hashvals
-    sigobj = sourmash.load_one_signature(args.query)
-    query_hashvals = set(sigobj.minhash.get_mins())
-    query_ksize = sigobj.minhash.ksize
+    # check arguments.
+    if not args.ksize:
+        error('must specify --ksize')
+        return -1
 
-    # track found kmers
-    found_kmers = {}
+    # load in all the hashes
+    hashes = set()
+    for line in open(args.hashfile, 'rt'):
+        hashval = int(line.strip())
+        hashes.add(hashval)
+
+    if not hashes:
+        error("ERROR, no hashes loaded from {}!", args.hashfile)
+        return -1
+
+    notify('loaded {} distinct hashes from {}', len(hashes), args.hashfile)
 
     # now, iterate over the input sequences and output those that overlap
     # with hashes!
@@ -73,6 +83,7 @@ def main():
     n = 0 # bp loaded
     m = 0 # bp in found sequences
     p = 0 # number of k-mers found
+    found_kmers = {}
     watermark = NOTIFY_EVERY_BP
     for filename in args.seqfiles:
         for record in screed.open(filename):
@@ -84,8 +95,8 @@ def main():
 
             # now do the hard work of finding the matching k-mers!
             for kmer, hashval in get_kmers_for_hashvals(record.sequence,
-                                                        query_hashvals,
-                                                        query_ksize):
+                                                        hashes,
+                                                        args.ksize):
                 found_kmers[kmer] = hashval
 
                 # write out sequence
