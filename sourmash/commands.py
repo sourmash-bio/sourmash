@@ -111,7 +111,7 @@ def compute(args):
                         "with few umis that might have been due to false rna enzyme reactions")
     parser.add_argument('--write-barcode-meta-csv', type=str,
                         help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes,"
-                        "Write to a given path, number of reads and number of umis per barcode, ")
+                        "Write to a given path, number of reads and number of umis per barcode")
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='For 10x input only (i.e input-is-10x flag is True,'
                         'Number of processes to use for reading 10x bam file')
