@@ -104,7 +104,7 @@ def read_bam_file(bam_path):
 
 
 def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
-    """Shard QC-pass bam file with the given line count and save to tmp dir.
+    """Shard QC-pass bam file with the given line count and save to shards_folder
 
     Parameters
     ----------
@@ -112,6 +112,8 @@ def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
         Bam file to shard
     chunked_file_line_count: int
         number of lines/alignment reads in each sharded bam file
+    shards_folder: str
+        absolute path to save the sharded bam files to
     Returns
     -------
 
