@@ -215,6 +215,8 @@ def test_do_sourmash_compute_10x():
         assert any(
             sig["signatures"][0]["mins"] != [] for sig in data)
 
+        # @CTB what is the purpose of this? why are files getting created
+        # outside of 'location'?
         folder = utils.get_test_data('10x-example/')
         for file_name in os.listdir(folder):
             if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
@@ -234,12 +236,14 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, '10x-example_dna.sig')
         assert os.path.exists(sigfile)
-        with open(sigfile) as fp:
+        with open(sigfile) as fp:         # @CTB why not use sourmash.load_one_signature?
             data = json.load(fp)
         assert len(data) == 1
         assert any(
             sig["signatures"][0]["mins"] != [] for sig in data)
 
+        # @CTB what is the purpose of this? why are files getting created
+        # outside of 'location'?
         folder = utils.get_test_data('10x-example/')
         for file_name in os.listdir(folder):
             if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
@@ -250,6 +254,9 @@ def test_do_sourmash_compute_10x():
         assert len(data) == 9
         barcodes = [file_name.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
         assert len(list(bc in true_barcodes for bc in barcodes)) == 1
+
+        # @CTB what is the purpose of this? why are files getting created
+        # outside of 'location'?
         os.unlink(csv_path)
 
 
