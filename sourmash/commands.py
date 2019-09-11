@@ -348,7 +348,7 @@ def compute(args):
         for fasta in iter_split(single_barcode_fastas, ","):
             # calculate unique umi, sequence counts
             for record in screed.open(fasta):
-                umis[record.name] += record.sequence.count(delimeter)
+                umis[record.name] += record.sequence.count(delimiter)
 
         if args.write_barcode_meta_csv:
             unique_fasta_file = os.path.basename(fasta)
@@ -424,7 +424,7 @@ def compute(args):
 
     if args.input_is_10x:
         all_fastas_sorted = []
-        delimeter = "X"
+        delimiter = "X"
         umi_filter = True if args.count_valid_reads != 0 else False
         Elist = make_minhashes()
         CELL_BARCODE = "CELL_BARCODE"
@@ -485,7 +485,7 @@ def compute(args):
                     bam_to_fasta,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimeter,
+                    delimiter,
                     umi_filter)
 
                 length_sharded_bam_files = len(filenames)
@@ -505,12 +505,12 @@ def compute(args):
                 pool.close()
                 pool.join()
 
-                # clean up the memmap and sharded intermediatary bam files
+                # clean up the memmap and sharded intermediary bam files
                 [os.unlink(file) for file in filenames if os.path.exists(file)]
                 del filenames
                 if os.path.exists(mmap_file):
                     os.unlink(mmap_file)
-                notify("Deleted intermediatary bam and memmap files")
+                notify("Deleted intermediary bam and memmap files")
 
                 # Build a dictionary with each unique barcode as key and
                 # their fasta files from different shards
@@ -669,7 +669,7 @@ def compare(args):
     parser.add_argument('--csv', type=argparse.FileType('w'),
                         help='save matrix in CSV format (with column headers)')
     parser.add_argument('-p', '--processes', type=int,
-                        help='Number of processes to parallely calculate similarity')
+                        help='Number of processes to use to calculate similarity')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress non-error output')
     args = parser.parse_args(args)
