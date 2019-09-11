@@ -1,3 +1,7 @@
+"""
+10x-sequencing specific utility functions.
+"""
+
 import os
 from .logging import notify
 from collections import defaultdict
@@ -12,7 +16,8 @@ UMIS = ['UB', 'XM']
 
 def pass_alignment_qc(alignment, barcodes):
     """
-    Assert high quality mapping, QC-passing barcode and UMI of alignment
+    Check high quality mapping, QC-passing barcode and UMI of alignment.
+
     alignment :
         aligned bam segment
     barcodes : list
@@ -39,7 +44,8 @@ def pass_alignment_qc(alignment, barcodes):
 
 def parse_barcode_renamer(barcodes, barcode_renamer):
     """
-    Return a dictionary with cell barcode and the renamed barcode
+    Return a dictionary with cell barcode and the renamed barcode.
+
     barcodes : list
         List of cellular barcode strings
     barcode_renamer : str
@@ -65,7 +71,8 @@ def parse_barcode_renamer(barcodes, barcode_renamer):
 
 
 def read_barcodes_file(barcode_path):
-    """Read single-column barcodes.tsv and genes.tsv files from 10x
+    """Read single-column barcodes.tsv and genes.tsv files from 10x.
+
     Parameters
     ----------
     barcode_path : str
@@ -81,7 +88,8 @@ def read_barcodes_file(barcode_path):
 
 
 def read_bam_file(bam_path):
-    """Read from a QC-pass bam file
+    """Read from a QC-pass bam file.
+
     Parameters
     ----------
     bam_path : str
@@ -96,7 +104,8 @@ def read_bam_file(bam_path):
 
 
 def shard_bam_file(bam_file_path, chunked_file_line_count):
-    """Shard QC-pass bam file with the given line count and save them to tmp dir
+    """Shard QC-pass bam file with the given line count and save to tmp dir.
+
     Parameters
     ----------
     bam_file_path : str
@@ -113,7 +122,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     startt = time.time()
     file_names = []
 
-    with pysam.AlignmentFile(bam_file_path, "rb") as bam_file:
+    with read_bam_file(bam_file_path) as bam_file:
         line_count = 0
         file_count = 0
         header = bam_file.header
@@ -130,19 +139,21 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
                 line_count = 0
                 outf.write(alignment)
                 outf.close()
-                notify("===== Sharding bam file ====== {}".format(file_count), end="\r")
+                notify("===== Sharding bam file ====== {}", file_count,
+                       end="\r")
             else:
                 outf.write(alignment)
                 line_count = line_count + 1
         outf.close()
 
-    notify(
-        "time taken to shard the bam file into {} shards is {:.5f} seconds".format(file_count, time.time() - startt))
+    notify("time taken to shard the bam file into {} shards is {:.5f} seconds",
+           file_count, time.time() - startt)
     return file_names
 
 
 def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
-    """Convert 10x bam to one-record-per-cell fasta
+    """Convert 10x bam to one-record-per-cell fasta.
+
     Parameters
     ----------
     bam : bamnostic.AlignmentFile
@@ -156,17 +167,20 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
         has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
         concatenated as 'AAAAAAAAAXCCCCCCCC'.
     umi_filter : boolean
-        If umi filter is True, then umi is written in place of fasta record name
+        If umi filter is True, then umi is written in place of fasta
+            record name
         barcode is the fasta file name in the output fastas.
     Returns
     -------
     filenames: list
-        one temp fasta filename for one cell's high-quality, non-duplicate reads
+        one temp fasta filename for one cell's high-quality, non-duplicate
+        reads
 
     """
     bam = read_bam_file(bam_file)
 
-    # Filter out high quality alignments and/or alignments with selected barcoddes
+    # Filter out high quality alignments and/or alignments with selected
+    # barcoddes
     bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
     if barcodes is not None:
         renamer = parse_barcode_renamer(barcodes, barcode_renamer)
@@ -176,7 +190,8 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
 
     for alignment in bam_filtered:
         # Get barcode of alignment, looks like "AAATGCCCAAACTGCT-1"
-        # a bam file might have good cell barcode as any of the tags in CELL_BARCODES
+        # a bam file might have good cell barcode as any of the tags in
+        # CELL_BARCODES
         for cb in CELL_BARCODES:
             if alignment.has_tag(cb):
                 barcode = alignment.get_tag(cb)
@@ -197,6 +212,9 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
 
     filenames = list(set(write_cell_sequences(cell_sequences, umi_filter, delimiter)))
     notify("bam_to_fasta conversion completed on {}", bam_file, end='\r', flush=True)
+
+    bam.close()
+
     return filenames
 
 

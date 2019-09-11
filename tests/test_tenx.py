@@ -27,6 +27,9 @@ def test_shard_bam_file():
     expected_alignments = sum(1 for _ in bam_file)
     bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments)
     assert len(bam_shard_files) == 1
+
+    # @CTB please do this in a temp directory, and then these things will be
+    # removed automatically.
     for bam_file in bam_shard_files:
         if os.path.exists(bam_file):
             os.unlink(bam_file)
@@ -41,6 +44,7 @@ def test_shard_bam_file():
     assert total_alignments == expected_alignments
 
     whole_bam_file = sourmash_tenx.read_bam_file(filename)
+    # @CTB please use temp directory
     for bam_file in bam_shard_files:
         for line in sourmash_tenx.read_bam_file(bam_file):
             assert line == next(whole_bam_file)
