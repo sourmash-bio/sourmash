@@ -280,7 +280,7 @@ def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
         except TypeError:
             fp.write(unicode(s))
         return None
-    return s
+    return unicode(s)
 
 
 def save_signatures_json(

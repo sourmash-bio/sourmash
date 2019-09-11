@@ -500,15 +500,14 @@ def compute(args):
                 # is saved as a separate element, hence the string
                 all_fastas = "," .join(itertools.chain(*(
                     pool.imap(
-                        lambda x: func(x), filenames, chunksize=chunksize))))
+                        lambda x: func(x.encode('utf-8')), filenames, chunksize=chunksize))))
                 pool.close()
                 pool.join()
 
                 # clean up the memmap and sharded intermediary bam files
                 [os.unlink(file) for file in filenames if os.path.exists(file)]
                 del filenames
-                if os.path.exists(mmap_file):
-                    os.unlink(mmap_file)
+                os.unlink(mmap_file)
                 notify("Deleted intermediary bam and memmap files")
 
                 # Build a dictionary with each unique barcode as key and
