@@ -103,7 +103,7 @@ def read_bam_file(bam_path):
     return pysam.AlignmentFile(bam_path, mode='rb')
 
 
-def shard_bam_file(bam_file_path, chunked_file_line_count):
+def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
     """Shard QC-pass bam file with the given line count and save to tmp dir.
 
     Parameters
@@ -122,8 +122,6 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
     startt = time.time()
     file_names = []
 
-    temp_folder = tempfile.mkdtemp()
-
     with read_bam_file(bam_file_path) as bam_file:
         line_count = 0
         file_count = 0
@@ -131,7 +129,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count):
         for index, alignment in enumerate(bam_file):
             if line_count == 0:
                 file_name = os.path.join(
-                    temp_folder,
+                    shards_folder,
                     "temp_bam_shard_{}.bam".format(file_count))
                 file_names.append(file_name)
                 outf = pysam.AlignmentFile(file_name, "wb", header=header)

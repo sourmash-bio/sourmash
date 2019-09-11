@@ -1,6 +1,7 @@
 from . import sourmash_tst_utils as utils
 import sourmash.tenx as sourmash_tenx
 
+import tempfile
 import pysam as bs
 
 
@@ -24,11 +25,13 @@ def test_shard_bam_file():
     assert isinstance(bam_file, bs.AlignmentFile)
 
     expected_alignments = sum(1 for _ in bam_file)
-    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments)
+    bam_shard_files = sourmash_tenx.shard_bam_file(
+        filename, expected_alignments, tempfile.mkdtemp())
     assert len(bam_shard_files) == 1
 
     num_shards = 2
-    bam_shard_files = sourmash_tenx.shard_bam_file(filename, expected_alignments // num_shards)
+    bam_shard_files = sourmash_tenx.shard_bam_file(
+        filename, expected_alignments // num_shards, tempfile.mkdtemp())
     assert len(bam_shard_files) == 2
 
     total_alignments = 0

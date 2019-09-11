@@ -474,7 +474,7 @@ def compute(args):
                 notify('... reading bam file from {}', filename)
                 n_jobs = args.processes
                 filenames, mmap_file = np_utils.to_memmap(np.array(
-                    shard_bam_file(filename, args.line_count)))
+                    shard_bam_file(filename, args.line_count, os.getcwd())))
 
                 # Create a per-cell fasta generator of sequences
                 # If the reads should be filtered by barcodes and umis
