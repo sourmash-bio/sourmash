@@ -25,24 +25,26 @@ def test_shard_bam_file():
     assert isinstance(bam_file, bs.AlignmentFile)
 
     expected_alignments = sum(1 for _ in bam_file)
-    bam_shard_files = sourmash_tenx.shard_bam_file(
-        filename, expected_alignments, tempfile.mkdtemp())
-    assert len(bam_shard_files) == 1
+    with utils.TempDirectory() as location:
+        bam_shard_files = sourmash_tenx.shard_bam_file(
+            filename, expected_alignments, location)
+        assert len(bam_shard_files) == 1
 
     num_shards = 2
-    bam_shard_files = sourmash_tenx.shard_bam_file(
-        filename, expected_alignments // num_shards, tempfile.mkdtemp())
-    assert len(bam_shard_files) == 2
+    with utils.TempDirectory() as location:
+        bam_shard_files = sourmash_tenx.shard_bam_file(
+            filename, expected_alignments // num_shards, location)
+        assert len(bam_shard_files) == 2
 
-    total_alignments = 0
-    for bam_file in bam_shard_files:
-        total_alignments += sum(1 for _ in sourmash_tenx.read_bam_file(bam_file))
-    assert total_alignments == expected_alignments
+        total_alignments = 0
+        for bam_file in bam_shard_files:
+            total_alignments += sum(1 for _ in sourmash_tenx.read_bam_file(bam_file))
+        assert total_alignments == expected_alignments
 
-    whole_bam_file = sourmash_tenx.read_bam_file(filename)
-    for bam_file in bam_shard_files:
-        for line in sourmash_tenx.read_bam_file(bam_file):
-            assert line == next(whole_bam_file)
+        whole_bam_file = sourmash_tenx.read_bam_file(filename)
+        for bam_file in bam_shard_files:
+            for line in sourmash_tenx.read_bam_file(bam_file):
+                assert line == next(whole_bam_file)
 
 
 def test_pass_alignment_qc():
