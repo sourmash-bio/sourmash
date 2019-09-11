@@ -1,7 +1,6 @@
 from . import sourmash_tst_utils as utils
 import sourmash.tenx as sourmash_tenx
 
-import tempfile
 import pysam as bs
 
 

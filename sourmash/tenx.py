@@ -57,12 +57,14 @@ def parse_barcode_renamer(barcodes, barcode_renamer):
     barcode_renamer : dict
         A (str, str) mapping of the original barcode to its new name
     """
+    print(barcodes)
     if barcode_renamer is not None:
         renamer = {}
 
         with open(barcode_renamer) as f:
             for line in f.readlines():
                 barcode, renamed = line.split()
+                print(barcode, renamed)
                 assert barcode in barcodes
                 renamer[barcode] = renamed
     else:
@@ -183,7 +185,7 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
     # Filter out high quality alignments and/or alignments with selected
     # barcoddes
     bam_filtered = (x for x in bam if pass_alignment_qc(x, barcodes))
-    if barcodes is not None:
+    if barcode_renamer is not None and barcodes is not None:
         renamer = parse_barcode_renamer(barcodes, barcode_renamer)
     else:
         renamer = None
