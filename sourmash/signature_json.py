@@ -236,6 +236,10 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
 
 
 def get_top_records(siglist):
+    # @CTB I think get_top_records can be removed? It doesn't serve much
+    # of a purpose, and (in some old versions of Python at least) it
+    # may randomize the order of signatures in siglist, which is an
+    # undesirable side effect.
     top_records = {}
     for sig in siglist:
         name, filename, sketch = sig._save()
@@ -248,7 +252,7 @@ def get_top_records(siglist):
 
 
 def add_meta_save(top_records):
-    """ Convert one signatures into a JSON dict
+    """ Convert one signature into a JSON dict
     - siglist: sequence of SourmashSignature objects
     - index: index of siglist to save
     """
