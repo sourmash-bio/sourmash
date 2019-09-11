@@ -183,18 +183,17 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
         assert os.path.exists(sigfile)
-        with open(sigfile) as fp:
-            data = json.load(fp)
-        assert len(data) == 8
-        barcode_signatures = [sig['name'] for sig in data]
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 16
+        barcode_signatures = list(set([sig.name() for sig in siglist]))
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
-        assert all(
-            sig["signatures"][i]["mins"] != [] for i in range(2) for sig in data)
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
 
         # Filtered bam file with no barcodes file
         # should run sourmash compute successfully
@@ -209,18 +208,10 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, '10x-example_dna.sig')
         assert os.path.exists(sigfile)
-        with open(sigfile) as fp:
-            data = json.load(fp)
-        assert len(data) == 32
-        assert any(
-            sig["signatures"][0]["mins"] != [] for sig in data)
-
-        # @CTB what is the purpose of this? why are files getting created
-        # outside of 'location'?
-        folder = utils.get_test_data('10x-example/')
-        for file_name in os.listdir(folder):
-            if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
-                os.unlink(file_name)
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 32
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
 
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
         csv_path = os.path.join(location, "all_barcodes_meta.csv")
@@ -236,28 +227,16 @@ def test_do_sourmash_compute_10x():
 
         sigfile = os.path.join(location, '10x-example_dna.sig')
         assert os.path.exists(sigfile)
-        with open(sigfile) as fp:         # @CTB why not use sourmash.load_one_signature?
-            data = json.load(fp)
-        assert len(data) == 1
-        assert any(
-            sig["signatures"][0]["mins"] != [] for sig in data)
-
-        # @CTB what is the purpose of this? why are files getting created
-        # outside of 'location'?
-        folder = utils.get_test_data('10x-example/')
-        for file_name in os.listdir(folder):
-            if file_name.endswith(".bam") and file_name.startswith("temp_bam_shard"):
-                os.unlink(file_name)
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 1
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
 
         with open(csv_path, 'rb') as f:
             data = [line.split() for line in f]
         assert len(data) == 9
-        barcodes = [file_name.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
+        barcodes = [filename.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
         assert len(list(bc in true_barcodes for bc in barcodes)) == 1
-
-        # @CTB what is the purpose of this? why are files getting created
-        # outside of 'location'?
-        os.unlink(csv_path)
 
 
 def test_do_sourmash_compute_name():

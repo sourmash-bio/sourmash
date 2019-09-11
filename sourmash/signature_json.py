@@ -235,12 +235,15 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def get_top_records(siglist):
-    # @CTB I think get_top_records can be removed? It doesn't serve much
-    # of a purpose, and (in some old versions of Python at least) it
-    # may randomize the order of signatures in siglist, which is an
-    # undesirable side effect.
+def add_meta_save(siglist):
+    """ Convert one signature into a JSON dict
+    - siglist: sequence of SourmashSignature objects
+    - index: index of siglist to save
+    """
+    from .signature import SIGNATURE_VERSION
+    records = []
     top_records = {}
+
     for sig in siglist:
         name, filename, sketch = sig._save()
         k = (name, filename)
@@ -248,16 +251,9 @@ def get_top_records(siglist):
         x.append(sketch)
         top_records[k] = x
 
-    return top_records
+    if not top_records:
+        return ""
 
-
-def add_meta_save(top_records):
-    """ Convert one signature into a JSON dict
-    - siglist: sequence of SourmashSignature objects
-    - index: index of siglist to save
-    """
-    from .signature import SIGNATURE_VERSION
-    records = []
     for (name, filename), sketches in top_records.items():
         record = {}
         if name:
@@ -272,6 +268,7 @@ def add_meta_save(top_records):
         record['license'] = 'CC0'
         record['email'] = ''
         records.append(record)
+
     return records
 
 
@@ -295,13 +292,7 @@ def save_signatures_json(
     - sort_keys: sort the keys in mappings before writting to JSON
     """
     startt = time.time()
-    top_records = get_top_records(siglist)
-
-    if not top_records:
-        return ""
-
-    records = add_meta_save(top_records)
-
+    records = add_meta_save(siglist)
     s = write_records_to_json(records, fp, indent, sort_keys)
     notify("time taken to save signatures is {:.5f} seconds", time.time() - startt, end="\r")
     return s

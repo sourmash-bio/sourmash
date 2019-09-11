@@ -264,7 +264,6 @@ def compute(args):
         """Split a string by the given separator and
         return the results in a generator"""
         sep = sep or ' '
-        # @CTB I think this function can be replaced by 'string.split', no?
         groups = itertools.groupby(string, lambda s: s != sep)
         return (''.join(g) for k, g in groups if k)
 
@@ -322,7 +321,7 @@ def compute(args):
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
             name=barcode_name)
-        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        records = signature_json.add_meta_save(siglist)
 
         notify(
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
@@ -394,7 +393,7 @@ def compute(args):
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
             name=barcode_name)
-        records = signature_json.add_meta_save(signature_json.get_top_records(siglist))
+        records = signature_json.add_meta_save(siglist)
         notify(
             "time taken to build signature records for a barcode {} is {:.5f} seconds",
             unique_fasta_file, time.time() - startt, end="\r", flush=True)
@@ -574,11 +573,7 @@ def compute(args):
                                                              umi_count,
                                                              read_count))
 
-                            # @CTB why do we need this 'if' statement?
-                            # wouldn't it have caused an error above if
-                            # not exist?
-                            if os.path.exists(barcode_meta_txt):
-                                os.unlink(barcode_meta_txt)
+                            os.unlink(barcode_meta_txt)
 
                 filtered_barcode_signatures = len(records)
                 notify("Signature records created for {}",
