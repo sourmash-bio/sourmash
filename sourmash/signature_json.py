@@ -252,7 +252,7 @@ def add_meta_save(siglist):
         top_records[k] = x
 
     if not top_records:
-        return ""
+        return records
 
     for (name, filename), sketches in top_records.items():
         record = {}
@@ -280,7 +280,7 @@ def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
         except TypeError:
             fp.write(unicode(s))
         return None
-    return unicode(s)
+    return s
 
 
 def save_signatures_json(
@@ -293,6 +293,8 @@ def save_signatures_json(
     """
     startt = time.time()
     records = add_meta_save(siglist)
+    if records == []:
+        return ""
     s = write_records_to_json(records, fp, indent, sort_keys)
     notify("time taken to save signatures is {:.5f} seconds", time.time() - startt, end="\r")
     return s
