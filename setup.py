@@ -69,10 +69,10 @@ SETUP_METADATA = \
                        'setuptools_scm', 'setuptools_scm_git_archive'],
     "use_scm_version": {"write_to": "sourmash/version.py"},
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy','recommonmark'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
-        '10x': ['pathos', 'bamnostic>=0.9.2'],
+        '10x': ['pathos', 'pysam']
         },
     "include_package_data": True,
     "package_data": {

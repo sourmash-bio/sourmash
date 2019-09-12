@@ -1,4 +1,6 @@
 pytest
+pathos
+pysam
 screed
 numpy
 matplotlib
