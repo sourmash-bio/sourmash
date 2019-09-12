@@ -133,6 +133,7 @@ def test_do_sourmash_compute_singleton():
 
 def test_do_sourmash_compute_10x():
     pytest.importorskip('pysam')
+    pytest.importorskip('pathos')
 
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')

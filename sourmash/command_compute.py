@@ -15,7 +15,6 @@ import collections
 from collections import defaultdict
 from functools import partial
 import numpy as np
-import pathos.multiprocessing as multiprocessing
 
 import screed
 from .sourmash_args import SourmashArgumentParser
@@ -430,6 +429,7 @@ def compute(args):
             elif args.input_is_10x:
                 from .tenx import (read_barcodes_file, shard_bam_file,
                                    bam_to_fasta)
+                from pathos import multiprocessing
 
                 # Initializing time
                 startt = time.time()
