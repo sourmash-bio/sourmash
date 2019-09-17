@@ -11,7 +11,7 @@ from sourmash.signature_json import (_json_next_atomic_array,
                                          load_signatureset_json_iter,
                                          save_signatures_json)
 from collections import OrderedDict
-    
+
 def test__json_next_atomic_array():
     t = (2,3,4,5,6)
     s = json.dumps(t)

@@ -25,7 +25,7 @@ doc: .PHONY
 coverage: all
 	$(PYTHON) setup.py clean --all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=.
+	$(PYTHON) -m pytest --cov=. --cov-report term-missing
 
 benchmark: all
 	asv continuous master

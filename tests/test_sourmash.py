@@ -166,30 +166,82 @@ def test_do_sourmash_compute_singleton():
 
 
 def test_do_sourmash_compute_10x():
-    bamnostic = pytest.importorskip('bamnostic')
+    pytest.importorskip('pysam')
 
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example')
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+        barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
+                                           ['compute', '-k', '21',
+                                            '--line-count', '50',
                                             '--input-is-10x',
+                                            '--protein',
+                                            '--barcodes-file',
+                                            barcodes_file,
                                             testdata1],
                                            in_directory=location)
 
-        sigfile = os.path.join(location, '10x-example.sig')
+        sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
         assert os.path.exists(sigfile)
-
-        with open(sigfile) as f:
-            data = json.load(f)
-
-        barcode_signatures = [sig['name'] for sig in data]
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 16
+        barcode_signatures = list(set([sig.name() for sig in siglist]))
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
 
+        # Filtered bam file with no barcodes file
+        # should run sourmash compute successfully
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--dna',
+                                            '--input-is-10x',
+                                            testdata1,
+                                            '-o', '10x-example_dna.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example_dna.sig')
+        assert os.path.exists(sigfile)
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 32
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
+
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+        csv_path = os.path.join(location, "all_barcodes_meta.csv")
+        barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
+        renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--dna', '--count-valid-reads', '10',
+                                            '--input-is-10x',
+                                            testdata1,
+                                            '--write-barcode-meta-csv', csv_path,
+                                            '--barcodes', barcodes_path,
+                                            '--rename-10x-barcodes', renamer_path,
+                                            '--save-fastas', location,
+                                            '-o', '10x-example_dna.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example_dna.sig')
+        assert os.path.exists(sigfile)
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 1
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        assert all(mins != [] for mins in min_hashes)
+
+        with open(csv_path, 'rb') as f:
+            data = [line.split() for line in f]
+        assert len(data) == 9
+        barcodes = [filename.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
+        assert len(barcodes) == 1
+        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
 
 
 def test_do_sourmash_compute_name():
@@ -212,7 +264,7 @@ def test_do_sourmash_compute_name():
                                            in_directory=location)
 
         sigfile2 = os.path.join(location, 'foo2.sig')
-        assert os.path.exists(sigfile)
+        assert os.path.exists(sigfile2)
 
         sig2 = next(signature.load_signatures(sigfile))
         assert sig2.name() == 'foo'
@@ -860,7 +912,6 @@ def test_do_compare_quiet():
 
 
 def test_do_traverse_directory_compare():
-    import numpy
     with utils.TempDirectory() as location:
         status, out, err = utils.runscript('sourmash',
                                            ['compare', '--traverse-directory',

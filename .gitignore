@@ -24,3 +24,4 @@ sourmash/_minhash.cpp
 .pytest_cache
 .python-version
 sourmash/version.py
+*.DS_Store
