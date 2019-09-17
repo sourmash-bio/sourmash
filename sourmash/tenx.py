@@ -8,7 +8,6 @@ from collections import defaultdict
 import tempfile
 import time
 import numpy as np
-import pysam
 
 CELL_BARCODES = ['CB', 'XC']
 UMIS = ['UB', 'XM']
@@ -100,6 +99,8 @@ def read_bam_file(bam_path):
     bam_file : pysam.AlignmentFile
         Iterator over possorted_genome_bam.bam file
     """
+    import pysam
+
     return pysam.AlignmentFile(bam_path, mode='rb')
 
 
@@ -120,6 +121,8 @@ def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
     shards : list
         list of sharded bam filenames
     """
+    import pysam
+
     notify("Sharding the bam file")
     startt = time.time()
     file_names = []
