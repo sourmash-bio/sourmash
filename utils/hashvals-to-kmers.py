@@ -26,6 +26,9 @@ def get_kmers_for_hashvals(sequence, hashvals, ksize):
 
     for start in range(0, len(sequence) - ksize + 1):
         kmer = sequence[start:start + ksize]
+        kmer_rc = screed.rc(kmer)
+        if kmer > kmer_rc:                # choose fwd or rc
+            kmer = kmer_rc
 
         # NOTE: we do not avoid non-ACGT characters, because those k-mers,
         # when hashed, shouldn't match anything that sourmash outputs.
