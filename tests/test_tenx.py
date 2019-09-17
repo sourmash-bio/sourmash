@@ -1,6 +1,8 @@
+import pytest
+pytest.importorskip('pysam')
+
 from . import sourmash_tst_utils as utils
 import sourmash.tenx as sourmash_tenx
-
 import pysam as bs
 
 
