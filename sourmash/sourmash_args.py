@@ -13,7 +13,8 @@ from .sbtmh import SigLeaf
 from .lca import lca_utils
 import sourmash
 
-DEFAULT_LOAD_K=31
+DEFAULT_LOAD_K = 31
+DEFAULT_N = 500
 
 
 class SourmashArgumentParser(argparse.ArgumentParser):
@@ -149,8 +150,8 @@ def load_query_signature(filename, ksize, select_moltype):
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
             notify('selecting default query k={}.', DEFAULT_LOAD_K)
-        elif ksize:
-            notify('selecting specified query k={}', ksize)
+    elif ksize:
+        notify('selecting specified query k={}', ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -301,7 +302,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
                     n_signatures += len(siglist)
-                except:                       # ignore errors with traverse
+                except Exception:  # ignore errors with traverse
                     pass
 
             # done! jump to beginning of main 'for' loop

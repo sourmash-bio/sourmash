@@ -5,7 +5,6 @@ sure we can find it.
 """
 import argparse
 import sourmash
-from sourmash import sourmash_args
 from sourmash.sbtmh import search_minhashes
 
 THRESHOLD=0.08

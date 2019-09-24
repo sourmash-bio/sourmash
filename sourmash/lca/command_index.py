@@ -4,7 +4,6 @@ Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
 from __future__ import print_function
 import sys
-import argparse
 import csv
 from collections import defaultdict
 
