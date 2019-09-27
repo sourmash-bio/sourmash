@@ -98,7 +98,7 @@ def test_do_compare_parallel(c):
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
+    cmp_out = numpy.load(cmp_outfile)
 
     sigs = []
     for fn in testsigs:
@@ -128,7 +128,7 @@ def test_do_basic_compare_using_rna_arg(c):
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
+    cmp_out = numpy.load(cmp_outfile)
 
     sigs = []
     for fn in testsigs:
@@ -966,7 +966,7 @@ def test_do_sourmash_sbt_search_check_bug():
         assert '1 matches:' in out
 
         tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
-        assert tree.nodes[0].metadata['min_n_below'] == 431
+        assert tree._nodes[0].metadata['min_n_below'] == 431
 
 
 def test_do_sourmash_sbt_search_empty_sig():
@@ -990,7 +990,7 @@ def test_do_sourmash_sbt_search_empty_sig():
         assert '1 matches:' in out
 
         tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
-        assert tree.nodes[0].metadata['min_n_below'] == 1
+        assert tree._nodes[0].metadata['min_n_below'] == 1
 
 
 def test_do_sourmash_sbt_move_and_search_output():
@@ -3011,10 +3011,9 @@ def test_storage_convert():
 
         ipfs = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(ipfs.nodes)
+        assert len(original) == len(ipfs)
         assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(ipfs.nodes.items())))
+                   for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
         args = ['storage', 'convert',
                 '-b', """'TarStorage("{}")'""".format(
@@ -3024,10 +3023,10 @@ def test_storage_convert():
                                            in_directory=location)
         tar = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(tar.nodes)
+        assert len(original) == len(tar)
         assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(tar.nodes.items())))
+                   for (n1, n2) in zip(sorted(original), sorted(tar)))
+
 
 def test_storage_convert_identity():
     with utils.TempDirectory() as location:
@@ -3045,10 +3044,9 @@ def test_storage_convert_identity():
 
         identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(identity.nodes)
+        assert len(original) == len(identity)
         assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(identity.nodes.items())))
+                   for (n1, n2) in zip(sorted(original), sorted(identity)))
 
 
 def test_storage_convert_fsstorage_newpath():
@@ -3069,10 +3067,9 @@ def test_storage_convert_fsstorage_newpath():
 
         identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(identity.nodes)
+        assert len(original) == len(identity)
         assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(identity.nodes.items())))
+                   for (n1, n2) in zip(sorted(original), sorted(identity)))
 
 
 def test_migrate():
@@ -3090,14 +3087,14 @@ def test_migrate():
 
         identity = SBT.load(testsbt, leaf_loader=SigLeaf.load)
 
-        assert len(original.nodes) == len(identity.nodes)
+        assert len(original) == len(identity)
         assert all(n1[1].name == n2[1].name
-                   for (n1, n2) in zip(sorted(original.nodes.items()),
-                                       sorted(identity.nodes.items())))
+                   for (n1, n2) in zip(sorted(original),
+                                       sorted(identity)))
 
         assert "this is an old index version" not in err
         assert all('min_n_below' in node.metadata
-                       for node in identity.nodes.values()
+                       for node in identity
                        if isinstance(node, Node))
 
 
