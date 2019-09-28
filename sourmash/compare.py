@@ -63,7 +63,7 @@ def similarity(sig1, sig2, ignore_abundance, downsample):
         if 'mismatch in max_hash' in str(e) and downsample:
             xx = sig1.minhash.downsample_max_hash(sig2.minhash)
             yy = sig2.minhash.downsample_max_hash(sig1.minhash)
-            sig = similarity(xx, yy, ignore_abundance)
+            sig = similarity(xx, yy, ignore_abundance, False)
             return sig
         else:
             raise

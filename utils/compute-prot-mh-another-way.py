@@ -69,7 +69,6 @@ import sys, screed
 import mmh3
 import sourmash
 print('imported sourmash:', sourmash, file=sys.stderr)
-from sourmash import MinHash
 import sourmash.signature
 
 record = next(iter(screed.open(sys.argv[1])))

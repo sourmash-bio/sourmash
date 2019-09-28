@@ -16,7 +16,6 @@ try:                                      # py2/py3 compat
     from itertools import zip_longest
 except ImportError:
     from itertools import izip_longest as zip_longest
-import pprint
 
 from .._minhash import get_max_hash_for_scaled
 from ..logging import notify, error, debug
