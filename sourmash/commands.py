@@ -44,7 +44,6 @@ def info(args):
         notify('- loaded from path: {}', os.path.dirname(khmer.__file__))
         notify('')
 
-        import screed
         notify('screed version {}', screed.__version__)
         notify('- loaded from path: {}', os.path.dirname(screed.__file__))
 
@@ -744,13 +743,6 @@ def gather(args):
     new_max_hash = query.minhash.max_hash
     next_query = query
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
-        # print interim result & save in a list for later use
-        pct_query = '{:.1f}%'.format(result.f_orig_query*100)
-        pct_genome = '{:.1f}%'.format(result.f_match*100)
-
-        name = result.leaf._display_name(40)
-
-
         if not len(found):                # first result? print header.
             if query.minhash.track_abundance and not args.ignore_abundance:
                 print_results("")
@@ -899,13 +891,6 @@ def multigather(args):
         found = []
         weighted_missed = 1
         for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
-            # print interim result & save in a list for later use
-            pct_query = '{:.1f}%'.format(result.f_orig_query*100)
-            pct_genome = '{:.1f}%'.format(result.f_match*100)
-
-            name = result.leaf._display_name(40)
-
-
             if not len(found):                # first result? print header.
                 if query.minhash.track_abundance and not args.ignore_abundance:
                     print_results("")

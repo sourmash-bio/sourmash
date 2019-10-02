@@ -6,7 +6,7 @@ from __future__ import print_function
 import sys
 import argparse
 import csv
-from collections import defaultdict, Counter
+from collections import defaultdict
 
 from .. import sourmash_args, load_signatures
 from ..logging import notify, error, print_results, set_quiet, debug

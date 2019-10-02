@@ -294,7 +294,7 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
-    output_json = sourmash.save_signatures([merged_sigobj], fp=args.output)
+    sourmash.save_signatures([merged_sigobj], fp=args.output)
 
     notify('loaded and merged {} signatures', total_loaded)
 
@@ -344,7 +344,7 @@ def intersect(args):
     intersect_mh.add_many(mins)
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
-    output_json = sourmash.save_signatures([intersect_sigobj], fp=args.output)
+    sourmash.save_signatures([intersect_sigobj], fp=args.output)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -399,14 +399,14 @@ def subtract(args):
     if not total_loaded:
         error("no signatures to subtract!?")
         sys.exit(-1)
-        
+
 
     subtract_mh = from_sigobj.minhash.copy_and_clear()
     subtract_mh.add_many(subtract_mins)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    output_json = sourmash.save_signatures([subtract_sigobj], fp=args.output)
+    sourmash.save_signatures([subtract_sigobj], fp=args.output)
 
     notify('loaded and subtracted {} signatures', total_loaded)
 
@@ -444,7 +444,7 @@ def rename(args):
     else:
         fp = sys.stdout
 
-    output_json = sourmash.save_signatures(outlist, fp=fp)
+    sourmash.save_signatures(outlist, fp=fp)
     if args.output:
         fp.close()
 
@@ -497,7 +497,7 @@ def extract(args):
         error("no matching signatures!")
         sys.exit(-1)
 
-    output_json = sourmash.save_signatures(outlist, fp=args.output)
+    sourmash.save_signatures(outlist, fp=args.output)
 
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
@@ -550,7 +550,7 @@ def flatten(args):
 
         outlist.extend(siglist)
 
-    output_json = sourmash.save_signatures(outlist, fp=args.output)
+    sourmash.save_signatures(outlist, fp=args.output)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -624,7 +624,7 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    output_json = sourmash.save_signatures(output_list, fp=args.output)
+    sourmash.save_signatures(output_list, fp=args.output)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
@@ -684,7 +684,6 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    total_loaded = 0
     ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
                                      select_moltype=moltype)
     mh = ss.minhash

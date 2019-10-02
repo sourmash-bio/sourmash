@@ -4,7 +4,6 @@ Summarize rank-specific information from LCAs in one or more databases.
 """
 from __future__ import print_function
 import sys
-import argparse
 from collections import defaultdict
 
 from ..logging import error, debug, set_quiet

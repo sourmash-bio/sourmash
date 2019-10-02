@@ -11,8 +11,7 @@ import sys
 import random
 import itertools
 import time
-import collections
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from functools import partial
 import numpy as np
 
@@ -25,8 +24,8 @@ from . import sourmash_args
 from . import np_utils
 from .logging import notify, error, set_quiet, debug
 
+from .sourmash_args import DEFAULT_N
 DEFAULT_COMPUTE_K = '21,31,51'
-from .commands import DEFAULT_N
 DEFAULT_LINE_COUNT = 1500
 
 
@@ -483,7 +482,7 @@ def compute(args):
 
                 # Build a dictionary with each unique barcode as key and
                 # their fasta files from different shards
-                fasta_files_dict = collections.OrderedDict()
+                fasta_files_dict = OrderedDict()
                 for fasta in iter_split(all_fastas, ","):
                     barcode = os.path.basename(fasta).replace(".fasta", "")
                     value = fasta_files_dict.get(barcode, "")
