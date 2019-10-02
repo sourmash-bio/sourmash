@@ -18,10 +18,13 @@ routines can use the NCBI taxonomy but do not depend on it in any way.
 We have `several tutorials <tutorials.html>`__ available! Start with
 `Making signatures, comparing, and searching <tutorial-basic.html>`__.
 
-Please see the `mash <http://mash.readthedocs.io/en/latest/>`__
-software and the `mash paper (Ondov et al., 2016)
-<http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
-information on how and why MinHash sketches work.
+The paper `Large-scale sequence comparisons with sourmash (Pierce et
+al., 2019) <https://f1000research.com/articles/8-1006>`__ gives an
+overview of how sourmash works and what its major use cases
+are. Please also see the `mash software
+<http://mash.readthedocs.io/en/latest/>`__ and the `mash paper (Ondov
+et al., 2016) <http://dx.doi.org/10.1186/s13059-016-0997-x>`__ for
+background information on how and why MinHash works.
 
 **Questions? Thoughts?** Ask us on the `sourmash issue tracker <https://github.com/dib-lab/sourmash/issues/>`__!
 
