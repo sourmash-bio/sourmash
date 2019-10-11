@@ -192,7 +192,7 @@ def test_do_sourmash_compute_10x():
                                             '--write-barcode-meta-csv', csv_path,
                                             '--barcodes', barcodes_path,
                                             '--rename-10x-barcodes', renamer_path,
-                                            '--save-fastas', location,
+                                            '--save-fastas',
                                             '-o', '10x-example_dna.sig'],
                                            in_directory=location)
 
