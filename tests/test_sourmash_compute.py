@@ -158,10 +158,9 @@ def test_do_sourmash_compute_10x_barcode():
 
         # Ensure that every cell barcode in barcodes.tsv has a signature
         assert all(bc in true_barcodes for bc in barcode_signatures)
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        for mins in min_hashes:
+            assert mins != []
 
 
 def test_do_sourmash_compute_10x_no_barcode():
@@ -182,31 +181,9 @@ def test_do_sourmash_compute_10x_no_barcode():
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 32
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-
-def test_do_sourmash_compute_10x_no_filter_umis():
-    pytest.importorskip('bam2fasta')
-    with utils.TempDirectory() as location:
-        # test to check if all the lines in unfiltered_umi_to_sig are callled and tested
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--save-fastas', location,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 32
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        for mins in min_hashes:
+            assert mins != []
 
 
 def test_do_sourmash_compute_10x_filter_umis():
@@ -236,10 +213,9 @@ def test_do_sourmash_compute_10x_filter_umis():
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 1
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
+        min_hashes = [x.minhash.get_mins() for x in siglist]
+        for mins in min_hashes:
+            assert mins != []
 
         with open(csv_path, 'rb') as f:
             data = [line.split() for line in f]
