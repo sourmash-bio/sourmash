@@ -101,7 +101,7 @@ def read_bam_file(bam_path):
     """
     import pysam
 
-    return pysam.AlignmentFile(bam_path, mode='rb', check_sq=False, check_header=False)
+    return pysam.AlignmentFile(bam_path, mode='rb')
 
 
 def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
