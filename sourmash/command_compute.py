@@ -253,6 +253,7 @@ def compute(args):
         single_barcode_fastas = all_fastas_sorted[index]
 
         count = 0
+        whole_sequence = ""
         # Iterating through fasta files for single barcode from different
         # fastas
         for fasta in iter_split(single_barcode_fastas, ","):
@@ -261,18 +262,17 @@ def compute(args):
             # all the sequences from all bam shards to
             if count == 0:
                 unique_fasta_file = os.path.basename(fasta)
+                barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
                     f = open(unique_fasta_file, "w")
+                    f.write(">{}\n".format(barcode_name))
 
             # Add sequence
             for record in screed.open(fasta):
                 sequence = record.sequence
                 add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
-
-                # Updating the fasta file with each of the sequences
-                if args.save_fastas:
-                    f.write(">{}\n{}".format(filename, record.sequence))
+                whole_sequence += sequence + delimiter
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -280,12 +280,13 @@ def compute(args):
 
             count += 1
 
-        # Close the opened fasta file
+        # Updating the fasta file with each of the sequences and closing the fasta file
         if args.save_fastas:
+            f.write("{}".format(whole_sequence))
             f.close()
 
-        # Build signature records
         barcode_name = unique_fasta_file.replace(".fasta", "")
+        # Build signature records
         siglist = build_siglist(
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
@@ -320,14 +321,15 @@ def compute(args):
 
         if args.write_barcode_meta_csv:
             unique_fasta_file = os.path.basename(fasta)
-            unique_fasta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
-            with open(unique_fasta_file, "w") as f:
+            unique_meta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
+            with open(unique_meta_file, "w") as f:
                 f.write("{} {}".format(len(umis), sum(list(umis.values()))))
 
         debug("Completed tracking umi counts", end="\r", flush=True)
         if len(umis) < args.count_valid_reads:
             return []
         count = 0
+        whole_sequence = ""
         for fasta in iter_split(single_barcode_fastas, ","):
 
             # Initializing fasta file to save the sequence to
@@ -344,8 +346,7 @@ def compute(args):
 
                 # Updating the fasta file with each of the sequences
                 if args.save_fastas:
-                    f.write(">{}\n{}".format(filename, record.sequence))
-
+                    whole_sequence += sequence + delimiter
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
@@ -355,6 +356,7 @@ def compute(args):
               flush=True)
         # Close the opened fasta file
         if args.save_fastas:
+            f.write("{}".format(whole_sequence))
             f.close()
         # Build signature records
         barcode_name = unique_fasta_file.replace(".fasta", "")
