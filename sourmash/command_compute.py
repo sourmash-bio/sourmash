@@ -347,12 +347,11 @@ def compute(args):
                 add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
 
-                # Updating the fasta file with each of the sequences
-                if args.save_fastas:
-                    if sequence.endswith(delimiter):
-                        whole_sequence += sequence
-                    else:
-                        whole_sequence += sequence + delimiter
+                # Appending the sequence with each of the sequences
+                if sequence.endswith(delimiter):
+                    whole_sequence += sequence
+                else:
+                    whole_sequence += sequence + delimiter
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
@@ -360,7 +359,7 @@ def compute(args):
 
         debug("Added sequences of unique barcode,umi to Elist", end="\r",
               flush=True)
-        # Close the opened fasta file
+        # Update the fasta file with all sequence and close the opened fasta file
         if args.save_fastas:
             f.write("{}".format(whole_sequence))
             f.close()
