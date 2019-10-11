@@ -244,8 +244,9 @@ def test_do_sourmash_compute_10x_filter_umis():
         with open(csv_path, 'rb') as f:
             data = [line.split() for line in f]
         assert len(data) == 9
-        fasta_files = os.listdir(fastas_dir)
-        barcodes = [filename.replace(".fasta", "") for filename in fasta_files]
+        barcodes = [filename.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
+        for record in screed.open(barcodes[0] + ".fasta", ):
+            assert record.sequence.count(">") == 1
         assert len(barcodes) == 1
         assert len(fasta_files) == 1
         assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
