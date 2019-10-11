@@ -353,7 +353,8 @@ def compute(args):
                 unique_fasta_file = os.path.basename(fasta)
                 barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
-                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
+                    f = open(unique_fasta_file, "w")
+                    f.write(">{}\n".format(barcode_name))
 
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
