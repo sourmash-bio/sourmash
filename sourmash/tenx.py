@@ -256,10 +256,7 @@ def write_cell_sequences(cell_sequences, umi_filter=False, delimiter="X"):
 
             # Append to an existing barcode file with a different umi
             with open(filename, "a") as f:
-                if os.stat(filename).st_size != 0:
-                    f.write(">{}\n{}\n".format(umi, seq))
-                else:
-                    f.write(">{}\n{}".format(umi, seq))
+                f.write(">{}\n{}\n".format(umi, seq))
             yield filename
         else:
             filename = os.path.join(temp_folder, cell + '.fasta')
