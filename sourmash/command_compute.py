@@ -286,6 +286,8 @@ def compute(args):
                 sequence = record.sequence
                 add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
+
+                # Appending the sequence with each of the sequences
                 if sequence.endswith(delimiter):
                     whole_sequence += sequence
                 else:
