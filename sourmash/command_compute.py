@@ -243,6 +243,148 @@ def compute(args):
         return [ sig.SourmashSignature(E, filename=filename,
                                        name=name) for E in Elist ]
 
+    def iter_split(string, sep=None):
+        """Split a string by the given separator and
+        return the results in a generator"""
+        sep = sep or ' '
+        groups = itertools.groupby(string, lambda s: s != sep)
+        return (''.join(g) for k, g in groups if k)
+
+    def fasta_to_sig_record(index):
+        """Convert fasta to sig record"""
+        if umi_filter:
+            return filtered_umi_to_sig(index)
+        else:
+            return unfiltered_umi_to_sig(index)
+
+    def unfiltered_umi_to_sig(index):
+        """Returns signature records across fasta files for a unique barcode"""
+        # Initializing time
+        startt = time.time()
+
+        # Getting all fastas for a given barcode
+        # from different shards
+        single_barcode_fastas = all_fastas_sorted[index]
+
+        count = 0
+        whole_sequence = ""
+        # Iterating through fasta files for single barcode from different
+        # fastas
+        for fasta in iter_split(single_barcode_fastas, ","):
+
+            # Initializing the fasta file to write
+            # all the sequences from all bam shards to
+            if count == 0:
+                unique_fasta_file = os.path.basename(fasta)
+                barcode_name = unique_fasta_file.replace(".fasta", "")
+                if args.save_fastas:
+                    f = open(unique_fasta_file, "w")
+                    f.write(">{}\n".format(barcode_name))
+
+            # Add sequence
+            for record in screed.open(fasta):
+                sequence = record.sequence
+                add_seq(Elist, sequence,
+                        args.input_is_protein, args.check_sequence)
+                whole_sequence += sequence + delimiter
+
+            # Delete fasta file in tmp folder
+            if os.path.exists(fasta):
+                os.unlink(fasta)
+
+            count += 1
+
+        # Updating the fasta file with each of the sequences and closing the fasta file
+        if args.save_fastas:
+            f.write("{}".format(whole_sequence))
+            f.close()
+
+        barcode_name = unique_fasta_file.replace(".fasta", "")
+        # Build signature records
+        siglist = build_siglist(
+            Elist,
+            os.path.join(args.filenames[0], unique_fasta_file),
+            name=barcode_name)
+        records = signature_json.add_meta_save(siglist)
+
+        notify(
+            "time taken to build signature records for a barcode {} is {:.5f} seconds",
+            unique_fasta_file, time.time() - startt, end='\r')
+        return records
+
+    def filtered_umi_to_sig(index):
+        """Returns signature records for all the fasta files for a unique
+        barcode, only if it has more than count-valid-reads number of umis."""
+
+        # Initializing time
+        startt = time.time()
+
+        # Getting all fastas for a given barcode
+        # from different shards
+        single_barcode_fastas = all_fastas_sorted[index]
+
+        debug("calculating umi counts", end="\r", flush=True)
+        # Tracking UMI Counts
+        umis = defaultdict(int)
+        # Iterating through fasta files for single barcode from different
+        # fastas
+        for fasta in iter_split(single_barcode_fastas, ","):
+            # calculate unique umi, sequence counts
+            for record in screed.open(fasta):
+                umis[record.name] += record.sequence.count(delimiter)
+
+        if args.write_barcode_meta_csv:
+            unique_fasta_file = os.path.basename(fasta)
+            unique_meta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
+            with open(unique_meta_file, "w") as f:
+                f.write("{} {}".format(len(umis), sum(list(umis.values()))))
+
+        debug("Completed tracking umi counts", end="\r", flush=True)
+        if len(umis) < args.count_valid_reads:
+            return []
+        count = 0
+        whole_sequence = ""
+        for fasta in iter_split(single_barcode_fastas, ","):
+
+            # Initializing fasta file to save the sequence to
+            if count == 0:
+                unique_fasta_file = os.path.basename(fasta)
+                barcode_name = unique_fasta_file.replace(".fasta", "")
+                if args.save_fastas:
+                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
+
+            # Add sequences of barcodes with more than count-valid-reads umis
+            for record in screed.open(fasta):
+                sequence = record.sequence
+                add_seq(Elist, sequence,
+                        args.input_is_protein, args.check_sequence)
+
+                # Updating the fasta file with each of the sequences
+                if args.save_fastas:
+                    whole_sequence += sequence + delimiter
+            # Delete fasta file in tmp folder
+            if os.path.exists(fasta):
+                os.unlink(fasta)
+            count += 1
+
+        debug("Added sequences of unique barcode,umi to Elist", end="\r",
+              flush=True)
+        # Update the fasta file with all sequence and close the opened fasta file
+        if args.save_fastas:
+            f.write("{}".format(whole_sequence))
+            f.close()
+        # Build signature records
+        barcode_name = unique_fasta_file.replace(".fasta", "")
+        siglist = build_siglist(
+            Elist,
+            os.path.join(args.filenames[0], unique_fasta_file),
+            name=barcode_name)
+        records = signature_json.add_meta_save(siglist)
+        notify(
+            "time taken to build signature records for a barcode {} is {:.5f} seconds",
+            unique_fasta_file, time.time() - startt, end="\r", flush=True)
+        return records
+
     def save_siglist(siglist, output_fp, filename=None):
         # save!
         if output_fp:
