@@ -288,10 +288,7 @@ def compute(args):
                         args.input_is_protein, args.check_sequence)
 
                 # Appending the sequence with each of the sequences
-                if sequence.endswith(delimiter):
-                    whole_sequence += sequence
-                else:
-                    whole_sequence += sequence + delimiter
+                whole_sequence += sequence
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -365,10 +362,7 @@ def compute(args):
                         args.input_is_protein, args.check_sequence)
 
                 # Appending the sequence with each of the sequences
-                if sequence.endswith(delimiter):
-                    whole_sequence += sequence
-                else:
-                    whole_sequence += sequence + delimiter
+                whole_sequence += sequence
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
