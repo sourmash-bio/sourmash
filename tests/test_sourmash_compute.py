@@ -207,6 +207,8 @@ def test_do_sourmash_compute_10x():
             data = [line.split() for line in f]
         assert len(data) == 9
         barcodes = [filename.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
+        for record in screed.open(barcodes[0] + ".fasta", ):
+            assert record.sequence.count(">") == 1
         assert len(barcodes) == 1
         assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
 
