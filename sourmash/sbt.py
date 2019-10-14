@@ -797,26 +797,28 @@ class SBT(object):
         # initialize search queue with top node of tree
         queue = [0]
 
+        visited_leaves = set([])
+
         # while the queue is not empty, load each node and apply search
         # function.
         while queue:
             position = queue.pop(0)
-            node = self.nodes.get(position, None)
+            current_node = self.nodes.get(position, None)
 
             # repair while searching.
-            if node is None:
+            if current_node is None:
                 if verbose:
                     notify("repairing missing node {} ...", position, end='\r')
                 if position in self.missing_nodes:
-                    self._rebuild_node(node)
-                    node = self.nodes[position]
+                    self._rebuild_node(current_node)
+                    current_node = self.nodes[position]
                 else:
                     continue
 
             # Add
-            if isinstance(node, Leaf):
+            if isinstance(current_node, Leaf):
                 if verbose:
-                    notify("Visiting {}", node.data, end='\r')
+                    notify("Visiting {}", current_node.data, end='\r')
                 n = 0
                 upper_internal_node = self.parent(position)
                 while n < n_parent_levels:
@@ -827,9 +829,9 @@ class SBT(object):
                 similarities = []
                 for leaf in leaves:
                     # Ignore self-similarity
-                    if leaf == node:
+                    if leaf == current_node:
                         continue
-                    similarity = node.data.similarity(
+                    similarity = current_node.data.similarity(
                         leaf.data, ignore_abundance=ignore_abundance,
                         downsample=downsample)
                     # Don't filter for minimum similarity as some samples are bad
@@ -837,9 +839,10 @@ class SBT(object):
                     # of multiple sizes won't cast to int/float in numpy, so
                     # similarity_adjacency_to_knn won't work on the adjacencies
                     similarities.append(
-                        [node.data.name(), leaf.data.name(), similarity])
+                        [current_node.data.name(), leaf.data.name(), similarity])
 
                 # take `n_neighbors` leaves with largest similarities
+                # adjacency list of: (node1, node2, similarity)
                 adjacent = sorted(similarities, key=lambda x: x[2])[
                            -n_neighbors:]
                 adjacencies.extend(adjacent)
