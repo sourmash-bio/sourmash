@@ -207,7 +207,7 @@ def test_do_sourmash_compute_10x_filter_umis():
                                             '--write-barcode-meta-csv', csv_path,
                                             '--barcodes', barcodes_path,
                                             '--rename-10x-barcodes', renamer_path,
-                                            '--save-fastas',
+                                            '--save-fastas', location,
                                             '-o', '10x-example_dna.sig'],
                                            in_directory=location)
 

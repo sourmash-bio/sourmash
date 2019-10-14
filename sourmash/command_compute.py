@@ -78,7 +78,7 @@ def compute(args):
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='For 10x input only (i.e input-is-10x flag is True, '
                         'Number of processes to use for reading 10x bam file')
-    parser.add_argument('--save-fastas', action='store_true',
+    parser.add_argument('--save-fastas', default="", type=str,
                         help='For 10x input only (i.e input-is-10x flag is True), '
                         'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta '
                         'in the absolute path given by this flag, By default, fastas are not saved')
@@ -278,7 +278,7 @@ def compute(args):
                 unique_fasta_file = os.path.basename(fasta)
                 barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
-                    f = open(unique_fasta_file, "w")
+                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
                     f.write(">{}\n".format(barcode_name))
 
             # Add sequence
@@ -353,7 +353,7 @@ def compute(args):
                 unique_fasta_file = os.path.basename(fasta)
                 barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
-                    f = open(unique_fasta_file, "w")
+                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
                     f.write(">{}\n".format(barcode_name))
 
             # Add sequences of barcodes with more than count-valid-reads umis
