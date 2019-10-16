@@ -162,13 +162,18 @@ public:
         add_hash(hash);
     }
 
-    void add_sequence(const std::string& sequence, bool force=false) {
+    void _invalid_kmer(const std::string& kmer) {
+        std::string msg = "invalid DNA character in input k-mer: ";
+        msg += kmer;
+        throw minhash_exception(msg); 
+    }
 
-        if (sequence.length() < ksize) {
+    void add_sequence(std::string& seq, bool force=false) {
+
+        if (seq.length() < ksize) {
             return;
         }
 
-        std::string seq = sequence; // could just be volatile and remove const from `sequence`
         std::transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
 
         if (!is_protein) {
@@ -177,13 +182,11 @@ public:
 				auto fw_kmer = seq.c_str() + i;
                 auto rc_kmer = rc.c_str() + rc.length() - ksize - i;
 
-                if (! _checkkmerdna(fw_kmer)) {
+                if (! _checkdna(fw_kmer, ksize)) {
                     if (force) {
                         continue;
                     } else {
-                        std::string msg = "invalid DNA character in input k-mer: ";
-                        msg += fw_kmer;
-                        throw minhash_exception(msg); 
+                        _invalid_kmer(fw_kmer);
                     }
                 }
 
@@ -271,16 +274,38 @@ public:
         return aa;
     }
 
-    bool _checkdna(const std::string& seq) const {
-
-        for (size_t i=0; i < seq.length(); ++i) {
-            switch(seq[i]) {
+    /**
+     * @Synopsis  Check that a single char is a DNA base.
+     *
+     * @Param c The character.
+     *
+     * @Returns   True if valid, false otherwise.
+     */
+    bool _checkdna(const char c) const {
+        switch(c) {
             case 'A':
             case 'C':
             case 'G':
             case 'T':
                 break;
             default:
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * @Synopsis  Safe DNA sanity check for a sequence of
+     *            arbitrary length.
+     *
+     * @Param seq The sequence.
+     *
+     * @Returns   True if valid, false otherwise.
+     */
+    bool _checkdna(const std::string& seq) const {
+
+        for (size_t i=0; i < seq.length(); ++i) {
+            if (!_checkdna(seq[i])) {
                 return false;
             }
         }
@@ -294,16 +319,10 @@ public:
      *
      * @Returns   true if sane; false otherwise. 
      */
-    bool _checkkmerdna(const char * kmer) const {
+    bool _checkdna(const char * kmer, unsigned int length) const {
 
-        for (size_t i=0; i < ksize; ++i) {
-            switch(kmer[i]) {
-            case 'A':
-            case 'C':
-            case 'G':
-            case 'T':
-                break;
-            default:
+        for (size_t i=0; i < length; ++i) {
+            if (!_checkdna(*(kmer + i))) {
                 return false;
             }
         }
