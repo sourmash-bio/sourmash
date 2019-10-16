@@ -16,11 +16,30 @@
   /*ABCDEFGHIJKLMNOPQRSTUVWXYZ      abcdefghijklmnopqrstuvwxyz    */\
   " TVGH FCD  M KN   YSAABW R       TVGH FCD  M KN   YSAABW R"
 
-uint64_t _hash_murmur(const std::string& kmer,
-                      const uint32_t seed) {
+inline uint64_t _hash_murmur(const std::string& kmer,
+                             const uint32_t seed) {
     uint64_t out[2];
     out[0] = 0; out[1] = 0;
     MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
+    return out[0];
+}
+
+/**
+ * @Synopsis  Unsafe hash overload. Takes a const char * 
+ *            and assumes it has length ksize.
+ *
+ * @Param kmer The k-mer.
+ * @Param ksize Length of the k-mer.
+ * @Param seed Hashing seed.
+ *
+ * @Returns   The hash value.
+ */
+inline uint64_t _hash_murmur(const char * kmer,
+                             unsigned int ksize,
+                             const uint32_t seed) {
+    uint64_t out[2];
+    out[0] = 0; out[1] = 0;
+    MurmurHash3_x64_128((void *)kmer, ksize, seed, &out);
     return out[0];
 }
 
@@ -131,32 +150,50 @@ public:
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence, bool force=false) {
-        if (strlen(sequence) < ksize) {
+
+    /**
+     * @Synopsis  Unsafe overload: calls _hash_murmur assuming
+     *            word is length ksize.
+     *
+     * @Param word k-mer to add.
+     */
+    void add_word(const char * word, unsigned int size) {
+        const HashIntoType hash = _hash_murmur(word, size, seed);
+        add_hash(hash);
+    }
+
+    void add_sequence(const std::string& sequence, bool force=false) {
+
+        if (sequence.length() < ksize) {
             return;
         }
-        std::string seq = sequence;
-        transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
+
+        std::string seq = sequence; // could just be volatile and remove const from `sequence`
+        std::transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
 
         if (!is_protein) {
+            auto rc = _revcomp(seq);
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-                const std::string kmer = seq.substr(i, ksize);
-                if (! _checkdna(kmer)) {
+				auto fw_kmer = seq.c_str() + i;
+                auto rc_kmer = rc.c_str() + rc.length() - ksize - i;
+
+                if (! _checkkmerdna(fw_kmer)) {
                     if (force) {
                         continue;
                     } else {
                         std::string msg = "invalid DNA character in input k-mer: ";
-                        msg += kmer;
-                        throw minhash_exception(msg);
+                        msg += fw_kmer;
+                        throw minhash_exception(msg); 
                     }
                 }
 
-                const std::string rc = _revcomp(kmer);
-
-                if (kmer < rc) {
-                    add_word(kmer);
+                if (std::lexicographical_compare(fw_kmer,
+                                                 fw_kmer + ksize,
+                                                 rc_kmer,
+                                                 rc_kmer + ksize)) {
+                    add_word(fw_kmer, ksize);
                 } else {
-                    add_word(rc);
+                    add_word(rc_kmer, ksize);
                 }
             }
         } else {                      // protein
@@ -234,10 +271,33 @@ public:
         return aa;
     }
 
-    bool _checkdna(const std::string seq) const {
+    bool _checkdna(const std::string& seq) const {
 
         for (size_t i=0; i < seq.length(); ++i) {
             switch(seq[i]) {
+            case 'A':
+            case 'C':
+            case 'G':
+            case 'T':
+                break;
+            default:
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @Synopsis  Unsafe k-mer DNA sanity check: doesn't check length.
+     *
+     * @Param kmer k-mer to check.
+     *
+     * @Returns   true if sane; false otherwise. 
+     */
+    bool _checkkmerdna(const char * kmer) const {
+
+        for (size_t i=0; i < ksize; ++i) {
+            switch(kmer[i]) {
             case 'A':
             case 'C':
             case 'G':
