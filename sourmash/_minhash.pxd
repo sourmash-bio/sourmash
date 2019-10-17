@@ -18,7 +18,7 @@ cdef extern from "kmer_min_hash.hh":
 
 
     cdef uint64_t _hash_murmur(const string, uint32_t seed)
-
+    cdef uint64_t _hash_murmur(const char *, unsigned int, uint32_t)
 
     cdef cppclass KmerMinHash:
         const uint32_t seed;
@@ -32,8 +32,9 @@ cdef extern from "kmer_min_hash.hh":
         KmerMinHash(unsigned int, unsigned int, bool, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
         void remove_hash(HashIntoType) except +ValueError
-        void add_word(string word) except +ValueError
-        void add_sequence(const char *, bool) except +ValueError
+        void add_word(const string& word) except +ValueError
+        void add_word(const char * word) except +ValueError
+        void add_sequence(const string&, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         string aa_to_dayhoff(string aa) except +ValueError
         string translate_codon(string codon) except +ValueError
@@ -48,7 +49,8 @@ cdef extern from "kmer_min_hash.hh":
         void add_hash(HashIntoType) except +ValueError
         void remove_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
-        void add_sequence(const char *, bool) except +ValueError
+        void add_word(const char * word) except +ValueError
+        void add_sequence(const string&, bool) except +ValueError
         void merge(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         string aa_to_dayhoff(string aa) except +ValueError
