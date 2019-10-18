@@ -872,6 +872,29 @@ def test_set_abundance_2():
     new_mh.track_abundance = True
     new_mh.set_abundances(mins)
 
+    assert new_mh.get_mins(with_abundance=True) == mins
+
+
+def test_reset_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=True)
+    a.add_sequence('ATGC')
+
+    # If we had a minhash with abundances and drop it, this shouldn't fail.
+    # Convert from Abundance to Regular MinHash
+    a.track_abundance = False
+
+    assert a.get_mins(with_abundance=True) == [12415348535738636339]
+
+
+def test_set_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=False)
+    a.add_sequence('ATGC')
+
+    with pytest.raises(RuntimeError) as e:
+        a.track_abundance = True
+
+    assert "Can only set track_abundance=True if the MinHash is empty" in e.value.args[0]
+
 
 def test_reviving_minhash():
     # simulate reading a MinHash from disk
