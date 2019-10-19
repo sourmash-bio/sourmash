@@ -23,6 +23,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
+filter <signature> [<signature> ... ]     - filter k-mers on abundance
 flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
@@ -41,15 +42,6 @@ sourmash signature merge -h
 def _check_abundance_compatibility(sig1, sig2):
     if sig1.minhash.track_abundance != sig2.minhash.track_abundance:
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
-
-
-def _flatten(mh):
-    "turn off track_abundance on a MinHash object"
-    mh_params = list(mh.__getstate__())
-    # Abundance is 6th parameter
-    mh_params[6] = False
-    mh.__setstate__(mh_params)
-    assert not mh.track_abundance
 
 
 def _set_num_scaled(mh, num, scaled):
@@ -270,8 +262,8 @@ def merge(args):
                 mh = first_sig.minhash.copy_and_clear()
 
                 # forcibly remove abundance?
-                if mh.track_abundance and args.flatten:
-                    _flatten(mh)
+                if args.flatten:
+                    mh.track_abundance = False
 
             try:
                 if not args.flatten:
@@ -340,7 +332,7 @@ def intersect(args):
 
     # forcibly turn off track_abundance
     intersect_mh = first_sig.minhash.copy_and_clear()
-    _flatten(intersect_mh)
+    intersect_mh.track_abundance = False
     intersect_mh.add_many(mins)
     intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
@@ -543,7 +535,7 @@ def flatten(args):
 
         for ss in siglist:
             flattened_mh = ss.minhash.copy_and_clear()
-            _flatten(flattened_mh)
+            flattened_mh.track_abundance = False
             flattened_mh.add_many(ss.minhash.get_mins())
 
             ss.minhash = flattened_mh
