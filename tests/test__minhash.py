@@ -41,6 +41,7 @@ import pickle
 
 import pytest
 
+import sourmash
 from sourmash._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
@@ -859,6 +860,40 @@ def test_set_abundance():
         a.set_abundances({1: 3, 2: 4})
 
     assert "track_abundance=True when constructing" in e.value.args[0]
+
+
+def test_set_abundance_2():
+    sig = sourmash.load_one_signature(utils.get_test_data("genome-s12.fa.gz.sig"),
+                                      ksize=30,
+                                      select_moltype='dna')
+    new_mh = sig.minhash.copy_and_clear()
+    mins = sig.minhash.get_mins()
+    mins = {k: 1 for k in mins}
+    new_mh.track_abundance = True
+    new_mh.set_abundances(mins)
+
+    assert new_mh.get_mins(with_abundance=True) == mins
+
+
+def test_reset_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=True)
+    a.add_sequence('ATGC')
+
+    # If we had a minhash with abundances and drop it, this shouldn't fail.
+    # Convert from Abundance to Regular MinHash
+    a.track_abundance = False
+
+    assert a.get_mins(with_abundance=True) == [12415348535738636339]
+
+
+def test_set_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=False)
+    a.add_sequence('ATGC')
+
+    with pytest.raises(RuntimeError) as e:
+        a.track_abundance = True
+
+    assert "Can only set track_abundance=True if the MinHash is empty" in e.value.args[0]
 
 
 def test_reviving_minhash():

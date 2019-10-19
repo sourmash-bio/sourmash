@@ -61,7 +61,7 @@ cdef extern from "kmer_min_hash.hh":
 
 cdef class MinHash(object):
     cdef unique_ptr[KmerMinHash] _this
-    cdef public bool track_abundance
+    cdef bool _track_abundance
 
     cpdef get_mins(self, bool with_abundance=*)
     cpdef set_abundances(self, dict)

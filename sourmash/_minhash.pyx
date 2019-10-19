@@ -97,7 +97,7 @@ cdef class MinHash(object):
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0,
                        mins=None, HashIntoType scaled=0):
-        self.track_abundance = track_abundance
+        self._track_abundance = track_abundance
 
         if max_hash and scaled:
             raise ValueError('cannot set both max_hash and scaled')
@@ -150,7 +150,7 @@ cdef class MinHash(object):
         (n, ksize, is_protein, dayhoff, mins, _, track_abundance, max_hash, seed) =\
           tup
 
-        self.track_abundance = track_abundance
+        self._track_abundance = track_abundance
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
@@ -253,9 +253,31 @@ cdef class MinHash(object):
 
     @property
     def max_hash(self):
-        mm = deref(self._this).max_hash
+        return deref(self._this).max_hash
 
-        return mm
+    @property
+    def track_abundance(self):
+        return self._track_abundance
+
+    @track_abundance.setter
+    def track_abundance(self, v):
+        cdef KmerMinHash *mh = NULL
+
+        if v == self._track_abundance:
+            return
+
+        if v is True and len(self) != 0:
+            raise RuntimeError("Can only set track_abundance=True if the MinHash is empty")
+
+        if v:
+            mh = new KmerMinAbundance(self.num, self.ksize, self.is_protein,
+                                      self.dayhoff, self.seed, self.max_hash)
+            self._this.reset(mh)
+
+        # At this point, if we are changing from track_abundance=True to False,
+        # keep the underlying Abundance MH (to avoid copying data to a new one).
+
+        self._track_abundance = v
 
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
