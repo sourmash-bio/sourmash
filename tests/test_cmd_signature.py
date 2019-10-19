@@ -141,6 +141,27 @@ def test_sig_merge_3_abund_ba(c):
 
 
 @utils.in_tempdir
+def test_sig_filter_1(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'filter', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sigs = list(sourmash.load_signatures(out))
+
+    assert len(filtered_sigs) == 2
+
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+
+    assert filtered_sigs[0].minhash == mh47
+    assert filtered_sigs[1].minhash == mh63
+
+
+@utils.in_tempdir
 def test_sig_merge_flatten(c):
     # merge of 47 without abund, with 63 with, will succeed with --flatten
     sig47 = utils.get_test_data('47.fa.sig')

@@ -495,6 +495,79 @@ def extract(args):
            len(args.signatures))
 
 
+def filter(args):
+    """
+    filter hashes by abundance in all of the signatures
+    """
+    p = SourmashArgumentParser(prog='sourmash signature flatten')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout,
+                   help='output signature to this file')
+    p.add_argument('--md5', default=None,
+                   help='select signatures whose md5 contains this substring')
+    p.add_argument('--name', default=None,
+                   help='select signatures whose name contains this substring')
+
+    p.add_argument('-m', '--min-abundance', type=int, default=1,
+                   help='keep hashes >= this minimum abundance')
+    p.add_argument('-M', '--max-abundance', type=int, default=None,
+                    help='keep hashes <= this maximum abundance')
+
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    outlist = []
+    total_loaded = 0
+    for filename in args.signatures:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype,
+                                           do_raise=True)
+        siglist = list(siglist)
+
+        total_loaded += len(siglist)
+
+        # select!
+        if args.md5 is not None:
+            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+        if args.name is not None:
+            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+
+        for ss in siglist:
+            mh = ss.minhash
+            if not mh.track_abundance:
+                notify('ignoring signature {} - track_abundance not set.',
+                       ss)
+                continue
+
+            abunds = mh.get_mins(with_abundance=True)
+            abunds2 = {}
+            for k, v in abunds.items():
+                if v >= args.min_abundance:
+                    if args.max_abundance is None or \
+                       v <= args.max_abundance:
+                       abunds2[k] = v
+
+            filtered_mh = mh.copy_and_clear()
+            filtered_mh.set_abundances(abunds2)
+
+            ss.minhash = filtered_mh
+
+        outlist.extend(siglist)
+
+    sourmash.save_signatures(outlist, fp=args.output)
+
+    notify("loaded {} total that matched ksize & molecule type",
+           total_loaded)
+    notify("extracted {} signatures from {} file(s)", len(outlist),
+           len(args.signatures))
+
+
 def flatten(args):
     """
     flatten a signature, removing abundances.
@@ -702,6 +775,7 @@ def main(sysv_args):
                 'intersect': intersect,
                 'rename': rename,
                 'extract': extract,
+                'filter': filter,
                 'flatten': flatten,
                 'downsample': downsample,
                 'subtract': subtract,
