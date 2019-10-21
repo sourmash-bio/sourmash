@@ -197,6 +197,7 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
                 barcode = alignment.get_tag(cb)
 
         renamed = renamer[barcode] if renamer is not None else barcode
+        umi = ""
         for umi_tag in UMIS:
             if alignment.has_tag(umi_tag):
                 umi = alignment.get_tag(umi_tag)
