@@ -399,6 +399,7 @@ def compute(args):
         all_fastas_sorted = []
         delimiter = "X"
         umi_filter = True if args.count_valid_reads != 0 else False
+        notify("Umi filter is {}", umi_filter)
         Elist = make_minhashes()
         CELL_BARCODE = "CELL_BARCODE"
         UMI_COUNT = "UMI_COUNT"
