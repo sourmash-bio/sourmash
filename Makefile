@@ -10,6 +10,7 @@ build:
 
 clean:
 	$(PYTHON) setup.py clean --all
+	rm -f sourmash/*.so
 	cd doc && make clean
 
 install: all
