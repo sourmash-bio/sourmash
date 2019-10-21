@@ -206,7 +206,9 @@ def test_do_sourmash_compute_10x():
         barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
         renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
         fastas_dir = os.path.join(location, "fastas")
-        os.makedirs(fastas_dir, exist_ok=True)
+        if not os.path.exists(fastas_dir):
+            os.makedirs(fastas_dir)
+
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             '--dna', '--count-valid-reads', '10',
