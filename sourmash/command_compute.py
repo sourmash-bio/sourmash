@@ -253,7 +253,6 @@ def compute(args):
         single_barcode_fastas = all_fastas_sorted[index]
 
         count = 0
-        whole_sequence = ""
         # Iterating through fasta files for single barcode from different
         # fastas
         for fasta in iter_split(single_barcode_fastas, ","):
@@ -265,16 +264,18 @@ def compute(args):
                 barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
                     f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
-                    f.write(">{}\n".format(barcode_name))
 
             # Add sequence
             for record in screed.open(fasta):
                 sequence = record.sequence
+                cell = record.name
                 add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
 
-                # Appending the sequence with each of the sequences
-                whole_sequence += sequence
+                if args.save_fastas:
+                    # Appending sequence of a umi to the fasta
+                    barcode, umi = cell.split(delimiter)
+                    f.write(">{}\n{}\n".format(barcode + "_" + umi, sequence))
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -284,7 +285,6 @@ def compute(args):
 
         # Updating the fasta file with each of the sequences and closing the fasta file
         if args.save_fastas:
-            f.write("{}".format(whole_sequence))
             f.close()
 
         barcode_name = unique_fasta_file.replace(".fasta", "")
@@ -301,7 +301,7 @@ def compute(args):
         return records
 
     def filtered_umi_to_sig(index):
-        """Returns signature records for all the fasta files for a unique 
+        """Returns signature records for all the fasta files for a unique
         barcode, only if it has more than count-valid-reads number of umis."""
 
         # Initializing time
@@ -331,7 +331,6 @@ def compute(args):
         if len(umis) < args.count_valid_reads:
             return []
         count = 0
-        whole_sequence = ""
         for fasta in iter_split(single_barcode_fastas, ","):
 
             # Initializing fasta file to save the sequence to
@@ -340,16 +339,18 @@ def compute(args):
                 barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
                     f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
-                    f.write(">{}\n".format(barcode_name))
 
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
                 sequence = record.sequence
+                cell = record.name
                 add_seq(Elist, sequence,
                         args.input_is_protein, args.check_sequence)
 
-                # Appending the sequence with each of the sequences
-                whole_sequence += sequence
+                if args.save_fastas:
+                    # Appending sequence of a umi to the fasta
+                    barcode, umi = cell.split(delimiter)
+                    f.write(">{}\n{}\n".format(barcode + "_" + umi, sequence))
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
@@ -359,7 +360,6 @@ def compute(args):
               flush=True)
         # Update the fasta file with all sequence and close the opened fasta file
         if args.save_fastas:
-            f.write("{}".format(whole_sequence))
             f.close()
         # Build signature records
         barcode_name = unique_fasta_file.replace(".fasta", "")
