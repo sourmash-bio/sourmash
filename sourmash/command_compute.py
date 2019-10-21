@@ -268,14 +268,17 @@ def compute(args):
             # Add sequence
             for record in screed.open(fasta):
                 sequence = record.sequence
-                cell = record.name
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                if args.save_fastas:
-                    # Appending sequence of a umi to the fasta
-                    barcode, umi = cell.split(delimiter)
-                    f.write(">{}\n{}\n".format(barcode + "_" + umi, sequence))
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -343,14 +346,18 @@ def compute(args):
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
                 sequence = record.sequence
-                cell = record.name
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                if args.save_fastas:
-                    # Appending sequence of a umi to the fasta
-                    barcode, umi = cell.split(delimiter)
-                    f.write(">{}\n{}\n".format(barcode + "_" + umi, sequence))
+                # Appending sequence of a umi to the fasta
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
@@ -460,8 +467,7 @@ def compute(args):
                     bam_to_fasta,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimiter,
-                    umi_filter)
+                    delimiter)
 
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files,

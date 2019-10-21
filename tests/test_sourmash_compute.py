@@ -184,42 +184,6 @@ def test_do_sourmash_compute_10x():
         # min_hashes = [x.minhash.get_mins() for x in siglist]
         # assert all(mins != [] for mins in min_hashes)
 
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
-        renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna', '--count-valid-reads', '10',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--barcodes', barcodes_path,
-                                            '--rename-10x-barcodes', renamer_path,
-                                            '--save-fastas', location,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 1
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-        with open(csv_path, 'rb') as f:
-            data = [line.split() for line in f]
-        assert len(data) == 9
-        barcodes = [filename.replace(".fasta", "") for filename in os.listdir(location) if filename.endswith('.fasta')]
-        for record in screed.open(os.path.join(location, barcodes[0] + ".fasta")):
-            assert record.sequence.count(">") == 0
-            assert record.name == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
-            assert record.sequence.endswith("X")
-        assert len(barcodes) == 1
-        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
-
         # test to check if all the lines in unfiltered_umi_to_sig are callled and tested
         csv_path = os.path.join(location, "all_barcodes_meta.csv")
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
@@ -236,6 +200,51 @@ def test_do_sourmash_compute_10x():
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 32
+
+        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+        csv_path = os.path.join(location, "all_barcodes_meta.csv")
+        barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
+        renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
+        fastas_dir = os.path.join(location, "fastas")
+        os.makedirs(fastas_dir, exist_ok=True)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '31',
+                                            '--dna', '--count-valid-reads', '10',
+                                            '--input-is-10x',
+                                            testdata1,
+                                            '--write-barcode-meta-csv', csv_path,
+                                            '--barcodes', barcodes_path,
+                                            '--rename-10x-barcodes', renamer_path,
+                                            '--save-fastas', fastas_dir,
+                                            '-o', '10x-example_dna.sig'],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, '10x-example_dna.sig')
+        assert os.path.exists(sigfile)
+        siglist = list(signature.load_signatures(sigfile))
+        assert len(siglist) == 1
+        # TODO PV This seems to randomly fail/pass - commenting out for now
+        # but the min hashes should never be empty
+        # min_hashes = [x.minhash.get_mins() for x in siglist]
+        # assert all(mins != [] for mins in min_hashes)
+
+        with open(csv_path, 'rb') as f:
+            data = [line.split() for line in f]
+        assert len(data) == 9
+        fasta_files = os.listdir(fastas_dir)
+        barcodes = [filename.replace(".fasta", "") for filename in fasta_files]
+        assert len(barcodes) == 1
+        assert len(fasta_files) == 1
+        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
+        count = 0
+        fasta_file_name = os.path.join(fastas_dir, fasta_files[0])
+        for record in screed.open(fasta_file_name):
+            name = record.name
+            sequence = record.sequence
+            count += 1
+            assert name.startswith('lung_epithelial_cell|AAATGCCCAAACTGCT-1')
+            assert sequence.count(">") == 0
+            assert sequence.count("X") == 0
 
 
 def test_do_sourmash_compute_name():
