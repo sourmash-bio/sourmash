@@ -284,11 +284,17 @@ def compute(args):
             # Add sequence
             for record in screed.open(fasta):
                 sequence = record.sequence
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                # Appending the sequence with each of the sequences
-                whole_sequence += sequence
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -359,11 +365,18 @@ def compute(args):
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
                 sequence = record.sequence
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                # Appending the sequence with each of the sequences
-                whole_sequence += sequence
+                # Appending sequence of a umi to the fasta
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
