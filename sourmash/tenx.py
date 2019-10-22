@@ -155,7 +155,7 @@ def shard_bam_file(bam_file_path, chunked_file_line_count, shards_folder):
     return file_names
 
 
-def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
+def bam_to_fasta(barcodes, barcode_renamer, delimiter, bam_file):
     """Convert 10x bam to one-record-per-cell fasta.
 
     Parameters
@@ -170,10 +170,6 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
         Non-DNA or protein alphabet character to be ignored, e.g. if a cell
         has two sequences 'AAAAAAAAA' and 'CCCCCCCC', they would be
         concatenated as 'AAAAAAAAAXCCCCCCCC'.
-    umi_filter : boolean
-        If umi filter is True, then umi is written in place of fasta
-            record name
-        barcode is the fasta file name in the output fastas.
     Returns
     -------
     filenames: list
@@ -200,21 +196,18 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
             if alignment.has_tag(cb):
                 barcode = alignment.get_tag(cb)
 
-        # If umi_filter is True, add the umi to the cell barcode separated by X
-        # "AAATGCCCAAACTGCT-1" is the CELL_BARCODE and AGCT is the UMI
-        # then the key in cell_sequences would be AAATGCCCAAACTGCT-1XAGCT
         renamed = renamer[barcode] if renamer is not None else barcode
-        if umi_filter:
-            for umi_tag in UMIS:
-                if alignment.has_tag(umi_tag):
-                    umi = alignment.get_tag(umi_tag)
-            renamed = renamed + delimiter + umi
+        umi = ""
+        for umi_tag in UMIS:
+            if alignment.has_tag(umi_tag):
+                umi = alignment.get_tag(umi_tag)
+        renamed = renamed + delimiter + umi
 
         # Make a long string of all the cell sequences, separated
         # by a non-alphabet letter
         cell_sequences[renamed] += alignment.seq + delimiter
 
-    filenames = list(set(write_cell_sequences(cell_sequences, umi_filter, delimiter)))
+    filenames = list(set(write_cell_sequences(cell_sequences, delimiter)))
     notify("bam_to_fasta conversion completed on {}", bam_file, end='\r', flush=True)
 
     bam.close()
@@ -222,23 +215,19 @@ def bam_to_fasta(barcodes, barcode_renamer, delimiter, umi_filter, bam_file):
     return filenames
 
 
-def write_cell_sequences(cell_sequences, umi_filter=False, delimiter="X"):
+def write_cell_sequences(cell_sequences, delimiter="X"):
     """
     Write each cell's sequences to an individual file
         Parameters
     ----------
     cell_sequences: dictionary with a cell and corresponding sequence
-    if umi_filter is True, the cell key is expected to contain umi as well
+    ithe cell key is expected to contain umi as well
     separated by the delimiter.
-    e.g cell_key dictionary if umi_filter False is {AAAAAAAAA: AGCTACACTA},
     else {AAAAAAAAAXACTAG: AGCTACACTA} - In this case AAAAAAAAA would be cell
     barcode and ACTAG would be umi. The umi will be further used by downstream
     processing functions appropriately. The barcode is safely returned as the
     fasta filename and the umi is saved as record.name/sequence id in the
     fasta file
-    umi_filter : boolean, default False
-        If umi filter is True, then umi is written in the fasta file as
-        record.name, cell barcode is the fasta file name in the output fastas.
     delimiter : str, default X
         Used to separate barcode and umi in the cell sequences dict.
 
@@ -250,19 +239,11 @@ def write_cell_sequences(cell_sequences, umi_filter=False, delimiter="X"):
     temp_folder = tempfile.mkdtemp()
 
     for cell, seq in cell_sequences.items():
-        if umi_filter:
-            barcode, umi = cell.split(delimiter)
-            filename = os.path.join(temp_folder, barcode + '.fasta')
+        barcode, umi = cell.split(delimiter)
+        filename = os.path.join(temp_folder, barcode + '.fasta')
 
-            # Append to an existing barcode file with a different umi
-            with open(filename, "a") as f:
-                if os.stat(filename).st_size != 0:
-                    f.write(">{}\n{}\n".format(umi, seq))
-                else:
-                    f.write(">{}\n{}".format(umi, seq))
-            yield filename
-        else:
-            filename = os.path.join(temp_folder, cell + '.fasta')
-            with open(filename, "w") as f:
-                f.write(">{}\n{}".format(cell, seq))
-            yield filename
+        # Append to an existing barcode file with a different umi
+        with open(filename, "a") as f:
+            f.write(">{}\n{}\n".format(umi, seq))
+        yield filename
+
