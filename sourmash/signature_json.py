@@ -284,8 +284,11 @@ def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
     if fp:
         try:
             fp.write(s)
-        except TypeError:
-            fp.write(unicode(s))
+        except TypeError:  # fp is opened in binary mode
+            try:
+                fp.write(s.encode('utf-8'))
+            except TypeError:  # Python 2
+                fp.write(unicode(s))
         return None
     return s
 
