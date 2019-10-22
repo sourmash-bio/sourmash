@@ -40,7 +40,6 @@ cdef extern from "kmer_min_hash.hh":
         string aa_to_dayhoff(string aa) except +ValueError
         string translate_codon(string codon) except +ValueError
         string aa_to_hp(string aa) except +ValueError
-        string translate_codon(string codon) except +ValueError
         unsigned int count_common(const KmerMinHash&) except +ValueError
         unsigned long size()
 
