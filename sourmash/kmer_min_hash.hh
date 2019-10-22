@@ -87,7 +87,7 @@ public:
 
     KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, bool hp, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), hp(hp) seed(s), max_hash(mx) {
+        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), hp(hp), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -507,7 +507,7 @@ private:
 // | N, C, S, T, D, E, R, H, K, Q          | p       |     
     std::map<std::string, std::string> _hp_table = {
       {"A", "h"}, {"F", "h"}, {"G", "h"}, {"I", "h"},
-      {"L", "h"}, {"M", 'h'}, {"P", "h"}, {"V", "h"},
+      {"L", "h"}, {"M", "h"}, {"P", "h"}, {"V", "h"},
       {"W", "h"}, {"Y", "h"}, {"N", "p"}, {"C", "p"},
       {"S", "p"}, {"T", "p"}, {"D", "p"}, {"E", "p"},
       {"R", "p"}, {"H", "p"}, {"K", "p"}, {"Q", "p"}
