@@ -759,11 +759,11 @@ signature license: CC0
         assert line.strip() in out
 
 @utils.in_tempdir
-def test_sig_describe_1_dayhoff(c):
+def test_sig_describe_1_hp(c):
     # get basic info on a signature
     testdata = utils.get_test_data('short.fa')
     c.run_sourmash('compute', '-k', '21,30',
-                   '--dayhoff', '--protein',
+                   '--dayhoff', '--hp', '--protein',
                    '--dna',
                    testdata)
     # stdout should be new signature
@@ -795,7 +795,14 @@ md5: ef4fa1f3a90f3873187370f1eacc0d9a
 k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
-
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: ef4fa1f3a90f3873187370f1eacc0d9a
+k=21 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
 ---
 signature filename: short.fa.sig
 signature: short.fa
@@ -820,6 +827,15 @@ signature: short.fa
 source file: short.fa
 md5: 5647819f2eac913e04af51c8d548ad56
 k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 5647819f2eac913e04af51c8d548ad56
+k=30 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 

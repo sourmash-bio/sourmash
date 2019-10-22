@@ -93,6 +93,7 @@ cdef class MinHash(object):
     def __init__(self, unsigned int n, unsigned int ksize,
                        bool is_protein=False,
                        bool dayhoff=False,
+                       bool hp=False,
                        bool track_abundance=False,
                        uint32_t seed=MINHASH_DEFAULT_SEED,
                        HashIntoType max_hash=0,
@@ -112,9 +113,9 @@ cdef class MinHash(object):
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
-            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, seed, max_hash)
+            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, hp, seed, max_hash)
         else:
-            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, seed, max_hash)
+            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, hp, seed, max_hash)
 
         self._this.reset(mh)
 
@@ -128,6 +129,7 @@ cdef class MinHash(object):
     def __copy__(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
                     deref(self._this).is_protein, deref(self._this).dayhoff,
+                    deref(self._this).hp,
                     self.track_abundance,
                     deref(self._this).seed, deref(self._this).max_hash)
         a.merge(self)
@@ -147,18 +149,18 @@ cdef class MinHash(object):
                 deref(self._this).seed)
 
     def __setstate__(self, tup):
-        (n, ksize, is_protein, dayhoff, mins, _, track_abundance, max_hash, seed) =\
+        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance, max_hash, seed) =\
           tup
 
         self._track_abundance = track_abundance
 
         cdef KmerMinHash *mh = NULL
         if track_abundance:
-            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, seed, max_hash)
+            mh = new KmerMinAbundance(n, ksize, is_protein, dayhoff, hp, seed, max_hash)
             self._this.reset(mh)
             self.set_abundances(mins)
         else:
-            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, seed, max_hash)
+            mh = new KmerMinHash(n, ksize, is_protein, dayhoff, hp, seed, max_hash)
             self._this.reset(mh)
             self.add_many(mins)
 
@@ -168,6 +170,7 @@ cdef class MinHash(object):
                 deref(self._this).ksize,
                 deref(self._this).is_protein,
                 deref(self._this).dayhoff,
+                deref(self._this).hp,
                 self.track_abundance,
                 deref(self._this).seed,
                 deref(self._this).max_hash,
@@ -182,7 +185,7 @@ cdef class MinHash(object):
     def copy_and_clear(self):
         a = MinHash(deref(self._this).num, deref(self._this).ksize,
                     deref(self._this).is_protein, deref(self._this).dayhoff,
-                    self.track_abundance,
+                    deref(self._this).hp, self.track_abundance,
                     deref(self._this).seed, deref(self._this).max_hash)
         return a
 
@@ -248,6 +251,10 @@ cdef class MinHash(object):
         return deref(self._this).dayhoff
 
     @property
+    def hp(self):
+        return deref(self._this).hp
+
+    @property
     def ksize(self):
         return deref(self._this).ksize
 
@@ -271,7 +278,7 @@ cdef class MinHash(object):
 
         if v:
             mh = new KmerMinAbundance(self.num, self.ksize, self.is_protein,
-                                      self.dayhoff, self.seed, self.max_hash)
+                                      self.dayhoff, self.hp, self.seed, self.max_hash)
             self._this.reset(mh)
 
         # At this point, if we are changing from track_abundance=True to False,
@@ -294,6 +301,7 @@ cdef class MinHash(object):
 
         a = MinHash(new_num, deref(self._this).ksize,
                     deref(self._this).is_protein, deref(self._this).dayhoff,
+                    deref(self._this).hp,
                     self.track_abundance,
                     deref(self._this).seed, 0)
         if self.track_abundance:
@@ -326,6 +334,7 @@ cdef class MinHash(object):
 
         a = MinHash(0, deref(self._this).ksize,
                     deref(self._this).is_protein, deref(self._this).dayhoff,
+                    deref(self._this).hp,
                     self.track_abundance,
                     deref(self._this).seed, new_max_hash)
         if self.track_abundance:
@@ -348,6 +357,7 @@ cdef class MinHash(object):
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
                                           deref(self._this).dayhoff,
+                                          deref(self._this).hp,
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
 
@@ -356,6 +366,7 @@ cdef class MinHash(object):
                                           deref(self._this).ksize,
                                           deref(self._this).is_protein,
                                           deref(self._this).dayhoff,
+                                          deref(self._this).hp,
                                           deref(self._this).seed,
                                           deref(self._this).max_hash)
 
@@ -467,10 +478,10 @@ cdef class MinHash(object):
             raise ValueError("cannot add amino acid sequence to DNA MinHash!")
 
         aa_kmers = (sequence[i:i + ksize] for i in range(0, len(sequence) - ksize + 1))
-        if not self.dayhoff:
+        if not self.dayhoff and not self.hp:
             for aa_kmer in aa_kmers:
                 deref(self._this).add_word(to_bytes(aa_kmer))
-        else:
+        elif self.dayhoff:
             for aa_kmer in aa_kmers:
                 dayhoff_kmer = ''
                 for aa in aa_kmer:
@@ -478,6 +489,14 @@ cdef class MinHash(object):
                     dayhoff_kmer += dayhoff_letter
                 # dayhoff_kmer = ''.join( for aa in aa_kmer)
                 deref(self._this).add_word(to_bytes(dayhoff_kmer))
+        else:
+            for aa_kmer in aa_kmers:
+                hp_kmer = ''
+                for aa in aa_kmer:
+                    hp_letter = deref(self._this).aa_to_hp(to_bytes(aa))
+                    hp_kmer += hp_letter
+                # hp_kmer = ''.join( for aa in aa_kmer)
+                deref(self._this).add_word(to_bytes(hp_kmer))
 
     def is_molecule_type(self, molecule):
         if molecule.upper() == 'DNA' and not self.is_protein:
@@ -489,4 +508,10 @@ cdef class MinHash(object):
             else:
                 if molecule == 'protein':
                     return True
+            if self.hp:
+                if molecule == 'hp':
+                    return True
+                else:
+                    if molecule == 'protein':
+                        return True
         return False

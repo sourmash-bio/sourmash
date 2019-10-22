@@ -11,6 +11,11 @@ def dayhoff(request):
     return request.param
 
 
+@pytest.fixture(params=[True, False])
+def hp(request):
+    return request.param
+
+
 @pytest.fixture(params=[2, 5, 10])
 def n_children(request):
     return request.param

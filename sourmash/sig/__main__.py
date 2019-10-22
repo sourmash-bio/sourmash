@@ -49,8 +49,8 @@ def _set_num_scaled(mh, num, scaled):
     mh_params = list(mh.__getstate__())
     # Number of hashes is 0th parameter
     mh_params[0] = num
-    # Scale is 7th parameter
-    mh_params[7] = get_max_hash_for_scaled(scaled)
+    # Scale is 8th parameter
+    mh_params[8] = get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -108,6 +108,8 @@ def describe(args):
         if mh.is_protein:
             if mh.dayhoff:
                 moltype = 'dayhoff'
+            elif mh.hp:
+                moltype = 'hp'
             else:
                 moltype = 'protein'
         scaled = mh.scaled
