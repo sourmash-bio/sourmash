@@ -4,10 +4,8 @@ Compare two taxonomy spreadsheets.
 """
 from __future__ import print_function
 import sys
-import argparse
 from collections import defaultdict
 
-from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet
 from . import lca_utils
 from .lca_utils import zip_lineage

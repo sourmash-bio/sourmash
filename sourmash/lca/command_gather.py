@@ -11,7 +11,7 @@ import csv
 from collections import Counter, defaultdict, namedtuple
 
 from .. import sourmash_args, save_signatures, SourmashSignature
-from ..logging import notify, error, print_results, set_quiet, debug
+from ..logging import notify, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
@@ -78,11 +78,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         orig_abunds = { k: 1 for k in query_mins }
     sum_abunds = sum(orig_abunds.values())
 
-
-    # collect all mentioned lineage_ids -> md5s, from across the databases
-    md5_to_lineage = {}
-    md5_to_name = {}
-
     # now! do the gather:
     while 1:
         # find all of the assignments for the current set of hashes
@@ -105,14 +100,18 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                 counts[(lca_db, idx)] += 1
 
         # collect the most abundant assignments
-        common_iter = iter(counts.most_common())
         best_list = []
-        (best_lca_db, best_idx), top_count = next(common_iter)
+        top_count = 0
 
-        best_list.append((best_lca_db, best_idx))
-        for (lca_db, idx), count in common_iter:
+        for (lca_db, idx), count in counts.most_common():
+            if not best_list:
+                top_count = count
+                best_list.append((lca_db, idx))
+                continue
+
             if count != top_count:
                 break
+
             best_list.append((lca_db, idx))
 
         # sort on idx and pick the lowest (for consistency).
