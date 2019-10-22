@@ -1002,17 +1002,21 @@ def watch(args):
         moltype = 'DNA'
         is_protein = False
         dayhoff = False
+        hp = False
     elif args.protein:
         moltype = 'protein'
         is_protein = True
         dayhoff = False
+        hp = False
     elif args.dayhoff:
         moltype = 'dayhoff'
         is_protein = True
         dayhoff = True
+        hp = False
     else:
         moltype = 'hp'
         is_protein = True
+        dayhoff = False
         hp = True
 
     tree = load_sbt_index(args.sbt_name)

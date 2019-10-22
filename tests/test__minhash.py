@@ -108,9 +108,9 @@ def test_bytes_dna(track_abundance):
     assert len(b) == 1
 
 
-def test_bytes_protein(track_abundance, dayhoff, hp):
+def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
     mh.add_protein(u'AGYYG')
     mh.add_protein(b'AGYYG')
@@ -118,12 +118,36 @@ def test_bytes_protein(track_abundance, dayhoff, hp):
     assert len(mh.get_mins()) == 4
 
 
-def test_protein(track_abundance, dayhoff, hp):
+def test_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.get_mins()) == 4
+
+
+def test_bytes_protein_hp(track_abundance, hp):
+    # verify that we can hash protein/aa sequences
+    mh = MinHash(10, 6, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh.add_protein('AGYYG')
+    mh.add_protein(u'AGYYG')
+    mh.add_protein(b'AGYYG')
+
+    if hp:
+        assert len(mh.get_mins()) == 1
+    else:
+        assert len(mh.get_mins()) == 4
+
+
+def test_protein_hp(track_abundance, hp):
+    # verify that we can hash protein/aa sequences
+    mh = MinHash(10, 6, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh.add_protein('AGYYG')
+
+    if hp:
+        assert len(mh.get_mins()) == 1
+    else:
+        assert len(mh.get_mins()) == 4
 
 
 def test_translate_codon(track_abundance):

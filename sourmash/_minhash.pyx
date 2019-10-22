@@ -144,6 +144,7 @@ cdef class MinHash(object):
                 deref(self._this).ksize,
                 deref(self._this).is_protein,
                 deref(self._this).dayhoff,
+                deref(self._this).hp,
                 self.get_mins(with_abundance=with_abundance),
                 None, self.track_abundance, deref(self._this).max_hash,
                 deref(self._this).seed)

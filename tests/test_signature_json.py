@@ -116,8 +116,8 @@ def test_load_signaturesset_json_iter_molecules():
 
     t = list()
     molecules = 'DNA', 'protein', 'dayhoff', 'hp'
-    names = "Foo", 'Bar', "Biz"
-    filenames = '/tmp/foo', '/tmp/bar', '/tmp/biz'
+    names = "Foo", 'Bar', "Biz", "Baz"
+    filenames = '/tmp/foo', '/tmp/bar', '/tmp/biz', '/tmp/baz'
 
     for molecule, name, filename in zip(molecules, names, filenames):
         minhash = (2,3,4,5,6)

@@ -799,7 +799,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: short.fa
 source file: short.fa
-md5: ef4fa1f3a90f3873187370f1eacc0d9a
+md5: 20be00d9d577da9faeb77477bf07d3fb
 k=21 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
@@ -834,7 +834,7 @@ signature license: CC0
 signature filename: short.fa.sig
 signature: short.fa
 source file: short.fa
-md5: 5647819f2eac913e04af51c8d548ad56
+md5: ad1e329dd98b5e32422e9decf298aa5f
 k=30 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
