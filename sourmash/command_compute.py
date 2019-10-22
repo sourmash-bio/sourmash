@@ -84,10 +84,10 @@ def compute(args):
     parser.add_argument('-p', '--processes', default=2, type=int,
                         help='For 10x input only (i.e input-is-10x flag is True, '
                         'Number of processes to use for reading 10x bam file')
-    parser.add_argument('--save-fastas', type=str,
+    parser.add_argument('--save-fastas', default="", type=str,
                         help='For 10x input only (i.e input-is-10x flag is True), '
                         'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta '
-                        'save by default in the same directory from which the command is run')
+                        'in the absolute path given by this flag, By default, fastas are not saved')
     parser.add_argument('--line-count', type=int,
                         help='For 10x input only (i.e input-is-10x flag is True), line count for each bam shard',
                         default=DEFAULT_LINE_COUNT)
@@ -261,18 +261,24 @@ def compute(args):
             # all the sequences from all bam shards to
             if count == 0:
                 unique_fasta_file = os.path.basename(fasta)
+                barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
-                    f = open(unique_fasta_file, "w")
+                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
 
             # Add sequence
             for record in screed.open(fasta):
                 sequence = record.sequence
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                # Updating the fasta file with each of the sequences
-                if args.save_fastas:
-                    f.write(">{}\n{}".format(filename, record.sequence))
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
 
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
@@ -280,12 +286,12 @@ def compute(args):
 
             count += 1
 
-        # Close the opened fasta file
+        # Updating the fasta file with each of the sequences and closing the fasta file
         if args.save_fastas:
             f.close()
 
-        # Build signature records
         barcode_name = unique_fasta_file.replace(".fasta", "")
+        # Build signature records
         siglist = build_siglist(
             Elist,
             os.path.join(args.filenames[0], unique_fasta_file),
@@ -298,7 +304,7 @@ def compute(args):
         return records
 
     def filtered_umi_to_sig(index):
-        """Returns signature records for all the fasta files for a unique 
+        """Returns signature records for all the fasta files for a unique
         barcode, only if it has more than count-valid-reads number of umis."""
 
         # Initializing time
@@ -320,8 +326,8 @@ def compute(args):
 
         if args.write_barcode_meta_csv:
             unique_fasta_file = os.path.basename(fasta)
-            unique_fasta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
-            with open(unique_fasta_file, "w") as f:
+            unique_meta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
+            with open(unique_meta_file, "w") as f:
                 f.write("{} {}".format(len(umis), sum(list(umis.values()))))
 
         debug("Completed tracking umi counts", end="\r", flush=True)
@@ -333,19 +339,25 @@ def compute(args):
             # Initializing fasta file to save the sequence to
             if count == 0:
                 unique_fasta_file = os.path.basename(fasta)
+                barcode_name = unique_fasta_file.replace(".fasta", "")
                 if args.save_fastas:
-                    f = open(unique_fasta_file, "w")
+                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
 
             # Add sequences of barcodes with more than count-valid-reads umis
             for record in screed.open(fasta):
                 sequence = record.sequence
-                add_seq(Elist, sequence,
-                        args.input_is_protein, args.check_sequence)
+                umi = record.name
 
-                # Updating the fasta file with each of the sequences
-                if args.save_fastas:
-                    f.write(">{}\n{}".format(filename, record.sequence))
-
+                # Appending sequence of a umi to the fasta
+                split_seqs = sequence.split(delimiter)
+                for index, seq in enumerate(split_seqs):
+                    if seq == "":
+                        continue
+                    add_seq(Elist, sequence,
+                            args.input_is_protein, args.check_sequence)
+                    if args.save_fastas:
+                        f.write(">{}\n{}\n".format(
+                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
             # Delete fasta file in tmp folder
             if os.path.exists(fasta):
                 os.unlink(fasta)
@@ -353,7 +365,7 @@ def compute(args):
 
         debug("Added sequences of unique barcode,umi to Elist", end="\r",
               flush=True)
-        # Close the opened fasta file
+        # Update the fasta file with all sequence and close the opened fasta file
         if args.save_fastas:
             f.close()
         # Build signature records
@@ -394,6 +406,7 @@ def compute(args):
         all_fastas_sorted = []
         delimiter = "X"
         umi_filter = True if args.count_valid_reads != 0 else False
+        notify("Umi filter is {}", umi_filter)
         Elist = make_minhashes()
         CELL_BARCODE = "CELL_BARCODE"
         UMI_COUNT = "UMI_COUNT"
@@ -454,8 +467,7 @@ def compute(args):
                     bam_to_fasta,
                     barcodes,
                     args.rename_10x_barcodes,
-                    delimiter,
-                    umi_filter)
+                    delimiter)
 
                 length_sharded_bam_files = len(filenames)
                 chunksize = calculate_chunksize(length_sharded_bam_files,
