@@ -432,14 +432,16 @@ for an example use case.
 
 These commands manipulate signatures from the command line. Currently
 supported subcommands are `merge`, `rename`, `intersect`,
-`extract`, `downsample`, `subtract`, `import`, `export`, `info`, and
-`flatten`.
+`extract`, `downsample`, `subtract`, `import`, `export`, `info`,
+`flatten`, and `filter`.
 
-All of the signature commands work only on compatible signatures, where
-the k-mer size and nucleotide/protein sequences match.  If working directly
-with the hash values (e.g. `merge`, `intersect`, `subtract`) then the
-scaled values must also match; you can use `downsample` to convert a bunch
-of samples to the same scaled value.
+The signature commands that combine or otherwise have multiple
+signatures interacting (`merge`, `intersect`, `subtract`) work only on
+compatible signatures, where the k-mer size and nucleotide/protein
+sequences match each other.  If working directly with the hash values
+(e.g. `merge`, `intersect`, `subtract`) then the scaled values must
+also match; you can use `downsample` to convert a bunch of samples to
+the same scaled value.
 
 If there are multiple signatures in a file with different ksizes and/or
 from nucleotide and protein sequences, you can choose amongst them with
@@ -572,6 +574,23 @@ will remove all abundances from all of the .sig files in the current
 directory.
 
 The `flatten` command accepts the same selectors as `extract`.
+
+### `sourmash signature filter`
+
+Filter the hashes in the specified signature(s) by abundance, by either
+`-m/--min-abundance` or `-M/--max-abundance` or both. Abundance selection is
+inclusive, so `-m 2 -M 5` will select hashes with abundance greater than
+or equal to 2, and less than or equal to 5.
+
+For example,
+```
+sourmash signature -m 2 *.sig
+```
+
+will output new signatures containing only hashes that occur two or
+more times in each signature.
+
+The `filter` command accepts the same selectors as `extract`.
 
 ### `sourmash signature import`
 

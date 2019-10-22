@@ -141,6 +141,65 @@ def test_sig_merge_3_abund_ba(c):
 
 
 @utils.in_tempdir
+def test_sig_filter_1(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'filter', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sigs = list(sourmash.load_signatures(out))
+
+    assert len(filtered_sigs) == 2
+
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+
+    assert filtered_sigs[0].minhash == mh47
+    assert filtered_sigs[1].minhash == mh63
+
+
+@utils.in_tempdir
+def test_sig_filter_2(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', '-M', '5', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(sig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 and v <= 5 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
+def test_sig_filter_3(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(sig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
 def test_sig_merge_flatten(c):
     # merge of 47 without abund, with 63 with, will succeed with --flatten
     sig47 = utils.get_test_data('47.fa.sig')
@@ -225,6 +284,81 @@ def test_sig_intersect_2(c):
     print(out)
 
     assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_3(c):
+    # use --abundances-from to preserve abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    # actually do an intersection ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.get_mins(with_abundance=True)
+    mh63_mins = set(mh63.get_mins())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_intersect_4(c):
+    # use --abundances-from to preserve abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    # actually do an intersection ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.get_mins(with_abundance=True)
+    mh63_mins = set(mh63.get_mins())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_intersect_5(c):
+    # use --abundances-from to preserve abundances from sig #47
+    # make sure that you can't specify a flat sig for --abundances-from
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
 
 
 @utils.in_tempdir
