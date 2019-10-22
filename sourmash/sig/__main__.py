@@ -335,7 +335,7 @@ def intersect(args):
     # forcibly turn off track_abundance, unless --abundances-from set.
     if not args.abundances_from:
         intersect_mh = first_sig.minhash.copy_and_clear()
-        _flatten(intersect_mh)
+        intersect_mh.track_abundance = False
         intersect_mh.add_many(mins)
         intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
     else:
