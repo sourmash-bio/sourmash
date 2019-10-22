@@ -304,6 +304,8 @@ def intersect(args):
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout,
                    help='output signature to this file')
+    p.add_argument('-A', '--abundances-from',
+                   help='intersect with & take abundances from this signature')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -330,11 +332,30 @@ def intersect(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    # forcibly turn off track_abundance
-    intersect_mh = first_sig.minhash.copy_and_clear()
-    intersect_mh.track_abundance = False
-    intersect_mh.add_many(mins)
-    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+    # forcibly turn off track_abundance, unless --abundances-from set.
+    if not args.abundances_from:
+        intersect_mh = first_sig.minhash.copy_and_clear()
+        _flatten(intersect_mh)
+        intersect_mh.add_many(mins)
+        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+    else:
+        notify('loading signature from {}, keeping abundances',
+               args.abundances_from)
+        abund_sig = sourmash.load_one_signature(args.abundances_from,
+                                                ksize=args.ksize,
+                                                select_moltype=moltype)
+        if not abund_sig.minhash.track_abundance:
+            error("--track-abundance not set on loaded signature?! exiting.")
+            sys.exit(-1)
+        intersect_mh = abund_sig.minhash.copy_and_clear()
+        abund_mins = abund_sig.minhash.get_mins(with_abundance=True)
+
+        # do one last intersection
+        mins.intersection_update(abund_mins)
+        abund_mins = { k: abund_mins[k] for k in mins }
+
+        intersect_mh.set_abundances(abund_mins)
+        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
     sourmash.save_signatures([intersect_sigobj], fp=args.output)
 
