@@ -20,4 +20,4 @@ jobs:
     - name: Runs benchmarks against master
       run: |
         asv machine --yes
-        asv continuous origin/master
+        asv continuous origin/master $(git rev-parse HEAD)

@@ -32,8 +32,8 @@ coverage: all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
 	$(PYTHON) -m pytest --cov=. --cov-report term-missing
 
-benchmark: all
-	asv continuous master
+benchmark:
+	asv continuous master $(git rev-parse HEAD)
 
 check:
 	cargo build
