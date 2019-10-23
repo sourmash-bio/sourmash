@@ -190,7 +190,7 @@ impl Signature {
                                             return true;
                                         }
                                     }
-                                    None => unimplemented!(),
+                                    None => return true, // TODO: match previous behavior
                                 };
                             };
                         }

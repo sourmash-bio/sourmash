@@ -1,6 +1,5 @@
 use std::ffi::CStr;
 use std::io;
-use std::mem;
 use std::os::raw::c_char;
 use std::slice;
 
@@ -16,7 +15,7 @@ use crate::utils::SourmashStr;
 
 #[no_mangle]
 pub unsafe extern "C" fn signature_new() -> *mut Signature {
-    mem::transmute(Box::new(Signature::default()))
+    Box::into_raw(Box::new(Signature::default())) as _
 }
 
 #[no_mangle]
@@ -149,9 +148,14 @@ unsafe fn signature_first_mh(ptr: *mut Signature) -> Result<*mut KmerMinHash> {
         &mut *ptr
     };
 
-    if let Some(mh) = sig.signatures.get(0) {
-        Ok(mem::transmute(Box::new(mh.clone())))
+    if let Some(item) = sig.signatures.get(0) {
+        if let Sketch::MinHash(mh) = item {
+          Ok(Box::into_raw(Box::new(mh.clone())) as _)
+        } else {
+          unimplemented!()
+        }
     } else {
+        // TODO: need to select the correct one
         unimplemented!()
     }
 }
@@ -252,6 +256,7 @@ unsafe fn signatures_load_path(ptr: *const c_char,
     Ok(Box::into_raw(b) as *mut *mut Signature)
 }
 }
+
 ffi_fn! {
 unsafe fn signatures_load_buffer(ptr: *const c_char,
                                  insize: usize,
