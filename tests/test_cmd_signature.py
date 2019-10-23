@@ -151,6 +151,7 @@ def test_sig_filter_1(c):
     out = c.last_result.out
 
     filtered_sigs = list(sourmash.load_signatures(out))
+    filtered_sigs.sort(key=lambda x: x.name())
 
     assert len(filtered_sigs) == 2
 

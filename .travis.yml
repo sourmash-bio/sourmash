@@ -53,6 +53,7 @@ jobs:
       language: rust
       rust: stable
       before_script: skip
+      install: skip
       script:
         - rustup target add wasm32-unknown-unknown
         - cargo install --force wasm-pack
