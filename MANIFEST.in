@@ -3,6 +3,7 @@ include index.ipynb
 recursive-include sourmash_lib *
 recursive-include sourmash *
 recursive-include third-party *.cc *.h
+exclude tests/*
 global-exclude *.orig
 global-exclude *.pyc
 global-exclude *.so

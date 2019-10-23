@@ -93,26 +93,30 @@ def test_bam_to_fasta():
     barcodes = sourmash_tenx.read_barcodes_file(filename)
 
     fastas = sourmash_tenx.bam_to_fasta(
-        barcodes=barcodes, barcode_renamer=None, delimiter="X", umi_filter=False, bam_file=bam_file)
+        barcodes=barcodes, barcode_renamer=None, delimiter="X", bam_file=bam_file)
     assert len(list(fastas)) == 8
 
 
-def test_filtered_bam_to_fasta():
-    bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
+def test_bam_to_fasta_rename_barcodes():
+    filename = utils.get_test_data('10x-example/barcodes.tsv')
+    renamer_filename = utils.get_test_data('10x-example/barcodes_renamer.tsv')
+    bam_file = utils.get_test_data('10x-example/possorted_genome_bam.bam')
+    barcodes = sourmash_tenx.read_barcodes_file(filename)
+
     fastas = sourmash_tenx.bam_to_fasta(
-        barcodes=None, barcode_renamer=None, delimiter='X', umi_filter=False, bam_file=bam_file)
-    assert len(list(fastas)) == 32
+        barcodes=barcodes, barcode_renamer=renamer_filename, delimiter="X", bam_file=bam_file)
+    assert len(list(fastas)) == 8
 
 
 def test_filtered_bam_to_umi_fasta():
     bam_file = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
     fastas = sourmash_tenx.bam_to_fasta(
-        barcodes=None, barcode_renamer=None, delimiter='X', umi_filter=True, bam_file=bam_file)
+        barcodes=None, barcode_renamer=None, delimiter='X', bam_file=bam_file)
     assert len(list(fastas)) == 32
 
 
-def test_write_sequences():
-    cell_sequences = {'AAATGCCCAAACTGCT-1': "atgc", 'AAATGCCCAAAGTGCT-1': "gtga"}
+def test_write_sequences_no_umi():
+    cell_sequences = {'AAATGCCCAAACTGCT-1X': "atgc", 'AAATGCCCAAAGTGCT-1X': "gtga"}
     fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences))
     assert len(fastas) == len(cell_sequences)
     for fasta in fastas:
@@ -121,7 +125,7 @@ def test_write_sequences():
 
 def test_write_sequences_umi():
     cell_sequences = {'AAATGCCCAXAACTGCT-1': "atgc", 'AAATGCCXCAAAGTGCT-1': "gtga", 'AAATGCCXCAAAGTGCT-2': "gtgc"}
-    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences, True))
+    fastas = list(sourmash_tenx.write_cell_sequences(cell_sequences))
     assert len(fastas) == len(cell_sequences)
     for fasta in fastas:
         assert fasta.endswith(".fasta")

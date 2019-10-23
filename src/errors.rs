@@ -21,11 +21,17 @@ pub enum SourmashError {
     #[fail(display = "different signatures cannot be compared")]
     MismatchSignatureType,
 
+    #[fail(display = "Can only set track_abundance=True if the MinHash is empty")]
+    NonEmptyMinHash,
+
     #[fail(display = "invalid DNA character in input k-mer: {}", message)]
     InvalidDNA { message: String },
 
     #[fail(display = "invalid protein character in input: {}", message)]
     InvalidProt { message: String },
+
+    #[fail(display = "Codon is invalid length: {}", message)]
+    InvalidCodonLength { message: String },
 
     #[fail(display = "Error from deserialization")]
     SerdeError,
@@ -46,9 +52,11 @@ pub enum SourmashErrorCode {
     MismatchMaxHash = 1_03,
     MismatchSeed = 1_04,
     MismatchSignatureType = 1_05,
+    NonEmptyMinHash = 1_06,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
+    InvalidCodonLength = 11_03,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
@@ -74,8 +82,12 @@ impl SourmashErrorCode {
                     SourmashError::MismatchSignatureType => {
                         SourmashErrorCode::MismatchSignatureType
                     }
+                    SourmashError::NonEmptyMinHash => SourmashErrorCode::NonEmptyMinHash,
                     SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
+                    SourmashError::InvalidCodonLength { .. } => {
+                        SourmashErrorCode::InvalidCodonLength
+                    }
                     SourmashError::SerdeError => SourmashErrorCode::SerdeError,
                 };
             }
