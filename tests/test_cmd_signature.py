@@ -151,16 +151,15 @@ def test_sig_filter_1(c):
     out = c.last_result.out
 
     filtered_sigs = list(sourmash.load_signatures(out))
+    filtered_sigs.sort(key=lambda x: x.name())
 
     assert len(filtered_sigs) == 2
 
     mh47 = sourmash.load_one_signature(sig47).minhash
     mh63 = sourmash.load_one_signature(sig63).minhash
-    mins_47 = mh47.get_mins(with_abundance=True)
-    mins_63 = mh63.get_mins(with_abundance=True)
 
-    assert filtered_sigs[0].minhash.get_mins(with_abundance=True) == mins_47
-    assert filtered_sigs[1].minhash.get_mins(with_abundance=True) == mins_63
+    assert filtered_sigs[0].minhash == mh47
+    assert filtered_sigs[1].minhash == mh63
 
 
 @utils.in_tempdir
