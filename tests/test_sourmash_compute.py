@@ -451,7 +451,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 8
+            assert len(siglist) == 6
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
