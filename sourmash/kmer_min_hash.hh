@@ -16,6 +16,12 @@
   /*ABCDEFGHIJKLMNOPQRSTUVWXYZ      abcdefghijklmnopqrstuvwxyz    */\
   " TVGH FCD  M KN   YSAABW R       TVGH FCD  M KN   YSAABW R"
 
+enum class HashFunctions: uint32_t {
+  murmur64_DNA = 1,
+  murmur64_protein = 2,
+  murmur64_dayhoff = 3,
+};
+
 inline uint64_t _hash_murmur(const std::string& kmer,
                              const uint32_t seed) {
     uint64_t out[2];
@@ -78,15 +84,22 @@ class KmerMinHash
 public:
     const unsigned int num;
     const unsigned int ksize;
-    const bool is_protein;
-    const bool dayhoff;
+    HashFunctions hash_function;
     const uint32_t seed;
     const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, uint32_t s,
+    KmerMinHash(unsigned int n, unsigned int k, bool is_protein, bool dayhoff, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), seed(s), max_hash(mx) {
+        : num(n), ksize(k), seed(s), max_hash(mx) {
+      if (is_protein and dayhoff) {
+        hash_function = HashFunctions::murmur64_dayhoff;
+      } else if (is_protein) {
+        hash_function = HashFunctions::murmur64_protein;
+      } else {
+        hash_function = HashFunctions::murmur64_DNA;
+      }
+
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -100,10 +113,8 @@ public:
         if (ksize != other.ksize) {
             throw minhash_exception("different ksizes cannot be compared");
         }
-        if (is_protein != other.is_protein) {
-            throw minhash_exception("DNA/prot minhashes cannot be compared");
-        }
-        if (dayhoff != other.dayhoff) {
+        if (hash_function != other.hash_function) {
+            // TODO: fix this message
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
         if (max_hash != other.max_hash) {
@@ -176,7 +187,7 @@ public:
 
         std::transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
 
-        if (!is_protein) {
+        if (hash_function == HashFunctions::murmur64_DNA) {
             auto rc = _revcomp(seq);
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
 				auto fw_kmer = seq.c_str() + i;
@@ -263,7 +274,7 @@ public:
             residue = translate_codon(codon);
 
             // Use dayhoff encoding of amino acids
-            if (dayhoff) {
+            if (hash_function == HashFunctions::murmur64_dayhoff) {
                 std::string new_letter = aa_to_dayhoff(residue);
                 aa += new_letter;
             } else {
@@ -480,9 +491,9 @@ class KmerMinAbundance: public KmerMinHash {
  public:
     CMinHashType abunds;
 
-    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, bool dayhoff,
+    KmerMinAbundance(unsigned int n, unsigned int k, bool is_protein, bool dayhoff,
                      uint32_t seed, HashIntoType mx) :
-        KmerMinHash(n, k, prot, dayhoff, seed, mx) { };
+        KmerMinHash(n, k, is_protein, dayhoff, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {

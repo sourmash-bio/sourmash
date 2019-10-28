@@ -528,7 +528,7 @@ def search(args):
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              # TODO: properly get the right name here
-                                             sourmash_args.get_moltype(query).name[9:])
+                                             sourmash_args.get_moltype_string(query))
 
     # downsample if requested
     if args.scaled:

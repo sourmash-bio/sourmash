@@ -104,6 +104,16 @@ def get_moltype(sig, require=False):
     return sig.minhash.hash_function
 
 
+def get_moltype_string(sig, require=False):
+    hf = sig.minhash.hash_function
+    if hf == HashFunctions.murmur64_DNA:
+        return 'DNA'
+    elif hf == HashFunctions.murmur64_protein:
+        return 'protein'
+    elif hf == HashFunctions.murmur64_dayhoff:
+        return 'dayhoff'
+
+
 def calculate_moltype(args, default=None):
     if args.protein:
         if args.dna is True:

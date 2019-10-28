@@ -16,6 +16,10 @@ cdef extern from "kmer_min_hash.hh":
     ctypedef uint64_t HashIntoType;
     ctypedef vector[HashIntoType] CMinHashType;
 
+    cdef enum __HashFunctions 'HashFunctions':
+        _murmur64_DNA 'HashFunctions::murmur64_DNA'
+        _murmur64_protein 'HashFunctions::murmur64_protein'
+        _murmur64_dayhoff 'HashFunctions::murmur64_dayhoff'
 
     cdef uint64_t _hash_murmur(const string, uint32_t seed)
     cdef uint64_t _hash_murmur(const char *, unsigned int, uint32_t)
@@ -24,8 +28,7 @@ cdef extern from "kmer_min_hash.hh":
         const uint32_t seed;
         const unsigned int num;
         const unsigned int ksize;
-        const bool is_protein;
-        const bool dayhoff;
+        __HashFunctions hash_function;
         const HashIntoType max_hash;
         CMinHashType mins;
 
@@ -66,3 +69,9 @@ cdef class MinHash(object):
 
     cpdef get_mins(self, bool with_abundance=*)
     cpdef set_abundances(self, dict)
+
+
+cpdef enum _HashFunctions:
+    murmur64_DNA     = <uint32_t> _murmur64_DNA
+    murmur64_protein = <uint32_t> _murmur64_protein
+    murmur64_dayhoff = <uint32_t> _murmur64_dayhoff

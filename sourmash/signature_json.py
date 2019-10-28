@@ -17,6 +17,7 @@ except ImportError:
 
 from . import DEFAULT_SEED, MinHash
 from .logging import notify
+from .hash_functions import hashfunction_from_string, HashFunctions
 
 
 def _json_next_atomic_array(iterable, prefix_item = 'item', ijson = ijson):
@@ -93,7 +94,7 @@ def _json_next_signature(iterable,
         else:
             raise Exception("unknown molecule type: {}".format(molecule))
     else:
-        molecule = HashFunctions.from_string(hash_function)
+        molecule = hashfunction_from_string(hash_function)
 
         ## TODO: this should all go away
         if molecule == HashFunctions.murmur64_protein:
