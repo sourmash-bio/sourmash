@@ -78,19 +78,35 @@ def _json_next_signature(iterable,
     max_hash = d.get('max_hash', 0)
     seed = d.get('seed', DEFAULT_SEED)
 
-    molecule = d.get('molecule', 'DNA')
-    if molecule == 'protein':
-        is_protein = True
-        dayhoff = False
-    elif molecule == "dayhoff":
-        is_protein = True
-        dayhoff = True
-    elif molecule.upper() == 'DNA':
-        is_protein = False
-        dayhoff = False
+    hash_function = d.get('hash_function', '0.murmur64')
+    if hash_function == '0.murmur64':
+        molecule = d.get('molecule', 'DNA')
+        if molecule == 'protein':
+            is_protein = True
+            dayhoff = False
+        elif molecule == "dayhoff":
+            is_protein = True
+            dayhoff = True
+        elif molecule.upper() == 'DNA':
+            is_protein = False
+            dayhoff = False
+        else:
+            raise Exception("unknown molecule type: {}".format(molecule))
     else:
-        raise Exception("unknown molecule type: {}".format(molecule))
+        molecule = HashFunctions.from_string(hash_function)
 
+        ## TODO: this should all go away
+        if molecule == HashFunctions.murmur64_protein:
+            is_protein = True
+            dayhoff = False
+        elif molecule == HashFunctions.murmur64_dayhoff:
+            is_protein = True
+            dayhoff = True
+        elif molecule.upper() == HashFunctions.murmur64_DNA:
+            is_protein = False
+            dayhoff = False
+        else:
+            raise Exception("unknown molecule type: {}".format(molecule))
 
     track_abundance = False
     if 'abundances' in d:

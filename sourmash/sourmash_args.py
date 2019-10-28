@@ -8,6 +8,7 @@ from . import signature
 from .logging import notify, error
 
 from . import signature as sig
+from .hash_functions import HashFunctions
 from .sbt import SBT
 from .sbtmh import SigLeaf
 from .lca import lca_utils
@@ -100,16 +101,7 @@ def add_ksize_arg(parser, default):
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('DNA'):
-        moltype = 'DNA'
-    elif sig.minhash.is_molecule_type('protein'):
-        moltype = 'protein'
-    elif sig.minhash.is_molecule_type('dayhoff'):
-        moltype = 'dayhoff'
-    else:
-        raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
-
-    return moltype
+    return sig.minhash.hash_function
 
 
 def calculate_moltype(args, default=None):
@@ -121,11 +113,11 @@ def calculate_moltype(args, default=None):
 
     moltype = default
     if args.protein:
-        moltype = 'protein'
+        moltype = HashFunctions.murmur64_protein
     elif args.dna:
-        moltype = 'DNA'
+        moltype = HashFunctions.murmur64_DNA
     elif args.dayhoff:
-        moltype = 'dayhoff'
+        moltype = HashFunctions.murmur64_dayhoff
 
     return moltype
 

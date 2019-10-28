@@ -8,6 +8,7 @@ from cython.operator cimport dereference as deref, address
 from libcpp cimport bool
 from libc.stdint cimport uint32_t
 
+from .hash_functions import HashFunctions
 from ._minhash cimport KmerMinHash, KmerMinAbundance, _hash_murmur
 import math
 import copy
@@ -98,6 +99,16 @@ cdef class MinHash(object):
                        HashIntoType max_hash=0,
                        mins=None, HashIntoType scaled=0):
         self._track_abundance = track_abundance
+        self._hash_function = None
+
+        if is_protein and dayhoff:
+            self._hash_function = HashFunctions.murmur64_dayhoff
+        elif is_protein:
+            self._hash_function = HashFunctions.murmur64_protein
+        elif not is_protein and not dayhoff:
+            self._hash_function = HashFunctions.murmur64_DNA
+        else:
+            raise ValueError('invalid hash_function')
 
         if max_hash and scaled:
             raise ValueError('cannot set both max_hash and scaled')
@@ -278,6 +289,16 @@ cdef class MinHash(object):
         # keep the underlying Abundance MH (to avoid copying data to a new one).
 
         self._track_abundance = v
+
+    @property
+    def hash_function(self):
+        return self._hash_function
+
+    @hash_function.setter
+    def hash_function(self, v):
+        # TODO: validate v
+        # TODO: allow passing a string too?
+        self._hash_function = v
 
     def add_hash(self, uint64_t h):
         deref(self._this).add_hash(h)
@@ -480,13 +501,22 @@ cdef class MinHash(object):
                 deref(self._this).add_word(to_bytes(dayhoff_kmer))
 
     def is_molecule_type(self, molecule):
-        if molecule.upper() == 'DNA' and not self.is_protein:
+        # TODO: only accept molecule as enum
+        if isinstance(molecule, str):
+            if molecule.upper() == "DNA":
+                molecule = HashFunctions.murmur64_DNA
+            elif molecule == "protein":
+                molecule = HashFunctions.murmur64_protein
+            elif molecule == "dayhoff":
+                molecule = HashFunctions.murmur64_dayhoff
+
+        if molecule == HashFunctions.murmur64_DNA and not self.is_protein:
             return True
         if self.is_protein:
             if self.dayhoff:
-                if molecule == 'dayhoff':
+                if molecule == HashFunctions.murmur64_dayhoff:
                     return True
             else:
-                if molecule == 'protein':
+                if molecule == HashFunctions.murmur64_protein:
                     return True
         return False
