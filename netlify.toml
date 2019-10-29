@@ -1,0 +1,5 @@
+# Configuration for pull request documentation previews via Netlify
+
+[build]
+    publish = "doc/_build/html"
+    command = "pip install -e . && pip install -r requirements.txt && make doc"
