@@ -25,9 +25,9 @@
       "$id": "#/properties/version",
       "type": "integer",
       "title": "SBT version",
-      "default": 0,
+      "default": 5,
       "examples": [
-        4
+        5
       ]
     },
     "storage": {
@@ -43,7 +43,7 @@
           "$id": "#/properties/storage/properties/backend",
           "type": "string",
           "title": "The Backend Schema",
-          "default": "",
+          "default": "FSStorage",
           "examples": [
             "FSStorage", "IPFSStorage", "RedisStorage", "TarStorage"
           ]
