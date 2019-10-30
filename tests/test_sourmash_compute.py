@@ -150,6 +150,8 @@ def test_do_sourmash_compute_10x():
         sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
+        print(sigfile)
+        print(siglist)
         assert len(siglist) == 16
         barcode_signatures = list(set([sig.name() for sig in siglist]))
 

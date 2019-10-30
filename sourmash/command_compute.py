@@ -7,11 +7,12 @@ import argparse
 import os
 import os.path
 import sys
+import glob
 import random
 import screed
 import time
 
-import bam2fasta
+from bam2fasta import cli as bam2fasta_cli
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash
 from . import signature as sig
@@ -236,13 +237,7 @@ def compute(args):
                 sig.save_signatures(siglist, fp)
         notify(
             'saved signature(s) to {}. Note: signature license is CC0.',
-            sigfile_name,
-            end="\r")
-
-    if args.input_is_10x:
-        umi_filter = True if args.count_valid_reads != 0 else False
-        notify("Umi filter is {}", umi_filter)
-        Elist = make_minhashes()
+            sigfile_name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -270,6 +265,44 @@ def compute(args):
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
+            elif args.input_is_10x:
+
+                # Initializing time
+                startt = time.time()
+                metadata = [
+                    "--write-barcode-meta-csv", args.write_barcode_meta_csv] if args.write_barcode_meta_csv else ['', '']
+                save_fastas = ["--save-fastas", args.save_fastas] if args.save_fastas else ['', '']
+                barcodes_file = ["--barcodes-file", args.barcodes_file] if args.barcodes_file else ['', '']
+                rename_10x_barcodes = \
+                    ["--rename_10x_barcodes", args.rename_10x_barcodes] if args.rename_10x_barcodes else ['', '']
+
+                bam_to_fasta_args = [
+                    '--filename', filename,
+                    '--min-umi-per-barcode', str(args.count_valid_reads),
+                    '--processes', str(args.processes),
+                    '--line-count', str(args.line_count),
+                    barcodes_file[0], barcodes_file[1],
+                    rename_10x_barcodes[0], rename_10x_barcodes[1],
+                    save_fastas[0], save_fastas[1],
+                    metadata[0], metadata[1]]
+                bam_to_fasta_args = [arg for arg in bam_to_fasta_args if arg != '']
+
+                bam2fasta_cli.convert(bam_to_fasta_args)
+                siglist = []
+                for fasta in glob.glob(args.save_fastas + "*.fasta"):
+                    for n, record in enumerate(screed.open(fasta)):
+                        # make minhashes for each sequence
+                        Elist = make_minhashes()
+                        add_seq(Elist, record.sequence,
+                                args.input_is_protein, args.check_sequence)
+
+                        siglist += build_siglist(Elist, fasta, name=record.name)
+
+                    notify('calculated {} signatures for {} sequences in {}',
+                           len(siglist), n + 1, fasta)
+
+                notify("time taken to calculate signature records for 10x file is {:.5f} seconds",
+                       time.time() - startt)
             else:
                 # make minhashes for the whole file
                 Elist = make_minhashes()
@@ -298,41 +331,11 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(sigs), n + 1, filename)
 
-            if not args.output and not args.input_is_10x:
+            if not args.output:
                 save_siglist(siglist, args.output, sigfile)
 
-        if args.output and not args.input_is_10x:
+        if args.output:
             save_siglist(siglist, args.output, sigfile)
-    elif args.input_is_10x:
-
-        # Initializing time
-        startt = time.time()
-        fastas = bam2fasta.convert(
-            ['--filename' + args.filenames[0],
-             '--min-umi-per-barcode', args.count_valid_reads,
-             '--write-barcode-meta-csv', args.write_barcode_meta_csv,
-             '--barcodes', args.barcodes,
-             '--rename-10x-barcodes', args.rename_10x_barcodes,
-             ' --save-fastas', args.save_fastas,
-             " --processes", args.processes
-             ])
-        siglist = []
-        for fasta in fastas:
-            for n, record in enumerate(screed.open(fastas)):
-                # make minhashes for each sequence
-                Elist = make_minhashes()
-                add_seq(Elist, record.sequence,
-                        args.input_is_protein, args.check_sequence)
-
-                siglist += build_siglist(Elist, fasta, name=record.name)
-
-            notify('calculated {} signatures for {} sequences in {}',
-                   len(siglist), n + 1, fasta)
-
-        save_siglist(siglist, args.output, sigfile)
-
-        notify("time taken to save signature records for 10x folder is {:.5f} seconds",
-               time.time() - startt)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
         Elist = make_minhashes()
