@@ -11,9 +11,7 @@
     "required": [
       "class",
       "email",
-      "filename",
       "hash_function",
-      "name",
       "signatures",
       "version"
     ],

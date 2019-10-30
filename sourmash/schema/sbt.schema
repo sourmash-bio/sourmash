@@ -146,9 +146,7 @@
               "$id": "#/properties/nodes/properties/0/properties/metadata",
               "type": "object",
               "title": "The Metadata Schema",
-              "required": [
-                "min_n_below"
-              ],
+              "required": [],
               "properties": {
                 "min_n_below": {
                   "$id": "#/properties/nodes/properties/0/properties/metadata/properties/min_n_below",
