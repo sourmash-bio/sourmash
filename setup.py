@@ -72,7 +72,7 @@ SETUP_METADATA = \
         'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
-        '10x': ['pathos', 'pysam']
+        '10x': ['bam2fasta']
         },
     "include_package_data": True,
     "package_data": {
