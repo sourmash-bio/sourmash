@@ -67,11 +67,11 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('--count-valid-reads', default=0, type=int,
+    parser.add_argument('--min-umi-per-barcode', default=0, type=int,
                         help="For 10x input only (i.e input-is-10x flag is True), "
                         "A barcode is only considered a valid barcode read "
                         "and its signature is written if number of umis are greater "
-                        "than count-valid-reads. It is used to weed out cell barcodes "
+                        "than min-umi-per-barcode. It is used to weed out cell barcodes "
                         "with few umis that might have been due to false rna enzyme reactions")
     parser.add_argument('--write-barcode-meta-csv', type=str,
                         help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes, "
@@ -274,11 +274,11 @@ def compute(args):
                 save_fastas = ["--save-fastas", args.save_fastas] if args.save_fastas else ['', '']
                 barcodes_file = ["--barcodes-file", args.barcodes_file] if args.barcodes_file else ['', '']
                 rename_10x_barcodes = \
-                    ["--rename_10x_barcodes", args.rename_10x_barcodes] if args.rename_10x_barcodes else ['', '']
+                    ["--rename-10x-barcodes", args.rename_10x_barcodes] if args.rename_10x_barcodes else ['', '']
 
                 bam_to_fasta_args = [
                     '--filename', filename,
-                    '--min-umi-per-barcode', str(args.count_valid_reads),
+                    '--min-umi-per-barcode', str(args.min_umi_per_barcode),
                     '--processes', str(args.processes),
                     '--line-count', str(args.line_count),
                     barcodes_file[0], barcodes_file[1],
@@ -288,15 +288,26 @@ def compute(args):
                 bam_to_fasta_args = [arg for arg in bam_to_fasta_args if arg != '']
 
                 bam2fasta_cli.convert(bam_to_fasta_args)
+
+                # TODO Remove when above line returns fastas instead
+                if args.save_fastas == "":
+                    fastas_dir = os.getcwd() + os.sep
+                elif not(args.save_fastas.endswith(os.sep)):
+                    fastas_dir = args.save_fastas + os.sep
+                else:
+                    fastas_dir = args.save_fastas
+
+                fastas = glob.glob(fastas_dir + "*.fasta")
+
                 siglist = []
-                for fasta in glob.glob(args.save_fastas + "*.fasta"):
+                for fasta in fastas:
                     for n, record in enumerate(screed.open(fasta)):
                         # make minhashes for each sequence
                         Elist = make_minhashes()
                         add_seq(Elist, record.sequence,
                                 args.input_is_protein, args.check_sequence)
 
-                        siglist += build_siglist(Elist, fasta, name=record.name)
+                    siglist += build_siglist(Elist, fasta, name=record.name)
 
                     notify('calculated {} signatures for {} sequences in {}',
                            len(siglist), n + 1, fasta)
