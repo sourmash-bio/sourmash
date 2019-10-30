@@ -3,7 +3,7 @@ use sourmash::sketch::minhash::KmerMinHash;
 
 #[test]
 fn throws_error() {
-    let mut mh = KmerMinHash::new(1, 4, false, 42, 0, false);
+    let mut mh = KmerMinHash::new(1, 4, false, false, 42, 0, false);
 
     match mh.add_sequence(b"ATGR", false) {
         Ok(_) => assert!(false, "R is not a valid DNA character"),
@@ -13,8 +13,8 @@ fn throws_error() {
 
 #[test]
 fn merge() {
-    let mut a = KmerMinHash::new(20, 10, false, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, false, 42, 0, false);
+    let mut a = KmerMinHash::new(20, 10, false, false, 42, 0, false);
+    let mut b = KmerMinHash::new(20, 10, false, false, 42, 0, false);
 
     a.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
     b.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
@@ -40,8 +40,8 @@ fn merge() {
 
 #[test]
 fn compare() {
-    let mut a = KmerMinHash::new(20, 10, false, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, false, 42, 0, false);
+    let mut a = KmerMinHash::new(20, 10, false, false, 42, 0, false);
+    let mut b = KmerMinHash::new(20, 10, false, false, 42, 0, false);
 
     a.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
         .unwrap();
@@ -63,4 +63,16 @@ fn compare() {
         .unwrap();
     assert!(a.compare(&b).unwrap() >= 0.3);
     assert!(b.compare(&a).unwrap() >= 0.3);
+}
+
+#[test]
+fn dayhoff() {
+    let mut a = KmerMinHash::new(10, 6, true, true, 42, 0, false);
+    let mut b = KmerMinHash::new(10, 6, true, false, 42, 0, false);
+
+    a.add_sequence(b"ACTGAC", false).unwrap();
+    b.add_sequence(b"ACTGAC", false).unwrap();
+
+    assert_eq!(a.size(), 2);
+    assert_eq!(b.size(), 2);
 }
