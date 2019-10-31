@@ -7,7 +7,6 @@ import argparse
 import os
 import os.path
 import sys
-import glob
 import random
 import screed
 import time
@@ -287,17 +286,9 @@ def compute(args):
                     metadata[0], metadata[1]]
                 bam_to_fasta_args = [arg for arg in bam_to_fasta_args if arg != '']
 
-                bam2fasta_cli.convert(bam_to_fasta_args)
-
-                # TODO Remove when above line returns fastas instead
-                if args.save_fastas == "":
-                    fastas_dir = os.getcwd() + os.sep
-                elif not(args.save_fastas.endswith(os.sep)):
-                    fastas_dir = args.save_fastas + os.sep
-                else:
-                    fastas_dir = args.save_fastas
-
-                fastas = glob.glob(fastas_dir + "*.fasta")
+                fastas = bam2fasta_cli.convert(bam_to_fasta_args)
+                # TODO move to bam2fasta since pool imap creates this empty lists and returns them
+                fastas = [fasta for fasta in fastas if fasta != []]
 
                 siglist = []
                 for fasta in fastas:
