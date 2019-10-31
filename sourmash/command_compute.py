@@ -66,11 +66,11 @@ def compute(args):
                         help="name the signature generated from each file after the first record in the file (default: False)")
     parser.add_argument('--input-is-10x', action='store_true',
                         help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('--min-umi-per-barcode', default=0, type=int,
+    parser.add_argument('--count-valid-reads', default=0, type=int,
                         help="For 10x input only (i.e input-is-10x flag is True), "
                         "A barcode is only considered a valid barcode read "
                         "and its signature is written if number of umis are greater "
-                        "than min-umi-per-barcode. It is used to weed out cell barcodes "
+                        "than count-valid-reads. It is used to weed out cell barcodes "
                         "with few umis that might have been due to false rna enzyme reactions")
     parser.add_argument('--write-barcode-meta-csv', type=str,
                         help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes, "
@@ -277,7 +277,7 @@ def compute(args):
 
                 bam_to_fasta_args = [
                     '--filename', filename,
-                    '--min-umi-per-barcode', str(args.min_umi_per_barcode),
+                    '--min-umi-per-barcode', str(args.count_valid_reads),
                     '--processes', str(args.processes),
                     '--line-count', str(args.line_count),
                     barcodes_file[0], barcodes_file[1],

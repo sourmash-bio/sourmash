@@ -222,7 +222,7 @@ def test_do_sourmash_compute_10x_filter_umis():
 
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
-                                            '--dna', '--min-umi-per-barcode', '10',
+                                            '--dna', '--count-valid-reads', '10',
                                             '--input-is-10x',
                                             testdata1,
                                             '--write-barcode-meta-csv', csv_path,
