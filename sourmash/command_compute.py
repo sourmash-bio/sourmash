@@ -362,6 +362,7 @@ def compute(args):
         # make minhashes for the whole file
         Elist = make_minhashes()
 
+        n = 0
         total_seq = 0
         for filename in args.filenames:
             # consume & calculate signatures
