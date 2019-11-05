@@ -61,11 +61,11 @@ def add_moltype_args(parser):
                         help='do not build Dayhoff-encoded amino acid signatures')
     parser.set_defaults(dayhoff=False)
 
-    parser.add_argument('--hp', dest='hp', action='store_true',
-                        help='build HP-encoded amino acid signatures (default: False)')
-    parser.add_argument('--no-hp', dest='hp',
+    parser.add_argument('--hp', '--hydrophobic-polar', dest='hp', action='store_true',
+                        help='build hydrophobic-polar-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-hp', '--no-hydrophobic-polar', dest='hp',
                         action='store_false',
-                        help='do not build HP-encoded amino acid signatures')
+                        help='do not build hydrophobic-polar-encoded amino acid signatures')
     parser.set_defaults(hp=False)
 
     parser.add_argument('--dna', '--rna', dest='dna', default=None,

@@ -500,9 +500,9 @@ private:
     };
 
 // HP Hydrophobic/hydrophilic mapping
-// From: Brüne, D., Andrade-Navarro, M. A., & Mier, P. (2018).
-// Proteome-wide comparison between the amino acid composition of domains and
-// linkers. BMC Research Notes, 1–6. http://doi.org/10.1186/s13104-018-3221-0
+// From: Phillips, R., Kondev, J., Theriot, J. (2008). 
+// Physical Biology of the Cell. New York: Garland Science, Taylor & Francis Group. ISBN: 978-0815341635 
+
 //
 // | Amino acid                            | HP 
 // |---------------------------------------|---------|
