@@ -478,6 +478,10 @@ impl KmerMinHash {
     pub fn dayhoff(&self) -> bool {
         self.dayhoff
     }
+
+    pub fn mins(&self) -> Vec<u64> {
+        self.mins.clone()
+    }
 }
 
 impl SigsTrait for KmerMinHash {

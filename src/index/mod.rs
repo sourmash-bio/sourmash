@@ -18,6 +18,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use failure::Error;
 use lazy_init::Lazy;
+use mqf::MQF;
 use typed_builder::TypedBuilder;
 
 use crate::index::sbt::{Node, SBT};
@@ -29,6 +30,7 @@ use crate::sketch::ukhs::{FlatUKHS, UKHSTrait};
 use crate::sketch::Sketch;
 
 pub type MHBT = SBT<Node<Nodegraph>, Dataset<Signature>>;
+pub type MHMT = SBT<Node<MQF>, Dataset<Signature>>;
 pub type UKHSTree = SBT<Node<FlatUKHS>, Dataset<Signature>>;
 
 pub trait Index {
