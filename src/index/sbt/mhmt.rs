@@ -95,6 +95,7 @@ impl Comparable<Dataset<Signature>> for Node<MQF> {
                 .mins
                 .iter()
                 .filter(|h| dbg!(ng.count_key(**h % u64::pow(2, 26))) > 0)
+                //.filter(|h| dbg!(ng.count_key(**h)) > 0)
                 .count();
 
             let min_n_below = self.metadata["min_n_below"] as f64;
@@ -122,6 +123,7 @@ impl Comparable<Dataset<Signature>> for Node<MQF> {
                 .mins
                 .iter()
                 .filter(|h| ng.count_key(**h % u64::pow(2, 26)) > 0)
+                //.filter(|h| ng.count_key(**h) > 0)
                 .count();
 
             matches as f64 / sig.size() as f64

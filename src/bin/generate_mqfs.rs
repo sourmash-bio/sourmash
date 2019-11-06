@@ -55,17 +55,15 @@ fn main() {
                     sig.mins()
                         .iter()
                         .map(|h| {
-                            //dbg!(*h);
+                            dbg!(*h % u64::pow(2, 26));
                             mqf.insert(*h % u64::pow(2, 26), 1)
+                            //mqf.insert(*h, 1)
                         })
                         .count();
                 };
             } else if mqfs.contains_key(&child) {
-                mqfs.get_mut(&child)
-                    .unwrap()
-                    .iter()
-                    .map(|x| mqf.insert(x.0, x.1))
-                    .count();
+                let mut cmqf = mqfs.get_mut(&child).unwrap();
+                mqf.merge(&mut cmqf).expect("Error merging");
             } else {
                 // TODO: shouldn't happen...
                 unimplemented!()
