@@ -1,6 +1,8 @@
 pub mod mhbt;
-pub mod mhmt;
 pub mod ukhs;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod mhmt;
 
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
@@ -797,7 +799,7 @@ mod test {
 
     use crate::index::linear::LinearIndex;
     use crate::index::search::{search_minhashes, search_minhashes_containment};
-    use crate::index::{Dataset, Index, MHBT, MHMT};
+    use crate::index::{Dataset, Index, MHBT};
     use crate::signature::Signature;
 
     #[test]
@@ -813,12 +815,13 @@ mod test {
         tmpfile.seek(SeekFrom::Start(0)).unwrap();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn load_mhmt() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/v5_mhmt.sbt.json");
 
-        let mut sbt = MHMT::from_path(filename).expect("Loading error");
+        let mut sbt = crate::index::MHMT::from_path(filename).expect("Loading error");
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
