@@ -790,6 +790,18 @@ class SBT(object):
 
     def nearest_neighbors(self, n_neighbors, ignore_abundance, downsample,
                           verbose=False):
+        """Convert SBT to adjecency list of nearest neighbor graph
+
+        Parameters
+        ----------
+        n_neighbors : int
+            Number of neighboring samples to consider, where each sample is a
+            leaf
+        ignore_abundance : bool
+            Whether or not to ignore the abundance of k-mers
+        downsample : bool
+            Whether or not to downsample the number of min hashes observed
+        """
         adjacencies = []
 
         n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
