@@ -95,7 +95,11 @@ class GraphFactory(object):
     def __init__(self, ksize, starting_size, n_tables):
         self.ksize = ksize
         self.starting_size = starting_size
+
+        # Number of hash functions
         self.n_tables = n_tables
+        # total number of bits in the bloom filter = n_tables * "starting size"
+        # Explained here: https://github.com/dib-lab/khmer/issues/1898
 
     def __call__(self):
         return khmer.Nodegraph(self.ksize, self.starting_size, self.n_tables)
