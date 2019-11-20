@@ -752,20 +752,8 @@ def index(args):
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
-        # load all matching signatures in this file
-        ss = None
-        for ss in siglist:
-            ksizes.add(ss.minhash.ksize)
-            moltypes.add(sourmash_args.get_moltype(ss))
-            nums.add(ss.minhash.num)
-
-            if args.scaled:
-                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
-            scaleds.add(ss.minhash.scaled)
-
-            leaf = SigLeaf(ss.md5sum(), ss)
-            tree.add_node(leaf)
-            n += 1
+        n, ss = load_matching_signatures(args, ksizes, moltypes, n, nums, scaleds,
+                                         siglist, tree)
 
         if not ss:
             continue
@@ -796,6 +784,24 @@ def index(args):
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
     tree.save(args.sbt_name, sparseness=args.sparseness)
+
+
+def load_matching_signatures(args, ksizes, moltypes, n, nums, scaleds, siglist, tree):
+    # load all matching signatures in this file
+    ss = None
+    for ss in siglist:
+        ksizes.add(ss.minhash.ksize)
+        moltypes.add(sourmash_args.get_moltype(ss))
+        nums.add(ss.minhash.num)
+
+        if args.scaled:
+            ss.minhash = ss.minhash.downsample_scaled(args.scaled)
+        scaleds.add(ss.minhash.scaled)
+
+        leaf = SigLeaf(ss.md5sum(), ss)
+        tree.add_node(leaf)
+        n += 1
+    return n, ss
 
 
 def search(args):
