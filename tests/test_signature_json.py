@@ -115,9 +115,9 @@ def test_load_signaturesset_json_iter():
 def test_load_signaturesset_json_iter_molecules():
 
     t = list()
-    molecules = 'DNA', 'protein', 'dayhoff'
-    names = "Foo", 'Bar', "Biz"
-    filenames = '/tmp/foo', '/tmp/bar', '/tmp/biz'
+    molecules = 'DNA', 'protein', 'dayhoff', 'hp'
+    names = "Foo", 'Bar', "Biz", "Baz"
+    filenames = '/tmp/foo', '/tmp/bar', '/tmp/biz', '/tmp/baz'
 
     for molecule, name, filename in zip(molecules, names, filenames):
         minhash = (2,3,4,5,6)
@@ -143,7 +143,7 @@ def test_load_signaturesset_json_iter_molecules():
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     # Ensure all molecule types were read properly
-    assert len(sig_entries) == 3
+    assert len(sig_entries) == 4
 
 def test_save_load_multisig_json():
     e1 = sourmash.MinHash(n=1, ksize=20)
