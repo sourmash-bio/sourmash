@@ -4,11 +4,11 @@ Summarize rank-specific information from LCAs in one or more databases.
 """
 from __future__ import print_function
 import sys
-import argparse
 from collections import defaultdict
 
 from ..logging import error, debug, set_quiet
 from . import lca_utils
+from ..sourmash_args import SourmashArgumentParser
 
 
 def make_lca_counts(dblist):
@@ -48,7 +48,7 @@ def rankinfo_main(args):
     """
     rankinfo!
     """
-    p = argparse.ArgumentParser(prog="sourmash lca rankinfo")
+    p = SourmashArgumentParser(prog="sourmash lca rankinfo")
     p.add_argument('db', nargs='+')
     p.add_argument('--scaled', type=float)
     p.add_argument('-q', '--quiet', action='store_true',

@@ -22,20 +22,31 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
+include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/errors.rs
+	rustup override set nightly
+	RUST_BACKTRACE=1 cbindgen --clean -c cbindgen.toml -o $@
+	rustup override set stable
+
 coverage: all
 	$(PYTHON) setup.py clean --all
 	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=.
+	$(PYTHON) -m pytest --cov=. --cov-report term-missing
 
-benchmark: all
-	asv continuous master
+benchmark:
+	asv continuous master $(git rev-parse HEAD)
 
-wheel:
-	export DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64; \
-	docker pull $${DOCKER_IMAGE} ; \
-	docker run --rm -v `pwd`:/io $${DOCKER_IMAGE} /io/travis/build-wheels.sh
+check:
+	cargo build
+	cargo test
+	cargo bench
 
 last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
+
+wasm:
+	wasm-pack build
+
+wasi:
+	cargo wasi build
 
 FORCE:

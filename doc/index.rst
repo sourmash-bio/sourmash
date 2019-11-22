@@ -1,19 +1,13 @@
-.. note::
-    We are working on releasing sourmash 2.0,
-    and this documentation reflects changes not released officially yet.
-    If you want to see the documentation for sourmash 1.0 check
-    the `stable version <https://sourmash.readthedocs.io/en/stable/>`__.
-
 Welcome to sourmash!
 ====================
 
 sourmash is a command-line tool and Python library for computing
-`MinHash sketches <https://en.wikipedia.org/wiki/MinHash>`__ from DNA
+`hash sketches <https://en.wikipedia.org/wiki/MinHash>`__ from DNA
 sequences, comparing them to each other, and plotting the results.
 This allows you to estimate sequence similarity between even very
 large data sets quickly and accurately.
 
-sourmash can also be used to quickly search large databases of genomes
+sourmash can be used to quickly search large databases of genomes
 for matches to query genomes and metagenomes; see `our list of
 available databases <databases.html>`__.
 
@@ -21,22 +15,34 @@ sourmash also includes k-mer based taxonomic exploration and
 classification routines for genome and metagenome analysis. These
 routines can use the NCBI taxonomy but do not depend on it in any way.
 
-Please see the `mash <http://mash.readthedocs.io/en/latest/>`__
-software and the `mash paper (Ondov et al., 2016)
-<http://biorxiv.org/content/early/2015/10/26/029827>`__ for background
-information on how and why MinHash sketches work.
+We have `several tutorials <tutorials.html>`__ available! Start with
+`Making signatures, comparing, and searching <tutorial-basic.html>`__.
 
-We have two tutorials available: one on `genome and metagenome searching <tutorials.html>`__, and one on `taxonomic analysis <tutorials-lca.html>`__.
+The paper `Large-scale sequence comparisons with sourmash (Pierce et
+al., 2019) <https://f1000research.com/articles/8-1006>`__ gives an
+overview of how sourmash works and what its major use cases
+are. Please also see the `mash software
+<http://mash.readthedocs.io/en/latest/>`__ and the `mash paper (Ondov
+et al., 2016) <http://dx.doi.org/10.1186/s13059-016-0997-x>`__ for
+background information on how and why MinHash works.
+
+**Questions? Thoughts?** Ask us on the `sourmash issue tracker <https://github.com/dib-lab/sourmash/issues/>`__!
 
 ----
 
 To use sourmash, you must be comfortable with the UNIX command line;
-programmers may find the Python library and API useful as well.
+programmers may find the `Python library and API <api.html>`__ useful as well.
+
+If you use sourmash, please cite us!
+
+   Brown and Irber (2016),
+   **sourmash: a library for MinHash sketching of DNA**
+   Journal of Open Source Software, 1(5), 27, `doi:10.21105/joss.00027 <https://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9>`__
 
 sourmash in brief
 -----------------
 
-sourmash uses MinHash sketching to create "signatures", compressed
+sourmash uses MinHash-style sketching to create "signatures", compressed
 representations of DNA/RNA sequence.  These signatures can then
 be stored, searched, explored, and taxonomically annotated.
 
@@ -74,9 +80,9 @@ be stored, searched, explored, and taxonomically annotated.
 
 You can take a look at sourmash analyses on real data `in a saved
 Jupyter notebook
-<https://github.com/dib-lab/sourmash/blob/master/demo/00-demo.ipynb>`__,
-and experiment with it yourself `interactively with a binder
-<http://mybinder.org/repo/dib-lab/sourmash>`__ at `mybinder.org
+<https://github.com/dib-lab/sourmash/blob/master/doc/sourmash-examples.ipynb>`__,
+and experiment with it yourself `interactively in a Jupyter Notebook
+<https://mybinder.org/v2/gh/dib-lab/sourmash/master?filepath=doc%2Fsourmash-examples.ipynb>`__ at `mybinder.org
 <http://mybinder.org>`__.
 
 Installing sourmash
@@ -134,14 +140,9 @@ Contents:
 
    command-line
    tutorials
-   tutorials-lca
    using-sourmash-a-guide
    classifying-signatures
-   databases
    api
-   api-example
-   other-languages
-   requirements
    more-info
    support
 

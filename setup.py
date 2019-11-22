@@ -50,7 +50,7 @@ SETUP_METADATA = \
     "author": "C. Titus Brown",
     "author_email": "titus@idyll.org",
     "license": "BSD 3-clause",
-    "packages": find_packages(),
+    "packages": find_packages(exclude=["tests", "benchmarks"]),
     "entry_points": {'console_scripts': [
         'sourmash = sourmash.__main__:main'
         ]
@@ -64,15 +64,15 @@ SETUP_METADATA = \
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
                                extra_link_args=EXTRA_LINK_ARGS)],
-    "install_requires": ["screed>=0.9", "ijson", "khmer>=2.1"],
+    "install_requires": ["screed>=0.9", "ijson<2.5", "khmer>=2.1"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=38.6.0",
                        'setuptools_scm', 'setuptools_scm_git_archive'],
     "use_scm_version": {"write_to": "sourmash/version.py"},
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy','recommonmark'],
+        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
-        '10x': ['pathos', 'bamnostic>=0.9.2'],
+        '10x': ['bam2fasta==1.0.1']
         },
     "include_package_data": True,
     "package_data": {

@@ -4,7 +4,10 @@ dist: xenial
 
 cache:
   directories:
-    - $HOME/.cache/pip
+    - "$HOME/.cache/pip"
+    - "$HOME/.cargo"
+    - "target"
+    - ".tox"
 
 branches:
   only:
@@ -16,6 +19,8 @@ script: tox
 install: pip install tox-travis
 
 jobs:
+  allow_failures:
+    - name: integration (ipfs/redis)
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
@@ -34,6 +39,7 @@ jobs:
       name: integration (ipfs/redis)
       before_install:
         - sudo snap install ipfs
+        - "/snap/bin/ipfs --version"
         - "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
       services:
         - redis-server
@@ -42,6 +48,26 @@ jobs:
       python: 3.6
     - <<: *test
       python: 3.5
+    - <<: *test
+      name: wasm-pack
+      language: rust
+      rust: stable
+      before_script: skip
+      install: skip
+      script:
+        - rustup target add wasm32-unknown-unknown
+        - cargo install --force wasm-pack
+        - wasm-pack build
+    - <<: *test
+      name: wasi target
+      language: rust
+      rust: stable
+      before_script: skip
+      install: skip
+      script:
+        - rustup target add wasm32-wasi
+        - cargo install --force cargo-wasi
+        - cargo wasi build
 
     - &wheel
       stage: build wheel and send to github releases
@@ -50,10 +76,10 @@ jobs:
         - docker
       env:
         - PIP=pip
-        - CIBW_SKIP='*-manylinux1_i686'
+        - CIBW_SKIP='*-manylinux_i686'
       install: skip
       script:
-        - $PIP install cibuildwheel==0.10.0
+        - sudo $PIP install cibuildwheel==1.0.0
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
@@ -69,7 +95,7 @@ jobs:
       osx_image: xcode10.1
       language: generic
       before_script:
-        - $PIP install -U pip setuptools
+        - sudo $PIP install -U pip setuptools
       env:
         - PIP=pip2
         - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'

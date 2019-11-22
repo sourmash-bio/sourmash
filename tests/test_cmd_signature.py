@@ -3,6 +3,8 @@ Tests for the 'sourmash signature' command line.
 """
 from __future__ import print_function, unicode_literals
 import csv
+import shutil
+import os
 
 import pytest
 
@@ -139,6 +141,66 @@ def test_sig_merge_3_abund_ba(c):
 
 
 @utils.in_tempdir
+def test_sig_filter_1(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'filter', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sigs = list(sourmash.load_signatures(out))
+    filtered_sigs.sort(key=lambda x: x.name())
+
+    assert len(filtered_sigs) == 2
+
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+
+    assert filtered_sigs[0].minhash == mh47
+    assert filtered_sigs[1].minhash == mh63
+
+
+@utils.in_tempdir
+def test_sig_filter_2(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', '-M', '5', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(sig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 and v <= 5 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
+def test_sig_filter_3(c):
+    # test basic filtering
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(sig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
 def test_sig_merge_flatten(c):
     # merge of 47 without abund, with 63 with, will succeed with --flatten
     sig47 = utils.get_test_data('47.fa.sig')
@@ -223,6 +285,81 @@ def test_sig_intersect_2(c):
     print(out)
 
     assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_3(c):
+    # use --abundances-from to preserve abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    # actually do an intersection ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.get_mins(with_abundance=True)
+    mh63_mins = set(mh63.get_mins())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_intersect_4(c):
+    # use --abundances-from to preserve abundances from sig #47
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+    c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    # actually do an intersection ourselves for the test
+    mh47 = sourmash.load_one_signature(sig47).minhash
+    mh63 = sourmash.load_one_signature(sig63).minhash
+    mh47_abunds = mh47.get_mins(with_abundance=True)
+    mh63_mins = set(mh63.get_mins())
+
+    # get the set of mins that are in common
+    mh63_mins.intersection_update(mh47_abunds)
+
+    # take abundances from mh47 & create new sig
+    mh47_abunds = { k: mh47_abunds[k] for k in mh63_mins }
+    test_mh = mh47.copy_and_clear()
+    test_mh.set_abundances(mh47_abunds)
+
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_mh
+
+
+@utils.in_tempdir
+def test_sig_intersect_5(c):
+    # use --abundances-from to preserve abundances from sig #47
+    # make sure that you can't specify a flat sig for --abundances-from
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'intersect', '--abundances-from', sig47, sig63)
 
 
 @utils.in_tempdir
@@ -330,6 +467,39 @@ def test_sig_rename_1(c):
 
     assert actual_rename_sig.minhash == test_rename_sig.minhash
     assert test_rename_sig.name() != actual_rename_sig.name()
+    assert actual_rename_sig.name() == 'fiz bar'
+
+
+@utils.in_tempdir
+def test_sig_rename_1_multisig(c):
+    # set new name for multiple signatures/files
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    other_sig = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'rename', multisig, other_sig, 'fiz bar')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    n = 0
+    for sig in sourmash.load_signatures(out):
+        assert sig.name() == 'fiz bar'
+        n += 1
+
+    assert n == 9, n
+
+
+@utils.in_tempdir
+def test_sig_rename_2_output_to_same(c):
+    # change name of signature "in place", same output file
+    sig47 = utils.get_test_data('47.fa.sig')
+    inplace = c.output('inplace.sig')
+    shutil.copyfile(sig47, inplace)
+
+    print(inplace)
+
+    c.run_sourmash('sig', 'rename', '-d', inplace, 'fiz bar', '-o', inplace)
+
+    actual_rename_sig = sourmash.load_one_signature(inplace)
     assert actual_rename_sig.name() == 'fiz bar'
 
 
@@ -588,6 +758,85 @@ signature license: CC0
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
+
+@utils.in_tempdir
+def test_sig_describe_1_dayhoff(c):
+    # get basic info on a signature
+    testdata = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '21,30',
+                   '--dayhoff', '--protein',
+                   '--dna',
+                   testdata)
+    # stdout should be new signature
+    computed_sig = os.path.join(c.location, 'short.fa.sig')
+    c.run_sourmash('sig', 'describe', computed_sig)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    # Add final trailing slash for this OS
+    testdata_dirname = os.path.dirname(testdata) + os.sep
+    location = c.location + os.sep
+
+    expected_output = """\
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: e45a080101751e044d6df861d3d0f3fd
+k=21 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: ef4fa1f3a90f3873187370f1eacc0d9a
+k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 1136a8a68420bd93683e45cdaf109b80
+k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 4244d1612598af044e799587132f007e
+k=30 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 5647819f2eac913e04af51c8d548ad56
+k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+
+---
+signature filename: short.fa.sig
+signature: short.fa
+source file: short.fa
+md5: 71f7c111c01785e5f38efad45b00a0e1
+k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
+size: 500
+signature license: CC0
+""".splitlines()
+    for line in out.splitlines():
+        cleaned_line = line.strip().replace(
+            testdata_dirname, '').replace(location, '')
+        assert cleaned_line in expected_output
 
 
 @utils.in_tempdir

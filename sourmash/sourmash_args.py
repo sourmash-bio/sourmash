@@ -3,6 +3,7 @@ Utility functions for dealing with input args to the sourmash command line.
 """
 import sys
 import os
+import argparse
 from . import signature
 from .logging import notify, error
 
@@ -10,8 +11,39 @@ from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
 from .lca import lca_utils
+import sourmash
 
-DEFAULT_LOAD_K=31
+DEFAULT_LOAD_K = 31
+DEFAULT_N = 500
+
+
+class SourmashArgumentParser(argparse.ArgumentParser):
+    """Specialize ArgumentParser for sourmash.
+
+    In particular, set up printing of citation information.
+    """
+    def __init__(self, no_citation=False, **kwargs):
+        super(SourmashArgumentParser, self).__init__(add_help=False, **kwargs)
+        self.no_citation = no_citation
+
+    def parse_args(self, args=None, namespace=None):
+        args = super(SourmashArgumentParser, self).parse_args(args=args,
+                                                              namespace=namespace)
+
+        # some scripts do not have a quiet flag, assume quiet=False for those
+        if ('quiet' not in args or not args.quiet) and not self.no_citation:
+            citation()
+
+        return args
+
+
+_citation_printed = False
+def citation():
+    global _citation_printed
+    if not _citation_printed:
+        notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
+        notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
+        _citation_printed = True
 
 
 def add_moltype_args(parser):
@@ -21,6 +53,13 @@ def add_moltype_args(parser):
                         action='store_false',
                         help='do not choose a protein signature')
     parser.set_defaults(protein=False)
+
+    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
+                        help='build Dayhoff-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
+                        action='store_false',
+                        help='do not build Dayhoff-encoded amino acid signatures')
+    parser.set_defaults(dayhoff=False)
 
     parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
@@ -38,6 +77,13 @@ def add_construct_moltype_args(parser):
                         action='store_false',
                         help='do not build protein signatures')
     parser.set_defaults(protein=False)
+
+    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
+                        help='build Dayhoff-encoded amino acid signatures (default: False)')
+    parser.add_argument('--no-dayhoff', dest='dayhoff',
+                        action='store_false',
+                        help='do not build Dayhoff-encoded amino acid signatures')
+    parser.set_defaults(dayhoff=False)
 
     parser.add_argument('--dna', '--rna', dest='dna', default=None,
                         action='store_true',
@@ -58,6 +104,8 @@ def get_moltype(sig, require=False):
         moltype = 'DNA'
     elif sig.minhash.is_molecule_type('protein'):
         moltype = 'protein'
+    elif sig.minhash.is_molecule_type('dayhoff'):
+        moltype = 'dayhoff'
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
@@ -76,6 +124,8 @@ def calculate_moltype(args, default=None):
         moltype = 'protein'
     elif args.dna:
         moltype = 'DNA'
+    elif args.dayhoff:
+        moltype = 'dayhoff'
 
     return moltype
 
@@ -100,8 +150,8 @@ def load_query_signature(filename, ksize, select_moltype):
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
             notify('selecting default query k={}.', DEFAULT_LOAD_K)
-        elif ksize:
-            notify('selecting specified query k={}', ksize)
+    elif ksize:
+        notify('selecting specified query k={}', ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -252,7 +302,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                     notify('loaded {} signatures from {}', len(siglist),
                            sigfile, end='\r')
                     n_signatures += len(siglist)
-                except:                       # ignore errors with traverse
+                except Exception:  # ignore errors with traverse
                     pass
 
             # done! jump to beginning of main 'for' loop

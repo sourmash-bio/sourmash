@@ -6,10 +6,9 @@ Extension to sourmash.signature using JSON (making load times of collection of s
 # This was written for Python 3, may be there is a chance it will work with Python 2...
 from __future__ import print_function, unicode_literals
 
-import sys
-
 import io
 import json
+import time
 try:
     import ijson.backends.yajl2 as ijson
 except ImportError:
@@ -82,16 +81,23 @@ def _json_next_signature(iterable,
     molecule = d.get('molecule', 'DNA')
     if molecule == 'protein':
         is_protein = True
+        dayhoff = False
+    elif molecule == "dayhoff":
+        is_protein = True
+        dayhoff = True
     elif molecule.upper() == 'DNA':
         is_protein = False
+        dayhoff = False
     else:
         raise Exception("unknown molecule type: {}".format(molecule))
+
 
     track_abundance = False
     if 'abundances' in d:
         track_abundance = True
 
     e = MinHash(ksize=ksize, n=n, is_protein=is_protein,
+                dayhoff=dayhoff,
                 track_abundance=track_abundance,
                 max_hash=max_hash, seed=seed)
 
@@ -229,16 +235,15 @@ def load_signatures_json(data, ksize=None, ignore_md5sum=True, ijson=ijson):
         notify('\r...sig loading {:,}', n, flush=True)
 
 
-def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
-    """ Save multiple signatures into a JSON string (or into file handle 'fp')
+def add_meta_save(siglist):
+    """ Convert one signature into a JSON dict
     - siglist: sequence of SourmashSignature objects
-    - fp:
-    - indent: indentation spaces (an integer) or if None no indentation
-    - sort_keys: sort the keys in mappings before writting to JSON
+    - index: index of siglist to save
     """
     from .signature import SIGNATURE_VERSION
-
+    records = []
     top_records = {}
+
     for sig in siglist:
         name, filename, sketch = sig._save()
         k = (name, filename)
@@ -247,9 +252,8 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
         top_records[k] = x
 
     if not top_records:
-        return ""
+        return records
 
-    records = []
     for (name, filename), sketches in top_records.items():
         record = {}
         if name:
@@ -263,15 +267,37 @@ def save_signatures_json(siglist, fp=None, indent=None, sort_keys=True):
         record['hash_function'] = '0.murmur64'
         record['license'] = 'CC0'
         record['email'] = ''
-
         records.append(record)
 
+    return records
+
+
+def write_records_to_json(records, fp=None, indent=None, sort_keys=True):
     s = json.dumps(records, indent=indent, sort_keys=sort_keys, separators=(str(','), str(':')))
     if fp:
         try:
             fp.write(s)
-        except TypeError:
-            fp.write(unicode(s))
+        except TypeError:  # fp is opened in binary mode
+            try:
+                fp.write(s.encode('utf-8'))
+            except TypeError:  # Python 2
+                fp.write(unicode(s))
         return None
+    return s
 
+
+def save_signatures_json(
+        siglist, fp=None, indent=None, sort_keys=True):
+    """ Save multiple signatures into a JSON string (or into file handle 'fp')
+    - siglist: sequence of SourmashSignature objects
+    - fp: file handle to the location of a sig file
+    - indent: indentation spaces (an integer) or if None no indentation
+    - sort_keys: sort the keys in mappings before writting to JSON
+    """
+    startt = time.time()
+    records = add_meta_save(siglist)
+    if records == []:
+        return ""
+    s = write_records_to_json(records, fp, indent, sort_keys)
+    notify("time taken to save signatures is {:.5f} seconds", time.time() - startt, end="\r")
     return s

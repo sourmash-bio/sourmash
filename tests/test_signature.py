@@ -294,3 +294,13 @@ def test_load_minified(track_abundance):
         orig_file = f.read()
     assert len(minified) < len(orig_file)
     assert '\n' not in minified
+
+
+def test_binary_fp(tmpdir, track_abundance):
+    e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add("AT" * 10)
+
+    path = tmpdir.join("1.sig")
+    with open(str(path), 'wb') as fp:
+        sig = SourmashSignature(e)
+        s = save_signatures([sig], fp)

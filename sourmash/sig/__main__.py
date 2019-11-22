@@ -10,9 +10,9 @@ import json
 import sourmash
 import copy
 
-from ..logging import set_quiet, error, notify, set_quiet, print_results
+from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
-from ..sourmash_args import DEFAULT_LOAD_K
+from ..sourmash_args import DEFAULT_LOAD_K, SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
 
 usage='''
@@ -23,6 +23,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
+filter <signature> [<signature> ... ]     - filter k-mers on abundance
 flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
@@ -43,19 +44,13 @@ def _check_abundance_compatibility(sig1, sig2):
         raise ValueError("incompatible signatures: track_abundance is {} in first sig, {} in second".format(sig1.minhash.track_abundance, sig2.minhash.track_abundance))
 
 
-def _flatten(mh):
-    "turn off track_abundance on a MinHash object"
-    mh_params = list(mh.__getstate__())
-    mh_params[5] = False
-    mh.__setstate__(mh_params)
-    assert not mh.track_abundance
-
-
 def _set_num_scaled(mh, num, scaled):
     "set num and scaled values on a MinHash object"
     mh_params = list(mh.__getstate__())
+    # Number of hashes is 0th parameter
     mh_params[0] = num
-    mh_params[6] = get_max_hash_for_scaled(scaled)
+    # Scale is 7th parameter
+    mh_params[7] = get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -68,7 +63,7 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature describe')
+    p = SourmashArgumentParser(prog='sourmash signature describe')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -111,7 +106,10 @@ def describe(args):
         ksize = mh.ksize
         moltype = 'DNA'
         if mh.is_protein:
-            moltype = 'protein'
+            if mh.dayhoff:
+                moltype = 'dayhoff'
+            else:
+                moltype = 'protein'
         scaled = mh.scaled
         num = mh.num
         seed = mh.seed
@@ -143,7 +141,7 @@ def overlap(args):
     """
     provide detailed comparison of two signatures
     """
-    p = argparse.ArgumentParser(prog='sourmash signature overlap')
+    p = SourmashArgumentParser(prog='sourmash signature overlap')
     p.add_argument('signature1')
     p.add_argument('signature2')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -231,7 +229,7 @@ def merge(args):
     """
     merge one or more signatures.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature merge')
+    p = SourmashArgumentParser(prog='sourmash signature merge')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -264,8 +262,8 @@ def merge(args):
                 mh = first_sig.minhash.copy_and_clear()
 
                 # forcibly remove abundance?
-                if mh.track_abundance and args.flatten:
-                    _flatten(mh)
+                if args.flatten:
+                    mh.track_abundance = False
 
             try:
                 if not args.flatten:
@@ -288,7 +286,7 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
-    output_json = sourmash.save_signatures([merged_sigobj], fp=args.output)
+    sourmash.save_signatures([merged_sigobj], fp=args.output)
 
     notify('loaded and merged {} signatures', total_loaded)
 
@@ -299,13 +297,15 @@ def intersect(args):
 
     This function always removes abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature intersect')
+    p = SourmashArgumentParser(prog='sourmash signature intersect')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
     p.add_argument('-o', '--output', type=argparse.FileType('wt'),
                    default=sys.stdout,
                    help='output signature to this file')
+    p.add_argument('-A', '--abundances-from',
+                   help='intersect with & take abundances from this signature')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
@@ -332,13 +332,32 @@ def intersect(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    # forcibly turn off track_abundance
-    intersect_mh = first_sig.minhash.copy_and_clear()
-    _flatten(intersect_mh)
-    intersect_mh.add_many(mins)
-    intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+    # forcibly turn off track_abundance, unless --abundances-from set.
+    if not args.abundances_from:
+        intersect_mh = first_sig.minhash.copy_and_clear()
+        intersect_mh.track_abundance = False
+        intersect_mh.add_many(mins)
+        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+    else:
+        notify('loading signature from {}, keeping abundances',
+               args.abundances_from)
+        abund_sig = sourmash.load_one_signature(args.abundances_from,
+                                                ksize=args.ksize,
+                                                select_moltype=moltype)
+        if not abund_sig.minhash.track_abundance:
+            error("--track-abundance not set on loaded signature?! exiting.")
+            sys.exit(-1)
+        intersect_mh = abund_sig.minhash.copy_and_clear()
+        abund_mins = abund_sig.minhash.get_mins(with_abundance=True)
 
-    output_json = sourmash.save_signatures([intersect_sigobj], fp=args.output)
+        # do one last intersection
+        mins.intersection_update(abund_mins)
+        abund_mins = { k: abund_mins[k] for k in mins }
+
+        intersect_mh.set_abundances(abund_mins)
+        intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
+
+    sourmash.save_signatures([intersect_sigobj], fp=args.output)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -347,7 +366,7 @@ def subtract(args):
     """
     subtract one or more signatures from another
     """
-    p = argparse.ArgumentParser(prog='sourmash signature subtract')
+    p = SourmashArgumentParser(prog='sourmash signature subtract')
     p.add_argument('signature_from')
     p.add_argument('subtraction_sigs', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
@@ -393,48 +412,63 @@ def subtract(args):
     if not total_loaded:
         error("no signatures to subtract!?")
         sys.exit(-1)
-        
+
 
     subtract_mh = from_sigobj.minhash.copy_and_clear()
     subtract_mh.add_many(subtract_mins)
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    output_json = sourmash.save_signatures([subtract_sigobj], fp=args.output)
+    sourmash.save_signatures([subtract_sigobj], fp=args.output)
 
     notify('loaded and subtracted {} signatures', total_loaded)
 
 
 def rename(args):
     """
-    rename a signature.
+    rename one or more signatures.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature rename')
-    p.add_argument('signature')
+    p = SourmashArgumentParser(prog='sourmash signature rename')
+    p.add_argument('sigfiles', nargs='+')
     p.add_argument('name')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
+    p.add_argument('-d', '--debug', action='store_true',
+                   help='output debugging output')
+    p.add_argument('-o', '--output', help='output to this file')
     sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
     sourmash_args.add_moltype_args(p)
     args = p.parse_args(args)
-    set_quiet(args.quiet)
+    set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    sigobj = sourmash.load_one_signature(args.signature, ksize=args.ksize, select_moltype=moltype)
-    sigobj.d['name'] = args.name
-    output_json = sourmash.save_signatures([sigobj], fp=args.output)
+    outlist = []
+    for filename in args.sigfiles:
+        debug('loading {}', filename)
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype)
 
-    notify("set name to '{}'", args.name)
+        for sigobj in siglist:
+            sigobj.d['name'] = args.name
+            outlist.append(sigobj)
+
+    if args.output:
+        fp = open(args.output, 'wt')
+    else:
+        fp = sys.stdout
+
+    sourmash.save_signatures(outlist, fp=fp)
+    if args.output:
+        fp.close()
+
+    notify("set name to '{}' on {} signatures", args.name, len(outlist))
 
 
 def extract(args):
     """
     extract signatures.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature extract')
+    p = SourmashArgumentParser(prog='sourmash signature extract')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -476,8 +510,81 @@ def extract(args):
         error("no matching signatures!")
         sys.exit(-1)
 
-    output_json = sourmash.save_signatures(outlist, fp=args.output)
+    sourmash.save_signatures(outlist, fp=args.output)
 
+    notify("extracted {} signatures from {} file(s)", len(outlist),
+           len(args.signatures))
+
+
+def filter(args):
+    """
+    filter hashes by abundance in all of the signatures
+    """
+    p = SourmashArgumentParser(prog='sourmash signature flatten')
+    p.add_argument('signatures', nargs='+')
+    p.add_argument('-q', '--quiet', action='store_true',
+                   help='suppress non-error output')
+    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
+                   default=sys.stdout,
+                   help='output signature to this file')
+    p.add_argument('--md5', default=None,
+                   help='select signatures whose md5 contains this substring')
+    p.add_argument('--name', default=None,
+                   help='select signatures whose name contains this substring')
+
+    p.add_argument('-m', '--min-abundance', type=int, default=1,
+                   help='keep hashes >= this minimum abundance')
+    p.add_argument('-M', '--max-abundance', type=int, default=None,
+                    help='keep hashes <= this maximum abundance')
+
+    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
+    sourmash_args.add_moltype_args(p)
+    args = p.parse_args(args)
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    outlist = []
+    total_loaded = 0
+    for filename in args.signatures:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype,
+                                           do_raise=True)
+        siglist = list(siglist)
+
+        total_loaded += len(siglist)
+
+        # select!
+        if args.md5 is not None:
+            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+        if args.name is not None:
+            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+
+        for ss in siglist:
+            mh = ss.minhash
+            if not mh.track_abundance:
+                notify('ignoring signature {} - track_abundance not set.',
+                       ss)
+                continue
+
+            abunds = mh.get_mins(with_abundance=True)
+            abunds2 = {}
+            for k, v in abunds.items():
+                if v >= args.min_abundance:
+                    if args.max_abundance is None or \
+                       v <= args.max_abundance:
+                       abunds2[k] = v
+
+            filtered_mh = mh.copy_and_clear()
+            filtered_mh.set_abundances(abunds2)
+
+            ss.minhash = filtered_mh
+
+        outlist.extend(siglist)
+
+    sourmash.save_signatures(outlist, fp=args.output)
+
+    notify("loaded {} total that matched ksize & molecule type",
+           total_loaded)
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
 
@@ -486,7 +593,7 @@ def flatten(args):
     """
     flatten a signature, removing abundances.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature flatten')
+    p = SourmashArgumentParser(prog='sourmash signature flatten')
     p.add_argument('signatures', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -522,14 +629,14 @@ def flatten(args):
 
         for ss in siglist:
             flattened_mh = ss.minhash.copy_and_clear()
-            _flatten(flattened_mh)
+            flattened_mh.track_abundance = False
             flattened_mh.add_many(ss.minhash.get_mins())
 
             ss.minhash = flattened_mh
 
         outlist.extend(siglist)
 
-    output_json = sourmash.save_signatures(outlist, fp=args.output)
+    sourmash.save_signatures(outlist, fp=args.output)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -541,7 +648,7 @@ def downsample(args):
     """
     downsample a scaled signature.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature downsample')
+    p = SourmashArgumentParser(prog='sourmash signature downsample')
     p.add_argument('signatures', nargs="+")
     p.add_argument('--scaled', type=int, default=0,
                    help='scaled value to downsample to')
@@ -603,7 +710,7 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    output_json = sourmash.save_signatures(output_list, fp=args.output)
+    sourmash.save_signatures(output_list, fp=args.output)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
@@ -612,7 +719,7 @@ def sig_import(args):
     """
     import a signature into sourmash format.
     """
-    p = argparse.ArgumentParser(prog='sourmash signature import')
+    p = SourmashArgumentParser(prog='sourmash signature import')
     p.add_argument('filenames', nargs='+')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -650,7 +757,7 @@ def export(args):
     """
     export a signature to mash format
     """
-    p = argparse.ArgumentParser(prog='sourmash signature export')
+    p = SourmashArgumentParser(prog='sourmash signature export')
     p.add_argument('filename')
     p.add_argument('-q', '--quiet', action='store_true',
                    help='suppress non-error output')
@@ -663,7 +770,6 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    total_loaded = 0
     ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
                                      select_moltype=moltype)
     mh = ss.minhash
@@ -690,6 +796,7 @@ def main(sysv_args):
                 'intersect': intersect,
                 'rename': rename,
                 'extract': extract,
+                'filter': filter,
                 'flatten': flatten,
                 'downsample': downsample,
                 'subtract': subtract,

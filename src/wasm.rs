@@ -2,7 +2,8 @@ use wasm_bindgen::prelude::*;
 
 use serde_json;
 
-use crate::KmerMinHash;
+use crate::signature::SigsTrait;
+use crate::sketch::minhash::KmerMinHash;
 
 #[wasm_bindgen]
 impl KmerMinHash {
@@ -11,6 +12,7 @@ impl KmerMinHash {
         num: u32,
         ksize: u32,
         is_protein: bool,
+        dayhoff: bool,
         seed: u32,
         scaled: u32,
         track_abundance: bool,
@@ -27,6 +29,7 @@ impl KmerMinHash {
             num,
             ksize,
             is_protein,
+            dayhoff,
             seed as u64,
             max_hash,
             track_abundance,

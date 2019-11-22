@@ -41,6 +41,7 @@ import pickle
 
 import pytest
 
+import sourmash
 from sourmash._minhash import (MinHash, hash_murmur, dotproduct,
                                    get_scaled_for_max_hash,
                                    get_max_hash_for_scaled)
@@ -107,9 +108,9 @@ def test_bytes_dna(track_abundance):
     assert len(b) == 1
 
 
-def test_bytes_protein(track_abundance):
+def test_bytes_protein(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
     mh.add_protein(u'AGYYG')
     mh.add_protein(b'AGYYG')
@@ -117,12 +118,39 @@ def test_bytes_protein(track_abundance):
     assert len(mh.get_mins()) == 4
 
 
-def test_protein(track_abundance):
+def test_protein(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.get_mins()) == 4
+
+
+def test_translate_codon(track_abundance):
+    # Ensure that translation occurs properly
+    mh = MinHash(10, 6, is_protein=True)
+    assert "S" == mh.translate_codon('TCT')
+    assert "S" == mh.translate_codon('TC')
+    assert "X" == mh.translate_codon("T")
+
+    with pytest.raises(ValueError):
+        mh.translate_codon("")
+        mh.translate_codon("TCTA")
+
+
+def test_dayhoff(track_abundance):
+    # verify that we can hash to dayhoff-encoded protein/aa sequences
+    mh_dayhoff = MinHash(10, 6, is_protein=True,
+                         dayhoff=True, track_abundance=track_abundance)
+    mh_dayhoff.add_sequence('ACTGAC')
+
+    assert len(mh_dayhoff.get_mins()) == 2
+    # verify that dayhoff-encoded hashes are different from protein/aa hashes
+    mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
+    mh_protein.add_sequence('ACTGAC')
+
+    assert len(mh_protein.get_mins()) == 2
+    assert mh_protein.get_mins() != mh_dayhoff.get_mins()
 
 
 def test_protein_short(track_abundance):
@@ -206,7 +234,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample_scaled(100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo)
+    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
 
 
 def test_scaled(track_abundance):
@@ -223,7 +251,7 @@ def test_basic_dna_bad(track_abundance):
         mh.add_sequence('ATGR')
     print(e)
 
-    assert 'invalid DNA character in input k-mer: ATGR' in str(e)
+    assert 'invalid DNA character in input k-mer: ATGR' in str(e.value)
 
 
 def test_basic_dna_bad_2(track_abundance):
@@ -477,6 +505,42 @@ def test_mh_merge(track_abundance):
     c = a.merge(b)
     d = b.merge(a)
 
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0
+
+
+def test_mh_merge_empty_num(track_abundance):
+    # test merging two identically configured minhashes, one empty
+    a = MinHash(20, 10, track_abundance=track_abundance)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(c)
+    assert len(c) == len(d)
+    assert c.get_mins() == d.get_mins()
+    assert c.compare(d) == 1.0
+    assert d.compare(c) == 1.0
+
+
+def test_mh_merge_empty_scaled(track_abundance):
+    # test merging two identically configured minhashes, one empty
+    a = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
+
+    b = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = a.merge(b)
+    d = b.merge(a)
+
+    assert len(c)
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
     assert c.compare(d) == 1.0
@@ -798,6 +862,40 @@ def test_set_abundance():
     assert "track_abundance=True when constructing" in e.value.args[0]
 
 
+def test_set_abundance_2():
+    sig = sourmash.load_one_signature(utils.get_test_data("genome-s12.fa.gz.sig"),
+                                      ksize=30,
+                                      select_moltype='dna')
+    new_mh = sig.minhash.copy_and_clear()
+    mins = sig.minhash.get_mins()
+    mins = {k: 1 for k in mins}
+    new_mh.track_abundance = True
+    new_mh.set_abundances(mins)
+
+    assert new_mh.get_mins(with_abundance=True) == mins
+
+
+def test_reset_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=True)
+    a.add_sequence('ATGC')
+
+    # If we had a minhash with abundances and drop it, this shouldn't fail.
+    # Convert from Abundance to Regular MinHash
+    a.track_abundance = False
+
+    assert a.get_mins(with_abundance=True) == [12415348535738636339]
+
+
+def test_set_abundance_initialized():
+    a = MinHash(1, 4, track_abundance=False)
+    a.add_sequence('ATGC')
+
+    with pytest.raises(RuntimeError) as e:
+        a.track_abundance = True
+
+    assert "Can only set track_abundance=True if the MinHash is empty" in e.value.args[0]
+
+
 def test_reviving_minhash():
     # simulate reading a MinHash from disk
     mh = MinHash(0, 21, max_hash=184467440737095520, seed=42,
@@ -1030,3 +1128,41 @@ def test_distance_matrix(track_abundance):
             D1[i][j] = E.similarity(E2, track_abundance)
 
     assert numpy.array_equal(D1, D2)
+
+
+def test_remove_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+
+    orig_sig = signature.SourmashSignature(a)
+    orig_md5 = orig_sig.md5sum()
+
+    a.remove_many(list(range(0, 100, 3)))
+    new_sig = signature.SourmashSignature(a)
+    new_md5 = new_sig.md5sum()
+
+    assert orig_md5 == "f1cc295157374f5c07cfca5f867188a1"
+    assert new_md5 == "dd93fa319ef57f4a019c59ee1a8c73e2"
+    assert orig_md5 != new_md5
+
+    assert len(a) == 33
+    assert all(c % 6 != 0 for c in a.get_mins())
+
+
+def test_add_many(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+    b = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+
+    a.add_many(list(range(0, 100, 2)))
+    a.add_many(list(range(0, 100, 2)))
+
+    assert len(a) == 50
+    assert all(c % 2 == 0 for c in a.get_mins())
+
+    for h in range(0, 100, 2):
+        b.add_hash(h)
+        b.add_hash(h)
+
+    assert len(b) == 50
+    assert a == b

@@ -34,7 +34,8 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon'
+    'sphinxcontrib.napoleon',
+    'nbsphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -300,3 +301,5 @@ try:
 except ImportError:
     raise
     pass
+
+autodoc_mock_imports = ["sourmash._minhash"]

@@ -67,15 +67,14 @@ K = 21
 
 import sys, screed
 import mmh3
-import sourmash_lib
-print('imported sourmash:', sourmash_lib, file=sys.stderr)
-from sourmash_lib import MinHash
-import sourmash_lib.signature
+import sourmash
+print('imported sourmash:', sourmash, file=sys.stderr)
+import sourmash.signature
 
 record = next(iter(screed.open(sys.argv[1])))
 print('loaded', record.name, file=sys.stderr)
 
-mh = sourmash_lib.MinHash(ksize=K, n=500, is_protein=True)
+mh = sourmash.MinHash(ksize=K, n=500, is_protein=True)
 prot_ksize = int(K / 3)
 
 for kmer in kmers(record.sequence, prot_ksize):
@@ -87,5 +86,5 @@ for kmer in kmers(record.sequence, prot_ksize):
 
     mh.add_hash(hash)
 
-s = sourmash_lib.signature.SourmashSignature('', mh, name=record.name)
-print(sourmash_lib.signature.save_signatures([s]))
+s = sourmash.signature.SourmashSignature('', mh, name=record.name)
+print(sourmash.signature.save_signatures([s]))

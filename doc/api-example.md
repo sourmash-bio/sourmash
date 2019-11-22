@@ -1,4 +1,4 @@
-# `sourmash` Python API examples
+# `sourmash` API examples
 
 ## A first example: two k-mers
 

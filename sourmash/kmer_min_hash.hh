@@ -2,6 +2,7 @@
 #define KMER_MIN_HASH_HH
 
 #include <algorithm>
+#include <iostream>
 #include <set>
 #include <map>
 #include <queue>
@@ -15,11 +16,30 @@
   /*ABCDEFGHIJKLMNOPQRSTUVWXYZ      abcdefghijklmnopqrstuvwxyz    */\
   " TVGH FCD  M KN   YSAABW R       TVGH FCD  M KN   YSAABW R"
 
-uint64_t _hash_murmur(const std::string& kmer,
-                      const uint32_t seed) {
+inline uint64_t _hash_murmur(const std::string& kmer,
+                             const uint32_t seed) {
     uint64_t out[2];
     out[0] = 0; out[1] = 0;
     MurmurHash3_x64_128((void *)kmer.c_str(), kmer.size(), seed, &out);
+    return out[0];
+}
+
+/**
+ * @Synopsis  Unsafe hash overload. Takes a const char * 
+ *            and assumes it has length ksize.
+ *
+ * @Param kmer The k-mer.
+ * @Param ksize Length of the k-mer.
+ * @Param seed Hashing seed.
+ *
+ * @Returns   The hash value.
+ */
+inline uint64_t _hash_murmur(const char * kmer,
+                             unsigned int ksize,
+                             const uint32_t seed) {
+    uint64_t out[2];
+    out[0] = 0; out[1] = 0;
+    MurmurHash3_x64_128((void *)kmer, ksize, seed, &out);
     return out[0];
 }
 
@@ -59,13 +79,14 @@ public:
     const unsigned int num;
     const unsigned int ksize;
     const bool is_protein;
+    const bool dayhoff;
     const uint32_t seed;
     const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, uint32_t s,
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), seed(s), max_hash(mx) {
+        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -80,6 +101,9 @@ public:
             throw minhash_exception("different ksizes cannot be compared");
         }
         if (is_protein != other.is_protein) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (dayhoff != other.dayhoff) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
         if (max_hash != other.max_hash) {
@@ -114,36 +138,65 @@ public:
         }
       }
     }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+        }
+    }
+
     void add_word(const std::string& word) {
         const HashIntoType hash = _hash_murmur(word, seed);
         add_hash(hash);
     }
-    void add_sequence(const char * sequence, bool force=false) {
-        if (strlen(sequence) < ksize) {
+
+    /**
+     * @Synopsis  Unsafe overload: calls _hash_murmur assuming
+     *            word is length ksize.
+     *
+     * @Param word k-mer to add.
+     */
+    void add_word(const char * word, unsigned int size) {
+        const HashIntoType hash = _hash_murmur(word, size, seed);
+        add_hash(hash);
+    }
+
+    void _invalid_kmer(const std::string& kmer) {
+        std::string msg = "invalid DNA character in input k-mer: ";
+        msg += kmer;
+        throw minhash_exception(msg); 
+    }
+
+    void add_sequence(std::string& seq, bool force=false) {
+
+        if (seq.length() < ksize) {
             return;
         }
-        std::string seq = sequence;
-        transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
+
+        std::transform(seq.begin(), seq.end(), seq.begin(), ::toupper);
 
         if (!is_protein) {
+            auto rc = _revcomp(seq);
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-                const std::string kmer = seq.substr(i, ksize);
-                if (! _checkdna(kmer)) {
+				auto fw_kmer = seq.c_str() + i;
+                auto rc_kmer = rc.c_str() + rc.length() - ksize - i;
+
+                if (! _checkdna(fw_kmer, ksize)) {
                     if (force) {
                         continue;
                     } else {
-                        std::string msg = "invalid DNA character in input k-mer: ";
-                        msg += kmer;
-                        throw minhash_exception(msg);
+                        _invalid_kmer(fw_kmer);
                     }
                 }
 
-                const std::string rc = _revcomp(kmer);
-
-                if (kmer < rc) {
-                    add_word(kmer);
+                if (std::lexicographical_compare(fw_kmer,
+                                                 fw_kmer + ksize,
+                                                 rc_kmer,
+                                                 rc_kmer + ksize)) {
+                    add_word(fw_kmer, ksize);
                 } else {
-                    add_word(rc);
+                    add_word(rc_kmer, ksize);
                 }
             }
         } else {                      // protein
@@ -169,33 +222,107 @@ public:
         }
     }
 
-    std::string _dna_to_aa(const std::string& dna) {
-        std::string aa;
-        unsigned int dna_size = (dna.size() / 3) * 3; // floor it
-        for (unsigned int j = 0; j < dna_size; j += 3) {
-            std::string codon = dna.substr(j, 3);
+    std::string translate_codon(std::string& codon) {
+        std::string residue;
+
+        if (codon.length() >= 2 && codon.length() <= 3){
+            // If codon is length 2, pad with an N for ambiguous codon amino acids
+            if (codon.length() == 2) {
+                codon += "N";
+            }
             auto translated = _codon_table.find(codon);
+
             if (translated != _codon_table.end()) {
                 // "second" is the element mapped to by the codon
-                aa += translated -> second;
+                // Because .find returns an iterator
+                residue = translated -> second;
             } else {
                 // Otherwise, assign the "X" or "unknown" amino acid
-                aa += "X";
+                residue = "X";
             }
+        } else if (codon.length() == 1){
+            // Then we only have one nucleotides and the amino acid is unknown
+            residue = "X";
+        } else {
+            std::string msg = "Codon is invalid length: ";
+            msg += codon;
+            throw minhash_exception(msg);
+        }
+        return residue;
+    }
+
+    std::string _dna_to_aa(const std::string& dna) {
+        std::string aa;
+        std::string codon;
+        std::string residue;
+        unsigned int dna_size = (dna.size() / 3) * 3; // floor it
+        for (unsigned int j = 0; j < dna_size; j += 3) {
+
+            codon = dna.substr(j, 3);
+
+            residue = translate_codon(codon);
+
+            // Use dayhoff encoding of amino acids
+            if (dayhoff) {
+                std::string new_letter = aa_to_dayhoff(residue);
+                aa += new_letter;
+            } else {
+                aa += residue;
+            }
+
         }
         return aa;
     }
 
-    bool _checkdna(const std::string seq) const {
-
-        for (size_t i=0; i < seq.length(); ++i) {
-            switch(seq[i]) {
+    /**
+     * @Synopsis  Check that a single char is a DNA base.
+     *
+     * @Param c The character.
+     *
+     * @Returns   True if valid, false otherwise.
+     */
+    bool _checkdna(const char c) const {
+        switch(c) {
             case 'A':
             case 'C':
             case 'G':
             case 'T':
                 break;
             default:
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * @Synopsis  Safe DNA sanity check for a sequence of
+     *            arbitrary length.
+     *
+     * @Param seq The sequence.
+     *
+     * @Returns   True if valid, false otherwise.
+     */
+    bool _checkdna(const std::string& seq) const {
+
+        for (size_t i=0; i < seq.length(); ++i) {
+            if (!_checkdna(seq[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @Synopsis  Unsafe k-mer DNA sanity check: doesn't check length.
+     *
+     * @Param kmer k-mer to check.
+     *
+     * @Returns   true if sane; false otherwise. 
+     */
+    bool _checkdna(const char * kmer, unsigned int length) const {
+
+        for (size_t i=0; i < length; ++i) {
+            if (!_checkdna(*(kmer + i))) {
                 return false;
             }
         }
@@ -216,6 +343,22 @@ public:
         }
 
         return out;
+    }
+
+    std::string aa_to_dayhoff(const std::string& aa) const {
+        // Convert an amino acid letter to dayhoff encoding
+        std::string new_letter;
+
+        auto dayhoff_encoded = _dayhoff_table.find(aa);
+        if (dayhoff_encoded != _dayhoff_table.end()) {
+            // "second" is the element mapped to by the codon
+            // Because .find returns an iterator
+            new_letter = dayhoff_encoded -> second;
+        } else {
+            // Otherwise, assign the "X" or "unknown" amino acid
+            new_letter = "X";
+        }
+        return new_letter;
     }
 
     virtual void merge(const KmerMinHash& other) {
@@ -255,7 +398,7 @@ private:
         {"TTT", "F"}, {"TTC", "F"},
         {"TTA", "L"}, {"TTG", "L"},
 
-        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"},
+        {"TCT", "S"}, {"TCC", "S"}, {"TCA", "S"}, {"TCG", "S"}, {"TCN", "S"},
 
         {"TAT", "Y"}, {"TAC", "Y"},
         {"TAA", "*"}, {"TAG", "*"},
@@ -264,19 +407,19 @@ private:
         {"TGA", "*"},
         {"TGG", "W"},
 
-        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"},
+        {"CTT", "L"}, {"CTC", "L"}, {"CTA", "L"}, {"CTG", "L"}, {"CTN", "L"},
 
-        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"},
+        {"CCT", "P"}, {"CCC", "P"}, {"CCA", "P"}, {"CCG", "P"}, {"CCN", "P"},
 
         {"CAT", "H"}, {"CAC", "H"},
         {"CAA", "Q"}, {"CAG", "Q"},
 
-        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"},
+        {"CGT", "R"}, {"CGC", "R"}, {"CGA", "R"}, {"CGG", "R"}, {"CGN", "R"},
 
         {"ATT", "I"}, {"ATC", "I"}, {"ATA", "I"},
         {"ATG", "M"},
 
-        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"},
+        {"ACT", "T"}, {"ACC", "T"}, {"ACA", "T"}, {"ACG", "T"}, {"ACN", "T"},
 
         {"AAT", "N"}, {"AAC", "N"},
         {"AAA", "K"}, {"AAG", "K"},
@@ -284,24 +427,62 @@ private:
         {"AGT", "S"}, {"AGC", "S"},
         {"AGA", "R"}, {"AGG", "R"},
 
-        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"},
+        {"GTT", "V"}, {"GTC", "V"}, {"GTA", "V"}, {"GTG", "V"}, {"GTN", "V"},
 
-        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"},
+        {"GCT", "A"}, {"GCC", "A"}, {"GCA", "A"}, {"GCG", "A"}, {"GCN", "A"},
 
         {"GAT", "D"}, {"GAC", "D"},
         {"GAA", "E"}, {"GAG", "E"},
 
-        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}
+        {"GGT", "G"}, {"GGC", "G"}, {"GGA", "G"}, {"GGG", "G"}, {"GGN", "G"}
     };
+
+
+// Dayhoff table from
+// Peris, P., López, D., & Campos, M. (2008).
+// IgTM: An algorithm to predict transmembrane domains and topology in
+// proteins. BMC Bioinformatics, 9(1), 1029–11.
+// http://doi.org/10.1186/1471-2105-9-367
+//
+// Original source:
+// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
+// A model of evolutionary change in proteins,
+// in Atlas of Protein Sequence and Structure,
+// ed Dayhoff M. O., editor.
+// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
+//
+// | Amino acid    | Property              | Dayhoff |
+// |---------------|-----------------------|---------|
+// | C             | Sulfur polymerization | a       |
+// | A, G, P, S, T | Small                 | b       |
+// | D, E, N, Q    | Acid and amide        | c       |
+// | H, K, R       | Basic                 | d       |
+// | I, L, M, V    | Hydrophobic           | e       |
+// | F, W, Y       | Aromatic              | f       |
+    std::map<std::string, std::string> _dayhoff_table = {
+        {"C", "a"},
+
+        {"A", "b"}, {"G", "b"}, {"P", "b"}, {"S", "b"}, {"T", "b"},
+
+        {"D", "c"}, {"E", "c"}, {"N", "c"}, {"Q", "c"},
+
+        {"H", "d"}, {"K", "d"}, {"R", "d"},
+
+        {"I", "e"}, {"L", "e"}, {"M", "e"}, {"V", "e"},
+
+        {"F", "f"}, {"W", "f"}, {"Y", "f"}
+
+    };
+
 };
 
 class KmerMinAbundance: public KmerMinHash {
  public:
     CMinHashType abunds;
 
-    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, uint32_t seed,
-                     HashIntoType mx) :
-        KmerMinHash(n, k, prot, seed, mx) { };
+    KmerMinAbundance(unsigned int n, unsigned int k, bool prot, bool dayhoff,
+                     uint32_t seed, HashIntoType mx) :
+        KmerMinHash(n, k, prot, dayhoff, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {
@@ -341,6 +522,15 @@ class KmerMinAbundance: public KmerMinHash {
           }
         }
       }
+    }
+
+    virtual void remove_hash(const HashIntoType h) {
+        auto pos = std::lower_bound(std::begin(mins), std::end(mins), h);
+        if (pos != mins.cend() and *pos == h) {
+          mins.erase(pos);
+          size_t dist = std::distance(begin(mins), pos);
+          abunds.erase(begin(abunds) + dist);
+        }
     }
 
     virtual void merge(const KmerMinAbundance& other) {
@@ -398,7 +588,7 @@ class KmerMinAbundance: public KmerMinHash {
         std::copy(it2_m, other.mins.end(), out_m);
         std::copy(it2_a, other.abunds.end(), out_a);
 
-        if (merged_mins.size() < num) {
+        if (merged_mins.size() < num || !num) {
           mins = merged_mins;
           abunds = merged_abunds;
         } else {

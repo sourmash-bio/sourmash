@@ -58,6 +58,9 @@ class SourmashSignature(object):
 
         return self.minhash == other.minhash
 
+    def __ne__(self, other):
+        return not self == other
+
     def name(self):
         "Return as nice a name as possible, defaulting to md5 prefix."
         if 'name' in self.d:
@@ -99,8 +102,10 @@ class SourmashSignature(object):
             sketch['mins'] = list(map(int, minhash.get_mins()))
         sketch['md5sum'] = self.md5sum()
 
-        if minhash.is_protein:
+        if minhash.is_protein and not minhash.dayhoff:
             sketch['molecule'] = 'protein'
+        elif minhash.dayhoff:
+            sketch['molecule'] = 'dayhoff'
         else:
             sketch['molecule'] = 'DNA'
 
@@ -203,7 +208,6 @@ def load_signatures(data, ksize=None, select_moltype=None,
             try:
                 data = _guess_open(data)
                 is_fp = True
-                done = True
             except OSError as excinfo:
                 if not quiet: error(str(excinfo))
                 if do_raise:

@@ -15,8 +15,8 @@ import pytest
 from . import sourmash_tst_utils as utils
 import sourmash
 
-from sourmash_lib.lca import lca_utils
-from sourmash_lib.lca.lca_utils import *
+from sourmash.lca import lca_utils
+from sourmash.lca.lca_utils import *
 
 ## lca_utils tests
 
@@ -49,7 +49,7 @@ def test_zip_lineage_4():
     with pytest.raises(ValueError) as e:
         zip_lineage(x)
 
-    assert 'incomplete lineage at phylum - is class instead' in str(e)
+    assert 'incomplete lineage at phylum - is class instead' in str(e.value)
 
 
 def test_build_tree():
