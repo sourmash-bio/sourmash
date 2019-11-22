@@ -11,7 +11,6 @@ import random
 import screed
 import time
 
-from bam2fasta import cli as bam2fasta_cli
 from .sourmash_args import SourmashArgumentParser
 from . import DEFAULT_SEED, MinHash
 from . import signature as sig
@@ -285,6 +284,7 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                from bam2fasta import cli as bam2fasta_cli
 
                 # Initializing time
                 startt = time.time()

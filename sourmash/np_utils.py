@@ -1,4 +1,3 @@
-import numpy as np
 import tempfile
 
 
@@ -11,6 +10,8 @@ def to_memmap(array):
     :return: np.array large_memmap memory mapped array
     :return: str filename name of the file that memory mapped array is written to
     """
+    import numpy as np
+
     filename = tempfile.NamedTemporaryFile(prefix="array", suffix=".mmap", delete=False).name
     shape = array.shape
     f = np.memmap(filename, mode='w+', shape=shape, dtype=array.dtype)
