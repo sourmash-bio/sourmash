@@ -46,4 +46,7 @@ last-tag:
 wasm:
 	wasm-pack build
 
+wasi:
+	cargo wasi build
+
 FORCE:

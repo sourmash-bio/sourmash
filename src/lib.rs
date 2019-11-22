@@ -33,7 +33,7 @@ use cfg_if::cfg_if;
 use murmurhash3::murmurhash3_x64_128;
 
 cfg_if! {
-    if #[cfg(target_arch = "wasm32")] {
+    if #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))] {
         pub mod wasm;
     } else {
         pub mod ffi;
