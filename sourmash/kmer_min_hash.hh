@@ -80,13 +80,14 @@ public:
     const unsigned int ksize;
     const bool is_protein;
     const bool dayhoff;
+    const bool hp;
     const uint32_t seed;
     const HashIntoType max_hash;
     CMinHashType mins;
 
-    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, uint32_t s,
+    KmerMinHash(unsigned int n, unsigned int k, bool prot, bool dyhoff, bool hp, uint32_t s,
                 HashIntoType mx)
-        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), seed(s), max_hash(mx) {
+        : num(n), ksize(k), is_protein(prot), dayhoff(dyhoff), hp(hp), seed(s), max_hash(mx) {
       if (n > 0) {
         mins.reserve(num + 1);
       }
@@ -104,6 +105,9 @@ public:
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
         if (dayhoff != other.dayhoff) {
+            throw minhash_exception("DNA/prot minhashes cannot be compared");
+        }
+        if (hp != other.hp) {
             throw minhash_exception("DNA/prot minhashes cannot be compared");
         }
         if (max_hash != other.max_hash) {
@@ -179,7 +183,7 @@ public:
         if (!is_protein) {
             auto rc = _revcomp(seq);
             for (unsigned int i = 0; i < seq.length() - ksize + 1; i++) {
-				auto fw_kmer = seq.c_str() + i;
+        auto fw_kmer = seq.c_str() + i;
                 auto rc_kmer = rc.c_str() + rc.length() - ksize - i;
 
                 if (! _checkdna(fw_kmer, ksize)) {
@@ -266,7 +270,12 @@ public:
             if (dayhoff) {
                 std::string new_letter = aa_to_dayhoff(residue);
                 aa += new_letter;
-            } else {
+            // Use hp encoding of amino acids
+            } else if (hp) {
+                std::string new_letter = aa_to_hp(residue);
+                aa += new_letter;
+            }
+            else {
                 aa += residue;
             }
 
@@ -354,6 +363,22 @@ public:
             // "second" is the element mapped to by the codon
             // Because .find returns an iterator
             new_letter = dayhoff_encoded -> second;
+        } else {
+            // Otherwise, assign the "X" or "unknown" amino acid
+            new_letter = "X";
+        }
+        return new_letter;
+    }
+
+    std::string aa_to_hp(const std::string& aa) const {
+        // Convert an amino acid letter to hp encoding
+        std::string new_letter;
+
+        auto hp_encoded = _hp_table.find(aa);
+        if (hp_encoded != _hp_table.end()) {
+            // "second" is the element mapped to by the codon
+            // Because .find returns an iterator
+            new_letter = hp_encoded -> second;
         } else {
             // Otherwise, assign the "X" or "unknown" amino acid
             new_letter = "X";
@@ -474,6 +499,23 @@ private:
 
     };
 
+// HP Hydrophobic/hydrophilic mapping
+// From: Phillips, R., Kondev, J., Theriot, J. (2008). 
+// Physical Biology of the Cell. New York: Garland Science, Taylor & Francis Group. ISBN: 978-0815341635 
+
+//
+// | Amino acid                            | HP 
+// |---------------------------------------|---------|
+// | A, F, G, I, L, M, P, V, W, Y          | h       |
+// | N, C, S, T, D, E, R, H, K, Q          | p       |     
+    std::map<std::string, std::string> _hp_table = {
+      {"A", "h"}, {"F", "h"}, {"G", "h"}, {"I", "h"},
+      {"L", "h"}, {"M", "h"}, {"P", "h"}, {"V", "h"},
+      {"W", "h"}, {"Y", "h"}, {"N", "p"}, {"C", "p"},
+      {"S", "p"}, {"T", "p"}, {"D", "p"}, {"E", "p"},
+      {"R", "p"}, {"H", "p"}, {"K", "p"}, {"Q", "p"}
+    };
+
 };
 
 class KmerMinAbundance: public KmerMinHash {
@@ -481,8 +523,8 @@ class KmerMinAbundance: public KmerMinHash {
     CMinHashType abunds;
 
     KmerMinAbundance(unsigned int n, unsigned int k, bool prot, bool dayhoff,
-                     uint32_t seed, HashIntoType mx) :
-        KmerMinHash(n, k, prot, dayhoff, seed, mx) { };
+                     bool hp, uint32_t seed, HashIntoType mx) :
+        KmerMinHash(n, k, prot, dayhoff, hp, seed, mx) { };
 
     virtual void add_hash(HashIntoType h) {
       if ((max_hash and h <= max_hash) or not max_hash) {

@@ -152,6 +152,10 @@ def compute(args):
         notify('Computing both nucleotide and Dayhoff-encoded protein '
                'signatures.')
         num_sigs = 2*len(ksizes)
+    elif args.dna and args.hp:
+        notify('Computing both nucleotide and Hp-encoded protein '
+               'signatures.')
+        num_sigs = 2*len(ksizes)
     elif args.dna:
         notify('Computing only nucleotide (and not protein) signatures.')
         num_sigs = len(ksizes)
@@ -162,8 +166,12 @@ def compute(args):
         notify('Computing only Dayhoff-encoded protein (and not nucleotide) '
                'signatures.')
         num_sigs = len(ksizes)
+    elif args.hp:
+        notify('Computing only hp-encoded protein (and not nucleotide) '
+               'signatures.')
+        num_sigs = len(ksizes)
 
-    if (args.protein or args.dayhoff) and not args.input_is_protein:
+    if (args.protein or args.dayhoff or args.hp) and not args.input_is_protein:
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
@@ -190,6 +198,7 @@ def compute(args):
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=True,
                             dayhoff=False,
+                            hp=False,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
@@ -198,6 +207,16 @@ def compute(args):
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=True,
                             dayhoff=True,
+                            hp=False,
+                            track_abundance=args.track_abundance,
+                            scaled=args.scaled,
+                            seed=seed)
+                Elist.append(E)
+            if args.hp:
+                E = MinHash(ksize=k, n=args.num_hashes,
+                            is_protein=True,
+                            dayhoff=False,
+                            hp=True,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
@@ -206,6 +225,7 @@ def compute(args):
                 E = MinHash(ksize=k, n=args.num_hashes,
                             is_protein=False,
                             dayhoff=False,
+                            hp=False,
                             track_abundance=args.track_abundance,
                             scaled=args.scaled,
                             seed=seed)
@@ -342,6 +362,7 @@ def compute(args):
         # make minhashes for the whole file
         Elist = make_minhashes()
 
+        n = 0
         total_seq = 0
         for filename in args.filenames:
             # consume & calculate signatures
