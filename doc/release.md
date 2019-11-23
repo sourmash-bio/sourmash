@@ -42,7 +42,8 @@ cd testenv1
 source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
 cd sourmash
-pip install -r requirements.txt
+python -m pip install -U setuptools pip
+python -m pip install -r requirements.txt
 make test
 
 # Secondly we test via pip
@@ -50,8 +51,8 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-pip install -U setuptools
-pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
+python -m pip install -U setuptools pip
+python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
 make dist
@@ -63,14 +64,14 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-pip install -U setuptools
-pip install sourmash*tar.gz
-pip install pytest
+python -m pip install -U setuptools pip
+python -m pip install sourmash*tar.gz
+python -m pip install pytest
 tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 make dist
-make test  ## Currently failing, we don't have all the test data...
+#make test  ## Currently failing, we don't have all the test data...
 ```
 
 4\. Publish the new release on the testing PyPI server.  You will need
@@ -88,9 +89,9 @@ twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_
 cd ../../testenv4
 deactivate
 source bin/activate
-pip install -U setuptools
+pip install -U setuptools pip
 # install as much as possible from non-test server!
-pip install screed pytest numpy matplotlib scipy khmer "ijson<2.5"
+pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta
 pip install -i https://test.pypi.org/simple --pre sourmash
 sourmash info  # should print "sourmash version ${new_version}${rc}"
 ```
@@ -137,16 +138,18 @@ twine upload *.whl
 The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI, and open a PR in Bioconda. Review any changes
 (especially dependency versions, since these don't get picked up).
 
-This is an example PR (for `2.1.0`): https://github.com/bioconda/bioconda-recipes/pull/17113
+This is an example PR (for `2.1.0`): [https://github.com/bioconda/bioconda-recipes/pull/17113](https://github.com/bioconda/bioconda-recipes/pull/17113)
 
 ## Announce it!
 
 If a bioinformatics software is released and no one tweets, is it really released?
 
 Examples:
-2.0.0 https://twitter.com/luizirber/status/1108846466502520832
-2.0.1 https://twitter.com/luizirber/status/1136786447518711808
-2.1.0 https://twitter.com/luizirber/status/1166910335120314369
+- 2.0.0 https://twitter.com/luizirber/status/1108846466502520832
+- 2.0.1 https://twitter.com/luizirber/status/1136786447518711808
+- 2.1.0 https://twitter.com/luizirber/status/1166910335120314369
+- 2.2.0 https://twitter.com/luizirber/status/1179126660911661057
+- 2.3.0 https://twitter.com/luizirber/status/1198027116396171264
 
 ## To test on a blank Ubuntu system
 
