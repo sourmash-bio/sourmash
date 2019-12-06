@@ -58,36 +58,68 @@ optional arguments:
 Invoke `./cli-sandbox compute --help`
 
 ```
-usage: sourmash compute [-h] [--protein] [--dayhoff] [--hp] [-q]
-                        [--input-is-protein] [-k KSIZES] [-n NUM_HASHES]
-                        [--check-sequence] [-f] [-o OUTPUT] [--singleton]
-                        [--merge FILE] [--name-from-first] [--input-is-10x]
+usage: sourmash compute [-h] [-k KSIZES] [-n NUM_HASHES] [--track-abundance]
+                        [--scaled SCALED] [--protein] [--dayhoff] [--hp]
+                        [--input-is-protein] [--seed SEED] [--input-is-10x]
                         [--count-valid-reads COUNT_VALID_READS]
                         [--write-barcode-meta-csv WRITE_BARCODE_META_CSV]
                         [-p PROCESSES] [--save-fastas SAVE_FASTAS]
-                        [--line-count LINE_COUNT] [--track-abundance]
-                        [--scaled SCALED] [--seed SEED] [--randomize]
-                        [--license LICENSE] [--rename-10x-barcodes FILE]
-                        [--barcodes-file FILE]
+                        [--line-count LINE_COUNT] [--rename-10x-barcodes FILE]
+                        [--barcodes-file FILE] [-f] [-o OUTPUT] [--singleton]
+                        [--merge FILE] [--name-from-first] [--randomize] [-q]
+                        [--check-sequence] [--license LICENSE]
                         filenames [filenames ...]
 
-positional arguments:
+Required arguments:
   filenames             file(s) of sequences
 
-optional arguments:
+Miscellaneous options:
   -h, --help            show this help message and exit
+  -q, --quiet           suppress non-error output
+  --check-sequence      complain if input sequence is invalid
+  --license LICENSE     signature license. Currently only CC0 is supported.
+
+Sketching options:
+  -k KSIZES, --ksizes KSIZES
+                        comma-separated list of k-mer sizes; default=21,31,51
+  -n NUM_HASHES, --num-hashes NUM_HASHES
+                        number of hashes to use in each sketch; default=500
+  --track-abundance     track k-mer abundances in the generated signature
+  --scaled SCALED       choose number of hashes as 1 in FRACTION of input
+                        k-mers
   --protein             choose a protein signature; by default, a nucleotide
                         signature is used
   --dayhoff             build Dayhoff-encoded amino acid signatures
   --hp, --hydrophobic-polar
                         build hydrophobic-polar-encoded amino acid signatures
-  -q, --quiet           suppress non-error output
   --input-is-protein    Consume protein sequences - no translation needed.
-  -k KSIZES, --ksizes KSIZES
-                        comma-separated list of k-mer sizes; default=21,31,51
-  -n NUM_HASHES, --num-hashes NUM_HASHES
-                        number of hashes to use in each sketch; default=1500
-  --check-sequence      complain if input sequence is invalid
+  --seed SEED           seed used by MurmurHash; default=42
+
+10x options:
+  --input-is-10x        input is 10x single cell output folder
+  --count-valid-reads COUNT_VALID_READS
+                        a barcode is only considered a valid barcode read and
+                        its signature is written if number of umis are greater
+                        than count-valid-reads. It is used to weed out cell
+                        barcodes with few umis that might have been due to
+                        false rna enzyme reactions
+  --write-barcode-meta-csv WRITE_BARCODE_META_CSV
+                        for each of the unique barcodes, Write to a given
+                        path, number of reads and number of umis per barcode.
+  -p PROCESSES, --processes PROCESSES
+                        number of processes to use for reading 10x bam file
+  --save-fastas SAVE_FASTAS
+                        save merged fastas for all the unique barcodes to
+                        {CELL_BARCODE}.fasta in the absolute path given by
+                        this flag; by default, fastas are not saved
+  --line-count LINE_COUNT
+                        line count for each bam shard
+  --rename-10x-barcodes FILE
+                        Tab-separated file mapping 10x barcode name to new
+                        name, e.g. with channel or cell annotation label
+  --barcodes-file FILE  Barcodes file if the input is unfiltered 10x bam file
+
+File handling options:
   -f, --force           recompute signatures even if the file exists
   -o OUTPUT, --output OUTPUT
                         output computed signatures to this file
@@ -98,39 +130,7 @@ optional arguments:
                         specified name
   --name-from-first     name the signature generated from each file after the
                         first record in the file
-  --input-is-10x        input is 10x single cell output folder
-  --count-valid-reads COUNT_VALID_READS
-                        For 10x input only (i.e input-is-10x flag is True), A
-                        barcode is only considered a valid barcode read and
-                        its signature is written if number of umis are greater
-                        than count-valid-reads. It is used to weed out cell
-                        barcodes with few umis that might have been due to
-                        false rna enzyme reactions
-  --write-barcode-meta-csv WRITE_BARCODE_META_CSV
-                        For 10x input only (i.e input-is-10x flag is True),
-                        for each of the unique barcodes, Write to a given
-                        path, number of reads and number of umis per barcode.
-  -p PROCESSES, --processes PROCESSES
-                        For 10x input only (i.e input-is-10x flag is True,
-                        Number of processes to use for reading 10x bam file
-  --save-fastas SAVE_FASTAS
-                        For 10x input only (i.e input-is-10x flag is True),
-                        save merged fastas for all the unique barcodes to
-                        {CELL_BARCODE}.fasta in the absolute path given by
-                        this flag, By default, fastas are not saved
-  --line-count LINE_COUNT
-                        For 10x input only (i.e input-is-10x flag is True),
-                        line count for each bam shard
-  --track-abundance     track k-mer abundances in the generated signature
-  --scaled SCALED       choose number of hashes as 1 in FRACTION of input
-                        k-mers
-  --seed SEED           seed used by MurmurHash; default=42
   --randomize           shuffle the list of input filenames randomly
-  --license LICENSE     signature license. Currently only CC0 is supported.
-  --rename-10x-barcodes FILE
-                        Tab-separated file mapping 10x barcode name to new
-                        name, e.g. with channel or cell annotation label
-  --barcodes-file FILE  Barcodes file if the input is unfiltered 10x bam file
 ```
 
 Invoke `./cli-sandbox lca --help`
