@@ -1,4 +1,0 @@
-#!/usr/bin/env python
-import cli
-args = cli.get_parser().parse_args()
-print(args)

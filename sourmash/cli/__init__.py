@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 import sys
 
+from . import utils
+
 # Commands
 from . import compare
 from . import compute
