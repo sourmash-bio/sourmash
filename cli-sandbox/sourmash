@@ -5,19 +5,18 @@ import sys
 
 VERSION = '2.2.0'
 
-_citation_printed = False
-def print_citation():
-    global _citation_printed
-    if _citation_printed:
-        return
-    print('Cite me plz')
-    _citation_printed = True
-
 
 class CustomParser(ArgumentParser):
     def __init__(self, citation=True, **kwargs):
         super(CustomParser, self).__init__(**kwargs)
         self.citation = citation
+        self._citation_printed = False
+
+    def print_citation(self):
+        if self._citation_printed:
+            return
+        print('Cite me plz')
+        self._citation_printed = True
 
     def parse_args(self, args=None, namespace=None):
         if (args is None and len(sys.argv) == 1) or (args is not None and len(args) == 0):
@@ -25,7 +24,7 @@ class CustomParser(ArgumentParser):
             raise SystemExit(0)
         args = super(CustomParser, self).parse_args(args=args, namespace=namespace)
         if ('quiet' not in args or not args.quiet) and self.citation:
-            print_citation()
+            self.print_citation()
         return args
 
 
@@ -36,6 +35,7 @@ desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequen
 p = CustomParser(prog='sourmash', description=desc)
 p._optionals.title = 'Options'
 p.add_argument('-v', '--version', action='version', version='sourmash '+ VERSION)
+p.add_argument('-q', '--quiet', action='store_true', help='don\'t print citation information')
 s = p.add_subparsers(
     title='Commands', dest='cmd', metavar='cmd', help=commandstr,
     description='Invoke "sourmash <cmd> --help" for more details on executing each command.'
