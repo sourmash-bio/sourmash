@@ -151,13 +151,28 @@ Options:
 Invoke `./cli-sandbox lca index --help`
 
 ```
-usage: sourmash lca index [-h] csv lca_db_out signatures [signatures ...]
+usage: sourmash lca index [-h] [--scaled S] [-k K] [-q] [-d] [-C C] [--tabs]
+                          [--no-headers] [--split-identifiers] [-f]
+                          [--traverse-directory] [--report REPORT]
+                          csv lca_db_out signatures [signatures ...]
 
 positional arguments:
-  csv         taxonomy spreadsheet
-  lca_db_out  output database name
-  signatures  one or more sourmash signatures
+  csv                   taxonomy spreadsheet
+  lca_db_out            output database name
+  signatures            one or more sourmash signatures
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  --scaled S
+  -k K, --ksize K       k-mer size; default=31
+  -q, --quiet           suppress non-error output
+  -d, --debug           output debugging output
+  -C C, --start-column C
+                        column at which taxonomic assignments start; default=2
+  --tabs                input spreadsheet is tab-delimited; default is commas
+  --no-headers          no headers present in taxonomy spreadsheet
+  --split-identifiers   split names in signatures on whitspace and period
+  -f, --force
+  --traverse-directory  load all signatures underneath directories
+  --report REPORT       output a report on anomalies, if any
 ```
