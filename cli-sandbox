@@ -1,4 +1,0 @@
-#!/usr/bin/env python
-import sourmash
-args = sourmash.cli.get_parser().parse_args()
-print(args)
