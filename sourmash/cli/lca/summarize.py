@@ -22,3 +22,7 @@ def subparser(subparsers):
         '-d', '--debug', action='store_true',
         help='output debugging output'
     )
+
+
+def main(args):
+    print(args)

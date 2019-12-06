@@ -43,8 +43,25 @@ class SourmashParser(ArgumentParser):
         args = super(SourmashParser, self).parse_args(args=args, namespace=namespace)
         if ('quiet' not in args or not args.quiet) and self.citation:
             self.print_citation()
+
+        # BEGIN: dirty hacks to simultaneously support new and previous interface
         if hasattr(args, 'subcmd') and args.subcmd == 'import':
             args.subcmd = 'ingest'
+        if hasattr(args, 'cmd') and args.cmd == 'sbt_combine':
+            args.cmd = 'sbt'
+            args.subcmd = 'combine'
+        if hasattr(args, 'cmd') and args.cmd == 'index':
+            args.cmd = 'sbt'
+            args.subcmd = 'index'
+        if hasattr(args, 'cmd') and args.cmd == 'categorize':
+            args.cmd = 'sbt'
+            args.subcmd = 'categorize'
+        if hasattr(args, 'cmd') and args.cmd == 'watch':
+            args.subcmd = 'sbt'
+            args.subcmd = 'watch'
+        if hasattr(args, 'subcmd') and args.subcmd == 'compare_csv':
+            args.subcmd = 'compare'
+        # END: dirty hacks to simultaneously support new and previous interface
         return args
 
 
@@ -85,5 +102,11 @@ def get_parser():
     )
     for cmd in commands:
         getattr(sys.modules[__name__], cmd).subparser(sub)
+    # BEGIN: dirty hacks to simultaneously support new and previous interface
+    sbt.categorize.subparser(sub)
+    sbt.combine.alt_subparser(sub)
+    sbt.index.subparser(sub)
+    sbt.watch.subparser(sub)
+    # END: dirty hacks to simultaneously support new and previous interface
     parser._action_groups.reverse()
     return parser

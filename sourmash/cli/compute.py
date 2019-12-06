@@ -120,3 +120,7 @@ def subparser(subparsers):
     )
     subparser._positionals.title = 'Required arguments'
     subparser._optionals.title = 'Miscellaneous options'
+
+
+def main(args):
+    print(args)

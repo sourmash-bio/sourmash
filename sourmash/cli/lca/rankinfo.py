@@ -10,3 +10,7 @@ def subparser(subparsers):
         help='output debugging output'
     )
     subparser.add_argument('--scaled', metavar='FLOAT', type=float)
+
+
+def main(args):
+    print(args)
