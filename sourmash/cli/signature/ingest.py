@@ -12,6 +12,8 @@ def subparser(subparsers):
         help='output signature to this file'
     )
 
+    # Dirty hack to simultaneously support new and previous interface
+    # If desired, this function can be removed with a major version bump.
     subparser = subparsers.add_parser('import')
     subparser.add_argument('filenames', nargs='+')
     subparser.add_argument(

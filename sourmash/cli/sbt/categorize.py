@@ -22,3 +22,7 @@ def subparser(subparsers):
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present'
     )
+
+
+def main(args):
+    print(args)

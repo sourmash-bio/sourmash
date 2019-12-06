@@ -32,3 +32,7 @@ def subparser(subparsers):
         help='name to use for generated signature'
     )
     add_ksize_arg(subparser, 31)
+
+
+def main(args):
+    print(args)

@@ -23,3 +23,7 @@ def subparser(subparsers):
         '--traverse-directory', action='store_true',
         help='load all signatures underneath directories'
     )
+
+
+def main(args):
+    print(args)

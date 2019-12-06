@@ -38,3 +38,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '--output-dir', metavar='DIR', help='directory for output plots'
     )
+
+
+def main(args):
+    print(args)

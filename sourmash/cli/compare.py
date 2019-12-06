@@ -33,3 +33,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '-p', '--processes', metavar='N', type=int, default=None,
         help='Number of processes to use to calculate similarity')
+
+
+def main(args):
+    print(args)

@@ -43,3 +43,7 @@ def subparser(subparsers):
         help='downsample signatures to the specified scaled factor'
     )
     add_moltype_args(subparser)
+
+
+def main(args):
+    print(args)

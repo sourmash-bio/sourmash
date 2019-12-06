@@ -45,3 +45,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '--report', help='output a report on anomalies, if any'
     )
+
+
+def main(args):
+    print(args)
