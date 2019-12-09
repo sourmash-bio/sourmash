@@ -172,6 +172,9 @@ impl Nodegraph {
     where
         R: io::Read,
     {
+        // TODO: see https://github.com/brainstorm/bio-index-formats for an
+        // example of using nom to parse binary data.
+        // Use it here instead of byteorder
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
