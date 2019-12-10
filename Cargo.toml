@@ -39,7 +39,7 @@ human-panic = "1.0.1"
 lazy_static = "1.0.0"
 lazy-init = "0.3.0"
 log = "0.4.0"
-md5 = "0.6.0"
+md5 = "0.7.0"
 murmurhash3 = "~0.0.5"
 needletail = { version = "~0.2.1", optional = true }
 serde = "1.0"
