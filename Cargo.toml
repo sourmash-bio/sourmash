@@ -41,7 +41,7 @@ lazy-init = "0.3.0"
 log = "0.4.0"
 md5 = "0.6.0"
 murmurhash3 = "~0.0.5"
-needletail = { version = "~0.2.1", optional = true }
+needletail = { version = "~0.3.2", optional = true }
 serde = "1.0"
 serde_derive = "~1.0.58"
 serde_json = "1.0.2"
