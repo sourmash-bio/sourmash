@@ -28,7 +28,7 @@ from-finch = ["finch", "needletail"]
 [dependencies]
 byteorder = "^1.2"
 cfg-if = "0.1"
-clap = { version = "~2.32", features = ["yaml"] }
+clap = { version = "~2.33", features = ["yaml"] }
 env_logger = "0.6.0"
 exitfailure = "0.5.1"
 failure = "0.1.3"
