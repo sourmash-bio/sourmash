@@ -502,17 +502,11 @@ cdef class MinHash(object):
     def is_molecule_type(self, molecule):
         if molecule.upper() == 'DNA' and not self.is_protein:
             return True
-        if self.is_protein:
-            if self.dayhoff:
-                if molecule == 'dayhoff':
-                    return True
-            else:
-                if molecule == 'protein':
-                    return True
-            if self.hp:
-                if molecule == 'hp':
-                    return True
-                else:
-                    if molecule == 'protein':
-                        return True
+        elif self.is_protein and molecule == 'protein' and not any((self.dayhoff, self.hp)):
+            return True
+        elif self.dayhoff and molecule == 'dayhoff':
+            return True
+        elif self.hp and molecule == 'hp':
+            return True
+
         return False
