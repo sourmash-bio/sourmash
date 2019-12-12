@@ -58,6 +58,16 @@ jobs:
         - rustup target add wasm32-unknown-unknown
         - cargo install --force wasm-pack
         - wasm-pack build
+    - <<: *test
+      name: wasi target
+      language: rust
+      rust: stable
+      before_script: skip
+      install: skip
+      script:
+        - rustup target add wasm32-wasi
+        - cargo install --force cargo-wasi
+        - cargo wasi build
 
     - &wheel
       stage: build wheel and send to github releases
@@ -66,10 +76,10 @@ jobs:
         - docker
       env:
         - PIP=pip
-        - CIBW_SKIP='*-manylinux1_i686'
+        - CIBW_SKIP='*-manylinux_i686'
       install: skip
       script:
-        - sudo $PIP install cibuildwheel==0.10.2
+        - sudo $PIP install cibuildwheel==1.0.0
         - cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases

@@ -131,9 +131,8 @@ def test_do_sourmash_compute_singleton():
         assert sig.name().endswith('shortName')
 
 
-def test_do_sourmash_compute_10x():
-    pytest.importorskip('pysam')
-    pytest.importorskip('pathos')
+def test_do_sourmash_compute_10x_barcode():
+    pytest.importorskip('bam2fasta')
 
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
@@ -152,7 +151,7 @@ def test_do_sourmash_compute_10x():
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 16
-        barcode_signatures = list(set([sig.name() for sig in siglist]))
+        barcode_signatures = list(set([sig.name().split("_")[0] for sig in siglist]))
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
@@ -164,8 +163,12 @@ def test_do_sourmash_compute_10x():
         # min_hashes = [x.minhash.get_mins() for x in siglist]
         # assert all(mins != [] for mins in min_hashes)
 
-        # Filtered bam file with no barcodes file
-        # should run sourmash compute successfully
+
+def test_do_sourmash_compute_10x_no_barcode():
+    pytest.importorskip('bam2fasta')
+    # Filtered bam file with no barcodes file
+    # should run sourmash compute successfully
+    with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
@@ -184,6 +187,10 @@ def test_do_sourmash_compute_10x():
         # min_hashes = [x.minhash.get_mins() for x in siglist]
         # assert all(mins != [] for mins in min_hashes)
 
+
+def test_do_sourmash_compute_10x_no_filter_umis():
+    pytest.importorskip('bam2fasta')
+    with utils.TempDirectory() as location:
         # test to check if all the lines in unfiltered_umi_to_sig are callled and tested
         csv_path = os.path.join(location, "all_barcodes_meta.csv")
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
@@ -201,6 +208,10 @@ def test_do_sourmash_compute_10x():
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 32
 
+
+def test_do_sourmash_compute_10x_filter_umis():
+    pytest.importorskip('bam2fasta')
+    with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
         csv_path = os.path.join(location, "all_barcodes_meta.csv")
         barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
@@ -402,6 +413,41 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
             assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
 
 
+def test_do_sourmash_compute_multik_with_hp():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--hp', '--no-dna',
+                                            testdata1],
+                                           in_directory=location)
+        assert 'Computing only hp-encoded protein (and not nucleotide) ' \
+               'signatures.' in err
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert all(x.minhash.hp for x in siglist)
+
+
+def test_do_sourmash_compute_multik_with_hp_and_dna():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--hp',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+
 def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -422,6 +468,31 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
             assert 30 in ksizes
             assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
             assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
+
+
+def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21,30',
+                                            '--dayhoff', '--hp', '--protein',
+                                            testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 8
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+            assert sum(x.minhash.is_molecule_type('hp') for x in siglist) == 2
+            # 2 = dayhoff, 2 = hp = 4 protein
             assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
 
 

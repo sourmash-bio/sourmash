@@ -64,16 +64,16 @@ SETUP_METADATA = \
                                language="c++",
                                extra_compile_args=EXTRA_COMPILE_ARGS,
                                extra_link_args=EXTRA_LINK_ARGS)],
-    "install_requires": ["screed>=0.9", "ijson<2.5", "khmer>=2.1",
-                         "deprecation>=2.0.6"],
+    "install_requires": ["screed>=0.9", "ijson>=2.5.1", "khmer>=2.1", 'numpy',
+                         'matplotlib', 'scipy', "deprecation>=2.0.6"],
     "setup_requires": ['Cython>=0.25.2', "setuptools>=38.6.0",
                        'setuptools_scm', 'setuptools_scm_git_archive'],
     "use_scm_version": {"write_to": "sourmash/version.py"},
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'numpy', 'matplotlib', 'scipy', 'recommonmark'],
+        'test' : ['pytest', 'pytest-cov', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx'],
-        '10x': ['pathos', 'pysam']
+        '10x': ['bam2fasta==1.0.1']
         },
     "include_package_data": True,
     "package_data": {

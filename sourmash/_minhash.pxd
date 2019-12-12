@@ -26,10 +26,11 @@ cdef extern from "kmer_min_hash.hh":
         const unsigned int ksize;
         const bool is_protein;
         const bool dayhoff;
+        const bool hp;
         const HashIntoType max_hash;
         CMinHashType mins;
 
-        KmerMinHash(unsigned int, unsigned int, bool, bool, uint32_t, HashIntoType)
+        KmerMinHash(unsigned int, unsigned int, bool, bool, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
         void remove_hash(HashIntoType) except +ValueError
         void add_word(const string& word) except +ValueError
@@ -37,6 +38,7 @@ cdef extern from "kmer_min_hash.hh":
         void add_sequence(const string&, bool) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         string aa_to_dayhoff(string aa) except +ValueError
+        string aa_to_hp(string aa) except +ValueError
         string translate_codon(string codon) except +ValueError
         unsigned int count_common(const KmerMinHash&) except +ValueError
         unsigned long size()
@@ -45,7 +47,7 @@ cdef extern from "kmer_min_hash.hh":
     cdef cppclass KmerMinAbundance(KmerMinHash):
         CMinHashType abunds;
 
-        KmerMinAbundance(unsigned int, unsigned int, bool, bool, uint32_t, HashIntoType)
+        KmerMinAbundance(unsigned int, unsigned int, bool, bool, bool, uint32_t, HashIntoType)
         void add_hash(HashIntoType) except +ValueError
         void remove_hash(HashIntoType) except +ValueError
         void add_word(string word) except +ValueError
@@ -54,6 +56,7 @@ cdef extern from "kmer_min_hash.hh":
         void merge(const KmerMinAbundance&) except +ValueError
         void merge(const KmerMinHash&) except +ValueError
         string aa_to_dayhoff(string aa) except +ValueError
+        string aa_to_hp(string aa) except +ValueError
         string translate_codon(string codon) except +ValueError
         unsigned int count_common(const KmerMinAbundance&) except +ValueError
         unsigned long size()

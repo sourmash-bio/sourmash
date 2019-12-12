@@ -297,6 +297,34 @@ min similarity in matrix: 0.940'''.splitlines()
         assert status == 0
 
 
+def test_do_compare_hp():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--hp',
+                                            '--no-dna', testdata1],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '21', '--hp',
+                                            '--no-dna', testdata2],
+                                           in_directory=location)
+        assert status == 0
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare', 'short.fa.sig',
+                                            'short2.fa.sig', '--hp',
+                                            '--csv', 'xxx'],
+                                           in_directory=location)
+        true_out = '''[1.   0.94]
+[0.94 1.  ]
+min similarity in matrix: 0.940'''.splitlines()
+        for line in out:
+            cleaned_line = line.split('...')[-1].strip()
+            cleaned_line in true_out
+        assert status == 0
 
 
 def test_do_plot_comparison():

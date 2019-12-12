@@ -14,10 +14,10 @@ pub mod search;
 use std::path::Path;
 use std::rc::Rc;
 
-use serde_derive::{Deserialize, Serialize};
-
+use cfg_if::cfg_if;
 use failure::Error;
 use lazy_init::Lazy;
+use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::sbt::{Node, SBT};
@@ -30,6 +30,13 @@ use crate::sketch::Sketch;
 
 pub type MHBT = SBT<Node<Nodegraph>, Dataset<Signature>>;
 pub type UKHSTree = SBT<Node<FlatUKHS>, Dataset<Signature>>;
+
+cfg_if! {
+    if #[cfg(not(target_arch = "wasm32"))] {
+      use mqf::MQF;
+      pub type MHMT = SBT<Node<MQF>, Dataset<Signature>>;
+    }
+}
 
 pub trait Index {
     type Item;

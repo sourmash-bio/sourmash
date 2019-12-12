@@ -4,7 +4,6 @@ import itertools
 from functools import partial
 import time
 import multiprocessing
-import numpy as np
 
 from .logging import notify
 from sourmash.np_utils import to_memmap
@@ -25,6 +24,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
     :param boolean downsample by max_hash if True
     :return: np.array similarity matrix
     """
+    import numpy as np
 
     n = len(siglist)
 
@@ -122,6 +122,8 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     :param int n_jobs number of processes to run the similarity calculations on
     :return: np.array similarity matrix
     """
+    import numpy as np
+
     # Starting time - calculate time to keep track in case of lengthy siglist
     start_initial = time.time()
 

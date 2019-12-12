@@ -1002,14 +1002,22 @@ def watch(args):
         moltype = 'DNA'
         is_protein = False
         dayhoff = False
+        hp = False
     elif args.protein:
         moltype = 'protein'
         is_protein = True
         dayhoff = False
-    else:
+        hp = False
+    elif args.dayhoff:
         moltype = 'dayhoff'
         is_protein = True
         dayhoff = True
+        hp = False
+    else:
+        moltype = 'hp'
+        is_protein = True
+        dayhoff = False
+        hp = True
 
     tree = load_sbt_index(args.sbt_name)
 
@@ -1020,7 +1028,7 @@ def watch(args):
         tree_mh = leaf.data.minhash
         ksize = tree_mh.ksize
 
-    E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff)
+    E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff, hp=hp)
     streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
 
     notify('Computing signature for k={}, {} from stdin', ksize, moltype)
