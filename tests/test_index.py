@@ -187,7 +187,7 @@ def test_linear_index_load():
         linear = LinearIndex.load(filename)
 
     x = {ss2, ss47, ss63}
-    assert set(linear.signatures) == x, linear.signatures
+    assert set(linear.signatures()) == x, linear.signatures
     assert linear.filename == filename
 
 

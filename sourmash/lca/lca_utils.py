@@ -164,6 +164,9 @@ class LCA_Database(Index):
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
 
+    def signatures(self):
+        raise NotImplementedError
+
     def load(self, db_name):
         "Load from a JSON file."
         xopen = open
@@ -334,7 +337,7 @@ class LCA_Database(Index):
         elif self.scaled < minhash.scaled and not ignore_scaled:
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
-        if not hasattr(self, 'signatures'):
+        if not hasattr(self, '_signatures'):
             debug('creating signatures for LCA DB...')
             sigd = defaultdict(minhash.copy_and_clear)
 
@@ -342,9 +345,9 @@ class LCA_Database(Index):
                 for vv in v:
                     sigd[vv].add_hash(k)
 
-            self.signatures = sigd
+            self._signatures = sigd
 
-        debug('=> {} signatures!', len(self.signatures))
+        debug('=> {} signatures!', len(self._signatures))
 
         # build idx_to_ident from ident_to_idx
         if not hasattr(self, 'idx_to_ident'):
@@ -370,7 +373,7 @@ class LCA_Database(Index):
             name = self.ident_to_name[ident]
             debug('looking at {} ({})', ident, name)
 
-            match_mh = self.signatures[idx]
+            match_mh = self._signatures[idx]
             match_size = len(match_mh)
 
             debug('count: {}; query_mins: {}; match size: {}',

@@ -9,8 +9,8 @@ ABC = ABCMeta("ABC", (object,), {"__slots__": ()})
 
 class Index(ABC):
     @abstractmethod
-    def find(self, search_fn, *args, **kwargs):
-        """ """
+    def signatures(self):
+        "Return an iterator over all signatures in the Index object."
 
     @abstractmethod
     def search(self, signature, *args, **kwargs):
@@ -35,22 +35,25 @@ class Index(ABC):
 
 
 class LinearIndex(Index):
-    def __init__(self, signatures=None, filename=None):
-        self.signatures = []
-        if signatures:
-            self.signatures = list(signatures)
+    def __init__(self, _signatures=None, filename=None):
+        self._signatures = []
+        if _signatures:
+            self._signatures = list(_signatures)
         self.filename = filename
 
+    def signatures(self):
+        return iter(self._signatures)
+
     def __len__(self):
-        return len(self.signatures)
+        return len(self._signatures)
 
     def insert(self, node):
-        self.signatures.append(node)
+        self._signatures.append(node)
 
     def find(self, search_fn, *args, **kwargs):
         matches = []
 
-        for node in self.signatures:
+        for node in self.signatures():
             if search_fn(node, *args):
                 matches.append(node)
         return matches
@@ -79,7 +82,7 @@ class LinearIndex(Index):
         # do the actual search:
         matches = []
 
-        for ss in self.signatures:
+        for ss in self.signatures():
             similarity = query_match(ss)
             if similarity >= threshold:
                 # @CTB: check duplicates via md5sum - here or later?
@@ -92,7 +95,7 @@ class LinearIndex(Index):
     def gather(self, query, *args, **kwargs):
         "Return the best containment in the list."
         results = []
-        for ss in self.signatures:
+        for ss in self.signatures():
             cont = query.minhash.containment_ignore_maxhash(ss.minhash)
             if cont:
                 results.append((cont, ss, self.filename))
@@ -104,7 +107,7 @@ class LinearIndex(Index):
     def save(self, path):
         from .signature import save_signatures
         with open(path, 'wt') as fp:
-            save_signatures(self.signatures, fp)
+            save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
