@@ -135,7 +135,8 @@ class SBT(Index):
         self.storage = storage
 
     def signatures(self):
-        return leaves()
+        for k in self.leaves():
+            yield k.data
 
     def new_node_pos(self, node):
         if not self._nodes:

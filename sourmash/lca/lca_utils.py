@@ -165,7 +165,10 @@ class LCA_Database(Index):
         return "LCA_Database('{}')".format(self.filename)
 
     def signatures(self):
-        raise NotImplementedError
+        from .. import SourmashSignature
+        self._create_signatures()
+        for v in self._signatures.values():
+            yield SourmashSignature(v)
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -329,17 +332,13 @@ class LCA_Database(Index):
 
         return x
 
-    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
-        """
-        Do a Jaccard similarity or containment search.
-        """
-        # make sure we're looking at the same scaled value as database
-        if self.scaled > minhash.scaled:
-            minhash = minhash.downsample_scaled(self.scaled)
-        elif self.scaled < minhash.scaled and not ignore_scaled:
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+    def _create_signatures(self):
+        "Create a _signatures member dictionary that contains {idx: minhash}."
+        from .. import MinHash
 
         if not hasattr(self, '_signatures'):
+            minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+
             debug('creating signatures for LCA DB...')
             sigd = defaultdict(minhash.copy_and_clear)
 
@@ -350,6 +349,18 @@ class LCA_Database(Index):
             self._signatures = sigd
 
         debug('=> {} signatures!', len(self._signatures))
+
+    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
+        """
+        Do a Jaccard similarity or containment search.
+        """
+        # make sure we're looking at the same scaled value as database
+        if self.scaled > minhash.scaled:
+            minhash = minhash.downsample_scaled(self.scaled)
+        elif self.scaled < minhash.scaled and not ignore_scaled:
+            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+
+        self._create_signatures()
 
         # build idx_to_ident from ident_to_idx
         if not hasattr(self, 'idx_to_ident'):
