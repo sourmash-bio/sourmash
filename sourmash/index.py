@@ -34,7 +34,17 @@ class Index(ABC):
         return matches
 
     def search(self, query, *args, **kwargs):
-        """@@
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments accepted by all Index subclasses:
+          * do_containment: default False. If True, use Jaccard containment.
+          * best_only: default False. If True, allow optimizations that
+            may. May discard matches better than threshold, but first match
+            is guaranteed to be best.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
 
         Note, the "best only" hint is ignored by LinearIndex.
         """
@@ -60,7 +70,6 @@ class Index(ABC):
         for ss in self.signatures():
             similarity = query_match(ss)
             if similarity >= threshold:
-                # @CTB: check duplicates via md5sum - here or later?
                 matches.append((similarity, ss, self.filename))
 
         # sort!
@@ -68,7 +77,7 @@ class Index(ABC):
         return matches
 
     def gather(self, query, *args, **kwargs):
-        "Return the best containment in the list."
+        "Return the match with the best Jaccard containment in the Index."
         results = []
         for ss in self.signatures():
             cont = query.minhash.containment_ignore_maxhash(ss.minhash)
