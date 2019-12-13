@@ -13,14 +13,6 @@ class Index(ABC):
         "Return an iterator over all signatures in the Index object."
 
     @abstractmethod
-    def search(self, signature, *args, **kwargs):
-        """ """
-
-    @abstractmethod
-    def gather(self, signature, *args, **kwargs):
-        """ """
-
-    @abstractmethod
     def insert(self, node):
         """ """
 
@@ -32,23 +24,6 @@ class Index(ABC):
     @abstractmethod
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """ """
-
-
-class LinearIndex(Index):
-    def __init__(self, _signatures=None, filename=None):
-        self._signatures = []
-        if _signatures:
-            self._signatures = list(_signatures)
-        self.filename = filename
-
-    def signatures(self):
-        return iter(self._signatures)
-
-    def __len__(self):
-        return len(self._signatures)
-
-    def insert(self, node):
-        self._signatures.append(node)
 
     def find(self, search_fn, *args, **kwargs):
         matches = []
@@ -100,9 +75,26 @@ class LinearIndex(Index):
             if cont:
                 results.append((cont, ss, self.filename))
 
-        results.sort(reverse=True)        # CTB: sort on ss.name() too?
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].name()))
 
         return results
+
+
+class LinearIndex(Index):
+    def __init__(self, _signatures=None, filename=None):
+        self._signatures = []
+        if _signatures:
+            self._signatures = list(_signatures)
+        self.filename = filename
+
+    def signatures(self):
+        return iter(self._signatures)
+
+    def __len__(self):
+        return len(self._signatures)
+
+    def insert(self, node):
+        self._signatures.append(node)
 
     def save(self, path):
         from .signature import save_signatures
