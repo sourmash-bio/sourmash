@@ -271,7 +271,9 @@ class LCA_Database(Index):
             raise TypeError("'search' requires 'threshold'")
         threshold = kwargs['threshold']
         do_containment = kwargs.get('do_containment', False)
-        # @CTB ignore_abundance?
+        ignore_abundance = kwargs.get('ignore_abundance')
+        if not ignore_abundance:
+            raise TypeError("'search' on LCA databases does not use abundance")
 
         results = []
         for x in self.find(query.minhash, threshold, do_containment):

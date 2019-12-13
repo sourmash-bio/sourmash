@@ -545,6 +545,10 @@ def search(args):
                                                 not args.containment,
                                                 args.traverse_directory)
 
+    # forcibly ignore abundances if query has no abundances
+    if not query.minhash.track_abundance:
+        args.ignore_abundance = True
+
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
