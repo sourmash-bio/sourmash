@@ -50,7 +50,7 @@ bio = { git = "https://github.com/luizirber/rust-bio", branch = "feature/fastx_r
 primal = "0.2.3"
 pdatastructs = { git = "https://github.com/luizirber/pdatastructs.rs", branch = "succinct_wasm" }
 itertools = "0.8.0"
-typed-builder = "0.3.0"
+typed-builder = "0.4.0"
 csv = "1.0.7"
 tempfile = "3.1.0"
 
