@@ -138,7 +138,7 @@ def test_tree_v1_load():
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = next(load_signatures(testdata1))
+    to_search = load_one_signature(testdata1)
 
     results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
                                                to_search, 0.1)}
