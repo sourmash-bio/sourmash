@@ -228,6 +228,11 @@ def load_signatures(data, ksize=None, select_moltype=None,
             if not ksize or ksize == sig.minhash.ksize:
                 if not select_moltype or \
                      sig.minhash.is_molecule_type(select_moltype):
+                    if select_moltype == 'protein':
+                        if any(sig.minhash.is_molecule_type(t) for t in ('dayhoff', 'hp')):
+                            # dayhoff and hp are also protein MHs. only yield
+                            # sig if it is exactly one of (protein, hp, dayhoff)
+                            continue
                     yield sig
     except Exception as e:
         if not quiet:

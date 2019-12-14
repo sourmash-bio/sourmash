@@ -493,7 +493,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
             assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
             assert sum(x.minhash.is_molecule_type('hp') for x in siglist) == 2
             # 2 = dayhoff, 2 = hp = 4 protein
-            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 4
+            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
 
 
 def test_do_sourmash_compute_multik_with_nothing():
