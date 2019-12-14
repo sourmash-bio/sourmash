@@ -43,11 +43,11 @@ def test_simple(n_children):
     leaf5.data.count('AAAAT')
     leaf5.data.count('GAAAA')
 
-    root.insert(leaf1)
-    root.insert(leaf2)
-    root.insert(leaf3)
-    root.insert(leaf4)
-    root.insert(leaf5)
+    root.add_node(leaf1)
+    root.add_node(leaf2)
+    root.add_node(leaf3)
+    root.add_node(leaf4)
+    root.add_node(leaf5)
 
     def search_kmer(obj, seq):
         return obj.data.get(seq)
@@ -104,11 +104,11 @@ def test_longer_search(n_children):
     leaf5.data.count('AAAAT')
     leaf5.data.count('GAAAA')
 
-    root.insert(leaf1)
-    root.insert(leaf2)
-    root.insert(leaf3)
-    root.insert(leaf4)
-    root.insert(leaf5)
+    root.add_node(leaf1)
+    root.add_node(leaf2)
+    root.add_node(leaf3)
+    root.add_node(leaf4)
+    root.add_node(leaf5)
 
     def kmers(k, seq):
         for start in range(len(seq) - k + 1):
@@ -212,8 +212,8 @@ def test_tree_save_load(n_children):
 
     for f in utils.SIG_FILES:
         sig = next(load_signatures(utils.get_test_data(f)))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        tree.insert(leaf)
+        leaf = SigLeaf(f, sig)
+        tree.add_node(leaf)
         to_search = leaf
 
     print('*' * 60)
@@ -273,8 +273,7 @@ def test_search_minhashes():
     n_leaves = 0
     for f in utils.SIG_FILES:
         sig = next(load_signatures(utils.get_test_data(f)))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        tree.insert(leaf)
+        tree.insert(sig)
 
     to_search = next(iter(tree.leaves()))
 
@@ -298,7 +297,7 @@ def test_binary_nary_tree():
         sig = next(load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
-            tree.insert(leaf)
+            tree.add_node(leaf)
         to_search = leaf
         n_leaves += 1
 
@@ -324,12 +323,11 @@ def test_sbt_combine(n_children):
     n_leaves = 0
     for f in utils.SIG_FILES:
         sig = next(load_signatures(utils.get_test_data(f)))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        tree.insert(leaf)
+        tree.insert(sig)
         if n_leaves < 4:
-            tree_1.insert(leaf)
+            tree_1.insert(sig)
         else:
-            tree_2.insert(leaf)
+            tree_2.insert(sig)
         n_leaves += 1
 
     tree_1.combine(tree_2)
@@ -360,7 +358,7 @@ def test_sbt_combine(n_children):
     if not next_empty:
         next_empty = n + 1
 
-    tree_1.insert(leaf)
+    tree_1.add_node(SigLeaf(to_search.name(), to_search))
     assert tree_1.next_node == next_empty
 
 
@@ -372,7 +370,7 @@ def test_sbt_fsstorage():
         for f in utils.SIG_FILES:
             sig = next(load_signatures(utils.get_test_data(f)))
             leaf = SigLeaf(os.path.basename(f), sig)
-            tree.insert(leaf)
+            tree.add_node(leaf)
             to_search = leaf
 
         print('*' * 60)
@@ -405,7 +403,7 @@ def test_sbt_tarstorage():
         for f in utils.SIG_FILES:
             sig = next(load_signatures(utils.get_test_data(f)))
             leaf = SigLeaf(os.path.basename(f), sig)
-            tree.insert(leaf)
+            tree.add_node(leaf)
             to_search = leaf
 
         print('*' * 60)
@@ -441,7 +439,7 @@ def test_sbt_ipfsstorage():
         for f in utils.SIG_FILES:
             sig = next(load_signatures(utils.get_test_data(f)))
             leaf = SigLeaf(os.path.basename(f), sig)
-            tree.insert(leaf)
+            tree.add_node(leaf)
             to_search = leaf
 
         print('*' * 60)
@@ -479,7 +477,7 @@ def test_sbt_redisstorage():
         for f in utils.SIG_FILES:
             sig = next(load_signatures(utils.get_test_data(f)))
             leaf = SigLeaf(os.path.basename(f), sig)
-            tree.insert(leaf)
+            tree.add_node(leaf)
             to_search = leaf
 
         print('*' * 60)
@@ -533,8 +531,7 @@ def test_tree_repair_insert():
 
     for f in utils.SIG_FILES:
         sig = next(load_signatures(utils.get_test_data(f)))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        tree_repair.insert(leaf)
+        tree_repair.insert(sig)
 
     for pos, node in tree_repair:
         # Every parent of a node must be an internal node (and not a leaf),
@@ -554,7 +551,7 @@ def test_save_sparseness(n_children):
     for f in utils.SIG_FILES:
         sig = next(load_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
-        tree.insert(leaf)
+        tree.add_node(leaf)
         to_search = leaf
 
     print('*' * 60)
@@ -595,8 +592,8 @@ def test_sbt_signatures():
     sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
     sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
 
-    tree.insert(SigLeaf('47', sig47))
-    tree.insert(SigLeaf('63', sig63))
+    tree.insert(sig47)
+    tree.insert(sig63)
 
     xx = list(tree.signatures())
     assert len(xx) == 2

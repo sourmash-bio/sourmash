@@ -36,11 +36,11 @@ def test_simple_index(n_children):
     leaf5.data.count("AAAAT")
     leaf5.data.count("GAAAA")
 
-    root.insert(leaf1)
-    root.insert(leaf2)
-    root.insert(leaf3)
-    root.insert(leaf4)
-    root.insert(leaf5)
+    root.add_node(leaf1)
+    root.add_node(leaf2)
+    root.add_node(leaf3)
+    root.add_node(leaf4)
+    root.add_node(leaf5)
 
     def search_kmer(obj, seq):
         return obj.data.get(seq)
