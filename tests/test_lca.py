@@ -795,6 +795,54 @@ def test_rankinfo_on_single():
         assert not lines
 
 
+def test_rankinfo_no_tax():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-1.csv')
+        input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'rankinfo', lca_db]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+
+def test_rankinfo_with_min():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/dir1.lca.json')
+        db2 = utils.get_test_data('lca/dir2.lca.json')
+
+        cmd = ['lca', 'rankinfo', db1, db2, '--minimum-num', '1']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        lines = out.splitlines()
+        lines.remove('superkingdom: 0 (0.0%)')
+        lines.remove('phylum: 464 (12.8%)')
+        lines.remove('class: 533 (14.7%)')
+        lines.remove('order: 1050 (29.0%)')
+        lines.remove('family: 695 (19.2%)')
+        lines.remove('genus: 681 (18.8%)')
+        lines.remove('species: 200 (5.5%)')
+        lines.remove('strain: 0 (0.0%)')
+
+        assert not lines
+
+
 def test_compare_csv():
     with utils.TempDirectory() as location:
         a = utils.get_test_data('lca/classify-by-both.csv')
