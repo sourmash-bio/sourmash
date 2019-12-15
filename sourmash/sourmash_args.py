@@ -352,7 +352,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
             assert query_ksize == lca_db.ksize
             query_scaled = query.minhash.scaled
-            assert query_scaled and query_scaled <= lca_db.scaled
 
             notify('loaded LCA {}', sbt_or_sigfile, end='\r')
             n_databases += 1

@@ -274,7 +274,7 @@ class LCA_Database(Index):
             raise TypeError("'search' requires 'threshold'")
         threshold = kwargs['threshold']
         do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance')
+        ignore_abundance = kwargs.get('ignore_abundance', True)
         if not ignore_abundance:
             raise TypeError("'search' on LCA databases does not use abundance")
 
@@ -306,6 +306,10 @@ class LCA_Database(Index):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
         that don't fall in the required range.
+
+        NOTE: we probably need to invalidate some of the dynamically
+        calculated members of this object, like _signatures, when we do this.
+        But we aren't going to right now.
         """
         if scaled == self.scaled:
             return
@@ -362,7 +366,9 @@ class LCA_Database(Index):
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample_scaled(self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
+            # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+            pass
 
         self._create_signatures()
 
