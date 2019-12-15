@@ -134,6 +134,8 @@ def index(args):
     p.add_argument('--traverse-directory', action='store_true',
                    help='load all signatures underneath directories.')
     p.add_argument('--report', help='output a report on anomalies, if any.')
+    p.add_argument('--require-taxonomy', action='store_true',
+                   help='ignore signatures with no taxonomy entry')
     args = p.parse_args(args)
 
     if args.start_column < 2:
@@ -270,10 +272,14 @@ def index(args):
                 lineage = lid_to_lineage.get(lid)
 
             if lineage is None:
-                notify('WARNING: no lineage assignment for {}.', ident)
+                notify('\nWARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
+
+            if lineage is None and args.require_taxonomy:
+                notify('(skipping, because --require-taxonomy was specified)')
+                continue
 
             for hashval in minhash.get_mins():
                 hashval_to_idx[hashval].add(idx)
