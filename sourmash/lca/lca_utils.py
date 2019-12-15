@@ -368,7 +368,6 @@ class LCA_Database(Index):
         elif self.scaled < minhash.scaled and not ignore_scaled:
             # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
-            pass
 
         self._create_signatures()
 
