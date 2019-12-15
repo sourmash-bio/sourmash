@@ -13,7 +13,7 @@ class Index(ABC):
         "Return an iterator over all signatures in the Index object."
 
     @abstractmethod
-    def insert(self, node):
+    def insert(self, signature):
         """ """
 
     @abstractmethod
@@ -26,6 +26,14 @@ class Index(ABC):
         """ """
 
     def find(self, search_fn, *args, **kwargs):
+        """Use search_fn to find matching signatures in the index.
+
+        search_fn(other_sig, *args) should return a boolean that indicates
+        whether other_sig is a match.
+
+        Returns a list.
+        """
+
         matches = []
 
         for node in self.signatures():

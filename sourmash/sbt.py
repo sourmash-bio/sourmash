@@ -135,7 +135,8 @@ class SBT(Index):
         self.storage = storage
 
     def signatures(self):
-        return leaves()
+        for k in self.leaves():
+            yield k.data
 
     def new_node_pos(self, node):
         if not self._nodes:
@@ -164,7 +165,14 @@ class SBT(Index):
 
         return self.next_node
 
-    def insert(self, node):
+    def insert(self, signature):
+        "Add a new SourmashSignature in to the SBT."
+        from .sbtmh import SigLeaf
+        
+        leaf = SigLeaf(signature.name(), signature)
+        self.add_node(leaf)
+
+    def add_node(self, node):
         pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
@@ -211,10 +219,6 @@ class SBT(Index):
             self._rebuild_node(p.pos)
             node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
-
-    @deprecated(details="Use the insert method instead")
-    def add_node(self, node):
-        self.insert(node)
 
     def find(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."

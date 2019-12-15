@@ -165,7 +165,10 @@ class LCA_Database(Index):
         return "LCA_Database('{}')".format(self.filename)
 
     def signatures(self):
-        raise NotImplementedError
+        from .. import SourmashSignature
+        self._create_signatures()
+        for v in self._signatures.values():
+            yield SourmashSignature(v)
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -276,7 +279,7 @@ class LCA_Database(Index):
             raise TypeError("'search' on LCA databases does not use abundance")
 
         results = []
-        for x in self.find(query.minhash, threshold, do_containment):
+        for x in self.find_signatures(query.minhash, threshold, do_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
@@ -285,8 +288,8 @@ class LCA_Database(Index):
 
     def gather(self, query, *args, **kwargs):
         results = []
-        for x in self.find(query.minhash, 0.0,
-                           containment=True, ignore_scaled=True):
+        for x in self.find_signatures(query.minhash, 0.0,
+                                      containment=True, ignore_scaled=True):
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
@@ -294,7 +297,10 @@ class LCA_Database(Index):
         return results
 
     def insert(self, node):
-        pass
+        raise NotImplementedError
+
+    def find(self, search_fn, *args, **kwargs):
+        raise NotImplementedError
 
     def downsample_scaled(self, scaled):
         """
@@ -329,17 +335,13 @@ class LCA_Database(Index):
 
         return x
 
-    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
-        """
-        Do a Jaccard similarity or containment search.
-        """
-        # make sure we're looking at the same scaled value as database
-        if self.scaled > minhash.scaled:
-            minhash = minhash.downsample_scaled(self.scaled)
-        elif self.scaled < minhash.scaled and not ignore_scaled:
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+    def _create_signatures(self):
+        "Create a _signatures member dictionary that contains {idx: minhash}."
+        from .. import MinHash
 
         if not hasattr(self, '_signatures'):
+            minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+
             debug('creating signatures for LCA DB...')
             sigd = defaultdict(minhash.copy_and_clear)
 
@@ -350,6 +352,19 @@ class LCA_Database(Index):
             self._signatures = sigd
 
         debug('=> {} signatures!', len(self._signatures))
+
+    def find_signatures(self, minhash, threshold, containment=False,
+                       ignore_scaled=False):
+        """
+        Do a Jaccard similarity or containment search.
+        """
+        # make sure we're looking at the same scaled value as database
+        if self.scaled > minhash.scaled:
+            minhash = minhash.downsample_scaled(self.scaled)
+        elif self.scaled < minhash.scaled and not ignore_scaled:
+            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+
+        self._create_signatures()
 
         # build idx_to_ident from ident_to_idx
         if not hasattr(self, 'idx_to_ident'):
@@ -389,7 +404,6 @@ class LCA_Database(Index):
             debug('score: {} (containment? {})', score, containment)
 
             if score >= threshold:
-                # reconstruct signature... ugh.
                 from .. import SourmashSignature
                 match_sig = SourmashSignature(match_mh, name=name)
 

@@ -133,6 +133,34 @@ def test_db_repr():
     assert repr(db) == "LCA_Database('{}')".format(filename)
 
 
+def test_lca_index_signatures_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 2
+
+def test_lca_index_insert_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    sig = next(iter(db.signatures()))
+
+    with pytest.raises(NotImplementedError) as e:
+        db.insert(sig)
+
+def test_lca_index_find_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    sig = next(iter(db.signatures()))
+
+    with pytest.raises(NotImplementedError) as e:
+        db.find(None)
+
 ## command line tests
 
 
