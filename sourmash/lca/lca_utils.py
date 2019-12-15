@@ -279,7 +279,7 @@ class LCA_Database(Index):
             raise TypeError("'search' on LCA databases does not use abundance")
 
         results = []
-        for x in self.find(query.minhash, threshold, do_containment):
+        for x in self.find_signatures(query.minhash, threshold, do_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
@@ -288,8 +288,8 @@ class LCA_Database(Index):
 
     def gather(self, query, *args, **kwargs):
         results = []
-        for x in self.find(query.minhash, 0.0,
-                           containment=True, ignore_scaled=True):
+        for x in self.find_signatures(query.minhash, 0.0,
+                                      containment=True, ignore_scaled=True):
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
@@ -297,7 +297,10 @@ class LCA_Database(Index):
         return results
 
     def insert(self, node):
-        pass
+        raise NotImplementedError
+
+    def find(self, search_fn, *args, **kwargs):
+        raise NotImplementedError
 
     def downsample_scaled(self, scaled):
         """
@@ -350,7 +353,8 @@ class LCA_Database(Index):
 
         debug('=> {} signatures!', len(self._signatures))
 
-    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
+    def find_signatures(self, minhash, threshold, containment=False,
+                       ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search.
         """
@@ -400,7 +404,6 @@ class LCA_Database(Index):
             debug('score: {} (containment? {})', score, containment)
 
             if score >= threshold:
-                # reconstruct signature... ugh.
                 from .. import SourmashSignature
                 match_sig = SourmashSignature(match_mh, name=name)
 

@@ -591,7 +591,8 @@ def test_save_sparseness(n_children):
                 assert all(c.node is None for c in tree_loaded.children(pos))
 
 
-def test_sbt_signatures():
+def test_sbt_as_index_signatures():
+    # test 'signatures' method from Index base class.
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory, d=2)
 
