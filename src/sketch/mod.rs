@@ -1,5 +1,6 @@
 pub mod minhash;
 pub mod nodegraph;
+
 pub mod ukhs;
 
 use serde_derive::{Deserialize, Serialize};
@@ -11,5 +12,5 @@ use crate::sketch::ukhs::FlatUKHS;
 #[serde(untagged)]
 pub enum Sketch {
     MinHash(KmerMinHash),
-    UKHS(FlatUKHS),
+    UKHS(FlatUKHS), // FIXME
 }

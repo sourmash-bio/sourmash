@@ -70,10 +70,12 @@ SETUP_METADATA = \
                        'setuptools_scm', 'setuptools_scm_git_archive'],
     "use_scm_version": {"write_to": "sourmash/version.py"},
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'recommonmark'],
+        'test' : ['pytest', 'pytest-cov'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx'],
-        '10x': ['bam2fasta==1.0.1']
+        'doc' : ['sphinx', 'recommonmark', 'alabaster',
+                 "sphinxcontrib-napoleon", "nbsphinx"],
+        '10x': ['bam2fasta==1.0.1'],
+        'storage': ["ipfshttpclient", "redis"]
         },
     "include_package_data": True,
     "package_data": {

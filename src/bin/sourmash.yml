@@ -108,6 +108,25 @@ subcommands:
         args:
             - index:
                 help: SBT index
+    - index:
+        about: create an index
+        settings:
+            - ArgRequiredElseHelp
+        args:
+            - ksize:
+                help: "k-mer size for which to build the SBT."
+                short: k
+                long: "ksize"
+                takes_value: true
+                required: false
+            - output:
+                help: alternative output file
+                short: o
+                takes_value: true
+                required: false
+            - inputs:
+                help: signatures
+                multiple: true
 
 # groups:
 #  - protein:

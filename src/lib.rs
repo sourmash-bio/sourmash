@@ -18,9 +18,6 @@
 
 pub mod errors;
 
-#[macro_use]
-pub mod utils;
-
 pub mod index;
 
 pub mod signature;

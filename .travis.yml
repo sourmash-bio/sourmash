@@ -48,26 +48,6 @@ jobs:
       python: 3.6
     - <<: *test
       python: 3.5
-    - <<: *test
-      name: wasm-pack
-      language: rust
-      rust: stable
-      before_script: skip
-      install: skip
-      script:
-        - rustup target add wasm32-unknown-unknown
-        - cargo install --force wasm-pack
-        - wasm-pack build
-    - <<: *test
-      name: wasi target
-      language: rust
-      rust: stable
-      before_script: skip
-      install: skip
-      script:
-        - rustup target add wasm32-wasi
-        - cargo install --force cargo-wasi
-        - cargo wasi build
 
     - &wheel
       stage: build wheel and send to github releases

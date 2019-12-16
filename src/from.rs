@@ -1,15 +1,22 @@
-use finch::minhashes::MinHashKmers;
+use finch::sketch_schemes::mash::MashSketcher;
+use finch::sketch_schemes::SketchScheme;
 
-use crate::signatures::minhash::KmerMinHash;
+use crate::sketch::minhash::{HashFunctions, KmerMinHash};
 
-impl From<MinHashKmers> for KmerMinHash {
-    fn from(other: MinHashKmers) -> KmerMinHash {
-        let values = other.into_vec();
+/*
+ TODO:
+  - also convert scaled sketches
+  - sourmash Signature equivalent is the finch Sketch, write conversions for that too
+*/
+
+impl From<MashSketcher> for KmerMinHash {
+    fn from(other: MashSketcher) -> KmerMinHash {
+        let values = other.to_vec();
 
         let mut new_mh = KmerMinHash::new(
             values.len() as u32,
             values.get(0).unwrap().kmer.len() as u32,
-            false,
+            HashFunctions::murmur64_DNA,
             42,
             0,
             true,
@@ -20,7 +27,9 @@ impl From<MinHashKmers> for KmerMinHash {
             .map(|x| (x.hash as u64, x.count as u64))
             .collect();
 
-        new_mh.add_many_with_abund(&hash_with_abunds);
+        new_mh
+            .add_many_with_abund(&hash_with_abunds)
+            .expect("Error adding hashes with abund");
 
         new_mh
     }
@@ -32,27 +41,30 @@ mod test {
     use std::collections::HashSet;
     use std::iter::FromIterator;
 
-    use crate::signatures::minhash::KmerMinHash;
+    use crate::signature::SigsTrait;
+    use crate::sketch::minhash::{HashFunctions, KmerMinHash};
 
-    use finch::minhashes::MinHashKmers;
-    use needletail::kmer::canonical;
+    use finch::sketch_schemes::mash::MashSketcher;
+    use needletail::kmer::CanonicalKmers;
+    use needletail::Sequence;
 
     use super::*;
 
     #[test]
     fn finch_behavior() {
-        let mut a = KmerMinHash::new(20, 10, false, 42, 0, true);
-        let mut b = MinHashKmers::new(20, 42);
+        let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, true);
+        let mut b = MashSketcher::new(20, 10, 42);
 
         let seq = b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA";
+        let rc = seq.reverse_complement();
 
-        a.add_sequence(seq, false);
+        a.add_sequence(seq, false).unwrap();
 
-        for kmer in seq.windows(10) {
-            b.push(&canonical(kmer), 0);
+        for (_, kmer, _) in CanonicalKmers::new(seq, &rc, 10) {
+            b.push(&kmer, 0);
         }
 
-        let b_hashes = b.into_vec();
+        let b_hashes = b.to_vec();
 
         let s1: HashSet<_> = HashSet::from_iter(a.mins.iter().map(|x| *x));
         let s2: HashSet<_> = HashSet::from_iter(b_hashes.iter().map(|x| x.hash as u64));
@@ -76,15 +88,16 @@ mod test {
 
     #[test]
     fn from_finch() {
-        let mut a = KmerMinHash::new(20, 10, false, 42, 0, true);
-        let mut b = MinHashKmers::new(20, 42);
+        let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, true);
+        let mut b = MashSketcher::new(20, 10, 42);
 
         let seq = b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA";
+        let rc = seq.reverse_complement();
 
-        a.add_sequence(seq, false);
+        a.add_sequence(seq, false).unwrap();
 
-        for kmer in seq.windows(10) {
-            b.push(&canonical(kmer), 0);
+        for (_, kmer, _) in CanonicalKmers::new(seq, &rc, 10) {
+            b.push(&kmer, 0);
         }
 
         let c = KmerMinHash::from(b);

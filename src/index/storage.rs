@@ -44,7 +44,7 @@ impl From<&StorageArgs> for FSStorage {
                 fullpath.push(path);
 
                 FSStorage {
-                    fullpath: fullpath,
+                    fullpath,
                     subdir: path.clone(),
                 }
             }
@@ -105,7 +105,7 @@ impl Storage for FSStorage {
 
         let file = File::create(&fpath)?;
         let mut buf_writer = BufWriter::new(file);
-        buf_writer.write(content)?;
+        buf_writer.write_all(content)?;
         Ok(path.into())
     }
 
