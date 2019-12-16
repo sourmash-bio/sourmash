@@ -133,6 +133,84 @@ def test_db_repr():
     assert repr(db) == "LCA_Database('{}')".format(filename)
 
 
+def test_lca_index_signatures_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    siglist = list(db.signatures())
+    assert len(siglist) == 2
+
+
+def test_lca_index_insert_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    sig = next(iter(db.signatures()))
+
+    with pytest.raises(NotImplementedError) as e:
+        db.insert(sig)
+
+
+def test_lca_index_find_method():
+    # test 'signatures' method from base class Index
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    sig = next(iter(db.signatures()))
+
+    with pytest.raises(NotImplementedError) as e:
+        db.find(None)
+
+
+def test_search_db_scaled_gt_sig_scaled():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    match_sig = results[0][1]
+
+    sig.minhash = sig.minhash.downsample_scaled(10000)
+    assert sig.minhash == match_sig.minhash
+
+
+def test_search_db_scaled_lt_sig_scaled():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig.minhash = sig.minhash.downsample_scaled(100000)
+
+    with pytest.raises(ValueError) as e:
+        results = db.search(sig, threshold=.01, ignore_abundance=True)
+
+
+def test_gather_db_scaled_gt_sig_scaled():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+
+    results = db.gather(sig, threshold=.01, ignore_abundance=True)
+    match_sig = results[0][1]
+
+    sig.minhash = sig.minhash.downsample_scaled(10000)
+    assert sig.minhash == match_sig.minhash
+
+
+def test_gather_db_scaled_lt_sig_scaled():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+    sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig.minhash = sig.minhash.downsample_scaled(100000)
+
+    results = db.gather(sig, threshold=.01, ignore_abundance=True)
+    match_sig = results[0][1]
+
+    match_sig.minhash = match_sig.minhash.downsample_scaled(100000)
+    assert sig.minhash == match_sig.minhash
+
+
 ## command line tests
 
 

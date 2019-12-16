@@ -7,12 +7,12 @@ use lazy_init::Lazy;
 
 use crate::index::sbt::{FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError};
-use crate::index::{Comparable, Dataset};
+use crate::index::Comparable;
 use crate::signature::Signature;
 use crate::sketch::ukhs::{FlatUKHS, UKHSTrait};
 use crate::sketch::Sketch;
 
-impl<L> FromFactory<Node<FlatUKHS>> for SBT<Node<FlatUKHS>, L> {
+impl<L: Sync> FromFactory<Node<FlatUKHS>> for SBT<Node<FlatUKHS>, L> {
     fn factory(&self, name: &str) -> Result<Node<FlatUKHS>, Error> {
         let data = Lazy::new();
         // TODO: don't hardcode this!
@@ -34,15 +34,13 @@ impl Update<Node<FlatUKHS>> for Node<FlatUKHS> {
     }
 }
 
-impl Update<Node<FlatUKHS>> for Dataset<Signature> {
+impl Update<Node<FlatUKHS>> for Signature {
     fn update(&self, other: &mut Node<FlatUKHS>) -> Result<(), Error> {
-        let data = &self.data()?;
-
-        let sigs = if data.signatures.len() > 1 {
+        let sigs = if self.signatures.len() > 1 {
             // TODO: select the right signatures...
             unimplemented!()
         } else {
-            &data.signatures[0]
+            &self.signatures[0]
         };
 
         if let Sketch::UKHS(sig) = sigs {
@@ -73,14 +71,12 @@ impl Comparable<Node<FlatUKHS>> for Node<FlatUKHS> {
     }
 }
 
-impl Comparable<Dataset<Signature>> for Node<FlatUKHS> {
-    fn similarity(&self, other: &Dataset<Signature>) -> f64 {
-        let odata = other.data().unwrap();
-
-        if odata.signatures.len() > 1 {
+impl Comparable<Signature> for Node<FlatUKHS> {
+    fn similarity(&self, other: &Signature) -> f64 {
+        if other.signatures.len() > 1 {
             // TODO: select the right signatures...
             unimplemented!()
-        } else if let Sketch::UKHS(o_sig) = &odata.signatures[0] {
+        } else if let Sketch::UKHS(o_sig) = &other.signatures[0] {
             // This is doing a variation of Weighted Jaccard.
             // The internal nodes are built with max(l_i, r_i) for each
             // left and right children, so if we do a WJ similarity directly
@@ -108,7 +104,7 @@ impl Comparable<Dataset<Signature>> for Node<FlatUKHS> {
         }
     }
 
-    fn containment(&self, _other: &Dataset<Signature>) -> f64 {
+    fn containment(&self, _other: &Signature) -> f64 {
         unimplemented!();
     }
 }

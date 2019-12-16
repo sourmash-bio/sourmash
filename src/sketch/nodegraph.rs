@@ -7,14 +7,24 @@ use failure::Error;
 use fixedbitset::FixedBitSet;
 use primal;
 
+use crate::sketch::minhash::KmerMinHash;
 use crate::HashIntoType;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone)]
 pub struct Nodegraph {
     pub(crate) bs: Vec<FixedBitSet>,
     ksize: usize,
     occupied_bins: usize,
     unique_kmers: usize,
+}
+
+// TODO: only checking for the bitset for now,
+// since unique_kmers is not saved in a khmer nodegraph
+// and occupied_bins also has issues...
+impl PartialEq for Nodegraph {
+    fn eq(&self, other: &Nodegraph) -> bool {
+        self.bs == other.bs
+    }
 }
 
 impl Nodegraph {
@@ -33,13 +43,24 @@ impl Nodegraph {
     }
 
     pub fn with_tables(tablesize: usize, n_tables: usize, ksize: usize) -> Nodegraph {
-        // TODO: cache the Sieve somewhere for repeated calls?
-        let tablesizes: Vec<usize> = primal::Primes::all()
-            .filter(|p| *p >= tablesize)
-            .take(n_tables)
-            .collect();
+        let mut tablesizes = Vec::with_capacity(n_tables);
 
-        Nodegraph::new(&tablesizes, ksize)
+        let mut i = (tablesize - 1) as u64;
+        if i % 2 == 0 {
+            i += 1
+        }
+
+        while tablesizes.len() != n_tables {
+            if primal::is_prime(i) {
+                tablesizes.push(i as usize);
+            }
+            if i == 1 {
+                break;
+            }
+            i -= 2;
+        }
+
+        Nodegraph::new(tablesizes.as_slice(), ksize)
     }
 
     pub fn count(&mut self, hash: HashIntoType) -> bool {
@@ -85,23 +106,51 @@ impl Nodegraph {
 
         let mut new_bins = 0;
         for (bs, bs_other) in self.bs.iter_mut().zip(&other.bs) {
-            bs_other
-                .ones()
-                .map(|x| {
-                    if !bs.put(x) {
-                        new_bins += 1;
-                    }
-                })
-                .count();
+            bs_other.ones().for_each(|x| {
+                if !bs.put(x) {
+                    new_bins += 1;
+                }
+            });
         }
         // TODO: occupied bins seems to be broken in khmer? I don't get the same
         // values...
-        //self.occupied_bins += new_bins;
+        self.occupied_bins += new_bins;
+    }
+
+    pub fn expected_collisions(&self) -> f64 {
+        let min_size = self.bs.iter().map(|x| x.len()).min().unwrap();
+        let n_ht = self.bs.len();
+        let occupancy = self.occupied_bins;
+
+        let fp_one = occupancy / min_size;
+        f64::powf(fp_one as f64, n_ht as f64)
+    }
+
+    pub fn tablesize(&self) -> usize {
+        self.bs.iter().map(|x| x.len()).sum()
+    }
+
+    pub fn noccupied(&self) -> usize {
+        self.occupied_bins
+    }
+
+    pub fn matches(&self, mh: &KmerMinHash) -> usize {
+        mh.mins.iter().filter(|x| self.get(**x) == 1).count()
+    }
+
+    pub fn ntables(&self) -> usize {
+        self.bs.len()
+    }
+
+    pub fn ksize(&self) -> usize {
+        self.ksize
     }
 
     // save
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        self.save_to_writer(&mut File::open(path)?)?;
+        // TODO: if it ends with gz, open a compressed file
+        // might use get_output here?
+        self.save_to_writer(&mut File::create(path)?)?;
         Ok(())
     }
 
@@ -143,6 +192,9 @@ impl Nodegraph {
     where
         R: io::Read,
     {
+        // TODO: see https://github.com/brainstorm/bio-index-formats for an
+        // example of using nom to parse binary data.
+        // Use it here instead of byteorder
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
@@ -238,11 +290,14 @@ impl Nodegraph {
 #[cfg(test)]
 mod test {
     use super::*;
+    use cfg_if::cfg_if;
     use std::io::{BufReader, BufWriter};
     use std::path::PathBuf;
 
+    cfg_if! {
+    if #[cfg(not(target_arch = "wasm32"))] {
     use proptest::num::u64;
-    use proptest::{proptest, proptest_helper};
+    use proptest::{proptest};
 
     proptest! {
       #[test]
@@ -251,6 +306,8 @@ mod test {
           ng.count(hash);
           assert_eq!(ng.get(hash), 1);
       }
+    }
+    }
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use failure::{Error, Fail};
+use failure::Fail;
 
 #[derive(Debug, Fail)]
 pub enum SourmashError {
@@ -21,8 +21,8 @@ pub enum SourmashError {
     #[fail(display = "different signatures cannot be compared")]
     MismatchSignatureType,
 
-    #[fail(display = "Can only set track_abundance=True if the MinHash is empty")]
-    NonEmptyMinHash,
+    #[fail(display = "Can only set {} if the MinHash is empty", message)]
+    NonEmptyMinHash { message: String },
 
     #[fail(display = "invalid DNA character in input k-mer: {}", message)]
     InvalidDNA { message: String },
@@ -64,10 +64,11 @@ pub enum SourmashErrorCode {
     SerdeError = 100_004,
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
 impl SourmashErrorCode {
-    pub fn from_error(error: &Error) -> SourmashErrorCode {
+    pub fn from_error(error: &failure::Error) -> SourmashErrorCode {
         for cause in error.iter_chain() {
-            use crate::utils::Panic;
+            use crate::ffi::utils::Panic;
             if cause.downcast_ref::<Panic>().is_some() {
                 return SourmashErrorCode::Panic;
             }
@@ -82,7 +83,7 @@ impl SourmashErrorCode {
                     SourmashError::MismatchSignatureType => {
                         SourmashErrorCode::MismatchSignatureType
                     }
-                    SourmashError::NonEmptyMinHash => SourmashErrorCode::NonEmptyMinHash,
+                    SourmashError::NonEmptyMinHash { .. } => SourmashErrorCode::NonEmptyMinHash,
                     SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
                     SourmashError::InvalidCodonLength { .. } => {

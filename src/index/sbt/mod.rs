@@ -1,8 +1,13 @@
 pub mod mhbt;
-pub mod ukhs;
 
+/* FIXME: bring back after boomphf changes
+pub mod ukhs;
+*/
+
+/* FIXME: bring back after MQF works on macOS and Windows
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mhmt;
+*/
 
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
@@ -17,11 +22,12 @@ use std::rc::Rc;
 
 use failure::Error;
 use lazy_init::Lazy;
+use log::info;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
-use crate::index::{Comparable, Dataset, DatasetInfo, Index};
+use crate::index::{Comparable, DatasetInfo, Index, SigStore};
 use crate::signature::Signature;
 
 pub trait Update<O> {
@@ -33,7 +39,10 @@ pub trait FromFactory<N> {
 }
 
 #[derive(TypedBuilder)]
-pub struct SBT<N, L> {
+pub struct SBT<N, L>
+where
+    L: Sync,
+{
     #[builder(default = 2)]
     d: u32,
 
@@ -47,7 +56,7 @@ pub struct SBT<N, L> {
     nodes: HashMap<u64, N>,
 
     #[builder(default_code = "HashMap::default()")]
-    leaves: HashMap<u64, L>,
+    leaves: HashMap<u64, SigStore<L>>,
 }
 
 const fn parent(pos: u64, d: u64) -> u64 {
@@ -60,7 +69,7 @@ const fn child(parent: u64, pos: u64, d: u64) -> u64 {
 
 impl<N, L> SBT<N, L>
 where
-    L: std::clone::Clone + Default,
+    L: std::clone::Clone + Default + Sync,
     N: Default,
 {
     #[inline(always)]
@@ -86,15 +95,32 @@ where
         self.storage.clone()
     }
 
+    /*
+    fn fill_up(&mut self) -> Result<(), Error> {
+        let mut visited = HashSet::new();
+        let mut queue: Vec<_> = self.leaves.keys().collect();
+
+        while !queue.is_empty() {
+            let pos = queue.pop().unwrap();
+
+            if !visited.contains(&pos) {
+                visited.insert(pos);
+            }
+        }
+
+        Ok(())
+    }
+    */
+
     // combine
 }
 
-impl<T, U> SBT<Node<U>, Dataset<T>>
+impl<T, U> SBT<Node<U>, T>
 where
-    T: std::marker::Sync + ToWriter,
+    T: std::marker::Sync + ToWriter + Clone,
     U: std::marker::Sync + ToWriter,
     Node<U>: ReadData<U>,
-    Dataset<T>: ReadData<T>,
+    SigStore<T>: ReadData<T>,
 {
     fn parse_v4<R>(rdr: &mut R) -> Result<SBTInfo, Error>
     where
@@ -112,7 +138,7 @@ where
         Ok(SBTInfo::V5(sinfo))
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<SBT<Node<U>, Dataset<T>>, Error>
+    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<SBT<Node<U>, T>, Error>
     where
         R: Read,
         P: AsRef<Path>,
@@ -165,7 +191,7 @@ where
                     .leaves
                     .into_iter()
                     .map(|(n, l)| {
-                        let new_node = Dataset {
+                        let new_node = SigStore {
                             filename: l.filename,
                             name: l.name,
                             metadata: l.metadata,
@@ -192,7 +218,7 @@ where
                             };
                             Some((*n, new_node))
                         }
-                        NodeInfoV4::Dataset(_) => None,
+                        NodeInfoV4::Leaf(_) => None,
                     })
                     .collect();
 
@@ -201,8 +227,8 @@ where
                     .into_iter()
                     .filter_map(|(n, x)| match x {
                         NodeInfoV4::Node(_) => None,
-                        NodeInfoV4::Dataset(l) => {
-                            let new_node = Dataset {
+                        NodeInfoV4::Leaf(l) => {
+                            let new_node = SigStore {
                                 filename: l.filename,
                                 name: l.name,
                                 metadata: l.metadata,
@@ -227,7 +253,7 @@ where
         })
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<SBT<Node<U>, Dataset<T>>, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<SBT<Node<U>, T>, Error> {
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
 
@@ -238,8 +264,7 @@ where
         // TODO: canonicalize doesn't work on wasm32-wasi
         //basepath.canonicalize()?;
 
-        let sbt =
-            SBT::<Node<U>, Dataset<T>>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let sbt = SBT::<Node<U>, T>::from_reader(&mut reader, &basepath.parent().unwrap())?;
         Ok(sbt)
     }
 
@@ -286,7 +311,7 @@ where
 
                     let filename = (*l).save(&l.filename).unwrap();
                     let new_node = NodeInfo {
-                        filename: filename,
+                        filename,
                         name: l.name.clone(),
                         metadata: l.metadata.clone(),
                     };
@@ -303,9 +328,10 @@ where
                     // set storage to new one
                     mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
 
+                    // TODO: this should be l.md5sum(), not l.filename
                     let filename = (*l).save(&l.filename).unwrap();
                     let new_node = DatasetInfo {
-                        filename: filename,
+                        filename,
                         name: l.name.clone(),
                         metadata: l.metadata.clone(),
                     };
@@ -319,13 +345,18 @@ where
 
         Ok(())
     }
+
+    pub fn leaves(&self) -> Vec<SigStore<T>> {
+        self.leaves.values().cloned().collect()
+    }
 }
 
-impl<N, L> Index for SBT<N, L>
+impl<'a, N, L> Index<'a> for SBT<N, L>
 where
     N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
-    L: Comparable<L> + Update<N> + Clone + Debug + Default,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default + Sync,
     SBT<N, L>: FromFactory<N>,
+    SigStore<L>: From<L> + ReadData<L>,
 {
     type Item = L;
 
@@ -339,6 +370,7 @@ where
 
         while !queue.is_empty() {
             let pos = queue.pop().unwrap();
+
             if !visited.contains(&pos) {
                 visited.insert(pos);
 
@@ -349,8 +381,9 @@ where
                         }
                     }
                 } else if let Some(leaf) = self.leaves.get(&pos) {
-                    if search_fn(leaf, sig, threshold) {
-                        matches.push(leaf);
+                    let data = leaf.data().expect("Error reading data");
+                    if search_fn(data, sig, threshold) {
+                        matches.push(data);
                     }
                 }
             }
@@ -359,11 +392,11 @@ where
         Ok(matches)
     }
 
-    fn insert(&mut self, dataset: &L) -> Result<(), Error> {
+    fn insert(&mut self, dataset: L) -> Result<(), Error> {
         if self.leaves.is_empty() {
             // in this case the tree is empty,
             // just add the dataset to the first available leaf
-            self.leaves.entry(0).or_insert(dataset.clone());
+            self.leaves.entry(0).or_insert_with(|| dataset.into());
             return Ok(());
         }
 
@@ -373,6 +406,7 @@ where
         // TODO: find position by similarity search
         let pos = self.leaves.keys().max().unwrap() + 1;
         let parent_pos = self.parent(pos).unwrap();
+        let final_pos;
 
         if let Entry::Occupied(pnode) = self.leaves.entry(parent_pos) {
             // Case 1: parent is a Leaf
@@ -384,7 +418,7 @@ where
 
             // for each children update the parent node
             // TODO: write the update method
-            leaf.update(&mut new_node)?;
+            leaf.data.get().unwrap().update(&mut new_node)?;
             dataset.update(&mut new_node)?;
 
             // node and parent are children of new internal node
@@ -393,7 +427,8 @@ where
             let c2_pos = c_pos.next().unwrap();
 
             self.leaves.entry(c1_pos).or_insert(leaf);
-            self.leaves.entry(c2_pos).or_insert(dataset.clone());
+            self.leaves.entry(c2_pos).or_insert_with(|| dataset.into());
+            final_pos = c2_pos;
 
             // add the new internal node to self.nodes[parent_pos)
             // TODO check if it is really empty?
@@ -409,18 +444,23 @@ where
                 // (if there isn't an empty spot, it was already covered by case 1)
                 Entry::Occupied(mut pnode) => {
                     dataset.update(&mut pnode.get_mut())?;
-                    self.leaves.entry(pos).or_insert(dataset.clone());
+                    self.leaves.entry(pos).or_insert_with(|| dataset.into());
+                    final_pos = pos;
                 }
 
                 // Case 3: parent is None/empty
                 // this can happen with d != 2, need to create parent node
                 Entry::Vacant(pnode) => {
-                    self.leaves.entry(c_pos).or_insert(dataset.clone());
                     dataset.update(&mut new_node)?;
+                    self.leaves.entry(c_pos).or_insert_with(|| dataset.into());
+                    final_pos = c_pos;
                     pnode.insert(new_node);
                 }
             }
         }
+
+        let entry = &self.leaves[&final_pos];
+        let data = entry.data.get().unwrap();
 
         let mut parent_pos = parent_pos;
         while let Some(ppos) = self.parent(parent_pos) {
@@ -428,7 +468,7 @@ where
                 //TODO: use children for this node to update, instead of dragging
                 // dataset up to the root? It would be more generic, but this
                 // works for minhash, draff signatures and nodegraphs...
-                dataset.update(&mut pnode.get_mut())?;
+                data.update(&mut pnode.get_mut())?;
             }
             parent_pos = ppos;
         }
@@ -436,17 +476,37 @@ where
         Ok(())
     }
 
+    /*
+    fn batch_insert(&mut self, nodes: Vec<Self::Item>) -> Result<(), Error> {
+        self = scaffold(nodes, self.storage());
+        Ok(())
+    }
+    */
+
     fn save<P: AsRef<Path>>(&self, _path: P) -> Result<(), Error> {
-        unimplemented!()
+        unimplemented!();
     }
 
     fn load<P: AsRef<Path>>(_path: P) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn datasets(&self) -> Vec<Self::Item> {
-        self.leaves.values().cloned().collect()
+    fn signatures(&self) -> Vec<Self::Item> {
+        self.leaves
+            .values()
+            .map(|x| x.data().unwrap().clone())
+            .collect()
     }
+
+    fn signature_refs(&self) -> Vec<&Self::Item> {
+        self.leaves.values().map(|x| x.data().unwrap()).collect()
+    }
+
+    /*
+    fn iter_signatures(&'a self) -> Self::SignatureIterator {
+        self.leaves.values()
+    }
+    */
 }
 
 /*
@@ -497,7 +557,17 @@ where
     }
 }
 
-impl<T> Dataset<T>
+impl<T> PartialEq for Node<T>
+where
+    T: Sync + PartialEq,
+    Node<T>: ReadData<T>,
+{
+    fn eq(&self, other: &Node<T>) -> bool {
+        self.data().unwrap() == other.data().unwrap()
+    }
+}
+
+impl<T> SigStore<T>
 where
     T: Sync + ToWriter,
 {
@@ -544,7 +614,7 @@ struct NodeInfo {
 #[serde(untagged)]
 enum NodeInfoV4 {
     Node(NodeInfo),
-    Dataset(DatasetInfo),
+    Leaf(DatasetInfo),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -603,7 +673,7 @@ type HashIntersection = HashSet<u64, BuildHasherDefault<NoHashHasher>>;
 enum BinaryTree {
     Empty,
     Internal(Box<TreeNode<HashIntersection>>),
-    Dataset(Box<TreeNode<Dataset<Signature>>>),
+    Leaf(Box<TreeNode<SigStore<Signature>>>),
 }
 
 struct TreeNode<T> {
@@ -613,20 +683,20 @@ struct TreeNode<T> {
 }
 
 pub fn scaffold<N>(
-    mut datasets: Vec<Dataset<Signature>>,
+    mut datasets: Vec<SigStore<Signature>>,
     storage: Option<Rc<dyn Storage>>,
-) -> SBT<Node<N>, Dataset<Signature>>
+) -> SBT<Node<N>, Signature>
 where
     N: std::marker::Sync + std::clone::Clone + std::default::Default,
 {
-    let mut leaves: HashMap<u64, Dataset<Signature>> = HashMap::with_capacity(datasets.len());
+    let mut leaves: HashMap<u64, SigStore<Signature>> = HashMap::with_capacity(datasets.len());
 
     let mut next_round = Vec::new();
 
     // generate two bottom levels:
     // - datasets
     // - first level of internal nodes
-    eprintln!("Start processing leaves");
+    info!("Start processing leaves");
     while !datasets.is_empty() {
         let next_leaf = datasets.pop().unwrap();
 
@@ -655,7 +725,7 @@ where
                 .cloned()
                 .collect();
 
-            let simleaf_tree = BinaryTree::Dataset(Box::new(TreeNode {
+            let simleaf_tree = BinaryTree::Leaf(Box::new(TreeNode {
                 element: similar_leaf,
                 left: BinaryTree::Empty,
                 right: BinaryTree::Empty,
@@ -663,7 +733,7 @@ where
             (simleaf_tree, in_common)
         };
 
-        let leaf_tree = BinaryTree::Dataset(Box::new(TreeNode {
+        let leaf_tree = BinaryTree::Leaf(Box::new(TreeNode {
             element: next_leaf,
             left: BinaryTree::Empty,
             right: BinaryTree::Empty,
@@ -678,15 +748,15 @@ where
         next_round.push(tree);
 
         if next_round.len() % 100 == 0 {
-            eprintln!("Processed {} leaves", next_round.len() * 2);
+            info!("Processed {} leaves", next_round.len() * 2);
         }
     }
-    eprintln!("Finished processing leaves");
+    info!("Finished processing leaves");
 
     // while we don't get to the root, generate intermediary levels
     while next_round.len() != 1 {
         next_round = BinaryTree::process_internal_level(next_round);
-        eprintln!("Finished processing round {}", next_round.len());
+        info!("Finished processing round {}", next_round.len());
     }
 
     // Convert from binary tree to nodes/leaves
@@ -700,7 +770,7 @@ where
             visited.insert(pos);
 
             match cnode {
-                BinaryTree::Dataset(leaf) => {
+                BinaryTree::Leaf(leaf) => {
                     leaves.insert(pos, leaf.element);
                 }
                 BinaryTree::Internal(mut node) => {
@@ -761,7 +831,7 @@ impl BinaryTree {
                 BinaryTree::Empty => {
                     std::mem::replace(&mut el1.element, HashIntersection::default())
                 }
-                _ => panic!("Should not see a Dataset at this level"),
+                _ => panic!("Should not see a Leaf at this level"),
             }
         } else {
             HashIntersection::default()
@@ -784,217 +854,14 @@ impl BinaryTree {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::fs::File;
-    use std::io::{BufReader, Seek, SeekFrom};
-    use std::path::PathBuf;
-    use std::rc::Rc;
-    use tempfile;
-
-    use assert_matches::assert_matches;
-    use lazy_init::Lazy;
-
-    use super::{scaffold, Factory};
-
-    use crate::index::linear::LinearIndex;
-    use crate::index::search::{search_minhashes, search_minhashes_containment};
-    use crate::index::{Dataset, Index, MHBT};
-    use crate::signature::Signature;
-
-    #[test]
-    fn save_sbt() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
-
-        let mut sbt = MHBT::from_path(filename).expect("Loading error");
-
-        let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
-        sbt.save_file(tmpfile.path(), None).unwrap();
-
-        tmpfile.seek(SeekFrom::Start(0)).unwrap();
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    #[test]
-    fn load_mhmt() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5_mhmt.sbt.json");
-
-        let mut sbt = crate::index::MHMT::from_path(filename).expect("Loading error");
-
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
-
-        let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs = Signature::load_signatures(&mut reader, 31, Some("DNA".into()), None).unwrap();
-        let sig_data = sigs[0].clone();
-
-        let data = Lazy::new();
-        data.get_or_create(|| sig_data);
-
-        let leaf = Dataset::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build();
-
-        let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
-        //assert_eq!(results.len(), 1);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = sbt.find(search_minhashes, &leaf, 0.1).unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let mut linear = LinearIndex::builder().storage(sbt.storage()).build();
-        for l in &sbt.leaves {
-            linear.insert(l.1).unwrap();
-        }
-
-        println!(
-            "linear leaves {:?} {:?}",
-            linear.datasets.len(),
-            linear.datasets
-        );
-
-        let results = linear.find(search_minhashes, &leaf, 0.5).unwrap();
-        assert_eq!(results.len(), 1);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear.find(search_minhashes, &leaf, 0.1).unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear
-            .find(search_minhashes_containment, &leaf, 0.5)
-            .unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear
-            .find(search_minhashes_containment, &leaf, 0.1)
-            .unwrap();
-        assert_eq!(results.len(), 4);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-    }
-
-    #[test]
-    fn load_sbt() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
-
-        let sbt = MHBT::from_path(filename).expect("Loading error");
-
-        assert_eq!(sbt.d, 2);
-        //assert_eq!(sbt.storage.backend, "FSStorage");
-        //assert_eq!(sbt.storage.args["path"], ".sbt.v5");
-        //assert_matches!(&sbt.storage, <dyn Storage as Trait>::FSStorage(args) => {
-        //    assert_eq!(args, &[1, 100000, 4]);
-        //});
-        assert_matches!(&sbt.factory, Factory::GraphFactory { args } => {
-            assert_eq!(args, &(1, 100000.0, 4));
-        });
-
-        println!("sbt leaves {:?} {:?}", sbt.leaves.len(), sbt.leaves);
-
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
-
-        let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs = Signature::load_signatures(&mut reader, 31, Some("DNA".into()), None).unwrap();
-        let sig_data = sigs[0].clone();
-
-        let data = Lazy::new();
-        data.get_or_create(|| sig_data);
-
-        let leaf = Dataset::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build();
-
-        let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
-        assert_eq!(results.len(), 1);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = sbt.find(search_minhashes, &leaf, 0.1).unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let mut linear = LinearIndex::builder().storage(sbt.storage()).build();
-        for l in &sbt.leaves {
-            linear.insert(l.1).unwrap();
-        }
-
-        println!(
-            "linear leaves {:?} {:?}",
-            linear.datasets.len(),
-            linear.datasets
-        );
-
-        let results = linear.find(search_minhashes, &leaf, 0.5).unwrap();
-        assert_eq!(results.len(), 1);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear.find(search_minhashes, &leaf, 0.1).unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear
-            .find(search_minhashes_containment, &leaf, 0.5)
-            .unwrap();
-        assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-
-        let results = linear
-            .find(search_minhashes_containment, &leaf, 0.1)
-            .unwrap();
-        assert_eq!(results.len(), 4);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
-    }
-
-    #[test]
-    fn scaffold_sbt() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
-
-        let sbt = MHBT::from_path(filename).expect("Loading error");
-
-        let new_sbt: MHBT = scaffold(sbt.datasets(), sbt.storage());
-
-        assert_eq!(new_sbt.datasets().len(), 7);
-    }
-
-    #[test]
-    fn load_v4() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v4.sbt.json");
-
-        let _sbt = MHBT::from_path(filename).expect("Loading error");
-    }
-
-    #[test]
-    fn load_v5() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
-
-        let _sbt = MHBT::from_path(filename).expect("Loading error");
+/*
+impl<U> From<LinearIndex<Signature>> for SBT<Node<U>, Signature>
+where
+    U: Sync + Default + Clone,
+{
+    fn from(other: LinearIndex<Signature>) -> Self {
+        let storage = other.storage();
+        scaffold(other.datasets, storage)
     }
 }
+*/

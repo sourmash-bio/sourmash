@@ -57,8 +57,7 @@ class SigLeaf(Leaf):
         for v in self.data.minhash.get_mins():
             parent.data.count(v)
         min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
-        min_n_below = min(len(self.data.minhash.get_mins()),
-                          min_n_below)
+        min_n_below = min(len(self.data.minhash), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
@@ -203,9 +202,9 @@ def search_minhashes_containment(node, sig, threshold,
     return 0
 
 
-class GatherMinHashesFindBestIgnoreMaxHash(object):
-    def __init__(self, initial_best_match=0.0):
-        self.best_match = initial_best_match
+class GatherMinHashes(object):
+    def __init__(self):
+        self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
         score = 0
@@ -235,12 +234,11 @@ class GatherMinHashesFindBestIgnoreMaxHash(object):
         if results is not None:
             results[node.name] = score
 
-        if score >= threshold:
-            # have we done better than this? if no, truncate searches below.
-            if score >= self.best_match:
-                # update best if it's a leaf node...
-                if isinstance(node, SigLeaf):
-                    self.best_match = score
-                return 1
+        # have we done better than this? if no, truncate searches below.
+        if score >= self.best_match:
+            # update best if it's a leaf node...
+            if isinstance(node, SigLeaf):
+                self.best_match = score
+            return 1
 
         return 0

@@ -3,13 +3,13 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
-use ocf::get_input;
+use niffler::get_input;
 use serde_json;
 
+use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::Sketch;
-use crate::utils::SourmashStr;
 
 // Signature methods
 
@@ -243,8 +243,13 @@ unsafe fn signatures_load_path(ptr: *const c_char,
 
     // TODO: implement ignore_md5sum
 
+    let k = match ksize {
+      0 => None,
+      x => Some(x)
+    };
+
     let (mut input, _) = get_input(buf.to_str()?)?;
-    let filtered_sigs = Signature::load_signatures(&mut input, ksize, moltype, None)?;
+    let filtered_sigs = Signature::load_signatures(&mut input, k, moltype, None)?;
 
     let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {
       Box::into_raw(Box::new(x)) as *mut Signature
@@ -277,10 +282,15 @@ unsafe fn signatures_load_buffer(ptr: *const c_char,
         }
     };
 
+    let k = match ksize {
+      0 => None,
+      x => Some(x)
+    };
+
     // TODO: implement ignore_md5sum
 
     let mut reader = io::BufReader::new(buf);
-    let filtered_sigs = Signature::load_signatures(&mut reader, ksize, moltype, None)?;
+    let filtered_sigs = Signature::load_signatures(&mut reader, k, moltype, None)?;
 
     let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {
       Box::into_raw(Box::new(x)) as *mut Signature

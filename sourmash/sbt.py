@@ -10,7 +10,7 @@ To try it out, do::
     graph1 = factory()
     # ... add stuff to graph1 ...
     leaf1 = Leaf("a", graph1)
-    root.add_node(leaf1)
+    root.insert(leaf1)
 
 For example, ::
 
@@ -26,7 +26,7 @@ For example, ::
         graph = factory()
         graph.consume_fasta(filename)
         leaf = Leaf(filename, graph)
-        root.add_node(leaf)
+        root.insert(leaf)
 
 then define a search function, ::
 
@@ -57,6 +57,7 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
+from deprecation import deprecated
 import khmer
 
 try:
@@ -66,7 +67,7 @@ except AttributeError:
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
 from .logging import error, notify, debug
-
+from .index import Index
 
 STORAGES = {
     'TarStorage': TarStorage,
@@ -102,7 +103,7 @@ class GraphFactory(object):
         return (self.ksize, self.starting_size, self.n_tables)
 
 
-class SBT(object):
+class SBT(Index):
     """A Sequence Bloom Tree implementation allowing generic internal nodes and leaves.
 
     The default node and leaf format is a Bloom Filter (like the original implementation),
@@ -133,6 +134,10 @@ class SBT(object):
         self.next_node = 0
         self.storage = storage
 
+    def signatures(self):
+        for k in self.leaves():
+            yield k.data
+
     def new_node_pos(self, node):
         if not self._nodes:
             self.next_node = 1
@@ -160,13 +165,20 @@ class SBT(object):
 
         return self.next_node
 
-    def add_node(self, leaf):
-        pos = self.new_node_pos(leaf)
+    def insert(self, signature):
+        "Add a new SourmashSignature in to the SBT."
+        from .sbtmh import SigLeaf
+        
+        leaf = SigLeaf(signature.name(), signature)
+        self.add_node(leaf)
+
+    def add_node(self, node):
+        pos = self.new_node_pos(node)
 
         if pos == 0:  # empty tree; initialize w/node.
             n = Node(self.factory, name="internal." + str(pos))
             self._nodes[0] = n
-            pos = self.new_node_pos(leaf)
+            pos = self.new_node_pos(node)
 
         # Cases:
         # 1) parent is a Leaf (already covered)
@@ -186,26 +198,26 @@ class SBT(object):
             c1, c2 = self.children(p.pos)[:2]
 
             self._leaves[c1.pos] = p.node
-            self._leaves[c2.pos] = leaf
+            self._leaves[c2.pos] = node 
             del self._leaves[p.pos]
 
-            for child in (p.node, leaf):
+            for child in (p.node, node):
                 child.update(n)
         elif isinstance(p.node, Node):
-            self._leaves[pos] = leaf
-            leaf.update(p.node)
+            self._leaves[pos] = node 
+            node.update(p.node)
         elif p.node is None:
             n = Node(self.factory, name="internal." + str(p.pos))
             self._nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
-            self._leaves[c1.pos] = leaf
-            leaf.update(n)
+            self._leaves[c1.pos] = node 
+            node.update(n)
 
         # update all parents!
         p = self.parent(p.pos)
         while p:
             self._rebuild_node(p.pos)
-            leaf.update(self._nodes[p.pos])
+            node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
 
     def find(self, search_fn, *args, **kwargs):
@@ -250,6 +262,64 @@ class SBT(object):
                         else: # bfs
                             queue.extend(c.pos for c in self.children(node_p))
         return matches
+
+    def search(self, query, *args, **kwargs):
+        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import SearchMinHashesFindBest
+        from .signature import SourmashSignature
+
+        threshold = kwargs['threshold']
+        ignore_abundance = kwargs['ignore_abundance']
+        do_containment = kwargs['do_containment']
+        best_only = kwargs['best_only']
+
+        search_fn = search_minhashes
+        query_match = lambda x: query.similarity(
+            x, downsample=True, ignore_abundance=ignore_abundance)
+        if do_containment:
+            search_fn = search_minhashes_containment
+            query_match = lambda x: query.contained_by(x, downsample=True)
+        
+        if best_only:            # this needs to be reset for each SBT
+            search_fn = SearchMinHashesFindBest().search
+
+        # figure out scaled value of tree, downsample query if needed.
+        leaf = next(iter(self.leaves()))
+        tree_mh = leaf.data.minhash
+
+        tree_query = query
+        if tree_mh.scaled and query.minhash.scaled and \
+          tree_mh.scaled > query.minhash.scaled:
+            resampled_query_mh = tree_query.minhash
+            resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+            tree_query = SourmashSignature(resampled_query_mh)
+
+        # now, search!
+        results = []
+        for leaf in self.find(search_fn, tree_query, threshold):
+            similarity = query_match(leaf.data)
+
+            # tree search should always/only return matches above threshold
+            assert similarity >= threshold
+
+            results.append((similarity, leaf.data, None))
+
+        return results
+        
+
+    def gather(self, query, *args, **kwargs):
+        from .sbtmh import GatherMinHashes
+        # use a tree search function that keeps track of its best match.
+        search_fn = GatherMinHashes().search
+
+        results = []
+        for leaf in self.find(search_fn, query, 0.0):
+            leaf_e = leaf.data.minhash
+            similarity = query.minhash.containment_ignore_maxhash(leaf_e)
+            if similarity > 0.0:
+                results.append((similarity, leaf.data, None))
+
+        return results
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).
