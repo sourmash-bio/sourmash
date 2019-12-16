@@ -269,6 +269,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn roundtrip_sbt() -> Result<(), Box<dyn std::error::Error>> {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/v5.sbt.json");
