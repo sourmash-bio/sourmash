@@ -557,6 +557,16 @@ where
     }
 }
 
+impl<T> PartialEq for Node<T>
+where
+    T: Sync + PartialEq,
+    Node<T>: ReadData<T>,
+{
+    fn eq(&self, other: &Node<T>) -> bool {
+        self.data().unwrap() == other.data().unwrap()
+    }
+}
+
 impl<T> SigStore<T>
 where
     T: Sync + ToWriter,

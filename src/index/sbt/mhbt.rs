@@ -285,8 +285,6 @@ mod test {
             assert_eq!(args, &(1, 100000.0, 4));
         });
 
-        println!("sbt leaves {:?} {:?}", sbt.leaves.len(), sbt.leaves);
-
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
@@ -298,28 +296,34 @@ mod test {
 
         let results = sbt.find(search_minhashes, &leaf, 0.5)?;
         assert_eq!(results.len(), 1);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
+        //println!("results: {:?}", results);
+        //println!("leaf: {:?}", leaf);
 
         let results = sbt.find(search_minhashes, &leaf, 0.1)?;
         assert_eq!(results.len(), 2);
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
+        //println!("results: {:?}", results);
+        //println!("leaf: {:?}", leaf);
+
+        println!("sbt internal {:?} {:?}", sbt.nodes.len(), sbt.nodes);
+        println!("sbt leaves {:?} {:?}", sbt.leaves.len(), sbt.leaves);
 
         let mut new_sbt: MHBT = MHBT::builder().storage(None).build();
-        for l in sbt.signatures() {
+        let datasets = sbt.signatures();
+        for l in datasets {
             new_sbt.insert(l)?;
         }
 
-        println!(
-            "new_sbt leaves {:?} {:?}",
-            new_sbt.signature_refs().len(),
-            new_sbt.signature_refs()
-        );
+        for (i, node) in &sbt.nodes {
+            assert_eq!(node.data().unwrap(), new_sbt.nodes[i].data().unwrap());
+        }
+
+        assert_eq!(new_sbt.signature_refs().len(), 7);
+        println!("new_sbt internal {:?} {:?}", sbt.nodes.len(), sbt.nodes);
+        println!("new_sbt leaves {:?} {:?}", sbt.leaves.len(), sbt.leaves);
 
         let results = new_sbt.find(search_minhashes, &leaf, 0.5)?;
-        println!("results: {:?}", results);
-        println!("leaf: {:?}", leaf);
+        //println!("results: {:?}", results);
+        //println!("leaf: {:?}", leaf);
         assert_eq!(results.len(), 1);
 
         let results = new_sbt.find(search_minhashes, &leaf, 0.1)?;

@@ -158,9 +158,6 @@ mod test {
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
-    use std::rc::Rc;
-
-    use lazy_init::Lazy;
 
     use super::BIGSI;
 
@@ -186,16 +183,7 @@ mod test {
             Signature::load_signatures(&mut reader, Some(31), Some("DNA".into()), None).unwrap();
         let sig_data = sigs[0].clone();
 
-        let data = Lazy::new();
-        data.get_or_create(|| sig_data);
-
-        let leaf = SigStore::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build();
+        let leaf: SigStore<_> = sig_data.into();
 
         for l in datasets {
             bigsi.insert(l).expect("insertion error!");

@@ -10,12 +10,21 @@ use primal;
 use crate::sketch::minhash::KmerMinHash;
 use crate::HashIntoType;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone)]
 pub struct Nodegraph {
     pub(crate) bs: Vec<FixedBitSet>,
     ksize: usize,
     occupied_bins: usize,
     unique_kmers: usize,
+}
+
+// TODO: only checking for the bitset for now,
+// since unique_kmers is not saved in a khmer nodegraph
+// and occupied_bins also has issues...
+impl PartialEq for Nodegraph {
+    fn eq(&self, other: &Nodegraph) -> bool {
+        self.bs == other.bs
+    }
 }
 
 impl Nodegraph {
@@ -34,13 +43,24 @@ impl Nodegraph {
     }
 
     pub fn with_tables(tablesize: usize, n_tables: usize, ksize: usize) -> Nodegraph {
-        // TODO: cache the Sieve somewhere for repeated calls?
-        let tablesizes: Vec<usize> = primal::Primes::all()
-            .filter(|p| *p >= tablesize)
-            .take(n_tables)
-            .collect();
+        let mut tablesizes = Vec::with_capacity(n_tables);
 
-        Nodegraph::new(&tablesizes, ksize)
+        let mut i = (tablesize - 1) as u64;
+        if i % 2 == 0 {
+            i += 1
+        }
+
+        while tablesizes.len() != n_tables {
+            if primal::is_prime(i) {
+                tablesizes.push(i as usize);
+            }
+            if i == 1 {
+                break;
+            }
+            i -= 2;
+        }
+
+        Nodegraph::new(tablesizes.as_slice(), ksize)
     }
 
     pub fn count(&mut self, hash: HashIntoType) -> bool {
