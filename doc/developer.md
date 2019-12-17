@@ -7,7 +7,13 @@ You can get the latest development master branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
 ```
-To install all of the necessary dependencies, do:
+sourmash runs under both Python 2.7.x and Python 3.5+.  The base
+requirements are screed and ijson, together with a Rust environment (for the
+extension code). We suggest using `rustup` to install the Rust environment:
+
+    curl https://sh.rustup.rs -sSf | sh
+
+To install all of the necessary Python dependencies, do:
 ```
 pip install -r requirements.txt
 ```
@@ -24,13 +30,6 @@ pip install -e .
 ## Automated tests and code coverage calculation
 
 We use [Travis][0] for continuous integration.
-
-Code coverage calculation is enabled (on Linux only) by running
-`make coverage`.  This recompiles the C++ extension without
-optimization and with coverage configured.  See `setup.py` for
-more information on this; the environment variable
-`SOURMASH_COVERAGE` controls whether the C++ extension is
-compiled with code coverage analysis enabled.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 

@@ -268,10 +268,13 @@ def merge(args):
                     mh.track_abundance = False
 
             try:
+                sigobj_mh = sigobj.minhash
                 if not args.flatten:
                     _check_abundance_compatibility(first_sig, sigobj)
+                else:
+                    sigobj_mh.track_abundance = False
 
-                mh.merge(sigobj.minhash)
+                mh.merge(sigobj_mh)
             except:
                 error("ERROR when merging signature '{}' ({}) from file {}",
                       sigobj.name(), sigobj.md5sum()[:8], sigfile)

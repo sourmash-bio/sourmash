@@ -73,6 +73,6 @@ fn dayhoff() {
     a.add_sequence(b"ACTGAC", false).unwrap();
     b.add_sequence(b"ACTGAC", false).unwrap();
 
-    assert_eq!(a.size(), 1);
+    assert_eq!(a.size(), 2);
     assert_eq!(b.size(), 2);
 }

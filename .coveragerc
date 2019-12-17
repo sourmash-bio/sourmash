@@ -6,6 +6,5 @@ omit =
     doc/conf.py
     setup.py
     tests/*
-    third-party/smhasher/MurmurHash3.cc
     .tox/*
     benchmarks/*
