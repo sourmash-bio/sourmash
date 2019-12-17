@@ -12,10 +12,7 @@ use niffler::{get_output, CompressionFormat};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 
-/* FIXME bring back after succint-rs changes
 use sourmash::cmd::{count_unique, draff_compare, draff_search, draff_signature, prepare};
-*/
-use sourmash::cmd::prepare;
 
 use sourmash::index::linear::LinearIndex;
 use sourmash::index::sbt::scaffold;
@@ -334,7 +331,6 @@ fn main() -> Result<(), ExitFailure> {
     let m = App::from_yaml(yml).get_matches();
 
     match m.subcommand_name() {
-        /* FIXME bring back after succint-rs changes
         Some("draff") => {
             let cmd = m.subcommand_matches("draff").unwrap();
             let inputs = cmd
@@ -371,7 +367,6 @@ fn main() -> Result<(), ExitFailure> {
 
             count_unique(index)?;
         }
-        */
         Some("prepare") => {
             let cmd = m.subcommand_matches("prepare").unwrap();
             let index: &str = cmd.value_of("index").unwrap();

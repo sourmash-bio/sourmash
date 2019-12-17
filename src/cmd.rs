@@ -1,21 +1,18 @@
 use failure::Error;
 
-use crate::index::MHBT;
-
-/* FIXME: bring back after boomphf changes
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use log::info;
 use needletail::parse_sequence_path;
 
-use crate::index::{Comparable, Index, MHBT};
 use crate::index::linear::LinearIndex;
 use crate::index::storage::{FSStorage, Storage};
+use crate::index::UKHSTree;
+use crate::index::{Comparable, Index, MHBT};
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::Sketch;
-use crate::index::{UKHSTree};
 use crate::sketch::ukhs::{FlatUKHS, UKHSTrait, UniqueUKHS};
+use crate::sketch::Sketch;
 
 pub fn draff_index(sig_files: Vec<&str>, outfile: &str) -> Result<(), Error> {
     let storage: Rc<dyn Storage> = Rc::new(
@@ -140,9 +137,7 @@ pub fn draff_signature(files: Vec<&str>, k: usize, w: usize) -> Result<(), Error
 
     Ok(())
 }
-*/
 
-/* FIXME bring back after succint-rs changes
 pub fn count_unique(index_path: &str) -> Result<(), Error> {
     let index = MHBT::from_path(index_path)?;
 
@@ -171,7 +166,6 @@ pub fn count_unique(index_path: &str) -> Result<(), Error> {
 
     Ok(())
 }
-*/
 
 pub fn prepare(index_path: &str) -> Result<(), Error> {
     let mut index = MHBT::from_path(index_path)?;

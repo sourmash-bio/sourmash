@@ -27,11 +27,9 @@ use crate::signature::Signature;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 
-/* FIXME: bring back after boomphf changes
 use crate::sketch::ukhs::{FlatUKHS, UKHSTrait};
-pub type UKHSTree = SBT<Node<FlatUKHS>, Signature>;
-*/
 
+pub type UKHSTree = SBT<Node<FlatUKHS>, Signature>;
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
 /* FIXME: bring back after MQF works on macOS and Windows
@@ -267,13 +265,11 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
             }
         }
 
-        /* FIXME: bring back after boomphf changes
         if let Sketch::UKHS(mh) = &ng.signatures[0] {
             if let Sketch::UKHS(omh) = &ong.signatures[0] {
                 return 1. - mh.distance(&omh);
             }
         }
-        */
 
         unimplemented!()
     }
@@ -305,13 +301,11 @@ impl Comparable<Signature> for Signature {
             }
         }
 
-        /* FIXME: bring back after boomphf changes
         if let Sketch::UKHS(mh) = &self.signatures[0] {
             if let Sketch::UKHS(omh) = &other.signatures[0] {
                 return 1. - mh.distance(&omh);
             }
         }
-        */
 
         unimplemented!()
     }

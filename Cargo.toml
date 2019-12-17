@@ -46,13 +46,21 @@ murmurhash3 = "0.0.5"
 serde = "1.0.103"
 serde_derive = "1.0.103"
 serde_json = "1.0.44"
-#ukhs = { git = "https://github.com/luizirber/ukhs", branch = "feature/alternative_backends", features = ["boomphf_mphf"], default-features = false}
 primal = "0.2.3"
-#pdatastructs = { git = "https://github.com/luizirber/pdatastructs.rs", branch = "succinct_wasm" }
 itertools = "0.8.2"
 typed-builder = "0.4.0"
 csv = "1.1.1"
 tempfile = "3.1.0"
+
+[dependencies.ukhs]
+git = "https://github.com/luizirber/ukhs"
+branch = "feature/alternative_backends"
+features = ["boomphf_mphf"]
+default-features = false
+
+[dependencies.pdatastructs]
+git = "https://github.com/luizirber/pdatastructs.rs"
+branch = "succinct_wasm"
 
 [dependencies.needletail]
 version = "0.3.2"

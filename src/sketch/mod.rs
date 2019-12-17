@@ -12,5 +12,5 @@ use crate::sketch::ukhs::FlatUKHS;
 #[serde(untagged)]
 pub enum Sketch {
     MinHash(KmerMinHash),
-    UKHS(FlatUKHS), // FIXME
+    UKHS(FlatUKHS),
 }

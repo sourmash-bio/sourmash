@@ -1,41 +1,3 @@
-use failure::Error;
-use serde_derive::{Deserialize, Serialize};
-
-use crate::signature::SigsTrait;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FlatUKHS {}
-
-impl FlatUKHS {
-    pub fn md5sum(&self) -> String {
-        unimplemented!()
-    }
-}
-
-impl SigsTrait for FlatUKHS {
-    fn size(&self) -> usize {
-        unimplemented!()
-    }
-
-    fn to_vec(&self) -> Vec<u64> {
-        unimplemented!()
-    }
-
-    fn ksize(&self) -> usize {
-        unimplemented!()
-    }
-
-    fn check_compatible(&self, _other: &Self) -> Result<(), Error> {
-        unimplemented!()
-    }
-
-    fn add_sequence(&mut self, _seq: &[u8], _force: bool) -> Result<(), Error> {
-        unimplemented!()
-    }
-}
-
-/* FIXME bring back after succint-rs changes
-
 use std::f64::consts::PI;
 use std::fs::File;
 use std::hash::BuildHasherDefault;
@@ -43,13 +5,18 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::mem;
 use std::path::Path;
 
+use failure::Error;
 use itertools::Itertools;
 use pdatastructs::hyperloglog::HyperLogLog;
+use serde::de::{Deserialize, Deserializer};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde_derive::Deserialize;
 use ukhs;
 
 use crate::errors::SourmashError;
 use crate::index::sbt::NoHashHasher;
 use crate::index::storage::ToWriter;
+use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 
 #[derive(Clone)]
@@ -629,4 +596,3 @@ mod test {
         }
     }
 }
-*/
