@@ -32,9 +32,7 @@ def info(args):
     notify('')
 
     if args.verbose:
-        import khmer
-        notify('khmer version {}', khmer.__version__)
-        notify('- loaded from path: {}', os.path.dirname(khmer.__file__))
+        notify('khmer version: None (internal Nodegraph)')
         notify('')
 
         notify('screed version {}', screed.__version__)

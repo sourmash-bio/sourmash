@@ -63,6 +63,11 @@ impl Nodegraph {
         Nodegraph::new(tablesizes.as_slice(), ksize)
     }
 
+    pub(crate) fn count_kmer(&mut self, kmer: &[u8]) -> bool {
+        let h = _hash(kmer);
+        self.count(h)
+    }
+
     pub fn count(&mut self, hash: HashIntoType) -> bool {
         let mut is_new_kmer = false;
 
@@ -90,31 +95,24 @@ impl Nodegraph {
         1
     }
 
+    pub(crate) fn get_kmer(&self, kmer: &[u8]) -> usize {
+        let h = _hash(kmer);
+        self.get(h)
+    }
+
     // update
     pub fn update(&mut self, other: &Nodegraph) {
-        /*
-        let mut bitsets = Vec::with_capacity(self.bs.len());
-        for (bs, bs_other) in self.bs.iter().zip(&other.bs) {
-            let mut new_bs = FixedBitSet::with_capacity(bs.len());
-            for bit in bs.union(&bs_other) {
-                new_bs.insert(bit);
-            }
-            bitsets.push(new_bs);
-        }
-        self.bs = bitsets;
-        */
-
-        let mut new_bins = 0;
-        for (bs, bs_other) in self.bs.iter_mut().zip(&other.bs) {
-            bs_other.ones().for_each(|x| {
-                if !bs.put(x) {
-                    new_bins += 1;
-                }
-            });
-        }
         // TODO: occupied bins seems to be broken in khmer? I don't get the same
         // values...
-        self.occupied_bins += new_bins;
+        self.occupied_bins = self
+            .bs
+            .iter_mut()
+            .zip(&other.bs)
+            .map(|(bs, bs_other)| {
+                bs.union_with(bs_other);
+                bs.count_ones(..)
+            })
+            .sum();
     }
 
     pub fn expected_collisions(&self) -> f64 {
@@ -287,27 +285,78 @@ impl Nodegraph {
     }
 }
 
+fn twobit_repr(a: u8) -> HashIntoType {
+    match a as char {
+        'A' => 0,
+        'C' => 2,
+        'G' => 3,
+        'T' => 1,
+        _ => unimplemented!(),
+    }
+}
+
+fn twobit_comp(a: u8) -> HashIntoType {
+    match a as char {
+        'A' => 1,
+        'C' => 3,
+        'G' => 2,
+        'T' => 0,
+        _ => unimplemented!(),
+    }
+}
+
+fn uniqify_rc(f: HashIntoType, r: HashIntoType) -> HashIntoType {
+    if f < r {
+        f
+    } else {
+        r
+    }
+}
+
+fn _hash(kmer: &[u8]) -> HashIntoType {
+    let k = kmer.len();
+    let mut h = 0;
+    let mut r = 0;
+
+    h |= twobit_repr(kmer[0]);
+    r |= twobit_comp(kmer[k - 1]);
+
+    let mut i = 1;
+    let mut j: isize = (k - 2) as isize;
+
+    while i < k {
+        h = h << 2;
+        r = r << 2;
+
+        h |= twobit_repr(kmer[i]);
+        r |= twobit_comp(kmer[j as usize]);
+
+        i += 1;
+        j -= 1;
+    }
+
+    uniqify_rc(h, r)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use cfg_if::cfg_if;
     use std::io::{BufReader, BufWriter};
     use std::path::PathBuf;
 
-    cfg_if! {
-    if #[cfg(not(target_arch = "wasm32"))] {
+    use proptest::collection::vec;
     use proptest::num::u64;
-    use proptest::{proptest};
+    use proptest::proptest;
 
     proptest! {
       #[test]
-      fn count_and_get(hash in u64::ANY) {
-          let mut ng: Nodegraph = Nodegraph::new(&[10], 3);
-          ng.count(hash);
-          assert_eq!(ng.get(hash), 1);
+      fn count_and_get(hashes in vec(u64::ANY, 1..500)) {
+          let mut ng: Nodegraph = Nodegraph::new(&[1000], 3);
+          for hash in hashes {
+              ng.count(hash);
+              assert_eq!(ng.get(hash), 1);
+          }
       }
-    }
-    }
     }
 
     #[test]
@@ -364,6 +413,43 @@ mod test {
         ng_0.update(&ng_2);
         assert_eq!(ng_0.bs, ng_parent.bs);
         //assert_eq!(ng_0.occupied_bins, ng_parent.occupied_bins);
+    }
+
+    #[test]
+    fn update_nodegraph_many() -> Result<(), Box<dyn std::error::Error>> {
+        let mut leaf1 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "AAAAC"] {
+            leaf1.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf2 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "AAAAG"] {
+            leaf2.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf3 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "CAAAA"] {
+            leaf3.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf4 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "CAAAA", "GAAAA"] {
+            leaf4.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf5 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "GAAAA"] {
+            leaf5.count(_hash(kmer.as_bytes()));
+        }
+
+        let h = _hash("AAAAT".as_bytes());
+        for leaf in &[leaf1, leaf2, leaf3, leaf5] {
+            assert_eq!(leaf.get(h), 1);
+        }
+
+        assert_eq!(leaf4.get(h), 0);
+
+        Ok(())
     }
 
     #[test]

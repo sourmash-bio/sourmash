@@ -44,6 +44,22 @@ pub unsafe extern "C" fn nodegraph_count(ptr: *mut Nodegraph, h: u64) -> bool {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nodegraph_count_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> bool {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let c_str = {
+        assert!(!kmer.is_null());
+
+        CStr::from_ptr(kmer)
+    };
+
+    ng.count_kmer(c_str.to_bytes())
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nodegraph_get(ptr: *mut Nodegraph, h: u64) -> usize {
     let ng = {
         assert!(!ptr.is_null());
@@ -51,6 +67,22 @@ pub unsafe extern "C" fn nodegraph_get(ptr: *mut Nodegraph, h: u64) -> usize {
     };
 
     ng.get(h)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_get_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> usize {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let c_str = {
+        assert!(!kmer.is_null());
+
+        CStr::from_ptr(kmer)
+    };
+
+    ng.get_kmer(c_str.to_bytes())
 }
 
 #[no_mangle]
