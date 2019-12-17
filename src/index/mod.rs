@@ -34,7 +34,6 @@ pub type UKHSTree = SBT<Node<FlatUKHS>, Signature>;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
-/* FIXME: bring back after MQF works on macOS and Windows
 use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(not(target_arch = "wasm32"))] {
@@ -42,7 +41,6 @@ cfg_if! {
       pub type MHMT = SBT<Node<MQF>, Signature>;
     }
 }
-*/
 
 pub trait Index<'a> {
     type Item: Comparable<Self::Item>;

@@ -132,24 +132,20 @@ impl Comparable<Signature> for Node<MQF> {
     }
 }
 
-/* FIXME: bring back after MQF works on macOS and Windows
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
-    use std::io::{BufReader, Seek, SeekFrom};
+    use std::io::BufReader;
     use std::path::PathBuf;
     use std::rc::Rc;
-    use tempfile;
 
-    use assert_matches::assert_matches;
     use lazy_init::Lazy;
-
-    use super::{scaffold, Factory};
 
     use crate::index::linear::LinearIndex;
     use crate::index::search::{search_minhashes, search_minhashes_containment};
     use crate::index::storage::ReadData;
-    use crate::index::{Index, SigStore, MHBT};
+    use crate::index::{Index, SigStore};
     use crate::signature::Signature;
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -158,13 +154,19 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/v5_mhmt.sbt.json");
 
-        let mut sbt = crate::index::MHMT::from_path(filename).expect("Loading error");
+        let sbt = crate::index::MHMT::from_path(filename).expect("Loading error");
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs = Signature::load_signatures(&mut reader, 31, Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let sig_data = sigs[0].clone();
 
         let data = Lazy::new();
@@ -223,5 +225,4 @@ mod test {
         println!("results: {:?}", results);
         println!("leaf: {:?}", leaf);
     }
-    */
 }

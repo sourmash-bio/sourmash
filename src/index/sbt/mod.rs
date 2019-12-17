@@ -4,10 +4,8 @@ pub mod mhbt;
 pub mod ukhs;
 */
 
-/* FIXME: bring back after MQF works on macOS and Windows
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mhmt;
-*/
 
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
