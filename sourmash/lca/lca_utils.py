@@ -275,11 +275,13 @@ class LCA_Database(Index):
         threshold = kwargs['threshold']
         do_containment = kwargs.get('do_containment', False)
         ignore_abundance = kwargs.get('ignore_abundance', True)
+        mh = query.minhash
         if not ignore_abundance:
-            raise TypeError("'search' on LCA databases does not use abundance")
+            notify("'search' on LCA databases does not use abundance")
+            mh.track_abundance = False
 
         results = []
-        for x in self.find_signatures(query.minhash, threshold, do_containment):
+        for x in self.find_signatures(mh, threshold, do_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
