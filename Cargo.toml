@@ -8,7 +8,7 @@ keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
 license = "BSD-3-Clause"
 edition = "2018"
-default-run = "smrs"
+#default-run = "smrs"  ## Uncomment if MSRV is bumped
 autoexamples = false
 autobins = false
 
