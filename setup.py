@@ -75,7 +75,7 @@ SETUP_METADATA = {
     "zip_safe": False,
     "platforms": "any",
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov'],
+        'test' : ['pytest', 'pytest-cov', 'recommonmark'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx', 'recommonmark', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx"],
