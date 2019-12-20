@@ -27,11 +27,16 @@ python -m virtualenv dev
 . dev/bin/activate
 pip install -e .
 ```
+
+You can run tests by invoking `make test` or `python -m pytest` in the sourmash
+directory.
+
 ## Automated tests and code coverage calculation
 
-We use [Travis][0] for continuous integration.
+We use [Travis][0] and [GitHub Actions][2] for continuous integration.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-[0]:https://travis-ci.org/dib-lab/sourmash
-[1]:https://codecov.io/gh/dib-lab/sourmash/
+[0]: https://travis-ci.com/dib-lab/sourmash
+[1]: https://codecov.io/gh/dib-lab/sourmash/
+[2]: https://github.com/dib-lab/sourmash/actions
