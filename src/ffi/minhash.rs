@@ -50,6 +50,14 @@ pub unsafe extern "C" fn kmerminhash_free(ptr: *mut KmerMinHash) {
     Box::from_raw(ptr);
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_slice_free(ptr: *mut u64, insize: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    Vec::from_raw_parts(ptr as *mut u64, insize, insize);
+}
+
 ffi_fn! {
 unsafe fn kmerminhash_add_sequence(ptr: *mut KmerMinHash, sequence: *const c_char, force: bool) ->
     Result<()> {
@@ -165,7 +173,8 @@ unsafe fn kmerminhash_get_abunds(ptr: *mut KmerMinHash) -> Result<*const u64> {
         let output = abunds.clone();
         Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
     } else {
-        Ok(ptr::null())
+        //throw error, can't get abund
+        unimplemented!()
     }
 }
 }
