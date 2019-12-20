@@ -259,6 +259,34 @@ def test_basic_index_bad_spreadsheet():
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
+def test_basic_index_broken_spreadsheet():
+    # duplicate identifiers in this spreadsheet
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/bad-spreadsheet-2.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert status != 0
+        assert "multiple lineages for identifier TARA_ASE_MAG_00031" in err
+
+
+def test_basic_index_require_taxonomy():
+    # no taxonomy in here
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/bad-spreadsheet-3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', '--require-taxonomy', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert status != 0
+        assert "ERROR: no hash values found - are there any signatures?" in err
+
+
 def test_basic_index_column_start():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-3.csv')

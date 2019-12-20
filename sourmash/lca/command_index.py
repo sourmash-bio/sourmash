@@ -76,7 +76,12 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
             # store lineage tuple
             if lineage:
-                assignments[ident] = tuple(lineage)
+                # check duplicates -
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        raise Exception("multiple lineages for identifier {}".format(ident))
+                else:
+                    assignments[ident] = tuple(lineage)
 
     fp.close()
 
@@ -228,15 +233,16 @@ def index(args):
     record_remnants = set(ident_to_idx.keys())
     record_used_lineages = set()
     record_used_idents = set()
+    n_skipped = 0
     for filename in inp_files:
         n += 1
         for sig in load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
+            notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
             if sig.md5sum() in md5_to_name:
-                notify('\nWARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
+                debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
                 record_duplicates.add(filename)
                 continue
 
@@ -272,13 +278,14 @@ def index(args):
                 lineage = lid_to_lineage.get(lid)
 
             if lineage is None:
-                notify('\nWARNING: no lineage assignment for {}.', ident)
+                debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
 
             if lineage is None and args.require_taxonomy:
-                notify('(skipping, because --require-taxonomy was specified)')
+                debug('(skipping, because --require-taxonomy was specified)')
+                n_skipped += 1
                 continue
 
             for hashval in minhash.get_mins():
