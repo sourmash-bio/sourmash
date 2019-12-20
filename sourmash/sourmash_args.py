@@ -215,10 +215,11 @@ class LoadSingleSignatures(object):
                 self.ksizes.add(query_ksize)
                 self.moltypes.add(query_moltype)
 
-                yield filename, query, query_moltype, query_ksize
-
             if len(self.ksizes) > 1 or len(self.moltypes) > 1:
                 raise ValueError('multiple k-mer sizes/molecule types present')
+
+            for query in sl:
+                yield filename, query, query_moltype, query_ksize
 
 
 def traverse_find_sigs(dirnames, yield_all_files=False):

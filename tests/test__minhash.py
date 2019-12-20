@@ -42,11 +42,16 @@ import pickle
 import pytest
 
 import sourmash
-from sourmash._minhash import (MinHash, hash_murmur, dotproduct,
-                                   get_scaled_for_max_hash,
-                                   get_max_hash_for_scaled)
-from . import sourmash_tst_utils as utils
+from sourmash._minhash import (
+    MinHash,
+    hash_murmur,
+    dotproduct,
+    get_scaled_for_max_hash,
+    get_max_hash_for_scaled,
+)
 from sourmash import signature
+
+from . import sourmash_tst_utils as utils
 
 # add:
 # * get default params from Python
@@ -69,6 +74,7 @@ def test_basic_dna(track_abundance):
     print(a, b)
     assert a == b
     assert len(b) == 1
+    assert a[0] == b[0] == 12415348535738636339
 
 
 def test_div_zero(track_abundance):
@@ -95,12 +101,12 @@ def test_bytes_dna(track_abundance):
     mh = MinHash(1, 4, track_abundance=track_abundance)
     mh.add_sequence('ATGC')
     mh.add_sequence(b'ATGC')
-    mh.add_sequence(u'ATGC')
+    mh.add_sequence('ATGC')
     a = mh.get_mins()
 
     mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
     mh.add_sequence(b'GCAT')             # this will not get added; hash > ATGC
-    mh.add_sequence(u'GCAT')             # this will not get added; hash > ATGC
+    mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
     b = mh.get_mins()
 
     print(a, b)
@@ -112,7 +118,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
     mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
-    mh.add_protein(u'AGYYG')
+    mh.add_protein('AGYYG')
     mh.add_protein(b'AGYYG')
 
     assert len(mh.get_mins()) == 4
@@ -254,6 +260,13 @@ def test_max_hash_conversion():
     assert new_scaled == SCALED
 
 
+def test_max_hash_and_scaled_zero():
+    max_hash = get_max_hash_for_scaled(0)
+    new_scaled = get_scaled_for_max_hash(0)
+    assert max_hash == new_scaled
+    assert max_hash == 0
+
+
 def test_max_hash_and_scaled_error(track_abundance):
     # test behavior when supplying both max_hash and scaled
     with pytest.raises(ValueError):
@@ -369,6 +382,28 @@ def test_compare_1(track_abundance):
     assert b.compare(b) == 1.0
 
 
+def test_intersection_errors(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    c = MinHash(30, 10, track_abundance=track_abundance)
+
+    a.add_sequence("TGCCGCCCAGCA")
+    b.add_sequence("TGCCGCCCAGCA")
+
+    common = set(a.get_mins())
+    combined_size = 3
+
+    intersection, size = a.intersection(b, in_common=False)
+    assert intersection == set()
+    assert combined_size == size
+
+    with pytest.raises(TypeError):
+        a.intersection(set())
+
+    with pytest.raises(TypeError):
+        a.intersection(c)
+
+
 def test_intersection_1(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
@@ -379,38 +414,38 @@ def test_intersection_1(track_abundance):
     common = set(a.get_mins())
     combined_size = 3
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
     # add same sequence again
     b.add_sequence('TGCCGCCCAGCA')
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == common
     assert combined_size == size
 
@@ -420,18 +455,18 @@ def test_intersection_1(track_abundance):
     new_in_common = set(a.get_mins()).intersection(set(b.get_mins()))
     new_combined_size = 8
 
-    intersection, size = a.intersection(b)
+    intersection, size = a.intersection(b, in_common=True)
     assert intersection == new_in_common
     assert size == new_combined_size
 
-    intersection, size = b.intersection(a)
+    intersection, size = b.intersection(a, in_common=True)
     assert intersection == new_in_common
     assert size == new_combined_size
 
-    intersection, size = a.intersection(a)
+    intersection, size = a.intersection(a, in_common=True)
     assert intersection == set(a.get_mins())
 
-    intersection, size = b.intersection(b)
+    intersection, size = b.intersection(b, in_common=True)
     assert intersection == set(b.get_mins())
 
 
@@ -510,6 +545,20 @@ def test_mh_count_common_diff_ksize(track_abundance):
         a.count_common(b)
 
 
+def test_mh_count_common_notmh(track_abundance):
+    a = MinHash(20, 5, track_abundance=track_abundance)
+    b = set()
+
+    with pytest.raises(TypeError):
+        a.count_common(b)
+
+
+def test_mh_downsample_n_error(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    with pytest.raises(ValueError):
+        a.downsample_n(30)
+
+
 def test_mh_asymmetric(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
@@ -529,6 +578,12 @@ def test_mh_asymmetric(track_abundance):
     a = a.downsample_n(10)
     assert a.compare(b) == 0.5
     assert b.compare(a) == 0.5
+
+
+def test_mh_merge_typeerror(track_abundance):
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    with pytest.raises(TypeError):
+        a.merge(set())
 
 
 def test_mh_merge(track_abundance):
@@ -596,7 +651,7 @@ def test_mh_merge_check_length(track_abundance):
         b.add_hash(i)
 
     c = a.merge(b)
-    assert(len(c.get_mins()) == 20)
+    assert len(c.get_mins()) == 20
 
 
 def test_mh_merge_check_length2(track_abundance):
@@ -612,7 +667,7 @@ def test_mh_merge_check_length2(track_abundance):
     b.add_hash(4)
 
     c = a.merge(b)
-    assert(len(c.get_mins()) == 3)
+    assert len(c.get_mins()) == 3
 
 
 def test_mh_asymmetric_merge(track_abundance):

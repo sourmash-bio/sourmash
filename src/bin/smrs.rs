@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -24,6 +25,7 @@ use sourmash::index::search::{
 use sourmash::index::storage::{FSStorage, Storage};
 use sourmash::index::{Comparable, Index, MHBT};
 use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::HashFunctions;
 use sourmash::sketch::Sketch;
 
 pub fn index(
@@ -126,6 +128,12 @@ fn load_query_signature(
     moltype: Option<&str>,
     scaled: Option<u64>,
 ) -> Result<Query<Signature>, Error> {
+    let moltype: Option<HashFunctions> = if let Some(mol) = moltype {
+        Some(mol.try_into()?)
+    } else {
+        None
+    };
+
     let mut reader = io::BufReader::new(File::open(query)?);
     let sigs = Signature::load_signatures(&mut reader, ksize, moltype, scaled)?;
 

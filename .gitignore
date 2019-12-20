@@ -13,14 +13,9 @@ dist
 build
 sourmash.egg-info
 .ipynb_checkpoints
-_minhash.so
 .cache
 *.so
 .coverage
-sourmash_lib/_minhash.cpp
-sourmash/_minhash.cpp
-.asv/
-.eggs/
 .pytest_cache
 .python-version
 sourmash/version.py
@@ -30,6 +25,9 @@ sourmash/_lowlevel*.py
 .env
 Pipfile
 Pipfile.lock
-ocf/target/
 target/
 Cargo.lock
+.eggs
+.asv
+pkg/
+wasm-pack.log

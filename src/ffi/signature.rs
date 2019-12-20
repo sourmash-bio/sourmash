@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::ffi::CStr;
 use std::io;
 use std::os::raw::c_char;
@@ -8,7 +9,7 @@ use serde_json;
 
 use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
-use crate::sketch::minhash::KmerMinHash;
+use crate::sketch::minhash::{HashFunctions, KmerMinHash};
 use crate::sketch::Sketch;
 
 // Signature methods
@@ -233,12 +234,11 @@ unsafe fn signatures_load_path(ptr: *const c_char,
         CStr::from_ptr(ptr)
     };
 
-    let moltype = {
-        if select_moltype.is_null() {
+    let moltype: Option<HashFunctions> = if select_moltype.is_null() {
           None
         } else {
-          Some(CStr::from_ptr(select_moltype).to_str()?)
-        }
+          let mol = CStr::from_ptr(select_moltype).to_str()?;
+          Some(mol.try_into()?)
     };
 
     // TODO: implement ignore_md5sum
@@ -274,12 +274,11 @@ unsafe fn signatures_load_buffer(ptr: *const c_char,
         slice::from_raw_parts(ptr as *mut u8, insize)
     };
 
-    let moltype = {
-        if select_moltype.is_null() {
+    let moltype: Option<HashFunctions> = if select_moltype.is_null() {
           None
         } else {
-          Some(CStr::from_ptr(select_moltype).to_str()?)
-        }
+          let mol = CStr::from_ptr(select_moltype).to_str()?;
+          Some(mol.try_into()?)
     };
 
     let k = match ksize {

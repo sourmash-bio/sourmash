@@ -153,14 +153,15 @@ impl ReadData<Nodegraph> for Node<Nodegraph> {
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
     use std::io::{BufReader, Seek, SeekFrom};
     use std::path::PathBuf;
     use std::rc::Rc;
-    use tempfile;
 
     use assert_matches::assert_matches;
     use lazy_init::Lazy;
+    use tempfile;
 
     use super::Factory;
 
@@ -207,8 +208,13 @@ mod test {
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs =
-            Signature::load_signatures(&mut reader, Some(31), Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let sig_data = sigs[0].clone();
 
         let data = Lazy::new();
@@ -290,7 +296,12 @@ mod test {
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename)?);
-        let sigs = Signature::load_signatures(&mut reader, Some(31), Some("DNA".into()), None)?;
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )?;
         let sig_data = sigs[0].clone();
 
         let leaf: SigStore<_> = sig_data.into();

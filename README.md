@@ -1,9 +1,19 @@
+<meta charset="utf-8"/>
+
 # sourmash
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://travis-ci.com/dib-lab/sourmash.svg?branch=master)](https://travis-ci.com/dib-lab/sourmash)
+<a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/master/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
+<a href="https://github.com/dib-lab/sourmash/blob/master/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
+
+🦀
+[![](http://meritbadge.herokuapp.com/sourmash)](https://crates.io/crates/sourmash)
+[![Rust API Documentation on docs.rs](https://docs.rs/sourmash/badge.svg)](https://docs.rs/sourmash)
+
+---
 
 Compute MinHash signatures for nucleotide (DNA/RNA) and protein sequences.
 
@@ -13,7 +23,7 @@ Usage:
     sourmash compare *.sig -o distances
     sourmash plot distances
 
-Sourmash 1.0 is [published on JOSS](https://doi.org/10.21105/joss.00027); please cite that paper if you use sourmash (`doi: 10.21105/joss.00027`):.
+sourmash 1.0 is [published on JOSS](https://doi.org/10.21105/joss.00027); please cite that paper if you use sourmash (`doi: 10.21105/joss.00027`):.
 
 ----
 
@@ -48,9 +58,10 @@ A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/t
 ### Requirements
 
 sourmash runs under both Python 2.7.x and Python 3.5+.  The base
-requirements are screed and ijson, together with a C++ development
-environment and the CPython development headers and libraries (for the
-C++ extension).
+requirements are screed and ijson, together with a Rust environment (for the
+extension code). We suggest using `rustup` to install the Rust environment:
+
+    curl https://sh.rustup.rs -sSf | sh
 
 The comparison code (`sourmash compare`) uses numpy, and the plotting
 code uses matplotlib and scipy, but most of the code is usable without

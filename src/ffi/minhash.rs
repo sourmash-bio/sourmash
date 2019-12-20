@@ -297,7 +297,7 @@ unsafe fn kmerminhash_enable_abundance(ptr: *mut KmerMinHash) -> Result<()> {
         &mut *ptr
     };
 
-    if mh.mins.is_empty() {
+    if !mh.mins.is_empty() {
       return Err(SourmashError::NonEmptyMinHash { message: "track_abundance=True".into()}.into());
     }
 

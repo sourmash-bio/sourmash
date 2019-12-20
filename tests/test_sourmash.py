@@ -67,7 +67,7 @@ def test_do_serial_compare(c):
 
     cmp_outfile = c.output('cmp')
     assert os.path.exists(cmp_outfile)
-    cmp_out = numpy.load(cmp_outfile.encode('utf-8'))
+    cmp_out = numpy.load(cmp_outfile)
 
     sigs = []
     for fn in testsigs:
