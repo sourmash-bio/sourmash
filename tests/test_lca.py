@@ -211,6 +211,24 @@ def test_gather_db_scaled_lt_sig_scaled():
     assert sig.minhash == match_sig.minhash
 
 
+def test_db_lineage_to_lids():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+
+    d = db.lineage_to_lids
+    items = list(d.items())
+    assert len(items) == 2
+
+    print(items)
+
+    lin1 = items[0][0][-1]
+    assert lin1.rank == 'strain'
+    assert lin1.name == 'Shewanella baltica OS185'
+    lin1 = items[1][0][-1]
+    assert lin1.rank == 'strain'
+    assert lin1.name == 'Shewanella baltica OS223'
+
+
 ## command line tests
 
 
