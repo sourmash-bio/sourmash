@@ -39,7 +39,8 @@ def compare_csv(args):
     # first, load classify-style spreadsheet
     notify('loading classify output from: {}', args.csv1)
     assignments0, num_rows0 = load_taxonomy_assignments(args.csv1,
-                                                        start_column=3)
+                                                        start_column=3,
+                                                        force=args.force)
 
     notify('loaded {} distinct lineages, {} rows',
            len(set(assignments0.values())), num_rows0)
