@@ -443,7 +443,7 @@ def test_index_traverse_real_spreadsheet_no_report():
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
         lca_db = os.path.join(location, 'delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -467,7 +467,8 @@ def test_index_traverse_real_spreadsheet_report():
         lca_db = os.path.join(location, 'delmont-1.lca.json')
         report_loc = os.path.join(location, 'report.txt')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report', report_loc]
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report',
+               report_loc, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -998,7 +999,7 @@ def test_compare_csv():
         a = utils.get_test_data('lca/classify-by-both.csv')
         b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
 
-        cmd = ['lca', 'compare_csv', a, b]
+        cmd = ['lca', 'compare_csv', a, b, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1015,7 +1016,7 @@ def test_compare_csv_real():
         a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
         b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
 
-        cmd = ['lca', 'compare_csv', a, b, '--start-column=3']
+        cmd = ['lca', 'compare_csv', a, b, '--start-column=3', '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
