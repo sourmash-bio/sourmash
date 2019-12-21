@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::f64::consts::PI;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
@@ -482,6 +483,48 @@ impl KmerMinHash {
         }
     }
 
+    pub fn similarity(&self, other: &KmerMinHash, ignore_abundance: bool) -> Result<f64, Error> {
+        self.check_compatible(other)?;
+
+        if ignore_abundance {
+            if let Ok((common, size)) = self.intersection_size(other) {
+                Ok(common as f64 / u64::max(1, size) as f64)
+            } else {
+                Ok(0.0)
+            }
+        } else {
+            let a_sq: f64 = self.mins.iter().map(|a| (a * a) as f64).sum();
+            let b_sq: f64 = other.mins.iter().map(|a| (a * a) as f64).sum();
+
+            if a_sq == 0. || b_sq == 0. {
+                return Ok(0.0);
+            }
+
+            if self.abunds.is_none() || other.abunds.is_none() {
+                // TODO: throw error, we need abundance for this
+                unimplemented!()
+            }
+
+            let mut prod = 0;
+            let mut other_iter = other.mins.iter();
+            for (i, hash) in self.mins.iter().enumerate() {
+                while let Some(k) = other_iter.next() {
+                    if k < hash {
+                        continue;
+                    } else if k == hash {
+                        let a_abundance = self.abunds.as_ref().unwrap()[i];
+                        let b_abundance = other.abunds.as_ref().unwrap()[i];
+                        prod += a_abundance * b_abundance;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            let d = f64::min(prod as f64 / (a_sq.sqrt() * b_sq.sqrt()), 1.);
+            Ok(1. - (2. * d.acos() / PI))
+        }
+    }
+
     pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
         let it = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -519,6 +562,13 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
+        if self.num != other.num {
+            return Err(SourmashError::MismatchNum {
+                n1: self.num,
+                n2: other.num,
+            }
+            .into());
+        }
         if self.ksize != other.ksize {
             return Err(SourmashError::MismatchKSizes.into());
         }

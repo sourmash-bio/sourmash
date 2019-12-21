@@ -405,9 +405,7 @@ class MinHash(RustObject):
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_compare, other._get_objptr())
-
-    def jaccard(self, other):
-        return self.compare(other)
+    jaccard = compare
 
     def similarity(self, other, ignore_abundance=False):
         """Calculate similarity of two sketches.
@@ -424,22 +422,12 @@ class MinHash(RustObject):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
-        # if either signature is flat, calculate Jaccard only.
-        if not (self.track_abundance and other.track_abundance) or ignore_abundance:
-            return self.jaccard(other)
-        else:
-            # can we merge? if not, raise exception.
-            aa = copy.copy(self)
-            aa.merge(other)
+            return self._methodcall(lib.kmerminhash_similarity,
+                                    other._get_objptr(),
+                                    ignore_abundance)
 
-            a = self.get_mins(with_abundance=True)
-            b = other.get_mins(with_abundance=True)
-
-            prod = dotproduct(a, b)
-            prod = min(1.0, prod)
-
-            distance = 2 * math.acos(prod) / math.pi
-            return 1.0 - distance
+    def is_compatible(self, other):
+        return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
 
     def contained_by(self, other):
         """\
