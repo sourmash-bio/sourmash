@@ -57,6 +57,8 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     # convert into a lineage pair
     assignments = {}
     num_rows = 0
+    n_species = 0
+    n_strains = 0
     for row in r:
         if row and row[0].strip():        # want non-empty row
             num_rows += 1
@@ -76,14 +78,22 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
             # store lineage tuple
             if lineage:
-                # check duplicates -
+                # check duplicates
                 if ident in assignments:
                     if assignments[ident] != tuple(lineage):
                         raise Exception("multiple lineages for identifier {}".format(ident))
                 else:
                     assignments[ident] = tuple(lineage)
 
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        n_strains += 1
+
     fp.close()
+
+    if len(assignments) * 0.2 > n_species:
+        raise Exception("error: fewer than 20% of lineages have species-level resolution!? ({} total found)".format(n_species))
 
     return assignments, num_rows
 
