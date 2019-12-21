@@ -493,35 +493,59 @@ impl KmerMinHash {
                 Ok(0.0)
             }
         } else {
-            let a_sq: f64 = self.mins.iter().map(|a| (a * a) as f64).sum();
-            let b_sq: f64 = other.mins.iter().map(|a| (a * a) as f64).sum();
-
-            if a_sq == 0. || b_sq == 0. {
-                return Ok(0.0);
-            }
-
             if self.abunds.is_none() || other.abunds.is_none() {
                 // TODO: throw error, we need abundance for this
                 unimplemented!()
             }
 
+            let a_sq: f64 = self
+                .abunds
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|a| (a * a) as f64)
+                .sum();
+            let b_sq: f64 = other
+                .abunds
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|a| (a * a) as f64)
+                .sum();
+
+            let norm_a = a_sq.sqrt();
+            let norm_b = b_sq.sqrt();
+
+            if norm_a == 0. || norm_b == 0. {
+                return Ok(0.0);
+            }
+
             let mut prod = 0;
             let mut other_iter = other.mins.iter();
+            let mut next_hash = other_iter.next();
+            let abunds = self.abunds.as_ref().unwrap();
+            let other_abunds = other.abunds.as_ref().unwrap();
             for (i, hash) in self.mins.iter().enumerate() {
-                while let Some(k) = other_iter.next() {
-                    if k < hash {
-                        continue;
-                    } else if k == hash {
-                        let a_abundance = self.abunds.as_ref().unwrap()[i];
-                        let b_abundance = other.abunds.as_ref().unwrap()[i];
-                        prod += a_abundance * b_abundance;
+                loop {
+                    if let Some(k) = next_hash {
+                        if k < hash {
+                            next_hash = other_iter.next()
+                        } else if k == hash {
+                            let a_abundance = abunds[i];
+                            let b_abundance = other_abunds[i];
+                            prod += a_abundance * b_abundance;
+                            break;
+                        } else {
+                            break;
+                        }
                     } else {
                         break;
                     }
                 }
             }
-            let d = f64::min(prod as f64 / (a_sq.sqrt() * b_sq.sqrt()), 1.);
-            Ok(1. - (2. * d.acos() / PI))
+            let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+            let distance = 2. * prod.acos() / PI;
+            Ok(1. - distance)
         }
     }
 
@@ -562,6 +586,7 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
+        /*
         if self.num != other.num {
             return Err(SourmashError::MismatchNum {
                 n1: self.num,
@@ -569,6 +594,7 @@ impl SigsTrait for KmerMinHash {
             }
             .into());
         }
+        */
         if self.ksize != other.ksize {
             return Err(SourmashError::MismatchKSizes.into());
         }

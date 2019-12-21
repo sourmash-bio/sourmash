@@ -66,6 +66,21 @@ fn compare() {
 }
 
 #[test]
+fn similarity() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_DNA, 42, 0, true);
+
+    a.add_hash(1);
+    b.add_hash(1);
+    b.add_hash(2);
+
+    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false)? - 0.5).abs() < 0.001);
+
+    Ok(())
+}
+
+#[test]
 fn dayhoff() {
     let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_dayhoff, 42, 0, false);
     let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);

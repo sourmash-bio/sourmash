@@ -422,6 +422,9 @@ class MinHash(RustObject):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
+        if not (self.track_abundance and other.track_abundance) or ignore_abundance:
+            return self.jaccard(other)
+        else:
             return self._methodcall(lib.kmerminhash_similarity,
                                     other._get_objptr(),
                                     ignore_abundance)
