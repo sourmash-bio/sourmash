@@ -92,7 +92,9 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
     fp.close()
 
-    if len(assignments) * 0.2 > n_species:
+    # this is to guard against a bug that happened once and I can't find
+    # any more, when building a large GTDB-based database :) --CTB
+    if len(assignments) * 0.2 > n_species and len(assignments) > 50:
         raise Exception("error: fewer than 20% of lineages have species-level resolution!? ({} total found)".format(n_species))
 
     return assignments, num_rows
