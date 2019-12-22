@@ -81,6 +81,26 @@ fn similarity() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
+
+    a.add_sequence(b"ATGGA", false)?;
+    a.add_sequence(b"GGACA", false)?;
+
+    a.add_sequence(b"ATGGA", false)?;
+    b.add_sequence(b"ATGGA", false)?;
+
+    assert!(
+        (a.similarity(&b, false)? - 0.705).abs() < 0.001,
+        "{}",
+        a.similarity(&b, false)?
+    );
+
+    Ok(())
+}
+
+#[test]
 fn dayhoff() {
     let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_dayhoff, 42, 0, false);
     let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);

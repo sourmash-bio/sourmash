@@ -498,51 +498,44 @@ impl KmerMinHash {
                 unimplemented!()
             }
 
-            let a_sq: f64 = self
-                .abunds
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|a| (a * a) as f64)
-                .sum();
-            let b_sq: f64 = other
-                .abunds
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|a| (a * a) as f64)
-                .sum();
+            let abunds = self.abunds.as_ref().unwrap();
+            let other_abunds = other.abunds.as_ref().unwrap();
 
-            let norm_a = a_sq.sqrt();
-            let norm_b = b_sq.sqrt();
+            let mut prod = 0;
+            let mut other_iter = other.mins.iter().enumerate();
+            let mut next_hash = other_iter.next();
+            let mut a_sq = 0;
+            let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+
+            for (i, hash) in self.mins.iter().enumerate() {
+                unsafe {
+                    a_sq += abunds.get_unchecked(i) * abunds.get_unchecked(i);
+                }
+                loop {
+                    match next_hash {
+                        Some((j, k)) => {
+                            if k < hash {
+                                next_hash = other_iter.next();
+                                continue;
+                            } else if k == hash {
+                                unsafe {
+                                    prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
+                                }
+                            }
+                            break;
+                        }
+                        None => break,
+                    }
+                }
+            }
+
+            let norm_a = (a_sq as f64).sqrt();
+            let norm_b = (b_sq as f64).sqrt();
 
             if norm_a == 0. || norm_b == 0. {
                 return Ok(0.0);
             }
 
-            let mut prod = 0;
-            let mut other_iter = other.mins.iter();
-            let mut next_hash = other_iter.next();
-            let abunds = self.abunds.as_ref().unwrap();
-            let other_abunds = other.abunds.as_ref().unwrap();
-            for (i, hash) in self.mins.iter().enumerate() {
-                loop {
-                    if let Some(k) = next_hash {
-                        if k < hash {
-                            next_hash = other_iter.next()
-                        } else if k == hash {
-                            let a_abundance = abunds[i];
-                            let b_abundance = other_abunds[i];
-                            prod += a_abundance * b_abundance;
-                            break;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
             let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
             let distance = 2. * prod.acos() / PI;
             Ok(1. - distance)
