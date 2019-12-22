@@ -513,23 +513,19 @@ impl KmerMinHash {
                 unsafe {
                     a_sq += abunds.get_unchecked(i) * abunds.get_unchecked(i);
                 }
-                loop {
-                    match next_hash {
-                        Some((j, k)) => {
-                            if k < hash {
-                                next_hash = other_iter.next();
-                                continue;
-                            } else if k == hash {
-                                // Calling `get_unchecked` here is safe since
-                                // both `i` and `j` are valid indices
-                                // (`i` and `j` came from valid iterator calls)
-                                unsafe {
-                                    prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
-                                }
+                while let Some((j, k)) = next_hash {
+                    match k.cmp(hash) {
+                        Ordering::Less => next_hash = other_iter.next(),
+                        Ordering::Equal => {
+                            // Calling `get_unchecked` here is safe since
+                            // both `i` and `j` are valid indices
+                            // (`i` and `j` came from valid iterator calls)
+                            unsafe {
+                                prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
                             }
                             break;
                         }
-                        None => break,
+                        Ordering::Greater => break,
                     }
                 }
             }
