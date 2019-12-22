@@ -508,6 +508,8 @@ impl KmerMinHash {
             let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
 
             for (i, hash) in self.mins.iter().enumerate() {
+                // Calling `get_unchecked` here is safe since `i` is a valid index
+                // (`i` came from a valid iterator call)
                 unsafe {
                     a_sq += abunds.get_unchecked(i) * abunds.get_unchecked(i);
                 }
@@ -518,6 +520,9 @@ impl KmerMinHash {
                                 next_hash = other_iter.next();
                                 continue;
                             } else if k == hash {
+                                // Calling `get_unchecked` here is safe since
+                                // both `i` and `j` are valid indices
+                                // (`i` and `j` came from valid iterator calls)
                                 unsafe {
                                     prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
                                 }

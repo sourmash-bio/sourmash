@@ -128,9 +128,10 @@ def compare(args):
     # if using --scaled, downsample appropriately
     if is_scaled:
         max_scaled = max(s.minhash.scaled for s in siglist)
-        notify('downsampling to scaled value of {}'.format(max_scaled))
         for s in siglist:
-            s.minhash = s.minhash.downsample_scaled(max_scaled)
+            if s.minhash.scaled != max_scaled:
+                notify('downsampling to scaled value of {}'.format(max_scaled))
+                s.minhash = s.minhash.downsample_scaled(max_scaled)
 
     if len(siglist) == 0:
         error('no signatures!')

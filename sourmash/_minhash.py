@@ -67,29 +67,6 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
     return lib.hash_murmur(to_bytes(kmer), seed)
 
 
-def dotproduct(a, b, normalize=True):
-    """
-    Compute the dot product of two dictionaries {k: v} where v is
-    abundance.
-    """
-
-    if normalize:
-        norm_a = math.sqrt(sum([x * x for x in a.values()]))
-        norm_b = math.sqrt(sum([x * x for x in b.values()]))
-
-        if norm_a == 0.0 or norm_b == 0.0:
-            return 0.0
-    else:
-        norm_a = 1.0
-        norm_b = 1.0
-
-    prod = 0.0
-    for k, abundance in a.items():
-        prod += (float(abundance) / norm_a) * (b.get(k, 0) / norm_b)
-
-    return prod
-
-
 class MinHash(RustObject):
     def __init__(
         self,
@@ -422,6 +399,7 @@ class MinHash(RustObject):
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
 
+        # if either signature is flat, calculate Jaccard only.
         if not (self.track_abundance and other.track_abundance) or ignore_abundance:
             return self.jaccard(other)
         else:
