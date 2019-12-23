@@ -426,7 +426,8 @@ class LCA_Database(Index):
         return d
     lineage_to_lids = cached_property(_calc_lineage_to_lids)
 
-    def _calc_lid_to_idx(self):
+    @cached_property
+    def lid_to_idx(self):
         d = defaultdict(set)
         for idx, lid in self.idx_to_lid.items():
             d[lid].add(idx)
