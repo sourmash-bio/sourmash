@@ -211,6 +211,51 @@ def test_gather_db_scaled_lt_sig_scaled():
     assert sig.minhash == match_sig.minhash
 
 
+def test_db_lineage_to_lids():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+
+    d = db.lineage_to_lids
+    items = list(d.items())
+    items.sort()
+    assert len(items) == 2
+
+    print(items)
+
+    lin1 = items[0][0][-1]
+    assert lin1.rank == 'strain'
+    assert lin1.name == 'Shewanella baltica OS185'
+    lin1 = items[1][0][-1]
+    assert lin1.rank == 'strain'
+    assert lin1.name == 'Shewanella baltica OS223'
+
+
+def test_db_lid_to_idx():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+
+    d = db.lid_to_idx
+    items = list(d.items())
+    items.sort()
+    assert len(items) == 2
+
+    print(items)
+    assert items == [(32, {32}), (48, {48})]
+
+
+def test_db_idx_to_ident():
+    dbfile = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(dbfile)
+
+    d = db.idx_to_ident
+    items = list(d.items())
+    items.sort()
+    assert len(items) == 2
+
+    print(items)
+    assert items == [(32, 'NC_009665'), (48, 'NC_011663')]
+
+
 ## command line tests
 
 
@@ -257,6 +302,34 @@ def test_basic_index_bad_spreadsheet():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+
+
+def test_basic_index_broken_spreadsheet():
+    # duplicate identifiers in this spreadsheet
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/bad-spreadsheet-2.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert status != 0
+        assert "multiple lineages for identifier TARA_ASE_MAG_00031" in err
+
+
+def test_basic_index_require_taxonomy():
+    # no taxonomy in here
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/bad-spreadsheet-3.csv')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', '--require-taxonomy', taxcsv, lca_db, input_sig]
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert status != 0
+        assert "ERROR: no hash values found - are there any signatures?" in err
 
 
 def test_basic_index_column_start():
@@ -371,7 +444,7 @@ def test_index_traverse_real_spreadsheet_no_report():
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
         lca_db = os.path.join(location, 'delmont-1.lca.json')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig]
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -395,7 +468,8 @@ def test_index_traverse_real_spreadsheet_report():
         lca_db = os.path.join(location, 'delmont-1.lca.json')
         report_loc = os.path.join(location, 'report.txt')
 
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report', report_loc]
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--report',
+               report_loc, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -926,7 +1000,7 @@ def test_compare_csv():
         a = utils.get_test_data('lca/classify-by-both.csv')
         b = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
 
-        cmd = ['lca', 'compare_csv', a, b]
+        cmd = ['lca', 'compare_csv', a, b, '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -943,7 +1017,7 @@ def test_compare_csv_real():
         a = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
         b = utils.get_test_data('lca/tully-query.delmont-db.sigs.classify.csv')
 
-        cmd = ['lca', 'compare_csv', a, b, '--start-column=3']
+        cmd = ['lca', 'compare_csv', a, b, '--start-column=3', '-f']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
