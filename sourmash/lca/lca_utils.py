@@ -354,7 +354,8 @@ class LCA_Database(Index):
 
         return x
 
-    def _calc_signatures(self):
+    @cached_property
+    def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: minhash}."
         from .. import MinHash
 
