@@ -1,14 +1,14 @@
-use serde::de::{Deserialize, Deserializer};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use serde_derive::Deserialize;
-
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
 use failure::Error;
 use lazy_static::lazy_static;
+use serde::de::{Deserialize, Deserializer};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde_derive::Deserialize;
 
 use crate::_hash_murmur;
 use crate::errors::SourmashError;
@@ -17,13 +17,36 @@ use crate::signature::SigsTrait;
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u32)]
+pub enum HashFunctions {
+    murmur64_DNA = 1,
+    murmur64_protein = 2,
+    murmur64_dayhoff = 3,
+    murmur64_hp = 4,
+}
+
+impl TryFrom<&str> for HashFunctions {
+    type Error = Error;
+
+    fn try_from(moltype: &str) -> Result<Self, Self::Error> {
+        match moltype.to_lowercase().as_ref() {
+            "dna" => Ok(HashFunctions::murmur64_DNA),
+            "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
+            "hp" => Ok(HashFunctions::murmur64_hp),
+            "protein" => Ok(HashFunctions::murmur64_protein),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
-    is_protein: bool,
-    dayhoff: bool,
+    pub(crate) hash_function: HashFunctions,
     seed: u64,
     max_hash: u64,
     pub(crate) mins: Vec<u64>,
@@ -35,8 +58,7 @@ impl Default for KmerMinHash {
         KmerMinHash {
             num: 1000,
             ksize: 21,
-            is_protein: false,
-            dayhoff: false,
+            hash_function: HashFunctions::murmur64_DNA,
             seed: 42,
             max_hash: 0,
             mins: Vec::with_capacity(1000),
@@ -69,10 +91,12 @@ impl Serialize for KmerMinHash {
 
         partial.serialize_field(
             "molecule",
-            match &self.is_protein {
+            match &self.is_protein() {
                 true => {
-                    if self.dayhoff {
+                    if self.dayhoff() {
                         "dayhoff"
+                    } else if self.hp() {
+                        "hp"
                     } else {
                         "protein"
                     }
@@ -105,7 +129,12 @@ impl<'de> Deserialize<'de> for KmerMinHash {
         let tmpsig = TempSig::deserialize(deserializer)?;
 
         let num = if tmpsig.max_hash != 0 { 0 } else { tmpsig.num };
-        let molecule = tmpsig.molecule.to_lowercase();
+        let hash_function = match tmpsig.molecule.to_lowercase().as_ref() {
+            "protein" => HashFunctions::murmur64_protein,
+            "dayhoff" => HashFunctions::murmur64_dayhoff,
+            "dna" => HashFunctions::murmur64_DNA,
+            _ => unimplemented!(), // TODO: throw error here
+        };
 
         Ok(KmerMinHash {
             num,
@@ -114,13 +143,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             max_hash: tmpsig.max_hash,
             mins: tmpsig.mins,
             abunds: tmpsig.abundances,
-            is_protein: match molecule.as_ref() {
-                "protein" => true,
-                "dayhoff" => true,
-                "dna" => false,
-                _ => unimplemented!(),
-            },
-            dayhoff: molecule == "dayhoff",
+            hash_function,
         })
     }
 }
@@ -129,8 +152,7 @@ impl KmerMinHash {
     pub fn new(
         num: u32,
         ksize: u32,
-        is_protein: bool,
-        dayhoff: bool,
+        hash_function: HashFunctions,
         seed: u64,
         max_hash: u64,
         track_abundance: bool,
@@ -153,8 +175,7 @@ impl KmerMinHash {
         KmerMinHash {
             num,
             ksize,
-            is_protein,
-            dayhoff,
+            hash_function,
             seed,
             max_hash,
             mins,
@@ -167,7 +188,11 @@ impl KmerMinHash {
     }
 
     pub fn is_protein(&self) -> bool {
-        self.is_protein
+        self.hash_function == HashFunctions::murmur64_protein
+    }
+
+    fn is_dna(&self) -> bool {
+        self.hash_function == HashFunctions::murmur64_DNA
     }
 
     pub fn seed(&self) -> u64 {
@@ -183,8 +208,7 @@ impl KmerMinHash {
         md5_ctx.consume(self.ksize().to_string());
         self.mins
             .iter()
-            .map(|x| md5_ctx.consume(x.to_string()))
-            .count();
+            .for_each(|x| md5_ctx.consume(x.to_string()));
         format!("{:x}", md5_ctx.compute())
     }
 
@@ -393,10 +417,7 @@ impl KmerMinHash {
 
     pub fn count_common(&self, other: &KmerMinHash) -> Result<u64, Error> {
         self.check_compatible(other)?;
-        let iter = Intersection {
-            left: self.mins.iter().peekable(),
-            right: other.mins.iter().peekable(),
-        };
+        let iter = Intersection::new(self.mins.iter(), other.mins.iter());
 
         Ok(iter.count() as u64)
     }
@@ -407,8 +428,7 @@ impl KmerMinHash {
         let mut combined_mh = KmerMinHash::new(
             self.num,
             self.ksize,
-            self.is_protein,
-            self.dayhoff,
+            self.hash_function,
             self.seed,
             self.max_hash,
             self.abunds.is_some(),
@@ -417,18 +437,12 @@ impl KmerMinHash {
         combined_mh.merge(&self)?;
         combined_mh.merge(&other)?;
 
-        let it1 = Intersection {
-            left: self.mins.iter().peekable(),
-            right: other.mins.iter().peekable(),
-        };
+        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
         // TODO: there is probably a way to avoid this Vec here,
         // and pass the it1 as left in it2.
         let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection {
-            left: i1.iter().peekable(),
-            right: combined_mh.mins.iter().peekable(),
-        };
+        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
         let common: Vec<u64> = it2.cloned().collect();
         Ok((common, combined_mh.mins.len() as u64))
@@ -440,8 +454,7 @@ impl KmerMinHash {
         let mut combined_mh = KmerMinHash::new(
             self.num,
             self.ksize,
-            self.is_protein,
-            self.dayhoff,
+            self.hash_function,
             self.seed,
             self.max_hash,
             self.abunds.is_some(),
@@ -450,18 +463,12 @@ impl KmerMinHash {
         combined_mh.merge(&self)?;
         combined_mh.merge(&other)?;
 
-        let it1 = Intersection {
-            left: self.mins.iter().peekable(),
-            right: other.mins.iter().peekable(),
-        };
+        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
         // TODO: there is probably a way to avoid this Vec here,
         // and pass the it1 as left in it2.
         let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection {
-            left: i1.iter().peekable(),
-            right: combined_mh.mins.iter().peekable(),
-        };
+        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
         Ok((it2.count() as u64, combined_mh.mins.len() as u64))
     }
@@ -469,14 +476,28 @@ impl KmerMinHash {
     pub fn compare(&self, other: &KmerMinHash) -> Result<f64, Error> {
         self.check_compatible(other)?;
         if let Ok((common, size)) = self.intersection_size(other) {
-            return Ok(common as f64 / u64::max(1, size) as f64);
+            Ok(common as f64 / u64::max(1, size) as f64)
         } else {
-            return Ok(0.0);
+            Ok(0.0)
         }
     }
 
+    pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
+        let it = Intersection::new(self.mins.iter(), other.mins.iter());
+
+        Ok(it.count() as f64 / self.size() as f64)
+    }
+
     pub fn dayhoff(&self) -> bool {
-        self.dayhoff
+        self.hash_function == HashFunctions::murmur64_dayhoff
+    }
+
+    pub fn hp(&self) -> bool {
+        self.hash_function == HashFunctions::murmur64_hp
+    }
+
+    pub fn hash_function(&self) -> HashFunctions {
+        self.hash_function
     }
 
     pub fn mins(&self) -> Vec<u64> {
@@ -501,10 +522,8 @@ impl SigsTrait for KmerMinHash {
         if self.ksize != other.ksize {
             return Err(SourmashError::MismatchKSizes.into());
         }
-        if self.is_protein != other.is_protein {
-            return Err(SourmashError::MismatchDNAProt.into());
-        }
-        if self.dayhoff != other.dayhoff {
+        if self.hash_function != other.hash_function {
+            // TODO: fix this error
             return Err(SourmashError::MismatchDNAProt.into());
         }
         if self.max_hash != other.max_hash {
@@ -522,8 +541,7 @@ impl SigsTrait for KmerMinHash {
             .map(|&x| (x as char).to_ascii_uppercase() as u8)
             .collect();
         if sequence.len() >= (self.ksize as usize) {
-            if !self.is_protein {
-                // dna
+            if self.is_dna() {
                 for kmer in sequence.windows(self.ksize as usize) {
                     if _checkdna(kmer) {
                         let rc = revcomp(kmer);
@@ -551,20 +569,17 @@ impl SigsTrait for KmerMinHash {
                         .skip(i)
                         .take(sequence.len() - i)
                         .collect();
-                    let aa = to_aa(&substr, self.dayhoff)?;
+                    let aa = to_aa(&substr, self.dayhoff(), self.hp())?;
 
-                    aa.windows(aa_ksize as usize)
-                        .map(|n| self.add_word(n))
-                        .count();
+                    aa.windows(aa_ksize as usize).for_each(|n| self.add_word(n));
 
                     let rc_substr: Vec<u8> =
                         rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                    let aa_rc = to_aa(&rc_substr, self.dayhoff)?;
+                    let aa_rc = to_aa(&rc_substr, self.dayhoff(), self.hp())?;
 
                     aa_rc
                         .windows(aa_ksize as usize)
-                        .map(|n| self.add_word(n))
-                        .count();
+                        .for_each(|n| self.add_word(n));
                 }
             }
         }
@@ -573,8 +588,17 @@ impl SigsTrait for KmerMinHash {
 }
 
 struct Intersection<T, I: Iterator<Item = T>> {
-    left: Peekable<I>,
-    right: Peekable<I>,
+    iter: Peekable<I>,
+    other: Peekable<I>,
+}
+
+impl<T, I: Iterator<Item = T>> Intersection<T, I> {
+    pub fn new(left: I, right: I) -> Self {
+        Intersection {
+            iter: left.peekable(),
+            other: right.peekable(),
+        }
+    }
 }
 
 impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
@@ -582,21 +606,21 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
 
     fn next(&mut self) -> Option<T> {
         loop {
-            let res = match (self.left.peek(), self.right.peek()) {
+            let res = match (self.iter.peek(), self.other.peek()) {
                 (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
                 _ => return None,
             };
 
             match res {
                 Ordering::Less => {
-                    self.left.next();
+                    self.iter.next();
                 }
                 Ordering::Greater => {
-                    self.right.next();
+                    self.other.next();
                 }
                 Ordering::Equal => {
-                    self.right.next();
-                    return self.left.next();
+                    self.other.next();
+                    return self.iter.next();
                 }
             }
         }
@@ -685,7 +709,7 @@ lazy_static! {
 
         // G
         ("GGT", b'G'), ("GGC", b'G'), ("GGA", b'G'), ("GGG", b'G'), ("GGN", b'G'),
-        ].into_iter().cloned().collect()
+        ].iter().cloned().collect()
     };
 }
 
@@ -730,7 +754,33 @@ lazy_static! {
 
         // e
         (b'F', b'f'), (b'W', b'f'), (b'Y', b'f'),
-        ].into_iter().cloned().collect()
+        ].iter().cloned().collect()
+    };
+}
+
+// HP Hydrophobic/hydrophilic mapping
+// From: Phillips, R., Kondev, J., Theriot, J. (2008).
+// Physical Biology of the Cell. New York: Garland Science, Taylor & Francis Group. ISBN: 978-0815341635
+
+//
+// | Amino acid                            | HP
+// |---------------------------------------|---------|
+// | A, F, G, I, L, M, P, V, W, Y          | h       |
+// | N, C, S, T, D, E, R, H, K, Q          | p       |
+lazy_static! {
+    static ref HPTABLE: HashMap<u8, u8> = {
+        [
+            // h
+            (b'A', b'h'), (b'F', b'h'), (b'G', b'h'), (b'I', b'h'), (b'L', b'h'),
+            (b'M', b'h'), (b'P', b'h'), (b'V', b'h'), (b'W', b'h'), (b'Y', b'h'),
+
+            // p
+            (b'N', b'p'), (b'C', b'p'), (b'S', b'p'), (b'T', b'p'), (b'D', b'p'),
+            (b'E', b'p'), (b'R', b'p'), (b'H', b'p'), (b'K', b'p'), (b'Q', b'p'),
+        ]
+        .iter()
+        .cloned()
+        .collect()
     };
 }
 
@@ -770,8 +820,15 @@ pub(crate) fn aa_to_dayhoff(aa: u8) -> char {
     }
 }
 
+pub(crate) fn aa_to_hp(aa: u8) -> char {
+    match HPTABLE.get(&aa) {
+        Some(letter) => *letter as char,
+        None => 'X',
+    }
+}
+
 #[inline]
-fn to_aa(seq: &[u8], dayhoff: bool) -> Result<Vec<u8>, Error> {
+fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
     let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
 
     for chunk in seq.chunks(3) {
@@ -782,6 +839,8 @@ fn to_aa(seq: &[u8], dayhoff: bool) -> Result<Vec<u8>, Error> {
         let residue = translate_codon(chunk)?;
         if dayhoff {
             converted.push(aa_to_dayhoff(residue) as u8);
+        } else if hp {
+            converted.push(aa_to_hp(residue) as u8);
         } else {
             converted.push(residue);
         }

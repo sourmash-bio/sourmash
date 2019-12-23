@@ -1,12 +1,16 @@
 PYTHON ?= python
 
-all:
-	$(PYTHON) setup.py build_ext -i
+all: build
 
 .PHONY:
 
+build: .PHONY
+	$(PYTHON) setup.py build_ext -i
+	cargo build
+
 clean:
 	$(PYTHON) setup.py clean --all
+	rm -f sourmash/*.so
 	cd doc && make clean
 
 install: all
@@ -18,22 +22,23 @@ dist: FORCE
 test: all
 	pip install -e '.[test]'
 	$(PYTHON) -m pytest
+	cargo test
 
 doc: .PHONY
 	cd doc && make html
 
-include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/errors.rs
+include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/ffi/nodegraph.rs src/errors.rs
 	rustup override set nightly
 	RUST_BACKTRACE=1 cbindgen --clean -c cbindgen.toml -o $@
 	rustup override set stable
 
 coverage: all
-	$(PYTHON) setup.py clean --all
-	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
+	$(PYTHON) setup.py build_ext -i
 	$(PYTHON) -m pytest --cov=. --cov-report term-missing
 
 benchmark:
-	asv continuous master $(git rev-parse HEAD)
+	asv continuous master `git rev-parse HEAD`
+	cargo bench
 
 check:
 	cargo build

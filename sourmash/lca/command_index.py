@@ -57,6 +57,8 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     # convert into a lineage pair
     assignments = {}
     num_rows = 0
+    n_species = 0
+    n_strains = 0
     for row in r:
         if row and row[0].strip():        # want non-empty row
             num_rows += 1
@@ -76,9 +78,26 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
             # store lineage tuple
             if lineage:
-                assignments[ident] = tuple(lineage)
+                # check duplicates
+                if ident in assignments:
+                    if assignments[ident] != tuple(lineage):
+                        if not force:
+                            raise Exception("multiple lineages for identifier {}".format(ident))
+                else:
+                    assignments[ident] = tuple(lineage)
+
+                    if lineage[-1].rank == 'species':
+                        n_species += 1
+                    elif lineage[-1].rank == 'strain':
+                        n_strains += 1
 
     fp.close()
+
+    # this is to guard against a bug that happened once and I can't find
+    # any more, when building a large GTDB-based database :) --CTB
+    if len(assignments) * 0.2 > n_species and len(assignments) > 50:
+        if not force:
+            raise Exception("error: fewer than 20% of lineages have species-level resolution!? ({} total found)".format(n_species))
 
     return assignments, num_rows
 
@@ -134,6 +153,8 @@ def index(args):
     p.add_argument('--traverse-directory', action='store_true',
                    help='load all signatures underneath directories.')
     p.add_argument('--report', help='output a report on anomalies, if any.')
+    p.add_argument('--require-taxonomy', action='store_true',
+                   help='ignore signatures with no taxonomy entry')
     args = p.parse_args(args)
 
     if args.start_column < 2:
@@ -226,15 +247,16 @@ def index(args):
     record_remnants = set(ident_to_idx.keys())
     record_used_lineages = set()
     record_used_idents = set()
+    n_skipped = 0
     for filename in inp_files:
         n += 1
         for sig in load_signatures(filename, ksize=args.ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... loading signature {} (file {} of {})', sig.name()[:30], n, total_n, end='\r')
+            notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
             if sig.md5sum() in md5_to_name:
-                notify('\nWARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
+                debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
                 record_duplicates.add(filename)
                 continue
 
@@ -270,10 +292,15 @@ def index(args):
                 lineage = lid_to_lineage.get(lid)
 
             if lineage is None:
-                notify('WARNING: no lineage assignment for {}.', ident)
+                debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
+
+            if lineage is None and args.require_taxonomy:
+                debug('(skipping, because --require-taxonomy was specified)')
+                n_skipped += 1
+                continue
 
             for hashval in minhash.get_mins():
                 hashval_to_idx[hashval].add(idx)

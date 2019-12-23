@@ -450,8 +450,7 @@ def index(args):
                 ss.minhash = ss.minhash.downsample_scaled(args.scaled)
             scaleds.add(ss.minhash.scaled)
 
-            leaf = SigLeaf(ss.md5sum(), ss)
-            tree.add_node(leaf)
+            tree.insert(ss)
             n += 1
 
         if not ss:
@@ -545,6 +544,10 @@ def search(args):
                                                 not args.containment,
                                                 args.traverse_directory)
 
+    # forcibly ignore abundances if query has no abundances
+    if not query.minhash.track_abundance:
+        args.ignore_abundance = True
+
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
@@ -570,7 +573,7 @@ def search(args):
     print_results("----------   -----")
     for sr in results[:n_matches]:
         pct = '{:.1f}%'.format(sr.similarity*100)
-        name = sr.match_sig._display_name(60)
+        name = sr.match._display_name(60)
         print_results('{:>6}       {}', pct, name)
 
     if args.best_only:
@@ -583,14 +586,14 @@ def search(args):
         w.writeheader()
         for sr in results:
             d = dict(sr._asdict())
-            del d['match_sig']
+            del d['match']
             w.writerow(d)
 
     # save matching signatures upon request
     if args.save_matches:
         outname = args.save_matches.name
         notify('saving all matched signatures to "{}"', outname)
-        sig.save_signatures([ sr.match_sig for sr in results ],
+        sig.save_signatures([ sr.match for sr in results ],
                             args.save_matches)
 
 
@@ -758,7 +761,7 @@ def gather(args):
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
         average_abund ='{:.1f}'.format(result.average_abund)
-        name = result.leaf._display_name(40)
+        name = result.match._display_name(40)
 
         if query.minhash.track_abundance and not args.ignore_abundance:
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
@@ -786,13 +789,13 @@ def gather(args):
         w.writeheader()
         for result in found:
             d = dict(result._asdict())
-            del d['leaf']                 # actual signature not in CSV.
+            del d['match']                 # actual signature not in CSV.
             w.writerow(d)
 
     if found and args.save_matches:
         outname = args.save_matches.name
         notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ r.leaf for r in found ], args.save_matches)
+        sig.save_signatures([ r.match for r in found ], args.save_matches)
 
     if args.output_unassigned:
         if not len(query.minhash):
@@ -906,7 +909,7 @@ def multigather(args):
             pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
             pct_genome = '{:.1f}%'.format(result.f_match*100)
             average_abund ='{:.1f}'.format(result.average_abund)
-            name = result.leaf._display_name(40)
+            name = result.match._display_name(40)
 
             if query.minhash.track_abundance and not args.ignore_abundance:
                 print_results('{:9}   {:>7} {:>7} {:>9}    {}',
@@ -941,14 +944,14 @@ def multigather(args):
             w.writeheader()
             for result in found:
                 d = dict(result._asdict())
-                del d['leaf']                 # actual signature not in CSV.
+                del d['match']                 # actual signature not in CSV.
                 w.writerow(d)
 
         output_matches = output_base + '.matches.sig'
         with open(output_matches, 'wt') as fp:
             outname = output_matches
             notify('saving all matches to "{}"', outname)
-            sig.save_signatures([ r.leaf for r in found ], fp)
+            sig.save_signatures([ r.match for r in found ], fp)
 
         output_unassigned = output_base + '.unassigned.sig'
         with open(output_unassigned, 'wt') as fp:

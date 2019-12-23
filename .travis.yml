@@ -7,16 +7,18 @@ cache:
     - "$HOME/.cache/pip"
     - "$HOME/.cargo"
     - "target"
-    - ".tox"
 
 branches:
   only:
   - master
   - "/^v.*$/"
 
-script: tox
+script: tox -vv
 
-install: pip install tox-travis
+install:
+  - source .travis/install_cargo.sh
+
+before_script: pip install tox-travis
 
 jobs:
   allow_failures:
@@ -28,12 +30,14 @@ jobs:
 
     - &test
       stage: test
-      python: 2.7
+      python: 3.6
     - <<: *test
       os: osx
+      osx_image: xcode10.1
+      python: 3.7
       language: generic
       env:
-        - TOXENV=py36
+        - TOXENV=py37
     - <<: *test
       python: 3.7
       name: integration (ipfs/redis)
@@ -45,29 +49,9 @@ jobs:
         - redis-server
         - docker
     - <<: *test
-      python: 3.6
+      python: 2.7
     - <<: *test
       python: 3.5
-    - <<: *test
-      name: wasm-pack
-      language: rust
-      rust: stable
-      before_script: skip
-      install: skip
-      script:
-        - rustup target add wasm32-unknown-unknown
-        - cargo install --force wasm-pack
-        - wasm-pack build
-    - <<: *test
-      name: wasi target
-      language: rust
-      rust: stable
-      before_script: skip
-      install: skip
-      script:
-        - rustup target add wasm32-wasi
-        - cargo install --force cargo-wasi
-        - cargo wasi build
 
     - &wheel
       stage: build wheel and send to github releases
@@ -75,12 +59,16 @@ jobs:
       services:
         - docker
       env:
-        - PIP=pip
+        - CIBW_BUILD='cp37-*'
         - CIBW_SKIP='*-manylinux_i686'
-      install: skip
+        - CIBW_BEFORE_BUILD='source .travis/install_cargo.sh'
+        - CIBW_ENVIRONMENT='PATH="$HOME/.cargo/bin:$PATH"'
+        - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
+      before_script: skip
       script:
-        - sudo $PIP install cibuildwheel==1.0.0
-        - cibuildwheel --output-dir wheelhouse
+        - python -m pip install -U pip setuptools
+        - python -m pip install cibuildwheel==1.1.0
+        - python -m cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
         api_key:
@@ -93,12 +81,7 @@ jobs:
     - <<: *wheel
       os: osx
       osx_image: xcode10.1
-      language: generic
-      before_script:
-        - sudo $PIP install -U pip setuptools
-      env:
-        - PIP=pip2
-        - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
+      language: shell
 
 stages:
   - check

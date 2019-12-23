@@ -1,3 +1,41 @@
+use failure::Error;
+use serde_derive::{Deserialize, Serialize};
+
+use crate::signature::SigsTrait;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FlatUKHS {}
+
+impl FlatUKHS {
+    pub fn md5sum(&self) -> String {
+        unimplemented!()
+    }
+}
+
+impl SigsTrait for FlatUKHS {
+    fn size(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn to_vec(&self) -> Vec<u64> {
+        unimplemented!()
+    }
+
+    fn ksize(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn check_compatible(&self, _other: &Self) -> Result<(), Error> {
+        unimplemented!()
+    }
+
+    fn add_sequence(&mut self, _seq: &[u8], _force: bool) -> Result<(), Error> {
+        unimplemented!()
+    }
+}
+
+/* FIXME bring back after succint-rs changes
+
 use std::f64::consts::PI;
 use std::fs::File;
 use std::hash::BuildHasherDefault;
@@ -5,18 +43,13 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::mem;
 use std::path::Path;
 
-use failure::Error;
 use itertools::Itertools;
 use pdatastructs::hyperloglog::HyperLogLog;
-use serde::de::{Deserialize, Deserializer};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use serde_derive::Deserialize;
 use ukhs;
 
 use crate::errors::SourmashError;
 use crate::index::sbt::NoHashHasher;
 use crate::index::storage::ToWriter;
-use crate::signature::SigsTrait;
 use crate::sketch::nodegraph::Nodegraph;
 
 #[derive(Clone)]
@@ -38,8 +71,7 @@ impl UKHS<u64> {
         md5_ctx.consume(self.ukhs.k().to_string());
         self.buckets
             .iter()
-            .map(|x| md5_ctx.consume(x.to_string()))
-            .count();
+            .for_each(|x| md5_ctx.consume(x.to_string()));
         format!("{:x}", md5_ctx.compute())
     }
 }
@@ -179,24 +211,22 @@ impl UKHSTrait for UKHS<u64> {
         // this is the cosine distance as defined by scipy
         //1. - d
 
-        /*
         // This is the weighted Jaccard distance
         // TODO: don't iterate twice...
-        let mins: u64 = self
-            .buckets
-            .iter()
-            .zip(other.buckets.iter())
-            .map(|(a, b)| u64::min(*a, *b))
-            .sum();
-        let maxs: u64 = self
-            .buckets
-            .iter()
-            .zip(other.buckets.iter())
-            .map(|(a, b)| u64::max(*a, *b))
-            .sum();
-
-        1. - (mins as f64 / maxs as f64)
-        */
+        //let mins: u64 = self
+        //    .buckets
+        //    .iter()
+        //    .zip(other.buckets.iter())
+        //    .map(|(a, b)| u64::min(*a, *b))
+        //    .sum();
+        //let maxs: u64 = self
+        //    .buckets
+        //    .iter()
+        //    .zip(other.buckets.iter())
+        //    .map(|(a, b)| u64::max(*a, *b))
+        //    .sum();
+        //
+        //1. - (mins as f64 / maxs as f64)
     }
 
     fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
@@ -232,13 +262,13 @@ impl SigsTrait for UKHS<u64> {
         // TODO: is seq.len() > W?
         let it: Vec<(u64, u64)> = self.ukhs.hash_iter_sequence(seq)?.collect();
 
-        /* This one update every unikmer bucket with w_hash
-        it.into_iter()
-            .map(|(_, k_hash)| {
-                self.buckets[self.ukhs.query_bucket(k_hash).unwrap()] += 1;
-            })
-            .count();
-        */
+        // This one update every unikmer bucket with w_hash
+        //it.into_iter()
+        //    .map(|(_, k_hash)| {
+        //        self.buckets[self.ukhs.query_bucket(k_hash).unwrap()] += 1;
+        //    })
+        //    .count();
+        //
 
         // Only update the bucket for the minimum unikmer found
         for (_, group) in &it.into_iter().group_by(|(w, _)| *w) {
@@ -313,13 +343,12 @@ impl SigsTrait for UKHS<Nodegraph> {
     fn add_sequence(&mut self, seq: &[u8], _force: bool) -> Result<(), Error> {
         let it: Vec<(u64, u64)> = self.ukhs.hash_iter_sequence(seq)?.collect();
 
-        /* This one update every unikmer bucket with w_hash
-        it.into_iter()
-            .map(|(w_hash, k_hash)| {
-                self.buckets[self.ukhs.query_bucket(k_hash).unwrap()].count(w_hash);
-            })
-            .count();
-            */
+        // This one update every unikmer bucket with w_hash
+        //it.into_iter()
+        //    .map(|(w_hash, k_hash)| {
+        //        self.buckets[self.ukhs.query_bucket(k_hash).unwrap()].count(w_hash);
+        //    })
+        //    .count();
 
         // Only update the bucket for the minimum unikmer found
         for (w_hash, group) in &it.into_iter().group_by(|(w, _)| *w) {
@@ -412,13 +441,12 @@ impl SigsTrait for UKHS<HLL> {
     fn add_sequence(&mut self, seq: &[u8], _force: bool) -> Result<(), Error> {
         let it: Vec<(u64, u64)> = self.ukhs.hash_iter_sequence(seq)?.collect();
 
-        /* This one update every unikmer bucket with w_hash
-        it.into_iter()
-            .map(|(w_hash, k_hash)| {
-                self.buckets[self.ukhs.query_bucket(k_hash).unwrap()].add(&w_hash);
-            })
-            .count();
-        */
+        // This one update every unikmer bucket with w_hash
+        //it.into_iter()
+        //    .map(|(w_hash, k_hash)| {
+        //        self.buckets[self.ukhs.query_bucket(k_hash).unwrap()].add(&w_hash);
+        //    })
+        //    .count();
 
         // Only update the bucket for the minimum unikmer found
         for (w_hash, group) in &it.into_iter().group_by(|(w, _)| *w) {
@@ -516,40 +544,37 @@ where
 
 // Removed this for now, because calling .into() in these doesn't
 // transfer all the important information...
-/*
-impl From<FlatUKHS> for Dataset<Signature> {
-    fn from(other: FlatUKHS) -> Dataset<Signature> {
-        let data = Lazy::new();
-        data.get_or_create(|| other.into());
-
-        Dataset::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build()
-    }
-}
-
-impl From<FlatUKHS> for Signature {
-    fn from(other: FlatUKHS) -> Signature {
-        Signature::builder()
-            .hash_function("nthash") // TODO: spec!
-            .class("draff_signature") // TODO: spec!
-            .name(Some("draff_file".into())) // TODO: spec!
-            .signatures(vec![Sketch::UKHS(other)])
-            .build()
-    }
-}
-*/
+//impl From<FlatUKHS> for Dataset<Signature> {
+//    fn from(other: FlatUKHS) -> Dataset<Signature> {
+//        let data = Lazy::new();
+//        data.get_or_create(|| other.into());
+//
+//        Dataset::builder()
+//            .data(Rc::new(data))
+//            .filename("")
+//            .name("")
+//            .metadata("")
+//            .storage(None)
+//            .build()
+//    }
+//}
+//
+//impl From<FlatUKHS> for Signature {
+//    fn from(other: FlatUKHS) -> Signature {
+//        Signature::builder()
+//            .hash_function("nthash") // TODO: spec!
+//            .class("draff_signature") // TODO: spec!
+//            .name(Some("draff_file".into())) // TODO: spec!
+//            .signatures(vec![Sketch::UKHS(other)])
+//            .build()
+//    }
+//}
 
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
 
-    use bio::io::fasta::Reader;
-    use ocf::get_input;
+    use needletail::parse_sequence_path;
 
     use super::{FlatUKHS, MemberUKHS, UKHSTrait};
     use crate::signature::SigsTrait;
@@ -561,13 +586,14 @@ mod test {
 
         let mut ukhs = MemberUKHS::new(9, 21).unwrap();
 
-        let (input, _) = get_input(filename.to_str().unwrap()).unwrap();
-        let reader = Reader::new(input);
-
-        for record in reader.records() {
-            let record = record.unwrap();
-            ukhs.add_sequence(record.seq(), false).unwrap();
-        }
+        parse_sequence_path(
+            filename,
+            |_| {},
+            |record| {
+                ukhs.add_sequence(&record.seq, false).unwrap();
+            },
+        )
+        .expect("error parsing");
 
         // TODO: find test case...
         //assert_eq!(ukhs.to_vec(), [1, 2, 3]);
@@ -580,13 +606,14 @@ mod test {
 
         let mut ukhs = FlatUKHS::new(9, 21).unwrap();
 
-        let (input, _) = get_input(filename.to_str().unwrap()).unwrap();
-        let reader = Reader::new(input);
-
-        for record in reader.records() {
-            let record = record.unwrap();
-            ukhs.add_sequence(record.seq(), false).unwrap();
-        }
+        parse_sequence_path(
+            filename,
+            |_| {},
+            |record| {
+                ukhs.add_sequence(&record.seq, false).unwrap();
+            },
+        )
+        .expect("error parsing");
 
         let mut buffer = Vec::new();
         ukhs.to_writer(&mut buffer).unwrap();
@@ -602,3 +629,4 @@ mod test {
         }
     }
 }
+*/

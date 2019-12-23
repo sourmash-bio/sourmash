@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -6,24 +7,82 @@ use std::rc::Rc;
 use clap::{load_yaml, App};
 use exitfailure::ExitFailure;
 use failure::Error;
-//use human_panic::setup_panic;
-use lazy_init::Lazy;
 use log::{info, LevelFilter};
-use ocf::{get_output, CompressionFormat};
+use niffler::{get_output, CompressionFormat};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 
-use sourmash::cmd::{
-    count_unique, draff_compare, draff_index, draff_search, draff_signature, prepare,
-};
+/* FIXME bring back after succint-rs changes
+use sourmash::cmd::{count_unique, draff_compare, draff_search, draff_signature, prepare};
+*/
+use sourmash::cmd::prepare;
+
 use sourmash::index::linear::LinearIndex;
 use sourmash::index::sbt::scaffold;
 use sourmash::index::search::{
     search_minhashes, search_minhashes_containment, search_minhashes_find_best,
 };
-use sourmash::index::{Comparable, Dataset, Index, MHBT};
+use sourmash::index::storage::{FSStorage, Storage};
+use sourmash::index::{Comparable, Index, MHBT};
 use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::HashFunctions;
 use sourmash::sketch::Sketch;
+
+pub fn index(
+    sig_files: Vec<&str>,
+    storage: Rc<dyn Storage>,
+    outfile: &str,
+) -> Result<Indices, Error> {
+    let mut index = MHBT::builder().storage(Rc::clone(&storage)).build();
+
+    for filename in sig_files {
+        // TODO: check for stdin? can also use get_input()?
+
+        let mut sig = Signature::from_path(filename)?;
+
+        if sig.len() > 1 {
+            unimplemented!();
+        };
+
+        index.insert(sig.pop().unwrap())?;
+    }
+
+    // TODO: implement to_writer and use this?
+    //let mut output = get_output(outfile, CompressionFormat::No)?;
+    //index.to_writer(&mut output)?
+
+    index.save_file(outfile, Some(storage))?;
+
+    Ok(Indices::MHBT(index))
+
+    /*
+      let mut lindex = LinearIndex::<Signature>::builder()
+          .storage(Rc::clone(&storage))
+          .build();
+
+      for filename in sig_files {
+          // TODO: check for stdin? can also use get_input()?
+
+          let mut sig = Signature::from_path(filename)?;
+
+          if sig.len() > 1 {
+              unimplemented!();
+          };
+
+          lindex.insert(sig.pop().unwrap())?;
+      }
+
+      let mut index: MHBT = lindex.into();
+
+      // TODO: implement to_writer and use this?
+      //let mut output = get_output(outfile, CompressionFormat::No)?;
+      //index.to_writer(&mut output)?
+
+      index.save_file(outfile, Some(storage))?;
+
+      Ok(Indices::MHBT(index))
+    */
+}
 
 struct Query<T> {
     data: T,
@@ -53,31 +112,28 @@ impl Query<Signature> {
     }
 
     fn name(&self) -> String {
-        self.data.name().clone()
+        self.data.name()
     }
 }
 
-impl From<Query<Signature>> for Dataset<Signature> {
-    fn from(other: Query<Signature>) -> Dataset<Signature> {
-        let data = Lazy::new();
-        data.get_or_create(|| other.data);
-
-        Dataset::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build()
+impl From<Query<Signature>> for Signature {
+    fn from(other: Query<Signature>) -> Signature {
+        other.data
     }
 }
 
 fn load_query_signature(
     query: &str,
-    ksize: usize,
+    ksize: Option<usize>,
     moltype: Option<&str>,
     scaled: Option<u64>,
 ) -> Result<Query<Signature>, Error> {
+    let moltype: Option<HashFunctions> = if let Some(mol) = moltype {
+        Some(mol.try_into()?)
+    } else {
+        None
+    };
+
     let mut reader = io::BufReader::new(File::open(query)?);
     let sigs = Signature::load_signatures(&mut reader, ksize, moltype, scaled)?;
 
@@ -93,13 +149,13 @@ struct Database {
     path: String,
 }
 
-enum Indices {
+pub enum Indices {
     MHBT(MHBT),
-    LinearIndex(LinearIndex<Dataset<Signature>>),
+    LinearIndex(LinearIndex<Signature>),
 }
 
-impl Index for Database {
-    type Item = Dataset<Signature>;
+impl Index<'_> for Database {
+    type Item = Signature;
 
     fn find<F>(
         &self,
@@ -116,7 +172,7 @@ impl Index for Database {
         }
     }
 
-    fn insert(&mut self, node: &Self::Item) -> Result<(), Error> {
+    fn insert(&mut self, node: Self::Item) -> Result<(), Error> {
         match &mut self.data {
             Indices::MHBT(data) => data.insert(node),
             Indices::LinearIndex(data) => data.insert(node),
@@ -134,10 +190,17 @@ impl Index for Database {
         unimplemented!();
     }
 
-    fn datasets(&self) -> Vec<Self::Item> {
+    fn signatures(&self) -> Vec<Self::Item> {
         match &self.data {
-            Indices::MHBT(data) => data.datasets(),
-            Indices::LinearIndex(data) => data.datasets(),
+            Indices::MHBT(data) => data.signatures(),
+            Indices::LinearIndex(data) => data.signatures(),
+        }
+    }
+
+    fn signature_refs(&self) -> Vec<&Self::Item> {
+        match &self.data {
+            Indices::MHBT(data) => data.signature_refs(),
+            Indices::LinearIndex(data) => data.signature_refs(),
         }
     }
 }
@@ -170,7 +233,7 @@ fn load_sbts_and_sigs(
             info!("loaded SBT {}", path);
             n_databases += 1;
             continue;
-        } else if let Ok(data) = LinearIndex::<Dataset<Signature>>::from_path(path) {
+        } else if let Ok(data) = LinearIndex::<Signature>::from_path(path) {
             // TODO: check compatible
             dbs.push(Database {
                 data: Indices::LinearIndex(data),
@@ -251,7 +314,7 @@ fn search_databases(
             if similarity >= threshold {
                 results.push(Results {
                     similarity,
-                    match_sig: dataset.clone().into(),
+                    match_sig: dataset.clone(),
                     db: db.path.clone(),
                 })
             }
@@ -263,7 +326,7 @@ fn search_databases(
 }
 
 fn main() -> Result<(), ExitFailure> {
-    //setup_panic!();
+    //better_panic::install();
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -271,6 +334,7 @@ fn main() -> Result<(), ExitFailure> {
     let m = App::from_yaml(yml).get_matches();
 
     match m.subcommand_name() {
+        /* FIXME bring back after succint-rs changes
         Some("draff") => {
             let cmd = m.subcommand_matches("draff").unwrap();
             let inputs = cmd
@@ -300,6 +364,14 @@ fn main() -> Result<(), ExitFailure> {
 
             draff_compare(inputs)?;
         }
+        Some("count_unique") => {
+            let cmd = m.subcommand_matches("count_unique").unwrap();
+
+            let index: &str = cmd.value_of("index").unwrap();
+
+            count_unique(index)?;
+        }
+        */
         Some("prepare") => {
             let cmd = m.subcommand_matches("prepare").unwrap();
             let index: &str = cmd.value_of("index").unwrap();
@@ -311,29 +383,29 @@ fn main() -> Result<(), ExitFailure> {
             let inputs = cmd
                 .values_of("inputs")
                 .map(|vals| vals.collect::<Vec<_>>())
-                .unwrap();
+                .expect("Missing inputs");
 
-            let output: &str = cmd.value_of("output").unwrap();
+            let output: &str = cmd.value_of("output").expect("Missing output");
+            let (output, base) = if output.ends_with(".sbt.json") {
+                (output.to_owned(), output.trim_end_matches(".sbt.json"))
+            } else {
+                (output.to_owned() + ".sbt.json", output)
+            };
 
-            draff_index(inputs, output)?;
+            let storage: Rc<dyn Storage> = Rc::new(FSStorage::new(".", &format!(".sbt.{}", base)));
+
+            index(inputs, storage, &output)?;
         }
         Some("scaffold") => {
             let cmd = m.subcommand_matches("scaffold").unwrap();
             let sbt_file = cmd.value_of("current_sbt").unwrap();
 
             let sbt = MHBT::from_path(sbt_file)?;
-            let mut new_sbt: MHBT = scaffold(sbt.datasets(), sbt.storage());
+            let mut new_sbt: MHBT = scaffold(sbt.leaves(), sbt.storage());
 
             new_sbt.save_file("test", None)?;
 
-            assert_eq!(new_sbt.datasets().len(), sbt.datasets().len());
-        }
-        Some("count_unique") => {
-            let cmd = m.subcommand_matches("count_unique").unwrap();
-
-            let index: &str = cmd.value_of("index").unwrap();
-
-            count_unique(index)?;
+            assert_eq!(new_sbt.leaves().len(), sbt.leaves().len());
         }
         Some("search") => {
             let cmd = m.subcommand_matches("search").unwrap();
@@ -345,10 +417,9 @@ fn main() -> Result<(), ExitFailure> {
             let query = load_query_signature(
                 cmd.value_of("query").unwrap(),
                 if cmd.is_present("ksize") {
-                    cmd.value_of("ksize").unwrap().parse().unwrap()
+                    Some(cmd.value_of("ksize").unwrap().parse().unwrap())
                 } else {
-                    // TODO default k
-                    unimplemented!()
+                    None
                 },
                 Some("dna"), // TODO: select moltype,
                 if cmd.is_present("scaled") {

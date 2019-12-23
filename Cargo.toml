@@ -8,6 +8,8 @@ keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
 license = "BSD-3-Clause"
 edition = "2018"
+autoexamples = false
+autobins = false
 
 [lib]
 name = "sourmash"
@@ -18,7 +20,7 @@ bench = false
 lto=true
 
 [features]
-from-finch = ["finch", "needletail"]
+from-finch = ["finch"]
 
 [workspace]
 
@@ -26,53 +28,59 @@ from-finch = ["finch", "needletail"]
 #cbindgen = "~0.6.7"
 
 [dependencies]
-byteorder = "^1.2"
-cfg-if = "0.1"
-clap = { version = "~2.32", features = ["yaml"] }
-env_logger = "0.6.0"
+byteorder = "1.3.2"
+cfg-if = "0.1.10"
+clap = { version = "2.33.0", features = ["yaml"] }
+env_logger = "0.7.1"
 exitfailure = "0.5.1"
-failure = "0.1.3"
-failure_derive = "0.1.3"
-finch = { version = "~0.1.6", optional = true }
-fixedbitset = "^0.1.9"
-human-panic = "1.0.1"
-lazy_static = "1.0.0"
+failure = "0.1.6"
+failure_derive = "0.1.6"
+finch = { version = "0.3.0", optional = true }
+fixedbitset = "0.2.0"
+lazy_static = "1.4.0"
 lazy-init = "0.3.0"
-log = "0.4.0"
-md5 = "0.6.0"
-murmurhash3 = "~0.0.5"
-needletail = { version = "~0.2.1", optional = true }
-serde = "1.0"
-serde_derive = "~1.0.58"
-serde_json = "1.0.2"
-ukhs = { git = "https://github.com/luizirber/ukhs", branch = "feature/alternative_backends", features = ["boomphf_mphf"], default-features = false}
-bio = { git = "https://github.com/luizirber/rust-bio", branch = "feature/fastx_reader" }
+log = "0.4.8"
+md5 = "0.7.0"
+murmurhash3 = "0.0.5"
+serde = "1.0.103"
+serde_derive = "1.0.103"
+serde_json = "1.0.44"
+#ukhs = { git = "https://github.com/luizirber/ukhs", branch = "feature/alternative_backends", features = ["boomphf_mphf"], default-features = false}
 primal = "0.2.3"
-pdatastructs = { git = "https://github.com/luizirber/pdatastructs.rs", branch = "succinct_wasm" }
-itertools = "0.8.0"
-typed-builder = "0.3.0"
-csv = "1.0.7"
+#pdatastructs = { git = "https://github.com/luizirber/pdatastructs.rs", branch = "succinct_wasm" }
+itertools = "0.8.2"
+typed-builder = "0.4.0"
+csv = "1.1.1"
 tempfile = "3.1.0"
 
+[dependencies.needletail]
+version = "0.3.2"
+default-features = false
+#features = ["compression"]
+
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.wasm-bindgen]
-version = "^0.2"
+version = "0.2.55"
 features = ["serde-serialize"]
 
-[target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies.ocf]
-version = "0.1"
-path = "ocf"
+[target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies.niffler]
+version = "1.0"
 default-features = false
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies.mqf]
-version = "1.0.0"
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+proptest = "0.9.4"
 
 [dev-dependencies]
-proptest = "^0.8"
-criterion = "^0.2"
-rand = "^0.5"
-tempfile = "3"
-assert_matches = "1.2"
+criterion = "0.3.0"
+rand = "0.7.2"
+tempfile = "3.1.0"
+assert_matches = "1.3.0"
+assert_cmd = "0.12.0"
+predicates = "1.0.2"
 
 [[bench]]
 name = "index"
 harness = false
+
+[[bin]]
+name = "smrs"
+path = "src/bin/smrs.rs"

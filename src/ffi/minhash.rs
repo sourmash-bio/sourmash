@@ -1,12 +1,12 @@
 use std::ffi::CStr;
-use std::mem;
 use std::os::raw::c_char;
-use std::ptr;
 use std::slice;
 
 use crate::errors::SourmashError;
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{aa_to_dayhoff, translate_codon, KmerMinHash};
+use crate::sketch::minhash::{
+    aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions, KmerMinHash,
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
@@ -14,19 +14,31 @@ pub unsafe extern "C" fn kmerminhash_new(
     k: u32,
     prot: bool,
     dayhoff: bool,
+    hp: bool,
     seed: u64,
     mx: u64,
     track_abundance: bool,
 ) -> *mut KmerMinHash {
-    mem::transmute(Box::new(KmerMinHash::new(
+    // TODO: at most one of (prot, dayhoff, hp) should be true
+
+    let hash_function = if dayhoff {
+        HashFunctions::murmur64_dayhoff
+    } else if hp {
+        HashFunctions::murmur64_hp
+    } else if prot {
+        HashFunctions::murmur64_protein
+    } else {
+        HashFunctions::murmur64_DNA
+    };
+
+    Box::into_raw(Box::new(KmerMinHash::new(
         n,
         k,
-        prot,
-        dayhoff,
+        hash_function,
         seed,
         mx,
         track_abundance,
-    )))
+    ))) as _
 }
 
 #[no_mangle]
@@ -35,6 +47,14 @@ pub unsafe extern "C" fn kmerminhash_free(ptr: *mut KmerMinHash) {
         return;
     }
     Box::from_raw(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_slice_free(ptr: *mut u64, insize: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    Vec::from_raw_parts(ptr as *mut u64, insize, insize);
 }
 
 ffi_fn! {
@@ -97,8 +117,13 @@ pub unsafe extern "C" fn sourmash_aa_to_dayhoff(aa: c_char) -> c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn kmerminhash_remove_hash(ptr: *mut KmerMinHash, h: u64) {
-    let mh = unsafe {
+pub unsafe extern "C" fn sourmash_aa_to_hp(aa: c_char) -> c_char {
+    aa_to_hp(aa as u8) as c_char
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_remove_hash(ptr: *mut KmerMinHash, h: u64) {
+    let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
@@ -107,17 +132,17 @@ pub extern "C" fn kmerminhash_remove_hash(ptr: *mut KmerMinHash, h: u64) {
 }
 
 #[no_mangle]
-pub extern "C" fn kmerminhash_remove_many(
+pub unsafe extern "C" fn kmerminhash_remove_many(
     ptr: *mut KmerMinHash,
     hashes_ptr: *const u64,
     insize: usize,
 ) {
-    let mh = unsafe {
+    let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
 
-    let hashes = unsafe {
+    let hashes = {
         assert!(!hashes_ptr.is_null());
         slice::from_raw_parts(hashes_ptr as *mut u64, insize)
     };
@@ -147,7 +172,8 @@ unsafe fn kmerminhash_get_abunds(ptr: *mut KmerMinHash) -> Result<*const u64> {
         let output = abunds.clone();
         Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
     } else {
-        Ok(ptr::null())
+        //throw error, can't get abund
+        unimplemented!()
     }
 }
 }
@@ -237,6 +263,15 @@ pub unsafe extern "C" fn kmerminhash_dayhoff(ptr: *mut KmerMinHash) -> bool {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn kmerminhash_hp(ptr: *mut KmerMinHash) -> bool {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    mh.hp()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn kmerminhash_seed(ptr: *mut KmerMinHash) -> u64 {
     let mh = {
         assert!(!ptr.is_null());
@@ -270,8 +305,8 @@ unsafe fn kmerminhash_enable_abundance(ptr: *mut KmerMinHash) -> Result<()> {
         &mut *ptr
     };
 
-    if mh.mins.len() != 0 {
-      return Err(SourmashError::NonEmptyMinHash.into());
+    if !mh.mins.is_empty() {
+      return Err(SourmashError::NonEmptyMinHash { message: "track_abundance=True".into()}.into());
     }
 
     mh.abunds = Some(vec![]);
@@ -304,6 +339,31 @@ pub unsafe extern "C" fn kmerminhash_max_hash(ptr: *mut KmerMinHash) -> u64 {
         &mut *ptr
     };
     mh.max_hash()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_hash_function(ptr: *mut KmerMinHash) -> HashFunctions {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    mh.hash_function()
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_hash_function_set(ptr: *mut KmerMinHash, hash_function: HashFunctions) -> Result<()> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    if !mh.mins.is_empty() {
+      return Err(SourmashError::NonEmptyMinHash { message: "hash_function".into()}.into());
+    }
+
+    mh.hash_function = hash_function;
+    Ok(())
+}
 }
 
 ffi_fn! {
@@ -366,10 +426,26 @@ unsafe fn kmerminhash_intersection(ptr: *mut KmerMinHash, other: *const KmerMinH
        &*other
     };
 
-    if let Ok((_, size)) = mh.intersection(other_mh) {
+    if let Ok((_, size)) = mh.intersection_size(other_mh) {
         return Ok(size);
     }
     Ok(0)
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+    -> Result<f64> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let other_mh = {
+       assert!(!other.is_null());
+       &*other
+    };
+
+    mh.containment_ignore_maxhash(&other_mh)
 }
 }
 

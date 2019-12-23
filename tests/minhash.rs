@@ -1,9 +1,9 @@
 use sourmash::signature::SigsTrait;
-use sourmash::sketch::minhash::KmerMinHash;
+use sourmash::sketch::minhash::{HashFunctions, KmerMinHash};
 
 #[test]
 fn throws_error() {
-    let mut mh = KmerMinHash::new(1, 4, false, false, 42, 0, false);
+    let mut mh = KmerMinHash::new(1, 4, HashFunctions::murmur64_DNA, 42, 0, false);
 
     match mh.add_sequence(b"ATGR", false) {
         Ok(_) => assert!(false, "R is not a valid DNA character"),
@@ -13,8 +13,8 @@ fn throws_error() {
 
 #[test]
 fn merge() {
-    let mut a = KmerMinHash::new(20, 10, false, false, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, false, false, 42, 0, false);
+    let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut b = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
 
     a.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
     b.add_sequence(b"TGCCGCCCAGCA", false).unwrap();
@@ -40,8 +40,8 @@ fn merge() {
 
 #[test]
 fn compare() {
-    let mut a = KmerMinHash::new(20, 10, false, false, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, false, false, 42, 0, false);
+    let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
+    let mut b = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
 
     a.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
         .unwrap();
@@ -67,8 +67,8 @@ fn compare() {
 
 #[test]
 fn dayhoff() {
-    let mut a = KmerMinHash::new(10, 6, true, true, 42, 0, false);
-    let mut b = KmerMinHash::new(10, 6, true, false, 42, 0, false);
+    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_dayhoff, 42, 0, false);
+    let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);
 
     a.add_sequence(b"ACTGAC", false).unwrap();
     b.add_sequence(b"ACTGAC", false).unwrap();

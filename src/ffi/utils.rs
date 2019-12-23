@@ -25,7 +25,7 @@ macro_rules! ffi_fn (
         $(#[$attr])*
         pub unsafe extern "C" fn $name($($aname: $aty,)*) -> $rv
         {
-            $crate::utils::landingpad(|| $body)
+            $crate::ffi::utils::landingpad(|| $body)
         }
     );
 
@@ -39,7 +39,7 @@ macro_rules! ffi_fn (
         pub unsafe extern "C" fn $name($($aname: $aty,)*)
         {
             // this silences panics and stuff
-            $crate::utils::landingpad(|| { $body; Ok(0 as ::std::os::raw::c_int) });
+            $crate::ffi::utils::landingpad(|| { $body; Ok(0 as ::std::os::raw::c_int) });
         }
     }
 );

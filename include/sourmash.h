@@ -8,6 +8,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+enum HashFunctions {
+  HASH_FUNCTIONS_MURMUR64_DNA = 1,
+  HASH_FUNCTIONS_MURMUR64_PROTEIN = 2,
+  HASH_FUNCTIONS_MURMUR64_DAYHOFF = 3,
+  HASH_FUNCTIONS_MURMUR64_HP = 4,
+};
+typedef uint32_t HashFunctions;
+
 enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NO_ERROR = 0,
   SOURMASH_ERROR_CODE_PANIC = 1,
@@ -31,6 +39,8 @@ enum SourmashErrorCode {
 typedef uint32_t SourmashErrorCode;
 
 typedef struct KmerMinHash KmerMinHash;
+
+typedef struct Nodegraph Nodegraph;
 
 typedef struct Signature Signature;
 
@@ -57,6 +67,8 @@ void kmerminhash_add_word(KmerMinHash *ptr, const char *word);
 
 double kmerminhash_compare(KmerMinHash *ptr, const KmerMinHash *other);
 
+double kmerminhash_containment_ignore_maxhash(KmerMinHash *ptr, const KmerMinHash *other);
+
 uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other);
 
 bool kmerminhash_dayhoff(KmerMinHash *ptr);
@@ -66,6 +78,8 @@ void kmerminhash_disable_abundance(KmerMinHash *ptr);
 void kmerminhash_enable_abundance(KmerMinHash *ptr);
 
 void kmerminhash_free(KmerMinHash *ptr);
+
+void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 uint64_t kmerminhash_get_abund_idx(KmerMinHash *ptr, uint64_t idx);
 
@@ -78,6 +92,12 @@ uint64_t kmerminhash_get_min_idx(KmerMinHash *ptr, uint64_t idx);
 const uint64_t *kmerminhash_get_mins(KmerMinHash *ptr);
 
 uintptr_t kmerminhash_get_mins_size(KmerMinHash *ptr);
+
+HashFunctions kmerminhash_hash_function(KmerMinHash *ptr);
+
+void kmerminhash_hash_function_set(KmerMinHash *ptr, HashFunctions hash_function);
+
+bool kmerminhash_hp(KmerMinHash *ptr);
 
 uint64_t kmerminhash_intersection(KmerMinHash *ptr, const KmerMinHash *other);
 
@@ -95,6 +115,7 @@ KmerMinHash *kmerminhash_new(uint32_t n,
                              uint32_t k,
                              bool prot,
                              bool dayhoff,
+                             bool hp,
                              uint64_t seed,
                              uint64_t mx,
                              bool track_abundance);
@@ -108,6 +129,36 @@ void kmerminhash_remove_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintp
 uint64_t kmerminhash_seed(KmerMinHash *ptr);
 
 bool kmerminhash_track_abundance(KmerMinHash *ptr);
+
+bool nodegraph_count(Nodegraph *ptr, uint64_t h);
+
+double nodegraph_expected_collisions(Nodegraph *ptr);
+
+void nodegraph_free(Nodegraph *ptr);
+
+Nodegraph *nodegraph_from_buffer(const char *ptr, uintptr_t insize);
+
+Nodegraph *nodegraph_from_path(const char *filename);
+
+uintptr_t nodegraph_get(Nodegraph *ptr, uint64_t h);
+
+uintptr_t nodegraph_ksize(Nodegraph *ptr);
+
+uintptr_t nodegraph_matches(Nodegraph *ptr, KmerMinHash *mh_ptr);
+
+Nodegraph *nodegraph_new(void);
+
+uintptr_t nodegraph_noccupied(Nodegraph *ptr);
+
+uintptr_t nodegraph_ntables(Nodegraph *ptr);
+
+void nodegraph_save(Nodegraph *ptr, const char *filename);
+
+uintptr_t nodegraph_tablesize(Nodegraph *ptr);
+
+void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);
+
+Nodegraph *nodegraph_with_tables(uintptr_t ksize, uintptr_t starting_size, uintptr_t n_tables);
 
 bool signature_eq(Signature *ptr, Signature *other);
 
@@ -151,6 +202,8 @@ Signature **signatures_load_path(const char *ptr,
 SourmashStr signatures_save_buffer(Signature **ptr, uintptr_t size);
 
 char sourmash_aa_to_dayhoff(char aa);
+
+char sourmash_aa_to_hp(char aa);
 
 /**
  * Clears the last error.

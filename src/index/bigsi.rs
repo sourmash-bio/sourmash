@@ -5,7 +5,7 @@ use failure::{Error, Fail};
 use fixedbitset::FixedBitSet;
 use typed_builder::TypedBuilder;
 
-use crate::index::{Comparable, Index};
+use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
@@ -79,22 +79,9 @@ impl BIGSI<Signature> {
     }
 }
 
-impl Index for BIGSI<Signature> {
+impl<'a> Index<'a> for BIGSI<Signature> {
     type Item = Signature;
-
-    fn find<F>(
-        &self,
-        _search_fn: F,
-        _sig: &Self::Item,
-        _threshold: f64,
-    ) -> Result<Vec<&Self::Item>, Error>
-    where
-        F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
-    {
-        // TODO: is there a better way than making this a runtime check?
-        //Err(BIGSIError::MethodDisabled.into())
-        unimplemented!();
-    }
+    //type SignatureIterator = std::slice::Iter<'a, Self::Item>;
 
     fn search(
         &self,
@@ -109,12 +96,10 @@ impl Index for BIGSI<Signature> {
             let mut counter: HashMap<usize, usize> = HashMap::with_capacity(hashes.size());
 
             for hash in &hashes.mins {
-                self.query(*hash)
-                    .map(|dataset_idx| {
-                        let idx = counter.entry(dataset_idx).or_insert(0);
-                        *idx += 1;
-                    })
-                    .count();
+                self.query(*hash).for_each(|dataset_idx| {
+                    let idx = counter.entry(dataset_idx).or_insert(0);
+                    *idx += 1;
+                });
             }
 
             for (idx, count) in counter {
@@ -140,8 +125,8 @@ impl Index for BIGSI<Signature> {
         }
     }
 
-    fn insert(&mut self, node: &Self::Item) -> Result<(), Error> {
-        self.add(node.clone());
+    fn insert(&mut self, node: Self::Item) -> Result<(), Error> {
+        self.add(node);
         Ok(())
     }
 
@@ -153,24 +138,31 @@ impl Index for BIGSI<Signature> {
         unimplemented!()
     }
 
-    fn datasets(&self) -> Vec<Self::Item> {
+    fn signatures(&self) -> Vec<Self::Item> {
         unimplemented!()
     }
+
+    fn signature_refs(&self) -> Vec<&Self::Item> {
+        unimplemented!()
+    }
+
+    /*
+    fn iter_signatures(&'a self) -> Self::SignatureIterator {
+        self.datasets.iter()
+    }
+    */
 }
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
-    use std::rc::Rc;
-
-    use lazy_init::Lazy;
 
     use super::BIGSI;
 
-    use crate::index::storage::ReadData;
-    use crate::index::Dataset;
+    use crate::index::SigStore;
     use crate::index::{Index, MHBT};
     use crate::signature::Signature;
 
@@ -182,29 +174,25 @@ mod test {
         let sbt = MHBT::from_path(filename).expect("Loading error");
 
         let mut bigsi = BIGSI::new(10000, 10);
-        let datasets = sbt.datasets();
+        let datasets = sbt.signatures();
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs = Signature::load_signatures(&mut reader, 31, Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let sig_data = sigs[0].clone();
 
-        let data = Lazy::new();
-        data.get_or_create(|| sig_data);
+        let leaf: SigStore<_> = sig_data.into();
 
-        let leaf = Dataset::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build();
-
-        for l in &datasets {
-            let data = l.data().unwrap();
-            bigsi.insert(data).expect("insertion error!");
+        for l in datasets {
+            bigsi.insert(l).expect("insertion error!");
         }
 
         let results_sbt = sbt.search(&leaf, 0.5, false).unwrap();

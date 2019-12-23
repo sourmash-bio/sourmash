@@ -14,6 +14,7 @@ use typed_builder::TypedBuilder;
 
 use crate::errors::SourmashError;
 use crate::index::storage::ToWriter;
+use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
 
 pub trait SigsTrait {
@@ -82,6 +83,7 @@ pub struct Signature {
     #[builder(default)]
     pub filename: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
     #[serde(default = "default_license")]
@@ -154,8 +156,8 @@ impl Signature {
 
     pub fn load_signatures<R>(
         buf: &mut R,
-        ksize: usize,
-        moltype: Option<&str>,
+        ksize: Option<usize>,
+        moltype: Option<HashFunctions>,
         _scaled: Option<u64>,
     ) -> Result<Vec<Signature>, Error>
     where
@@ -181,33 +183,39 @@ impl Signature {
                 .filter(|sig| {
                     match sig {
                         Sketch::MinHash(mh) => {
-                            if ksize == 0 || ksize == mh.ksize() as usize {
-                                match moltype {
-                                    Some(x) => {
-                                        if (x.to_lowercase() == "dna" && !mh.is_protein())
-                                            || (x.to_lowercase() == "protein" && mh.is_protein())
-                                        {
-                                            return true;
-                                        }
+                            if let Some(k) = ksize {
+                                if k != mh.ksize() as usize {
+                                    return false;
+                                }
+                            };
+
+                            match moltype {
+                                Some(x) => {
+                                    if mh.hash_function() == x {
+                                        return true;
                                     }
-                                    None => return true, // TODO: match previous behavior
-                                };
+                                }
+                                None => return true, // TODO: match previous behavior
                             };
                         }
                         Sketch::UKHS(hs) => {
-                            if ksize == 0 || ksize == hs.ksize() as usize {
-                                match moltype {
-                                    Some(x) => {
-                                        if x.to_lowercase() == "dna" {
-                                            return true;
-                                        } else {
-                                            // TODO: draff only supports dna for now
-                                            unimplemented!()
-                                        }
+                            if let Some(k) = ksize {
+                                if k != hs.ksize() as usize {
+                                    return false;
+                                }
+                            };
+
+                            match moltype {
+                                Some(x) => {
+                                    if x == HashFunctions::murmur64_DNA {
+                                        return true;
+                                    } else {
+                                        // TODO: draff only supports dna for now
+                                        unimplemented!()
                                     }
-                                    None => unimplemented!(),
-                                };
-                            }
+                                }
+                                None => unimplemented!(),
+                            };
                         }
                     };
                     false
@@ -231,7 +239,7 @@ impl ToWriter for Signature {
     where
         W: io::Write,
     {
-        match serde_json::to_writer(writer, &self) {
+        match serde_json::to_writer(writer, &vec![&self]) {
             Ok(_) => Ok(()),
             Err(_) => Err(SourmashError::SerdeError.into()),
         }
@@ -267,6 +275,8 @@ impl PartialEq for Signature {
             if let Sketch::MinHash(other_mh) = &other.signatures[0] {
                 return metadata && (mh == other_mh);
             }
+        } else {
+            unimplemented!()
         }
         metadata
     }
@@ -274,6 +284,7 @@ impl PartialEq for Signature {
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryInto;
     use std::fs::File;
     use std::io::BufReader;
     use std::path::PathBuf;
@@ -286,7 +297,13 @@ mod test {
         filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
-        let sigs = Signature::load_signatures(&mut reader, 31, Some("DNA".into()), None).unwrap();
+        let sigs = Signature::load_signatures(
+            &mut reader,
+            Some(31),
+            Some("DNA".try_into().unwrap()),
+            None,
+        )
+        .unwrap();
         let _sig_data = sigs[0].clone();
         // TODO: check sig_data
     }

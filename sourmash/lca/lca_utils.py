@@ -7,6 +7,8 @@ import json
 import gzip
 from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
+import functools
+
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
@@ -19,9 +21,25 @@ except ImportError:
 
 from .._minhash import get_max_hash_for_scaled
 from ..logging import notify, error, debug
+from ..index import Index
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+
+
+def cached_property(fun):
+    """A memoize decorator for class properties."""
+    @functools.wraps(fun)
+    def get(self):
+        try:
+            return self._cache[fun]
+        except AttributeError:
+            self._cache = {}
+        except KeyError:
+            pass
+        ret = self._cache[fun] = fun(self)
+        return ret
+    return property(get)
 
 
 def check_files_exist(*files):
@@ -138,7 +156,7 @@ def find_lca(tree):
             return tuple(lineage), len(node)
 
 
-class LCA_Database(object):
+class LCA_Database(Index):
     """
     Wrapper class for taxonomic database.
 
@@ -146,7 +164,6 @@ class LCA_Database(object):
     obj.idx_to_lid: key 'idx' to 'lid'
     obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
     obj.hashval_to_idx: key 'hashval' => set('idx')
-    obj.lineage_to_lid: key (tuple of LineagePair objects) to 'lid'
     """
     def __init__(self):
         self.ksize = None
@@ -154,7 +171,6 @@ class LCA_Database(object):
         
         self.ident_to_idx = None
         self.idx_to_lid = None
-        self.lineage_to_lid = None
         self.lid_to_lineage = None
         self.hashval_to_idx = None
     
@@ -162,6 +178,11 @@ class LCA_Database(object):
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
+
+    def signatures(self):
+        from .. import SourmashSignature
+        for v in self._signatures.values():
+            yield SourmashSignature(v)
 
     def load(self, db_name):
         "Load from a JSON file."
@@ -261,10 +282,49 @@ class LCA_Database(object):
             
             json.dump(save_d, fp)
 
+    def search(self, query, *args, **kwargs):
+        # check arguments
+        if 'threshold' not in kwargs:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = kwargs['threshold']
+        do_containment = kwargs.get('do_containment', False)
+        ignore_abundance = kwargs.get('ignore_abundance', False)
+        mh = query.minhash
+        if ignore_abundance:
+            mh.track_abundance = False
+
+        results = []
+        for x in self.find_signatures(mh, threshold, do_containment):
+            (score, match, filename) = x
+            results.append((score, match, filename))
+
+        results.sort(key=lambda x: -x[0])
+        return results
+
+    def gather(self, query, *args, **kwargs):
+        results = []
+        for x in self.find_signatures(query.minhash, 0.0,
+                                      containment=True, ignore_scaled=True):
+            (score, match, filename) = x
+            if score:
+                results.append((score, match, filename))
+
+        return results
+
+    def insert(self, node):
+        raise NotImplementedError
+
+    def find(self, search_fn, *args, **kwargs):
+        raise NotImplementedError
+
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
         that don't fall in the required range.
+
+        NOTE: we probably need to invalidate some of the dynamically
+        calculated members of this object, like _signatures, when we do this.
+        But we aren't going to right now.
         """
         if scaled == self.scaled:
             return
@@ -294,7 +354,25 @@ class LCA_Database(object):
 
         return x
 
-    def find(self, minhash, threshold, containment=False, ignore_scaled=False):
+    @cached_property
+    def _signatures(self):
+        "Create a _signatures member dictionary that contains {idx: minhash}."
+        from .. import MinHash
+
+        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+
+        debug('creating signatures for LCA DB...')
+        sigd = defaultdict(minhash.copy_and_clear)
+
+        for (k, v) in self.hashval_to_idx.items():
+            for vv in v:
+                sigd[vv].add_hash(k)
+
+        debug('=> {} signatures!', len(sigd))
+        return sigd
+
+    def find_signatures(self, minhash, threshold, containment=False,
+                       ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search.
         """
@@ -302,27 +380,8 @@ class LCA_Database(object):
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample_scaled(self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
+            # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
-
-        if not hasattr(self, 'signatures'):
-            debug('creating signatures for LCA DB...')
-            sigd = defaultdict(minhash.copy_and_clear)
-
-            for (k, v) in self.hashval_to_idx.items():
-                for vv in v:
-                    sigd[vv].add_hash(k)
-
-            self.signatures = sigd
-
-        debug('=> {} signatures!', len(self.signatures))
-
-        # build idx_to_ident from ident_to_idx
-        if not hasattr(self, 'idx_to_ident'):
-            idx_to_ident = {}
-            for k, v in self.ident_to_idx.items():
-                idx_to_ident[v] = k
-
-            self.idx_to_ident = idx_to_ident
 
         query_mins = set(minhash.get_mins())
 
@@ -340,7 +399,7 @@ class LCA_Database(object):
             name = self.ident_to_name[ident]
             debug('looking at {} ({})', ident, name)
 
-            match_mh = self.signatures[idx]
+            match_mh = self._signatures[idx]
             match_size = len(match_mh)
 
             debug('count: {}; query_mins: {}; match size: {}',
@@ -354,11 +413,32 @@ class LCA_Database(object):
             debug('score: {} (containment? {})', score, containment)
 
             if score >= threshold:
-                # reconstruct signature... ugh.
                 from .. import SourmashSignature
                 match_sig = SourmashSignature(match_mh, name=name)
 
-                yield score, match_sig, match_sig.md5sum(), self.filename, name
+                yield score, match_sig, self.filename
+
+    @cached_property
+    def lineage_to_lids(self):
+        d = defaultdict(set)
+        for lid, lineage in self.lid_to_lineage.items():
+            d[lineage].add(lid)
+        return d
+
+    @cached_property
+    def lid_to_idx(self):
+        d = defaultdict(set)
+        for idx, lid in self.idx_to_lid.items():
+            d[lid].add(idx)
+        return d
+
+    @cached_property
+    def idx_to_ident(self):
+        d = defaultdict(set)
+        for ident, idx in self.ident_to_idx.items():
+            assert idx not in d
+            d[idx] = ident
+        return d
 
 
 def load_single_database(filename, verbose=False):

@@ -11,15 +11,18 @@ use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
-use crate::index::{Comparable, Dataset, DatasetInfo, Index};
+use crate::index::{Comparable, DatasetInfo, Index, SigStore};
 
 #[derive(TypedBuilder)]
-pub struct LinearIndex<L> {
+pub struct LinearIndex<L>
+where
+    L: Sync,
+{
     #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
 
     #[builder(default)]
-    pub(crate) datasets: Vec<L>,
+    pub(crate) datasets: Vec<SigStore<L>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -29,36 +32,16 @@ struct LinearInfo<L> {
     leaves: Vec<L>,
 }
 
-impl<L> Index for LinearIndex<L>
+impl<'a, L> Index<'a> for LinearIndex<L>
 where
-    L: Clone + Comparable<L>,
+    L: Sync + Clone + Comparable<L> + 'a,
+    SigStore<L>: From<L>,
 {
     type Item = L;
+    //type SignatureIterator = std::slice::Iter<'a, Self::Item>;
 
-    fn find<F>(
-        &self,
-        search_fn: F,
-        sig: &Self::Item,
-        threshold: f64,
-    ) -> Result<Vec<&Self::Item>, Error>
-    where
-        F: Fn(&dyn Comparable<Self::Item>, &Self::Item, f64) -> bool,
-    {
-        Ok(self
-            .datasets
-            .iter()
-            .flat_map(|node| {
-                if search_fn(node, sig, threshold) {
-                    Some(node)
-                } else {
-                    None
-                }
-            })
-            .collect())
-    }
-
-    fn insert(&mut self, node: &L) -> Result<(), Error> {
-        self.datasets.push(node.clone());
+    fn insert(&mut self, node: L) -> Result<(), Error> {
+        self.datasets.push(node.into());
         Ok(())
     }
 
@@ -77,15 +60,31 @@ where
         unimplemented!()
     }
 
-    fn datasets(&self) -> Vec<Self::Item> {
-        self.datasets.to_vec()
+    fn signatures(&self) -> Vec<Self::Item> {
+        self.datasets
+            .iter()
+            .map(|x| x.data.get().unwrap().clone())
+            .collect()
     }
+
+    fn signature_refs(&self) -> Vec<&Self::Item> {
+        self.datasets
+            .iter()
+            .map(|x| x.data.get().unwrap())
+            .collect()
+    }
+
+    /*
+    fn iter_signatures(&'a self) -> Self::SignatureIterator {
+        self.datasets.iter()
+    }
+    */
 }
 
-impl<L> LinearIndex<Dataset<L>>
+impl<L> LinearIndex<L>
 where
     L: std::marker::Sync + ToWriter,
-    Dataset<L>: ReadData<L>,
+    SigStore<L>: ReadData<L>,
 {
     pub fn save_file<P: AsRef<Path>>(
         &mut self,
@@ -127,12 +126,12 @@ where
                     mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
 
                     let filename = (*l).save(&l.filename).unwrap();
-                    let new_node = DatasetInfo {
-                        filename: filename,
+
+                    DatasetInfo {
+                        filename,
                         name: l.name.clone(),
                         metadata: l.metadata.clone(),
-                    };
-                    new_node
+                    }
                 })
                 .collect(),
         };
@@ -143,7 +142,7 @@ where
         Ok(())
     }
 
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<LinearIndex<Dataset<L>>, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<LinearIndex<L>, Error> {
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
 
@@ -153,12 +152,11 @@ where
         basepath.push(path);
         basepath.canonicalize()?;
 
-        let linear =
-            LinearIndex::<Dataset<L>>::from_reader(&mut reader, &basepath.parent().unwrap())?;
+        let linear = LinearIndex::<L>::from_reader(&mut reader, &basepath.parent().unwrap())?;
         Ok(linear)
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<LinearIndex<Dataset<L>>, Error>
+    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<LinearIndex<L>, Error>
     where
         R: Read,
         P: AsRef<Path>,
@@ -177,15 +175,12 @@ where
             datasets: linear
                 .leaves
                 .into_iter()
-                .map(|l| {
-                    let new_node = Dataset {
-                        filename: l.filename,
-                        name: l.name,
-                        metadata: l.metadata,
-                        storage: Some(Rc::clone(&storage)),
-                        data: Rc::new(Lazy::new()),
-                    };
-                    new_node
+                .map(|l| SigStore {
+                    filename: l.filename,
+                    name: l.name,
+                    metadata: l.metadata,
+                    storage: Some(Rc::clone(&storage)),
+                    data: Rc::new(Lazy::new()),
                 })
                 .collect(),
         })
