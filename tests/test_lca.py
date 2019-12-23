@@ -217,6 +217,7 @@ def test_db_lineage_to_lids():
 
     d = db.lineage_to_lids
     items = list(d.items())
+    items.sort()
     assert len(items) == 2
 
     print(items)

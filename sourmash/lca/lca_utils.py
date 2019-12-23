@@ -370,7 +370,6 @@ class LCA_Database(Index):
 
         debug('=> {} signatures!', len(sigd))
         return sigd
-    _signatures = cached_property(_calc_signatures)
 
     def find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
@@ -425,7 +424,6 @@ class LCA_Database(Index):
         for lid, lineage in self.lid_to_lineage.items():
             d[lineage].add(lid)
         return d
-    lineage_to_lids = cached_property(_calc_lineage_to_lids)
 
     @cached_property
     def lid_to_idx(self):
@@ -433,7 +431,6 @@ class LCA_Database(Index):
         for idx, lid in self.idx_to_lid.items():
             d[lid].add(idx)
         return d
-    lid_to_idx = cached_property(_calc_lid_to_idx)
 
     @cached_property
     def idx_to_ident(self):
@@ -442,7 +439,6 @@ class LCA_Database(Index):
             assert idx not in d
             d[idx] = ident
         return d
-    idx_to_ident = cached_property(_calc_idx_to_ident)
 
 
 def load_single_database(filename, verbose=False):
