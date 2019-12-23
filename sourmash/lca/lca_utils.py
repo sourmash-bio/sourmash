@@ -419,7 +419,8 @@ class LCA_Database(Index):
 
                 yield score, match_sig, self.filename
 
-    def _calc_lineage_to_lids(self):
+    @cached_property
+    def lineage_to_lids(self):
         d = defaultdict(set)
         for lid, lineage in self.lid_to_lineage.items():
             d[lineage].add(lid)
