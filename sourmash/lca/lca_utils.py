@@ -433,7 +433,8 @@ class LCA_Database(Index):
         return d
     lid_to_idx = cached_property(_calc_lid_to_idx)
 
-    def _calc_idx_to_ident(self):
+    @cached_property
+    def idx_to_ident(self):
         d = defaultdict(set)
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
