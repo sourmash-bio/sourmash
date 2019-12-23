@@ -67,8 +67,8 @@ fn compare() {
 
 #[test]
 fn similarity() -> Result<(), Box<dyn std::error::Error>> {
-    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_DNA, 42, 0, true);
-    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
 
     a.add_hash(1);
     b.add_hash(1);
@@ -96,6 +96,30 @@ fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
         "{}",
         a.similarity(&b, false)?
     );
+
+    Ok(())
+}
+
+#[test]
+fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
+
+    a.add_hash(1);
+    a.add_hash(1);
+    a.add_hash(5);
+    a.add_hash(5);
+
+    b.add_hash(1);
+    b.add_hash(2);
+    b.add_hash(3);
+    b.add_hash(4);
+
+    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false)? - 0.23).abs() < 0.001);
+
+    assert!((a.similarity(&a, true)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, true)? - 0.2).abs() < 0.001);
 
     Ok(())
 }

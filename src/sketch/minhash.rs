@@ -504,15 +504,10 @@ impl KmerMinHash {
             let mut prod = 0;
             let mut other_iter = other.mins.iter().enumerate();
             let mut next_hash = other_iter.next();
-            let mut a_sq = 0;
+            let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
             let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
 
             for (i, hash) in self.mins.iter().enumerate() {
-                // Calling `get_unchecked` here is safe since `i` is a valid index
-                // (`i` came from a valid iterator call)
-                unsafe {
-                    a_sq += abunds.get_unchecked(i) * abunds.get_unchecked(i);
-                }
                 while let Some((j, k)) = next_hash {
                     match k.cmp(hash) {
                         Ordering::Less => next_hash = other_iter.next(),

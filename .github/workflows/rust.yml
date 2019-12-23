@@ -137,14 +137,14 @@ jobs:
         id: coverage
 
       - name: Upload Python coverage to codecov
-        uses: codecov/codecov-action@v1.0.3
+        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           flags: pytests
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@v1.0.3
+        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ${{ steps.coverage.outputs.report }}
