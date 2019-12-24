@@ -4,7 +4,7 @@ all: build
 
 .PHONY:
 
-build:
+build: .PHONY
 	$(PYTHON) setup.py build_ext -i
 	cargo build
 

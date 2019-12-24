@@ -17,7 +17,7 @@ def test__json_next_atomic_array():
     s = json.dumps(t)
     if sys.version_info[0] < 3:
         s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.BytesIO(s.encode('utf-8')))
     a = _json_next_atomic_array(it)
     assert len(t) == len(a)
     assert all(x == y for x,y in zip(t, a))
@@ -37,7 +37,7 @@ def test__json_next_signature():
     s = json.dumps(t)
     if sys.version_info[0] < 3:
         s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.BytesIO(s.encode('utf-8')))
     # no MD5SUM
     sig = _json_next_signature(it, name, filename,
                                ignore_md5sum=True,
@@ -53,7 +53,7 @@ def test__json_next_signature():
     s = json.dumps(t)
     if sys.version_info[0] < 3:
         s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.BytesIO(s.encode('utf-8')))
     sig = _json_next_signature(it, name, filename,
                                ignore_md5sum=False,
                                ijson=ijson)
@@ -77,7 +77,7 @@ def test_load_signature_json():
     s = json.dumps(t)
     if sys.version_info[0] < 3:
         s = unicode(s)
-    it = ijson.parse(io.StringIO(s))
+    it = ijson.parse(io.BytesIO(s.encode('utf-8')))
     # no MD5SUM
     sig_entry = load_signature_json(it, ignore_md5sum=True)
 
@@ -105,7 +105,7 @@ def test_load_signaturesset_json_iter():
     if sys.version_info[0] < 3:
         s = unicode(s)
     # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
+    sig_entries = tuple(load_signatureset_json_iter(io.BytesIO(s.encode('utf-8')),
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     assert len(sig_entries) == 2
@@ -139,7 +139,7 @@ def test_load_signaturesset_json_iter_molecules():
     if sys.version_info[0] < 3:
         s = unicode(s)
     # no MD5SUM
-    sig_entries = tuple(load_signatureset_json_iter(io.StringIO(s),
+    sig_entries = tuple(load_signatureset_json_iter(io.BytesIO(s.encode('utf-8')),
                                                     ignore_md5sum=True,
                                                     ijson=ijson))
     # Ensure all molecule types were read properly

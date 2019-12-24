@@ -7,6 +7,8 @@ import json
 import gzip
 from os.path import exists
 from collections import OrderedDict, namedtuple, defaultdict, Counter
+import functools
+
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
@@ -23,6 +25,21 @@ from ..index import Index
 
 # type to store an element in a taxonomic lineage
 LineagePair = namedtuple('LineagePair', ['rank', 'name'])
+
+
+def cached_property(fun):
+    """A memoize decorator for class properties."""
+    @functools.wraps(fun)
+    def get(self):
+        try:
+            return self._cache[fun]
+        except AttributeError:
+            self._cache = {}
+        except KeyError:
+            pass
+        ret = self._cache[fun] = fun(self)
+        return ret
+    return property(get)
 
 
 def check_files_exist(*files):
@@ -147,7 +164,6 @@ class LCA_Database(Index):
     obj.idx_to_lid: key 'idx' to 'lid'
     obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
     obj.hashval_to_idx: key 'hashval' => set('idx')
-    obj.lineage_to_lid: key (tuple of LineagePair objects) to 'lid'
     """
     def __init__(self):
         self.ksize = None
@@ -155,7 +171,6 @@ class LCA_Database(Index):
         
         self.ident_to_idx = None
         self.idx_to_lid = None
-        self.lineage_to_lid = None
         self.lid_to_lineage = None
         self.hashval_to_idx = None
     
@@ -166,7 +181,6 @@ class LCA_Database(Index):
 
     def signatures(self):
         from .. import SourmashSignature
-        self._create_signatures()
         for v in self._signatures.values():
             yield SourmashSignature(v)
 
@@ -340,23 +354,22 @@ class LCA_Database(Index):
 
         return x
 
-    def _create_signatures(self):
+    @cached_property
+    def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: minhash}."
         from .. import MinHash
 
-        if not hasattr(self, '_signatures'):
-            minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
 
-            debug('creating signatures for LCA DB...')
-            sigd = defaultdict(minhash.copy_and_clear)
+        debug('creating signatures for LCA DB...')
+        sigd = defaultdict(minhash.copy_and_clear)
 
-            for (k, v) in self.hashval_to_idx.items():
-                for vv in v:
-                    sigd[vv].add_hash(k)
+        for (k, v) in self.hashval_to_idx.items():
+            for vv in v:
+                sigd[vv].add_hash(k)
 
-            self._signatures = sigd
-
-        debug('=> {} signatures!', len(self._signatures))
+        debug('=> {} signatures!', len(sigd))
+        return sigd
 
     def find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
@@ -369,16 +382,6 @@ class LCA_Database(Index):
         elif self.scaled < minhash.scaled and not ignore_scaled:
             # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
-
-        self._create_signatures()
-
-        # build idx_to_ident from ident_to_idx
-        if not hasattr(self, 'idx_to_ident'):
-            idx_to_ident = {}
-            for k, v in self.ident_to_idx.items():
-                idx_to_ident[v] = k
-
-            self.idx_to_ident = idx_to_ident
 
         query_mins = set(minhash.get_mins())
 
@@ -414,6 +417,28 @@ class LCA_Database(Index):
                 match_sig = SourmashSignature(match_mh, name=name)
 
                 yield score, match_sig, self.filename
+
+    @cached_property
+    def lineage_to_lids(self):
+        d = defaultdict(set)
+        for lid, lineage in self.lid_to_lineage.items():
+            d[lineage].add(lid)
+        return d
+
+    @cached_property
+    def lid_to_idx(self):
+        d = defaultdict(set)
+        for idx, lid in self.idx_to_lid.items():
+            d[lid].add(idx)
+        return d
+
+    @cached_property
+    def idx_to_ident(self):
+        d = defaultdict(set)
+        for ident, idx in self.ident_to_idx.items():
+            assert idx not in d
+            d[idx] = ident
+        return d
 
 
 def load_single_database(filename, verbose=False):
