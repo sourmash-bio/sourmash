@@ -821,26 +821,6 @@ def multigather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to search')
-    parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='save signature generated from data here')
-    parser.add_argument('--threshold', default=0.05, type=float,
-                        help='minimum threshold for matches (default=0.05)')
-    parser.add_argument('--input-is-protein', action='store_true',
-                        help='Consume protein sequences - no translation needed')
-    sourmash_args.add_construct_moltype_args(parser)
-    parser.add_argument('-n', '--num-hashes', type=int,
-                        default=DEFAULT_N,
-                        help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--name', type=str, default='stdin',
-                        help='name to use for generated signature')
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:

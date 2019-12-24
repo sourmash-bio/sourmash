@@ -30,6 +30,7 @@ from . import sbt_storage
 from . import signature
 from . import sig
 from . import cli
+from . import commands
 
 from pkg_resources import get_distribution, DistributionNotFound
 

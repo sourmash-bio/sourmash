@@ -326,7 +326,7 @@ def index(args):
     db.lineage_to_lid = lineage_to_lid
     db.lid_to_lineage = lid_to_lineage
     db.hashval_to_idx = hashval_to_idx
-    
+
     if args.ksize is None:
         args.ksize = DEFAULT_LOAD_K
     db.ksize = int(args.ksize)
