@@ -52,17 +52,6 @@ def rankinfo_main(args):
     """
     rankinfo!
     """
-    p = SourmashArgumentParser(prog="sourmash lca rankinfo")
-    p.add_argument('db', nargs='+')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    p.add_argument('--minimum-num', type=int, default=0,
-                   help='Minimum number of different lineages a k-mer must be in to be counted')
-    args = p.parse_args(args)
-
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)

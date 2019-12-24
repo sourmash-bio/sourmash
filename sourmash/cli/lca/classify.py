@@ -1,5 +1,6 @@
 from argparse import FileType
 
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
     subparser.add_argument('--db', nargs='+', action='append')
@@ -26,4 +27,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.lca.command_classify.classify(args)

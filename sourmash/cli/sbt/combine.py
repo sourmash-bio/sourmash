@@ -47,4 +47,5 @@ def alt_subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.commands.sbt_combine(args)

@@ -1,5 +1,5 @@
-import sourmash
 from sourmash.cli.utils import add_moltype_args, add_ksize_arg
+
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('overlap')
@@ -14,4 +14,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.sig.__main__.overlap(args)

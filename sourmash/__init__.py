@@ -28,6 +28,7 @@ from . import sbt
 from . import sbtmh
 from . import sbt_storage
 from . import signature
+from . import sig
 from . import cli
 
 from pkg_resources import get_distribution, DistributionNotFound

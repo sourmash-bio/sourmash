@@ -1,7 +1,11 @@
 from argparse import FileType
-import sourmash
+
 from sourmash._minhash import get_minhash_default_seed
-from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+from sourmash.cli.utils import (
+    add_ksize_arg,
+    add_moltype_args,
+    add_construct_moltype_args
+)
 
 
 def subparser(subparsers):
@@ -24,7 +28,7 @@ def subparser(subparsers):
         '--scaled', type=float, default=0,
         help='choose number of hashes as 1 in FRACTION of input k-mers'
     )
-    add_moltype_args(sketch_args)
+    add_construct_moltype_args(sketch_args)
     sketch_args.add_argument(
         '--input-is-protein', action='store_true',
         help='Consume protein sequences - no translation needed.'
@@ -123,4 +127,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    from sourmash.command_compute import compute
+    return compute(args)

@@ -1,10 +1,7 @@
-from . import index
 from . import combine
-from . import categorize
-from . import watch
 import sys
 
-subcommands = ['index', 'combine', 'categorize', 'watch']
+subcommands = ['combine']
 subcommandstr = ' -- '.join(sorted(subcommands))
 
 def subparser(subparsers):

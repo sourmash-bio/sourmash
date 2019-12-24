@@ -1,5 +1,7 @@
 from argparse import FileType
+
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('gather')
@@ -50,4 +52,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.commands.gather(args)

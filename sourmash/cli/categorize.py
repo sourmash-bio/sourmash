@@ -1,5 +1,7 @@
-import sourmash
-from sourmash.cli.utils import add_ksize_arg
+import argparse
+
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args
+
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('categorize')
@@ -22,7 +24,13 @@ def subparser(subparsers):
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present'
     )
+    add_moltype_args(subparser)
+
+    # TODO: help messages in these
+    subparser.add_argument('--csv', type=argparse.FileType('at'))
+    subparser.add_argument('--load-csv', default=None)
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.commands.categorize(args)
