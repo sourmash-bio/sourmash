@@ -142,6 +142,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           flags: pytests
+          fail_ci_if_error: true
 
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
@@ -149,6 +150,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ${{ steps.coverage.outputs.report }}
           flags: rusttests
+          fail_ci_if_error: true
 
   lints:
     name: Lints
