@@ -670,25 +670,6 @@ def gather(args):
 def multigather(args):
     from .search import gather_databases, format_bp
 
-    parser = SourmashArgumentParser()
-    parser.add_argument('--db', nargs='+', action='append')
-    parser.add_argument('--query', nargs='+', action='append')
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='search all signatures underneath directories.')
-    parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='downsample query to this scaled factor')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--ignore-abundance',  action='store_true',
-                        help='do NOT use k-mer abundances if present')
-    parser.add_argument('-d', '--debug', action='store_true')
-
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 

@@ -34,7 +34,7 @@ def test_run_sourmash():
 def test_run_sourmash_badcmd():
     status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
     assert status != 0                    # bad arg!
-    assert "Unrecognized command" in err
+    assert "cmd: invalid choice" in err
 
 def test_sourmash_info():
     status, out, err = utils.runscript('sourmash', ['info'], fail_ok=False)
@@ -523,7 +523,7 @@ def test_search_query_sig_does_not_exist():
         print(status, out, err)
         assert status == -1
         assert 'Cannot open file' in err
-        assert len(err.splitlines()) < 5
+        assert len(err.split('\n\r')) < 5
 
 
 def test_search_subject_sig_does_not_exist():

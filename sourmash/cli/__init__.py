@@ -12,6 +12,7 @@ from . import compute
 from . import gather
 from . import info
 from . import index
+from . import multigather
 from . import plot
 from . import search
 from . import watch
@@ -40,7 +41,7 @@ class SourmashParser(ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         if (args is None and len(sys.argv) == 1) or (args is not None and len(args) == 0):
             self.print_help()
-            raise SystemExit(0)
+            raise SystemExit(1)
         args = super(SourmashParser, self).parse_args(args=args, namespace=namespace)
         if ('quiet' not in args or not args.quiet) and self.citation:
             self.print_citation()
@@ -59,7 +60,8 @@ class SourmashParser(ArgumentParser):
 
 def get_parser():
     commands = ['compute', 'compare', 'search', 'plot', 'gather', 'index',
-                'lca', 'sbt', 'info', 'sig', 'categorize', 'watch']
+                'lca', 'sbt', 'info', 'sig', 'categorize', 'watch',
+                'multigather']
     commandstr = ' -- '.join(sorted(commands))
 
     desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.'
