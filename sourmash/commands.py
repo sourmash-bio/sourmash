@@ -259,11 +259,6 @@ def plot(args):
 
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
-    p = SourmashArgumentParser()
-    p.add_argument('mash_csvfile')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout, help='(default: stdout)')
-    args = p.parse_args(args)
 
     with open(args.mash_csvfile, 'r') as fp:
         reader = csv.reader(fp)

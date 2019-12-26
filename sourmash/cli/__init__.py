@@ -10,6 +10,7 @@ from . import categorize
 from . import compare
 from . import compute
 from . import gather
+from . import import_csv
 from . import info
 from . import index
 from . import multigather
@@ -80,7 +81,7 @@ class SourmashParser(ArgumentParser):
 def get_parser():
     commands = ['compute', 'compare', 'search', 'plot', 'gather', 'index',
                 'lca', 'sbt', 'info', 'sig', 'categorize', 'watch', 'storage',
-                'multigather', 'migrate', 'sbt_combine']
+                'multigather', 'migrate', 'sbt_combine', 'import_csv']
     commandstr = ' -- '.join(sorted(commands))
 
     desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.'
