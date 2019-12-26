@@ -891,32 +891,7 @@ def watch(args):
         sig.save_signatures([streamsig], args.output)
 
 
-def storage(args):
-    from .sbt import convert_cmd
-
-    parser = SourmashArgumentParser()
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-
-    subparsers = parser.add_subparsers()
-    convert_parser = subparsers.add_parser('convert')
-    convert_parser.add_argument('sbt', help='SBT to convert')
-    convert_parser.add_argument('-b', "--backend", type=str,
-                                help='Backend to convert to')
-    convert_parser.set_defaults(command='convert')
-
-    args = parser.parse_args(args)
-    set_quiet(args.quiet)
-    if args.command == 'convert':
-        convert_cmd(args.sbt, args.backend)
-
-
 def migrate(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name to save SBT into')
-
-    args = parser.parse_args(args)
-
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
     notify('saving SBT under "{}".', args.sbt_name)

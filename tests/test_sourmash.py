@@ -36,6 +36,14 @@ def test_run_sourmash_badcmd():
     assert status != 0                    # bad arg!
     assert "cmd: invalid choice" in err
 
+
+def test_run_sourmash_subcmd_help():
+    status, out, err = utils.runscript('sourmash', ['sbt'], fail_ok=True)
+    assert status != 0               # should fail
+    assert "usage: sourmash sbt" in out  # assert error was printed
+    assert "Traceback" not in out  # should not have printed a Traceback
+
+
 def test_sourmash_info():
     status, out, err = utils.runscript('sourmash', ['info'], fail_ok=False)
 

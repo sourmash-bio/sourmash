@@ -1,16 +1,16 @@
 import sys
 
-from . import combine
-from . import migrate
+from . import convert
 
-subcommands = ['combine', 'migrate']
+subcommands = ['convert']
 subcommandstr = ' -- '.join(sorted(subcommands))
 
+
 def subparser(subparsers):
-    subparser = subparsers.add_parser('sbt')
+    subparser = subparsers.add_parser('storage')
     s = subparser.add_subparsers(
         title='Subcommands', dest='subcmd', metavar='subcmd', help=subcommandstr,
-        description='Invoke "sourmash sbt <subcmd> --help" for more details on executing each subcommand.'
+        description='Invoke "sourmash storage <subcmd> --help" for more details on executing each subcommand.'
     )
     for subcmd in subcommands:
         getattr(sys.modules[__name__], subcmd).subparser(s)
