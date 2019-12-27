@@ -10,7 +10,6 @@ from ..logging import notify, error, print_results, set_quiet
 from . import lca_utils
 from .lca_utils import zip_lineage
 from .command_index import load_taxonomy_assignments
-from ..sourmash_args import SourmashArgumentParser
 
 
 def compare_csv(args):

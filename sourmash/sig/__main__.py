@@ -12,7 +12,7 @@ import copy
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
-from ..sourmash_args import DEFAULT_LOAD_K, SourmashArgumentParser
+from ..sourmash_args import SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
 
 usage='''

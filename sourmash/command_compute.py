@@ -3,7 +3,6 @@ Functions implementing the 'compute' command and related functions.
 """
 from __future__ import print_function, division, absolute_import
 
-import argparse
 import os
 import os.path
 import sys
@@ -11,13 +10,11 @@ import random
 import screed
 import time
 
-from .sourmash_args import SourmashArgumentParser
-from . import DEFAULT_SEED, MinHash
+from . import MinHash
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, set_quiet
 
-from .sourmash_args import DEFAULT_N
 DEFAULT_COMPUTE_K = '21,31,51'
 DEFAULT_LINE_COUNT = 1500
 

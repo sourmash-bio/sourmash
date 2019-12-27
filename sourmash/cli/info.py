@@ -1,4 +1,3 @@
-import khmer
 import os
 import screed
 import sourmash

@@ -8,7 +8,6 @@ from collections import defaultdict
 
 from ..logging import error, debug, set_quiet, notify
 from . import lca_utils
-from ..sourmash_args import SourmashArgumentParser
 
 
 def make_lca_counts(dblist, min_num=0):

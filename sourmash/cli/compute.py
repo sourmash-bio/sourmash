@@ -1,11 +1,7 @@
 from argparse import FileType
 
 from sourmash._minhash import get_minhash_default_seed
-from sourmash.cli.utils import (
-    add_ksize_arg,
-    add_moltype_args,
-    add_construct_moltype_args
-)
+from sourmash.cli.utils import add_construct_moltype_args
 
 
 def subparser(subparsers):

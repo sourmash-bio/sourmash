@@ -34,7 +34,6 @@ class SourmashParser(ArgumentParser):
     def print_citation(self):
         if self._citation_printed:
             return
-        import sourmash
         from sourmash.logging import notify
         notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")

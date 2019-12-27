@@ -6,7 +6,6 @@ Mimics `sourmash gather` but provides taxonomic information.
 """
 from __future__ import print_function, division
 import sys
-import argparse
 import csv
 from collections import Counter, defaultdict, namedtuple
 
@@ -15,7 +14,6 @@ from ..logging import notify, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
-from ..sourmash_args import SourmashArgumentParser
 
 
 LCAGatherResult = namedtuple('LCAGatherResult',

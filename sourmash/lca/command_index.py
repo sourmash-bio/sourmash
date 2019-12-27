@@ -11,7 +11,7 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
-from ..sourmash_args import SourmashArgumentParser, DEFAULT_LOAD_K
+from ..sourmash_args import DEFAULT_LOAD_K
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,

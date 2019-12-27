@@ -1,5 +1,3 @@
-from argparse import FileType
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
