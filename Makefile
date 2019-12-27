@@ -27,9 +27,14 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
-include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/ffi/nodegraph.rs src/errors.rs
+include/sourmash.h: crates/sourmash/src/lib.rs \
+                    crates/sourmash/src/ffi/minhash.rs \
+                    crates/sourmash/src/ffi/signature.rs \
+                    crates/sourmash/src/ffi/nodegraph.rs \
+                    crates/sourmash/src/errors.rs
 	rustup override set nightly
-	RUST_BACKTRACE=1 cbindgen --clean -c cbindgen.toml -o $@
+	cd crates/sourmash && \
+	RUST_BACKTRACE=1 cbindgen -c cbindgen.toml -o ../../$@
 	rustup override set stable
 
 coverage: all

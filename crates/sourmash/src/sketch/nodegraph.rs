@@ -322,8 +322,11 @@ mod test {
 
     #[test]
     fn load_save_nodegraph() {
-        let data: &[u8] = include_bytes!("../../tests/test-data/.sbt.v3/internal.0");
-        let mut reader = BufReader::new(data);
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/.sbt.v3/internal.0");
+        let data = std::fs::read(filename).unwrap();
+
+        let mut reader = BufReader::new(&data[..]);
 
         let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
 
@@ -342,17 +345,17 @@ mod test {
     #[test]
     fn update_nodegraph() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/internal.0");
+        filename.push("../../tests/test-data/.sbt.v3/internal.0");
 
         let ng_parent: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/internal.1");
+        filename.push("../../tests/test-data/.sbt.v3/internal.1");
 
         let ng_1: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/internal.2");
+        filename.push("../../tests/test-data/.sbt.v3/internal.2");
 
         let ng_2: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
@@ -366,7 +369,7 @@ mod test {
     #[test]
     fn load_nodegraph() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/internal.0");
+        filename.push("../../tests/test-data/.sbt.v3/internal.0");
 
         //let data = include_bytes!("data/internal.0");
 
