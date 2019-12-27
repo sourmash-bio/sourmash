@@ -39,9 +39,16 @@ def test_run_sourmash_badcmd():
 
 def test_run_sourmash_subcmd_help():
     status, out, err = utils.runscript('sourmash', ['sbt'], fail_ok=True)
+    print(out)
+    print(err)
     assert status != 0               # should fail
-    assert "usage: sourmash sbt" in out  # assert error was printed
-    assert "Traceback" not in out  # should not have printed a Traceback
+
+    # py27 defaults to out, py3 defaults to err. Sigh.
+    # assert error was printed
+    assert any("usage: sourmash sbt" in o for o in (err, out))
+
+    # should not have printed a Traceback
+    assert any("Traceback" not in o for o in (err, out))
 
 
 def test_sourmash_info():
