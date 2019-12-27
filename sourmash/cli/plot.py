@@ -41,4 +41,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.commands.plot(args)

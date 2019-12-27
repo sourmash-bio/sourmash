@@ -4,10 +4,13 @@ from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('gather')
-    subparser.add_argument('query', help='query signature')
+    subparser = subparsers.add_parser('multigather')
     subparser.add_argument(
-        'databases', nargs='+',
+        '--query', nargs='+', action='append',
+        help='query signature'
+    )
+    subparser.add_argument(
+        '--db', nargs='+', action='append',
         help='signatures/SBTs to search',
     )
     subparser.add_argument(
@@ -22,22 +25,8 @@ def subparser(subparsers):
         help='search all signatures underneath directories'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
-        help='output CSV containing matches to this file'
-    )
-    subparser.add_argument(
-        '--save-matches', metavar='FILE', type=FileType('wt'),
-        help='save the matched signatures from the database to the '
-        'specified file'
-    )
-    subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,
         help='threshold (in bp) for reporting results (default=50,000)'
-    )
-    subparser.add_argument(
-        '--output-unassigned', metavar='FILE', type=FileType('wt'),
-        help='output unassigned portions of the query as a signature to the '
-        'specified file'
     )
     subparser.add_argument(
         '--scaled', metavar='FLOAT', type=float, default=0,
@@ -53,4 +42,4 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
-    return sourmash.commands.gather(args)
+    return sourmash.commands.multigather(args)

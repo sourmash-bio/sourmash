@@ -1,6 +1,7 @@
 from . import describe
 from . import downsample
 from . import extract
+from . import filter
 from . import flatten
 from . import intersect
 from . import merge
@@ -12,16 +13,16 @@ from . import overlap
 import sys
 
 subcommands = [
-    'describe', 'downsample', 'extract', 'flatten', 'intersect', 'merge',
+    'describe', 'downsample', 'extract', 'filter', 'flatten', 'intersect', 'merge',
     'rename', 'subtract', 'ingest', 'export', 'overlap'
 ]
 subcommandstr = ' -- '.join(sorted(subcommands))
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('signature')
+    subparser = subparsers.add_parser('sig')
     s = subparser.add_subparsers(
         title='Subcommands', dest='subcmd', metavar='subcmd', help=subcommandstr,
-        description='Invoke "sourmash signature <subcmd> --help" for more details on executing each subcommand.'
+        description='Invoke "sourmash sig <subcmd> --help" for more details on executing each subcommand.'
     )
     for subcmd in subcommands:
         getattr(sys.modules[__name__], subcmd).subparser(s)

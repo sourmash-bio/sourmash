@@ -1,5 +1,6 @@
 from argparse import FileType
 
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('gather')
     subparser.add_argument('query')
@@ -27,4 +28,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.lca.gather_main(args)

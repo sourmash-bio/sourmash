@@ -1,5 +1,6 @@
 from argparse import FileType
 
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
     subparser.add_argument('--db', nargs='+', action='append')
@@ -25,4 +26,5 @@ def subparser(subparsers):
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.lca.command_summarize.summarize_main(args)

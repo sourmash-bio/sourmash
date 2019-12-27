@@ -79,21 +79,6 @@ def classify(args):
     """
     main single-genome classification function.
     """
-    p = SourmashArgumentParser(prog="sourmash lca classify")
-    p.add_argument('--db', nargs='+', action='append')
-    p.add_argument('--query', nargs='+', action='append')
-    p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='output CSV to this file instead of stdout')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    args = p.parse_args(args)
-
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)

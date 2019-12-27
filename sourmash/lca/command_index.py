@@ -11,7 +11,7 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
-from ..sourmash_args import SourmashArgumentParser
+from ..sourmash_args import SourmashArgumentParser, DEFAULT_LOAD_K
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -130,33 +130,6 @@ def index(args):
     """
     main function for building an LCA database.
     """
-    p = SourmashArgumentParser(prog="sourmash lca index")
-    p.add_argument('csv', help='taxonomy spreadsheet')
-    p.add_argument('lca_db_out', help='name to save database to')
-    p.add_argument('signatures', nargs='+',
-                   help='one or more sourmash signatures')
-    p.add_argument('--scaled', default=10000, type=float)
-    p.add_argument('-k', '--ksize', default=31, type=int)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    p.add_argument('-C', '--start-column', default=2, type=int,
-                   help='column at which taxonomic assignments start')
-    p.add_argument('--tabs', action='store_true',
-                   help='input spreadsheet is tab-delimited (default: commas)')
-    p.add_argument('--no-headers', action='store_true',
-                   help='no headers present in taxonomy spreadsheet')
-    p.add_argument('--split-identifiers', action='store_true',
-                   help='split names in signatures on whitspace and period')
-    p.add_argument('-f', '--force', action='store_true')
-    p.add_argument('--traverse-directory', action='store_true',
-                   help='load all signatures underneath directories.')
-    p.add_argument('--report', help='output a report on anomalies, if any.')
-    p.add_argument('--require-taxonomy', action='store_true',
-                   help='ignore signatures with no taxonomy entry')
-    args = p.parse_args(args)
-
     if args.start_column < 2:
         error('error, --start-column cannot be less than 2')
         sys.exit(-1)
@@ -164,6 +137,9 @@ def index(args):
     set_quiet(args.quiet, args.debug)
 
     args.scaled = int(args.scaled)
+
+    if args.ksize is None:
+        args.ksize = DEFAULT_LOAD_K
 
     # first, load taxonomy spreadsheet
     delimiter = ','
@@ -353,7 +329,7 @@ def index(args):
     db.lineage_to_lid = lineage_to_lid
     db.lid_to_lineage = lid_to_lineage
     db.hashval_to_idx = hashval_to_idx
-    
+
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
 

@@ -1,5 +1,5 @@
-import sourmash
 from sourmash.cli.utils import add_ksize_arg
+
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('index')
@@ -45,7 +45,12 @@ def subparser(subparsers):
     subparser.add_argument(
         '--report', help='output a report on anomalies, if any'
     )
+    subparser.add_argument(
+        '--require-taxonomy', action='store_true',
+        help='ignore signatures with no taxonomy entry'
+    )
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.lca.command_index.index(args)

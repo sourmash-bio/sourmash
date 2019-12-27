@@ -10,7 +10,12 @@ def subparser(subparsers):
         help='output debugging output'
     )
     subparser.add_argument('--scaled', metavar='FLOAT', type=float)
+    subparser.add_argument(
+        '--minimum-num', type=int, default=0,
+        help='Minimum number of different lineages a k-mer must be in to be counted'
+    )
 
 
 def main(args):
-    print(args)
+    import sourmash
+    return sourmash.lca.command_rankinfo.rankinfo_main(args)

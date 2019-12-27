@@ -11,7 +11,7 @@ def main(arglist=None):
     else:
         mod = getattr(sourmash.cli, args.cmd)
         mainmethod = getattr(mod, 'main')
-    mainmethod(args)
+    return mainmethod(args)
 
 
 if __name__ == '__main__':
