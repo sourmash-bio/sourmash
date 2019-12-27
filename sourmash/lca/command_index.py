@@ -138,6 +138,9 @@ def index(args):
 
     args.scaled = int(args.scaled)
 
+    if args.ksize is None:
+        args.ksize = DEFAULT_LOAD_K
+
     # first, load taxonomy spreadsheet
     delimiter = ','
     if args.tabs:
@@ -327,8 +330,6 @@ def index(args):
     db.lid_to_lineage = lid_to_lineage
     db.hashval_to_idx = hashval_to_idx
 
-    if args.ksize is None:
-        args.ksize = DEFAULT_LOAD_K
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
 
