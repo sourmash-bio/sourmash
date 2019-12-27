@@ -84,3 +84,4 @@ harness = false
 [[bin]]
 name = "smrs"
 path = "src/bin/smrs.rs"
+bench = false

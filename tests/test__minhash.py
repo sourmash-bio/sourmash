@@ -45,7 +45,6 @@ import sourmash
 from sourmash._minhash import (
     MinHash,
     hash_murmur,
-    dotproduct,
     get_scaled_for_max_hash,
     get_max_hash_for_scaled,
 )
@@ -1000,47 +999,6 @@ def test_reviving_minhash():
 
     for m in mins:
         mh.add_hash(m)
-
-
-def test_dotproduct_1():
-    a = {'x': 1}
-    assert dotproduct(a, a, normalize=True) == 1.0
-
-    a = {'x': 1}
-    b = {'x': 1}
-    assert dotproduct(a, b, normalize=True) == 1.0
-
-    c = {'x': 1, 'y': 1}
-    prod = dotproduct(c, c, normalize=True)
-    assert round(prod, 2) == 1.0
-
-    # check a.c => 45 degree angle
-    a = {'x': 1}
-    c = {'x': 1, 'y': 1}
-
-    angle = 45
-    rad = math.radians(angle)
-    cosval = math.cos(rad)
-    prod = dotproduct(a, c, normalize=True)
-    assert round(prod, 2) == 0.71
-    assert round(cosval, 2) == round(prod, 2)
-
-    c = {'x': 1, 'y': 1}
-    d = {'x': 1, 'y': 1}
-    prod = dotproduct(c, d, normalize=True)
-    assert round(prod, 2) == 1.0
-
-    a = {'x': 1}
-    e = {'y': 1}
-    assert dotproduct(a, e, normalize=True) == 0.0
-
-
-def test_dotproduct_zeroes():
-    a = {'x': 1}
-    b = {}
-
-    assert dotproduct(a, b) == 0.0
-    assert dotproduct(b, a) == 0.0
 
 
 def test_mh_copy_and_clear(track_abundance):

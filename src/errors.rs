@@ -6,6 +6,9 @@ pub enum SourmashError {
     #[fail(display = "internal error: {}", message)]
     Internal { message: String },
 
+    #[fail(display = "must have same num: {} != {}", n1, n2)]
+    MismatchNum { n1: u32, n2: u32 },
+
     #[fail(display = "different ksizes cannot be compared")]
     MismatchKSizes,
 
@@ -53,6 +56,7 @@ pub enum SourmashErrorCode {
     MismatchSeed = 1_04,
     MismatchSignatureType = 1_05,
     NonEmptyMinHash = 1_06,
+    MismatchNum = 1_07,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -76,6 +80,7 @@ impl SourmashErrorCode {
             if let Some(err) = cause.downcast_ref::<SourmashError>() {
                 return match err {
                     SourmashError::Internal { .. } => SourmashErrorCode::Internal,
+                    SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
                     SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
                     SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
                     SourmashError::MismatchMaxHash => SourmashErrorCode::MismatchMaxHash,

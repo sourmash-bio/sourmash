@@ -66,6 +66,65 @@ fn compare() {
 }
 
 #[test]
+fn similarity() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
+
+    a.add_hash(1);
+    b.add_hash(1);
+    b.add_hash(2);
+
+    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false)? - 0.5).abs() < 0.001);
+
+    Ok(())
+}
+
+#[test]
+fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 5, HashFunctions::murmur64_DNA, 42, 0, true);
+
+    a.add_sequence(b"ATGGA", false)?;
+    a.add_sequence(b"GGACA", false)?;
+
+    a.add_sequence(b"ATGGA", false)?;
+    b.add_sequence(b"ATGGA", false)?;
+
+    assert!(
+        (a.similarity(&b, false)? - 0.705).abs() < 0.001,
+        "{}",
+        a.similarity(&b, false)?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
+    let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
+    let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_dayhoff, 42, 0, true);
+
+    a.add_hash(1);
+    a.add_hash(1);
+    a.add_hash(5);
+    a.add_hash(5);
+
+    b.add_hash(1);
+    b.add_hash(2);
+    b.add_hash(3);
+    b.add_hash(4);
+
+    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false)? - 0.23).abs() < 0.001);
+
+    assert!((a.similarity(&a, true)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, true)? - 0.2).abs() < 0.001);
+
+    Ok(())
+}
+
+#[test]
 fn dayhoff() {
     let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_dayhoff, 42, 0, false);
     let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);

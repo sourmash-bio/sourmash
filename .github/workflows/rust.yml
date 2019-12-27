@@ -115,9 +115,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -e .[test]
+        env:
+          'CARGO_INCREMENTAL': '0'
+          'RUSTFLAGS': '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'
 
-      - name: Run tests
+      - name: Run Rust tests
         uses: actions-rs/cargo@v1
         with:
           command: test
@@ -126,15 +129,28 @@ jobs:
           'CARGO_INCREMENTAL': '0'
           'RUSTFLAGS': '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'
 
+      - name: Run Python tests
+        run: python -m pytest --cov=. --cov-report=xml
+
       - name: Collect coverage and generate report with grcov
-        uses: actions-rs/grcov@v0.1.4
+        uses: actions-rs/grcov@5fe6a05253e7b682e01c8097b6e3ea4ce1aaeacc
         id: coverage
 
-      - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v1.0.3
+      - name: Upload Python coverage to codecov
+        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: pytests
+          fail_ci_if_error: true
+
+      - name: Upload Rust coverage to codecov
+        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ${{ steps.coverage.outputs.report }}
+          flags: rusttests
+          fail_ci_if_error: true
 
   lints:
     name: Lints
