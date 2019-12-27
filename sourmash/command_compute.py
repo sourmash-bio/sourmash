@@ -12,7 +12,6 @@ import time
 
 from . import MinHash
 from . import signature as sig
-from . import sourmash_args
 from .logging import notify, error, set_quiet
 
 DEFAULT_COMPUTE_K = '21,31,51'

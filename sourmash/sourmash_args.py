@@ -18,35 +18,6 @@ DEFAULT_LOAD_K = 31
 DEFAULT_N = 500
 
 
-class SourmashArgumentParser(argparse.ArgumentParser):
-    """Specialize ArgumentParser for sourmash.
-
-    In particular, set up printing of citation information.
-    """
-    def __init__(self, no_citation=False, **kwargs):
-        super(SourmashArgumentParser, self).__init__(add_help=False, **kwargs)
-        self.no_citation = no_citation
-
-    def parse_args(self, args=None, namespace=None):
-        args = super(SourmashArgumentParser, self).parse_args(args=args,
-                                                              namespace=namespace)
-
-        # some scripts do not have a quiet flag, assume quiet=False for those
-        if ('quiet' not in args or not args.quiet) and not self.no_citation:
-            citation()
-
-        return args
-
-
-_citation_printed = False
-def citation():
-    global _citation_printed
-    if not _citation_printed:
-        notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
-        notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
-        _citation_printed = True
-
-
 def get_moltype(sig, require=False):
     if sig.minhash.is_molecule_type('DNA'):
         moltype = 'DNA'

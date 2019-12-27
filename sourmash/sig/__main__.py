@@ -12,7 +12,6 @@ import copy
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
-from ..sourmash_args import SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
 
 usage='''
@@ -63,14 +62,6 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    p = SourmashArgumentParser(prog='sourmash signature describe')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('--csv', type=argparse.FileType('wt'),
-                   help='output information to a CSV file')
-
-    args = p.parse_args(args)
     set_quiet(args.quiet)
 
     siglist = []
@@ -654,41 +645,12 @@ def export(args):
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
 
 
-def main(sysv_args):
-    set_quiet(False)
-
-    commands = {'merge': merge,
-                'intersect': intersect,
-                'rename': rename,
-                'extract': extract,
-                'filter': filter,
-                'flatten': flatten,
-                'downsample': downsample,
-                'subtract': subtract,
-                'import': sig_import,
-                'export': export,
-                'describe': describe,
-                'overlap': overlap}
-
-    parser = argparse.ArgumentParser(
-        description='signature file manipulation utilities', usage=usage)
-    parser.add_argument('sig_command', nargs='?')
-    args = parser.parse_args(sysv_args[0:1])
-
-    if not args.sig_command:
-        print(usage)
-        sys.exit(1)
-
-    if args.sig_command not in commands:
-        error('Unrecognized command: {}', args.sig_command)
-        parser.print_help()
-        sys.exit(1)
-
-    cmd = commands.get(args.sig_command)
-    cmd(sysv_args[1:])
-
-    return 0
+def main(arglist=None):
+    args = sourmash.cli.get_parser().parse_args(arglist)
+    submod = getattr(sourmash.cli.sig, args.subcmd)
+    mainmethod = getattr(submod, 'main')
+    return mainmethod(args)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    main(sys.argv)

@@ -10,7 +10,6 @@ import sys
 
 import screed
 from .compare import compare_all_pairs
-from .sourmash_args import SourmashArgumentParser
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
@@ -27,11 +26,6 @@ from .command_compute import compute
 
 def info(args):
     "Report sourmash version + version of installed dependencies."
-    parser = SourmashArgumentParser(no_citation=True)
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='report versions of khmer and screed')
-    args = parser.parse_args(args)
-
     from . import VERSION
     notify('sourmash version {}', VERSION)
     notify('- loaded from path: {}', os.path.dirname(__file__))
@@ -291,12 +285,6 @@ def import_csv(args):
 
 
 def dump(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_LOAD_K,
-                        help='k-mer size (default: %(default)i)')
-    args = parser.parse_args(args)
-
     for filename in args.filenames:
         notify('loading {}', filename)
         siglist = sig.load_signatures(filename, ksize=args.ksize)
