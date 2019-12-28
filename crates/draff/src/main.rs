@@ -1,7 +1,8 @@
 use clap::{load_yaml, App};
 use exitfailure::ExitFailure;
 //use human_panic::setup_panic;
-use sourmash::cmd::{draff_compare, draff_index, draff_search, draff_signature};
+
+use crate::cmd::{draff_compare, draff_index, draff_search, draff_signature};
 
 fn main() -> Result<(), ExitFailure> {
     //setup_panic!();

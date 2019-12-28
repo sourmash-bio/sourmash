@@ -4,13 +4,13 @@ use std::rc::Rc;
 
 use failure::Error;
 use lazy_init::Lazy;
+use sourmash::index::sbt::{FromFactory, Node, Update, SBT};
+use sourmash::index::storage::{ReadData, ReadDataError};
+use sourmash::index::Comparable;
+use sourmash::signature::Signature;
+use sourmash::sketch::Sketch;
 
-use crate::index::sbt::{FromFactory, Node, Update, SBT};
-use crate::index::storage::{ReadData, ReadDataError};
-use crate::index::Comparable;
-use crate::signature::Signature;
 use crate::sketch::ukhs::{FlatUKHS, UKHSTrait};
-use crate::sketch::Sketch;
 
 impl<L: Sync> FromFactory<Node<FlatUKHS>> for SBT<Node<FlatUKHS>, L> {
     fn factory(&self, name: &str) -> Result<Node<FlatUKHS>, Error> {

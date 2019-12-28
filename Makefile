@@ -54,7 +54,7 @@ last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
 
 wasm:
-	wasm-pack build
+	wasm-pack build crates/sourmash -d ../../pkg
 
 wasi:
 	cargo wasi build
