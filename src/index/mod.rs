@@ -16,7 +16,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
+use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -135,32 +135,24 @@ pub struct DatasetInfo {
 }
 
 #[derive(TypedBuilder, Default, Clone)]
-pub struct SigStore<T>
-where
-    T: std::marker::Sync,
-{
+pub struct SigStore<T> {
     pub(crate) filename: String,
     pub(crate) name: String,
     pub(crate) metadata: String,
 
     pub(crate) storage: Option<Rc<dyn Storage>>,
 
-    pub(crate) data: Rc<Lazy<T>>,
+    #[builder(default)]
+    pub(crate) data: OnceCell<T>,
 }
 
-impl<T> SigStore<T>
-where
-    T: std::marker::Sync + Default,
-{
+impl<T> SigStore<T> {
     pub fn name(&self) -> String {
         self.name.clone()
     }
 }
 
-impl<T> std::fmt::Debug for SigStore<T>
-where
-    T: std::marker::Sync,
-{
+impl<T> std::fmt::Debug for SigStore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -175,7 +167,7 @@ impl ReadData<Signature> for SigStore<Signature> {
         if let Some(sig) = self.data.get() {
             Ok(sig)
         } else if let Some(storage) = &self.storage {
-            let sig = self.data.get_or_create(|| {
+            let sig = self.data.get_or_init(|| {
                 let raw = storage.load(&self.filename).unwrap();
                 let sigs: Result<Vec<Signature>, _> = serde_json::from_reader(&mut &raw[..]);
                 if let Ok(sigs) = sigs {
@@ -241,13 +233,10 @@ impl From<Signature> for SigStore<Signature> {
         let name = other.name();
         let filename = other.filename();
 
-        let data = Lazy::new();
-        data.get_or_create(|| other);
-
         SigStore::builder()
             .name(name)
             .filename(filename)
-            .data(data)
+            .data(other)
             .metadata("")
             .storage(None)
             .build()
@@ -327,5 +316,17 @@ impl Comparable<Signature> for Signature {
             }
         }
         unimplemented!()
+    }
+}
+
+impl<L> From<DatasetInfo> for SigStore<L> {
+    fn from(other: DatasetInfo) -> SigStore<L> {
+        SigStore {
+            filename: other.filename,
+            name: other.name,
+            metadata: other.metadata,
+            storage: None,
+            data: OnceCell::new(),
+        }
     }
 }
