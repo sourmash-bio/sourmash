@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use failure::Error;
-use once_cell::sync::OnceCell;
 
 use crate::index::sbt::{Factory, FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError, ToWriter};
@@ -26,15 +25,12 @@ impl<L: Clone + Default> FromFactory<Node<Nodegraph>> for SBT<Node<Nodegraph>, L
             Factory::GraphFactory { args: (k, t, n) } => {
                 let n = Nodegraph::with_tables(t as usize, n as usize, k as usize);
 
-                let data = OnceCell::new();
-                data.get_or_init(|| n);
-
                 Ok(Node::builder()
                     .filename(name)
                     .name(name)
                     .metadata(HashMap::default())
                     .storage(self.storage())
-                    .data(data)
+                    .data(n)
                     .build())
             }
         }
@@ -71,9 +67,7 @@ impl Update<Node<Nodegraph>> for Signature {
             unimplemented!()
         }
 
-        let data = OnceCell::new();
-        data.get_or_init(|| parent_data);
-        parent.data = data;
+        parent.data = parent_data.into();
 
         Ok(())
     }

@@ -142,6 +142,7 @@ pub struct SigStore<T> {
 
     pub(crate) storage: Option<Rc<dyn Storage>>,
 
+    #[builder(default)]
     pub(crate) data: OnceCell<T>,
 }
 
@@ -232,13 +233,10 @@ impl From<Signature> for SigStore<Signature> {
         let name = other.name();
         let filename = other.filename();
 
-        let data = OnceCell::new();
-        data.get_or_init(|| other);
-
         SigStore::builder()
             .name(name)
             .filename(filename)
-            .data(data)
+            .data(other)
             .metadata("")
             .storage(None)
             .build()

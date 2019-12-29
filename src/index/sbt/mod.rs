@@ -174,28 +174,30 @@ where
                     .nodes
                     .into_iter()
                     .map(|(n, l)| {
-                        let new_node = Node {
-                            filename: l.filename,
-                            name: l.name,
-                            metadata: l.metadata,
-                            storage: Some(Rc::clone(&storage)),
-                            data: OnceCell::new(),
-                        };
-                        (n, new_node)
+                        (
+                            n,
+                            Node::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
                     })
                     .collect();
                 let leaves = sbt
                     .leaves
                     .into_iter()
                     .map(|(n, l)| {
-                        let new_node = SigStore {
-                            filename: l.filename,
-                            name: l.name,
-                            metadata: l.metadata,
-                            storage: Some(Rc::clone(&storage)),
-                            data: OnceCell::new(),
-                        };
-                        (n, new_node)
+                        (
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
                     })
                     .collect();
                 (nodes, leaves)
