@@ -207,16 +207,15 @@ where
                     .nodes
                     .iter()
                     .filter_map(|(n, x)| match x {
-                        NodeInfoV4::Node(l) => {
-                            let new_node = Node {
-                                filename: l.filename.clone(),
-                                name: l.name.clone(),
-                                metadata: l.metadata.clone(),
-                                storage: Some(Rc::clone(&storage)),
-                                data: OnceCell::new(),
-                            };
-                            Some((*n, new_node))
-                        }
+                        NodeInfoV4::Node(l) => Some((
+                            *n,
+                            Node::builder()
+                                .filename(l.filename.clone())
+                                .name(l.name.clone())
+                                .metadata(l.metadata.clone())
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )),
                         NodeInfoV4::Leaf(_) => None,
                     })
                     .collect();
@@ -226,16 +225,15 @@ where
                     .into_iter()
                     .filter_map(|(n, x)| match x {
                         NodeInfoV4::Node(_) => None,
-                        NodeInfoV4::Leaf(l) => {
-                            let new_node = SigStore {
-                                filename: l.filename,
-                                name: l.name,
-                                metadata: l.metadata,
-                                storage: Some(Rc::clone(&storage)),
-                                data: OnceCell::new(),
-                            };
-                            Some((n, new_node))
-                        }
+                        NodeInfoV4::Leaf(l) => Some((
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )),
                     })
                     .collect();
 
@@ -527,7 +525,10 @@ pub struct Node<T> {
     filename: String,
     name: String,
     metadata: HashMap<String, u64>,
+
+    #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
+
     #[builder(default)]
     pub(crate) data: OnceCell<T>,
 }

@@ -168,7 +168,15 @@ where
 
         Ok(LinearIndex {
             storage: Some(Rc::clone(&storage)),
-            datasets: linear.leaves.into_iter().map(|l| l.into()).collect(),
+            datasets: linear
+                .leaves
+                .into_iter()
+                .map(|l| {
+                    let mut v: SigStore<L> = l.into();
+                    v.storage = Some(Rc::clone(&storage));
+                    v
+                })
+                .collect(),
         })
     }
 
