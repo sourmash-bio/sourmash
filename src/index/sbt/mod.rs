@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
 use log::info;
+use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -182,7 +182,7 @@ where
                             name: l.name,
                             metadata: l.metadata,
                             storage: Some(Rc::clone(&storage)),
-                            data: Rc::new(Lazy::new()),
+                            data: OnceCell::new(),
                         };
                         (n, new_node)
                     })
@@ -196,7 +196,7 @@ where
                             name: l.name,
                             metadata: l.metadata,
                             storage: Some(Rc::clone(&storage)),
-                            data: Rc::new(Lazy::new()),
+                            data: OnceCell::new(),
                         };
                         (n, new_node)
                     })
@@ -214,7 +214,7 @@ where
                                 name: l.name.clone(),
                                 metadata: l.metadata.clone(),
                                 storage: Some(Rc::clone(&storage)),
-                                data: Rc::new(Lazy::new()),
+                                data: OnceCell::new(),
                             };
                             Some((*n, new_node))
                         }
@@ -233,7 +233,7 @@ where
                                 name: l.name,
                                 metadata: l.metadata,
                                 storage: Some(Rc::clone(&storage)),
-                                data: Rc::new(Lazy::new()),
+                                data: OnceCell::new(),
                             };
                             Some((n, new_node))
                         }
@@ -533,7 +533,7 @@ where
     metadata: HashMap<String, u64>,
     storage: Option<Rc<dyn Storage>>,
     #[builder(default)]
-    pub(crate) data: Rc<Lazy<T>>,
+    pub(crate) data: OnceCell<T>,
 }
 
 impl<T> Node<T>

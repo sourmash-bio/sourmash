@@ -16,7 +16,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
+use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -145,7 +145,7 @@ where
 
     pub(crate) storage: Option<Rc<dyn Storage>>,
 
-    pub(crate) data: Rc<Lazy<T>>,
+    pub(crate) data: OnceCell<T>,
 }
 
 impl<T> SigStore<T>
@@ -175,7 +175,7 @@ impl ReadData<Signature> for SigStore<Signature> {
         if let Some(sig) = self.data.get() {
             Ok(sig)
         } else if let Some(storage) = &self.storage {
-            let sig = self.data.get_or_create(|| {
+            let sig = self.data.get_or_init(|| {
                 let raw = storage.load(&self.filename).unwrap();
                 let sigs: Result<Vec<Signature>, _> = serde_json::from_reader(&mut &raw[..]);
                 if let Ok(sigs) = sigs {
@@ -241,8 +241,8 @@ impl From<Signature> for SigStore<Signature> {
         let name = other.name();
         let filename = other.filename();
 
-        let data = Lazy::new();
-        data.get_or_create(|| other);
+        let data = OnceCell::new();
+        data.get_or_init(|| other);
 
         SigStore::builder()
             .name(name)

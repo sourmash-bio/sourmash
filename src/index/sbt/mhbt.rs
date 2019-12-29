@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::io::Write;
-use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
+use once_cell::sync::OnceCell;
 
 use crate::index::sbt::{Factory, FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError, ToWriter};
@@ -27,15 +26,15 @@ impl<L: Sync + Clone + Default> FromFactory<Node<Nodegraph>> for SBT<Node<Nodegr
             Factory::GraphFactory { args: (k, t, n) } => {
                 let n = Nodegraph::with_tables(t as usize, n as usize, k as usize);
 
-                let data = Lazy::new();
-                data.get_or_create(|| n);
+                let data = OnceCell::new();
+                data.get_or_init(|| n);
 
                 Ok(Node::builder()
                     .filename(name)
                     .name(name)
                     .metadata(HashMap::default())
                     .storage(self.storage())
-                    .data(Rc::new(data))
+                    .data(data)
                     .build())
             }
         }
@@ -72,9 +71,9 @@ impl Update<Node<Nodegraph>> for Signature {
             unimplemented!()
         }
 
-        let data = Lazy::new();
-        data.get_or_create(|| parent_data);
-        parent.data = Rc::new(data);
+        let data = OnceCell::new();
+        data.get_or_init(|| parent_data);
+        parent.data = data;
 
         Ok(())
     }
@@ -139,7 +138,7 @@ impl Comparable<Signature> for Node<Nodegraph> {
 impl ReadData<Nodegraph> for Node<Nodegraph> {
     fn data(&self) -> Result<&Nodegraph, Error> {
         if let Some(storage) = &self.storage {
-            Ok(self.data.get_or_create(|| {
+            Ok(self.data.get_or_init(|| {
                 let raw = storage.load(&self.filename).unwrap();
                 Nodegraph::from_reader(&mut &raw[..]).unwrap()
             }))
@@ -157,10 +156,8 @@ mod test {
     use std::fs::File;
     use std::io::{BufReader, Seek, SeekFrom};
     use std::path::PathBuf;
-    use std::rc::Rc;
 
     use assert_matches::assert_matches;
-    use lazy_init::Lazy;
     use tempfile;
 
     use super::Factory;
@@ -217,16 +214,7 @@ mod test {
         .unwrap();
         let sig_data = sigs[0].clone();
 
-        let data = Lazy::new();
-        data.get_or_create(|| sig_data);
-
-        let leaf = SigStore::builder()
-            .data(Rc::new(data))
-            .filename("")
-            .name("")
-            .metadata("")
-            .storage(None)
-            .build();
+        let leaf = sig_data.into();
 
         let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);

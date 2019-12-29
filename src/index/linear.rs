@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
+use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -180,7 +180,7 @@ where
                     name: l.name,
                     metadata: l.metadata,
                     storage: Some(Rc::clone(&storage)),
-                    data: Rc::new(Lazy::new()),
+                    data: OnceCell::new(),
                 })
                 .collect(),
         })
