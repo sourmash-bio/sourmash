@@ -382,6 +382,23 @@ unsafe fn kmerminhash_merge(ptr: *mut KmerMinHash, other: *const KmerMinHash) ->
 }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_is_compatible(
+    ptr: *const KmerMinHash,
+    other: *const KmerMinHash,
+) -> bool {
+    let mh = {
+        assert!(!ptr.is_null());
+        &*ptr
+    };
+    let other_mh = {
+        assert!(!other.is_null());
+        &*other
+    };
+
+    mh.check_compatible(other_mh).is_ok()
+}
+
 ffi_fn! {
 unsafe fn kmerminhash_add_from(ptr: *mut KmerMinHash, other: *const KmerMinHash)
     -> Result<()> {
@@ -462,5 +479,21 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash)
     };
 
     mh.compare(other_mh)
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool)
+    -> Result<f64> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let other_mh = {
+       assert!(!other.is_null());
+       &*other
+    };
+
+    mh.similarity(other_mh, ignore_abundance)
 }
 }

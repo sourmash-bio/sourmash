@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::f64::consts::PI;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
@@ -482,6 +483,61 @@ impl KmerMinHash {
         }
     }
 
+    pub fn similarity(&self, other: &KmerMinHash, ignore_abundance: bool) -> Result<f64, Error> {
+        self.check_compatible(other)?;
+
+        if ignore_abundance {
+            if let Ok((common, size)) = self.intersection_size(other) {
+                Ok(common as f64 / u64::max(1, size) as f64)
+            } else {
+                Ok(0.0)
+            }
+        } else {
+            if self.abunds.is_none() || other.abunds.is_none() {
+                // TODO: throw error, we need abundance for this
+                unimplemented!()
+            }
+
+            let abunds = self.abunds.as_ref().unwrap();
+            let other_abunds = other.abunds.as_ref().unwrap();
+
+            let mut prod = 0;
+            let mut other_iter = other.mins.iter().enumerate();
+            let mut next_hash = other_iter.next();
+            let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
+            let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+
+            for (i, hash) in self.mins.iter().enumerate() {
+                while let Some((j, k)) = next_hash {
+                    match k.cmp(hash) {
+                        Ordering::Less => next_hash = other_iter.next(),
+                        Ordering::Equal => {
+                            // Calling `get_unchecked` here is safe since
+                            // both `i` and `j` are valid indices
+                            // (`i` and `j` came from valid iterator calls)
+                            unsafe {
+                                prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
+                            }
+                            break;
+                        }
+                        Ordering::Greater => break,
+                    }
+                }
+            }
+
+            let norm_a = (a_sq as f64).sqrt();
+            let norm_b = (b_sq as f64).sqrt();
+
+            if norm_a == 0. || norm_b == 0. {
+                return Ok(0.0);
+            }
+
+            let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+            let distance = 2. * prod.acos() / PI;
+            Ok(1. - distance)
+        }
+    }
+
     pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
         let it = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -519,6 +575,15 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
+        /*
+        if self.num != other.num {
+            return Err(SourmashError::MismatchNum {
+                n1: self.num,
+                n2: other.num,
+            }
+            .into());
+        }
+        */
         if self.ksize != other.ksize {
             return Err(SourmashError::MismatchKSizes.into());
         }
