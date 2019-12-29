@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use failure::Error;
-use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -14,10 +13,7 @@ use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter}
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
 
 #[derive(TypedBuilder)]
-pub struct LinearIndex<L>
-where
-    L: Sync,
-{
+pub struct LinearIndex<L> {
     #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
 
@@ -34,7 +30,7 @@ struct LinearInfo<L> {
 
 impl<'a, L> Index<'a> for LinearIndex<L>
 where
-    L: Sync + Clone + Comparable<L> + 'a,
+    L: Clone + Comparable<L> + 'a,
     SigStore<L>: From<L>,
 {
     type Item = L;
@@ -83,7 +79,7 @@ where
 
 impl<L> LinearIndex<L>
 where
-    L: std::marker::Sync + ToWriter,
+    L: ToWriter,
     SigStore<L>: ReadData<L>,
 {
     pub fn save_file<P: AsRef<Path>>(
@@ -172,17 +168,7 @@ where
 
         Ok(LinearIndex {
             storage: Some(Rc::clone(&storage)),
-            datasets: linear
-                .leaves
-                .into_iter()
-                .map(|l| SigStore {
-                    filename: l.filename,
-                    name: l.name,
-                    metadata: l.metadata,
-                    storage: Some(Rc::clone(&storage)),
-                    data: OnceCell::new(),
-                })
-                .collect(),
+            datasets: linear.leaves.into_iter().map(|l| l.into()).collect(),
         })
     }
 

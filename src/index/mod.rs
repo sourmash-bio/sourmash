@@ -135,10 +135,7 @@ pub struct DatasetInfo {
 }
 
 #[derive(TypedBuilder, Default, Clone)]
-pub struct SigStore<T>
-where
-    T: std::marker::Sync,
-{
+pub struct SigStore<T> {
     pub(crate) filename: String,
     pub(crate) name: String,
     pub(crate) metadata: String,
@@ -148,19 +145,13 @@ where
     pub(crate) data: OnceCell<T>,
 }
 
-impl<T> SigStore<T>
-where
-    T: std::marker::Sync + Default,
-{
+impl<T> SigStore<T> {
     pub fn name(&self) -> String {
         self.name.clone()
     }
 }
 
-impl<T> std::fmt::Debug for SigStore<T>
-where
-    T: std::marker::Sync,
-{
+impl<T> std::fmt::Debug for SigStore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -327,5 +318,17 @@ impl Comparable<Signature> for Signature {
             }
         }
         unimplemented!()
+    }
+}
+
+impl<L> From<DatasetInfo> for SigStore<L> {
+    fn from(other: DatasetInfo) -> SigStore<L> {
+        SigStore {
+            filename: other.filename,
+            name: other.name,
+            metadata: other.metadata,
+            storage: None,
+            data: OnceCell::new(),
+        }
     }
 }

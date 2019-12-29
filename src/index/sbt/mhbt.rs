@@ -20,7 +20,7 @@ impl ToWriter for Nodegraph {
     }
 }
 
-impl<L: Sync + Clone + Default> FromFactory<Node<Nodegraph>> for SBT<Node<Nodegraph>, L> {
+impl<L: Clone + Default> FromFactory<Node<Nodegraph>> for SBT<Node<Nodegraph>, L> {
     fn factory(&self, name: &str) -> Result<Node<Nodegraph>, Error> {
         match self.factory {
             Factory::GraphFactory { args: (k, t, n) } => {
