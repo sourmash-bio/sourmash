@@ -101,6 +101,12 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
     return row
 
 
+def display_lineage(lineage, include_strain=True, truncate_empty=True):
+    return ";".join(zip_lineage(lineage,
+                                include_strain=include_strain,
+                                truncate_empty=truncate_empty))
+
+
 # filter function toreplace blank/na/null with 'unassigned'
 filter_null = lambda x: 'unassigned' if x.strip() in \
   ('[Blank]', 'na', 'null', '') else x
