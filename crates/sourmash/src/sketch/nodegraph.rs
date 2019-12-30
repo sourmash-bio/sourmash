@@ -5,7 +5,7 @@ use std::path::Path;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use fixedbitset::FixedBitSet;
-use primal;
+use primal_check;
 
 use crate::sketch::minhash::KmerMinHash;
 use crate::HashIntoType;
@@ -51,7 +51,7 @@ impl Nodegraph {
         }
 
         while tablesizes.len() != n_tables {
-            if primal::is_prime(i) {
+            if primal_check::miller_rabin(i) {
                 tablesizes.push(i as usize);
             }
             if i == 1 {
