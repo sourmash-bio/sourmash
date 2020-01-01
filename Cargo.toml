@@ -1,7 +1,5 @@
 [workspace]
 members = [
   "crates/sourmash",
-  "crates/smrs",
-#  "crates/draff",
 ]
 default-members = ["crates/sourmash"]
