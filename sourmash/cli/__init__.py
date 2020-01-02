@@ -1,4 +1,5 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter, SUPPRESS
+import os
 import sys
 
 import sourmash
@@ -14,14 +15,15 @@ from . import gather
 from . import import_csv
 from . import info
 from . import index
+from . import migrate
 from . import multigather
 from . import plot
+from . import sbt_combine
 from . import search
 from . import watch
 
 # Subcommand groups
 from . import lca
-from . import sbt
 from . import sig
 from . import storage
 
@@ -79,27 +81,36 @@ class SourmashParser(ArgumentParser):
 
 
 def get_parser():
-    commands = ['compute', 'compare', 'search', 'plot', 'gather', 'index',
-                'lca', 'sbt', 'info', 'sig', 'categorize', 'watch', 'storage',
-                'multigather', 'migrate', 'sbt_combine', 'import_csv', 'dump']
-    commandstr = ' -- '.join(sorted(commands))
+    module_descs = {
+        'lca': 'Lowest common ancestor (LCA) based operations',
+        'sig': 'Operations on signatures (MinHash sketches)',
+        'storage': 'Operations on storage',
+    }
 
-    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.'
-    parser = SourmashParser(prog='sourmash', description=desc)
+    clidir = os.path.dirname(__file__)
+    basic_ops = utils.command_list(clidir)
+    usage = '    Basic operations\n'
+    for bo in basic_ops:
+        usage += '        sourmash {op:s} --help\n'.format(op=bo)
+    cmd_group_dirs = next(os.walk(clidir))[1]
+    cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
+    cmd_group_dirs = sorted(cmd_group_dirs)
+    for dirpath in cmd_group_dirs:
+        group_ops = utils.command_list(os.path.join(clidir, dirpath))
+        usage += '\n    ' + module_descs[dirpath] + '\n'
+        for go in group_ops:
+            usage += '        sourmash {gd:s} {op:s} --help\n'.format(gd=dirpath, op=go)
+
+    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\n' + usage
+    parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter)
     parser._optionals.title = 'Options'
     parser.add_argument('-v', '--version', action='version', version='sourmash '+ sourmash.VERSION)
     parser.add_argument('-q', '--quiet', action='store_true', help='don\'t print citation information')
     sub = parser.add_subparsers(
-        title='Commands', dest='cmd', metavar='cmd', help=commandstr,
-        description='Invoke "sourmash <cmd> --help" for more details on executing each command.'
+        title='Instructions', dest='cmd', metavar='cmd', help=SUPPRESS,
+        description='Invoke "sourmash <cmd> --help" or "sourmash <cmd> <subcmd> --help"\nfor more details on executing each command.'
     )
-    for cmd in commands:
-        if cmd in ('migrate', 'sbt_combine'):
-            continue
-        getattr(sys.modules[__name__], cmd).subparser(sub)
-    # BEGIN: dirty hacks to simultaneously support new and previous interface
-    sbt.combine.alt_subparser(sub)
-    sbt.migrate.subparser(sub)
-    # END: dirty hacks to simultaneously support new and previous interface
+    for op in basic_ops + cmd_group_dirs:
+        getattr(sys.modules[__name__], op).subparser(sub)
     parser._action_groups.reverse()
     return parser
