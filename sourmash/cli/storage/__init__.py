@@ -6,15 +6,14 @@ import sys
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('storage', formatter_class=RawDescriptionHelpFormatter)
-    desc = 'Invoke "sourmash storage <subcmd> --help" for more details on executing each subcommand.\n\n'
-    desc += '    Operations\n'
+    subparser = subparsers.add_parser('storage', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
+    desc = 'Operations\n'
     clidir = os.path.dirname(__file__)
     ops = command_list(clidir)
     for subcmd in ops:
-        desc += '        sourmash storage {sc:s} --help\n'.format(sc=subcmd)
+        desc += '    sourmash storage {sc:s} --help\n'.format(sc=subcmd)
     s = subparser.add_subparsers(
-        title='Subcommands', dest='subcmd', metavar='subcmd', help=SUPPRESS,
+        title='Storage utilities', dest='subcmd', metavar='subcmd', help=SUPPRESS,
         description=desc
     )
     for subcmd in ops:
