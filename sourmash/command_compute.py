@@ -10,9 +10,10 @@ import random
 import screed
 import time
 
-from . import MinHash
-from . import signature as sig
+from .signature import SourmashSignature, save_signatures
 from .logging import notify, error, set_quiet
+from .utils import RustObject
+from ._lowlevel import ffi, lib
 
 DEFAULT_COMPUTE_K = '21,31,51'
 DEFAULT_LINE_COUNT = 1500
@@ -64,11 +65,6 @@ def compute(args):
 
     # get list of k-mer sizes for which to compute sketches
     ksizes = args.ksizes
-    if ',' in ksizes:
-        ksizes = ksizes.split(',')
-        ksizes = list(map(int, ksizes))
-    else:
-        ksizes = [int(ksizes)]
 
     notify('Computing signature for ksizes: {}', str(ksizes))
     num_sigs = 0
@@ -115,75 +111,6 @@ def compute(args):
         error("must specify -o with --merge")
         sys.exit(-1)
 
-    def make_minhashes():
-        seed = args.seed
-
-        # one minhash for each ksize
-        Elist = []
-        for k in ksizes:
-            if args.protein:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=False,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.dayhoff:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=True,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.hp:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=False,
-                            hp=True,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.dna:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=False,
-                            dayhoff=False,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-        return Elist
-
-    def add_seq(Elist, seq, input_is_protein, check_sequence):
-        for E in Elist:
-            if input_is_protein:
-                E.add_protein(seq)
-            else:
-                E.add_sequence(seq, not check_sequence)
-
-    def build_siglist(Elist, filename, name=None):
-        return [ sig.SourmashSignature(E, filename=filename,
-                                       name=name) for E in Elist ]
-
-    def save_siglist(siglist, output_fp, filename=None):
-        # save!
-        if output_fp:
-            sigfile_name = args.output.name
-            sig.save_signatures(siglist, args.output)
-        else:
-            if filename is None:
-                raise Exception("internal error, filename is None")
-            with open(filename, 'w') as fp:
-                sigfile_name = filename
-                sig.save_signatures(siglist, fp)
-        notify(
-            'saved signature(s) to {}. Note: signature license is CC0.',
-            sigfile_name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -203,7 +130,10 @@ def compute(args):
                 siglist = []
                 for n, record in enumerate(screed.open(filename)):
                     # make minhashes for each sequence
-                    Elist = make_minhashes()
+                    Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                           args.dayhoff, args.hp, args.dna,
+                                           args.num_hashes,
+                                           args.track_abundance, args.scaled)
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
@@ -242,7 +172,10 @@ def compute(args):
                 for fasta in fastas:
                     for n, record in enumerate(screed.open(fasta)):
                         # make minhashes for each sequence
-                        Elist = make_minhashes()
+                        Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                               args.dayhoff, args.hp, args.dna,
+                                               args.num_hashes,
+                                               args.track_abundance, args.scaled)
                         add_seq(Elist, record.sequence,
                                 args.input_is_protein, args.check_sequence)
 
@@ -255,7 +188,10 @@ def compute(args):
                        time.time() - startt)
             else:
                 # make minhashes for the whole file
-                Elist = make_minhashes()
+                Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                       args.dayhoff, args.hp, args.dna,
+                                       args.num_hashes,
+                                       args.track_abundance, args.scaled)
 
                 # consume & calculate signatures
                 notify('... reading sequences from {}', filename)
@@ -288,7 +224,10 @@ def compute(args):
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
-        Elist = make_minhashes()
+        Elist = make_minhashes(ksizes, args.seed, args.protein,
+                               args.dayhoff, args.hp, args.dna,
+                               args.num_hashes,
+                               args.track_abundance, args.scaled)
 
         n = 0
         total_seq = 0
@@ -312,3 +251,145 @@ def compute(args):
 
         # at end, save!
         save_siglist(siglist, args.output)
+
+
+def make_minhashes(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+    params = ComputeParameters(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled)
+    sig = SourmashSignature.from_params(params)
+    return sig
+
+
+def add_seq(sig, seq, input_is_protein, check_sequence):
+    if input_is_protein:
+        sig.add_protein(seq)
+    else:
+        sig.add_sequence(seq, not check_sequence)
+
+
+def build_siglist(sig, filename, name=None):
+    if name is not None:
+        sig._name = name
+    sig.filename = filename
+    return [sig]
+
+
+def save_siglist(siglist, output_fp, filename=None):
+    # save!
+    if output_fp:
+        sigfile_name = output_fp.name
+        save_signatures(siglist, output_fp)
+    else:
+        if filename is None:
+            raise Exception("internal error, filename is None")
+        with open(filename, 'w') as fp:
+            sigfile_name = filename
+            save_signatures(siglist, fp)
+    notify(
+        'saved signature(s) to {}. Note: signature license is CC0.',
+        sigfile_name)
+
+
+class ComputeParameters(RustObject):
+    __dealloc_func__ = lib.computeparams_free
+
+    def __init__(self, ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+        self._objptr = lib.computeparams_new()
+
+        self.seed = seed
+        self.ksizes = ksizes
+        self.protein = protein
+        self.dayhoff = dayhoff
+        self.hp = hp
+        self.dna = dna
+        self.num_hashes = num_hashes
+        self.track_abundance = track_abundance
+        self.scaled = scaled
+
+    @staticmethod
+    def from_args(args):
+        ptr = lib.computeparams_new()
+        ret = ComputeParameters._from_objptr(ptr)
+
+        for arg, value in vars(args).items():
+            try:
+                getattr(type(ret), arg).fset(ret, value)
+            except AttributeError:
+                pass
+
+        return ret
+
+    @property
+    def seed(self):
+        return self._methodcall(lib.computeparams_seed)
+
+    @seed.setter
+    def seed(self, v):
+        return self._methodcall(lib.computeparams_set_seed, v)
+
+    @property
+    def ksizes(self):
+        size = ffi.new("uintptr_t *")
+        ksizes_ptr = self._methodcall(lib.computeparams_ksizes, size)
+        size = ffi.unpack(size, 1)[0]
+        ksizes = ffi.unpack(ksizes_ptr, size)
+        return ksizes
+
+    @ksizes.setter
+    def ksizes(self, v):
+        return self._methodcall(lib.computeparams_set_ksizes, list(v), len(v))
+
+    @property
+    def protein(self):
+        return self._methodcall(lib.computeparams_protein)
+
+    @protein.setter
+    def protein(self, v):
+        return self._methodcall(lib.computeparams_set_protein, v)
+
+    @property
+    def dayhoff(self):
+        return self._methodcall(lib.computeparams_dayhoff)
+
+    @dayhoff.setter
+    def dayhoff(self, v):
+        return self._methodcall(lib.computeparams_set_dayhoff, v)
+
+    @property
+    def hp(self):
+        return self._methodcall(lib.computeparams_hp)
+
+    @hp.setter
+    def hp(self, v):
+        return self._methodcall(lib.computeparams_set_hp, v)
+
+    @property
+    def dna(self):
+        return self._methodcall(lib.computeparams_dna)
+
+    @dna.setter
+    def dna(self, v):
+        return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def num_hashes(self):
+        return self._methodcall(lib.computeparams_num_hashes)
+
+    @num_hashes.setter
+    def num_hashes(self, v):
+        return self._methodcall(lib.computeparams_set_num_hashes, v)
+
+    @property
+    def track_abundance(self):
+        return self._methodcall(lib.computeparams_track_abundance)
+
+    @track_abundance.setter
+    def track_abundance(self, v):
+        return self._methodcall(lib.computeparams_set_track_abundance, v)
+
+    @property
+    def scaled(self):
+        return self._methodcall(lib.computeparams_scaled)
+
+    @scaled.setter
+    def scaled(self, v):
+        return self._methodcall(lib.computeparams_set_scaled, int(v))
