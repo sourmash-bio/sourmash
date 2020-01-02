@@ -8,7 +8,7 @@ from . import utils
 
 # Commands
 from . import categorize
-from . import compare
+from . import compare_csv
 from . import compute
 from . import dump
 from . import gather
@@ -68,14 +68,6 @@ class SourmashParser(ArgumentParser):
         # BEGIN: dirty hacks to simultaneously support new and previous interface
         if hasattr(args, 'subcmd') and args.subcmd == 'import':
             args.subcmd = 'ingest'
-        if hasattr(args, 'cmd') and args.cmd == 'sbt_combine':
-            args.cmd = 'sbt'
-            args.subcmd = 'combine'
-        if hasattr(args, 'cmd') and args.cmd == 'migrate':
-            args.cmd = 'sbt'
-            args.subcmd = 'migrate'
-        if hasattr(args, 'subcmd') and args.subcmd == 'compare_csv':
-            args.subcmd = 'compare'
         # END: dirty hacks to simultaneously support new and previous interface
         return args
 
@@ -96,19 +88,16 @@ def get_parser():
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)
     for dirpath in cmd_group_dirs:
-        group_ops = utils.command_list(os.path.join(clidir, dirpath))
         usage += '\n    ' + module_descs[dirpath] + '\n'
-        for go in group_ops:
-            usage += '        sourmash {gd:s} {op:s} --help\n'.format(gd=dirpath, op=go)
+        usage += '        sourmash {gd:s} --help\n'.format(gd=dirpath)
 
-    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\n' + usage
-    parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter)
+    desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\nUsage instructions:\n' + usage
+    parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     parser._optionals.title = 'Options'
     parser.add_argument('-v', '--version', action='version', version='sourmash '+ sourmash.VERSION)
     parser.add_argument('-q', '--quiet', action='store_true', help='don\'t print citation information')
     sub = parser.add_subparsers(
         title='Instructions', dest='cmd', metavar='cmd', help=SUPPRESS,
-        description='Invoke "sourmash <cmd> --help" or "sourmash <cmd> <subcmd> --help"\nfor more details on executing each command.'
     )
     for op in basic_ops + cmd_group_dirs:
         getattr(sys.modules[__name__], op).subparser(sub)
