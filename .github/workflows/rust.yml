@@ -193,7 +193,7 @@ jobs:
           command: install
           args: --force wasm-pack
       - name: run wasm-pack
-        run: wasm-pack build crates/sourmash -d ../../pkg
+        run: wasm-pack build src/core -d ../../pkg
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi
@@ -244,7 +244,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: publish
-          args: --dry-run --manifest-path crates/sourmash/Cargo.toml
+          args: --dry-run --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest

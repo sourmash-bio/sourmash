@@ -27,13 +27,13 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
-include/sourmash.h: crates/sourmash/src/lib.rs \
-                    crates/sourmash/src/ffi/minhash.rs \
-                    crates/sourmash/src/ffi/signature.rs \
-                    crates/sourmash/src/ffi/nodegraph.rs \
-                    crates/sourmash/src/errors.rs
+include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/minhash.rs \
+                    src/core/src/ffi/signature.rs \
+                    src/core/src/ffi/nodegraph.rs \
+                    src/core/src/errors.rs
 	rustup override set nightly
-	cd crates/sourmash && \
+	cd src/core && \
 	RUST_BACKTRACE=1 cbindgen -c cbindgen.toml -o ../../$@
 	rustup override set stable
 
@@ -54,7 +54,7 @@ last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
 
 wasm:
-	wasm-pack build crates/sourmash -d ../../pkg
+	wasm-pack build src/core -d ../../pkg
 
 wasi:
 	cargo wasi build
