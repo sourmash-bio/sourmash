@@ -78,12 +78,14 @@ def get_parser():
         'sig': 'Operations on signatures (MinHash sketches)',
         'storage': 'Operations on storage',
     }
+    expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
+    user_ops = [op for op in basic_ops if op not in expert]
     usage = '    Basic operations\n'
-    for bo in basic_ops:
-        usage += '        sourmash {op:s} --help\n'.format(op=bo)
+    for op in user_ops:
+        usage += '        sourmash {op:s} --help\n'.format(op=op)
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)
