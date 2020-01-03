@@ -10,6 +10,7 @@ import glob
 import json
 import csv
 import pytest
+import sys
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -43,9 +44,8 @@ def test_run_sourmash_subcmd_help():
     print(err)
     assert status != 0               # should fail
 
-    # py27 defaults to out, py3 defaults to err. Sigh.
-    # assert error was printed
-    assert any("invalid choice: 'sbt'" in o for o in (err, out))
+    assert "invalid choice:" in err
+    assert "'sbt' (choose from" in err
 
     # should not have printed a Traceback
     assert any("Traceback" not in o for o in (err, out))
