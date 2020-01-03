@@ -8,7 +8,7 @@ from . import utils
 
 # Commands
 from . import categorize
-from . import compare_csv
+from . import compare
 from . import compute
 from . import dump
 from . import gather
@@ -78,7 +78,7 @@ def get_parser():
         'sig': 'Operations on signatures (MinHash sketches)',
         'storage': 'Operations on storage',
     }
-    expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'sbt_combine', 'watch'])
+    expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)
