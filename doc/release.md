@@ -138,18 +138,19 @@ twine upload *.whl
 The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI, and open a PR in Bioconda. Review any changes
 (especially dependency versions, since these don't get picked up).
 
-This is an example PR (for `2.1.0`): [https://github.com/bioconda/bioconda-recipes/pull/17113](https://github.com/bioconda/bioconda-recipes/pull/17113)
+An example PR for [`2.1.0`](https://github.com/bioconda/bioconda-recipes/pull/17113).
 
 ## Announce it!
 
 If a bioinformatics software is released and no one tweets, is it really released?
 
 Examples:
-- 2.0.0 https://twitter.com/luizirber/status/1108846466502520832
-- 2.0.1 https://twitter.com/luizirber/status/1136786447518711808
-- 2.1.0 https://twitter.com/luizirber/status/1166910335120314369
-- 2.2.0 https://twitter.com/luizirber/status/1179126660911661057
-- 2.3.0 https://twitter.com/luizirber/status/1198027116396171264
+
+- [2.3.0](https://twitter.com/luizirber/status/1198027116396171264)
+- [2.2.0](https://twitter.com/luizirber/status/1179126660911661057)
+- [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
+- [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
+- [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
 
 ## To test on a blank Ubuntu system
 
