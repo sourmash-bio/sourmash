@@ -1,5 +1,5 @@
 from . import classify
-from . import compare
+from . import compare_csv
 from . import gather
 from . import index
 from . import rankinfo

@@ -45,7 +45,7 @@ def test_run_sourmash_subcmd_help():
 
     # py27 defaults to out, py3 defaults to err. Sigh.
     # assert error was printed
-    assert any("usage: sourmash sbt" in o for o in (err, out))
+    assert any("invalid choice: 'sbt'" in o for o in (err, out))
 
     # should not have printed a Traceback
     assert any("Traceback" not in o for o in (err, out))
