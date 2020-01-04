@@ -12,7 +12,7 @@ import functools
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair']
+           'count_lca_for_assignments', 'LineagePair', 'display_lineage']
 
 try:                                      # py2/py3 compat
     from itertools import zip_longest
@@ -86,16 +86,25 @@ def zip_lineage(lineage, include_strain=True, truncate_empty=False):
     ['a', '', 'c', '', '', '', '', '']
     """
 
-    row = []
     empty = LineagePair(None, '')
-    for taxrank, lineage_tup in zip_longest(taxlist(include_strain=include_strain), lineage, fillvalue=empty):
-        if lineage_tup == empty:
-            if truncate_empty:
-                break
-        else:
-            # validate non-empty tax, e.g. superkingdom/phylum/class in order.
-            if lineage_tup.rank != taxrank:
-                raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
+
+    pairs = zip_longest(taxlist(include_strain=include_strain),
+                        lineage, fillvalue=empty)
+    pairs = list(pairs)
+
+    # eliminate empty if so requested
+    if truncate_empty:
+        last_lineage_tup = pairs[-1][1]
+        while pairs and last_lineage_tup == empty:
+            pairs.pop(-1)
+            if pairs:
+                last_lineage_tup = pairs[-1][1]
+
+    row = []
+    for taxrank, lineage_tup in pairs:
+        # validate non-empty tax, e.g. superkingdom/phylum/class in order.
+        if lineage_tup != empty and lineage_tup.rank != taxrank:
+            raise ValueError('incomplete lineage at {} - is {} instead'.format(taxrank, lineage_tup.rank))
 
         row.append(lineage_tup.name)
     return row

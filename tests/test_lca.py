@@ -44,12 +44,27 @@ def test_zip_lineage_3():
     assert zip_lineage(x) == ['a', '', 'c', '', '', '', '', '']
 
 
+def test_zip_lineage_3_truncate():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert zip_lineage(x, truncate_empty=True) == ['a', '', 'c']
+
+
 def test_zip_lineage_4():
     x = [ LineagePair('superkingdom', 'a'), LineagePair('class', 'c') ]
     with pytest.raises(ValueError) as e:
         zip_lineage(x)
 
     assert 'incomplete lineage at phylum - is class instead' in str(e.value)
+
+
+def test_display_lineage_1():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert display_lineage(x) == "a;b", display_lineage(x)
+
+
+def test_display_lineage_2():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert display_lineage(x) == "a;;c", display_lineage(x)
 
 
 def test_build_tree():
