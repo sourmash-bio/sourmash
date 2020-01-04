@@ -1,6 +1,5 @@
 # Releasing a new version of sourmash
 
-
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
@@ -10,6 +9,9 @@ Remember to update release numbers/RC in:
 
 ## Testing a release
 
+ 0\. First things first: check if Read the Docs is building properly for
+ master. Build on https://readthedocs.org/projects/sourmash/builds/ should be
+ passing, and also check if https://sourmash.readthedocs.io/en/latest/ is updated.
 
  1\. The below should be done in a clean checkout:
 ```
@@ -19,7 +21,7 @@ cd sourmash
 ```
 2\. Set your new version number and release candidate (you might want to check https://github.com/dib-lab/sourmash/releases for next version number):
 ```
-new_version=1.0.0
+new_version=3.0.0
 rc=rc1
 ```
  and then tag the release candidate with the new version number prefixed by
