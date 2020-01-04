@@ -1,10 +1,5 @@
 channels:
   - conda-forge
-  - bioconda
   - defaults
 dependencies:
   - rust
-  - pip
-  - python=3.7
-  - pip:
-    - -e ../.[doc]
