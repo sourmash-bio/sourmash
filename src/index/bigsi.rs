@@ -198,7 +198,7 @@ mod test {
         let results_sbt = sbt.search(&leaf, 0.5, false).unwrap();
         assert_eq!(results_sbt.len(), 1);
 
-        let data = (*leaf.data).get().unwrap();
+        let data = leaf.data.get().unwrap();
         let results_bigsi = bigsi.search(&data, 0.5, false).unwrap();
         assert_eq!(results_bigsi.len(), 1);
 
@@ -207,7 +207,7 @@ mod test {
         let results_sbt = sbt.search(&leaf, 0.1, false).unwrap();
         assert_eq!(results_sbt.len(), 2);
 
-        let data = (*leaf.data).get().unwrap();
+        let data = leaf.data.get().unwrap();
         let results_bigsi = bigsi.search(&data, 0.1, false).unwrap();
         assert_eq!(results_bigsi.len(), 2);
 

@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use failure::Error;
-use lazy_init::Lazy;
 use log::info;
+use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -39,10 +39,7 @@ pub trait FromFactory<N> {
 }
 
 #[derive(TypedBuilder)]
-pub struct SBT<N, L>
-where
-    L: Sync,
-{
+pub struct SBT<N, L> {
     #[builder(default = 2)]
     d: u32,
 
@@ -69,7 +66,7 @@ const fn child(parent: u64, pos: u64, d: u64) -> u64 {
 
 impl<N, L> SBT<N, L>
 where
-    L: std::clone::Clone + Default + Sync,
+    L: std::clone::Clone + Default,
     N: Default,
 {
     #[inline(always)]
@@ -117,8 +114,8 @@ where
 
 impl<T, U> SBT<Node<U>, T>
 where
-    T: std::marker::Sync + ToWriter + Clone,
-    U: std::marker::Sync + ToWriter,
+    T: ToWriter + Clone,
+    U: ToWriter,
     Node<U>: ReadData<U>,
     SigStore<T>: ReadData<T>,
 {
@@ -177,28 +174,30 @@ where
                     .nodes
                     .into_iter()
                     .map(|(n, l)| {
-                        let new_node = Node {
-                            filename: l.filename,
-                            name: l.name,
-                            metadata: l.metadata,
-                            storage: Some(Rc::clone(&storage)),
-                            data: Rc::new(Lazy::new()),
-                        };
-                        (n, new_node)
+                        (
+                            n,
+                            Node::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
                     })
                     .collect();
                 let leaves = sbt
                     .leaves
                     .into_iter()
                     .map(|(n, l)| {
-                        let new_node = SigStore {
-                            filename: l.filename,
-                            name: l.name,
-                            metadata: l.metadata,
-                            storage: Some(Rc::clone(&storage)),
-                            data: Rc::new(Lazy::new()),
-                        };
-                        (n, new_node)
+                        (
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
                     })
                     .collect();
                 (nodes, leaves)
@@ -208,16 +207,15 @@ where
                     .nodes
                     .iter()
                     .filter_map(|(n, x)| match x {
-                        NodeInfoV4::Node(l) => {
-                            let new_node = Node {
-                                filename: l.filename.clone(),
-                                name: l.name.clone(),
-                                metadata: l.metadata.clone(),
-                                storage: Some(Rc::clone(&storage)),
-                                data: Rc::new(Lazy::new()),
-                            };
-                            Some((*n, new_node))
-                        }
+                        NodeInfoV4::Node(l) => Some((
+                            *n,
+                            Node::builder()
+                                .filename(l.filename.clone())
+                                .name(l.name.clone())
+                                .metadata(l.metadata.clone())
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )),
                         NodeInfoV4::Leaf(_) => None,
                     })
                     .collect();
@@ -227,16 +225,15 @@ where
                     .into_iter()
                     .filter_map(|(n, x)| match x {
                         NodeInfoV4::Node(_) => None,
-                        NodeInfoV4::Leaf(l) => {
-                            let new_node = SigStore {
-                                filename: l.filename,
-                                name: l.name,
-                                metadata: l.metadata,
-                                storage: Some(Rc::clone(&storage)),
-                                data: Rc::new(Lazy::new()),
-                            };
-                            Some((n, new_node))
-                        }
+                        NodeInfoV4::Leaf(l) => Some((
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )),
                     })
                     .collect();
 
@@ -354,7 +351,7 @@ where
 impl<'a, N, L> Index<'a> for SBT<N, L>
 where
     N: Comparable<N> + Comparable<L> + Update<N> + Debug + Default,
-    L: Comparable<L> + Update<N> + Clone + Debug + Default + Sync,
+    L: Comparable<L> + Update<N> + Clone + Debug + Default,
     SBT<N, L>: FromFactory<N>,
     SigStore<L>: From<L> + ReadData<L>,
 {
@@ -524,21 +521,21 @@ pub enum Factory {
 }
 
 #[derive(TypedBuilder, Default, Clone)]
-pub struct Node<T>
-where
-    T: std::marker::Sync,
-{
+pub struct Node<T> {
     filename: String,
     name: String,
     metadata: HashMap<String, u64>,
-    storage: Option<Rc<dyn Storage>>,
+
     #[builder(default)]
-    pub(crate) data: Rc<Lazy<T>>,
+    storage: Option<Rc<dyn Storage>>,
+
+    #[builder(default)]
+    pub(crate) data: OnceCell<T>,
 }
 
 impl<T> Node<T>
 where
-    T: Sync + ToWriter,
+    T: ToWriter,
 {
     pub fn save(&self, path: &str) -> Result<String, Error> {
         if let Some(storage) = &self.storage {
@@ -559,7 +556,7 @@ where
 
 impl<T> PartialEq for Node<T>
 where
-    T: Sync + PartialEq,
+    T: PartialEq,
     Node<T>: ReadData<T>,
 {
     fn eq(&self, other: &Node<T>) -> bool {
@@ -569,7 +566,7 @@ where
 
 impl<T> SigStore<T>
 where
-    T: Sync + ToWriter,
+    T: ToWriter,
 {
     pub fn save(&self, path: &str) -> Result<String, Error> {
         if let Some(storage) = &self.storage {
@@ -589,7 +586,7 @@ where
 
 impl<T> std::fmt::Debug for Node<T>
 where
-    T: std::marker::Sync + std::fmt::Debug,
+    T: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -687,7 +684,7 @@ pub fn scaffold<N>(
     storage: Option<Rc<dyn Storage>>,
 ) -> SBT<Node<N>, Signature>
 where
-    N: std::marker::Sync + std::clone::Clone + std::default::Default,
+    N: Clone + Default,
 {
     let mut leaves: HashMap<u64, SigStore<Signature>> = HashMap::with_capacity(datasets.len());
 
@@ -857,7 +854,7 @@ impl BinaryTree {
 /*
 impl<U> From<LinearIndex<Signature>> for SBT<Node<U>, Signature>
 where
-    U: Sync + Default + Clone,
+    U: Default + Clone,
 {
     fn from(other: LinearIndex<Signature>) -> Self {
         let storage = other.storage();
