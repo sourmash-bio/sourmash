@@ -12,7 +12,7 @@ use sourmash::signature::Signature;
 
 fn find_small_bench(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("tests/test-data/v5.sbt.json");
+    filename.push("../../tests/test-data/v5.sbt.json");
 
     let sbt = MHBT::from_path(filename).expect("Loading error");
 
@@ -47,7 +47,7 @@ fn find_small_bench(c: &mut Criterion) {
 
 fn find_subset_bench(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("tests/test-data/subset.sbt.json");
+    filename.push("../../tests/test-data/subset.sbt.json");
 
     let sbt = MHBT::from_path(filename).expect("Loading error");
 

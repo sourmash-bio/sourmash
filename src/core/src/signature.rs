@@ -294,7 +294,7 @@ mod test {
     #[test]
     fn load_sig() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
+        filename.push("../../tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
         let sigs = Signature::load_signatures(

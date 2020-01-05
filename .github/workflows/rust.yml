@@ -180,7 +180,7 @@ jobs:
           args: -- -D warnings
 
   wasm-pack:
-    name: Check if wasm-pack builds a valid package
+    name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -193,7 +193,7 @@ jobs:
           command: install
           args: --force wasm-pack
       - name: run wasm-pack
-        run: wasm-pack build
+        run: wasm-pack build src/core -d ../../pkg
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi
@@ -240,11 +240,11 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Make sure we can publish the crate
+      - name: Make sure we can publish the sourmash crate
         uses: actions-rs/cargo@v1
         with:
           command: publish
-          args: --dry-run
+          args: --dry-run --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest

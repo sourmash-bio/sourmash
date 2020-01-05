@@ -27,9 +27,14 @@ test: all
 doc: .PHONY
 	cd doc && make html
 
-include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/ffi/nodegraph.rs src/errors.rs
+include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/minhash.rs \
+                    src/core/src/ffi/signature.rs \
+                    src/core/src/ffi/nodegraph.rs \
+                    src/core/src/errors.rs
 	rustup override set nightly
-	RUST_BACKTRACE=1 cbindgen --clean -c cbindgen.toml -o $@
+	cd src/core && \
+	RUST_BACKTRACE=1 cbindgen -c cbindgen.toml -o ../../$@
 	rustup override set stable
 
 coverage: all
@@ -49,7 +54,7 @@ last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
 
 wasm:
-	wasm-pack build
+	wasm-pack build src/core -d ../../pkg
 
 wasi:
 	cargo wasi build

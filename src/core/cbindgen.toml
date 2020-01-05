@@ -4,6 +4,7 @@ language = "C"
 
 [parse]
 expand = ["sourmash"]
+clean = true
 
 [enum]
 rename_variants = "QualifiedScreamingSnakeCase"

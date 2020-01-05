@@ -166,7 +166,7 @@ mod test {
     #[test]
     fn save_sbt() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
+        filename.push("../../tests/test-data/v5.sbt.json");
 
         let mut sbt = MHBT::from_path(filename).expect("Loading error");
 
@@ -179,7 +179,7 @@ mod test {
     #[test]
     fn load_sbt() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
+        filename.push("../../tests/test-data/v5.sbt.json");
 
         let sbt = MHBT::from_path(filename).expect("Loading error");
 
@@ -196,7 +196,7 @@ mod test {
         println!("sbt leaves {:?} {:?}", sbt.leaves.len(), sbt.leaves);
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
+        filename.push("../../tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename).unwrap());
         let sigs = Signature::load_signatures(
@@ -260,7 +260,7 @@ mod test {
     #[ignore]
     fn roundtrip_sbt() -> Result<(), Box<dyn std::error::Error>> {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
+        filename.push("../../tests/test-data/v5.sbt.json");
 
         let sbt = MHBT::from_path(filename)?;
 
@@ -275,7 +275,7 @@ mod test {
         });
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
+        filename.push("../../tests/test-data/.sbt.v3/60f7e23c24a8d94791cc7a8680c493f9");
 
         let mut reader = BufReader::new(File::open(filename)?);
         let sigs = Signature::load_signatures(
@@ -341,7 +341,7 @@ mod test {
     #[test]
     fn scaffold_sbt() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
+        filename.push("../../tests/test-data/v5.sbt.json");
 
         let sbt = MHBT::from_path(filename).expect("Loading error");
 
@@ -353,7 +353,7 @@ mod test {
     #[test]
     fn load_v4() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v4.sbt.json");
+        filename.push("../../tests/test-data/v4.sbt.json");
 
         let _sbt = MHBT::from_path(filename).expect("Loading error");
     }
@@ -361,7 +361,7 @@ mod test {
     #[test]
     fn load_v5() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("tests/test-data/v5.sbt.json");
+        filename.push("../../tests/test-data/v5.sbt.json");
 
         let _sbt = MHBT::from_path(filename).expect("Loading error");
     }

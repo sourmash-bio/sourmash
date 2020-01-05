@@ -27,11 +27,6 @@ use crate::signature::Signature;
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 
-/* FIXME: bring back after boomphf changes
-use crate::sketch::ukhs::{FlatUKHS, UKHSTrait};
-pub type UKHSTree = SBT<Node<FlatUKHS>, Signature>;
-*/
-
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
 /* FIXME: bring back after MQF works on macOS and Windows

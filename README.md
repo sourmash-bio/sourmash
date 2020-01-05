@@ -9,10 +9,6 @@
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 <a href="https://github.com/dib-lab/sourmash/blob/master/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 
-🦀
-[![](http://meritbadge.herokuapp.com/sourmash)](https://crates.io/crates/sourmash)
-[![Rust API Documentation on docs.rs](https://docs.rs/sourmash/badge.svg)](https://docs.rs/sourmash)
-
 ---
 
 Compute MinHash signatures for nucleotide (DNA/RNA) and protein sequences.
@@ -45,7 +41,7 @@ We recommend using bioconda to install sourmash:
 ```
 conda install -c conda-forge -c bioconda sourmash
 ```
-This will install the latest stable version of sourmash 2.
+This will install the latest stable version of sourmash 3.
 
 You can also use pip to install sourmash:
 
@@ -95,7 +91,10 @@ After installation, `sourmash` is the main command-line entry point;
 run it with `python -m sourmash`, or do `pip install -e /path/to/repo` to
 do a developer install in a virtual environment.
 
-The `sourmash/` directory contains the library code.
+The `sourmash/` directory contains the Python library and command-line interface code.
+
+The `src/core/` directory contains the Rust library implementing core
+functionality.
 
 Tests require py.test and can be run with `make test`.
 
@@ -104,4 +103,4 @@ Please see [the developer notes](doc/developer.md) for more information.
 ----
 
 CTB
-Dec 2018
+Jan 2020

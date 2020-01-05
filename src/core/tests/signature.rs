@@ -9,7 +9,7 @@ use sourmash::signature::Signature;
 #[test]
 fn load_signature() {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("tests/test-data/genome-s10+s11.sig");
+    filename.push("../../tests/test-data/genome-s10+s11.sig");
 
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
