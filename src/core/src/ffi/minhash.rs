@@ -163,6 +163,30 @@ unsafe fn kmerminhash_get_mins(ptr: *mut KmerMinHash) -> Result<*const u64> {
 }
 
 ffi_fn! {
+unsafe fn kmerminhash_add_many(
+    ptr: *mut KmerMinHash,
+    hashes_ptr: *const u64,
+    insize: usize,
+  ) -> Result<()> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let hashes = {
+        assert!(!hashes_ptr.is_null());
+        slice::from_raw_parts(hashes_ptr as *mut u64, insize)
+    };
+
+    for hash in hashes {
+      mh.add_hash(*hash);
+    }
+
+    Ok(())
+}
+}
+
+ffi_fn! {
 unsafe fn kmerminhash_get_abunds(ptr: *mut KmerMinHash) -> Result<*const u64> {
     let mh = {
         assert!(!ptr.is_null());

@@ -191,11 +191,10 @@ class MinHash(RustObject):
         if isinstance(hashes, MinHash):
             self._methodcall(lib.kmerminhash_add_from, hashes._objptr)
         else:
-            for hash in hashes:
-                self._methodcall(lib.kmerminhash_add_hash, hash)
+            self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Add many hashes in at once."
+        "Remove many hashes at once."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def update(self, other):
