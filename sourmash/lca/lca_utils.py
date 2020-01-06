@@ -385,7 +385,7 @@ class LCA_Database(Index):
                 temp_sets[vv].add(k)
 
         for sig, vals in temp_sets.items():
-            sigd[sig].add_many(sorted(vals))
+            sigd[sig].add_many(vals)
 
         debug('=> {} signatures!', len(sigd))
         return sigd

@@ -68,6 +68,8 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
 
 
 class MinHash(RustObject):
+    __dealloc_func__ = lib.kmerminhash_free
+
     def __init__(
         self,
         n,
@@ -98,7 +100,6 @@ class MinHash(RustObject):
         self._objptr = lib.kmerminhash_new(
             n, ksize, is_protein, dayhoff, hp, seed, int(max_hash), track_abundance
         )
-        self.__dealloc_func__ = lib.kmerminhash_free
 
         if mins:
             if track_abundance:
