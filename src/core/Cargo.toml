@@ -3,11 +3,12 @@ name = "sourmash"
 version = "0.3.0"
 authors = ["Luiz Irber <luiz.irber@gmail.com>"]
 description = "MinHash sketches for genomic data"
-repository = "https://github.com/luizirber/sourmash-rust"
+repository = "https://github.com/dib-lab/sourmash"
 keywords = ["minhash", "bioinformatics"]
 categories = ["science", "algorithms", "data-structures"]
 license = "BSD-3-Clause"
 edition = "2018"
+readme = "README.md"
 autoexamples = false
 autobins = false
 
