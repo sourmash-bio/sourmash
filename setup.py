@@ -68,10 +68,13 @@ SETUP_METADATA = {
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",
-        "setuptools_scm",
+        "setuptools_scm>=3.2.0",
         "setuptools_scm_git_archive",
     ],
-    "use_scm_version": {"write_to": "sourmash/version.py"},
+    "use_scm_version": {
+        "write_to": "sourmash/version.py",
+        "git_describe_command": "git describe --dirty --tags --long --match v* --first-parent"
+    },
     "zip_safe": False,
     "platforms": "any",
     "extras_require": {
