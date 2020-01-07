@@ -1,3 +1,9 @@
+"""Define the command line interface for sourmash lca
+
+The top level CLI is defined in ../__init__.py. This module defines the CLI for
+`sourmash lca` operations.
+"""
+
 from . import classify
 from . import compare_csv
 from . import gather
@@ -18,7 +24,7 @@ def subparser(subparsers):
     for subcmd in ops:
         desc += '    sourmash lca {sc:s} --help\n'.format(sc=subcmd)
     s = subparser.add_subparsers(
-        title='Lowest common ancestor (LCA) utilities', dest='subcmd', metavar='subcmd', help=SUPPRESS,
+        title='Taxonomic utilities', dest='subcmd', metavar='subcmd', help=SUPPRESS,
         description=desc
     )
     for subcmd in ops:

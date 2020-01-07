@@ -1,3 +1,12 @@
+"""Define the top-level command line interface for sourmash
+
+This module handles user input when sourmash is invoked from the command line.
+A top-level parser is defined for the `sourmash` command, and subparsers are
+defined for each subcommand. Some sourmash operations are grouped together
+using the `sourmash <subcmd> <subsubcmd>` pattern, and these are organized in
+their own CLI submodules, each with a dedicated directory.
+"""
+
 from argparse import ArgumentParser, RawDescriptionHelpFormatter, SUPPRESS
 import os
 import sys
@@ -79,8 +88,8 @@ class SourmashParser(ArgumentParser):
 
 def get_parser():
     module_descs = {
-        'lca': 'Lowest common ancestor (LCA) based operations',
-        'sig': 'Operations on signatures (MinHash sketches)',
+        'lca': 'Taxonomic operations',
+        'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
     }
     expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])

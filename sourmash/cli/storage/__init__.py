@@ -1,3 +1,9 @@
+"""Define the command line interface for sourmash storage
+
+The top level CLI is defined in ../__init__.py. This module defines the CLI for
+`sourmash storage` operations.
+"""
+
 from . import convert
 from ..utils import command_list
 from argparse import SUPPRESS, RawDescriptionHelpFormatter

@@ -1,3 +1,9 @@
+"""Define the command line interface for sourmash sig
+
+The top level CLI is defined in ../__init__.py. This module defines the CLI for
+`sourmash sig` operations.
+"""
+
 from . import describe
 from . import downsample
 from . import extract
@@ -24,7 +30,7 @@ def subparser(subparsers):
     for subcmd in ops:
         desc += '    sourmash sig {sc:s} --help\n'.format(sc=subcmd)
     s = subparser.add_subparsers(
-        title='Utilities for handling signatures', dest='subcmd', metavar='subcmd', help=SUPPRESS,
+        title='Manipulate signature files', dest='subcmd', metavar='subcmd', help=SUPPRESS,
         description=desc
     )
     for subcmd in ops:
