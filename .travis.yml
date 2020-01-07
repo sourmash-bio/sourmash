@@ -19,10 +19,7 @@ script: tox -vv
 install:
   - source .travis/install_cargo.sh
 
-before_script: |
-  python -m pip install -U pip
-  python -m pip install tox-travis
-  python -m pip install -U tox
+before_script: pip install tox-travis
 
 jobs:
   allow_failures:
