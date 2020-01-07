@@ -93,6 +93,8 @@ uint64_t kmerminhash_get_min_idx(KmerMinHash *ptr, uint64_t idx);
 
 const uint64_t *kmerminhash_get_mins(KmerMinHash *ptr);
 
+void kmerminhash_add_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
+
 uintptr_t kmerminhash_get_mins_size(KmerMinHash *ptr);
 
 HashFunctions kmerminhash_hash_function(KmerMinHash *ptr);

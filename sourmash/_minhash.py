@@ -68,6 +68,8 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
 
 
 class MinHash(RustObject):
+    __dealloc_func__ = lib.kmerminhash_free
+
     def __init__(
         self,
         n,
@@ -98,7 +100,6 @@ class MinHash(RustObject):
         self._objptr = lib.kmerminhash_new(
             n, ksize, is_protein, dayhoff, hp, seed, int(max_hash), track_abundance
         )
-        self.__dealloc_func__ = lib.kmerminhash_free
 
         if mins:
             if track_abundance:
@@ -191,11 +192,10 @@ class MinHash(RustObject):
         if isinstance(hashes, MinHash):
             self._methodcall(lib.kmerminhash_add_from, hashes._objptr)
         else:
-            for hash in hashes:
-                self._methodcall(lib.kmerminhash_add_hash, hash)
+            self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Add many hashes in at once."
+        "Remove many hashes at once."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def update(self, other):
