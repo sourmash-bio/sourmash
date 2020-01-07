@@ -378,13 +378,13 @@ class LCA_Database(Index):
 
         debug('creating signatures for LCA DB...')
         sigd = defaultdict(minhash.copy_and_clear)
-        temp_sets = defaultdict(set)
+        temp_vals = defaultdict(list)
 
         for (k, v) in self.hashval_to_idx.items():
             for vv in v:
-                temp_sets[vv].add(k)
+                temp_vals[vv].append(k)
 
-        for sig, vals in temp_sets.items():
+        for sig, vals in temp_vals.items():
             sigd[sig].add_many(vals)
 
         debug('=> {} signatures!', len(sigd))
