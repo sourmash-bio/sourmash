@@ -22,6 +22,7 @@ install:
 before_script: |
   python -m pip install -U pip
   python -m pip install tox-travis
+  python -m pip install -U tox
 
 jobs:
   allow_failures:
