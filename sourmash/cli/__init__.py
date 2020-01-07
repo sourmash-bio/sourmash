@@ -99,7 +99,9 @@ def get_parser():
     user_ops = [op for op in basic_ops if op not in expert]
     usage = '    Basic operations\n'
     for op in user_ops:
-        usage += '        sourmash {op:s} --help\n'.format(op=op)
+        docstring = getattr(sys.modules[__name__], op).__doc__
+        helpstring = 'sourmash {op:s} --help'.format(op=op)
+        usage += '        {hs:25s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)

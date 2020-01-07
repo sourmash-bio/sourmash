@@ -1,3 +1,5 @@
+"""'sourmash categorize' description goes here"""
+
 import argparse
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args

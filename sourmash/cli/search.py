@@ -1,3 +1,5 @@
+"""search a signature against a list of signatures"""
+
 from argparse import FileType
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args

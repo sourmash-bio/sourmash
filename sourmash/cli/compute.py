@@ -1,3 +1,5 @@
+"""compute genome signatures"""
+
 from argparse import FileType
 
 from sourmash._minhash import get_minhash_default_seed

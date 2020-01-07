@@ -1,3 +1,5 @@
+"""display sourmash version and other information"""
+
 import os
 import screed
 import sourmash

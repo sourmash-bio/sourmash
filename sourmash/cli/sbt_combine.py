@@ -1,3 +1,5 @@
+"""combine multiple Sequence Bloom Trees"""
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('sbt_combine')
     subparser.add_argument('sbt_name', help='name to save SBT into')

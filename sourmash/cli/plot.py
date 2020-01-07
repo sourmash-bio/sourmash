@@ -1,3 +1,5 @@
+"""plot distance matrix made by 'compare'"""
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('plot')
     subparser.add_argument(

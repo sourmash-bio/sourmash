@@ -1,3 +1,5 @@
+"""'sourmash import_csv' description goes here"""
+
 from argparse import FileType
 import sys
 
