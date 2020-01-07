@@ -1,4 +1,4 @@
-"""'sourmash multigather' description goes here"""
+"'sourmash multigather' - gather many signatures against multiple databases."
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 

@@ -1,4 +1,4 @@
-"""'sourmash categorize' description goes here"""
+"'sourmash categorize' - query an SBT for bes match, with many signatures."
 
 import argparse
 

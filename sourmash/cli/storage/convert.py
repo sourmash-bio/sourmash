@@ -1,4 +1,4 @@
-"""'sourmash storage convert' description goes here"""
+"'sourmash storage convert' - convert an SBT to use a different back end."
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('convert')

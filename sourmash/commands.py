@@ -285,6 +285,7 @@ def import_csv(args):
 
 
 def dump(args):
+    "Dump hashes for each input signature into a {name}.dump.txt file."
     for filename in args.filenames:
         notify('loading {}', filename)
         siglist = sig.load_signatures(filename, ksize=args.ksize)
@@ -315,7 +316,7 @@ def sbt_combine(args):
 
 def index(args):
     """
-    Build an Sequence Bloom Tree index of the given signatures.
+    Build a Sequence Bloom Tree index of the given signatures.
     """
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -479,6 +480,7 @@ def search(args):
 
 
 def categorize(args):
+    "Use an SBT to find the best match to many signatures."
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -654,6 +656,7 @@ def gather(args):
 
 
 def multigather(args):
+    "Gather many signatures against multiple databases."
     from .search import gather_databases, format_bp
 
     set_quiet(args.quiet)
@@ -878,6 +881,7 @@ def watch(args):
 
 
 def migrate(args):
+    "Migrate an SBT database to the latest version."
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
     notify('saving SBT under "{}".', args.sbt_name)

@@ -1,4 +1,4 @@
-"""'sourmash migrate' description goes here"""
+"'sourmash migrate' - migrate an SBT database to the latest version."
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('migrate')

@@ -1,4 +1,4 @@
-"""'sourmash dump' description goes here"""
+"'sourmash dump' - produce a text dump of hashes in one or more signatures."
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
