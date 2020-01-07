@@ -83,8 +83,9 @@ SETUP_METADATA = {
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
         '10x': ['bam2fasta==1.0.1'],
-        'storage': ["ipfshttpclient", "redis"]
+        'storage': ["ipfshttpclient==offset_fix", "redis"]
     },
+    "dependency_links": ["git+https://github.com/WouterGlorieux/py-ipfs-http-client.git@a73e4db661d991a81352bbd051648cae3d63cd51#egg=ipfshttpclient-offset_fix"],
     "include_package_data": True,
     "classifiers": CLASSIFIERS,
     "milksnake_tasks": [build_native],
