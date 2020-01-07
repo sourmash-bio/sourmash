@@ -1,3 +1,5 @@
+"""compare spreadsheets"""
+
 def subparser(subparsers):
     # Dirty hack to simultaneously support new and previous interface
     # If desired, this function can be removed with a major version bump.

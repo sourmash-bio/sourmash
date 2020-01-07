@@ -1,3 +1,5 @@
+"""export a signature, e.g. to mash"""
+
 from argparse import FileType
 import sys
 

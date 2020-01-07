@@ -1,3 +1,5 @@
+"""database rank info"""
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('rankinfo')
     subparser.add_argument('db', nargs='+')

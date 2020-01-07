@@ -1,3 +1,5 @@
+"""remove abundances"""
+
 from argparse import FileType
 import sys
 

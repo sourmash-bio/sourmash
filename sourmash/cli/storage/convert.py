@@ -1,3 +1,5 @@
+"""'sourmash storage convert' description goes here"""
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('convert')
     subparser.add_argument(

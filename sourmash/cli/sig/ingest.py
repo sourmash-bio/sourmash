@@ -1,3 +1,5 @@
+"""import a mash or other signature"""
+
 from argparse import FileType
 import sys
 

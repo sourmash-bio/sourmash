@@ -28,7 +28,9 @@ def subparser(subparsers):
     clidir = os.path.dirname(__file__)
     ops = command_list(clidir)
     for subcmd in ops:
-        desc += '    sourmash sig {sc:s} --help\n'.format(sc=subcmd)
+        docstring = getattr(sys.modules[__name__], subcmd).__doc__
+        helpstring = 'sourmash sig {op:s} --help'.format(op=subcmd)
+        desc += '        {hs:33s} {ds:s}\n'.format(hs=helpstring, ds=docstring)
     s = subparser.add_subparsers(
         title='Manipulate signature files', dest='subcmd', metavar='subcmd', help=SUPPRESS,
         description=desc

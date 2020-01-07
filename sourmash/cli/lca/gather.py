@@ -1,3 +1,5 @@
+"""classify metagenomes"""
+
 from argparse import FileType
 
 

@@ -1,3 +1,5 @@
+"""summarize mixture"""
+
 from argparse import FileType
 
 

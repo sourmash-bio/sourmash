@@ -1,3 +1,5 @@
+"""classify genomes"""
+
 from argparse import FileType
 
 

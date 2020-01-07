@@ -1,3 +1,5 @@
+"""filter k-mers on abundance"""
+
 from argparse import FileType
 import sys
 

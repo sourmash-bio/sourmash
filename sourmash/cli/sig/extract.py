@@ -1,3 +1,5 @@
+"""extract one or more signatures"""
+
 from argparse import FileType
 import sys
 

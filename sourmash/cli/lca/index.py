@@ -1,3 +1,5 @@
+"""create LCA database"""
+
 from sourmash.cli.utils import add_ksize_arg
 
 
