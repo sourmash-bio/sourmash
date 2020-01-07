@@ -38,7 +38,7 @@ class SourmashParser(ArgumentParser):
         if self._citation_printed:
             return
         from sourmash.logging import notify
-        notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
+        notify("\n== This is sourmash version {version}. ==", version=sourmash.VERSION)
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
         self._citation_printed = True
 
@@ -52,6 +52,11 @@ class SourmashParser(ArgumentParser):
                 continue
             elif name in action.choices:
                 return action.choices[name]
+
+    def print_help(self):
+        super(SourmashParser, self).print_help()
+        self.print_citation()
+
 
     def parse_args(self, args=None, namespace=None):
         if (args is None and len(sys.argv) == 1) or (args is not None and len(args) == 0):
