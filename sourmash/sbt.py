@@ -1160,6 +1160,7 @@ def filter_distance(filter_a, filter_b, n=1000):
 
 
 def convert_cmd(name, backend):
+    "Convert an SBT to use a different back end."
     from .sbtmh import SigLeaf
 
     options = backend.split('(')

@@ -3,7 +3,6 @@ Functions implementing the 'compute' command and related functions.
 """
 from __future__ import print_function, division, absolute_import
 
-import argparse
 import os
 import os.path
 import sys
@@ -11,13 +10,10 @@ import random
 import screed
 import time
 
-from .sourmash_args import SourmashArgumentParser
-from . import DEFAULT_SEED, MinHash
+from . import MinHash
 from . import signature as sig
-from . import sourmash_args
 from .logging import notify, error, set_quiet
 
-from .sourmash_args import DEFAULT_N
 DEFAULT_COMPUTE_K = '21,31,51'
 DEFAULT_LINE_COUNT = 1500
 
@@ -35,74 +31,6 @@ def compute(args):
             => creates one output file file.sig, with all sequences from
                file1.fa and file2.fa combined into one signature.
     """
-    parser = SourmashArgumentParser()
-    parser.add_argument('filenames', nargs='+',
-                        help='file(s) of sequences')
-
-    sourmash_args.add_construct_moltype_args(parser)
-
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--input-is-protein', action='store_true',
-                        help='Consume protein sequences - no translation needed.')
-    parser.add_argument('-k', '--ksizes',
-                        default=DEFAULT_COMPUTE_K,
-                        help='comma-separated list of k-mer sizes (default: %(default)s)')
-    parser.add_argument('-n', '--num-hashes', type=int,
-                        default=DEFAULT_N,
-                        help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--check-sequence', action='store_true',
-                        help='complain if input sequence is invalid (default: False)')
-    parser.add_argument('-f', '--force', action='store_true',
-                        help='recompute signatures even if the file exists (default: False)')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output computed signatures to this file')
-    parser.add_argument('--singleton', action='store_true',
-                        help='compute a signature for each sequence record individually (default: False)')
-    parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
-                        help="merge all input files into one signature named this")
-    parser.add_argument('--name-from-first', action='store_true',
-                        help="name the signature generated from each file after the first record in the file (default: False)")
-    parser.add_argument('--input-is-10x', action='store_true',
-                        help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('--count-valid-reads', default=0, type=int,
-                        help="For 10x input only (i.e input-is-10x flag is True), "
-                        "A barcode is only considered a valid barcode read "
-                        "and its signature is written if number of umis are greater "
-                        "than count-valid-reads. It is used to weed out cell barcodes "
-                        "with few umis that might have been due to false rna enzyme reactions")
-    parser.add_argument('--write-barcode-meta-csv', type=str,
-                        help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes, "
-                        "Write to a given path, number of reads and number of umis per barcode.")
-    parser.add_argument('-p', '--processes', default=2, type=int,
-                        help='For 10x input only (i.e input-is-10x flag is True, '
-                        'Number of processes to use for reading 10x bam file')
-    parser.add_argument('--save-fastas', default="", type=str,
-                        help='For 10x input only (i.e input-is-10x flag is True), '
-                        'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta '
-                        'in the absolute path given by this flag, By default, fastas are not saved')
-    parser.add_argument('--line-count', type=int,
-                        help='For 10x input only (i.e input-is-10x flag is True), line count for each bam shard',
-                        default=DEFAULT_LINE_COUNT)
-    parser.add_argument('--track-abundance', action='store_true',
-                        help='track k-mer abundances in the generated signature (default: False)')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='choose number of hashes as 1 in FRACTION of input k-mers')
-    parser.add_argument('--seed', type=int,
-                        help='seed used by MurmurHash (default: 42)',
-                        default=DEFAULT_SEED)
-    parser.add_argument('--randomize', action='store_true',
-                        help='shuffle the list of input filenames randomly')
-    parser.add_argument('--license', default='CC0', type=str,
-                        help='signature license. Currently only CC0 is supported.')
-    parser.add_argument('--rename-10x-barcodes', type=str,
-                        help="Tab-separated file mapping 10x barcode name "
-                        "to new name, e.g. with channel or cell "
-                        "annotation label", required=False)
-    parser.add_argument('--barcodes-file', type=str,
-                        help="Barcodes file if the input is unfiltered 10x bam file", required=False)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
 
     if args.license != 'CC0':

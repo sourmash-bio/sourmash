@@ -6,7 +6,6 @@ Mimics `sourmash gather` but provides taxonomic information.
 """
 from __future__ import print_function, division
 import sys
-import argparse
 import csv
 from collections import Counter, defaultdict, namedtuple
 
@@ -15,7 +14,6 @@ from ..logging import notify, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
-from ..sourmash_args import SourmashArgumentParser
 
 
 LCAGatherResult = namedtuple('LCAGatherResult',
@@ -184,21 +182,6 @@ def gather_main(args):
     full lineage information for each known hash, as opposed to storing only
     the least-common-ancestor information for it.
     """
-    p = SourmashArgumentParser(prog="sourmash lca gather")
-    p.add_argument('query')
-    p.add_argument('db', nargs='+')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='output CSV containing matches to this file')
-    p.add_argument('--output-unassigned', type=argparse.FileType('wt'),
-                   help='output unassigned portions of the query as a signature to this file')
-    p.add_argument('--ignore-abundance',  action='store_true',
-                   help='do NOT use k-mer abundances if present')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    args = p.parse_args(args)
-
     set_quiet(args.quiet, args.debug)
 
     if not check_files_exist(args.query, *args.db):

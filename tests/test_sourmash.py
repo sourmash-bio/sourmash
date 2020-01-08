@@ -10,6 +10,7 @@ import glob
 import json
 import csv
 import pytest
+import sys
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -34,7 +35,21 @@ def test_run_sourmash():
 def test_run_sourmash_badcmd():
     status, out, err = utils.runscript('sourmash', ['foobarbaz'], fail_ok=True)
     assert status != 0                    # bad arg!
-    assert "Unrecognized command" in err
+    assert "cmd: invalid choice" in err
+
+
+def test_run_sourmash_subcmd_help():
+    status, out, err = utils.runscript('sourmash', ['sbt'], fail_ok=True)
+    print(out)
+    print(err)
+    assert status != 0               # should fail
+
+    assert "invalid choice:" in err
+    assert "'sbt' (choose from" in err
+
+    # should not have printed a Traceback
+    assert any("Traceback" not in o for o in (err, out))
+
 
 def test_sourmash_info():
     status, out, err = utils.runscript('sourmash', ['info'], fail_ok=False)
@@ -523,7 +538,7 @@ def test_search_query_sig_does_not_exist():
         print(status, out, err)
         assert status == -1
         assert 'Cannot open file' in err
-        assert len(err.splitlines()) < 5
+        assert len(err.split('\n\r')) < 5
 
 
 def test_search_subject_sig_does_not_exist():
