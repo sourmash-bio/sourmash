@@ -22,7 +22,7 @@ def subparser(subparsers):
 
     sketch_args = subparser.add_argument_group('Sketching options')
     sketch_args.add_argument(
-        '-k', '--ksizes', default=[21, 31, 51],
+        '-k', '--ksizes', default="21,31,51",
         type=ksize_parser,
         help='comma-separated list of k-mer sizes; default=%(default)s'
     )
