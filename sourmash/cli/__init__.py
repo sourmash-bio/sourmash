@@ -38,18 +38,20 @@ from . import storage
 
 
 class SourmashParser(ArgumentParser):
+    _citation_printed = False
+
     def __init__(self, citation=True, **kwargs):
         super(SourmashParser, self).__init__(**kwargs)
         self.citation = citation
-        self._citation_printed = False
 
-    def print_citation(self):
-        if self._citation_printed:
+    @classmethod
+    def print_citation(cls):
+        if cls._citation_printed:
             return
         from sourmash.logging import notify
         notify("\n== This is sourmash version {version}. ==", version=sourmash.VERSION)
         notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
-        self._citation_printed = True
+        cls._citation_printed = True
 
     def _subparser_from_name(self, name):
         """Given a name, get the subparser instance registered with this parser."""
@@ -63,8 +65,8 @@ class SourmashParser(ArgumentParser):
                 return action.choices[name]
 
     def print_help(self):
-        super(SourmashParser, self).print_help()
         self.print_citation()
+        super(SourmashParser, self).print_help()
 
 
     def parse_args(self, args=None, namespace=None):
