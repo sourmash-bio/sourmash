@@ -278,7 +278,7 @@ class SBT(Index):
         ignore_abundance = kwargs['ignore_abundance']
         do_containment = kwargs['do_containment']
         best_only = kwargs['best_only']
-        unload_data = kwargs.get('unload_data', True)
+        unload_data = kwargs.get('unload_data', False)
 
         search_fn = search_minhashes
         query_match = lambda x: query.similarity(

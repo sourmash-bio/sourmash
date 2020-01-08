@@ -437,7 +437,8 @@ def search(args):
     # do the actual search
     results = search_databases(query, databases,
                                args.threshold, args.containment,
-                               args.best_only, args.ignore_abundance)
+                               args.best_only, args.ignore_abundance,
+                               unload_data=True)
 
     n_matches = len(results)
     if args.best_only:
