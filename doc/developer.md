@@ -157,6 +157,13 @@ src/core
 └── tests/               | Integration tests (using the public API of the crate)
 ```
 
+### Changing code touching all layers: an example PR
+
+Luiz wrote a [blog post] describing a PR that changes code at the Python API down to the Rust code library,
+including some tools for evaluating performance changes.
+
+[blog post]: https://blog.luizirber.org/2020/01/10/sourmash-pr/
+
 ## Versioning
 
 We use [`setuptools_scm`] to generate versions based on git tags.
