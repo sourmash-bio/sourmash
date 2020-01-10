@@ -26,32 +26,12 @@ compare_csv <csv1> <csv2>                                - compare spreadsheets
 sourmash lca index -h
 '''
 
-def main(sysv_args):
-    set_quiet(False)
+def main(arglist=None):
+    args = sourmash.cli.get_parser().parse_args(arglist)
+    submod = getattr(sourmash.cli.sig, args.subcmd)
+    mainmethod = getattr(submod, 'main')
+    return mainmethod(args)
 
-    commands = {'classify': classify,
-                'index': index,
-                'summarize': summarize_main,
-                'rankinfo': rankinfo_main,
-                'gather': gather_main,
-                'compare_csv': compare_csv}
-
-    parser = argparse.ArgumentParser(
-        description='lowest-common ancestor (LCA) utilities', usage=usage)
-    parser.add_argument('lca_command', nargs='?')
-    args = parser.parse_args(sysv_args[0:1])
-
-    if not args.lca_command:
-        print(usage)
-        sys.exit(1)
-
-    if args.lca_command not in commands:
-        error('Unrecognized command: {}', args.lca_command)
-        parser.print_help()
-        sys.exit(1)
-
-    cmd = commands.get(args.lca_command)
-    cmd(sysv_args[1:])
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main(sys.argv)

@@ -3,7 +3,6 @@ Command-line entry point for 'python -m sourmash.sig'
 """
 from __future__ import print_function, unicode_literals
 import sys
-import argparse
 import csv
 import json
 
@@ -12,7 +11,6 @@ import copy
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
-from ..sourmash_args import DEFAULT_LOAD_K, SourmashArgumentParser
 from .._minhash import get_max_hash_for_scaled
 
 usage='''
@@ -63,14 +61,6 @@ def describe(args):
     """
     provide basic info on signatures
     """
-    p = SourmashArgumentParser(prog='sourmash signature describe')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('--csv', type=argparse.FileType('wt'),
-                   help='output information to a CSV file')
-
-    args = p.parse_args(args)
     set_quiet(args.quiet)
 
     siglist = []
@@ -143,15 +133,6 @@ def overlap(args):
     """
     provide detailed comparison of two signatures
     """
-    p = SourmashArgumentParser(prog='sourmash signature overlap')
-    p.add_argument('signature1')
-    p.add_argument('signature2')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
 
     moltype = sourmash_args.calculate_moltype(args)
@@ -231,19 +212,6 @@ def merge(args):
     """
     merge one or more signatures.
     """
-    p = SourmashArgumentParser(prog='sourmash signature merge')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('--flatten', action='store_true',
-                   help='Remove abundances from all signatures.')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -302,18 +270,6 @@ def intersect(args):
 
     This function always removes abundances.
     """
-    p = SourmashArgumentParser(prog='sourmash signature intersect')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('-A', '--abundances-from',
-                   help='intersect with & take abundances from this signature')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -371,19 +327,6 @@ def subtract(args):
     """
     subtract one or more signatures from another
     """
-    p = SourmashArgumentParser(prog='sourmash signature subtract')
-    p.add_argument('signature_from')
-    p.add_argument('subtraction_sigs', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('--flatten', action='store_true',
-                   help='remove abundance from signatures before subtracting')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -433,17 +376,6 @@ def rename(args):
     """
     rename one or more signatures.
     """
-    p = SourmashArgumentParser(prog='sourmash signature rename')
-    p.add_argument('sigfiles', nargs='+')
-    p.add_argument('name')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    p.add_argument('-o', '--output', help='output to this file')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -473,21 +405,6 @@ def extract(args):
     """
     extract signatures.
     """
-    p = SourmashArgumentParser(prog='sourmash signature extract')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('--md5', default=None,
-                   help='select signatures whose md5 contains this substring')
-    p.add_argument('--name', default=None,
-                   help='select signatures whose name contains this substring')
-
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -525,26 +442,6 @@ def filter(args):
     """
     filter hashes by abundance in all of the signatures
     """
-    p = SourmashArgumentParser(prog='sourmash signature flatten')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('--md5', default=None,
-                   help='select signatures whose md5 contains this substring')
-    p.add_argument('--name', default=None,
-                   help='select signatures whose name contains this substring')
-
-    p.add_argument('-m', '--min-abundance', type=int, default=1,
-                   help='keep hashes >= this minimum abundance')
-    p.add_argument('-M', '--max-abundance', type=int, default=None,
-                    help='keep hashes <= this maximum abundance')
-
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -598,21 +495,6 @@ def flatten(args):
     """
     flatten a signature, removing abundances.
     """
-    p = SourmashArgumentParser(prog='sourmash signature flatten')
-    p.add_argument('signatures', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    p.add_argument('--md5', default=None,
-                   help='select signatures whose md5 contains this substring')
-    p.add_argument('--name', default=None,
-                   help='select signatures whose name contains this substring')
-
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -653,20 +535,6 @@ def downsample(args):
     """
     downsample a scaled signature.
     """
-    p = SourmashArgumentParser(prog='sourmash signature downsample')
-    p.add_argument('signatures', nargs="+")
-    p.add_argument('--scaled', type=int, default=0,
-                   help='scaled value to downsample to')
-    p.add_argument('--num', type=int, default=0,
-                   help='num value to downsample to')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -724,14 +592,6 @@ def sig_import(args):
     """
     import a signature into sourmash format.
     """
-    p = SourmashArgumentParser(prog='sourmash signature import')
-    p.add_argument('filenames', nargs='+')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    args = p.parse_args(args)
     set_quiet(args.quiet)
 
     siglist = []
@@ -762,16 +622,6 @@ def export(args):
     """
     export a signature to mash format
     """
-    p = SourmashArgumentParser(prog='sourmash signature export')
-    p.add_argument('filename')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout,
-                   help='output signature to this file')
-    sourmash_args.add_ksize_arg(p, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(p)
-    args = p.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -794,41 +644,12 @@ def export(args):
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
 
 
-def main(sysv_args):
-    set_quiet(False)
-
-    commands = {'merge': merge,
-                'intersect': intersect,
-                'rename': rename,
-                'extract': extract,
-                'filter': filter,
-                'flatten': flatten,
-                'downsample': downsample,
-                'subtract': subtract,
-                'import': sig_import,
-                'export': export,
-                'describe': describe,
-                'overlap': overlap}
-
-    parser = argparse.ArgumentParser(
-        description='signature file manipulation utilities', usage=usage)
-    parser.add_argument('sig_command', nargs='?')
-    args = parser.parse_args(sysv_args[0:1])
-
-    if not args.sig_command:
-        print(usage)
-        sys.exit(1)
-
-    if args.sig_command not in commands:
-        error('Unrecognized command: {}', args.sig_command)
-        parser.print_help()
-        sys.exit(1)
-
-    cmd = commands.get(args.sig_command)
-    cmd(sysv_args[1:])
-
-    return 0
+def main(arglist=None):
+    args = sourmash.cli.get_parser().parse_args(arglist)
+    submod = getattr(sourmash.cli.sig, args.subcmd)
+    mainmethod = getattr(submod, 'main')
+    return mainmethod(args)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    main(sys.argv)

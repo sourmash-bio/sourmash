@@ -3,7 +3,6 @@ Functions implementing the main command-line subcommands.
 """
 from __future__ import print_function, division, absolute_import
 
-import argparse
 import csv
 import os
 import os.path
@@ -11,7 +10,6 @@ import sys
 
 import screed
 from .compare import compare_all_pairs
-from .sourmash_args import SourmashArgumentParser
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
@@ -28,11 +26,6 @@ from .command_compute import compute
 
 def info(args):
     "Report sourmash version + version of installed dependencies."
-    parser = SourmashArgumentParser(no_citation=True)
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='report versions of khmer and screed')
-    args = parser.parse_args(args)
-
     from . import VERSION
     notify('sourmash version {}', VERSION)
     notify('- loaded from path: {}', os.path.dirname(__file__))
@@ -52,22 +45,6 @@ def compare(args):
     "Compare multiple signature files and create a distance matrix."
     import numpy
 
-    parser = SourmashArgumentParser()
-    parser.add_argument('signatures', nargs='+', help='list of signatures')
-    parser.add_argument('-o', '--output')
-    parser.add_argument('--ignore-abundance', action='store_true',
-                        help='do NOT use k-mer abundances if present')
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(parser)
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='compare all signatures underneath directories.')
-    parser.add_argument('--csv', type=argparse.FileType('w'),
-                        help='save matrix in CSV format (with column headers)')
-    parser.add_argument('-p', '--processes', type=int,
-                        help='Number of processes to use to calculate similarity')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -191,29 +168,6 @@ def plot(args):
     import scipy.cluster.hierarchy as sch
     from . import fig as sourmash_fig
 
-    # set up cmd line arguments
-    parser = SourmashArgumentParser()
-    parser.add_argument('distances', help="output from 'sourmash compare'")
-    parser.add_argument('--pdf', action='store_true',
-                        help='output PDF, not PNG.')
-    parser.add_argument('--labels', action='store_true',
-                        help='show sample labels on dendrogram/matrix')
-    parser.add_argument('--indices', action='store_false',
-                        help='show sample indices but not labels')
-    parser.add_argument('--vmax', default=1.0, type=float,
-                        help='upper limit of heatmap scale; (default: %(default)f)')
-    parser.add_argument('--vmin', default=0.0, type=float,
-                        help='lower limit of heatmap scale; (default: %(default)f)')
-    parser.add_argument("--subsample", type=int,
-                        help="randomly downsample to this many samples, max.")
-    parser.add_argument("--subsample-seed", type=int, default=1,
-                        help="random seed for --subsample; default=1")
-    parser.add_argument('-f', '--force', action='store_true',
-                        help='forcibly plot non-distance matrices')
-    parser.add_argument('--output-dir', help='directory for output plots')
-
-    args = parser.parse_args(args)
-
     # load files
     D_filename = args.distances
     labelfilename = D_filename + '.labels.txt'
@@ -302,11 +256,6 @@ def plot(args):
 
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
-    p = SourmashArgumentParser()
-    p.add_argument('mash_csvfile')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   default=sys.stdout, help='(default: stdout)')
-    args = p.parse_args(args)
 
     with open(args.mash_csvfile, 'r') as fp:
         reader = csv.reader(fp)
@@ -336,12 +285,7 @@ def import_csv(args):
 
 
 def dump(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-k', '--ksize', type=int, default=DEFAULT_LOAD_K,
-                        help='k-mer size (default: %(default)i)')
-    args = parser.parse_args(args)
-
+    "Dump hashes for each input signature into a {name}.dump.txt file."
     for filename in args.filenames:
         notify('loading {}', filename)
         siglist = sig.load_signatures(filename, ksize=args.ksize)
@@ -356,16 +300,6 @@ def dump(args):
 
 
 def sbt_combine(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name to save SBT into')
-    parser.add_argument('sbts', nargs='+',
-                        help='SBTs to combine to a new SBT')
-    parser.add_argument('-x', '--bf-size', type=float, default=1e5)
-
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
-
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
 
@@ -382,34 +316,8 @@ def sbt_combine(args):
 
 def index(args):
     """
-    Build an Sequence Bloom Tree index of the given signatures.
+    Build a Sequence Bloom Tree index of the given signatures.
     """
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name to save SBT into')
-    parser.add_argument('signatures', nargs='+',
-                        help='signatures to load into SBT')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('-k', '--ksize', type=int, default=None,
-                        help='k-mer size for which to build the SBT.')
-    parser.add_argument('-d', '--n_children', type=int, default=2,
-                        help='Number of children for internal nodes')
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath any directories.')
-    parser.add_argument('--append', action='store_true', default=False,
-                        help='add signatures to an existing SBT.')
-    parser.add_argument('-x', '--bf-size', type=float, default=1e5,
-                        help='Bloom filter size used for internal nodes.')
-    parser.add_argument('-f', '--force', action='store_true',
-                        help='Try loading all files with --traverse-directory')
-    parser.add_argument('-s', '--sparseness', type=float, default=.0,
-                        help='What percentage of internal nodes will not be saved. '
-                             'Ranges from 0.0 (save all nodes) to 1.0 (no nodes saved)')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='downsample signatures to this scaled factor')
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -491,36 +399,6 @@ def index(args):
 def search(args):
     from .search import search_databases
 
-    parser = SourmashArgumentParser()
-    parser.add_argument('query', help='query signature')
-    parser.add_argument('databases', help='signatures/SBTs to search',
-                        nargs='+')
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='search all signatures underneath directories.')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--threshold', default=0.08, type=float,
-                        help='minimum threshold for reporting matches (default=0.08)')
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'),
-                        help='output matching signatures to this file.')
-    parser.add_argument('--best-only', action='store_true',
-                        help='report only the best match (with greater speed).')
-    parser.add_argument('-n', '--num-results', default=3, type=int,
-                        help='number of results to report')
-    parser.add_argument('--containment', action='store_true',
-                        help='evaluate containment rather than similarity')
-    parser.add_argument('--ignore-abundance', action='store_true',
-                        help='do NOT use k-mer abundances if present. Note: '
-                             'has no effect if --containment is specified')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='downsample query to this scaled factor (yields greater speed)')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output CSV containing matches to this file')
-
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -602,25 +480,7 @@ def search(args):
 
 
 def categorize(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to load')
-    parser.add_argument('queries', nargs='+',
-                        help='list of signatures to categorize')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('-k', '--ksize', type=int, default=None)
-    parser.add_argument('--threshold', default=0.08, type=float,
-                       help='minimum threshold for reporting matches (default=0.08)')
-    parser.add_argument('--traverse-directory', action="store_true")
-    parser.add_argument('--ignore-abundance', action='store_true',
-                        help='do NOT use k-mer abundances if present')
-
-    sourmash_args.add_moltype_args(parser)
-
-    parser.add_argument('--csv', type=argparse.FileType('at'))
-    parser.add_argument('--load-csv', default=None)
-
-    args = parser.parse_args(args)
+    "Use an SBT to find the best match to many signatures."
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -684,32 +544,6 @@ def categorize(args):
 def gather(args):
     from .search import gather_databases, format_bp
 
-    parser = SourmashArgumentParser()
-    parser.add_argument('query', help='query signature')
-    parser.add_argument('databases', help='signatures/SBTs to search',
-                        nargs='+')
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='search all signatures underneath directories.')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output CSV containing matches to this file')
-    parser.add_argument('--save-matches', type=argparse.FileType('wt'),
-                        help='save the matched signatures from the database to this file.')
-    parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results (default=50,000)')
-    parser.add_argument('--output-unassigned', type=argparse.FileType('wt'),
-                        help='output unassigned portions of the query as a signature to this file')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='downsample query to this scaled factor')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--ignore-abundance',  action='store_true',
-                        help='do NOT use k-mer abundances if present')
-    parser.add_argument('-d', '--debug', action='store_true')
-
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet, args.debug)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -822,27 +656,9 @@ def gather(args):
 
 
 def multigather(args):
+    "Gather many signatures against multiple databases."
     from .search import gather_databases, format_bp
 
-    parser = SourmashArgumentParser()
-    parser.add_argument('--db', nargs='+', action='append')
-    parser.add_argument('--query', nargs='+', action='append')
-    parser.add_argument('--traverse-directory', action='store_true',
-                        help='search all signatures underneath directories.')
-    parser.add_argument('--threshold-bp', type=float, default=5e4,
-                        help='threshold (in bp) for reporting results')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='downsample query to this scaled factor')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--ignore-abundance',  action='store_true',
-                        help='do NOT use k-mer abundances if present')
-    parser.add_argument('-d', '--debug', action='store_true')
-
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    sourmash_args.add_moltype_args(parser)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -975,26 +791,6 @@ def multigather(args):
 
 def watch(args):
     "Build a signature from raw FASTA/FASTQ coming in on stdin, search."
-
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name of SBT to search')
-    parser.add_argument('inp_file', nargs='?', default='/dev/stdin')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='save signature generated from data here')
-    parser.add_argument('--threshold', default=0.05, type=float,
-                        help='minimum threshold for matches (default=0.05)')
-    parser.add_argument('--input-is-protein', action='store_true',
-                        help='Consume protein sequences - no translation needed')
-    sourmash_args.add_construct_moltype_args(parser)
-    parser.add_argument('-n', '--num-hashes', type=int,
-                        default=DEFAULT_N,
-                        help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--name', type=str, default='stdin',
-                        help='name to use for generated signature')
-    sourmash_args.add_ksize_arg(parser, DEFAULT_LOAD_K)
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
 
     if args.input_is_protein and args.dna:
@@ -1084,32 +880,8 @@ def watch(args):
         sig.save_signatures([streamsig], args.output)
 
 
-def storage(args):
-    from .sbt import convert_cmd
-
-    parser = SourmashArgumentParser()
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-
-    subparsers = parser.add_subparsers()
-    convert_parser = subparsers.add_parser('convert')
-    convert_parser.add_argument('sbt', help='SBT to convert')
-    convert_parser.add_argument('-b', "--backend", type=str,
-                                help='Backend to convert to')
-    convert_parser.set_defaults(command='convert')
-
-    args = parser.parse_args(args)
-    set_quiet(args.quiet)
-    if args.command == 'convert':
-        convert_cmd(args.sbt, args.backend)
-
-
 def migrate(args):
-    parser = SourmashArgumentParser()
-    parser.add_argument('sbt_name', help='name to save SBT into')
-
-    args = parser.parse_args(args)
-
+    "Migrate an SBT database to the latest version."
     tree = load_sbt_index(args.sbt_name, print_version_warning=False)
 
     notify('saving SBT under "{}".', args.sbt_name)
