@@ -88,7 +88,7 @@ A short description of the high-level files and dirs in the sourmash repo:
 └── tox.ini             | Configuration for test automation
 ```
 
-### The Python module
+### The Python module (and CLI)
 
 ```
 sourmash
@@ -112,14 +112,7 @@ sourmash
 ├── signature_json.py   | signature parsing code (to/from JSON)
 ├── signature.py        | signature class and methods
 ├── sourmash_args.py    | convenient shortcuts for CLI usage
-├── utils.py            | Convenience functions to interact with core library
-```
-
-### The Python CLI
-
-```
-sourmash
-└── cli/
+└── utils.py            | Convenience functions to interact with core library
 ```
 
 ### The Rust core library
