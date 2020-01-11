@@ -1,61 +1,121 @@
 {
-    "@context": [
-        "https://doi.org/10.5063/schema/codemeta-2.0",
-        "http://schema.org"
-    ],
-    "@type": "SoftwareSourceCode",
-    "author": [
-        {
-            "@id": "https://orcid.org/0000-0001-6001-2677",
-            "@type": "Person",
-            "familyName": "Brown",
-            "givenName": "C. Titus"
-        },
-        {
-            "@id": "https://orcid.org/0000-0003-4371-9659",
-            "@type": "Person",
-            "familyName": "Irber Junior",
-            "givenName": "Luiz Carlos"
-        }
-    ],
-    "contributor": [
-        {
-          "@type": "Person",
-          "givenName": "Taylor",
-          "familyName": "Reiter",
-          "@id": "https://orcid.org/0000-0002-7388-421X"
-        },
-        {
-          "@type": "Person",
-          "givenName": "N. Tessa",
-          "familyName": "Pierce",
-          "@id": "https://orcid.org/0000-0002-2942-5331"
-        },
-        {
-          "@type": "Person",
-          "givenName": "Brooks",
-          "familyName": "Phillip",
-          "@id": "https://orcid.org/0000-0003-3987-244X"
-        }
-    ],
-    "audience": [
-        {
-            "@type": "Audience",
-            "audienceType": "Science/Research"
-        }
-    ],
-    "provider": {
-        "@id": "https://pypi.org",
-        "@type": "Organization",
-        "name": "The Python Package Index",
-        "url": "https://pypi.org"
+  "@context": [
+    "https://doi.org/10.5063/schema/codemeta-2.0",
+    "http://schema.org"
+  ],
+  "@type": "SoftwareSourceCode",
+  "author": [
+    {
+      "@id": "https://orcid.org/0000-0001-6001-2677",
+      "@type": "Person",
+      "familyName": "Brown",
+      "givenName": "C. Titus"
     },
-    "dateCreated": "2016-06-07",
-    "datePublished": "2016-06-07",
-    "dateModified": "2020-01-04",
-    "codeRepository": "https://github.com/dib-lab/sourmash",
-    "identifier": "https://doi.org/10.21105/joss.00027",
-    "name": "sourmash: a library for MinHash sketching of DNA",
-    "version": "3.0.1",
-    "license": "BSD 3-clause"
+    {
+      "@id": "https://orcid.org/0000-0003-4371-9659",
+      "@type": "Person",
+      "familyName": "Irber Junior",
+      "givenName": "Luiz Carlos"
+    }
+  ],
+  "contributor": [
+    {
+      "@type": "Person",
+      "givenName": "Taylor",
+      "familyName": "Reiter",
+      "@id": "https://orcid.org/0000-0002-7388-421X"
+    },
+    {
+      "@type": "Person",
+      "givenName": "N. Tessa",
+      "familyName": "Pierce",
+      "@id": "https://orcid.org/0000-0002-2942-5331"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Phillip",
+      "familyName": "Brooks",
+      "@id": "https://orcid.org/0000-0003-3987-244X"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Katrin",
+      "familyName": "Leinweber",
+      "@id": "https://orcid.org/0000-0001-5135-5758"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Tim",
+      "familyName": "Head",
+      "@id": "https://orcid.org/0000-0003-0931-3698"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Connor",
+      "familyName": "Skennerton",
+      "@id": "https://orcid.org/0000-0003-1320-4873"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Olga",
+      "familyName": "Botvinnik",
+      "@id": "https://orcid.org/0000-0003-4412-7970"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Harriet",
+      "familyName": "Alexander",
+      "@id": "https://orcid.org/0000-0003-1308-8008"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Daniel S.",
+      "familyName": "Standage",
+      "@id": "https://orcid.org/0000-0003-0342-8531"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Lisa K.",
+      "familyName": "Johnson",
+      "@id": "https://orcid.org/0000-0002-3600-7218"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Venkata Naga",
+      "familyName": "Pranathi Vemuri",
+      "@id": "https://orcid.org/0000-0002-5748-9594"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Camille",
+      "familyName": "Scott",
+      "@id": "https://orcid.org/0000-0001-8822-8779"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Ricky",
+      "familyName": "Lim",
+      "@id": "https://orcid.org/0000-0003-1313-7076"
+    }
+  ],
+  "audience": [
+    {
+      "@type": "Audience",
+      "audienceType": "Science/Research"
+    }
+  ],
+  "provider": {
+    "@id": "https://pypi.org",
+    "@type": "Organization",
+    "name": "The Python Package Index",
+    "url": "https://pypi.org"
+  },
+  "dateCreated": "2016-06-07",
+  "datePublished": "2016-06-07",
+  "dateModified": "2020-01-04",
+  "codeRepository": "https://github.com/dib-lab/sourmash",
+  "identifier": "https://doi.org/10.21105/joss.00027",
+  "name": "sourmash: a library for MinHash sketching of DNA",
+  "version": "3.0.1",
+  "license": "BSD 3-clause"
 }
