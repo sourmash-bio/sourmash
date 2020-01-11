@@ -110,6 +110,20 @@
     "name": "The Python Package Index",
     "url": "https://pypi.org"
   },
+  "programmingLanguage": [
+    {
+      "@type": "ComputerLanguage",
+      "name": "Python",
+      "version": "3.8.1",
+      "url": "https://www.python.org/"
+    },
+    {
+      "@type": "ComputerLanguage",
+      "name": "Rust",
+      "version": "1.40.0",
+      "url": "https://rustlang.org"
+    }
+  ],
   "dateCreated": "2016-06-07",
   "datePublished": "2016-06-07",
   "dateModified": "2020-01-04",
@@ -117,5 +131,6 @@
   "identifier": "https://doi.org/10.21105/joss.00027",
   "name": "sourmash: a library for MinHash sketching of DNA",
   "version": "3.0.1",
-  "license": "BSD 3-clause"
+  "issueTracker": "https://github.com/dib-lab/sourmash/issues",
+  "license": "https://spdx.org/licenses/BSD-3-Clause"
 }
