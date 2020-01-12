@@ -1,136 +1,119 @@
 {
-  "@context": [
-    "https://doi.org/10.5063/schema/codemeta-2.0",
-    "http://schema.org"
-  ],
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
   "@type": "SoftwareSourceCode",
+  "license": "https://spdx.org/licenses/BSD-3-Clause",
+  "codeRepository": "https://github.com/dib-lab/sourmash",
+  "contIntegration": "https://travis-ci.com/dib-lab/sourmash",
+  "dateCreated": "2016-06-07",
+  "datePublished": "2016-06-07",
+  "dateModified": "2020-01-04",
+  "issueTracker": "https://github.com/dib-lab/sourmash/issues",
+  "name": "sourmash: a library for MinHash sketching of DNA",
+  "version": "3.0.1",
+  "identifier": "https://doi.org/10.21105/joss.00027",
+  "applicationCategory": "Bioinformatics",
+  "developmentStatus": "active",
+  "referencePublication": "https://doi.org/10.21105/joss.00027",
+  "programmingLanguage": [
+    "Python",
+    "Rust"
+  ],
+  "relatedLink": [
+    "https://sourmash.readthedocs.io/",
+    "https://sourmash.bio"
+  ],
   "author": [
     {
-      "@id": "https://orcid.org/0000-0001-6001-2677",
       "@type": "Person",
-      "familyName": "Brown",
-      "givenName": "C. Titus"
+      "@id": "https://orcid.org/0000-0001-6001-2677",
+      "givenName": "C. Titus",
+      "familyName": "Brown"
     },
     {
-      "@id": "https://orcid.org/0000-0003-4371-9659",
       "@type": "Person",
-      "familyName": "Irber Junior",
-      "givenName": "Luiz Carlos"
+      "@id": "https://orcid.org/0000-0003-4371-9659",
+      "givenName": "Luiz Carlos",
+      "familyName": "Irber Junior"
     }
   ],
   "contributor": [
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-7388-421X",
       "givenName": "Taylor",
-      "familyName": "Reiter",
-      "@id": "https://orcid.org/0000-0002-7388-421X"
+      "familyName": "Reiter"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-2942-5331",
       "givenName": "N. Tessa",
-      "familyName": "Pierce",
-      "@id": "https://orcid.org/0000-0002-2942-5331"
+      "familyName": "Pierce"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-3987-244X",
       "givenName": "Phillip",
-      "familyName": "Brooks",
-      "@id": "https://orcid.org/0000-0003-3987-244X"
+      "familyName": "Brooks"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0001-5135-5758",
       "givenName": "Katrin",
-      "familyName": "Leinweber",
-      "@id": "https://orcid.org/0000-0001-5135-5758"
+      "familyName": "Leinweber"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-0931-3698",
       "givenName": "Tim",
-      "familyName": "Head",
-      "@id": "https://orcid.org/0000-0003-0931-3698"
+      "familyName": "Head"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-1320-4873",
       "givenName": "Connor",
-      "familyName": "Skennerton",
-      "@id": "https://orcid.org/0000-0003-1320-4873"
+      "familyName": "Skennerton"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-4412-7970",
       "givenName": "Olga",
-      "familyName": "Botvinnik",
-      "@id": "https://orcid.org/0000-0003-4412-7970"
+      "familyName": "Botvinnik"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-1308-8008",
       "givenName": "Harriet",
-      "familyName": "Alexander",
-      "@id": "https://orcid.org/0000-0003-1308-8008"
+      "familyName": "Alexander"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-0342-8531",
       "givenName": "Daniel S.",
-      "familyName": "Standage",
-      "@id": "https://orcid.org/0000-0003-0342-8531"
+      "familyName": "Standage"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-3600-7218",
       "givenName": "Lisa K.",
-      "familyName": "Johnson",
-      "@id": "https://orcid.org/0000-0002-3600-7218"
+      "familyName": "Johnson"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-5748-9594",
       "givenName": "Venkata Naga",
-      "familyName": "Pranathi Vemuri",
-      "@id": "https://orcid.org/0000-0002-5748-9594"
+      "familyName": "Pranathi Vemuri"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0001-8822-8779",
       "givenName": "Camille",
-      "familyName": "Scott",
-      "@id": "https://orcid.org/0000-0001-8822-8779"
+      "familyName": "Scott"
     },
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0003-1313-7076",
       "givenName": "Ricky",
-      "familyName": "Lim",
-      "@id": "https://orcid.org/0000-0003-1313-7076"
+      "familyName": "Lim"
     }
-  ],
-  "audience": [
-    {
-      "@type": "Audience",
-      "audienceType": "Science/Research"
-    }
-  ],
-  "provider": {
-    "@id": "https://pypi.org",
-    "@type": "Organization",
-    "name": "The Python Package Index",
-    "url": "https://pypi.org"
-  },
-  "programmingLanguage": [
-    {
-      "@type": "ComputerLanguage",
-      "name": "Python",
-      "version": "3.8.1",
-      "url": "https://www.python.org/"
-    },
-    {
-      "@type": "ComputerLanguage",
-      "name": "Rust",
-      "version": "1.40.0",
-      "url": "https://rustlang.org"
-    }
-  ],
-  "dateCreated": "2016-06-07",
-  "datePublished": "2016-06-07",
-  "dateModified": "2020-01-04",
-  "codeRepository": "https://github.com/dib-lab/sourmash",
-  "identifier": "https://doi.org/10.21105/joss.00027",
-  "name": "sourmash: a library for MinHash sketching of DNA",
-  "version": "3.0.1",
-  "issueTracker": "https://github.com/dib-lab/sourmash/issues",
-  "license": "https://spdx.org/licenses/BSD-3-Clause"
+  ]
 }
