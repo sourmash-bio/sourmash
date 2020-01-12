@@ -302,3 +302,10 @@ jobs:
         with:
           command: test
           args: --no-fail-fast
+
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger new archival in software heritage on new tags
+        if: startsWith(github.ref, 'refs/tags/')
+        run: curl https://archive.softwareheritage.org/api/1/origin/save/git/url/https://github.com/dib-lab/sourmash.git/
