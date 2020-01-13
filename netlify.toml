@@ -7,6 +7,6 @@ command = '''
     cd .. && \
     curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     source $HOME/.cargo/env && \
-    pip install -e .[doc] && \
-    make doc
+    python3 -m pip install -e .[doc] && \
+    make doc PYTHON=python3
 '''
