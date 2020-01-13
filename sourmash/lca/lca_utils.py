@@ -382,7 +382,11 @@ class LCA_Database(Index):
 
         for (k, v) in self.hashval_to_idx.items():
             for vv in v:
-                temp_vals[vv].append(k)
+                temp_hashes = temp_vals[vv]
+                temp_hashes.append(k)
+                if len(temp_hashes) > 50:
+                    sigd[vv].add_many(temp_hashes)
+                    temp_vals[vv].clear()
 
         for sig, vals in temp_vals.items():
             sigd[sig].add_many(vals)

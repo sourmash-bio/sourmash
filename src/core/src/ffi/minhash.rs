@@ -175,7 +175,7 @@ unsafe fn kmerminhash_add_many(
 
     let hashes = {
         assert!(!hashes_ptr.is_null());
-        slice::from_raw_parts(hashes_ptr as *mut u64, insize)
+        slice::from_raw_parts(hashes_ptr as *const u64, insize)
     };
 
     for hash in hashes {

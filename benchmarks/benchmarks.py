@@ -41,6 +41,10 @@ class TimeMinHashSuite:
         for i in range(10000):
             mh.add_hash(i)
 
+    def time_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
+
     def time_compare(self):
         mh = self.mh
         other_mh = self.populated_mh
@@ -83,6 +87,15 @@ class PeakmemMinHashSuite:
         sequences = self.sequences
         for seq in sequences:
             mh.add_sequence(seq)
+
+    def peakmem_add_hash(self):
+        mh = self.mh
+        for i in range(10000):
+            mh.add_hash(i)
+
+    def peakmem_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
 
 
 ####################
