@@ -386,7 +386,7 @@ class LCA_Database(Index):
                 temp_hashes.append(k)
                 if len(temp_hashes) > 50:
                     sigd[vv].add_many(temp_hashes)
-                    temp_vals[vv].clear()
+                    del temp_vals[vv]
 
         for sig, vals in temp_vals.items():
             sigd[sig].add_many(vals)
