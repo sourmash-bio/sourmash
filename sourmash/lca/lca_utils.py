@@ -322,11 +322,10 @@ class LCA_Database(Index):
 
         results = []
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / len(query.minhash)
-        n = 0
+        threshold = threshold_bp / (len(query.minhash) * self.scaled)
+        print('xxx', threshold)
         for x in self.find_signatures(query.minhash, threshold,
                                       containment=True, ignore_scaled=True):
-            n += 1
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))

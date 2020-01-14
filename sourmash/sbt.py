@@ -312,8 +312,12 @@ class SBT(Index):
         # use a tree search function that keeps track of its best match.
         search_fn = GatherMinHashes().search
 
+        leaf = next(iter(self.leaves()))
+        tree_mh = leaf.data.minhash
+        scaled = tree_mh.scaled
+
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / len(query.minhash)
+        threshold = threshold_bp / (len(query.minhash) * scaled)
 
         results = []
         for leaf in self.find(search_fn, query, 0.0):
