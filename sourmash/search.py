@@ -70,7 +70,7 @@ def _subtract_and_downsample(to_remove, old_query, scaled=None):
     return SourmashSignature(mh)
 
 
-def _find_best(dblist, query):
+def _find_best(dblist, query, threshold_bp):
     """
     Search for the best containment, return precisely one match.
     """
@@ -81,7 +81,7 @@ def _find_best(dblist, query):
 
     # search across all databases
     for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query):
+        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
@@ -118,7 +118,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
-        best_cont, best_match, filename = _find_best(databases, query)
+        best_cont, best_match, filename = _find_best(databases, query,
+                                                     threshold_bp)
         if not best_match:          # no matches at all!
             break
 
