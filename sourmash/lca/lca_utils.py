@@ -321,7 +321,7 @@ class LCA_Database(Index):
             return []
 
         results = []
-        threshold_bp = kwargs.get('threshold_bp', 0)
+        threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = threshold_bp / len(query.minhash)
         n = 0
         for x in self.find_signatures(query.minhash, threshold,
