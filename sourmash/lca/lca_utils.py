@@ -317,12 +317,20 @@ class LCA_Database(Index):
         return results
 
     def gather(self, query, *args, **kwargs):
+        if not query.minhash:
+            return []
+
         results = []
-        for x in self.find_signatures(query.minhash, 0.0,
+        threshold_bp = kwargs.get('threshold_bp', 0)
+        threshold = threshold_bp / len(query.minhash)
+        n = 0
+        for x in self.find_signatures(query.minhash, threshold,
                                       containment=True, ignore_scaled=True):
+            n += 1
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
+                break
 
         return results
 

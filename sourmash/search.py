@@ -82,7 +82,7 @@ def _find_best(dblist, query):
     # search across all databases
     for (obj, filename, filetype) in dblist:
         for cont, match, fname in obj.gather(query):
-            assert cont
+            assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
             if (cont == best_cont and match.name() < best_match.name()) or \
@@ -117,7 +117,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         orig_abunds = orig_mh.get_mins(with_abundance=True)
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
-    while 1:
+    while query.minhash:
         best_cont, best_match, filename = _find_best(databases, query)
         if not best_match:          # no matches at all!
             break
