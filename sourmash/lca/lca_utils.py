@@ -419,25 +419,17 @@ class LCA_Database(Index):
             for idx in idx_list:
                 c[idx] += 1
 
-        debug('number of matching signatures for hashes: {}', len(c))
-
         for idx, count in c.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
-            debug('looking at {} ({})', ident, name)
 
             match_mh = self._signatures[idx]
             match_size = len(match_mh)
-
-            debug('count: {}; query_mins: {}; match size: {}',
-                  count, len(query_mins), match_size)
 
             if containment:
                 score = count / len(query_mins)
             else:
                 score = count / (len(query_mins) + match_size - count)
-
-            debug('score: {} (containment? {})', score, containment)
 
             if score >= threshold:
                 from .. import SourmashSignature
