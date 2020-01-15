@@ -3,3 +3,4 @@ tests/test-data/*.sig  linguist-detectable=false
 tests/test-data/*/*.sig  linguist-detectable=false
 tests/test-data/*/*/*.sig  linguist-detectable=false
 tests/test-data/.sbt.v2/*.sbt  linguist-detectable=false
+include/sourmash.h  linguist-language=C
