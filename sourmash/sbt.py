@@ -223,6 +223,8 @@ class SBT(Index):
     def find(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
+        unload_data = kwargs.get("unload_data", False)
+
         # initialize search queue with top node of tree
         matches = []
         visited, queue = set(), [0]
@@ -261,6 +263,10 @@ class SBT(Index):
                                 queue.insert(0, c.pos)
                         else: # bfs
                             queue.extend(c.pos for c in self.children(node_p))
+
+                if unload_data:
+                    node_g.unload()
+
         return matches
 
     def search(self, query, *args, **kwargs):
@@ -272,6 +278,7 @@ class SBT(Index):
         ignore_abundance = kwargs['ignore_abundance']
         do_containment = kwargs['do_containment']
         best_only = kwargs['best_only']
+        unload_data = kwargs.get('unload_data', False)
 
         search_fn = search_minhashes
         query_match = lambda x: query.similarity(
@@ -296,7 +303,7 @@ class SBT(Index):
 
         # now, search!
         results = []
-        for leaf in self.find(search_fn, tree_query, threshold):
+        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
@@ -312,6 +319,8 @@ class SBT(Index):
         # use a tree search function that keeps track of its best match.
         search_fn = GatherMinHashes().search
 
+        unload_data = kwargs.get('unload_data', False)
+
         leaf = next(iter(self.leaves()))
         tree_mh = leaf.data.minhash
         scaled = tree_mh.scaled
@@ -320,7 +329,7 @@ class SBT(Index):
         threshold = threshold_bp / (len(query.minhash) * scaled)
 
         results = []
-        for leaf in self.find(search_fn, query, 0.0):
+        for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
             leaf_e = leaf.data.minhash
             similarity = query.minhash.containment_ignore_maxhash(leaf_e)
             if similarity > 0.0:
@@ -1061,6 +1070,9 @@ class Node(object):
     def data(self, new_data):
         self._data = new_data
 
+    def unload(self):
+        self._data = None
+
     @staticmethod
     def load(info, storage=None):
         new_node = Node(info['factory'],
@@ -1114,6 +1126,9 @@ class Leaf(object):
     @data.setter
     def data(self, new_data):
         self._data = new_data
+
+    def unload(self):
+        self._data = None
 
     def save(self, path):
         # We need to do this tempfile dance because khmer only load

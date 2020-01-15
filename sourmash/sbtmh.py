@@ -31,7 +31,7 @@ def search_sbt_index(tree, query, threshold):
         for match_sig, similarity in search_sbt_index(tree, query, threshold):
            ...
     """
-    for leaf in tree.find(search_minhashes, query, threshold):
+    for leaf in tree.find(search_minhashes, query, threshold, unload_data=True):
         similarity = query.similarity(leaf.data)
         yield leaf.data, similarity
 
@@ -175,8 +175,7 @@ class SearchMinHashesFindBest(object):
         return 0
 
 
-def search_minhashes_containment(node, sig, threshold,
-                                 results=None, downsample=True):
+def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
