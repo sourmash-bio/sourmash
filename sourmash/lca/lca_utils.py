@@ -388,8 +388,22 @@ class LCA_Database(Index):
 
         for (k, v) in self.hashval_to_idx.items():
             for vv in v:
-                temp_vals[vv].append(k)
+                temp_hashes = temp_vals[vv]
+                temp_hashes.append(k)
 
+                # 50 is an arbitrary number. If you really want
+                # to micro-optimize, list is resized and grow in this pattern:
+                # 0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
+                # (from https://github.com/python/cpython/blob/b2b4a51f7463a0392456f7772f33223e57fa4ccc/Objects/listobject.c#L57)
+                if len(temp_hashes) > 50:
+                    sigd[vv].add_many(temp_hashes)
+
+                    # Sigh, python 2... when it goes away,
+                    # we can do `temp_hashes.clear()` instead.
+                    del temp_vals[vv]
+
+        # We loop temp_vals again to add any remainder hashes
+        # (each list of hashes is smaller than 50 items)
         for sig, vals in temp_vals.items():
             sigd[sig].add_many(vals)
 
