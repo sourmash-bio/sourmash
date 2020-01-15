@@ -10,8 +10,11 @@ Remember to update release numbers/RC in:
 ## Testing a release
 
  0\. First things first: check if Read the Docs is building properly for
- master. Build on https://readthedocs.org/projects/sourmash/builds/ should be
- passing, and also check if https://sourmash.readthedocs.io/en/latest/ is updated.
+ master. Build on [Read the Docs][rtd] should be
+ passing, and also check if [the rendered docs] are updated.
+
+[rtd]: https://readthedocs.org/projects/sourmash/builds/
+[rendered docs]: https://sourmash.readthedocs.io/en/latest/
 
  1\. The below should be done in a clean checkout:
 ```
@@ -19,7 +22,7 @@ cd $(mktemp -d)
 git clone git@github.com:dib-lab/sourmash.git
 cd sourmash
 ```
-2\. Set your new version number and release candidate (you might want to check https://github.com/dib-lab/sourmash/releases for next version number):
+2\. Set your new version number and release candidate (you might want to check [the releases page] for next version number):
 ```
 new_version=3.0.0
 rc=rc1
@@ -30,8 +33,13 @@ rc=rc1
 git tag -a v${new_version}${rc}
 git push --tags git@github.com:dib-lab/sourmash.git
 ```
+
+[the releases page]: https://github.com/dib-lab/sourmash/releases
+
 3\. Test the release candidate. Bonus: repeat on Mac OS X:
 ```
+python -m pip install -U setuptools pip virtualenv wheel
+
 cd ..
 python -m venv testenv1
 python -m venv testenv2
@@ -73,15 +81,14 @@ tar xzf sourmash-${new_version}${rc}.tar.gz
 cd sourmash-${new_version}${rc}
 python -m pip install -r requirements.txt
 make dist
-#make test  ## Currently failing, we don't have all the test data...
+cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so let's copy it here
+make test
 ```
 
 4\. Publish the new release on the testing PyPI server.  You will need
-   to change your PyPI credentials as documented here:
-   https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives
+   to [change your PyPI credentials].
    We will be using `twine` to upload the package to TestPyPI and verify
    everything works before sending it to PyPI:
-
 ```
 pip install twine
 twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_version}${rc}.tar.gz
@@ -91,12 +98,15 @@ twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_
 cd ../../testenv4
 deactivate
 source bin/activate
-pip install -U setuptools pip
+pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
-pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta
+pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta deprecation
 pip install -i https://test.pypi.org/simple --pre sourmash
 sourmash info  # should print "sourmash version ${new_version}${rc}"
 ```
+
+[change your PyPI credentials]: https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives
+
 5\. Do any final testing:
 
    * check that the binder demo notebook is up to date
@@ -128,7 +138,9 @@ git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
 4. Add the release on GitHub, using the tag you just pushed.  Name
    it 'version X.Y.Z', and copy and paste in the release notes:
 
-5. Upload wheels from GitHub Releases to PyPI. [`hub`](https://hub.github.com/) makes this easier, but you can also manually download all the files from https://github.com/dib-lab/sourmash/releases.
+5. Upload wheels from GitHub Releases to PyPI.
+[`hub`](https://hub.github.com/) makes this easier,
+but you can also manually download all the files from [the releases page].
 ```
 mkdir -p wheel && cd wheel
 hub release download v${new_version}
@@ -148,6 +160,8 @@ If a bioinformatics software is released and no one tweets, is it really release
 
 Examples:
 
+- [3.1.0](https://twitter.com/luizirber/status/1217639572202409984)
+- [3.0.0](https://twitter.com/luizirber/status/1213588144458649600)
 - [2.3.0](https://twitter.com/luizirber/status/1198027116396171264)
 - [2.2.0](https://twitter.com/luizirber/status/1179126660911661057)
 - [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
