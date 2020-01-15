@@ -86,7 +86,7 @@ def test_str(track_abundance):
     assert str(sig) == 'SourmashSignature(59502a74)'
     assert repr(sig) == 'SourmashSignature(59502a74)'
 
-    sig.d['name'] = 'fizbar'
+    sig._name = 'fizbar'
     assert str(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
     assert repr(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
 
@@ -191,7 +191,6 @@ def test_md5(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     e.add_hash(5)
     sig = SourmashSignature(e)
-    print(sig._save())
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
 
 

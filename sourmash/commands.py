@@ -832,7 +832,6 @@ def watch(args):
         ksize = tree_mh.ksize
 
     E = MinHash(ksize=ksize, n=args.num_hashes, is_protein=is_protein, dayhoff=dayhoff, hp=hp)
-    streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
 
     notify('Computing signature for k={}, {} from stdin', ksize, moltype)
 
@@ -840,6 +839,7 @@ def watch(args):
         search_fn = SearchMinHashesFindBest().search
 
         results = []
+        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
         for leaf in tree.find(search_fn, streamsig, args.threshold):
             results.append((streamsig.similarity(leaf.data),
                             leaf.data))
@@ -877,6 +877,7 @@ def watch(args):
 
     if args.output:
         notify('saving signature to {}', args.output.name)
+        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
         sig.save_signatures([streamsig], args.output)
 
 
