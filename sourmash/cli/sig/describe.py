@@ -71,8 +71,8 @@ def describe(signatures, quiet=True, csvout=None):
             with_abundance = 1
         md5 = sig.md5sum()
         name = sig.name()
-        filename = sig.d.get('filename', '')
-        license = sig.d['license']
+        filename = sig.filename
+        license = sig.license
 
         if w:
             w.writerow(locals())
