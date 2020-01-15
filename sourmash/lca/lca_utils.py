@@ -317,12 +317,18 @@ class LCA_Database(Index):
         return results
 
     def gather(self, query, *args, **kwargs):
+        if not query.minhash:
+            return []
+
         results = []
-        for x in self.find_signatures(query.minhash, 0.0,
+        threshold_bp = kwargs.get('threshold_bp', 0.0)
+        threshold = threshold_bp / (len(query.minhash) * self.scaled)
+        for x in self.find_signatures(query.minhash, threshold,
                                       containment=True, ignore_scaled=True):
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
+                break
 
         return results
 
@@ -430,7 +436,6 @@ class LCA_Database(Index):
         for idx, count in c.items():
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
-            debug('looking at {} ({})', ident, name)
 
             match_mh = self._signatures[idx]
             match_size = len(match_mh)
@@ -443,7 +448,8 @@ class LCA_Database(Index):
             else:
                 score = count / (len(query_mins) + match_size - count)
 
-            debug('score: {} (containment? {})', score, containment)
+            debug('score: {} (containment? {}), threshold: {}',
+                  score, containment, threshold)
 
             if score >= threshold:
                 from .. import SourmashSignature

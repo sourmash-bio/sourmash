@@ -60,7 +60,7 @@ def load_query_signature(filename, ksize, select_moltype):
                                        select_moltype=select_moltype,
                                        do_raise=True)
         sl = list(sl)
-    except IOError:
+    except (IOError, ValueError):
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
 
