@@ -9,34 +9,34 @@ Remember to update release numbers/RC in:
 
 ## Testing a release
 
- 0\. First things first: check if Read the Docs is building properly for
- master. Build on [Read the Docs][rtd] should be
- passing, and also check if [the rendered docs] are updated.
+0\. First things first: check if Read the Docs is building properly for master.
+The build on [Read the Docs] should be passing,
+and also check if the [rendered docs] are updated.
 
-[rtd]: https://readthedocs.org/projects/sourmash/builds/
+[Read the Docs]: https://readthedocs.org/projects/sourmash/builds/
 [rendered docs]: https://sourmash.readthedocs.io/en/latest/
 
- 1\. The below should be done in a clean checkout:
+1\. The below should be done in a clean checkout:
 ```
 cd $(mktemp -d)
 git clone git@github.com:dib-lab/sourmash.git
 cd sourmash
 ```
-2\. Set your new version number and release candidate (you might want to check [the releases page] for next version number):
+
+2\. Set your new version number and release candidate
+(you might want to check [the releases page] for next version number):
 ```
 new_version=3.0.0
 rc=rc1
 ```
- and then tag the release candidate with the new version number prefixed by
-   the letter 'v':
+and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
 git tag -a v${new_version}${rc}
 git push --tags git@github.com:dib-lab/sourmash.git
 ```
-
 [the releases page]: https://github.com/dib-lab/sourmash/releases
 
-3\. Test the release candidate. Bonus: repeat on Mac OS X:
+3\. Test the release candidate. Bonus: repeat on macOS:
 ```
 python -m pip install -U setuptools pip virtualenv wheel
 
@@ -85,15 +85,15 @@ cp -a ../../sourmash/tests/test-data tests/  ## We don't ship the test data, so 
 make test
 ```
 
-4\. Publish the new release on the testing PyPI server.  You will need
-   to [change your PyPI credentials].
-   We will be using `twine` to upload the package to TestPyPI and verify
-   everything works before sending it to PyPI:
+4\. Publish the new release on the testing PyPI server.
+You will need to [change your PyPI credentials].
+We will be using `twine` to upload the package to TestPyPI and verify
+everything works before sending it to PyPI:
 ```
 pip install twine
 twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_version}${rc}.tar.gz
 ```
-   Test the PyPI release in a new virtualenv:
+Test the PyPI release in a new virtualenv:
 ```
 cd ../../testenv4
 deactivate
@@ -109,36 +109,38 @@ sourmash info  # should print "sourmash version ${new_version}${rc}"
 
 5\. Do any final testing:
 
-   * check that the binder demo notebook is up to date
-   * check wheels from github releases
+ * check that the binder demo notebook is up to date
+ * check wheels from GitHub releases
 
 ## How to make a final release
 
-When you've got a thoroughly tested release candidate, cut a release like
-so:
+When you've got a thoroughly tested release candidate,
+cut a release like so:
 
-1. Create the final tag. Write the changes from previous version in the tag commit message. `git log --oneline` can be useful here, because it can be used to compare the two versions (and hopefully we used descriptive PR names and commit messages). An example comparing `2.2.0` to `2.1.0`:
+1\. Create the final tag. Write the changes from previous version in the tag commit message. `git log --oneline` can be useful here, because it can be used to compare the two versions (and hopefully we used descriptive PR names and commit messages). An example comparing `2.2.0` to `2.1.0`:
 `git log --oneline v2.1.0..v2.2.0`
 
 ```
 cd ../sourmash
 git tag -a v${new_version}
 ```
-2. Publish the new release on PyPI (requires an authorized account).
+
+2\. Publish the new release on PyPI (requires an authorized account).
 ```
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
-3. Delete the release candidate tag and push the tag updates to GitHub:
+
+3\. Delete the release candidate tag and push the tag updates to GitHub:
 ```
 git tag -d v${new_version}${rc}
 git push --tags git@github.com:dib-lab/sourmash.git
 git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
 ```
-4. Add the release on GitHub, using the tag you just pushed.  Name
-   it 'version X.Y.Z', and copy and paste in the release notes:
+4\. Add the release on GitHub, using the tag you just pushed.
+Name it 'version X.Y.Z', and copy and paste in the release notes.
 
-5. Upload wheels from GitHub Releases to PyPI.
+5\. Upload wheels from GitHub Releases to PyPI.
 [`hub`](https://hub.github.com/) makes this easier,
 but you can also manually download all the files from [the releases page].
 ```
