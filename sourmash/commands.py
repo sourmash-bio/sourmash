@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
-from .sourmash_args import DEFAULT_LOAD_K
+from .sourmash_args import DEFAULT_LOAD_K, FileOutput
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -149,14 +149,15 @@ def compare(args):
 
     # output CSV?
     if args.csv:
-        w = csv.writer(args.csv)
-        w.writerow(labeltext)
+        with FileOutput(args.csv, 'wt') as csv_fp:
+            w = csv.writer(csv_fp)
+            w.writerow(labeltext)
 
-        for i in range(len(labeltext)):
-            y = []
-            for j in range(len(labeltext)):
-                y.append('{}'.format(similarity[i][j]))
-            args.csv.write(','.join(y) + '\n')
+            for i in range(len(labeltext)):
+                y = []
+                for j in range(len(labeltext)):
+                    y.append('{}'.format(similarity[i][j]))
+                w.writerow(y)
 
 
 def plot(args):
