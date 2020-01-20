@@ -642,7 +642,7 @@ def export(args):
     ll = list(mh.get_mins())
     x['sketches'] = [{ 'hashes': ll }]
 
-    with open(args.output, 'wt') as fp:
+    with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
 
