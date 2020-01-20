@@ -8,6 +8,7 @@ import json
 
 import sourmash
 import copy
+from sourmash.sourmash_args import FileOutput
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
@@ -394,14 +395,8 @@ def rename(args):
             sigobj._name = args.name
             outlist.append(sigobj)
 
-    if args.output:
-        fp = open(args.output, 'wt')
-    else:
-        fp = sys.stdout
-
-    sourmash.save_signatures(outlist, fp=fp)
-    if args.output:
-        fp.close()
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("set name to '{}' on {} signatures", args.name, len(outlist))
 
@@ -437,11 +432,8 @@ def extract(args):
         error("no matching signatures!")
         sys.exit(-1)
 
-    if args.output:
-        with open(args.output, 'wt') as fp:
-            sourmash.save_signatures(outlist, fp=fp)
-    else:
-        sourmash.save_signatures(outlist, fp=sys.stdout)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
@@ -592,12 +584,8 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    if args.output:
-        fp = open(args.output, 'wt')
+    with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures(output_list, fp=fp)
-        fp.close()
-    else:
-        sourmash.save_signatures(output_list, fp=sys.stdout)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
