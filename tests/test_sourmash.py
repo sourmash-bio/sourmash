@@ -204,7 +204,7 @@ def test_do_compare_output_csv():
         with open(os.path.join(location, 'xxx')) as fp:
             lines = fp.readlines()
             assert len(lines) == 3
-            assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
+            assert lines[1:] == [u'1.0,0.93\n', '0.93,1.0\n']
 
 
 def test_do_compare_downsample():
