@@ -1,7 +1,5 @@
 """classify genomes"""
 
-from argparse import FileType
-
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
@@ -17,9 +15,8 @@ def subparser(subparsers):
         help='output debugging output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
-        help='output CSV to the specified file; by default output to terminal '
-        '(standard output)'
+        '-o', '--output', metavar='FILE', default='-',
+        help='output CSV to the specified file; by default output to stdout'
     )
     subparser.add_argument('--scaled', type=float)
     subparser.add_argument(

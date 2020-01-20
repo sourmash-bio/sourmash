@@ -110,11 +110,9 @@ def classify(args):
 
     # set up output
     csvfp = csv.writer(sys.stdout)
-    if args.output:
-        notify("outputting classifications to '{}'", args.output.name)
-        csvfp = csv.writer(args.output)
-    else:
-        notify("outputting classifications to stdout")
+    notify("outputting classifications to {}", args.output)
+    with sourmash_args.FileOutput(args.output, 'wt') as outfp:
+        csvfp = csv.writer(outfp)
     csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
 
     # for each query, gather all the matches across databases
