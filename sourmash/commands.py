@@ -465,20 +465,21 @@ def search(args):
 
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
 
-        w.writeheader()
-        for sr in results:
-            d = dict(sr._asdict())
-            del d['match']
-            w.writerow(d)
+        with FileOutput(args.output, 'wt') as fp:
+            w = csv.DictWriter(fp, fieldnames=fieldnames)
+
+            w.writeheader()
+            for sr in results:
+                d = dict(sr._asdict())
+                del d['match']
+                w.writerow(d)
 
     # save matching signatures upon request
     if args.save_matches:
-        outname = args.save_matches.name
-        notify('saving all matched signatures to "{}"', outname)
-        sig.save_signatures([ sr.match for sr in results ],
-                            args.save_matches)
+        notify('saving all matched signatures to "{}"', args.save_matches)
+        with FileOutput(args.save_matches, 'wt') as fp:
+            sig.save_signatures([ sr.match for sr in results ], fp)
 
 
 def categorize(args):
