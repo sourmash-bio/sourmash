@@ -282,7 +282,8 @@ def import_csv(args):
             notify('loaded signature: {} {}', name, s.md5sum()[:8])
 
         notify('saving {} signatures to JSON', len(siglist))
-        sig.save_signatures(siglist, args.output)
+        with FileOutput(args.output, 'wt') as outfp:
+            sig.save_signatures(siglist, outfp)
 
 
 def dump(args):
