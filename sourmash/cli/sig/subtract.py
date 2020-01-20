@@ -1,6 +1,5 @@
 """subtract one or more signatures"""
 
-from argparse import FileType
 import sys
 
 from sourmash.cli.utils import add_moltype_args, add_ksize_arg
@@ -15,9 +14,8 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
-        default=sys.stdout,
-        help='output signature to this file'
+        '-o', '--output', metavar='FILE',
+        help='output signature to this file (default stdout)'
     )
     subparser.add_argument(
         '--flatten', action='store_true',

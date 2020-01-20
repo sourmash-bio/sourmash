@@ -265,7 +265,8 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
-    sourmash.save_signatures([merged_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([merged_sigobj], fp=fp)
 
     notify('loaded and merged {} signatures', total_loaded)
 
@@ -324,7 +325,8 @@ def intersect(args):
         intersect_mh.set_abundances(abund_mins)
         intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
-    sourmash.save_signatures([intersect_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([intersect_sigobj], fp=fp)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -373,7 +375,8 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    sourmash.save_signatures([subtract_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([subtract_sigobj], fp=fp)
 
     notify('loaded and subtracted {} signatures', total_loaded)
 
@@ -484,7 +487,8 @@ def filter(args):
 
         outlist.extend(siglist)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -524,7 +528,8 @@ def flatten(args):
 
         outlist.extend(siglist)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -617,7 +622,8 @@ def sig_import(args):
         s = sourmash.SourmashSignature(mh, filename=filename)
         siglist.append(s)
 
-    sourmash.save_signatures(siglist, args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(siglist, fp)
 
 
 def export(args):
