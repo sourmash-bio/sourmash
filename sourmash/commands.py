@@ -625,24 +625,25 @@ def gather(args):
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
-        w.writeheader()
-        for result in found:
-            d = dict(result._asdict())
-            del d['match']                 # actual signature not in CSV.
-            w.writerow(d)
+
+        with FileOutput(args.output, 'wt') as fp:
+            w = csv.DictWriter(fp, fieldnames=fieldnames)
+            w.writeheader()
+            for result in found:
+                d = dict(result._asdict())
+                del d['match']                 # actual signature not in CSV.
+                w.writerow(d)
 
     if found and args.save_matches:
-        outname = args.save_matches.name
-        notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ r.match for r in found ], args.save_matches)
+        notify('saving all matches to "{}"', args.save_matches)
+        with FileOutput(args.save_matches, 'wt') as fp:
+            sig.save_signatures([ r.match for r in found ], fp)
 
     if args.output_unassigned:
         if not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
-            outname = args.output_unassigned.name
-            notify('saving unassigned hashes to "{}"', outname)
+            notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
             with_abundance = next_query.minhash.track_abundance
             e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
@@ -653,8 +654,8 @@ def gather(args):
             else:
                 e.add_many(next_query.minhash.get_mins())
 
-            sig.save_signatures([ sig.SourmashSignature(e) ],
-                                args.output_unassigned)
+            with FileOutput(args.output_unassigned, 'wt') as fp:
+                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
 
 
 def multigather(args):
