@@ -22,7 +22,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-o', '--output', metavar='FILE',
-        help='output signature to this file'
+        help='output signature to this file (default stdout)'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
