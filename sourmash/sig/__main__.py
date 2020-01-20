@@ -82,8 +82,10 @@ def describe(args):
 
     # write CSV?
     w = None
+    csv_fp = None
     if args.csv:
-        w = csv.DictWriter(args.csv,
+        csv_fp = open(args.csv, 'wt')
+        w = csv.DictWriter(csv_fp,
                            ['signature_file', 'md5', 'ksize', 'moltype', 'num',
                             'scaled', 'n_hashes', 'seed', 'with_abundance',
                             'name', 'filename', 'license'],
@@ -127,6 +129,9 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 signature license: {license}
 ''', **locals())
+
+    if csv_fp:
+        csv_fp.close()
 
 
 def overlap(args):
@@ -432,7 +437,11 @@ def extract(args):
         error("no matching signatures!")
         sys.exit(-1)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    if args.output:
+        with open(args.output, 'wt') as fp:
+            sourmash.save_signatures(outlist, fp=fp)
+    else:
+        sourmash.save_signatures(outlist, fp=sys.stdout)
 
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
@@ -583,7 +592,12 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    sourmash.save_signatures(output_list, fp=args.output)
+    if args.output:
+        fp = open(args.output, 'wt')
+        sourmash.save_signatures(output_list, fp=fp)
+        fp.close()
+    else:
+        sourmash.save_signatures(output_list, fp=sys.stdout)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
@@ -640,7 +654,8 @@ def export(args):
     ll = list(mh.get_mins())
     x['sketches'] = [{ 'hashes': ll }]
 
-    print(json.dumps(x), file=args.output)
+    with open(args.output, 'wt') as fp:
+        print(json.dumps(x), file=fp)
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
 
 

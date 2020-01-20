@@ -1,6 +1,5 @@
 """export a signature, e.g. to mash"""
 
-from argparse import FileType
 import sys
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
@@ -14,7 +13,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
+        '-o', '--output', metavar='FILE',
         default=sys.stdout,
         help='output signature to this file'
     )

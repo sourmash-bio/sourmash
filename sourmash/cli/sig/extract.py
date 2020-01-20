@@ -1,6 +1,5 @@
 """extract one or more signatures"""
 
-from argparse import FileType
 import sys
 
 from sourmash.cli.utils import add_moltype_args, add_ksize_arg
@@ -14,8 +13,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
-        default=sys.stdout,
+        '-o', '--output', metavar='FILE',
         help='output signature to this file'
     )
     subparser.add_argument(
