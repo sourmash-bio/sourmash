@@ -2386,6 +2386,37 @@ def test_gather_metagenome():
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
 
+
+def test_gather_metagenome_threshold_bp():
+    # set a threshold on the gather output
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'gather {} gcf_all -k 21 --threshold-bp 2e6'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 1 matches total' in out
+        assert 'found less than 2.0 Mbp in common. => exiting' in err
+        assert 'the recovered matches hit 33.2% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
 def test_multigather_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -2414,6 +2445,7 @@ def test_multigather_metagenome():
                 'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
+
 
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:

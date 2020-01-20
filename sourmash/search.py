@@ -154,7 +154,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         if intersect_bp < threshold_bp:   # hard cutoff for now
             notify('found less than {} in common. => exiting',
-                   format_bp(intersect_bp))
+                   format_bp(threshold_bp))
             break
 
         # calculate fractions wrt first denominator - genome size
