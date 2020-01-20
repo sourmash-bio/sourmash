@@ -881,9 +881,11 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify('saving signature to {}', args.output.name)
-        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
-        sig.save_signatures([streamsig], args.output)
+        notify('saving signature to {}', args.output)
+        with FileOutput(args.output, 'wt') as fp:
+            streamsig = sig.SourmashSignature(E, filename='stdin',
+                                              name=args.name)
+        sig.save_signatures([streamsig], fp)
 
 
 def migrate(args):
