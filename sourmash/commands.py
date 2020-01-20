@@ -509,6 +509,12 @@ def categorize(args):
     loader = sourmash_args.LoadSingleSignatures(inp_files,
                                                 args.ksize, moltype)
 
+    csv_w = None
+    csv_fp = None
+    if args.csv:
+        csv_fp = open(args.csv, 'wt')
+        csv_w = csv.writer(csv_fp)
+
     for queryfile, query, query_moltype, query_ksize in loader:
         notify('loaded query: {}... (k={}, {})', query.name()[:30],
                query_ksize, query_moltype)
@@ -534,15 +540,17 @@ def categorize(args):
         else:
             notify('for {}, no match found', query.name())
 
-        if args.csv:
-            w = csv.writer(args.csv)
-            w.writerow([queryfile, query.name(), best_hit_query_name,
-                        best_hit_sim])
+        if csv_w:
+            csv_w.writerow([queryfile, query.name(), best_hit_query_name,
+                           best_hit_sim])
 
     if loader.skipped_ignore:
         notify('skipped/ignore: {}', loader.skipped_ignore)
     if loader.skipped_nosig:
         notify('skipped/nosig: {}', loader.skipped_nosig)
+
+    if csv_fp:
+        csv_fp.close()
 
 
 def gather(args):
