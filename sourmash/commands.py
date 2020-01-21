@@ -161,7 +161,7 @@ def compare(args):
 
 
 def plot(args):
-    "Produce a clustering and plot."
+    "Produce a clustering matrix and plot."
     import matplotlib as mpl
     mpl.use('Agg')
     import numpy
@@ -177,10 +177,12 @@ def plot(args):
     D = numpy.load(open(D_filename, 'rb'))
     notify('...got {} x {} matrix.', *D.shape)
 
+    if args.labeltext:
+        labelfilename = args.labeltext
     notify('loading labels from {}', labelfilename)
     labeltext = [ x.strip() for x in open(labelfilename) ]
     if len(labeltext) != D.shape[0]:
-        error('{} labels != matrix size, exiting')
+        error('{} labels != matrix size, exiting', len(labeltext))
         sys.exit(-1)
 
     # build filenames, decide on PDF/PNG output
@@ -233,6 +235,7 @@ def plot(args):
         np_idx = numpy.array(sample_idx)
         D = D[numpy.ix_(np_idx, np_idx)]
         labeltext = [ labeltext[idx] for idx in sample_idx ]
+
     ### do clustering
     Y = sch.linkage(D, method='single')
     sch.dendrogram(Y, orientation='right', labels=labeltext)
