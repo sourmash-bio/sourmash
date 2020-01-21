@@ -10,6 +10,7 @@ import random
 import screed
 import time
 
+from . import sourmash_args
 from .signature import SourmashSignature, save_signatures
 from .logging import notify, error, set_quiet
 from .utils import RustObject
@@ -273,15 +274,15 @@ def build_siglist(sig, filename, name=None):
     return [sig]
 
 
-def save_siglist(siglist, output_fp, filename=None):
+def save_siglist(siglist, sigfile_name, filename=None):
     # save!
-    if output_fp:
-        sigfile_name = output_fp.name
-        save_signatures(siglist, output_fp)
+    if sigfile_name:
+        with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
+            save_signatures(siglist, fp)
     else:
         if filename is None:
             raise Exception("internal error, filename is None")
-        with open(filename, 'w') as fp:
+        with sourmash_args.FileOutput(filename, 'w') as fp:
             sigfile_name = filename
             save_signatures(siglist, fp)
     notify(

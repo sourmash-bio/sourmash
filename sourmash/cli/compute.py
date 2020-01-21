@@ -95,7 +95,7 @@ def subparser(subparsers):
         help='recompute signatures even if the file exists'
     )
     file_args.add_argument(
-        '-o', '--output', type=FileType('wt'),
+        '-o', '--output',
         help='output computed signatures to this file'
     )
     file_args.add_argument(
