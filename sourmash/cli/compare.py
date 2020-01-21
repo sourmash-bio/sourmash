@@ -1,7 +1,5 @@
 """compare genomes"""
 
-from argparse import FileType
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
@@ -29,7 +27,7 @@ def subparser(subparsers):
         help='compare all signatures underneath directories'
     )
     subparser.add_argument(
-        '--csv', metavar='F', type=FileType('w'),
+        '--csv', metavar='F',
         help='write matrix to specified file in CSV format (with column '
         'headers)'
     )

@@ -1,7 +1,5 @@
 """classify a stream of sequences"""
 
-from argparse import FileType
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
@@ -14,7 +12,7 @@ def subparser(subparsers):
         help='suppress non-error output'
     )
     subparser.add_argument(
-        '-o', '--output', type=FileType('wt'),
+        '-o', '--output',
         help='save signature generated from data here'
     )
     subparser.add_argument(

@@ -29,7 +29,7 @@ def subparser(subparsers):
     add_moltype_args(subparser)
 
     # TODO: help messages in these
-    subparser.add_argument('--csv', type=argparse.FileType('at'))
+    subparser.add_argument('--csv', help='output summary CSV to this file')
     subparser.add_argument('--load-csv', default=None)
 
 

@@ -1,6 +1,5 @@
 """import a mash or other signature"""
 
-from argparse import FileType
 import sys
 
 
@@ -15,9 +14,8 @@ def subparser(subparsers):
             help='suppress non-error output'
         )
         subparser.add_argument(
-            '-o', '--output', metavar='FILE', type=FileType('wt'),
-            default=sys.stdout,
-            help='output signature to this file'
+            '-o', '--output', metavar='FILE',
+            help='output signature to this file (default stdout)'
         )
 
 

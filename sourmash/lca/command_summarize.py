@@ -131,14 +131,15 @@ def summarize_main(args):
 
     # CSV:
     if args.output:
-        w = csv.writer(args.output)
-        headers = ['count'] + list(lca_utils.taxlist())
-        w.writerow(headers)
+        with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
+            w = csv.writer(csv_fp)
+            headers = ['count'] + list(lca_utils.taxlist())
+            w.writerow(headers)
 
-        for (lineage, count) in lineage_counts.items():
-            debug('lineage:', lineage)
-            row = [count] + lca_utils.zip_lineage(lineage)
-            w.writerow(row)
+            for (lineage, count) in lineage_counts.items():
+                debug('lineage:', lineage)
+                row = [count] + lca_utils.zip_lineage(lineage)
+                w.writerow(row)
 
 
 if __name__ == '__main__':

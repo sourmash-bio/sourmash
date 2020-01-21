@@ -1,7 +1,5 @@
 """classify metagenomes"""
 
-from argparse import FileType
-
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('gather')
@@ -15,11 +13,11 @@ def subparser(subparsers):
         help='output debugging output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
+        '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
     subparser.add_argument(
-        '--output-unassigned', metavar='FILE', type=FileType('wt'),
+        '--output-unassigned', metavar='FILE',
         help='output unassigned portions of the query as a signature to this '
         'file'
     )

@@ -16,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
-from .sourmash_args import DEFAULT_LOAD_K
+from .sourmash_args import DEFAULT_LOAD_K, FileOutput
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -149,14 +149,15 @@ def compare(args):
 
     # output CSV?
     if args.csv:
-        w = csv.writer(args.csv)
-        w.writerow(labeltext)
+        with FileOutput(args.csv, 'wt') as csv_fp:
+            w = csv.writer(csv_fp)
+            w.writerow(labeltext)
 
-        for i in range(len(labeltext)):
-            y = []
-            for j in range(len(labeltext)):
-                y.append('{}'.format(similarity[i][j]))
-            args.csv.write(','.join(y) + '\n')
+            for i in range(len(labeltext)):
+                y = []
+                for j in range(len(labeltext)):
+                    y.append('{}'.format(similarity[i][j]))
+                w.writerow(y)
 
 
 def plot(args):
@@ -281,7 +282,8 @@ def import_csv(args):
             notify('loaded signature: {} {}', name, s.md5sum()[:8])
 
         notify('saving {} signatures to JSON', len(siglist))
-        sig.save_signatures(siglist, args.output)
+        with FileOutput(args.output, 'wt') as outfp:
+            sig.save_signatures(siglist, outfp)
 
 
 def dump(args):
@@ -464,20 +466,21 @@ def search(args):
 
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
 
-        w.writeheader()
-        for sr in results:
-            d = dict(sr._asdict())
-            del d['match']
-            w.writerow(d)
+        with FileOutput(args.output, 'wt') as fp:
+            w = csv.DictWriter(fp, fieldnames=fieldnames)
+
+            w.writeheader()
+            for sr in results:
+                d = dict(sr._asdict())
+                del d['match']
+                w.writerow(d)
 
     # save matching signatures upon request
     if args.save_matches:
-        outname = args.save_matches.name
-        notify('saving all matched signatures to "{}"', outname)
-        sig.save_signatures([ sr.match for sr in results ],
-                            args.save_matches)
+        notify('saving all matched signatures to "{}"', args.save_matches)
+        with FileOutput(args.save_matches, 'wt') as fp:
+            sig.save_signatures([ sr.match for sr in results ], fp)
 
 
 def categorize(args):
@@ -506,6 +509,12 @@ def categorize(args):
     loader = sourmash_args.LoadSingleSignatures(inp_files,
                                                 args.ksize, moltype)
 
+    csv_w = None
+    csv_fp = None
+    if args.csv:
+        csv_fp = open(args.csv, 'wt')
+        csv_w = csv.writer(csv_fp)
+
     for queryfile, query, query_moltype, query_ksize in loader:
         notify('loaded query: {}... (k={}, {})', query.name()[:30],
                query_ksize, query_moltype)
@@ -531,15 +540,17 @@ def categorize(args):
         else:
             notify('for {}, no match found', query.name())
 
-        if args.csv:
-            w = csv.writer(args.csv)
-            w.writerow([queryfile, query.name(), best_hit_query_name,
-                        best_hit_sim])
+        if csv_w:
+            csv_w.writerow([queryfile, query.name(), best_hit_query_name,
+                           best_hit_sim])
 
     if loader.skipped_ignore:
         notify('skipped/ignore: {}', loader.skipped_ignore)
     if loader.skipped_nosig:
         notify('skipped/nosig: {}', loader.skipped_nosig)
+
+    if csv_fp:
+        csv_fp.close()
 
 
 def gather(args):
@@ -624,24 +635,25 @@ def gather(args):
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
-        w.writeheader()
-        for result in found:
-            d = dict(result._asdict())
-            del d['match']                 # actual signature not in CSV.
-            w.writerow(d)
+
+        with FileOutput(args.output, 'wt') as fp:
+            w = csv.DictWriter(fp, fieldnames=fieldnames)
+            w.writeheader()
+            for result in found:
+                d = dict(result._asdict())
+                del d['match']                 # actual signature not in CSV.
+                w.writerow(d)
 
     if found and args.save_matches:
-        outname = args.save_matches.name
-        notify('saving all matches to "{}"', outname)
-        sig.save_signatures([ r.match for r in found ], args.save_matches)
+        notify('saving all matches to "{}"', args.save_matches)
+        with FileOutput(args.save_matches, 'wt') as fp:
+            sig.save_signatures([ r.match for r in found ], fp)
 
     if args.output_unassigned:
         if not len(query.minhash):
             notify('no unassigned hashes! not saving.')
         else:
-            outname = args.output_unassigned.name
-            notify('saving unassigned hashes to "{}"', outname)
+            notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
             with_abundance = next_query.minhash.track_abundance
             e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
@@ -652,8 +664,8 @@ def gather(args):
             else:
                 e.add_many(next_query.minhash.get_mins())
 
-            sig.save_signatures([ sig.SourmashSignature(e) ],
-                                args.output_unassigned)
+            with FileOutput(args.output_unassigned, 'wt') as fp:
+                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
 
 
 def multigather(args):
@@ -877,9 +889,11 @@ def watch(args):
                similarity)
 
     if args.output:
-        notify('saving signature to {}', args.output.name)
-        streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
-        sig.save_signatures([streamsig], args.output)
+        notify('saving signature to {}', args.output)
+        with FileOutput(args.output, 'wt') as fp:
+            streamsig = sig.SourmashSignature(E, filename='stdin',
+                                              name=args.name)
+        sig.save_signatures([streamsig], fp)
 
 
 def migrate(args):
