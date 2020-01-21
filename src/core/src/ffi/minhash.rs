@@ -75,6 +75,23 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut KmerMinHash, sequence: *const c_cha
 }
 }
 
+ffi_fn! {
+unsafe fn kmerminhash_add_protein(ptr: *mut KmerMinHash, sequence: *const c_char) ->
+    Result<()> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let c_str = {
+        assert!(!sequence.is_null());
+
+        CStr::from_ptr(sequence)
+    };
+
+    mh.add_protein(c_str.to_bytes())
+}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut KmerMinHash, h: u64) {
     let mh = {
