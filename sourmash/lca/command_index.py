@@ -89,6 +89,7 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                     if lineage[-1].rank == 'species':
                         n_species += 1
                     elif lineage[-1].rank == 'strain':
+                        n_species += 1
                         n_strains += 1
 
     fp.close()

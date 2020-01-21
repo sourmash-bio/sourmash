@@ -27,14 +27,15 @@ def format_bp(bp):
 
 
 def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance):
+                     ignore_abundance, unload_data=False):
     results = []
     found_md5 = set()
     for (obj, filename, filetype) in databases:
         search_iter = obj.search(query, threshold=threshold,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
-                                 best_only=best_only)
+                                 best_only=best_only,
+                                 unload_data=unload_data)
         for (similarity, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
@@ -70,7 +71,7 @@ def _subtract_and_downsample(to_remove, old_query, scaled=None):
     return SourmashSignature(mh)
 
 
-def _find_best(dblist, query):
+def _find_best(dblist, query, threshold_bp):
     """
     Search for the best containment, return precisely one match.
     """
@@ -81,8 +82,8 @@ def _find_best(dblist, query):
 
     # search across all databases
     for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query):
-            assert cont
+        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
+            assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
             if (cont == best_cont and match.name() < best_match.name()) or \
@@ -117,8 +118,9 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         orig_abunds = orig_mh.get_mins(with_abundance=True)
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
-    while 1:
-        best_cont, best_match, filename = _find_best(databases, query)
+    while query.minhash:
+        best_cont, best_match, filename = _find_best(databases, query,
+                                                     threshold_bp)
         if not best_match:          # no matches at all!
             break
 
@@ -152,7 +154,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         if intersect_bp < threshold_bp:   # hard cutoff for now
             notify('found less than {} in common. => exiting',
-                   format_bp(intersect_bp))
+                   format_bp(threshold_bp))
             break
 
         # calculate fractions wrt first denominator - genome size

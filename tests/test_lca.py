@@ -333,6 +333,38 @@ def test_basic_index_broken_spreadsheet():
         assert "multiple lineages for identifier TARA_ASE_MAG_00031" in err
 
 
+def test_basic_index_too_many_strains_too_few_species():
+    # explicit test for #841, where 'n_species' wasn't getting counted
+    # if lineage was at strain level resolution.
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/podar-lineage.csv')
+        input_sig = utils.get_test_data('47.fa.sig')
+        lca_db = os.path.join(location, 'out.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig,
+               '-C', '3', '--split-identifiers']
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert not 'error: fewer than 20% of lineages' in err
+        assert status == 0
+
+
+def test_basic_index_too_few_species():
+    # spreadsheets with too few species should be flagged, unless -f specified
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/tully-genome-sigs.classify.csv')
+
+        # (these don't really matter, should break on load spreadsheet)
+        input_sig = utils.get_test_data('47.fa.sig')
+        lca_db = os.path.join(location, 'out.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-C', '3']
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert 'error: fewer than 20% of lineages' in err
+        assert status != 0
+
+
 def test_basic_index_require_taxonomy():
     # no taxonomy in here
     with utils.TempDirectory() as location:
