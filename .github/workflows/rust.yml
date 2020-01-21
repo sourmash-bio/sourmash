@@ -3,8 +3,12 @@ name: Rust checks
 on:
   push:
     branches: [master]
+    paths:
+      - 'src/core/**'
   pull_request:
     branches: [master]
+    paths:
+      - 'src/core/**'
 
 jobs:
   check:
