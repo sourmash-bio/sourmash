@@ -202,9 +202,20 @@ def test_do_compare_output_csv():
                                            in_directory=location)
 
         with open(os.path.join(location, 'xxx')) as fp:
-            lines = fp.readlines()
-            assert len(lines) == 3
-            assert lines[1:] == [u'1.0,0.93\n', '0.93,1.0\n']
+            r = iter(csv.reader(fp))
+            row = next(r)
+            print(row)
+            row = next(r)
+            print(row)
+            assert float(row[0]) == 1.0
+            assert float(row[1]) == 0.93
+            row = next(r)
+            assert float(row[0]) == 0.93
+            assert float(row[1]) == 1.0
+
+            # exactly three lines
+            with pytest.raises(StopIteration) as e:
+                next(r)
 
 
 def test_do_compare_downsample():
