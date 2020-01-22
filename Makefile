@@ -6,7 +6,6 @@ all: build
 
 build: .PHONY
 	$(PYTHON) setup.py build_ext -i
-	cargo build
 
 clean:
 	$(PYTHON) setup.py clean --all

@@ -8,7 +8,10 @@ use std::iter::Iterator;
 use std::path::Path;
 use std::str;
 
+use cfg_if::cfg_if;
 use failure::Error;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -22,6 +25,7 @@ pub trait SigsTrait {
     fn to_vec(&self) -> Vec<u64>;
     fn check_compatible(&self, other: &Self) -> Result<(), Error>;
     fn add_sequence(&mut self, seq: &[u8], _force: bool) -> Result<(), Error>;
+    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error>;
     fn ksize(&self) -> usize;
 }
 
@@ -62,8 +66,15 @@ impl SigsTrait for Sketch {
 
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
         match *self {
-            Sketch::UKHS(ref mut ukhs) => ukhs.add_sequence(seq, force),
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
+            Sketch::UKHS(_) => unimplemented!(),
+        }
+    }
+
+    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
+        match *self {
+            Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
+            Sketch::UKHS(_) => unimplemented!(),
         }
     }
 }
@@ -231,6 +242,46 @@ impl Signature {
         });
 
         Ok(filtered_sigs.collect())
+    }
+
+    pub fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
+        cfg_if! {
+        if #[cfg(feature = "parallel")] {
+            self.signatures
+                .par_iter_mut()
+                .for_each(|sketch| {
+                    sketch.add_sequence(&seq, force).unwrap(); }
+                );
+        } else {
+            self.signatures
+                .iter_mut()
+                .for_each(|sketch| {
+                    sketch.add_sequence(&seq, force).unwrap(); }
+                );
+        }
+        }
+
+        Ok(())
+    }
+
+    pub fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
+        cfg_if! {
+        if #[cfg(feature = "parallel")] {
+            self.signatures
+                .par_iter_mut()
+                .for_each(|sketch| {
+                    sketch.add_protein(&seq).unwrap(); }
+                );
+        } else {
+            self.signatures
+                .iter_mut()
+                .for_each(|sketch| {
+                    sketch.add_protein(&seq).unwrap(); }
+                );
+        }
+        }
+
+        Ok(())
     }
 }
 

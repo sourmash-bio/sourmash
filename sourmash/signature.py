@@ -155,6 +155,20 @@ class SourmashSignature(RustObject):
             else:
                 raise
 
+    def add_sequence(self, sequence, force=False):
+        self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
+
+    def add_protein(self, sequence):
+        self._methodcall(lib.signature_add_protein, to_bytes(sequence))
+
+    @staticmethod
+    def from_params(params):
+        ptr = rustcall(lib.signature_from_params, params._get_objptr())
+        return SourmashSignature._from_objptr(ptr)
+
+    def __len__(self):
+        return self._methodcall(lib.signature_len)
+
     def __getstate__(self):  # enable pickling
         return (
             self.minhash,

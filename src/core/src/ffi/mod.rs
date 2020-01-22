@@ -6,6 +6,7 @@
 #[macro_use]
 pub mod utils;
 
+pub mod cmd;
 pub mod minhash;
 pub mod nodegraph;
 pub mod signature;

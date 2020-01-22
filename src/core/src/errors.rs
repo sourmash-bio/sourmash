@@ -24,6 +24,9 @@ pub enum SourmashError {
     #[fail(display = "different signatures cannot be compared")]
     MismatchSignatureType,
 
+    #[fail(display = "Invalid hash function: {}", function)]
+    InvalidHashFunction { function: String },
+
     #[fail(display = "Can only set {} if the MinHash is empty", message)]
     NonEmptyMinHash { message: String },
 
@@ -61,6 +64,7 @@ pub enum SourmashErrorCode {
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
     InvalidCodonLength = 11_03,
+    InvalidHashFunction = 11_04,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
@@ -93,6 +97,9 @@ impl SourmashErrorCode {
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
                     SourmashError::InvalidCodonLength { .. } => {
                         SourmashErrorCode::InvalidCodonLength
+                    }
+                    SourmashError::InvalidHashFunction { .. } => {
+                        SourmashErrorCode::InvalidHashFunction
                     }
                     SourmashError::SerdeError => SourmashErrorCode::SerdeError,
                 };

@@ -16,6 +16,9 @@ import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf, load_sbt_index
+from sourmash.command_compute import ComputeParameters
+from sourmash.cli.compute import subparser
+from sourmash.cli import SourmashParser
 
 from sourmash import signature
 from sourmash import VERSION
@@ -879,3 +882,25 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
+
+
+def test_compute_parameters():
+    args_list = ["compute", "-k", "21,31", "--singleton", "--protein", "--no-dna", "input_file"]
+
+    parser = SourmashParser(prog='sourmash')
+    subp = parser.add_subparsers(title="instruction", dest="cmd", metavar="cmd")
+    subparser(subp)
+
+    args = parser.parse_args(args_list)
+
+    params = ComputeParameters.from_args(args)
+
+    assert params.ksizes == [21, 31]
+    assert params.protein == True
+    assert params.dna == False
+    assert params.seed == 42
+    assert params.dayhoff == False
+    assert params.hp == False
+    assert params.num_hashes == 500
+    assert params.scaled == 0
+    assert params.track_abundance == False
