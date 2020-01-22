@@ -107,6 +107,33 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     return max_score
 
 
+def _similarity_downsample(mh_1, mh_2):
+    "calculate Jaccard similarity w/downsampling, if needed"
+    try:
+        score = mh_2.similarity(mh_1)
+    except Exception as e:
+        if 'mismatch in max_hash' in str(e):
+            xx = mh_1.downsample_max_hash(mh_1)
+            yy = mh_2.downsample_max_hash(mh_2)
+
+            score = yy.similarity(xx)
+        else:
+            raise
+
+    return score
+
+
+def _count_common_downsample(mh_1, mh_2):
+    "calculate common hashes, with downsampling if needed"
+    max_scaled = max(mh_1.scaled, mh_2.scaled)
+    if mh_1.scaled != max_scaled:
+        mh_1 = mh_1.downsample_scaled(max_scaled)
+    if mh_2.scaled != max_scaled:
+        mh_2 = mh_2.downsample_scaled(max_scaled)
+
+    return mh_1.count_common(mh_2)
+
+
 def search_minhashes(node, sig, threshold, results=None, downsample=True):
     """\
     Default tree search function, searching for best Jaccard similarity.
@@ -115,17 +142,10 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        try:
+        if downsample:
+            score = _similarity_downsample(sig.minhash, node.data.minhash)
+        else:
             score = node.data.minhash.similarity(sig.minhash)
-        except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                score = yy.similarity(xx)
-            else:
-                raise
-
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -148,16 +168,10 @@ class SearchMinHashesFindBest(object):
         score = 0
 
         if isinstance(node, SigLeaf):
-            try:
+            if self.downsample:
+                score = _similarity_downsample(sig.minhash, node.data.minhash)
+            else:
                 score = node.data.minhash.similarity(sig.minhash)
-            except Exception as e:
-                if 'mismatch in max_hash' in str(e) and self.downsample:
-                    xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                    yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                    score = yy.similarity(xx)
-                else:
-                    raise
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -179,17 +193,10 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        try:
+        if downsample:
+            matches = _count_common_downsample(sig.minhash, node.data.minhash)
+        else:
             matches = node.data.minhash.count_common(sig.minhash)
-        except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                matches = yy.count_common(xx)
-            else:
-                raise
-
     else:  # Node or Leaf, Nodegraph by minhash comparison
         get = node.data.get
         matches = sum(1 for value in mins if get(value))
@@ -212,17 +219,8 @@ class GatherMinHashes(object):
             return 0
 
         if isinstance(node, SigLeaf):
-            max_scaled = max(node.data.minhash.scaled, query.minhash.scaled)
-
-            mh1 = node.data.minhash
-            if mh1.scaled != max_scaled:
-                mh1 = node.data.minhash.downsample_scaled(max_scaled)
-
-            mh2 = query.minhash
-            if mh2.scaled != max_scaled:
-                mh2 = query.minhash.downsample_scaled(max_scaled)
-
-            matches = mh1.count_common(mh2)
+            matches = _count_common_downsample(node.data.minhash,
+                                               query.minhash)
         else:  # Nodegraph by minhash comparison
             mins = query.minhash.get_mins()
             get = node.data.get
