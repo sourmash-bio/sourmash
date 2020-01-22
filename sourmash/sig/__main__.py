@@ -552,10 +552,16 @@ def downsample(args):
         error('cannot specify both --num and --scaled')
         sys.exit(-1)
 
+    if args.inplace and args.output:
+        error('cannot specify both --inplace and -o/--output')
+        sys.exit(-1)
+
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
-        siglist = sourmash.load_signatures(sigfile, ksize=args.ksize, select_moltype=moltype, do_raise=True)
+        siglist = sourmash.load_signatures(sigfile, ksize=args.ksize,
+                                           select_moltype=moltype,
+                                           do_raise=True)
 
         for sigobj in siglist:
             mh = sigobj.minhash
@@ -589,8 +595,19 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures(output_list, fp=fp)
+        # if we are updating signatures in place, at end of each file siglist,
+        # output & clear output list.
+        if args.inplace:
+            with open(sigfile, 'wt') as fp:
+                sourmash.save_signatures(output_list, fp=fp)
+                output_list = []
+
+    # outtput all signatures if we're not updating in place.
+    if not args.inplace:
+        with FileOutput(args.output, 'wt') as fp:
+            sourmash.save_signatures(output_list, fp=fp)
+    else:
+        assert not output_list
 
     notify("loaded and downsampled {} signatures", total_loaded)
 

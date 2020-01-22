@@ -625,6 +625,58 @@ def test_sig_downsample_1_scaled(c):
 
 
 @utils.in_tempdir
+def test_sig_downsample_1_scaled_multiple_sigs(c):
+    # downsample two scaled signatures
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    c.run_sourmash('sig', 'downsample', '--scaled', '10000', sig47, sig63)
+
+    # stdout should be new signatures
+    out = c.last_result.out
+
+    test_downsample_47 = sourmash.load_one_signature(sig47)
+    test_downsample_63 = sourmash.load_one_signature(sig63)
+    actual_downsample_sigs = list(sourmash.load_signatures(out))
+    actual_downsample_sigs.sort(key=lambda x: x.name())
+
+    assert len(actual_downsample_sigs) == 2
+
+    test_mh_47 = test_downsample_47.minhash.downsample_scaled(10000)
+    test_mh_63 = test_downsample_63.minhash.downsample_scaled(10000)
+    assert test_mh_63 != test_mh_47
+
+    assert actual_downsample_sigs[0].minhash == test_mh_47
+    assert actual_downsample_sigs[1].minhash == test_mh_63
+
+
+@utils.in_tempdir
+def test_sig_downsample_1_scaled_inplace(c):
+    # downsample two scaled signatures in place
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    inp47 = os.path.join(c.location, '47.sig')
+    inp63 = os.path.join(c.location, '63.sig')
+    shutil.copyfile(sig47, inp47)
+    shutil.copyfile(sig63, inp63)
+    c.run_sourmash('sig', 'downsample', '--scaled', '10000', inp47, inp63,
+                   '--inplace')
+
+    # stdout should be new signatures
+    test_downsample_47 = sourmash.load_one_signature(sig47)
+    test_downsample_63 = sourmash.load_one_signature(sig63)
+
+    actual_downsample_47 = sourmash.load_one_signature(inp47)
+    actual_downsample_63 = sourmash.load_one_signature(inp63)
+
+    test_mh_47 = test_downsample_47.minhash.downsample_scaled(10000)
+    test_mh_63 = test_downsample_63.minhash.downsample_scaled(10000)
+
+    assert actual_downsample_47.minhash == test_mh_47
+    assert actual_downsample_63.minhash == test_mh_63
+
+
+@utils.in_tempdir
 def test_sig_downsample_1_scaled_downsample_multisig(c):
     # downsample many scaled signatures in one file
     multisig = utils.get_test_data('47+63-multisig.sig')
