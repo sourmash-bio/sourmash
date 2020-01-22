@@ -1,5 +1,5 @@
 use sourmash::signature::SigsTrait;
-use sourmash::sketch::minhash::{HashFunctions, KmerMinHash};
+use sourmash::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
 
 #[test]
 fn throws_error() {
@@ -134,4 +134,9 @@ fn dayhoff() {
 
     assert_eq!(a.size(), 2);
     assert_eq!(b.size(), 2);
+}
+
+#[test]
+fn max_for_scaled() {
+    assert_eq!(max_hash_for_scaled(100), Some(184467440737095520));
 }

@@ -31,7 +31,9 @@ def _make_exceptions():
             pass
 
         code = getattr(lib, attr)
-        if code < 100 or code > 10000:
+        if code == 1104:
+            exceptions_by_code[code] = ValueError
+        elif code < 100 or code > 10000:
             Exc.__name__ = attr[20:].title().replace('_', '')
             Exc.code = getattr(lib, attr)
             globals()[Exc.__name__] = Exc

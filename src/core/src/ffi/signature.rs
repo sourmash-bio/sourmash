@@ -7,6 +7,7 @@ use std::slice;
 use niffler::get_input;
 use serde_json;
 
+use crate::cmd::ComputeParameters;
 use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
 use crate::sketch::minhash::{HashFunctions, KmerMinHash};
@@ -20,11 +21,65 @@ pub unsafe extern "C" fn signature_new() -> *mut Signature {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn signature_from_params(ptr: *mut ComputeParameters) -> *mut Signature {
+    let params = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    Box::into_raw(Box::new(Signature::from_params(params))) as _
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn signature_free(ptr: *mut Signature) {
     if ptr.is_null() {
         return;
     }
     Box::from_raw(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn signature_len(ptr: *mut Signature) -> usize {
+    let sig = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    sig.signatures.len()
+}
+
+ffi_fn! {
+unsafe fn signature_add_sequence(ptr: *mut Signature, sequence: *const c_char, force: bool) ->
+    Result<()> {
+    let sig = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let c_str = {
+        assert!(!sequence.is_null());
+
+        CStr::from_ptr(sequence)
+    };
+
+    sig.add_sequence(c_str.to_bytes(), force)
+}
+}
+
+ffi_fn! {
+unsafe fn signature_add_protein(ptr: *mut Signature, sequence: *const c_char) ->
+    Result<()> {
+    let sig = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let c_str = {
+        assert!(!sequence.is_null());
+
+        CStr::from_ptr(sequence)
+    };
+
+    sig.add_protein(c_str.to_bytes())
+}
 }
 
 ffi_fn! {

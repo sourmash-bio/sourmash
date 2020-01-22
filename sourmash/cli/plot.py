@@ -14,6 +14,10 @@ def subparser(subparsers):
         help='show sample labels on dendrogram/matrix'
     )
     subparser.add_argument(
+        '--labeltext',
+        help='filename containing list of labels (overrides signature names)'
+    )
+    subparser.add_argument(
         '--indices', action='store_false',
         help='show sample indices but not labels'
     )

@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use serde_json;
 
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{HashFunctions, KmerMinHash};
+use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
 
 #[wasm_bindgen]
 impl KmerMinHash {
@@ -20,10 +20,8 @@ impl KmerMinHash {
     ) -> KmerMinHash {
         let max_hash = if num != 0 {
             0
-        } else if scaled == 0 {
-            u64::max_value()
         } else {
-            u64::max_value() / scaled as u64
+            max_hash_for_scaled(scaled as u64).unwrap()
         };
 
         // TODO: at most one of (prot, dayhoff, hp) should be true

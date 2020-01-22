@@ -478,6 +478,68 @@ def test_do_plot_comparison_4_fail_not_distance():
         assert status != 0
 
 
+def test_plot_override_labeltext():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+            fp.write('a\nb\nc\nd\n')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--labeltext', 'new.labels.txt'],
+                                           in_directory=location)
+
+        print(out)
+
+        assert 'loading labels from new.labels.txt' in err
+
+        expected = """\
+0\ta
+1\tb
+2\tc
+3\td"""
+        assert expected in out
+
+
+def test_plot_override_labeltext_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+            fp.write('a\nb\nc\n')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--labeltext', 'new.labels.txt'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(out)
+        print(err)
+        assert status != 0
+        assert 'loading labels from new.labels.txt' in err
+        assert '3 labels != matrix size, exiting' in err
+
+
 def test_plot_subsample_1():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
