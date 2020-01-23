@@ -201,6 +201,57 @@ def test_sig_filter_3(c):
 
 
 @utils.in_tempdir
+def test_sig_filter_3_inplace(c):
+    # test basic filtering
+    orig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig47 = os.path.join(c.location, '47.sig')
+    shutil.copyfile(orig47, sig47)
+    c.run_sourmash('sig', 'filter', '-m', '2', sig47, '--inplace')
+
+    # new signature will be same as input, b/c of --inplace
+    filtered_sig = sourmash.load_one_signature(sig47)
+    test_sig = sourmash.load_one_signature(orig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
+def test_sig_filter_4_inplace_several(c):
+    # test basic filtering
+    orig47 = utils.get_test_data('track_abund/47.fa.sig')
+    orig63 = utils.get_test_data('track_abund/63.fa.sig')
+    sig47 = os.path.join(c.location, '47.sig')
+    sig63 = os.path.join(c.location, '63.sig')
+    shutil.copyfile(orig47, sig47)
+    shutil.copyfile(orig63, sig63)
+    c.run_sourmash('sig', 'filter', '-m', '2', sig47, sig63, '--inplace')
+
+    # look at both signatures - 47
+    filtered_sig = sourmash.load_one_signature(sig47)
+    test_sig = sourmash.load_one_signature(orig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+    # 63
+    filtered_sig = sourmash.load_one_signature(sig63)
+    test_sig = sourmash.load_one_signature(orig63)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
 def test_sig_merge_flatten(c):
     # merge of 47 without abund, with 63 with, will succeed with --flatten
     sig47 = utils.get_test_data('47.fa.sig')

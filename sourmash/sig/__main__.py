@@ -451,6 +451,7 @@ def filter(args):
 
     outlist = []
     total_loaded = 0
+    total_filtered = 0
     for filename in args.signatures:
         siglist = sourmash.load_signatures(filename, ksize=args.ksize,
                                            select_moltype=moltype,
@@ -484,15 +485,23 @@ def filter(args):
             filtered_mh.set_abundances(abunds2)
 
             ss.minhash = filtered_mh
+            total_filtered += 1
 
-        outlist.extend(siglist)
+        if args.inplace:
+            with open(filename, 'wt') as outfp:
+                sourmash.save_signatures(siglist, fp=outfp)
+        else:
+            outlist.extend(siglist)
 
-    with FileOutput(args.output, 'wt') as fp:
-        sourmash.save_signatures(outlist, fp=fp)
+    if not args.inplace:
+        with FileOutput(args.output, 'wt') as fp:
+            sourmash.save_signatures(outlist, fp=fp)
+    else:
+        assert not outlist
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
-    notify("extracted {} signatures from {} file(s)", len(outlist),
+    notify("filtered {} signatures from {} file(s)", total_filtered,
            len(args.signatures))
 
 

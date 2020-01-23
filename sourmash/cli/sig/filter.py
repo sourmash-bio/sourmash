@@ -32,6 +32,10 @@ def subparser(subparsers):
         '-M', '--max-abundance', type=int, default=None,
         help='keep hashes <= this maximum abundance'
     )
+    subparser.add_argument(
+        '--inplace', action='store_true',
+        help='update input signature files directly'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
