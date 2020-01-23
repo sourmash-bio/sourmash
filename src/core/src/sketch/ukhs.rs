@@ -32,4 +32,8 @@ impl SigsTrait for FlatUKHS {
     fn add_sequence(&mut self, _seq: &[u8], _force: bool) -> Result<(), Error> {
         unimplemented!()
     }
+
+    fn add_protein(&mut self, _seq: &[u8]) -> Result<(), Error> {
+        unimplemented!()
+    }
 }
