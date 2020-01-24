@@ -793,18 +793,49 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
+/*
+  'T', // 'A' = A
+  'V', // 'B' = not A = C,T,G
+  'G', // 'C' = C
+  'H', // 'D' = not C = A,T,G
+  'N', // 'E' = .
+  'N', // 'F' = .
+  'C', // 'G' = G
+  'D', // 'H' = not G = A,C,T
+  'N', // 'I' = .
+  'N', // 'J' = .
+  'M', // 'K' = T,G = Keto
+  'N', // 'L' = .
+  'K', // 'M' = A,C = Amino
+  'N', // 'N' = A,C,T,G = uNkNowN
+  'N', // 'O' = .
+  'N', // 'P' = .
+  'N', // 'Q' = .
+  'Y', // 'R' = A,G = puRine
+  'S', // 'S' = G,C = Strong
+  'A', // 'T' = T
+  'A', // 'U' = T (RNA)
+  'B', // 'V' = not T = A,C,G
+  'W', // 'W' = A,T = Weak
+  'N', // 'X' = .
+  'R', // 'Y' = pYrimidine = C,T
+  'N', // 'Z' = .
+*/
+const COMPLEMENT: [u8; 256] = {
+    let mut lookup = [0; 256];
+    lookup[b'A' as usize] = b'T';
+    lookup[b'C' as usize] = b'G';
+    lookup[b'G' as usize] = b'C';
+    lookup[b'T' as usize] = b'A';
+    lookup[b'N' as usize] = b'N';
+    lookup
+};
+
 #[inline]
 fn revcomp(seq: &[u8]) -> Vec<u8> {
     seq.iter()
         .rev()
-        .map(|nt| {
-            // see https://github.com/marbl/Mash/pull/125#issuecomment-544229405
-            if nt & 2 == 0 {
-                b'A' + b'T' - nt
-            } else {
-                b'C' + b'G' - nt
-            }
-        })
+        .map(|nt| COMPLEMENT[*nt as usize])
         .collect()
 }
 
