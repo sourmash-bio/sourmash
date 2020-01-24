@@ -797,12 +797,13 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
 fn revcomp(seq: &[u8]) -> Vec<u8> {
     seq.iter()
         .rev()
-        .map(|nt| match *nt as char {
-            'A' | 'a' => b'T',
-            'T' | 't' => b'A',
-            'C' | 'c' => b'G',
-            'G' | 'g' => b'C',
-            x => x as u8,
+        .map(|nt| {
+            // see https://github.com/marbl/Mash/pull/125#issuecomment-544229405
+            if nt & 2 == 0 {
+                b'A' + b'T' - nt
+            } else {
+                b'C' + b'G' - nt
+            }
         })
         .collect()
 }
