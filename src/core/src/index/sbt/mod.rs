@@ -13,13 +13,14 @@ use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::File;
-use std::hash::{BuildHasherDefault, Hasher};
+use std::hash::BuildHasherDefault;
 use std::io::{BufReader, Read};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use log::info;
+use nohash_hasher::NoHashHasher;
 use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
@@ -686,34 +687,9 @@ enum SBTInfo {
     V4(SBTInfoV4<NodeInfoV4>),
 }
 
-// This comes from finch
-pub struct NoHashHasher(u64);
-
-impl Default for NoHashHasher {
-    #[inline]
-    fn default() -> NoHashHasher {
-        NoHashHasher(0x0)
-    }
-}
-
-impl Hasher for NoHashHasher {
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        *self = NoHashHasher(
-            (u64::from(bytes[0]) << 24)
-                + (u64::from(bytes[1]) << 16)
-                + (u64::from(bytes[2]) << 8)
-                + u64::from(bytes[3]),
-        );
-    }
-    fn finish(&self) -> u64 {
-        self.0
-    }
-}
-
 enum BinaryTree {
     Empty,
-    Internal(Box<TreeNode<HashSet<u64, BuildHasherDefault<NoHashHasher>>>>),
+    Internal(Box<TreeNode<HashSet<u64, BuildHasherDefault<NoHashHasher<u64>>>>>),
     Leaf(Box<TreeNode<SigStore<Signature>>>),
 }
 
@@ -744,7 +720,7 @@ where
         let (simleaf_tree, in_common) = if datasets.is_empty() {
             (
                 BinaryTree::Empty,
-                HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
+                HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
                     next_leaf.mins().into_iter(),
                 ),
             )
@@ -761,11 +737,11 @@ where
 
             let similar_leaf = datasets.remove(similar_leaf_pos);
 
-            let in_common = HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
+            let in_common = HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
                 next_leaf.mins().into_iter(),
             )
             .union(
-                &HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
+                &HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
                     similar_leaf.mins().into_iter(),
                 ),
             )
@@ -875,22 +851,22 @@ impl BinaryTree {
                 BinaryTree::Internal(ref mut el2) => {
                     let c1 = std::mem::replace(
                         &mut el1.element,
-                        HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
                     );
                     let c2 = std::mem::replace(
                         &mut el2.element,
-                        HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
                     );
                     c1.union(&c2).cloned().collect()
                 }
                 BinaryTree::Empty => std::mem::replace(
                     &mut el1.element,
-                    HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                    HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
                 ),
                 _ => panic!("Should not see a Leaf at this level"),
             }
         } else {
-            HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default()
+            HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default()
         };
 
         BinaryTree::Internal(Box::new(TreeNode {
