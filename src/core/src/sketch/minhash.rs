@@ -458,11 +458,16 @@ impl KmerMinHash {
         Ok(())
     }
 
-    pub fn count_common(&self, other: &KmerMinHash) -> Result<u64, Error> {
-        self.check_compatible(other)?;
-        let iter = Intersection::new(self.mins.iter(), other.mins.iter());
+    pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
+        if downsample {
+            Ok(0 as u64)
+        }
+        else{
+            self.check_compatible(other)?;
+            let iter = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        Ok(iter.count() as u64)
+            Ok(iter.count() as u64)
+        }
     }
 
     pub fn intersection(&self, other: &KmerMinHash) -> Result<(Vec<u64>, u64), Error> {
@@ -516,12 +521,17 @@ impl KmerMinHash {
         Ok((it2.count() as u64, combined_mh.mins.len() as u64))
     }
 
-    pub fn compare(&self, other: &KmerMinHash) -> Result<f64, Error> {
-        self.check_compatible(other)?;
-        if let Ok((common, size)) = self.intersection_size(other) {
-            Ok(common as f64 / u64::max(1, size) as f64)
-        } else {
+    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
+        if downsample {
             Ok(0.0)
+        }
+        else {
+            self.check_compatible(other)?;
+            if let Ok((common, size)) = self.intersection_size(other) {
+                Ok(common as f64 / u64::max(1, size) as f64)
+            } else {
+                Ok(0.0)
+            }
         }
     }
 

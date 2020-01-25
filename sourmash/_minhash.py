@@ -291,10 +291,10 @@ class MinHash(RustObject):
         except SourmashError as e:
             raise ValueError(e.message)
 
-    def count_common(self, other):
+    def count_common(self, other, downsample=False):
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
-        return self._methodcall(lib.kmerminhash_count_common, other._get_objptr())
+        return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
     def downsample_n(self, new_num):
         if self.num and self.num < new_num:
@@ -381,7 +381,7 @@ class MinHash(RustObject):
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
-        return self._methodcall(lib.kmerminhash_compare, other._get_objptr())
+        return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), False)
     jaccard = compare
 
     def similarity(self, other, ignore_abundance=False):
