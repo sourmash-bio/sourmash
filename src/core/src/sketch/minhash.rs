@@ -1081,13 +1081,16 @@ fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
     Ok(converted)
 }
 
+const VALID: [bool; 256] = {
+    let mut lookup = [false; 256];
+    lookup[b'A' as usize] = true;
+    lookup[b'C' as usize] = true;
+    lookup[b'G' as usize] = true;
+    lookup[b'T' as usize] = true;
+    lookup
+};
+
 #[inline]
 fn _checkdna(seq: &[u8]) -> bool {
-    for n in seq.iter() {
-        match *n as char {
-            'A' | 'C' | 'G' | 'T' | 'a' | 'c' | 'g' | 't' => (),
-            _ => return false,
-        }
-    }
-    true
+    seq.iter().all(|n| VALID[*n as usize])
 }
