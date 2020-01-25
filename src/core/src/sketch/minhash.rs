@@ -470,8 +470,9 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many(&other.mins)?;
-                return self.count_common(&new_mh, false)
-            } else { // other.max_hash < self.max_hash
+                return self.count_common(&new_mh, false);
+            } else {
+                // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
                     self.num,
                     self.ksize,
@@ -481,10 +482,9 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many(&self.mins)?;
-                return new_mh.count_common(other, false)
+                return new_mh.count_common(other, false);
             }
-        }
-        else{
+        } else {
             self.check_compatible(other)?;
             let iter = Intersection::new(self.mins.iter(), other.mins.iter());
 
@@ -556,8 +556,9 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many(&other.mins)?;
-                return self.compare(&new_mh, false)
-            } else { // other.max_hash < self.max_hash
+                return self.compare(&new_mh, false);
+            } else {
+                // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
                     self.num,
                     self.ksize,
@@ -567,10 +568,9 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many(&self.mins)?;
-                return new_mh.compare(other, false)
+                return new_mh.compare(other, false);
             }
-        }
-        else {
+        } else {
             self.check_compatible(other)?;
             if let Ok((common, size)) = self.intersection_size(other) {
                 Ok(common as f64 / u64::max(1, size) as f64)
@@ -581,7 +581,12 @@ impl KmerMinHash {
     }
 
     // compare two minhashes, with abundance.
-    pub fn similarity(&self, other: &KmerMinHash, ignore_abundance: bool, downsample: bool) -> Result<f64, Error> {
+    pub fn similarity(
+        &self,
+        other: &KmerMinHash,
+        ignore_abundance: bool,
+        downsample: bool,
+    ) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
             if self.max_hash < other.max_hash {
                 let mut new_mh = KmerMinHash::new(
@@ -592,9 +597,10 @@ impl KmerMinHash {
                     self.max_hash,
                     other.abunds.is_some(),
                 );
-                //new_mh.add_many_with_abund(&other.abunds)?;
-                return self.compare(&new_mh, false)
-            } else { // other.max_hash < self.max_hash
+                new_mh.add_many_with_abund(&other.to_vec_abunds())?;
+                return self.compare(&new_mh, false);
+            } else {
+                // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
                     self.num,
                     self.ksize,
@@ -603,11 +609,10 @@ impl KmerMinHash {
                     other.max_hash,
                     self.abunds.is_some(),
                 );
-                //new_mh.add_many_with_abund(&self.abunds)?;
-                return new_mh.compare(other, false)
+                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+                return new_mh.compare(other, false);
             }
-        }
-        else {
+        } else {
             self.check_compatible(other)?;
 
             if ignore_abundance {
@@ -683,6 +688,22 @@ impl KmerMinHash {
 
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
+    }
+
+    fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
+        if let Some(abunds) = &self.abunds {
+            self.mins
+                .iter()
+                .cloned()
+                .zip(abunds.iter().cloned())
+                .collect()
+        } else {
+            self.mins
+                .iter()
+                .cloned()
+                .zip(std::iter::repeat(1))
+                .collect()
+        }
     }
 }
 
