@@ -294,6 +294,41 @@ def test_scaled(track_abundance):
         mh = MinHash(2, 4, track_abundance=track_abundance, scaled=2)
 
 
+def test_mh_similarity_downsample(track_abundance):
+    a = MinHash(0, 20, max_hash=50, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        for j in range(i):                # add abundances
+            a.add_hash(i)
+
+    b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        for j in range(i):                # add abundances
+            b.add_hash(i)
+
+    # error, incompatible max hash
+    with pytest.raises(ValueError):
+        a.similarity(b, ignore_abundance=True, downsample=False)
+
+    with pytest.raises(ValueError):
+        a.similarity(b, ignore_abundance=False, downsample=False)
+
+    with pytest.raises(ValueError):
+        b.similarity(a, ignore_abundance=True, downsample=False)
+
+    with pytest.raises(ValueError):
+        b.similarity(a, ignore_abundance=False, downsample=False)
+
+    # downsample=True => no error; values should match either way
+    x = a.similarity(b, ignore_abundance=True, downsample=True)
+    y = b.similarity(a, ignore_abundance=True, downsample=True)
+    assert x == y
+
+    # downsample=True => no error; values should match either way
+    x = a.similarity(b, ignore_abundance=False, downsample=True)
+    y = b.similarity(a, ignore_abundance=False, downsample=True)
+    assert x == y
+
+
 def test_basic_dna_bad(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(1, 4, track_abundance=track_abundance)
