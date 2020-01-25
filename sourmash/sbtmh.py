@@ -137,10 +137,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        if downsample:
-            score = _similarity_downsample(sig.minhash, node.data.minhash)
-        else:
-            score = node.data.minhash.similarity(sig.minhash)
+        score = node.data.minhash.similarity(sig.minhash, downsample)
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -163,10 +160,7 @@ class SearchMinHashesFindBest(object):
         score = 0
 
         if isinstance(node, SigLeaf):
-            if self.downsample:
-                score = _similarity_downsample(sig.minhash, node.data.minhash)
-            else:
-                score = node.data.minhash.similarity(sig.minhash)
+            score = node.data.minhash.similarity(sig.minhash, self.downsample)
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, mins)
 
