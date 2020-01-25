@@ -10,7 +10,7 @@ cache:
 
 if: (type = push AND ((branch = master) OR (tag = "/^v.*$/"))) OR (type = pull_request)
 
-script: tox
+script: tox -vv
 
 install:
   - source .travis/install_cargo.sh
