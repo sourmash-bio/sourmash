@@ -303,7 +303,9 @@ def test_mh_similarity_downsample(track_abundance):
     b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         for j in range(i):                # add abundances
-            b.add_hash(i)
+            b.add_hash(80 - i)
+
+    print(b.get_mins(True))
 
     # error, incompatible max hash
     with pytest.raises(ValueError):
@@ -322,11 +324,13 @@ def test_mh_similarity_downsample(track_abundance):
     x = a.similarity(b, ignore_abundance=True, downsample=True)
     y = b.similarity(a, ignore_abundance=True, downsample=True)
     assert x == y
+    print(x)
 
     # downsample=True => no error; values should match either way
     x = a.similarity(b, ignore_abundance=False, downsample=True)
     y = b.similarity(a, ignore_abundance=False, downsample=True)
     assert x == y
+    print(y)
 
 
 def test_basic_dna_bad(track_abundance):
