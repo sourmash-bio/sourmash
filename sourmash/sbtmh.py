@@ -109,18 +109,13 @@ def _max_jaccard_underneath_internal_node(node, hashes):
 
 def _similarity_downsample(mh_1, mh_2):
     "calculate Jaccard similarity w/downsampling, if needed"
-    try:
-        score = mh_2.similarity(mh_1)
-    except Exception as e:
-        if 'mismatch in max_hash' in str(e):
-            xx = mh_1.downsample_max_hash(mh_1)
-            yy = mh_2.downsample_max_hash(mh_2)
+    max_scaled = max(mh_1.scaled, mh_2.scaled)
+    if mh_1.scaled != max_scaled:
+        mh_1 = mh_1.downsample_scaled(max_scaled)
+    if mh_2.scaled != max_scaled:
+        mh_2 = mh_2.downsample_scaled(max_scaled)
 
-            score = yy.similarity(xx)
-        else:
-            raise
-
-    return score
+    return mh_1.similarity(mh_2)
 
 
 def _count_common_downsample(mh_1, mh_2):
