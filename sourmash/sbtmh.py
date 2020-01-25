@@ -107,29 +107,7 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     return max_score
 
 
-def _similarity_downsample(mh_1, mh_2):
-    "calculate Jaccard similarity w/downsampling, if needed"
-    max_scaled = max(mh_1.scaled, mh_2.scaled)
-    if mh_1.scaled != max_scaled:
-        mh_1 = mh_1.downsample_scaled(max_scaled)
-    if mh_2.scaled != max_scaled:
-        mh_2 = mh_2.downsample_scaled(max_scaled)
-
-    return mh_1.similarity(mh_2)
-
-
-def _count_common_downsample(mh_1, mh_2):
-    "calculate common hashes, with downsampling if needed"
-    max_scaled = max(mh_1.scaled, mh_2.scaled)
-    if mh_1.scaled != max_scaled:
-        mh_1 = mh_1.downsample_scaled(max_scaled)
-    if mh_2.scaled != max_scaled:
-        mh_2 = mh_2.downsample_scaled(max_scaled)
-
-    return mh_1.count_common(mh_2)
-
-
-def search_minhashes(node, sig, threshold, results=None, downsample=True):
+def search_minhashes(node, sig, threshold, results=None):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
@@ -137,10 +115,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        if downsample:
-            score = _similarity_downsample(sig.minhash, node.data.minhash)
-        else:
-            score = node.data.minhash.similarity(sig.minhash)
+        score = node.data.minhash.similarity(sig.minhash)
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -154,19 +129,15 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
 
 
 class SearchMinHashesFindBest(object):
-    def __init__(self, downsample=True):
+    def __init__(self):
         self.best_match = 0.
-        self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
         score = 0
 
         if isinstance(node, SigLeaf):
-            if self.downsample:
-                score = _similarity_downsample(sig.minhash, node.data.minhash)
-            else:
-                score = node.data.minhash.similarity(sig.minhash)
+            score = node.data.minhash.similarity(sig.minhash)
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -188,10 +159,7 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        if downsample:
-            matches = _count_common_downsample(sig.minhash, node.data.minhash)
-        else:
-            matches = node.data.minhash.count_common(sig.minhash)
+        matches = node.data.minhash.count_common(sig.minhash, downsample)
     else:  # Node or Leaf, Nodegraph by minhash comparison
         get = node.data.get
         matches = sum(1 for value in mins if get(value))
@@ -214,8 +182,7 @@ class GatherMinHashes(object):
             return 0
 
         if isinstance(node, SigLeaf):
-            matches = _count_common_downsample(node.data.minhash,
-                                               query.minhash)
+            matches = query.minhash.count_common(node.data.minhash, True)
         else:  # Nodegraph by minhash comparison
             mins = query.minhash.get_mins()
             get = node.data.get

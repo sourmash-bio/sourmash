@@ -2079,6 +2079,35 @@ def test_do_sourmash_sbt_search_bestonly():
         assert 'short.fa' in out
 
 
+def test_do_sourmash_sbt_search_bestonly_scaled():
+    # as currently implemented, the query signature will be automatically
+    # downsampled to match the tree.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '1'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '--best-only',
+                                            'short.fa.sig', 'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert 'short.fa' in out
+
+
 def test_sbt_search_order_dependence():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz')
