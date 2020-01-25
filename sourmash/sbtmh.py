@@ -107,7 +107,7 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     return max_score
 
 
-def search_minhashes(node, sig, threshold, results=None, downsample=True):
+def search_minhashes(node, sig, threshold, results=None):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
@@ -115,7 +115,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        score = node.data.minhash.similarity(sig.minhash, downsample)
+        score = node.data.minhash.similarity(sig.minhash)
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -129,16 +129,15 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
 
 
 class SearchMinHashesFindBest(object):
-    def __init__(self, downsample=True):
+    def __init__(self):
         self.best_match = 0.
-        self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
         score = 0
 
         if isinstance(node, SigLeaf):
-            score = node.data.minhash.similarity(sig.minhash, self.downsample)
+            score = node.data.minhash.similarity(sig.minhash)
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, mins)
 
