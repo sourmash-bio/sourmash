@@ -137,6 +137,18 @@ fn dayhoff() {
 }
 
 #[test]
+fn hp() {
+    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_hp, 42, 0, false);
+    let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);
+
+    a.add_sequence(b"ACTGAC", false).unwrap();
+    b.add_sequence(b"ACTGAC", false).unwrap();
+
+    assert_eq!(a.size(), 2);
+    assert_eq!(b.size(), 2);
+}
+
+#[test]
 fn max_for_scaled() {
     assert_eq!(max_hash_for_scaled(100), Some(184467440737095520));
 }
