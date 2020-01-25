@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/core/**'
   pull_request:
-    branches: [master]
     paths:
       - 'src/core/**'
 
