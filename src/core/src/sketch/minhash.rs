@@ -679,16 +679,22 @@ impl SigsTrait for KmerMinHash {
                 }
             } else {
                 // slow path: there are erroneous kmers in the middle
-                for i in 0..=len - ksize {
+                let mut i = 0;
+                while i <= len - ksize {
                     let kmer = &sequence[i..i + ksize];
                     if _checkdna(kmer) {
                         let krc = &rc[len - ksize - i..len - i];
                         self.add_word(std::cmp::min(kmer, krc));
+                        i += 1;
                     } else if !force {
+                        // throw error if DNA is not valid
                         return Err(SourmashError::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
                         }
                         .into());
+                    } else {
+                        // skip past the last position, which is an error
+                        i += ksize;
                     }
                 }
             }
@@ -793,17 +799,21 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
     }
 }
 
+const COMPLEMENT: [u8; 256] = {
+    let mut lookup = [0; 256];
+    lookup[b'A' as usize] = b'T';
+    lookup[b'C' as usize] = b'G';
+    lookup[b'G' as usize] = b'C';
+    lookup[b'T' as usize] = b'A';
+    lookup[b'N' as usize] = b'N';
+    lookup
+};
+
 #[inline]
 fn revcomp(seq: &[u8]) -> Vec<u8> {
     seq.iter()
         .rev()
-        .map(|nt| match *nt as char {
-            'A' | 'a' => b'T',
-            'T' | 't' => b'A',
-            'C' | 'c' => b'G',
-            'G' | 'g' => b'C',
-            x => x as u8,
-        })
+        .map(|nt| COMPLEMENT[*nt as usize])
         .collect()
 }
 
@@ -1071,13 +1081,16 @@ fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
     Ok(converted)
 }
 
+const VALID: [bool; 256] = {
+    let mut lookup = [false; 256];
+    lookup[b'A' as usize] = true;
+    lookup[b'C' as usize] = true;
+    lookup[b'G' as usize] = true;
+    lookup[b'T' as usize] = true;
+    lookup
+};
+
 #[inline]
 fn _checkdna(seq: &[u8]) -> bool {
-    for n in seq.iter() {
-        match *n as char {
-            'A' | 'C' | 'G' | 'T' | 'a' | 'c' | 'g' | 't' => (),
-            _ => return false,
-        }
-    }
-    true
+    seq.iter().all(|n| VALID[*n as usize])
 }
