@@ -55,6 +55,7 @@ def similarity(sig1, sig2, ignore_abundance, downsample):
     :param boolean downsample by max_hash if True
     :return: float similarity of the two signatures
     """
+    # @CTB
 
     try:
         sig = sig1.minhash.similarity(sig2.minhash, ignore_abundance)

@@ -112,7 +112,7 @@ void kmerminhash_add_word(KmerMinHash *ptr, const char *word);
 
 double kmerminhash_compare(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
 
-double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance);
+double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
 
 double kmerminhash_containment_ignore_maxhash(KmerMinHash *ptr, const KmerMinHash *other);
 

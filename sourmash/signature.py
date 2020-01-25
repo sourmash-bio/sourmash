@@ -129,22 +129,18 @@ class SourmashSignature(RustObject):
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         "Compute similarity with the other signature."
-        try:
-            return self.minhash.similarity(other.minhash, ignore_abundance)
-        except ValueError as e:
-            if "mismatch in max_hash" in str(e) and downsample:
-                xx = self.minhash.downsample_max_hash(other.minhash)
-                yy = other.minhash.downsample_max_hash(self.minhash)
-                return xx.similarity(yy, ignore_abundance)
-            else:
-                raise
+        return self.minhash.similarity(other.minhash,
+                                       ignore_abundance=ignore_abundance,
+                                       downsample=downsample)
 
     def jaccard(self, other):
         "Compute Jaccard similarity with the other MinHash signature."
-        return self.minhash.similarity(other.minhash, True)
+        return self.minhash.similarity(other.minhash, ignore_abundance=True,
+                                       downsample=False)
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
+        # @CTB
         try:
             return self.minhash.contained_by(other.minhash)
         except ValueError as e:

@@ -538,7 +538,7 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, 
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool)
+unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
     -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -549,6 +549,6 @@ unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHas
        &*other
     };
 
-    mh.similarity(other_mh, ignore_abundance)
+    mh.similarity(other_mh, ignore_abundance, downsample)
 }
 }
