@@ -53,19 +53,20 @@ fn signature_from_computeparams() {
 #[test]
 fn signature_slow_path() {
     let params = ComputeParameters {
-        ksizes: vec![2, 3, 4],
+        ksizes: vec![2, 3, 4, 5],
         num_hashes: 3,
         ..Default::default()
     };
 
     let mut sig = Signature::from_params(&params);
-    sig.add_sequence(b"ATGCN", true).unwrap();
+    sig.add_sequence(b"ATGCTN", true).unwrap();
 
-    assert_eq!(sig.signatures.len(), 3);
+    assert_eq!(sig.signatures.len(), 4);
     dbg!(&sig.signatures);
     assert_eq!(sig.signatures[0].size(), 3);
-    assert_eq!(sig.signatures[1].size(), 2);
-    assert_eq!(sig.signatures[2].size(), 1);
+    assert_eq!(sig.signatures[1].size(), 3);
+    assert_eq!(sig.signatures[2].size(), 2);
+    assert_eq!(sig.signatures[3].size(), 1);
 }
 
 #[test]
