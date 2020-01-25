@@ -470,7 +470,7 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many(&other.mins)?;
-                return self.count_common(&new_mh, false);
+                self.count_common(&new_mh, false)
             } else {
                 // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
@@ -482,7 +482,7 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many(&self.mins)?;
-                return new_mh.count_common(other, false);
+                new_mh.count_common(other, false)
             }
         } else {
             self.check_compatible(other)?;
@@ -556,7 +556,7 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many(&other.mins)?;
-                return self.compare(&new_mh, false);
+                self.compare(&new_mh, false)
             } else {
                 // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
@@ -568,7 +568,7 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many(&self.mins)?;
-                return new_mh.compare(other, false);
+                new_mh.compare(other, false)
             }
         } else {
             self.check_compatible(other)?;
@@ -598,7 +598,7 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many_with_abund(&other.to_vec_abunds())?;
-                return self.compare(&new_mh, false);
+                self.compare(&new_mh, false)
             } else {
                 // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
@@ -610,7 +610,7 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-                return new_mh.compare(other, false);
+                new_mh.compare(other, false)
             }
         } else {
             self.check_compatible(other)?;
