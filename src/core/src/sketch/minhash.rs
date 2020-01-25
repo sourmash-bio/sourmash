@@ -460,7 +460,29 @@ impl KmerMinHash {
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
         if downsample {
-            Ok(0 as u64)
+            if self.max_hash < other.max_hash {
+                let new_mh = KmerMinHash::new(
+                    other.num,
+                    other.ksize,
+                    other.hash_function,
+                    other.seed,
+                    self.max_hash,
+                    other.abunds.is_some(),
+                );
+                return self.count_common(&new_mh, false)
+            } else if other.max_hash < self.max_hash {
+                let new_mh = KmerMinHash::new(
+                    self.num,
+                    self.ksize,
+                    self.hash_function,
+                    self.seed,
+                    other.max_hash,
+                    self.abunds.is_some(),
+                );
+                return new_mh.count_common(other, false)
+            } else {
+                return self.count_common(other, false)
+            }
         }
         else{
             self.check_compatible(other)?;
@@ -523,7 +545,29 @@ impl KmerMinHash {
 
     pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
         if downsample {
-            Ok(0.0)
+            if self.max_hash < other.max_hash {
+                let new_mh = KmerMinHash::new(
+                    other.num,
+                    other.ksize,
+                    other.hash_function,
+                    other.seed,
+                    self.max_hash,
+                    other.abunds.is_some(),
+                );
+                return self.compare(&new_mh, false)
+            } else if other.max_hash < self.max_hash {
+                let new_mh = KmerMinHash::new(
+                    self.num,
+                    self.ksize,
+                    self.hash_function,
+                    self.seed,
+                    other.max_hash,
+                    self.abunds.is_some(),
+                );
+                return new_mh.compare(other, false)
+            } else {
+                return self.compare(other, false)
+            }
         }
         else {
             self.check_compatible(other)?;
