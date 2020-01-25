@@ -25,7 +25,7 @@ jobs:
       stage: check # do a pre-screen to make sure this is even worth testing
       python: 3.7
       env:
-        PYTHONDEVMODE=1
+        - PYTHONDEVMODE=1
 
     - &test
       stage: test
