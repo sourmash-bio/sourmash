@@ -114,7 +114,6 @@ jobs:
       - name: Coverage with tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.9.0'
           args: '-- --no-fail-fast --all --all-features --test-threads 1'
 
       - name: Upload Rust coverage to codecov
