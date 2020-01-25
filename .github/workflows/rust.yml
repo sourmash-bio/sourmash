@@ -108,13 +108,13 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
 
       - name: Coverage with tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          args: '-- --no-fail-fast --all --all-features --test-threads 1'
+          args: '--all --all-features -- --test-threads 1'
 
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
