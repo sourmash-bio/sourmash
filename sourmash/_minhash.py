@@ -410,23 +410,17 @@ class MinHash(RustObject):
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
 
-    def contained_by(self, other):
+    def contained_by(self, other, downsample=False):
         """\
         Calculate how much of self is contained by other.
         """
         if not len(self):
             return 0.0
 
-        return self.count_common(other) / len(self)
+        return self.count_common(other, downsample) / len(self)
 
     def containment_ignore_maxhash(self, other):
-        if len(self) == 0:
-            return 0.0
-
-        if not isinstance(other, MinHash):
-            raise TypeError("Must be a MinHash!")
-
-        return self._methodcall(lib.kmerminhash_containment_ignore_maxhash, other._get_objptr())
+        return self.contained_by(other, downsample=True)
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):

@@ -140,16 +140,7 @@ class SourmashSignature(RustObject):
 
     def contained_by(self, other, downsample=False):
         "Compute containment by the other signature. Note: ignores abundance."
-        # @CTB
-        try:
-            return self.minhash.contained_by(other.minhash)
-        except ValueError as e:
-            if "mismatch in max_hash" in str(e) and downsample:
-                xx = self.minhash.downsample_max_hash(other.minhash)
-                yy = other.minhash.downsample_max_hash(self.minhash)
-                return xx.contained_by(yy)
-            else:
-                raise
+        return self.minhash.contained_by(other.minhash, downsample)
 
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
