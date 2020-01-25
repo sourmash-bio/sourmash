@@ -121,7 +121,6 @@ jobs:
         uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ steps.coverage.outputs.report }}
           flags: rusttests
           fail_ci_if_error: true
 
