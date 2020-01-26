@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::f64::consts::PI;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
@@ -579,7 +580,8 @@ impl KmerMinHash {
         }
     }
 
-    // compare two minhashes, with abundance.
+    // compare two minhashes, with abundance;
+    // calculate their angular similarity.
     pub fn similarity(
         &self,
         other: &KmerMinHash,
@@ -659,8 +661,9 @@ impl KmerMinHash {
                 if norm_a == 0. || norm_b == 0. {
                     return Ok(0.0);
                 }
-                let prod = prod as f64 / (norm_a * norm_b);
-                Ok(prod)
+                let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+                let distance = 2. * prod.acos() / PI;
+                Ok(1. - distance)
             }
         }
     }

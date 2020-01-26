@@ -19,8 +19,8 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :return: np.array similarity matrix
     """
@@ -58,8 +58,8 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param siglist list of signatures
     :return: list of similarities for the combinations of signature at index with
@@ -89,8 +89,8 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param int n_jobs number of processes to run the similarity calculations on
     :return: np.array similarity matrix
@@ -169,8 +169,8 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param int n_jobs number of processes to run the similarity calculations on,
     if number of jobs is None or 1, compare serially, otherwise parallely.

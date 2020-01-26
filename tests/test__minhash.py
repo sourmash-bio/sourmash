@@ -37,6 +37,7 @@ from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
 import pickle
+import math
 
 import pytest
 
@@ -318,31 +319,37 @@ def test_mh_similarity_downsample_jaccard_value():
     assert a.similarity(b, downsample=True) == 4. / 6.
 
 
-def test_mh_cosine_similarity():
-    # check actual cos similarity for a non-trivial case, taken from:
+def test_mh_angular_similarity():
+    # check actual angular similarity for a non-trivial case, taken from:
     # https://www.sciencedirect.com/topics/computer-science/cosine-similarity
+    # note: angular similarity is 1 - 2*(acos(sim) / pi), when elements
+    # are always positive (https://en.wikipedia.org/wiki/Cosine_similarity)
     a = MinHash(0, 20, max_hash=50, track_abundance=True)
     b = MinHash(0, 20, max_hash=50, track_abundance=True)
     a.set_abundances({ 1:5, 3:3, 5:2, 8:2})
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 })
 
-    assert round(a.similarity(b), 4) == 0.9356
+    cos_sim = 0.9356
+    angular_sim = 1 - 2*math.acos(cos_sim) / math.pi
+    assert round(angular_sim, 4) == 0.7703
+
+    assert round(a.similarity(b), 4) == round(angular_sim, 4)
 
 
-def test_mh_cosine_similarity_2():
-    # check actual cos similarity for a second non-trivial case
+def test_mh_angular_similarity_2():
+    # check actual angular similarity for a second non-trivial case
     a = MinHash(0, 20, max_hash=100, track_abundance=True)
     b = MinHash(0, 20, max_hash=100, track_abundance=True)
     a.set_abundances({ 1:5, 3:3, 5:2, 8:2, 70:70 })
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
 
-    assert round(a.similarity(b), 4) == 0.9991
+    assert round(a.similarity(b), 4) == 0.9728
 
     # ignore_abundance => jaccard
     assert a.similarity(b, ignore_abundance=True) == 5. / 7.
 
 
-def test_mh_similarity_downsample_cosine_value():
+def test_mh_similarity_downsample_angular_value():
     # test downsample=True argument to MinHash.similarity
 
     # max_hash = 50
@@ -354,8 +361,8 @@ def test_mh_similarity_downsample_cosine_value():
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
 
     # the hash=70 will be truncated by downsampling
-    cos = a.similarity(b, downsample=True)
-    assert round(cos, 4) == 0.9356
+    sim = a.similarity(b, downsample=True)
+    assert round(sim, 4) == 0.7703
 
     # with ignore_abundance, will be equal to jaccard
     jaccard = a.similarity(b, downsample=True, ignore_abundance=True)

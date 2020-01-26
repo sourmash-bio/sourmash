@@ -395,8 +395,8 @@ class MinHash(RustObject):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity, a distance metric based on the cosine similarity.
 
         Note, because the term frequencies (tf-idf weights) cannot be negative,
         the angle will never be < 0deg or > 90deg.
