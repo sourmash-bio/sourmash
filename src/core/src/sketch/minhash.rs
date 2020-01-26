@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::f64::consts::PI;
 use std::iter::{Iterator, Peekable};
 use std::str;
 
@@ -598,7 +597,7 @@ impl KmerMinHash {
                     other.abunds.is_some(),
                 );
                 new_mh.add_many_with_abund(&other.to_vec_abunds())?;
-                self.compare(&new_mh, false)
+                self.similarity(&new_mh, ignore_abundance, false)
             } else {
                 // other.max_hash < self.max_hash
                 let mut new_mh = KmerMinHash::new(
@@ -610,7 +609,7 @@ impl KmerMinHash {
                     self.abunds.is_some(),
                 );
                 new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-                new_mh.compare(other, false)
+                new_mh.similarity(other, ignore_abundance, false)
             }
         } else {
             self.check_compatible(other)?;
@@ -660,10 +659,8 @@ impl KmerMinHash {
                 if norm_a == 0. || norm_b == 0. {
                     return Ok(0.0);
                 }
-
-                let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
-                let distance = 2. * prod.acos() / PI;
-                Ok(1. - distance)
+                let prod = prod as f64 / (norm_a * norm_b);
+                Ok(prod)
             }
         }
     }
