@@ -769,7 +769,7 @@ impl SigsTrait for KmerMinHash {
                     }
                     last_position_check += 1;
                 }
-                return true;
+                true
             };
 
             for i in 0..=len - ksize {

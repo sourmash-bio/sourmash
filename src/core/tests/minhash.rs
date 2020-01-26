@@ -65,8 +65,7 @@ fn compare() {
 fn invalid_dna() {
     let mut a = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
 
-    a.add_sequence(b"AAANNCCCTN", true)
-        .unwrap();
+    a.add_sequence(b"AAANNCCCTN", true).unwrap();
     assert_eq!(a.mins().len(), 3);
 
     let mut b = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
