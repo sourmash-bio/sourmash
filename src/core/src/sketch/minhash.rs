@@ -679,23 +679,35 @@ impl SigsTrait for KmerMinHash {
                 }
             } else {
                 // slow path: there are erroneous kmers in the middle
-                let mut i = 0;
-                while i <= len - ksize {
-                    let kmer = &sequence[i..i + ksize];
-                    if _checkdna(kmer) {
-                        let krc = &rc[len - ksize - i..len - i];
-                        self.add_word(std::cmp::min(kmer, krc));
-                        i += 1;
-                    } else if !force {
-                        // throw error if DNA is not valid
-                        return Err(SourmashError::InvalidDNA {
-                            message: String::from_utf8(kmer.to_vec()).unwrap(),
+                let mut last_position_check = 0;
+
+                let mut is_valid_kmer = |i| {
+                    for j in std::cmp::max(i, last_position_check)..i + ksize {
+                        if !VALID[sequence[j] as usize] {
+                            return false;
                         }
-                        .into());
-                    } else {
-                        // skip past the last position, which is an error
-                        i += ksize;
+                        last_position_check += 1;
                     }
+                    return true;
+                };
+
+                for i in 0..=len - ksize {
+                    let kmer = &sequence[i..i + ksize];
+
+                    if !is_valid_kmer(i) {
+                        if !force {
+                            // throw error if DNA is not valid
+                            return Err(SourmashError::InvalidDNA {
+                                message: String::from_utf8(kmer.to_vec()).unwrap(),
+                            }
+                            .into());
+                        }
+
+                        continue; // skip invalid k-mer
+                    }
+
+                    let krc = &rc[len - ksize - i..len - i];
+                    self.add_word(std::cmp::min(kmer, krc));
                 }
             }
         } else {
