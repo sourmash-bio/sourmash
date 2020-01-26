@@ -738,7 +738,7 @@ impl SigsTrait for KmerMinHash {
             return Err(SourmashError::MismatchDNAProt.into());
         }
         if self.max_hash != other.max_hash {
-            return Err(SourmashError::MismatchMaxHash.into());
+            return Err(SourmashError::MismatchScaled.into());
         }
         if self.seed != other.seed {
             return Err(SourmashError::MismatchSeed.into());
