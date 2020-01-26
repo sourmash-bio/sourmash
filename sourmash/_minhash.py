@@ -14,6 +14,7 @@ MINHASH_DEFAULT_SEED = 42
 
 
 def get_minhash_default_seed():
+    "Return the default seed value used for the MurmurHash hashing function."
     return MINHASH_DEFAULT_SEED
 
 
@@ -23,10 +24,12 @@ MINHASH_MAX_HASH = 0xFFFFFFFFFFFFFFFF
 
 
 def get_minhash_max_hash():
+    "Return the maximum hash value."
     return MINHASH_MAX_HASH
 
 
 def get_max_hash_for_scaled(scaled):
+    "Convert a 'scaled' value into a 'max_hash' value."
     if scaled == 0:
         return 0
     elif scaled == 1:
@@ -36,6 +39,7 @@ def get_max_hash_for_scaled(scaled):
 
 
 def get_scaled_for_max_hash(max_hash):
+    "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
     return int(round(get_minhash_max_hash() / max_hash, 0))
