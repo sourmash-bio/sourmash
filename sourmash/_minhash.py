@@ -14,6 +14,7 @@ MINHASH_DEFAULT_SEED = 42
 
 
 def get_minhash_default_seed():
+    "Return the default seed value used for the MurmurHash hashing function."
     return MINHASH_DEFAULT_SEED
 
 
@@ -23,10 +24,12 @@ MINHASH_MAX_HASH = 0xFFFFFFFFFFFFFFFF
 
 
 def get_minhash_max_hash():
+    "Return the maximum hash value."
     return MINHASH_MAX_HASH
 
 
 def get_max_hash_for_scaled(scaled):
+    "Convert a 'scaled' value into a 'max_hash' value."
     if scaled == 0:
         return 0
     elif scaled == 1:
@@ -36,6 +39,7 @@ def get_max_hash_for_scaled(scaled):
 
 
 def get_scaled_for_max_hash(max_hash):
+    "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
     return int(round(get_minhash_max_hash() / max_hash, 0))
@@ -291,10 +295,10 @@ class MinHash(RustObject):
         except SourmashError as e:
             raise ValueError(e.message)
 
-    def count_common(self, other):
+    def count_common(self, other, downsample=False):
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
-        return self._methodcall(lib.kmerminhash_count_common, other._get_objptr())
+        return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
     def downsample_n(self, new_num):
         if self.num and self.num < new_num:
@@ -377,21 +381,22 @@ class MinHash(RustObject):
 
         return common, max(size, 1)
 
-    def compare(self, other):
+    def compare(self, other, downsample=False):
+        "Compare two sketches, w/o abundance; calculates Jaccard similarity."
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
-        return self._methodcall(lib.kmerminhash_compare, other._get_objptr())
+        return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
     jaccard = compare
 
-    def similarity(self, other, ignore_abundance=False):
+    def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
 
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity, a distance metric based on the cosine similarity.
 
         Note, because the term frequencies (tf-idf weights) cannot be negative,
         the angle will never be < 0deg or > 90deg.
@@ -400,33 +405,28 @@ class MinHash(RustObject):
         """
 
         # if either signature is flat, calculate Jaccard only.
-        if not (self.track_abundance and other.track_abundance) or ignore_abundance:
-            return self.jaccard(other)
+        both_track_abundance = self.track_abundance and other.track_abundance
+        if not both_track_abundance or ignore_abundance:
+            return self.compare(other, downsample)
         else:
             return self._methodcall(lib.kmerminhash_similarity,
                                     other._get_objptr(),
-                                    ignore_abundance)
+                                    ignore_abundance, downsample)
 
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
 
-    def contained_by(self, other):
+    def contained_by(self, other, downsample=False):
         """\
         Calculate how much of self is contained by other.
         """
         if not len(self):
             return 0.0
 
-        return self.count_common(other) / len(self)
+        return self.count_common(other, downsample) / len(self)
 
     def containment_ignore_maxhash(self, other):
-        if len(self) == 0:
-            return 0.0
-
-        if not isinstance(other, MinHash):
-            raise TypeError("Must be a MinHash!")
-
-        return self._methodcall(lib.kmerminhash_containment_ignore_maxhash, other._get_objptr())
+        return self.contained_by(other, downsample=True)
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):

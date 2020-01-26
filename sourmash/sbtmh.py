@@ -107,7 +107,7 @@ def _max_jaccard_underneath_internal_node(node, hashes):
     return max_score
 
 
-def search_minhashes(node, sig, threshold, results=None, downsample=True):
+def search_minhashes(node, sig, threshold, results=None):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
@@ -115,17 +115,7 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
     score = 0
 
     if isinstance(node, SigLeaf):
-        try:
-            score = node.data.minhash.similarity(sig.minhash)
-        except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                score = yy.similarity(xx)
-            else:
-                raise
-
+        score = node.data.minhash.similarity(sig.minhash)
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -139,25 +129,15 @@ def search_minhashes(node, sig, threshold, results=None, downsample=True):
 
 
 class SearchMinHashesFindBest(object):
-    def __init__(self, downsample=True):
+    def __init__(self):
         self.best_match = 0.
-        self.downsample = downsample
 
     def search(self, node, sig, threshold, results=None):
         mins = sig.minhash.get_mins()
         score = 0
 
         if isinstance(node, SigLeaf):
-            try:
-                score = node.data.minhash.similarity(sig.minhash)
-            except Exception as e:
-                if 'mismatch in max_hash' in str(e) and self.downsample:
-                    xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                    yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                    score = yy.similarity(xx)
-                else:
-                    raise
+            score = node.data.minhash.similarity(sig.minhash)
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, mins)
 
@@ -179,17 +159,7 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     mins = sig.minhash.get_mins()
 
     if isinstance(node, SigLeaf):
-        try:
-            matches = node.data.minhash.count_common(sig.minhash)
-        except Exception as e:
-            if 'mismatch in max_hash' in str(e) and downsample:
-                xx = sig.minhash.downsample_max_hash(node.data.minhash)
-                yy = node.data.minhash.downsample_max_hash(sig.minhash)
-
-                matches = yy.count_common(xx)
-            else:
-                raise
-
+        matches = node.data.minhash.count_common(sig.minhash, downsample)
     else:  # Node or Leaf, Nodegraph by minhash comparison
         get = node.data.get
         matches = sum(1 for value in mins if get(value))
@@ -212,17 +182,7 @@ class GatherMinHashes(object):
             return 0
 
         if isinstance(node, SigLeaf):
-            max_scaled = max(node.data.minhash.scaled, query.minhash.scaled)
-
-            mh1 = node.data.minhash
-            if mh1.scaled != max_scaled:
-                mh1 = node.data.minhash.downsample_scaled(max_scaled)
-
-            mh2 = query.minhash
-            if mh2.scaled != max_scaled:
-                mh2 = query.minhash.downsample_scaled(max_scaled)
-
-            matches = mh1.count_common(mh2)
+            matches = query.minhash.count_common(node.data.minhash, True)
         else:  # Nodegraph by minhash comparison
             mins = query.minhash.get_mins()
             get = node.data.get

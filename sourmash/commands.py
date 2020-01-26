@@ -525,6 +525,7 @@ def categorize(args):
         results = []
         search_fn = SearchMinHashesFindBest().search
 
+        # note, "ignore self" here may prevent using newer 'tree.search' fn.
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
                 similarity = query.similarity(
@@ -852,13 +853,14 @@ def watch(args):
     notify('Computing signature for k={}, {} from stdin', ksize, moltype)
 
     def do_search():
-        search_fn = SearchMinHashesFindBest().search
-
         results = []
         streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
-        for leaf in tree.find(search_fn, streamsig, args.threshold):
-            results.append((streamsig.similarity(leaf.data),
-                            leaf.data))
+        for similarity, match, _ in tree.search(streamsig,
+                                                threshold=args.threshold,
+                                                best_only=True,
+                                                ignore_abundance=True,
+                                                do_containment=False):
+            results.append((similarity, match))
 
         return results
 

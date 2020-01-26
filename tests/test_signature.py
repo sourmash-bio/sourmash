@@ -133,7 +133,7 @@ def test_roundtrip_empty(track_abundance):
 
 def test_roundtrip_max_hash(track_abundance):
     e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
-                             max_hash=10)
+                         max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -149,7 +149,7 @@ def test_roundtrip_max_hash(track_abundance):
 
 def test_roundtrip_seed(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance,
-                             seed=10)
+                         seed=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -165,9 +165,9 @@ def test_roundtrip_seed(track_abundance):
 
 def test_similarity_downsample(track_abundance):
     e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
-                             max_hash=2**63)
+                         max_hash=2**63)
     f = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
-                             max_hash=2**2)
+                         max_hash=2**2)
 
     e.add_hash(1)
     e.add_hash(5)
@@ -180,8 +180,10 @@ def test_similarity_downsample(track_abundance):
     ee = SourmashSignature(e)
     ff = SourmashSignature(f)
 
-    with pytest.raises(ValueError):       # mismatch in max_hash
+    with pytest.raises(ValueError) as e:       # mismatch in max_hash
         ee.similarity(ff)
+
+    assert 'mismatch in scaled; comparison fail' in str(e.value)
 
     x = ee.similarity(ff, downsample=True)
     assert round(x, 1) == 1.0

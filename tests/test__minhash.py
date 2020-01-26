@@ -36,8 +36,8 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
-import math
 import pickle
+import math
 
 import pytest
 
@@ -292,6 +292,144 @@ def test_scaled(track_abundance):
     # make sure you can't set both max_n and scaled.
     with pytest.raises(ValueError):
         mh = MinHash(2, 4, track_abundance=track_abundance, scaled=2)
+
+
+def test_mh_jaccard_similarity():
+    # check actual Jaccard value for a non-trivial case
+    a = MinHash(0, 20, max_hash=50, track_abundance=False)
+    b = MinHash(0, 20, max_hash=50, track_abundance=False)
+    a.add_many([1, 3, 5, 8])
+    b.add_many([1, 3, 5, 6, 8, 10])
+
+    assert a.similarity(b) == 4. / 6.
+
+
+def test_mh_similarity_downsample_jaccard_value():
+    # check jaccard value after downsampling
+
+    # max_hash = 50
+    a = MinHash(0, 20, max_hash=50, track_abundance=False)
+    # max_hash = 100
+    b = MinHash(0, 20, max_hash=100, track_abundance=False)
+
+    a.add_many([1, 3, 5, 8, 70])
+    b.add_many([1, 3, 5, 6, 8, 10, 70 ])
+
+    # the hash=70 will be truncated by downsampling
+    assert a.similarity(b, downsample=True) == 4. / 6.
+
+
+def test_mh_angular_similarity():
+    # check actual angular similarity for a non-trivial case, taken from:
+    # https://www.sciencedirect.com/topics/computer-science/cosine-similarity
+    # note: angular similarity is 1 - 2*(acos(sim) / pi), when elements
+    # are always positive (https://en.wikipedia.org/wiki/Cosine_similarity)
+    a = MinHash(0, 20, max_hash=50, track_abundance=True)
+    b = MinHash(0, 20, max_hash=50, track_abundance=True)
+    a.set_abundances({ 1:5, 3:3, 5:2, 8:2})
+    b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 })
+
+    cos_sim = 0.9356
+    angular_sim = 1 - 2*math.acos(cos_sim) / math.pi
+    assert round(angular_sim, 4) == 0.7703
+
+    assert round(a.similarity(b), 4) == round(angular_sim, 4)
+
+
+def test_mh_angular_similarity_2():
+    # check actual angular similarity for a second non-trivial case
+    a = MinHash(0, 20, max_hash=100, track_abundance=True)
+    b = MinHash(0, 20, max_hash=100, track_abundance=True)
+    a.set_abundances({ 1:5, 3:3, 5:2, 8:2, 70:70 })
+    b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
+
+    assert round(a.similarity(b), 4) == 0.9728
+
+    # ignore_abundance => jaccard
+    assert a.similarity(b, ignore_abundance=True) == 5. / 7.
+
+
+def test_mh_similarity_downsample_angular_value():
+    # test downsample=True argument to MinHash.similarity
+
+    # max_hash = 50
+    a = MinHash(0, 20, max_hash=50, track_abundance=True)
+    # max_hash = 100
+    b = MinHash(0, 20, max_hash=100, track_abundance=True)
+
+    a.set_abundances({ 1:5, 3:3, 5:2, 8:2, 70:70 })
+    b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
+
+    # the hash=70 will be truncated by downsampling
+    sim = a.similarity(b, downsample=True)
+    assert round(sim, 4) == 0.7703
+
+    # with ignore_abundance, will be equal to jaccard
+    jaccard = a.similarity(b, downsample=True, ignore_abundance=True)
+    assert jaccard == 4. / 6.
+
+
+def test_mh_similarity_downsample_true(track_abundance):
+    # verify sim(a, b) == sim(b, a), with and without ignore_abundance
+
+    # max_hash = 50
+    a = MinHash(0, 20, max_hash=50, track_abundance=track_abundance)
+    # max_hash = 100
+    b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    # downsample=True => no error; values should match either way
+    x = a.similarity(b, ignore_abundance=True, downsample=True)
+    y = b.similarity(a, ignore_abundance=True, downsample=True)
+    assert x == y
+
+    # downsample=True => no error; values should match either way
+    x = a.similarity(b, ignore_abundance=False, downsample=True)
+    y = b.similarity(a, ignore_abundance=False, downsample=True)
+    assert x == y
+
+
+def test_mh_similarity_downsample_errors(track_abundance):
+    # test downsample=False (default) argument to MinHash.similarity
+
+    # max_hash = 50
+    a = MinHash(0, 20, max_hash=50, track_abundance=track_abundance)
+    # max_hash = 100
+    b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
+
+    a_values = { 1:5, 3:3, 5:2, 8:2}
+    b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
+    if track_abundance:
+        a.set_abundances(a_values)
+        b.set_abundances(b_values)
+    else:
+        a.add_many(a_values.keys())
+        b.add_many(b_values.keys())
+
+    # error, incompatible max hash
+    with pytest.raises(ValueError) as e:
+        a.similarity(b, ignore_abundance=True)   # downsample=False
+    assert 'mismatch in scaled; comparison fail' in str(e.value)
+
+    with pytest.raises(ValueError) as e:
+        a.similarity(b, ignore_abundance=False)  # downsample=False
+    assert 'mismatch in scaled; comparison fail' in str(e.value)
+
+    with pytest.raises(ValueError) as e:
+        b.similarity(a, ignore_abundance=True)   # downsample=False
+    assert 'mismatch in scaled; comparison fail' in str(e.value)
+
+    with pytest.raises(ValueError) as e:
+        b.similarity(a, ignore_abundance=False)  # downsample=false
+    assert 'mismatch in scaled; comparison fail' in str(e.value)
 
 
 def test_basic_dna_bad(track_abundance):
