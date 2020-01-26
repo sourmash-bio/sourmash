@@ -66,6 +66,19 @@ fn compare() {
 }
 
 #[test]
+fn invalid_dna() {
+    let mut a = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+
+    a.add_sequence(b"AAANNCCCTN", true)
+        .unwrap();
+    assert_eq!(a.mins().len(), 3);
+
+    let mut b = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+    b.add_sequence(b"NAAA", true).unwrap();
+    assert_eq!(b.mins().len(), 1);
+}
+
+#[test]
 fn similarity() -> Result<(), Box<dyn std::error::Error>> {
     let mut a = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);
     let mut b = KmerMinHash::new(5, 20, HashFunctions::murmur64_hp, 42, 0, true);

@@ -656,47 +656,49 @@ impl SigsTrait for KmerMinHash {
         let rc = revcomp(&sequence);
 
         if self.is_dna() {
-            if _checkdna(&sequence) {
-                // fast path: all kmers are valid
-                for i in 0..=len - ksize {
-                    // ... and then while moving the k-mer window forward for the sequence
-                    // we move another window backwards for the RC.
-                    //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                    //                   +-+---------+---------------+-------+
-                    //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                    //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                    //  +->         +->  |0|    2    |       3       |   6   |
-                    //   +->       +->   |1|    3    |       2       |   5   |
-                    //    +->     +->    |2|    4    |       1       |   4   |
-                    //     +->   +->     |3|    5    |       0       |   3   |
-                    //                   +-+---------+---------------+-------+
-                    // (leaving this table here because I had to draw to
-                    //  get the indices correctly)
-                    let kmer = &sequence[i..i + ksize];
-                    let krc = &rc[len - ksize - i..len - i];
+            let mut last_position_check = 0;
 
-                    self.add_word(std::cmp::min(kmer, krc));
+            let mut is_valid_kmer = |i| {
+                for j in std::cmp::max(i, last_position_check)..i + ksize {
+                    if !VALID[sequence[j] as usize] {
+                        return false;
+                    }
+                    last_position_check += 1;
                 }
-            } else {
-                // slow path: there are erroneous kmers in the middle
-                let mut i = 0;
-                while i <= len - ksize {
-                    let kmer = &sequence[i..i + ksize];
-                    if _checkdna(kmer) {
-                        let krc = &rc[len - ksize - i..len - i];
-                        self.add_word(std::cmp::min(kmer, krc));
-                        i += 1;
-                    } else if !force {
+                return true;
+            };
+
+            for i in 0..=len - ksize {
+                // ... and then while moving the k-mer window forward for the sequence
+                // we move another window backwards for the RC.
+                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+                //                   +-+---------+---------------+-------+
+                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+                //  +->         +->  |0|    2    |       3       |   6   |
+                //   +->       +->   |1|    3    |       2       |   5   |
+                //    +->     +->    |2|    4    |       1       |   4   |
+                //     +->   +->     |3|    5    |       0       |   3   |
+                //                   +-+---------+---------------+-------+
+                // (leaving this table here because I had to draw to
+                //  get the indices correctly)
+
+                let kmer = &sequence[i..i + ksize];
+
+                if !is_valid_kmer(i) {
+                    if !force {
                         // throw error if DNA is not valid
                         return Err(SourmashError::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
                         }
                         .into());
-                    } else {
-                        // skip past the last position, which is an error
-                        i += ksize;
                     }
+
+                    continue; // skip invalid k-mer
                 }
+
+                let krc = &rc[len - ksize - i..len - i];
+                self.add_word(std::cmp::min(kmer, krc));
             }
         } else {
             // protein
@@ -1089,8 +1091,3 @@ const VALID: [bool; 256] = {
     lookup[b'T' as usize] = true;
     lookup
 };
-
-#[inline]
-fn _checkdna(seq: &[u8]) -> bool {
-    seq.iter().all(|n| VALID[*n as usize])
-}
