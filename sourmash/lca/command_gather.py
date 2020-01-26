@@ -244,17 +244,18 @@ def gather_main(args):
         fieldnames = ['intersect_bp', 'f_match', 'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'name', 'n_equal_matches'] + list(lca_utils.taxlist())
 
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
-        w.writeheader()
-        for result in found:
-            lineage = result.lineage
-            d = dict(result._asdict())
-            del d['lineage']
+        with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
+            w = csv.DictWriter(csv_fp, fieldnames=fieldnames)
+            w.writeheader()
+            for result in found:
+                lineage = result.lineage
+                d = dict(result._asdict())
+                del d['lineage']
 
-            for (rank, value) in lineage:
-                d[rank] = value
+                for (rank, value) in lineage:
+                    d[rank] = value
 
-            w.writerow(d)
+                w.writerow(d)
 
     if args.output_unassigned:
         if not found:
@@ -262,13 +263,13 @@ def gather_main(args):
         elif not remaining_mins:
             notify('no unassigned hashes! not saving.')
         else:
-            outname = args.output_unassigned.name
-            notify('saving unassigned hashes to "{}"', outname)
+            notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
             e = query_sig.minhash.copy_and_clear()
             e.add_many(remaining_mins)
 
-            save_signatures([ SourmashSignature(e) ], args.output_unassigned)
+            with sourmash_args.FileOutput(args.output_unassigned, 'wt') as fp:
+                save_signatures([ SourmashSignature(e) ], fp)
 
 
 if __name__ == '__main__':

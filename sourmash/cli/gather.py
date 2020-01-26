@@ -1,8 +1,6 @@
 """search a metagenome signature for multiple non-
                                   overlapping matches"""
 
-from argparse import FileType
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
@@ -25,11 +23,11 @@ def subparser(subparsers):
         help='search all signatures underneath directories'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
+        '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
     subparser.add_argument(
-        '--save-matches', metavar='FILE', type=FileType('wt'),
+        '--save-matches', metavar='FILE',
         help='save the matched signatures from the database to the '
         'specified file'
     )
@@ -38,7 +36,7 @@ def subparser(subparsers):
         help='threshold (in bp) for reporting results (default=50,000)'
     )
     subparser.add_argument(
-        '--output-unassigned', metavar='FILE', type=FileType('wt'),
+        '--output-unassigned', metavar='FILE',
         help='output unassigned portions of the query as a signature to the '
         'specified file'
     )

@@ -6,12 +6,24 @@ from sourmash._minhash import get_minhash_default_seed
 from sourmash.cli.utils import add_construct_moltype_args
 
 
+def ksize_parser(ksizes):
+    # get list of k-mer sizes for which to compute sketches
+    if ',' in ksizes:
+        ksizes = ksizes.split(',')
+        ksizes = list(map(int, ksizes))
+    else:
+        ksizes = [int(ksizes)]
+
+    return ksizes
+
+
 def subparser(subparsers):
     subparser = subparsers.add_parser('compute')
 
     sketch_args = subparser.add_argument_group('Sketching options')
     sketch_args.add_argument(
         '-k', '--ksizes', default='21,31,51',
+        type=ksize_parser,
         help='comma-separated list of k-mer sizes; default=%(default)s'
     )
     sketch_args.add_argument(
@@ -83,7 +95,7 @@ def subparser(subparsers):
         help='recompute signatures even if the file exists'
     )
     file_args.add_argument(
-        '-o', '--output', type=FileType('wt'),
+        '-o', '--output',
         help='output computed signatures to this file'
     )
     file_args.add_argument(

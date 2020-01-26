@@ -362,3 +362,46 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         print('')
 
     return databases
+
+
+class FileOutput(object):
+    """A context manager for file outputs that handles sys.stdout gracefully.
+
+    Usage:
+
+       with FileOutput(filename, mode) as fp:
+          ...
+
+    does what you'd expect, but it handles the situation where 'filename'
+    is '-' or None. This makes it nicely compatible with argparse usage,
+    e.g.
+
+    p = argparse.ArgumentParser()
+    p.add_argument('--output')
+    args = p.parse_args()
+    ...
+    with FileOutput(args.output, 'wt') as fp:
+       ...
+
+    will properly handle no argument or '-' as sys.stdout.
+    """
+    def __init__(self, filename, mode='wt'):
+        self.filename = filename
+        self.mode = mode
+        self.fp = None
+
+    def open(self):
+        if self.filename == '-' or self.filename is None:
+            return sys.stdout
+        self.fp = open(self.filename, self.mode)
+        return self.fp
+
+    def __enter__(self):
+        return self.open()
+
+    def __exit__(self, type, value, traceback):
+        # do we need to handle exceptions here?
+        if self.fp:
+            self.fp.close()
+
+        return False

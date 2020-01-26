@@ -1,5 +1,5 @@
 use sourmash::signature::SigsTrait;
-use sourmash::sketch::minhash::{HashFunctions, KmerMinHash};
+use sourmash::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
 
 #[test]
 fn throws_error() {
@@ -47,22 +47,30 @@ fn compare() {
         .unwrap();
     b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
         .unwrap();
-    assert_eq!(a.compare(&b).unwrap(), 1.0);
-    //    assert_eq!(b.compare(&b).unwrap(), 1.0);
-    assert_eq!(b.compare(&a).unwrap(), 1.0);
-    //    assert_eq!(a.compare(&a).unwrap(), 1.0);
+    assert_eq!(a.compare(&b, false).unwrap(), 1.0);
+    assert_eq!(b.compare(&a, false).unwrap(), 1.0);
 
     b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
         .unwrap();
-    assert_eq!(a.compare(&b).unwrap(), 1.0);
-    //    assert_eq!(b.compare(&b).unwrap(), 1.0);
-    assert_eq!(b.compare(&a).unwrap(), 1.0);
-    //    assert_eq!(a.compare(&a).unwrap(), 1.0);
+    assert_eq!(a.compare(&b, false).unwrap(), 1.0);
+    assert_eq!(b.compare(&a, false).unwrap(), 1.0);
 
     b.add_sequence(b"GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT", false)
         .unwrap();
-    assert!(a.compare(&b).unwrap() >= 0.3);
-    assert!(b.compare(&a).unwrap() >= 0.3);
+    assert!(a.compare(&b, false).unwrap() >= 0.3);
+    assert!(b.compare(&a, false).unwrap() >= 0.3);
+}
+
+#[test]
+fn invalid_dna() {
+    let mut a = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+
+    a.add_sequence(b"AAANNCCCTN", true).unwrap();
+    assert_eq!(a.mins().len(), 3);
+
+    let mut b = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
+    b.add_sequence(b"NAAA", true).unwrap();
+    assert_eq!(b.mins().len(), 1);
 }
 
 #[test]
@@ -74,8 +82,8 @@ fn similarity() -> Result<(), Box<dyn std::error::Error>> {
     b.add_hash(1);
     b.add_hash(2);
 
-    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, false)? - 0.5).abs() < 0.001);
+    assert!((a.similarity(&a, false, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false, false)? - 0.5).abs() < 0.001);
 
     Ok(())
 }
@@ -92,9 +100,9 @@ fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
     b.add_sequence(b"ATGGA", false)?;
 
     assert!(
-        (a.similarity(&b, false)? - 0.705).abs() < 0.001,
+        (a.similarity(&b, false, false)? - 0.705).abs() < 0.001,
         "{}",
-        a.similarity(&b, false)?
+        a.similarity(&b, false, false)?
     );
 
     Ok(())
@@ -115,11 +123,11 @@ fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
     b.add_hash(3);
     b.add_hash(4);
 
-    assert!((a.similarity(&a, false)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, false)? - 0.23).abs() < 0.001);
+    assert!((a.similarity(&a, false, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, false, false)? - 0.23).abs() < 0.001);
 
-    assert!((a.similarity(&a, true)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, true)? - 0.2).abs() < 0.001);
+    assert!((a.similarity(&a, true, false)? - 1.0).abs() < 0.001);
+    assert!((a.similarity(&b, true, false)? - 0.2).abs() < 0.001);
 
     Ok(())
 }
@@ -134,4 +142,21 @@ fn dayhoff() {
 
     assert_eq!(a.size(), 2);
     assert_eq!(b.size(), 2);
+}
+
+#[test]
+fn hp() {
+    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_hp, 42, 0, false);
+    let mut b = KmerMinHash::new(10, 6, HashFunctions::murmur64_protein, 42, 0, false);
+
+    a.add_sequence(b"ACTGAC", false).unwrap();
+    b.add_sequence(b"ACTGAC", false).unwrap();
+
+    assert_eq!(a.size(), 2);
+    assert_eq!(b.size(), 2);
+}
+
+#[test]
+fn max_for_scaled() {
+    assert_eq!(max_hash_for_scaled(100), Some(184467440737095520));
 }

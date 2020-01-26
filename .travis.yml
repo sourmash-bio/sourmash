@@ -8,10 +8,7 @@ cache:
     - "$HOME/.cargo"
     - "target"
 
-branches:
-  only:
-  - master
-  - "/^v.*$/"
+if: (type = push AND ((branch = master) OR (tag = "/^v.*$/"))) OR (type = pull_request)
 
 script: tox -vv
 
@@ -27,6 +24,8 @@ jobs:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
       python: 3.7
+      env:
+        - PYTHONDEVMODE=1
 
     - &test
       stage: test

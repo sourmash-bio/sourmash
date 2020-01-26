@@ -1,7 +1,5 @@
 """summarize mixture"""
 
-from argparse import FileType
-
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('summarize')
@@ -13,7 +11,7 @@ def subparser(subparsers):
         help='load all signatures underneath directories'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
+        '-o', '--output', metavar='FILE',
         help='file to which CSV output will be written'
     )
     subparser.add_argument('--scaled', metavar='FLOAT', type=float)

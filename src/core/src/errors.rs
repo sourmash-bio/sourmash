@@ -15,14 +15,17 @@ pub enum SourmashError {
     #[fail(display = "DNA/prot minhashes cannot be compared")]
     MismatchDNAProt,
 
-    #[fail(display = "mismatch in max_hash; comparison fail")]
-    MismatchMaxHash,
+    #[fail(display = "mismatch in scaled; comparison fail")]
+    MismatchScaled,
 
     #[fail(display = "mismatch in seed; comparison fail")]
     MismatchSeed,
 
     #[fail(display = "different signatures cannot be compared")]
     MismatchSignatureType,
+
+    #[fail(display = "Invalid hash function: {}", function)]
+    InvalidHashFunction { function: String },
 
     #[fail(display = "Can only set {} if the MinHash is empty", message)]
     NonEmptyMinHash { message: String },
@@ -52,7 +55,7 @@ pub enum SourmashErrorCode {
     // Compatibility errors
     MismatchKSizes = 1_01,
     MismatchDNAProt = 1_02,
-    MismatchMaxHash = 1_03,
+    MismatchScaled = 1_03,
     MismatchSeed = 1_04,
     MismatchSignatureType = 1_05,
     NonEmptyMinHash = 1_06,
@@ -61,6 +64,7 @@ pub enum SourmashErrorCode {
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
     InvalidCodonLength = 11_03,
+    InvalidHashFunction = 11_04,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
@@ -83,7 +87,7 @@ impl SourmashErrorCode {
                     SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
                     SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
                     SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
-                    SourmashError::MismatchMaxHash => SourmashErrorCode::MismatchMaxHash,
+                    SourmashError::MismatchScaled => SourmashErrorCode::MismatchScaled,
                     SourmashError::MismatchSeed => SourmashErrorCode::MismatchSeed,
                     SourmashError::MismatchSignatureType => {
                         SourmashErrorCode::MismatchSignatureType
@@ -93,6 +97,9 @@ impl SourmashErrorCode {
                     SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
                     SourmashError::InvalidCodonLength { .. } => {
                         SourmashErrorCode::InvalidCodonLength
+                    }
+                    SourmashError::InvalidHashFunction { .. } => {
+                        SourmashErrorCode::InvalidHashFunction
                     }
                     SourmashError::SerdeError => SourmashErrorCode::SerdeError,
                 };

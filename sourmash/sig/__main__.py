@@ -8,6 +8,7 @@ import json
 
 import sourmash
 import copy
+from sourmash.sourmash_args import FileOutput
 
 from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
 from .. import sourmash_args
@@ -82,8 +83,10 @@ def describe(args):
 
     # write CSV?
     w = None
+    csv_fp = None
     if args.csv:
-        w = csv.DictWriter(args.csv,
+        csv_fp = open(args.csv, 'wt')
+        w = csv.DictWriter(csv_fp,
                            ['signature_file', 'md5', 'ksize', 'moltype', 'num',
                             'scaled', 'n_hashes', 'seed', 'with_abundance',
                             'name', 'filename', 'license'],
@@ -127,6 +130,9 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 signature license: {license}
 ''', **locals())
+
+    if csv_fp:
+        csv_fp.close()
 
 
 def overlap(args):
@@ -259,7 +265,8 @@ def merge(args):
 
     merged_sigobj = sourmash.SourmashSignature(mh)
 
-    sourmash.save_signatures([merged_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([merged_sigobj], fp=fp)
 
     notify('loaded and merged {} signatures', total_loaded)
 
@@ -318,7 +325,8 @@ def intersect(args):
         intersect_mh.set_abundances(abund_mins)
         intersect_sigobj = sourmash.SourmashSignature(intersect_mh)
 
-    sourmash.save_signatures([intersect_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([intersect_sigobj], fp=fp)
 
     notify('loaded and intersected {} signatures', total_loaded)
 
@@ -367,7 +375,8 @@ def subtract(args):
 
     subtract_sigobj = sourmash.SourmashSignature(subtract_mh)
 
-    sourmash.save_signatures([subtract_sigobj], fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures([subtract_sigobj], fp=fp)
 
     notify('loaded and subtracted {} signatures', total_loaded)
 
@@ -389,14 +398,8 @@ def rename(args):
             sigobj._name = args.name
             outlist.append(sigobj)
 
-    if args.output:
-        fp = open(args.output, 'wt')
-    else:
-        fp = sys.stdout
-
-    sourmash.save_signatures(outlist, fp=fp)
-    if args.output:
-        fp.close()
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("set name to '{}' on {} signatures", args.name, len(outlist))
 
@@ -432,7 +435,8 @@ def extract(args):
         error("no matching signatures!")
         sys.exit(-1)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("extracted {} signatures from {} file(s)", len(outlist),
            len(args.signatures))
@@ -483,7 +487,8 @@ def filter(args):
 
         outlist.extend(siglist)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -523,7 +528,8 @@ def flatten(args):
 
         outlist.extend(siglist)
 
-    sourmash.save_signatures(outlist, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(outlist, fp=fp)
 
     notify("loaded {} total that matched ksize & molecule type",
            total_loaded)
@@ -583,7 +589,8 @@ def downsample(args):
 
             output_list.append(sigobj)
 
-    sourmash.save_signatures(output_list, fp=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(output_list, fp=fp)
 
     notify("loaded and downsampled {} signatures", total_loaded)
 
@@ -615,7 +622,8 @@ def sig_import(args):
         s = sourmash.SourmashSignature(mh, filename=filename)
         siglist.append(s)
 
-    sourmash.save_signatures(siglist, args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(siglist, fp)
 
 
 def export(args):
@@ -640,7 +648,8 @@ def export(args):
     ll = list(mh.get_mins())
     x['sketches'] = [{ 'hashes': ll }]
 
-    print(json.dumps(x), file=args.output)
+    with FileOutput(args.output, 'wt') as fp:
+        print(json.dumps(x), file=fp)
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
 
 

@@ -202,9 +202,20 @@ def test_do_compare_output_csv():
                                            in_directory=location)
 
         with open(os.path.join(location, 'xxx')) as fp:
-            lines = fp.readlines()
-            assert len(lines) == 3
-            assert lines[1:] == ['1.0,0.93\n', '0.93,1.0\n']
+            r = iter(csv.reader(fp))
+            row = next(r)
+            print(row)
+            row = next(r)
+            print(row)
+            assert float(row[0]) == 1.0
+            assert float(row[1]) == 0.93
+            row = next(r)
+            assert float(row[0]) == 0.93
+            assert float(row[1]) == 1.0
+
+            # exactly three lines
+            with pytest.raises(StopIteration) as e:
+                next(r)
 
 
 def test_do_compare_downsample():
@@ -469,6 +480,68 @@ def test_do_plot_comparison_4_fail_not_distance():
                                            in_directory=location, fail_ok=True)
         print(status, out, err)
         assert status != 0
+
+
+def test_plot_override_labeltext():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+            fp.write('a\nb\nc\nd\n')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--labeltext', 'new.labels.txt'],
+                                           in_directory=location)
+
+        print(out)
+
+        assert 'loading labels from new.labels.txt' in err
+
+        expected = """\
+0\ta
+1\tb
+2\tc
+3\td"""
+        assert expected in out
+
+
+def test_plot_override_labeltext_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+        testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
+        testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
+        testdata4 = utils.get_test_data('genome-s10+s11.sig')
+        inp_sigs = [testdata1, testdata2, testdata3, testdata4]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compare'] + inp_sigs + \
+                                           ['-o', 'cmp', '-k', '21', '--dna'],
+                                           in_directory=location)
+
+        with open(os.path.join(location, 'new.labels.txt'), 'wt') as fp:
+            fp.write('a\nb\nc\n')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['plot', 'cmp',
+                                            '--labeltext', 'new.labels.txt'],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        print(out)
+        print(err)
+        assert status != 0
+        assert 'loading labels from new.labels.txt' in err
+        assert '3 labels != matrix size, exiting' in err
 
 
 def test_plot_subsample_1():
@@ -2015,6 +2088,35 @@ def test_do_sourmash_sbt_search_bestonly():
         assert 'short.fa' in out
 
 
+def test_do_sourmash_sbt_search_bestonly_scaled():
+    # as currently implemented, the query signature will be automatically
+    # downsampled to match the tree.
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '1'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig',
+                                            'short2.fa.sig',
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', '--best-only',
+                                            'short.fa.sig', 'zzz'],
+                                           in_directory=location)
+        print(out)
+
+        assert 'short.fa' in out
+
+
 def test_sbt_search_order_dependence():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz')
@@ -2395,6 +2497,37 @@ def test_gather_metagenome():
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
 
+
+def test_gather_metagenome_threshold_bp():
+    # set a threshold on the gather output
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd.extend(testdata_sigs)
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+
+        cmd = 'gather {} gcf_all -k 21 --threshold-bp 2e6'.format(query_sig)
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 1 matches total' in out
+        assert 'found less than 2.0 Mbp in common. => exiting' in err
+        assert 'the recovered matches hit 33.2% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
 def test_multigather_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -2423,6 +2556,7 @@ def test_multigather_metagenome():
                 'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
+
 
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:

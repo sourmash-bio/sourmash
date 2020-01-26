@@ -4,7 +4,9 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use sourmash::cmd::ComputeParameters;
 use sourmash::signature::Signature;
+use sourmash::signature::SigsTrait;
 
 #[test]
 fn load_signature() {
@@ -28,4 +30,79 @@ fn load_signature() {
         assert_eq!(name, "s10+s11");
     }
     assert_eq!(sig.signatures.len(), 4);
+}
+
+#[test]
+fn signature_from_computeparams() {
+    let params = ComputeParameters {
+        ksizes: vec![2, 3, 4],
+        num_hashes: 3,
+        ..Default::default()
+    };
+
+    let mut sig = Signature::from_params(&params);
+    sig.add_sequence(b"ATGC", false).unwrap();
+
+    assert_eq!(sig.signatures.len(), 3);
+    dbg!(&sig.signatures);
+    assert_eq!(sig.signatures[0].size(), 3);
+    assert_eq!(sig.signatures[1].size(), 2);
+    assert_eq!(sig.signatures[2].size(), 1);
+}
+
+#[test]
+fn signature_slow_path() {
+    let params = ComputeParameters {
+        ksizes: vec![2, 3, 4, 5],
+        num_hashes: 3,
+        ..Default::default()
+    };
+
+    let mut sig = Signature::from_params(&params);
+    sig.add_sequence(b"ATGCTN", true).unwrap();
+
+    assert_eq!(sig.signatures.len(), 4);
+    dbg!(&sig.signatures);
+    assert_eq!(sig.signatures[0].size(), 3);
+    assert_eq!(sig.signatures[1].size(), 3);
+    assert_eq!(sig.signatures[2].size(), 2);
+    assert_eq!(sig.signatures[3].size(), 1);
+}
+
+#[test]
+fn signature_add_sequence_protein() {
+    let params = ComputeParameters {
+        ksizes: vec![3, 6],
+        num_hashes: 3,
+        protein: true,
+        dna: false,
+        ..Default::default()
+    };
+
+    let mut sig = Signature::from_params(&params);
+    sig.add_sequence(b"ATGCAT", false).unwrap();
+
+    assert_eq!(sig.signatures.len(), 2);
+    dbg!(&sig.signatures);
+    assert_eq!(sig.signatures[0].size(), 3);
+    assert_eq!(sig.signatures[1].size(), 1);
+}
+
+#[test]
+fn signature_add_protein() {
+    let params = ComputeParameters {
+        ksizes: vec![3, 6],
+        num_hashes: 3,
+        protein: true,
+        dna: false,
+        ..Default::default()
+    };
+
+    let mut sig = Signature::from_params(&params);
+    sig.add_protein(b"AGY").unwrap();
+
+    assert_eq!(sig.signatures.len(), 2);
+    dbg!(&sig.signatures);
+    assert_eq!(sig.signatures[0].size(), 3);
+    assert_eq!(sig.signatures[1].size(), 2);
 }

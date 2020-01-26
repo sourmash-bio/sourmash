@@ -75,6 +75,23 @@ unsafe fn kmerminhash_add_sequence(ptr: *mut KmerMinHash, sequence: *const c_cha
 }
 }
 
+ffi_fn! {
+unsafe fn kmerminhash_add_protein(ptr: *mut KmerMinHash, sequence: *const c_char) ->
+    Result<()> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let c_str = {
+        assert!(!sequence.is_null());
+
+        CStr::from_ptr(sequence)
+    };
+
+    mh.add_protein(c_str.to_bytes())
+}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut KmerMinHash, h: u64) {
     let mh = {
@@ -454,7 +471,7 @@ unsafe fn kmerminhash_add_from(ptr: *mut KmerMinHash, other: *const KmerMinHash)
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
     -> Result<u64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -465,7 +482,7 @@ unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinH
        &*other
     };
 
-    mh.count_common(other_mh)
+    mh.count_common(other_mh, downsample)
 }
 }
 
@@ -505,7 +522,7 @@ unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
     -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -516,12 +533,12 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash)
        &*other
     };
 
-    mh.compare(other_mh)
+    mh.compare(other_mh, downsample)
 }
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool)
+unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
     -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -532,6 +549,6 @@ unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHas
        &*other
     };
 
-    mh.similarity(other_mh, ignore_abundance)
+    mh.similarity(other_mh, ignore_abundance, downsample)
 }
 }

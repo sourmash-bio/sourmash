@@ -1,7 +1,5 @@
 """search a signature against a list of signatures"""
 
-from argparse import FileType
-
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
@@ -27,7 +25,7 @@ def subparser(subparsers):
         help='minimum threshold for reporting matches; default=0.08'
     )
     subparser.add_argument(
-        '--save-matches', metavar='FILE', type=FileType('wt'),
+        '--save-matches', metavar='FILE',
         help='output matching signatures to the specified file'
     )
     subparser.add_argument(
@@ -52,7 +50,7 @@ def subparser(subparsers):
         help='downsample query to this scaled factor (yields greater speed)'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', type=FileType('wt'),
+        '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
     add_ksize_arg(subparser, 31)

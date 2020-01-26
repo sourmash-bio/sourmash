@@ -280,16 +280,6 @@ class SBT(Index):
         best_only = kwargs['best_only']
         unload_data = kwargs.get('unload_data', False)
 
-        search_fn = search_minhashes
-        query_match = lambda x: query.similarity(
-            x, downsample=True, ignore_abundance=ignore_abundance)
-        if do_containment:
-            search_fn = search_minhashes_containment
-            query_match = lambda x: query.contained_by(x, downsample=True)
-        
-        if best_only:            # this needs to be reset for each SBT
-            search_fn = SearchMinHashesFindBest().search
-
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
         tree_mh = leaf.data.minhash
@@ -300,6 +290,17 @@ class SBT(Index):
             resampled_query_mh = tree_query.minhash
             resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
+
+        # define both search function and post-search calculation function
+        search_fn = search_minhashes
+        query_match = lambda x: tree_query.similarity(
+            x, downsample=False, ignore_abundance=ignore_abundance)
+        if do_containment:
+            search_fn = search_minhashes_containment
+            query_match = lambda x: tree_query.contained_by(x, downsample=True)
+
+        if best_only:            # this needs to be reset for each SBT
+            search_fn = SearchMinHashesFindBest().search
 
         # now, search!
         results = []
