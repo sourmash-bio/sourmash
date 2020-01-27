@@ -8,7 +8,7 @@ cache:
     - "$HOME/.cargo"
     - "target"
 
-if: (type = push AND ((branch = master) OR (tag = "/^v.*$/"))) OR (type = pull_request)
+if: (type = push AND ((branch = master) OR (tag = ^v.*$))) OR (type = pull_request)
 
 script: tox -vv
 
