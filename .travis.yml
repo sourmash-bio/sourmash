@@ -11,7 +11,8 @@ cache:
 if: |
   (type = push AND (branch = master)) OR \
   (tag =~ ^v) OR \
-  (type = pull_request)
+  (type = pull_request) OR \
+  (type = cron)
 
 script: tox -vv
 
