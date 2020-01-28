@@ -771,6 +771,35 @@ def test_gather_csv_output_filename_bug(c):
         assert row['filename'] == lca_db_1
 
 
+@utils.in_tempdir
+def test_compare_no_such_file(c):
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('compare', 'nosuchfile.sig')
+
+    assert "file 'nosuchfile.sig' does not exist! exiting." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_no_such_file_force(c):
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('compare', 'nosuchfile.sig', '-f')
+
+    print(c.last_result.err)
+    assert "no signatures found! exiting." in c.last_result.err
+
+
+def test_compare_no_matching_sigs():
+    query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    status, out, err = utils.runscript('sourmash', ['compare', '-k', '100',
+                                        query], fail_ok=True)
+
+    print(out)
+    print(err)
+    assert status
+    assert 'warning: no signatures loaded at given ksize/molecule type' in err
+    assert 'no signatures found! exiting.' in err
+
+
 def test_compare_deduce_molecule():
     # deduce DNA vs protein from query, if it is unique
     with utils.TempDirectory() as location:
