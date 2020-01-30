@@ -3,7 +3,6 @@ Functions implementing the 'compute' command and related functions.
 """
 from __future__ import print_function, division, absolute_import
 
-import argparse
 import os
 import os.path
 import sys
@@ -11,14 +10,12 @@ import random
 import screed
 import time
 
-from bam2fasta import cli as bam2fasta_cli
-from .sourmash_args import SourmashArgumentParser
-from . import DEFAULT_SEED, MinHash
-from . import signature as sig
 from . import sourmash_args
+from .signature import SourmashSignature, save_signatures
 from .logging import notify, error, set_quiet
+from .utils import RustObject
+from ._lowlevel import ffi, lib
 
-from .sourmash_args import DEFAULT_N
 DEFAULT_COMPUTE_K = '21,31,51'
 DEFAULT_LINE_COUNT = 1500
 
@@ -36,74 +33,6 @@ def compute(args):
             => creates one output file file.sig, with all sequences from
                file1.fa and file2.fa combined into one signature.
     """
-    parser = SourmashArgumentParser()
-    parser.add_argument('filenames', nargs='+',
-                        help='file(s) of sequences')
-
-    sourmash_args.add_construct_moltype_args(parser)
-
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress non-error output')
-    parser.add_argument('--input-is-protein', action='store_true',
-                        help='Consume protein sequences - no translation needed.')
-    parser.add_argument('-k', '--ksizes',
-                        default=DEFAULT_COMPUTE_K,
-                        help='comma-separated list of k-mer sizes (default: %(default)s)')
-    parser.add_argument('-n', '--num-hashes', type=int,
-                        default=DEFAULT_N,
-                        help='number of hashes to use in each sketch (default: %(default)i)')
-    parser.add_argument('--check-sequence', action='store_true',
-                        help='complain if input sequence is invalid (default: False)')
-    parser.add_argument('-f', '--force', action='store_true',
-                        help='recompute signatures even if the file exists (default: False)')
-    parser.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                        help='output computed signatures to this file')
-    parser.add_argument('--singleton', action='store_true',
-                        help='compute a signature for each sequence record individually (default: False)')
-    parser.add_argument('--merge', '--name', type=str, default='', metavar="MERGED",
-                        help="merge all input files into one signature named this")
-    parser.add_argument('--name-from-first', action='store_true',
-                        help="name the signature generated from each file after the first record in the file (default: False)")
-    parser.add_argument('--input-is-10x', action='store_true',
-                        help="Input is 10x single cell output folder (default: False)")
-    parser.add_argument('--count-valid-reads', default=0, type=int,
-                        help="For 10x input only (i.e input-is-10x flag is True), "
-                        "A barcode is only considered a valid barcode read "
-                        "and its signature is written if number of umis are greater "
-                        "than count-valid-reads. It is used to weed out cell barcodes "
-                        "with few umis that might have been due to false rna enzyme reactions")
-    parser.add_argument('--write-barcode-meta-csv', type=str,
-                        help="For 10x input only (i.e input-is-10x flag is True), for each of the unique barcodes, "
-                        "Write to a given path, number of reads and number of umis per barcode.")
-    parser.add_argument('-p', '--processes', default=2, type=int,
-                        help='For 10x input only (i.e input-is-10x flag is True, '
-                        'Number of processes to use for reading 10x bam file')
-    parser.add_argument('--save-fastas', default="", type=str,
-                        help='For 10x input only (i.e input-is-10x flag is True), '
-                        'save merged fastas for all the unique barcodes to {CELL_BARCODE}.fasta '
-                        'in the absolute path given by this flag, By default, fastas are not saved')
-    parser.add_argument('--line-count', type=int,
-                        help='For 10x input only (i.e input-is-10x flag is True), line count for each bam shard',
-                        default=DEFAULT_LINE_COUNT)
-    parser.add_argument('--track-abundance', action='store_true',
-                        help='track k-mer abundances in the generated signature (default: False)')
-    parser.add_argument('--scaled', type=float, default=0,
-                        help='choose number of hashes as 1 in FRACTION of input k-mers')
-    parser.add_argument('--seed', type=int,
-                        help='seed used by MurmurHash (default: 42)',
-                        default=DEFAULT_SEED)
-    parser.add_argument('--randomize', action='store_true',
-                        help='shuffle the list of input filenames randomly')
-    parser.add_argument('--license', default='CC0', type=str,
-                        help='signature license. Currently only CC0 is supported.')
-    parser.add_argument('--rename-10x-barcodes', type=str,
-                        help="Tab-separated file mapping 10x barcode name "
-                        "to new name, e.g. with channel or cell "
-                        "annotation label", required=False)
-    parser.add_argument('--barcodes-file', type=str,
-                        help="Barcodes file if the input is unfiltered 10x bam file", required=False)
-
-    args = parser.parse_args(args)
     set_quiet(args.quiet)
 
     if args.license != 'CC0':
@@ -137,11 +66,6 @@ def compute(args):
 
     # get list of k-mer sizes for which to compute sketches
     ksizes = args.ksizes
-    if ',' in ksizes:
-        ksizes = ksizes.split(',')
-        ksizes = list(map(int, ksizes))
-    else:
-        ksizes = [int(ksizes)]
 
     notify('Computing signature for ksizes: {}', str(ksizes))
     num_sigs = 0
@@ -188,232 +112,6 @@ def compute(args):
         error("must specify -o with --merge")
         sys.exit(-1)
 
-    def make_minhashes():
-        seed = args.seed
-
-        # one minhash for each ksize
-        Elist = []
-        for k in ksizes:
-            if args.protein:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=False,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.dayhoff:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=True,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.hp:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=True,
-                            dayhoff=False,
-                            hp=True,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-            if args.dna:
-                E = MinHash(ksize=k, n=args.num_hashes,
-                            is_protein=False,
-                            dayhoff=False,
-                            hp=False,
-                            track_abundance=args.track_abundance,
-                            scaled=args.scaled,
-                            seed=seed)
-                Elist.append(E)
-        return Elist
-
-    def add_seq(Elist, seq, input_is_protein, check_sequence):
-        for E in Elist:
-            if input_is_protein:
-                E.add_protein(seq)
-            else:
-                E.add_sequence(seq, not check_sequence)
-
-    def build_siglist(Elist, filename, name=None):
-        return [ sig.SourmashSignature(E, filename=filename,
-                                       name=name) for E in Elist ]
-
-    def iter_split(string, sep=None):
-        """Split a string by the given separator and
-        return the results in a generator"""
-        sep = sep or ' '
-        groups = itertools.groupby(string, lambda s: s != sep)
-        return (''.join(g) for k, g in groups if k)
-
-    def fasta_to_sig_record(index):
-        """Convert fasta to sig record"""
-        if umi_filter:
-            return filtered_umi_to_sig(index)
-        else:
-            return unfiltered_umi_to_sig(index)
-
-    def unfiltered_umi_to_sig(index):
-        """Returns signature records across fasta files for a unique barcode"""
-        # Initializing time
-        startt = time.time()
-
-        # Getting all fastas for a given barcode
-        # from different shards
-        single_barcode_fastas = all_fastas_sorted[index]
-
-        count = 0
-        whole_sequence = ""
-        # Iterating through fasta files for single barcode from different
-        # fastas
-        for fasta in iter_split(single_barcode_fastas, ","):
-
-            # Initializing the fasta file to write
-            # all the sequences from all bam shards to
-            if count == 0:
-                unique_fasta_file = os.path.basename(fasta)
-                barcode_name = unique_fasta_file.replace(".fasta", "")
-                if args.save_fastas:
-                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
-                    f.write(">{}\n".format(barcode_name))
-
-            # Add sequence
-            for record in screed.open(fasta):
-                sequence = record.sequence
-                umi = record.name
-
-                split_seqs = sequence.split(delimiter)
-                for index, seq in enumerate(split_seqs):
-                    if seq == "":
-                        continue
-                    add_seq(Elist, sequence,
-                            args.input_is_protein, args.check_sequence)
-                    if args.save_fastas:
-                        f.write(">{}\n{}\n".format(
-                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
-
-            # Delete fasta file in tmp folder
-            if os.path.exists(fasta):
-                os.unlink(fasta)
-
-            count += 1
-
-        # Updating the fasta file with each of the sequences and closing the fasta file
-        if args.save_fastas:
-            f.write("{}".format(whole_sequence))
-            f.close()
-
-        barcode_name = unique_fasta_file.replace(".fasta", "")
-        # Build signature records
-        siglist = build_siglist(
-            Elist,
-            os.path.join(args.filenames[0], unique_fasta_file),
-            name=barcode_name)
-        records = signature_json.add_meta_save(siglist)
-
-        notify(
-            "time taken to build signature records for a barcode {} is {:.5f} seconds",
-            unique_fasta_file, time.time() - startt, end='\r')
-        return records
-
-    def filtered_umi_to_sig(index):
-        """Returns signature records for all the fasta files for a unique
-        barcode, only if it has more than count-valid-reads number of umis."""
-
-        # Initializing time
-        startt = time.time()
-
-        # Getting all fastas for a given barcode
-        # from different shards
-        single_barcode_fastas = all_fastas_sorted[index]
-
-        debug("calculating umi counts", end="\r", flush=True)
-        # Tracking UMI Counts
-        umis = defaultdict(int)
-        # Iterating through fasta files for single barcode from different
-        # fastas
-        for fasta in iter_split(single_barcode_fastas, ","):
-            # calculate unique umi, sequence counts
-            for record in screed.open(fasta):
-                umis[record.name] += record.sequence.count(delimiter)
-
-        if args.write_barcode_meta_csv:
-            unique_fasta_file = os.path.basename(fasta)
-            unique_meta_file = unique_fasta_file.replace(".fasta", "_meta.txt")
-            with open(unique_meta_file, "w") as f:
-                f.write("{} {}".format(len(umis), sum(list(umis.values()))))
-
-        debug("Completed tracking umi counts", end="\r", flush=True)
-        if len(umis) < args.count_valid_reads:
-            return []
-        count = 0
-        whole_sequence = ""
-        for fasta in iter_split(single_barcode_fastas, ","):
-
-            # Initializing fasta file to save the sequence to
-            if count == 0:
-                unique_fasta_file = os.path.basename(fasta)
-                barcode_name = unique_fasta_file.replace(".fasta", "")
-                if args.save_fastas:
-                    f = open(os.path.join(args.save_fastas, unique_fasta_file), "w")
-                    f.write(">{}\n".format(barcode_name))
-
-            # Add sequences of barcodes with more than count-valid-reads umis
-            for record in screed.open(fasta):
-                sequence = record.sequence
-                umi = record.name
-
-                # Appending sequence of a umi to the fasta
-                split_seqs = sequence.split(delimiter)
-                for index, seq in enumerate(split_seqs):
-                    if seq == "":
-                        continue
-                    add_seq(Elist, sequence,
-                            args.input_is_protein, args.check_sequence)
-                    if args.save_fastas:
-                        f.write(">{}\n{}\n".format(
-                            barcode_name + "_" + umi + "_" + '{:03d}'.format(index), seq))
-            # Delete fasta file in tmp folder
-            if os.path.exists(fasta):
-                os.unlink(fasta)
-            count += 1
-
-        debug("Added sequences of unique barcode,umi to Elist", end="\r",
-              flush=True)
-        # Update the fasta file with all sequence and close the opened fasta file
-        if args.save_fastas:
-            f.write("{}".format(whole_sequence))
-            f.close()
-        # Build signature records
-        barcode_name = unique_fasta_file.replace(".fasta", "")
-        siglist = build_siglist(
-            Elist,
-            os.path.join(args.filenames[0], unique_fasta_file),
-            name=barcode_name)
-        records = signature_json.add_meta_save(siglist)
-        notify(
-            "time taken to build signature records for a barcode {} is {:.5f} seconds",
-            unique_fasta_file, time.time() - startt, end="\r", flush=True)
-        return records
-
-    def save_siglist(siglist, output_fp, filename=None):
-        # save!
-        if output_fp:
-            sigfile_name = args.output.name
-            sig.save_signatures(siglist, args.output)
-        else:
-            if filename is None:
-                raise Exception("internal error, filename is None")
-            with open(filename, 'w') as fp:
-                sigfile_name = filename
-                sig.save_signatures(siglist, fp)
-        notify(
-            'saved signature(s) to {}. Note: signature license is CC0.',
-            sigfile_name)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
@@ -433,7 +131,10 @@ def compute(args):
                 siglist = []
                 for n, record in enumerate(screed.open(filename)):
                     # make minhashes for each sequence
-                    Elist = make_minhashes()
+                    Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                           args.dayhoff, args.hp, args.dna,
+                                           args.num_hashes,
+                                           args.track_abundance, args.scaled)
                     add_seq(Elist, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
@@ -442,6 +143,7 @@ def compute(args):
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
             elif args.input_is_10x:
+                from bam2fasta import cli as bam2fasta_cli
 
                 # Initializing time
                 startt = time.time()
@@ -471,7 +173,10 @@ def compute(args):
                 for fasta in fastas:
                     for n, record in enumerate(screed.open(fasta)):
                         # make minhashes for each sequence
-                        Elist = make_minhashes()
+                        Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                               args.dayhoff, args.hp, args.dna,
+                                               args.num_hashes,
+                                               args.track_abundance, args.scaled)
                         add_seq(Elist, record.sequence,
                                 args.input_is_protein, args.check_sequence)
 
@@ -484,7 +189,10 @@ def compute(args):
                        time.time() - startt)
             else:
                 # make minhashes for the whole file
-                Elist = make_minhashes()
+                Elist = make_minhashes(ksizes, args.seed, args.protein,
+                                       args.dayhoff, args.hp, args.dna,
+                                       args.num_hashes,
+                                       args.track_abundance, args.scaled)
 
                 # consume & calculate signatures
                 notify('... reading sequences from {}', filename)
@@ -517,8 +225,12 @@ def compute(args):
             save_siglist(siglist, args.output, sigfile)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
-        Elist = make_minhashes()
+        Elist = make_minhashes(ksizes, args.seed, args.protein,
+                               args.dayhoff, args.hp, args.dna,
+                               args.num_hashes,
+                               args.track_abundance, args.scaled)
 
+        n = 0
         total_seq = 0
         for filename in args.filenames:
             # consume & calculate signatures
@@ -540,3 +252,145 @@ def compute(args):
 
         # at end, save!
         save_siglist(siglist, args.output)
+
+
+def make_minhashes(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+    params = ComputeParameters(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled)
+    sig = SourmashSignature.from_params(params)
+    return sig
+
+
+def add_seq(sig, seq, input_is_protein, check_sequence):
+    if input_is_protein:
+        sig.add_protein(seq)
+    else:
+        sig.add_sequence(seq, not check_sequence)
+
+
+def build_siglist(sig, filename, name=None):
+    if name is not None:
+        sig._name = name
+    sig.filename = filename
+    return [sig]
+
+
+def save_siglist(siglist, sigfile_name, filename=None):
+    # save!
+    if sigfile_name:
+        with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
+            save_signatures(siglist, fp)
+    else:
+        if filename is None:
+            raise Exception("internal error, filename is None")
+        with sourmash_args.FileOutput(filename, 'w') as fp:
+            sigfile_name = filename
+            save_signatures(siglist, fp)
+    notify(
+        'saved signature(s) to {}. Note: signature license is CC0.',
+        sigfile_name)
+
+
+class ComputeParameters(RustObject):
+    __dealloc_func__ = lib.computeparams_free
+
+    def __init__(self, ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
+        self._objptr = lib.computeparams_new()
+
+        self.seed = seed
+        self.ksizes = ksizes
+        self.protein = protein
+        self.dayhoff = dayhoff
+        self.hp = hp
+        self.dna = dna
+        self.num_hashes = num_hashes
+        self.track_abundance = track_abundance
+        self.scaled = scaled
+
+    @staticmethod
+    def from_args(args):
+        ptr = lib.computeparams_new()
+        ret = ComputeParameters._from_objptr(ptr)
+
+        for arg, value in vars(args).items():
+            try:
+                getattr(type(ret), arg).fset(ret, value)
+            except AttributeError:
+                pass
+
+        return ret
+
+    @property
+    def seed(self):
+        return self._methodcall(lib.computeparams_seed)
+
+    @seed.setter
+    def seed(self, v):
+        return self._methodcall(lib.computeparams_set_seed, v)
+
+    @property
+    def ksizes(self):
+        size = ffi.new("uintptr_t *")
+        ksizes_ptr = self._methodcall(lib.computeparams_ksizes, size)
+        size = ffi.unpack(size, 1)[0]
+        ksizes = ffi.unpack(ksizes_ptr, size)
+        return ksizes
+
+    @ksizes.setter
+    def ksizes(self, v):
+        return self._methodcall(lib.computeparams_set_ksizes, list(v), len(v))
+
+    @property
+    def protein(self):
+        return self._methodcall(lib.computeparams_protein)
+
+    @protein.setter
+    def protein(self, v):
+        return self._methodcall(lib.computeparams_set_protein, v)
+
+    @property
+    def dayhoff(self):
+        return self._methodcall(lib.computeparams_dayhoff)
+
+    @dayhoff.setter
+    def dayhoff(self, v):
+        return self._methodcall(lib.computeparams_set_dayhoff, v)
+
+    @property
+    def hp(self):
+        return self._methodcall(lib.computeparams_hp)
+
+    @hp.setter
+    def hp(self, v):
+        return self._methodcall(lib.computeparams_set_hp, v)
+
+    @property
+    def dna(self):
+        return self._methodcall(lib.computeparams_dna)
+
+    @dna.setter
+    def dna(self, v):
+        return self._methodcall(lib.computeparams_set_dna, v)
+
+    @property
+    def num_hashes(self):
+        return self._methodcall(lib.computeparams_num_hashes)
+
+    @num_hashes.setter
+    def num_hashes(self, v):
+        return self._methodcall(lib.computeparams_set_num_hashes, v)
+
+    @property
+    def track_abundance(self):
+        return self._methodcall(lib.computeparams_track_abundance)
+
+    @track_abundance.setter
+    def track_abundance(self, v):
+        return self._methodcall(lib.computeparams_set_track_abundance, v)
+
+    @property
+    def scaled(self):
+        return self._methodcall(lib.computeparams_scaled)
+
+    @scaled.setter
+    def scaled(self, v):
+        return self._methodcall(lib.computeparams_set_scaled, int(v))

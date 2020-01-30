@@ -10,26 +10,9 @@ from ..logging import notify, error, print_results, set_quiet
 from . import lca_utils
 from .lca_utils import zip_lineage
 from .command_index import load_taxonomy_assignments
-from ..sourmash_args import SourmashArgumentParser
 
 
 def compare_csv(args):
-    p = SourmashArgumentParser(prog="sourmash lca compare_csv")
-    p.add_argument('csv1', help='taxonomy spreadsheet output by classify')
-    p.add_argument('csv2', help='custom taxonomy spreadsheet')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    p.add_argument('-C', '--start-column', default=2, type=int,
-                   help='column at which taxonomic assignments start')
-    p.add_argument('--tabs', action='store_true',
-                   help='input spreadsheet is tab-delimited (default: commas)')
-    p.add_argument('--no-headers', action='store_true',
-                   help='no headers present in taxonomy spreadsheet')
-    p.add_argument('-f', '--force', action='store_true')
-    args = p.parse_args(args)
-
     if args.start_column < 2:
         error('error, --start-column cannot be less than 2')
         sys.exit(-1)
@@ -39,7 +22,8 @@ def compare_csv(args):
     # first, load classify-style spreadsheet
     notify('loading classify output from: {}', args.csv1)
     assignments0, num_rows0 = load_taxonomy_assignments(args.csv1,
-                                                        start_column=3)
+                                                        start_column=3,
+                                                        force=args.force)
 
     notify('loaded {} distinct lineages, {} rows',
            len(set(assignments0.values())), num_rows0)

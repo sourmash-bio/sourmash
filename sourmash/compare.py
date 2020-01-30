@@ -4,7 +4,6 @@ import itertools
 from functools import partial
 import time
 import multiprocessing
-import numpy as np
 
 from .logging import notify
 from sourmash.np_utils import to_memmap
@@ -20,11 +19,12 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :return: np.array similarity matrix
     """
+    import numpy as np
 
     n = len(siglist)
 
@@ -39,40 +39,13 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
     return similarities
 
 
-def similarity(sig1, sig2, ignore_abundance, downsample):
-    """Compute similarity with the other MinHash signature.
-    This function is separated from the SourmashSignature to
-    avoid pickling the whole class during the pool map
-
-    :param sig1 first signature
-    :param sig2 other signature to compare with
-    :param boolean ignore_abundance
-        If the sketches are not abundance weighted, or ignore_abundance=True,
-        compute Jaccard similarity.
-
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
-    :param boolean downsample by max_hash if True
-    :return: float similarity of the two signatures
-    """
-
-    try:
-        sig = sig1.minhash.similarity(sig2.minhash, ignore_abundance)
-        return sig
-    except ValueError as e:
-        if 'mismatch in max_hash' in str(e) and downsample:
-            xx = sig1.minhash.downsample_max_hash(sig2.minhash)
-            yy = sig2.minhash.downsample_max_hash(sig1.minhash)
-            sig = similarity(xx, yy, ignore_abundance, False)
-            return sig
-        else:
-            raise
-
-
 def similarity_args_unpack(args, ignore_abundance, downsample):
-    """Helper function to unpack the arguments. Written to use in pool.imap as it
-    can only be given one argument."""
-    return similarity(*args, ignore_abundance=ignore_abundance, downsample=downsample)
+    """Helper function to unpack the arguments. Written to use in pool.imap
+    as it can only be given one argument."""
+    sig1, sig2 = args
+    return sig1.similarity(sig2,
+                           ignore_abundance=ignore_abundance,
+                           downsample=downsample)
 
 
 def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
@@ -85,8 +58,8 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param siglist list of signatures
     :return: list of similarities for the combinations of signature at index with
@@ -116,12 +89,14 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param int n_jobs number of processes to run the similarity calculations on
     :return: np.array similarity matrix
     """
+    import numpy as np
+
     # Starting time - calculate time to keep track in case of lengthy siglist
     start_initial = time.time()
 
@@ -194,8 +169,8 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
         If the sketches are not abundance weighted, or ignore_abundance=True,
         compute Jaccard similarity.
 
-        If the sketches are abundance weighted, calculate a distance metric
-        based on the cosine similarity.
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
     :param boolean downsample by max_hash if True
     :param int n_jobs number of processes to run the similarity calculations on,
     if number of jobs is None or 1, compare serially, otherwise parallely.

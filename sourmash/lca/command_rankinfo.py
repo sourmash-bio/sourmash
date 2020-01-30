@@ -6,12 +6,11 @@ from __future__ import print_function
 import sys
 from collections import defaultdict
 
-from ..logging import error, debug, set_quiet
+from ..logging import error, debug, set_quiet, notify
 from . import lca_utils
-from ..sourmash_args import SourmashArgumentParser
 
 
-def make_lca_counts(dblist):
+def make_lca_counts(dblist, min_num=0):
     """
     Collect counts of all the LCAs in the list of databases.
 
@@ -22,10 +21,14 @@ def make_lca_counts(dblist):
     assignments = defaultdict(set)
     for lca_db in dblist:
         for hashval, idx_list in lca_db.hashval_to_idx.items():
+            if min_num and len(idx_list) < min_num:
+                continue
+
             for idx in idx_list:
-                lid = lca_db.idx_to_lid[idx]
-                lineage = lca_db.lid_to_lineage[lid]
-                assignments[hashval].add(lineage)
+                lid = lca_db.idx_to_lid.get(idx)
+                if lid is not None:
+                    lineage = lca_db.lid_to_lineage[lid]
+                    assignments[hashval].add(lineage)
 
     # now convert to trees -> do LCA & counts
     counts = defaultdict(int)
@@ -48,15 +51,6 @@ def rankinfo_main(args):
     """
     rankinfo!
     """
-    p = SourmashArgumentParser(prog="sourmash lca rankinfo")
-    p.add_argument('db', nargs='+')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    args = p.parse_args(args)
-
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
@@ -70,7 +64,7 @@ def rankinfo_main(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
 
     # count all the LCAs across these databases
-    counts = make_lca_counts(dblist)
+    counts = make_lca_counts(dblist, args.minimum_num)
 
     # collect counts across all ranks
     counts_by_rank = defaultdict(int)
@@ -81,9 +75,12 @@ def rankinfo_main(args):
 
     # output!
     total = float(sum(counts_by_rank.values()))
-    for rank in lca_utils.taxlist():
-        count = counts_by_rank.get(rank, 0)
-        print('{}: {} ({:.1f}%)'.format(rank, count, count / total * 100.))
+    if total == 0:
+        notify("(no hashvals with lineages found)")
+    else:
+        for rank in lca_utils.taxlist():
+            count = counts_by_rank.get(rank, 0)
+            print('{}: {} ({:.1f}%)'.format(rank, count, count / total * 100.))
 
 
 if __name__ == '__main__':

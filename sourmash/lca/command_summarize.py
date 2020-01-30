@@ -4,7 +4,6 @@ Summarize the taxonomic content of the given signatures, combined.
 """
 from __future__ import print_function
 import sys
-import argparse
 import csv
 from collections import defaultdict
 
@@ -12,7 +11,6 @@ from .. import sourmash_args, load_signatures
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
-from ..sourmash_args import SourmashArgumentParser
 
 
 DEFAULT_THRESHOLD=5
@@ -60,21 +58,6 @@ def summarize_main(args):
     """
     main summarization function.
     """
-    p = SourmashArgumentParser(prog="sourmash lca summarize")
-    p.add_argument('--db', nargs='+', action='append')
-    p.add_argument('--query', nargs='+', action='append')
-    p.add_argument('--threshold', type=int, default=DEFAULT_THRESHOLD)
-    p.add_argument('--traverse-directory', action='store_true',
-                        help='load all signatures underneath directories.')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='CSV output')
-    p.add_argument('--scaled', type=float)
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    args = p.parse_args(args)
-
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
@@ -148,14 +131,15 @@ def summarize_main(args):
 
     # CSV:
     if args.output:
-        w = csv.writer(args.output)
-        headers = ['count'] + list(lca_utils.taxlist())
-        w.writerow(headers)
+        with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
+            w = csv.writer(csv_fp)
+            headers = ['count'] + list(lca_utils.taxlist())
+            w.writerow(headers)
 
-        for (lineage, count) in lineage_counts.items():
-            debug('lineage:', lineage)
-            row = [count] + lca_utils.zip_lineage(lineage)
-            w.writerow(row)
+            for (lineage, count) in lineage_counts.items():
+                debug('lineage:', lineage)
+                row = [count] + lca_utils.zip_lineage(lineage)
+                w.writerow(row)
 
 
 if __name__ == '__main__':

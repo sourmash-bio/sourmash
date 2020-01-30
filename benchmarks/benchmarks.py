@@ -19,6 +19,7 @@ def load_sequences():
 class TimeMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=False)
+        self.protein_mh = MinHash(500, 21, is_protein=True, track_abundance=False)
         self.sequences = load_sequences()
 
         self.populated_mh = MinHash(500, 21, track_abundance=False)
@@ -31,6 +32,12 @@ class TimeMinHashSuite:
         for seq in sequences:
             mh.add_sequence(seq)
 
+    def time_add_protein(self):
+        mh = self.protein_mh
+        sequences = self.sequences
+        for seq in sequences:
+            mh.add_protein(seq)
+
     def time_get_mins(self):
         mh = self.populated_mh
         for i in range(500):
@@ -40,6 +47,10 @@ class TimeMinHashSuite:
         mh = self.mh
         for i in range(10000):
             mh.add_hash(i)
+
+    def time_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
 
     def time_compare(self):
         mh = self.mh
@@ -70,12 +81,11 @@ class TimeMinHashSuite:
         for i in range(500):
             mh += other_mh
 
-    # TODO: add_protein
-
 
 class PeakmemMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=True)
+        self.protein_mh = MinHash(500, 21, is_protein=True, track_abundance=True)
         self.sequences = load_sequences()
 
     def peakmem_add_sequence(self):
@@ -83,6 +93,21 @@ class PeakmemMinHashSuite:
         sequences = self.sequences
         for seq in sequences:
             mh.add_sequence(seq)
+
+    def peakmem_add_protein(self):
+        mh = self.protein_mh
+        sequences = self.sequences
+        for seq in sequences:
+            mh.add_protein(seq)
+
+    def peakmem_add_hash(self):
+        mh = self.mh
+        for i in range(10000):
+            mh.add_hash(i)
+
+    def peakmem_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
 
 
 ####################
