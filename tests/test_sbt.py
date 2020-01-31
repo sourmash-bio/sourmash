@@ -114,8 +114,20 @@ def test_localized_add_node(n_children, track_abundance):
     root.add_node(leaf2)
     root.add_node(leaf3)
     root.add_node(leaf4)
-
     
+    # create mapping from leaf name to node pos
+    leaf_nodes = {
+        sig.name: n
+        for n, sig in
+        root._leaves.items()
+    }
+    
+    # verify most similar leaves are sharing same parent node
+    assert root.parent(leaf_nodes["a"]) == root.parent(leaf_nodes["b"])
+    assert root.parent(leaf_nodes["c"]) == root.parent(leaf_nodes["d"])    
+
+    raise ValueError
+            
 
 
 def test_longer_search(n_children):
