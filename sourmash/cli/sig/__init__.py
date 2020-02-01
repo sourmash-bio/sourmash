@@ -23,7 +23,7 @@ import sys
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('sig', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS, aliases=['signature'])
+    subparser = subparsers.add_parser('sig', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
     desc = 'Operations\n'
     clidir = os.path.dirname(__file__)
     ops = command_list(clidir)
