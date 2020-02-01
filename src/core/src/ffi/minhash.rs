@@ -555,7 +555,7 @@ unsafe fn kmerminhash_jaccard(ptr: *mut KmerMinHash, other: *const KmerMinHash)
 
 ffi_fn! {
 unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
-                                 -> Result<f64> {
+    -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
