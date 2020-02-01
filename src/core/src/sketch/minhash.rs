@@ -526,7 +526,7 @@ impl KmerMinHash {
     }
 
     // compare two minhashes, ignoring abundance.
-    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
+    pub fn jaccard(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
             let cmp = self.max_hash < other.max_hash;
             let a = if cmp { self } else { other };
@@ -543,10 +543,13 @@ impl KmerMinHash {
             }
         }
     }
+    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
+        self.jaccard(&other, downsample)
+    }
 
     // compare two minhashes, with abundance;
     // calculate their angular similarity.
-    pub fn similarity(
+    pub fn angular_similarity(
         &self,
         other: &KmerMinHash,
         ignore_abundance: bool,
@@ -612,6 +615,14 @@ impl KmerMinHash {
                 Ok(1. - distance)
             }
         }
+    }
+    pub fn similarity(
+        &self,
+        other: &KmerMinHash,
+        ignore_abundance: bool,
+        downsample: bool,
+    ) -> Result<f64, Error> {
+        self.angular_similarity(&other, ignore_abundance, downsample)
     }
 
     pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {

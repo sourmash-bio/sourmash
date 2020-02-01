@@ -524,6 +524,12 @@ unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *
 ffi_fn! {
 unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
     -> Result<f64> {
+    Ok(kmerminhash_jaccard(ptr, other, downsample))
+}
+}
+ffi_fn! {
+unsafe fn kmerminhash_jaccard(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
+    -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -539,7 +545,13 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, 
 
 ffi_fn! {
 unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
-    -> Result<f64> {
+                                 -> Result<f64> {
+    Ok(kmerminhash_angular_similarity(ptr, other, ignore_abundance, downsample))
+}
+}
+ffi_fn! {
+unsafe fn kmerminhash_angular_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
+                                         -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -549,6 +561,6 @@ unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHas
        &*other
     };
 
-    mh.similarity(other_mh, ignore_abundance, downsample)
+    mh.angular_similarity(other_mh, ignore_abundance, downsample)
 }
 }

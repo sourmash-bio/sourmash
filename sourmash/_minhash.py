@@ -381,13 +381,13 @@ class MinHash(RustObject):
 
         return common, max(size, 1)
 
-    def compare(self, other, downsample=False):
+    def jaccard(self, other, downsample=False):
         "Compare two sketches, w/o abundance; calculates Jaccard similarity."
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
-        return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
-    jaccard = compare
+        return self._methodcall(lib.kmerminhash_jaccard, other._get_objptr(), downsample)
+    compare = jaccard
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
@@ -407,9 +407,9 @@ class MinHash(RustObject):
         # if either signature is flat, calculate Jaccard only.
         both_track_abundance = self.track_abundance and other.track_abundance
         if not both_track_abundance or ignore_abundance:
-            return self.compare(other, downsample)
+            return self.jaccard(other, downsample)
         else:
-            return self._methodcall(lib.kmerminhash_similarity,
+            return self._methodcall(lib.kmerminhash_angular_similarity,
                                     other._get_objptr(),
                                     ignore_abundance, downsample)
 
