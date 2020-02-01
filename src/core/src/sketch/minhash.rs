@@ -610,12 +610,10 @@ impl KmerMinHash {
 
             let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
             a.similarity(&downsampled_mh, ignore_abundance, false)
+        } else if ignore_abundance {
+            self.jaccard(&other)
         } else {
-            if ignore_abundance {
-                self.jaccard(&other)
-            } else {
-                self.angular_similarity(&other)
-            }
+            self.angular_similarity(&other)
         }
     }
 
