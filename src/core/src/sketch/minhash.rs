@@ -525,8 +525,17 @@ impl KmerMinHash {
         Ok((it2.count() as u64, combined_mh.mins.len() as u64))
     }
 
+    // calculate Jaccard similarity, ignoring abundance.
+    pub fn jaccard(&self, other: &KmerMinHash) -> Result<f64, Error> {
+        self.check_compatible(other)?;
+        if let Ok((common, size)) = self.intersection_size(other) {
+            Ok(common as f64 / u64::max(1, size) as f64)
+        } else {
+            Ok(0.0)
+        }
+    }
     // compare two minhashes, ignoring abundance.
-    pub fn jaccard(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
+    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
             let cmp = self.max_hash < other.max_hash;
             let a = if cmp { self } else { other };
@@ -535,21 +544,59 @@ impl KmerMinHash {
             let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
             a.compare(&downsampled_mh, false)
         } else {
-            self.check_compatible(other)?;
-            if let Ok((common, size)) = self.intersection_size(other) {
-                Ok(common as f64 / u64::max(1, size) as f64)
-            } else {
-                Ok(0.0)
-            }
+            self.jaccard(&other)
         }
-    }
-    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
-        self.jaccard(&other, downsample)
     }
 
     // compare two minhashes, with abundance;
     // calculate their angular similarity.
-    pub fn angular_similarity(
+    pub fn angular_similarity(&self, other: &KmerMinHash)
+                              -> Result<f64, Error> {
+        self.check_compatible(other)?;
+
+        if self.abunds.is_none() || other.abunds.is_none() {
+            // TODO: throw error, we need abundance for this
+            unimplemented!()
+        }
+
+        let abunds = self.abunds.as_ref().unwrap();
+        let other_abunds = other.abunds.as_ref().unwrap();
+
+        let mut prod = 0;
+        let mut other_iter = other.mins.iter().enumerate();
+        let mut next_hash = other_iter.next();
+        let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
+        let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+
+        for (i, hash) in self.mins.iter().enumerate() {
+            while let Some((j, k)) = next_hash {
+                match k.cmp(hash) {
+                    Ordering::Less => next_hash = other_iter.next(),
+                    Ordering::Equal => {
+                        // Calling `get_unchecked` here is safe since
+                        // both `i` and `j` are valid indices
+                        // (`i` and `j` came from valid iterator calls)
+                        unsafe {
+                            prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
+                        }
+                        break;
+                    }
+                    Ordering::Greater => break,
+                }
+            }
+        }
+
+        let norm_a = (a_sq as f64).sqrt();
+        let norm_b = (b_sq as f64).sqrt();
+
+        if norm_a == 0. || norm_b == 0. {
+            return Ok(0.0);
+        }
+        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+        let distance = 2. * prod.acos() / PI;
+        Ok(1. - distance)
+    }
+    pub fn similarity(
         &self,
         other: &KmerMinHash,
         ignore_abundance: bool,
@@ -563,66 +610,12 @@ impl KmerMinHash {
             let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
             a.similarity(&downsampled_mh, ignore_abundance, false)
         } else {
-            self.check_compatible(other)?;
-
             if ignore_abundance {
-                if let Ok((common, size)) = self.intersection_size(other) {
-                    Ok(common as f64 / u64::max(1, size) as f64)
-                } else {
-                    Ok(0.0)
-                }
+                self.jaccard(&other)
             } else {
-                if self.abunds.is_none() || other.abunds.is_none() {
-                    // TODO: throw error, we need abundance for this
-                    unimplemented!()
-                }
-
-                let abunds = self.abunds.as_ref().unwrap();
-                let other_abunds = other.abunds.as_ref().unwrap();
-
-                let mut prod = 0;
-                let mut other_iter = other.mins.iter().enumerate();
-                let mut next_hash = other_iter.next();
-                let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
-                let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
-
-                for (i, hash) in self.mins.iter().enumerate() {
-                    while let Some((j, k)) = next_hash {
-                        match k.cmp(hash) {
-                            Ordering::Less => next_hash = other_iter.next(),
-                            Ordering::Equal => {
-                                // Calling `get_unchecked` here is safe since
-                                // both `i` and `j` are valid indices
-                                // (`i` and `j` came from valid iterator calls)
-                                unsafe {
-                                    prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
-                                }
-                                break;
-                            }
-                            Ordering::Greater => break,
-                        }
-                    }
-                }
-
-                let norm_a = (a_sq as f64).sqrt();
-                let norm_b = (b_sq as f64).sqrt();
-
-                if norm_a == 0. || norm_b == 0. {
-                    return Ok(0.0);
-                }
-                let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
-                let distance = 2. * prod.acos() / PI;
-                Ok(1. - distance)
+                self.angular_similarity(&other)
             }
         }
-    }
-    pub fn similarity(
-        &self,
-        other: &KmerMinHash,
-        ignore_abundance: bool,
-        downsample: bool,
-    ) -> Result<f64, Error> {
-        self.angular_similarity(&other, ignore_abundance, downsample)
     }
 
     pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
