@@ -34,6 +34,7 @@ from . import watch
 # Subcommand groups
 from . import lca
 from . import sig
+from . import sig as signature            # to support alias in sig/__init__.py
 from . import storage
 
 
