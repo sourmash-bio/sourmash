@@ -552,8 +552,7 @@ impl KmerMinHash {
 
     // compare two minhashes, with abundance;
     // calculate their angular similarity.
-    pub fn angular_similarity(&self, other: &KmerMinHash)
-                              -> Result<f64, Error> {
+    pub fn angular_similarity(&self, other: &KmerMinHash) -> Result<f64, Error> {
         self.check_compatible(other)?;
 
         if self.abunds.is_none() || other.abunds.is_none() {
