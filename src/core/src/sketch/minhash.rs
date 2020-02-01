@@ -535,6 +535,8 @@ impl KmerMinHash {
         }
     }
     // compare two minhashes, ignoring abundance.
+    // CTB: this is unused by ffi now.
+    // CTB: this can be replaced by a call to similarity(..., ignore_abundance=True)
     pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
             let cmp = self.max_hash < other.max_hash;

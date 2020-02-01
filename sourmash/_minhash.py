@@ -387,7 +387,7 @@ class MinHash(RustObject):
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
-    jaccard = compare                     # @CTB we should deprecate this?
+    jaccard = compare                     # @CTB should we deprecate this?
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.

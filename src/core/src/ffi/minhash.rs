@@ -533,7 +533,8 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, 
        &*other
     };
 
-    mh.compare(other_mh, downsample)
+    // call similarity directly, with ignore_abundance=True
+    mh.similarity(other_mh, true, downsample)
 }
 }
 ffi_fn! {
