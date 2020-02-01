@@ -16,12 +16,37 @@ import sourmash
 
 def test_run_sourmash_signature_cmd():
     status, out, err = utils.runscript('sourmash', ['signature'], fail_ok=True)
+    assert not 'sourmash: error: argument cmd: invalid choice:' in err
+    assert 'Manipulate signature files:' in out
     assert status != 0                    # no args provided, ok ;)
 
 
 def test_run_sourmash_sig_cmd():
     status, out, err = utils.runscript('sourmash', ['sig'], fail_ok=True)
+    assert not 'sourmash: error: argument cmd: invalid choice:' in err
+    assert 'Manipulate signature files:' in out
     assert status != 0                    # no args provided, ok ;)
+
+
+@utils.in_tempdir
+def test_sig_merge_1_use_full_signature_in_cmd(c):
+    # merge of 47 & 63 should be union of mins
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig47and63 = utils.get_test_data('47+63.fa.sig')
+    c.run_sourmash('signature', 'merge', sig47, sig63)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
 
 
 @utils.in_tempdir
