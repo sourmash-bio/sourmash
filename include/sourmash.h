@@ -8,15 +8,25 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum HashFunctions {
+enum HashFunctions
+#ifdef __cplusplus
+  : uint32_t
+#endif // __cplusplus
+ {
   HASH_FUNCTIONS_MURMUR64_DNA = 1,
   HASH_FUNCTIONS_MURMUR64_PROTEIN = 2,
   HASH_FUNCTIONS_MURMUR64_DAYHOFF = 3,
   HASH_FUNCTIONS_MURMUR64_HP = 4,
 };
+#ifndef __cplusplus
 typedef uint32_t HashFunctions;
+#endif // __cplusplus
 
-enum SourmashErrorCode {
+enum SourmashErrorCode
+#ifdef __cplusplus
+  : uint32_t
+#endif // __cplusplus
+ {
   SOURMASH_ERROR_CODE_NO_ERROR = 0,
   SOURMASH_ERROR_CODE_PANIC = 1,
   SOURMASH_ERROR_CODE_INTERNAL = 2,
@@ -38,7 +48,9 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
   SOURMASH_ERROR_CODE_SERDE_ERROR = 100004,
 };
+#ifndef __cplusplus
 typedef uint32_t SourmashErrorCode;
+#endif // __cplusplus
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
 
@@ -65,6 +77,10 @@ typedef struct {
    */
   bool owned;
 } SourmashStr;
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -348,5 +364,9 @@ void sourmash_str_free(SourmashStr *s);
 SourmashStr sourmash_str_from_cstr(const char *s);
 
 char sourmash_translate_codon(const char *codon);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif // __cplusplus
 
 #endif /* SOURMASH_H_INCLUDED */
