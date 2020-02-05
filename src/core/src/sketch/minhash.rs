@@ -535,23 +535,6 @@ impl KmerMinHash {
             Ok(0.0)
         }
     }
-    // compare two minhashes, ignoring abundance.
-    // CTB: this is unused by ffi now.
-    // CTB: this can be replaced by a call to similarity(..., ignore_abundance=True)
-    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            let (first, second) = if self.max_hash < other.max_hash {
-                (self, other)
-            } else {
-                (other, self)
-            };
-
-            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
-            first.compare(&downsampled_mh, false)
-        } else {
-            self.jaccard(&other)
-        }
-    }
 
     // compare two minhashes, with abundance;
     // calculate their angular similarity.
@@ -600,6 +583,7 @@ impl KmerMinHash {
         let distance = 2. * prod.acos() / PI;
         Ok(1. - distance)
     }
+
     pub fn similarity(
         &self,
         other: &KmerMinHash,
