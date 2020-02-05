@@ -533,7 +533,23 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, 
        &*other
     };
 
-    mh.compare(other_mh, downsample)
+    // call similarity directly, with ignore_abundance=True
+    mh.similarity(other_mh, true, downsample)
+}
+}
+ffi_fn! {
+unsafe fn kmerminhash_jaccard(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+    -> Result<f64> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let other_mh = {
+       assert!(!other.is_null());
+       &*other
+    };
+
+    mh.jaccard(other_mh)
 }
 }
 
@@ -550,5 +566,20 @@ unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHas
     };
 
     mh.similarity(other_mh, ignore_abundance, downsample)
+}
+}
+ffi_fn! {
+unsafe fn kmerminhash_angular_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+                                         -> Result<f64> {
+    let mh = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let other_mh = {
+       assert!(!other.is_null());
+       &*other
+    };
+
+    mh.angular_similarity(other_mh)
 }
 }

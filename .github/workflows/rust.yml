@@ -161,7 +161,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack
+          args: --force wasm-pack --version 0.8.1
       - name: run wasm-pack
         run: wasm-pack build src/core -d ../../pkg
 

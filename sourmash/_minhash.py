@@ -387,7 +387,7 @@ class MinHash(RustObject):
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
-    jaccard = compare
+    jaccard = compare                     # @CTB should we deprecate this?
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
@@ -407,7 +407,7 @@ class MinHash(RustObject):
         # if either signature is flat, calculate Jaccard only.
         both_track_abundance = self.track_abundance and other.track_abundance
         if not both_track_abundance or ignore_abundance:
-            return self.compare(other, downsample)
+            return self.jaccard(other, downsample)
         else:
             return self._methodcall(lib.kmerminhash_similarity,
                                     other._get_objptr(),

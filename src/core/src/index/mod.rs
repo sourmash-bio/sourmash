@@ -247,7 +247,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.compare(&omh, false).unwrap();
+                return mh.similarity(&omh, true, false).unwrap();
             }
         }
 
@@ -285,7 +285,7 @@ impl Comparable<Signature> for Signature {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
-                return mh.compare(&omh, false).unwrap();
+                return mh.similarity(&omh, true, false).unwrap();
             }
         }
 

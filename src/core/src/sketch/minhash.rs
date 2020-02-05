@@ -460,30 +460,13 @@ impl KmerMinHash {
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
         if downsample && self.max_hash != other.max_hash {
-            if self.max_hash < other.max_hash {
-                let mut new_mh = KmerMinHash::new(
-                    other.num,
-                    other.ksize,
-                    other.hash_function,
-                    other.seed,
-                    self.max_hash,
-                    other.abunds.is_some(),
-                );
-                new_mh.add_many(&other.mins)?;
-                self.count_common(&new_mh, false)
+            let (first, second) = if self.max_hash < other.max_hash {
+                (self, other)
             } else {
-                // other.max_hash < self.max_hash
-                let mut new_mh = KmerMinHash::new(
-                    self.num,
-                    self.ksize,
-                    self.hash_function,
-                    self.seed,
-                    other.max_hash,
-                    self.abunds.is_some(),
-                );
-                new_mh.add_many(&self.mins)?;
-                new_mh.count_common(other, false)
-            }
+                (other, self)
+            };
+            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
             let iter = Intersection::new(self.mins.iter(), other.mins.iter());
@@ -543,45 +526,64 @@ impl KmerMinHash {
         Ok((it2.count() as u64, combined_mh.mins.len() as u64))
     }
 
-    // compare two minhashes, ignoring abundance.
-    pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
-        if downsample && self.max_hash != other.max_hash {
-            if self.max_hash < other.max_hash {
-                let mut new_mh = KmerMinHash::new(
-                    other.num,
-                    other.ksize,
-                    other.hash_function,
-                    other.seed,
-                    self.max_hash,
-                    other.abunds.is_some(),
-                );
-                new_mh.add_many(&other.mins)?;
-                self.compare(&new_mh, false)
-            } else {
-                // other.max_hash < self.max_hash
-                let mut new_mh = KmerMinHash::new(
-                    self.num,
-                    self.ksize,
-                    self.hash_function,
-                    self.seed,
-                    other.max_hash,
-                    self.abunds.is_some(),
-                );
-                new_mh.add_many(&self.mins)?;
-                new_mh.compare(other, false)
-            }
+    // calculate Jaccard similarity, ignoring abundance.
+    pub fn jaccard(&self, other: &KmerMinHash) -> Result<f64, Error> {
+        self.check_compatible(other)?;
+        if let Ok((common, size)) = self.intersection_size(other) {
+            Ok(common as f64 / u64::max(1, size) as f64)
         } else {
-            self.check_compatible(other)?;
-            if let Ok((common, size)) = self.intersection_size(other) {
-                Ok(common as f64 / u64::max(1, size) as f64)
-            } else {
-                Ok(0.0)
-            }
+            Ok(0.0)
         }
     }
 
     // compare two minhashes, with abundance;
     // calculate their angular similarity.
+    pub fn angular_similarity(&self, other: &KmerMinHash) -> Result<f64, Error> {
+        self.check_compatible(other)?;
+
+        if self.abunds.is_none() || other.abunds.is_none() {
+            // TODO: throw error, we need abundance for this
+            unimplemented!()
+        }
+
+        let abunds = self.abunds.as_ref().unwrap();
+        let other_abunds = other.abunds.as_ref().unwrap();
+
+        let mut prod = 0;
+        let mut other_iter = other.mins.iter().enumerate();
+        let mut next_hash = other_iter.next();
+        let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
+        let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+
+        for (i, hash) in self.mins.iter().enumerate() {
+            while let Some((j, k)) = next_hash {
+                match k.cmp(hash) {
+                    Ordering::Less => next_hash = other_iter.next(),
+                    Ordering::Equal => {
+                        // Calling `get_unchecked` here is safe since
+                        // both `i` and `j` are valid indices
+                        // (`i` and `j` came from valid iterator calls)
+                        unsafe {
+                            prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
+                        }
+                        break;
+                    }
+                    Ordering::Greater => break,
+                }
+            }
+        }
+
+        let norm_a = (a_sq as f64).sqrt();
+        let norm_b = (b_sq as f64).sqrt();
+
+        if norm_a == 0. || norm_b == 0. {
+            return Ok(0.0);
+        }
+        let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
+        let distance = 2. * prod.acos() / PI;
+        Ok(1. - distance)
+    }
+
     pub fn similarity(
         &self,
         other: &KmerMinHash,
@@ -589,82 +591,17 @@ impl KmerMinHash {
         downsample: bool,
     ) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
-            if self.max_hash < other.max_hash {
-                let mut new_mh = KmerMinHash::new(
-                    other.num,
-                    other.ksize,
-                    other.hash_function,
-                    other.seed,
-                    self.max_hash,
-                    other.abunds.is_some(),
-                );
-                new_mh.add_many_with_abund(&other.to_vec_abunds())?;
-                self.similarity(&new_mh, ignore_abundance, false)
+            let (first, second) = if self.max_hash < other.max_hash {
+                (self, other)
             } else {
-                // other.max_hash < self.max_hash
-                let mut new_mh = KmerMinHash::new(
-                    self.num,
-                    self.ksize,
-                    self.hash_function,
-                    self.seed,
-                    other.max_hash,
-                    self.abunds.is_some(),
-                );
-                new_mh.add_many_with_abund(&self.to_vec_abunds())?;
-                new_mh.similarity(other, ignore_abundance, false)
-            }
+                (other, self)
+            };
+            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.similarity(&downsampled_mh, ignore_abundance, false)
+        } else if ignore_abundance {
+            self.jaccard(&other)
         } else {
-            self.check_compatible(other)?;
-
-            if ignore_abundance {
-                if let Ok((common, size)) = self.intersection_size(other) {
-                    Ok(common as f64 / u64::max(1, size) as f64)
-                } else {
-                    Ok(0.0)
-                }
-            } else {
-                if self.abunds.is_none() || other.abunds.is_none() {
-                    // TODO: throw error, we need abundance for this
-                    unimplemented!()
-                }
-
-                let abunds = self.abunds.as_ref().unwrap();
-                let other_abunds = other.abunds.as_ref().unwrap();
-
-                let mut prod = 0;
-                let mut other_iter = other.mins.iter().enumerate();
-                let mut next_hash = other_iter.next();
-                let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
-                let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
-
-                for (i, hash) in self.mins.iter().enumerate() {
-                    while let Some((j, k)) = next_hash {
-                        match k.cmp(hash) {
-                            Ordering::Less => next_hash = other_iter.next(),
-                            Ordering::Equal => {
-                                // Calling `get_unchecked` here is safe since
-                                // both `i` and `j` are valid indices
-                                // (`i` and `j` came from valid iterator calls)
-                                unsafe {
-                                    prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
-                                }
-                                break;
-                            }
-                            Ordering::Greater => break,
-                        }
-                    }
-                }
-
-                let norm_a = (a_sq as f64).sqrt();
-                let norm_b = (b_sq as f64).sqrt();
-
-                if norm_a == 0. || norm_b == 0. {
-                    return Ok(0.0);
-                }
-                let prod = f64::min(prod as f64 / (norm_a * norm_b), 1.);
-                let distance = 2. * prod.acos() / PI;
-                Ok(1. - distance)
-            }
+            self.angular_similarity(&other)
         }
     }
 
@@ -688,6 +625,24 @@ impl KmerMinHash {
 
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
+    }
+
+    // create a downsampled copy of self
+    fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
+        let mut new_mh = KmerMinHash::new(
+            self.num,
+            self.ksize,
+            self.hash_function,
+            self.seed,
+            max_hash, // old max_hash => max_hash arg
+            self.abunds.is_some(),
+        );
+        if self.abunds.is_some() {
+            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+        } else {
+            new_mh.add_many(&self.mins)?;
+        }
+        Ok(new_mh)
     }
 
     fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
