@@ -2083,6 +2083,34 @@ def test_do_sourmash_check_search_vs_actual_similarity():
         assert status == 0
 
 
+def test_do_sourmash_check_sbt_filenames():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sig_names = set()
+        sig_md5s = set()
+        for f in files:
+            sig = signature.load_one_signature(f)
+            sig_names.add(sig.name())
+            sig_md5s.add(sig.md5sum())
+
+        sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
+        assert len(sbt_files) == 13
+
+        for f in sbt_files:
+            if 'internal' in f:
+                continue
+            f = os.path.basename(f)
+            assert f not in sig_names
+            assert f in sig_md5s
+
+
 def test_do_sourmash_sbt_search_bestonly():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
