@@ -27,6 +27,10 @@ def subparser(subparsers):
         help='compare all signatures underneath directories'
     )
     subparser.add_argument(
+        '-f', '--force', action='store_true',
+        help='continue past errors in file loading'
+    )
+    subparser.add_argument(
         '--csv', metavar='F',
         help='write matrix to specified file in CSV format (with column '
         'headers)'
