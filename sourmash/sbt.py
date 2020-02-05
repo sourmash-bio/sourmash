@@ -169,7 +169,7 @@ class SBT(Index):
         "Add a new SourmashSignature in to the SBT."
         from .sbtmh import SigLeaf
         
-        leaf = SigLeaf(signature.name(), signature)
+        leaf = SigLeaf(signature.md5sum(), signature)
         self.add_node(leaf)
 
     def add_node(self, node):

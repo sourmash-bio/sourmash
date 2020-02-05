@@ -771,6 +771,35 @@ def test_gather_csv_output_filename_bug(c):
         assert row['filename'] == lca_db_1
 
 
+@utils.in_tempdir
+def test_compare_no_such_file(c):
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('compare', 'nosuchfile.sig')
+
+    assert "file 'nosuchfile.sig' does not exist! exiting." in c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_no_such_file_force(c):
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('compare', 'nosuchfile.sig', '-f')
+
+    print(c.last_result.err)
+    assert "no signatures found! exiting." in c.last_result.err
+
+
+def test_compare_no_matching_sigs():
+    query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    status, out, err = utils.runscript('sourmash', ['compare', '-k', '100',
+                                        query], fail_ok=True)
+
+    print(out)
+    print(err)
+    assert status
+    assert 'warning: no signatures loaded at given ksize/molecule type' in err
+    assert 'no signatures found! exiting.' in err
+
+
 def test_compare_deduce_molecule():
     # deduce DNA vs protein from query, if it is unique
     with utils.TempDirectory() as location:
@@ -2052,6 +2081,34 @@ def test_do_sourmash_check_search_vs_actual_similarity():
                                            ['search', files[0], 'zzz'],
                                            in_directory=location)
         assert status == 0
+
+
+def test_do_sourmash_check_sbt_filenames():
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', '-k', '31', 'zzz'] + files,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+
+        sig_names = set()
+        sig_md5s = set()
+        for f in files:
+            sig = signature.load_one_signature(f)
+            sig_names.add(sig.name())
+            sig_md5s.add(sig.md5sum())
+
+        sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
+        assert len(sbt_files) == 13
+
+        for f in sbt_files:
+            if 'internal' in f:
+                continue
+            f = os.path.basename(f)
+            assert f not in sig_names
+            assert f in sig_md5s
 
 
 def test_do_sourmash_sbt_search_bestonly():
