@@ -39,29 +39,6 @@ fn merge() {
 }
 
 #[test]
-fn compare() {
-    let mut a = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
-    let mut b = KmerMinHash::new(20, 10, HashFunctions::murmur64_DNA, 42, 0, false);
-
-    a.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
-        .unwrap();
-    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
-        .unwrap();
-    assert_eq!(a.compare(&b, false).unwrap(), 1.0);
-    assert_eq!(b.compare(&a, false).unwrap(), 1.0);
-
-    b.add_sequence(b"TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA", false)
-        .unwrap();
-    assert_eq!(a.compare(&b, false).unwrap(), 1.0);
-    assert_eq!(b.compare(&a, false).unwrap(), 1.0);
-
-    b.add_sequence(b"GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT", false)
-        .unwrap();
-    assert!(a.compare(&b, false).unwrap() >= 0.3);
-    assert!(b.compare(&a, false).unwrap() >= 0.3);
-}
-
-#[test]
 fn invalid_dna() {
     let mut a = KmerMinHash::new(20, 3, HashFunctions::murmur64_DNA, 42, 0, false);
 
