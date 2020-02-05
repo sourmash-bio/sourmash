@@ -460,12 +460,13 @@ impl KmerMinHash {
 
     pub fn count_common(&self, other: &KmerMinHash, downsample: bool) -> Result<u64, Error> {
         if downsample && self.max_hash != other.max_hash {
-            let cmp = self.max_hash < other.max_hash;
-            let a = if cmp { self } else { other };
-            let b = if cmp { other } else { self };
-
-            let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
-            a.count_common(&downsampled_mh, false)
+            let (first, second) = if self.max_hash < other.max_hash {
+                (self, other)
+            } else {
+                (other, self)
+            };
+            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
             let iter = Intersection::new(self.mins.iter(), other.mins.iter());
@@ -539,12 +540,14 @@ impl KmerMinHash {
     // CTB: this can be replaced by a call to similarity(..., ignore_abundance=True)
     pub fn compare(&self, other: &KmerMinHash, downsample: bool) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
-            let cmp = self.max_hash < other.max_hash;
-            let a = if cmp { self } else { other };
-            let b = if cmp { other } else { self };
+            let (first, second) = if self.max_hash < other.max_hash {
+                (self, other)
+            } else {
+                (other, self)
+            };
 
-            let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
-            a.compare(&downsampled_mh, false)
+            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.compare(&downsampled_mh, false)
         } else {
             self.jaccard(&other)
         }
@@ -604,12 +607,13 @@ impl KmerMinHash {
         downsample: bool,
     ) -> Result<f64, Error> {
         if downsample && self.max_hash != other.max_hash {
-            let cmp = self.max_hash < other.max_hash;
-            let a = if cmp { self } else { other };
-            let b = if cmp { other } else { self };
-
-            let downsampled_mh = b.downsample_max_hash(a.max_hash)?;
-            a.similarity(&downsampled_mh, ignore_abundance, false)
+            let (first, second) = if self.max_hash < other.max_hash {
+                (self, other)
+            } else {
+                (other, self)
+            };
+            let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
+            first.similarity(&downsampled_mh, ignore_abundance, false)
         } else if ignore_abundance {
             self.jaccard(&other)
         } else {
