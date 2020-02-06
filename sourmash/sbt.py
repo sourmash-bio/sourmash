@@ -331,7 +331,7 @@ class SBT(Index):
         results = []
         for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
             leaf_e = leaf.data.minhash
-            similarity = query.minhash.containment_ignore_maxhash(leaf_e)
+            similarity = query.minhash.contained_by(leaf_e, True)
             if similarity > 0.0:
                 results.append((similarity, leaf.data, None))
 

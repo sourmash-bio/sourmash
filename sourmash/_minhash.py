@@ -426,6 +426,10 @@ class MinHash(RustObject):
         return self.count_common(other, downsample) / len(self)
 
     def containment_ignore_maxhash(self, other):
+        """Calculate contained_by, with downsampling.
+
+        @CTB to be deprecated/removed in v4 or v5.
+        """
         return self.contained_by(other, downsample=True)
 
     def __iadd__(self, other):

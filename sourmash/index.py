@@ -88,7 +88,7 @@ class Index(ABC):
         "Return the match with the best Jaccard containment in the Index."
         results = []
         for ss in self.signatures():
-            cont = query.minhash.containment_ignore_maxhash(ss.minhash)
+            cont = query.minhash.contained_by(ss.minhash, True)
             if cont:
                 results.append((cont, ss, self.filename))
 
