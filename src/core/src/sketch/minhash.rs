@@ -270,7 +270,7 @@ impl KmerMinHash {
                 }
                 return;
             } else if hash <= self.max_hash
-                || current_max > hash
+                || current_max >= hash
                 || (self.mins.len() as u32) < self.num
             {
                 // "good" hash - within range, smaller than current entry, or
