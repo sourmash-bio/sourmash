@@ -116,8 +116,6 @@ double kmerminhash_jaccard(KmerMinHash *ptr, const KmerMinHash *other, bool down
 double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
 double kmerminhash_angular_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
 
-double kmerminhash_containment_ignore_maxhash(KmerMinHash *ptr, const KmerMinHash *other);
-
 uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
 
 bool kmerminhash_dayhoff(KmerMinHash *ptr);

@@ -506,22 +506,6 @@ unsafe fn kmerminhash_intersection(ptr: *mut KmerMinHash, other: *const KmerMinH
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *const KmerMinHash)
-    -> Result<f64> {
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    let other_mh = {
-       assert!(!other.is_null());
-       &*other
-    };
-
-    mh.containment_ignore_maxhash(&other_mh)
-}
-}
-
-ffi_fn! {
 unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
     -> Result<f64> {
     let mh = {

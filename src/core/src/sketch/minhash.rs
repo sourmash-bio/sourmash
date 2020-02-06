@@ -606,12 +606,6 @@ impl KmerMinHash {
         }
     }
 
-    pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
-        let it = Intersection::new(self.mins.iter(), other.mins.iter());
-
-        Ok(it.count() as f64 / self.size() as f64)
-    }
-
     pub fn dayhoff(&self) -> bool {
         self.hash_function == HashFunctions::murmur64_dayhoff
     }
