@@ -1138,6 +1138,14 @@ def test_reviving_minhash():
         mh.add_hash(m)
 
 
+def test_set_abundance_num():
+    a = MinHash(2, 10, track_abundance=True)
+
+    a.set_abundances({1: 3, 2: 4})
+
+    assert a.get_mins(with_abundance=True) == {1: 3, 2: 4}
+
+
 def test_mh_copy_and_clear(track_abundance):
     # test basic creation of new, empty MinHash
     a = MinHash(20, 10, track_abundance=track_abundance)
