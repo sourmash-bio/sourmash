@@ -381,13 +381,14 @@ class MinHash(RustObject):
 
         return common, max(size, 1)
 
-    def compare(self, other, downsample=False):
-        "Compare two sketches, w/o abundance; calculates Jaccard similarity."
+    def jaccard(self, other, downsample=False):
+        """Calculate Jaccard similarity of two MinHash objects."""
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
-    jaccard = compare                     # @CTB should we deprecate this?
+    compare = jaccard # this will be removed at some point @CTB
+
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
@@ -403,15 +404,14 @@ class MinHash(RustObject):
 
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
+        return self._methodcall(lib.kmerminhash_similarity,
+                                other._get_objptr(),
+                                ignore_abundance, downsample)
 
-        # if either signature is flat, calculate Jaccard only.
-        both_track_abundance = self.track_abundance and other.track_abundance
-        if not both_track_abundance or ignore_abundance:
-            return self.jaccard(other, downsample)
-        else:
-            return self._methodcall(lib.kmerminhash_similarity,
-                                    other._get_objptr(),
-                                    ignore_abundance, downsample)
+    def angular_similarity(self, other):
+        "Calculate the angular similarity."
+        return self._methodcall(lib.kmerminhash_angular_similarity,
+                                other._get_objptr())
 
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())

@@ -543,7 +543,7 @@ impl KmerMinHash {
 
         if self.abunds.is_none() || other.abunds.is_none() {
             // TODO: throw error, we need abundance for this
-            unimplemented!()
+            unimplemented!() // @CTB fixme
         }
 
         let abunds = self.abunds.as_ref().unwrap();
@@ -598,7 +598,8 @@ impl KmerMinHash {
             };
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
-        } else if ignore_abundance {
+        } else if ignore_abundance ||
+            self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(&other)
         } else {
             self.angular_similarity(&other)
