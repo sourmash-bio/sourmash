@@ -57,7 +57,6 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
-from deprecation import deprecated
 import khmer
 
 try:
