@@ -274,7 +274,14 @@ unsafe fn kmerminhash_set_abundances(
         slice::from_raw_parts(abunds_ptr as *const u64, insize)
     };
 
-    let pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
+    let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
+    pairs.sort();
+
+    // Reset the minhash
+    mh.mins.clear();
+    if let Some(ref mut abunds) = mh.abunds {
+        abunds.clear();
+    }
 
     mh.add_many_with_abund(&pairs)?;
 
