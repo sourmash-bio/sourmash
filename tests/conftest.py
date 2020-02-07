@@ -51,10 +51,9 @@ def pytest_addoption(parser):
                      help="run hypothesis tests")
 
 def pytest_runtest_setup(item):
-    hyp = any(mark for mark in item.iter_markers(name="hypothesis"))
-    if hyp:
-        if not item.config.getoption("--run-hypothesis"):
-            pytest.skip("set --run-hypothesis option to run hypothesis tests")
+    if item.config.getoption("--run-hypothesis"):
+        if not any(mark for mark in item.iter_markers(name="hypothesis")):
+            pytest.skip("--run-hypothesis option set, running only hypothesis tests")
 
 settings.register_profile("ci", max_examples=1000)
 settings.register_profile("dev", max_examples=10)
