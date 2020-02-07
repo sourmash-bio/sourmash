@@ -39,13 +39,22 @@ def pytest_collection_modifyitems(items, config):
                 deselected_items.append(item)
         config.hook.pytest_deselected(items=deselected_items)
         items[:] = selected_items
+# --- END - Only run tests using a particular fixture --- #
 
 def pytest_addoption(parser):
     parser.addoption("--usesfixture",
                      action="store",
                      default=None,
                      help="just run tests that use a particular fixture")
-# --- END - Only run tests using a particular fixture --- #
+
+    parser.addoption("--run-hypothesis", action="store_true",
+                     help="run hypothesis tests")
+
+def pytest_runtest_setup(item):
+    hyp = any(mark for mark in item.iter_markers(name="hypothesis"))
+    if hyp:
+        if not item.config.getoption("--run-hypothesis"):
+            pytest.skip("set --run-hypothesis option to run hypothesis tests")
 
 settings.register_profile("ci", max_examples=1000)
 settings.register_profile("dev", max_examples=10)

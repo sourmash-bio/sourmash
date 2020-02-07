@@ -24,4 +24,4 @@ jobs:
 
       - name: Run Hypothesis tests
         run: |
-          python -m pytest -m hypothesis --hypothesis-show-statistics --hypothesis-profile ci
+          python -m pytest --run-hypothesis --hypothesis-show-statistics --hypothesis-profile ci
