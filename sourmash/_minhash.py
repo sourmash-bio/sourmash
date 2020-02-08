@@ -72,6 +72,31 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
 
 
 class MinHash(RustObject):
+    """\
+    The core sketch object for sourmash.
+
+    MinHash objects store and provide functionality for subsampled hash values
+    from DNA, RNA, and amino acid sequences. MinHash also supports both the
+    standard MinHash behavior (bounded size or ``num``) and a non-standard
+    MinHash, called "modulo hash" behavior, or ``scaled``. Please see
+    the API examples at
+
+        https://sourmash.readthedocs.io/en/latest/api-example.html#sourmash-minhash-objects-and-manipulations
+
+    for more information.
+
+    Basic usage:
+
+    >>> from sourmash import MinHash
+    >>> mh1 = MinHash(n=20, ksize=3)
+    >>> mh1.add_sequence('ATGAGAGACGATAGACAGATGAC')
+
+    >>> mh2 = MinHash(n=20, ksize=3)
+    >>> mh2.add_sequence('ATGAGActCGATAGaCAGATGAC')
+
+    >>> round(mh1.similarity(mh2), 2)
+    0.85
+    """
     __dealloc_func__ = lib.kmerminhash_free
 
     def __init__(
@@ -87,6 +112,26 @@ class MinHash(RustObject):
         mins=None,
         scaled=0,
     ):
+        """\
+        Create a sourmash.MinHash object.
+
+        To create a standard (``num``) MinHash, use:
+           ``MinHash(<num>, <ksize>, ...)``
+
+        To create a ``scaled`` MinHash, use
+            ``MinHash(0, <ksize>, scaled=<int>, ...)``
+
+        Optional arguments:
+           * is_protein (default False) - aa k-mers
+           * dayhoff (default False) - dayhoff encoding
+           * hp (default False) - hydrophilic/hydrophobic aa
+           * track_abundance (default False) - track hash multiplicity
+           * mins (default None) - list of hashvals, or (hashval, abund) pairs
+           * seed (default 42) - murmurhash seed
+
+        Deprecated:
+           * ``max_hash=<int>``; use ``scaled`` instead.
+        """
         if max_hash and scaled:
             raise ValueError("cannot set both max_hash and scaled")
         elif scaled:
@@ -112,6 +157,7 @@ class MinHash(RustObject):
                 self.add_many(mins)
 
     def __copy__(self):
+        "Create a new copy of this MinHash."
         a = MinHash(
             self.num,
             self.ksize,
@@ -125,7 +171,8 @@ class MinHash(RustObject):
         a.merge(self)
         return a
 
-    def __getstate__(self):  # enable pickling
+    def __getstate__(self):
+        "support pickling via __getstate__/__setstate__"
         return (
             self.num,
             self.ksize,
@@ -140,7 +187,9 @@ class MinHash(RustObject):
         )
 
     def __setstate__(self, tup):
-        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance, max_hash, seed) = tup
+        "support pickling via __getstate__/__setstate__"
+        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance,
+         max_hash, seed) = tup
 
         self.__del__()
         self._objptr = lib.kmerminhash_new(
@@ -152,6 +201,7 @@ class MinHash(RustObject):
             self.add_many(mins)
 
     def __reduce__(self):
+        "alternative pickling protocol."
         return (
             MinHash,
             (
@@ -169,9 +219,11 @@ class MinHash(RustObject):
         )
 
     def __eq__(self, other):
+        "equality testing via =="
         return self.__getstate__() == other.__getstate__()
 
     def copy_and_clear(self):
+        "Create an empty copy of this MinHash."
         a = MinHash(
             self.num,
             self.ksize,
@@ -185,48 +237,64 @@ class MinHash(RustObject):
         return a
 
     def add_sequence(self, sequence, force=False):
-        self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence), force)
+        "Add a sequence into the sketch."
+        self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
+                         force)
 
     def add(self, kmer):
-        "Add kmer into sketch."
+        "Add a kmer into the sketch."
         self.add_sequence(kmer)
 
     def add_many(self, hashes):
-        "Add many hashes in at once."
+        """Add many hashes to the sketch at once.
+
+        ``hashes`` can be either an iterable (list, set, etc.), or another
+        ``MinHash`` object.
+        """
         if isinstance(hashes, MinHash):
             self._methodcall(lib.kmerminhash_add_from, hashes._objptr)
         else:
             self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Remove many hashes at once."
+        "Remove many hashes at once; ``hashes`` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def update(self, other):
-        "Update this estimator from all the hashes from the other."
+        "Update this sketch from all the hashes from the other."
         self.add_many(other)
 
     def __len__(self):
+        "Number of hashes."
         return self._methodcall(lib.kmerminhash_get_mins_size)
 
     def get_mins(self, with_abundance=False):
+        """Return list of hashes or if ``with_abundance`` a list
+        of (hash, abund).
+        """
         size = self._methodcall(lib.kmerminhash_get_mins_size)
         mins_ptr = self._methodcall(lib.kmerminhash_get_mins)
 
-        if with_abundance and self.track_abundance:
-            abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds)
-            result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
-            lib.kmerminhash_slice_free(abunds_ptr, size)
-        else:
-            result = ffi.unpack(mins_ptr, size)
+        try:
+            if with_abundance and self.track_abundance:
+                abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds)
+                result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
+                lib.kmerminhash_slice_free(abunds_ptr, size)
+            else:
+                result = ffi.unpack(mins_ptr, size)
+        finally:
+            lib.kmerminhash_slice_free(mins_ptr, size)
 
-        lib.kmerminhash_slice_free(mins_ptr, size)
         return result
 
     def get_hashes(self):
+        "Return the list of hashes."
         return self.get_mins()
 
     def subtract_mins(self, other):
+        """Get the list of mins in this MinHash, after removing the ones in
+        ``other``.
+        """
         a = set(self.get_mins())
         b = set(other.get_mins())
         return a - b
@@ -286,9 +354,11 @@ class MinHash(RustObject):
             self._methodcall(lib.kmerminhash_enable_abundance)
 
     def add_hash(self, h):
+        "Add a single hash value."
         return self._methodcall(lib.kmerminhash_add_hash, h)
 
     def translate_codon(self, codon):
+        "Translate a codon into an amino acid."
         try:
             return rustcall(lib.sourmash_translate_codon,
                             to_bytes(codon)).decode('utf-8')
@@ -296,11 +366,17 @@ class MinHash(RustObject):
             raise ValueError(e.message)
 
     def count_common(self, other, downsample=False):
+        """\
+        Return the number of hashes in common between ``self`` and ``other``.
+
+        Optionally downsample ``scaled`` objects to highest ``scaled`` value.
+        """
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
     def downsample_n(self, new_num):
+        "Copy this object and downsample new object to num=``new_num``."
         if self.num and self.num < new_num:
             raise ValueError("new sample n is higher than current sample n")
 
@@ -315,13 +391,19 @@ class MinHash(RustObject):
         return a
 
     def downsample_max_hash(self, *others):
+        """Copy this object and downsample new object to min of ``*others``.
+
+        Here, ``*others`` is one or more MinHash objects.
+        """
         max_hashes = [x.max_hash for x in others]
         new_max_hash = min(self.max_hash, *max_hashes)
         new_scaled = get_scaled_for_max_hash(new_max_hash)
 
         return self.downsample_scaled(new_scaled)
 
-    def downsample_scaled(self, new_num):
+    def downsample_scaled(self, new_scaled):
+        """Copy this object and downsample new object to scaled=``new_scaled``.
+        """
         if self.num:
             raise ValueError("num != 0 - cannot downsample a standard MinHash")
 
@@ -330,14 +412,14 @@ class MinHash(RustObject):
             raise ValueError("no max_hash available - cannot downsample")
 
         old_scaled = get_scaled_for_max_hash(self.max_hash)
-        if old_scaled > new_num:
+        if old_scaled > new_scaled:
             raise ValueError(
                 "new scaled {} is lower than current sample scaled {}".format(
-                    new_num, old_scaled
+                    new_scaled, old_scaled
                 )
             )
 
-        new_max_hash = get_max_hash_for_scaled(new_num)
+        new_max_hash = get_max_hash_for_scaled(new_scaled)
 
         a = MinHash(
             0,
@@ -357,6 +439,10 @@ class MinHash(RustObject):
         return a
 
     def intersection(self, other, in_common=False):
+        """Calculate the intersection between ``self`` and ``other``.
+
+        if ``in_common``, ... @CTB
+        """
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
 
@@ -382,7 +468,7 @@ class MinHash(RustObject):
         return common, max(size, 1)
 
     def jaccard(self, other, downsample=False):
-        """Calculate Jaccard similarity of two MinHash objects."""
+        "Calculate Jaccard similarity of two MinHash objects."
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
@@ -441,6 +527,9 @@ class MinHash(RustObject):
     merge = __iadd__
 
     def set_abundances(self, values):
+        """Set abundances for hashes from ``values``, where
+        ```values[hash] = abund``
+        """
         if self.track_abundance:
             hashes = []
             abunds = []
@@ -456,16 +545,23 @@ class MinHash(RustObject):
             )
 
     def add_protein(self, sequence):
+        "Add a protein sequence."
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
 
     def is_molecule_type(self, molecule):
+        """Check if this MinHash is a particular human-readable molecule type.
+
+        Supports 'protein', 'dayhoff', 'hp', 'DNA'.
+        """
+        if molecule.lower() not in ('protein', 'dayhoff', 'hp', 'dna'):
+            raise ValueError("unknown moltype in query, '{}'".format(molecule))
         if self.is_protein and molecule == 'protein':
             return True
         elif self.dayhoff and molecule == 'dayhoff':
             return True
         elif self.hp and molecule == 'hp':
             return True
-        elif molecule.upper() == "DNA" and self.is_dna:
+        elif molecule.lower() == "dna" and self.is_dna:
             return True
 
         return False
