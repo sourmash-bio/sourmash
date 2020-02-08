@@ -15,21 +15,21 @@ Create two MinHashes using 3-mers, and add the sequences:
 
 ```
 >>> import sourmash
->>> E1 = sourmash.MinHash(n=20, ksize=3)
->>> E1.add_sequence(seq1)
+>>> mh1 = sourmash.MinHash(n=20, ksize=3)
+>>> mh1.add_sequence(seq1)
 
 ```
 
 ```
->>> E2 = sourmash.MinHash(n=20, ksize=3)
->>> E2.add_sequence(seq2)
+>>> mh2 = sourmash.MinHash(n=20, ksize=3)
+>>> mh2.add_sequence(seq2)
 
 ```
 
 One of the 3-mers (out of 7) overlaps, so Jaccard index is 1/7:
 
 ```
->>> round(E1.jaccard(E2), 2)
+>>> round(mh1.jaccard(mh2), 2)
 0.14
 
 ```
@@ -37,7 +37,7 @@ One of the 3-mers (out of 7) overlaps, so Jaccard index is 1/7:
 and of course the MinHashes match themselves:
 
 ```
->>> E1.jaccard(E1)
+>>> mh1.jaccard(mh1)
 1.0
 
 ```
@@ -45,8 +45,8 @@ and of course the MinHashes match themselves:
 We can add sequences and query at any time --
 
 ```
->>> E1.add_sequence(seq2)
->>> x = E1.jaccard(E2)
+>>> mh1.add_sequence(seq2)
+>>> x = mh1.jaccard(mh2)
 >>> round(x, 3)
 0.571
 
@@ -79,10 +79,10 @@ raising an exception.
 >>> import screed
 >>> minhashes = []
 >>> for g in genomes:
-...     E = sourmash.MinHash(n=500, ksize=31)
+...     mh = sourmash.MinHash(n=500, ksize=31)
 ...     for record in screed.open(g):
-...         E.add_sequence(record.sequence[:50000], True)
-...     minhashes.append(E)
+...         mh.add_sequence(record.sequence[:50000], True)
+...     minhashes.append(mh)
 
 ```
 
@@ -219,7 +219,7 @@ MinHash objects with different num or scaled values (or different ksizes):
 
 ```
 >>> signum2 = sourmash.MinHash(n=1000, ksize=31)
->>> signum.similarity(signum2)
+>>> signum.jaccard(signum2)
 Traceback (most recent call last):
   ...
 TypeError: must have same num: 500 != 1000
