@@ -442,15 +442,13 @@ class MinHash(RustObject):
 
     def set_abundances(self, values):
         if self.track_abundance:
-            added = 0
+            hashes = []
+            abunds = []
+            for h, v in values.items():
+                hashes.append(h)
+                abunds.append(v)
 
-            for k, v in sorted(values.items()):
-                if not self.max_hash or k <= self.max_hash:
-                    self._methodcall(lib.kmerminhash_mins_push, k)
-                    self._methodcall(lib.kmerminhash_abunds_push, v)
-                    added += 1
-                    if self.num > 0 and added >= self.num:
-                        break
+            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes))
         else:
             raise RuntimeError(
                 "Use track_abundance=True when constructing "
