@@ -614,8 +614,7 @@ impl KmerMinHash {
             };
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
-        } else if ignore_abundance ||
-            self.abunds.is_none() || other.abunds.is_none() {
+        } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(&other)
         } else {
             self.angular_similarity(&other)
