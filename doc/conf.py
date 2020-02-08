@@ -38,7 +38,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinxcontrib.napoleon',
-    'nbsphinx'
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -295,14 +296,10 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-try:
-    from recommonmark.parser import CommonMarkParser
+from recommonmark.parser import CommonMarkParser
 
-    source_parsers = {
-        '.md': CommonMarkParser,
-    }
-except ImportError:
-    raise
-    pass
+source_parsers = {
+    '.md': CommonMarkParser,
+}
 
 autodoc_mock_imports = ["sourmash._minhash"]
