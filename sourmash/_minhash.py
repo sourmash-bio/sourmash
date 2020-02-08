@@ -4,6 +4,7 @@ from __future__ import unicode_literals, division
 import math
 import copy
 
+from . import VERSION
 from ._compat import string_types, range_type
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
@@ -439,8 +440,9 @@ class MinHash(RustObject):
 
         return a
 
-    @deprecated(version='3.3',
-                reason='Use count_common or set methods instead.')
+    @deprecated(deprecated_in="3.3", removed_in="4.0",
+                current_version=VERSION,
+                details='Use count_common or set methods instead.')
     def intersection(self, other, in_common=False):
         """Calculate the intersection between ``self`` and ``other``, and
         return ``(mins, size)`` where ``mins`` are the hashes in common, and
@@ -479,8 +481,9 @@ class MinHash(RustObject):
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
 
-    @deprecated(version='3.3',
-                reason="Use 'similarity' instead of compare.")
+    @deprecated(deprecated_in="3.3", removed_in="4.0",
+                current_version=VERSION,
+                details="Use 'similarity' instead of compare.")
     def compare(self, other, downsample=False):
         "Calculate Jaccard similarity of two sketches."
         return self.jaccard(other, downsample=downsample)
@@ -521,8 +524,9 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
-    @deprecated(version='3.3',
-                reason="Use 'contained_by' with downsample=True instead.")
+    @deprecated(deprecated_in="3.3", removed_in="4.0",
+                current_version=VERSION,
+                details="Use 'contained_by' with downsample=True instead.")
     def containment_ignore_maxhash(self, other):
         """Calculate contained_by, with downsampling.
         """
