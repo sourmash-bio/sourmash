@@ -275,6 +275,11 @@ impl KmerMinHash {
             return;
         }
 
+        if abundance == 0 {
+            // well, don't add it.
+            return;
+        }
+
         // From this point on, hash is within scaled (or no scaled specified).
 
         // empty mins? add it.
