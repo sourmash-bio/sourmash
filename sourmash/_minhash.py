@@ -261,7 +261,7 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def update(self, other):
-        "Update this sketch from all the hashes from the other."
+        "Update this sketch from all the hashes in the other."
         self.add_many(other)
 
     def __len__(self):
@@ -528,7 +528,7 @@ class MinHash(RustObject):
 
     def set_abundances(self, values):
         """Set abundances for hashes from ``values``, where
-        ```values[hash] = abund``
+        ``values[hash] = abund``
         """
         if self.track_abundance:
             hashes = []
