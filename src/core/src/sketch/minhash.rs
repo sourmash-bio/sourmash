@@ -256,56 +256,74 @@ impl KmerMinHash {
     }
 
     pub fn add_hash(&mut self, hash: u64) {
+        self.add_hash_with_abundance(hash, 1);
+    }
+
+    pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
         let current_max = match self.mins.last() {
             Some(&x) => x,
             None => u64::max_value(),
         };
 
-        if hash <= self.max_hash || self.max_hash == 0 {
-            // empty? add it, if within range / no range specified.
-            if self.mins.is_empty() {
+        if hash > self.max_hash && self.max_hash != 0 {
+            // This is a scaled minhash, and we don't need to add the new hash
+            return;
+        }
+
+        if self.num == 0 && self.max_hash == 0 {
+            // why did you create this minhash? it will always be empty...
+            return;
+        }
+
+        if abundance == 0 {
+            // well, don't add it.
+            return;
+        }
+
+        // From this point on, hash is within scaled (or no scaled specified).
+
+        // empty mins? add it.
+        if self.mins.is_empty() {
+            self.mins.push(hash);
+            if let Some(ref mut abunds) = self.abunds {
+                abunds.push(abundance);
+            }
+            return;
+        }
+
+        if hash <= self.max_hash || hash <= current_max || (self.mins.len() as u32) < self.num {
+            // "good" hash - within range, smaller than current entry, or
+            // still have space available
+            let pos = match self.mins.binary_search(&hash) {
+                Ok(p) => p,
+                Err(p) => p,
+            };
+
+            if pos == self.mins.len() {
+                // at end - must still be growing, we know the list won't
+                // get too long
                 self.mins.push(hash);
                 if let Some(ref mut abunds) = self.abunds {
-                    abunds.push(1);
+                    abunds.push(abundance);
                 }
-                return;
-            } else if hash <= self.max_hash
-                || current_max >= hash
-                || (self.mins.len() as u32) < self.num
-            {
-                // "good" hash - within range, smaller than current entry, or
-                // still have space available
-                let pos = match self.mins.binary_search(&hash) {
-                    Ok(p) => p,
-                    Err(p) => p,
-                };
-
-                if pos == self.mins.len() {
-                    // at end - must still be growing, we know the list won't
-                    // get too long
-                    self.mins.push(hash);
-                    if let Some(ref mut abunds) = self.abunds {
-                        abunds.push(1);
-                    }
-                } else if self.mins[pos] != hash {
-                    // didn't find hash in mins, so inserting somewhere
-                    // in the middle; shrink list if needed.
-                    self.mins.insert(pos, hash);
-                    if let Some(ref mut abunds) = self.abunds {
-                        abunds.insert(pos, 1);
-                    }
-
-                    // is it too big now?
-                    if self.num != 0 && self.mins.len() > (self.num as usize) {
-                        self.mins.pop();
-                        if let Some(ref mut abunds) = self.abunds {
-                            abunds.pop();
-                        }
-                    }
-                } else if let Some(ref mut abunds) = self.abunds {
-                    // pos == hash: hash value already in mins, inc count
-                    abunds[pos] += 1;
+            } else if self.mins[pos] != hash {
+                // didn't find hash in mins, so inserting somewhere
+                // in the middle; shrink list if needed.
+                self.mins.insert(pos, hash);
+                if let Some(ref mut abunds) = self.abunds {
+                    abunds.insert(pos, abundance);
                 }
+
+                // is it too big now?
+                if self.num != 0 && self.mins.len() > (self.num as usize) {
+                    self.mins.pop();
+                    if let Some(ref mut abunds) = self.abunds {
+                        abunds.pop();
+                    }
+                }
+            } else if let Some(ref mut abunds) = self.abunds {
+                // pos == hash: hash value already in mins, inc count by abundance
+                abunds[pos] += abundance;
             }
         }
     }
@@ -451,9 +469,7 @@ impl KmerMinHash {
 
     pub fn add_many_with_abund(&mut self, hashes: &[(u64, u64)]) -> Result<(), Error> {
         for item in hashes {
-            for _i in 0..item.1 {
-                self.add_hash(item.0);
-            }
+            self.add_hash_with_abundance(item.0, item.1);
         }
         Ok(())
     }
