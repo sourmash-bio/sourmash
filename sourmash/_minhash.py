@@ -8,6 +8,7 @@ from ._compat import string_types, range_type
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
+from deprecated import deprecated
 
 # default MurmurHash seed
 MINHASH_DEFAULT_SEED = 42
@@ -129,7 +130,7 @@ class MinHash(RustObject):
            * mins (default None) - list of hashvals, or (hashval, abund) pairs
            * seed (default 42) - murmurhash seed
 
-        Deprecated:
+        Deprecated: @CTB
            * ``max_hash=<int>``; use ``scaled`` instead.
         """
         if max_hash and scaled:
@@ -438,10 +439,15 @@ class MinHash(RustObject):
 
         return a
 
+    @deprecated(version='3.3',
+                reason='Use count_common or set methods instead.')
     def intersection(self, other, in_common=False):
-        """Calculate the intersection between ``self`` and ``other``.
+        """Calculate the intersection between ``self`` and ``other``, and
+        return ``(mins, size)`` where ``mins`` are the hashes in common, and
+        ``size`` is the number of hashes.
 
-        if ``in_common``, ... @CTB
+        if ``in_common``, return the actual hashes. Otherwise, mins will be
+        empty.
         """
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
@@ -460,7 +466,6 @@ class MinHash(RustObject):
             size = len(combined_mh)
             common = set(self.get_mins())
             common.intersection_update(other.get_mins())
-            common.intersection_update(combined_mh.get_mins())
         else:
             size = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
             common = set()
@@ -472,8 +477,13 @@ class MinHash(RustObject):
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
-        return self._methodcall(lib.kmerminhash_compare, other._get_objptr(), downsample)
-    compare = jaccard # this will be removed at some point @CTB
+        return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
+
+    @deprecated(version='3.3',
+                reason="Use 'similarity' instead of compare.")
+    def compare(self, other, downsample=False):
+        "Calculate Jaccard similarity of two sketches."
+        return self.jaccard(other, downsample=downsample)
 
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
@@ -511,10 +521,10 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
+    @deprecated(version='3.3',
+                reason="Use 'contained_by' with downsample=True instead.")
     def containment_ignore_maxhash(self, other):
         """Calculate contained_by, with downsampling.
-
-        @CTB to be deprecated/removed in v4 or v5.
         """
         return self.contained_by(other, downsample=True)
 
