@@ -8,7 +8,7 @@ from ._compat import string_types, range_type
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
-from deprecated import deprecated
+from deprecation import deprecated
 
 # default MurmurHash seed
 MINHASH_DEFAULT_SEED = 42
