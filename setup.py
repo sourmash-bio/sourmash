@@ -80,7 +80,8 @@ SETUP_METADATA = {
         'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
         'doc' : ['sphinx', 'recommonmark', 'alabaster',
-                 "sphinxcontrib-napoleon", "nbsphinx"],
+                 "sphinxcontrib-napoleon", "nbsphinx",
+                 "ipython"],
         '10x': ['bam2fasta==1.0.1'],
         'storage': ["ipfshttpclient", "redis"]
     },
