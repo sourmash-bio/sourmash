@@ -541,6 +541,8 @@ def test_intersection_errors(track_abundance):
         a.intersection(c)
 
 
+# this filter doesn't work, but leaving it in pour encourages les autres.
+@pytest.mark.filterwarnings("ignore")
 def test_intersection_1(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
@@ -696,7 +698,7 @@ def test_mh_downsample_n_error(track_abundance):
         a.downsample_n(30)
 
 
-def test_mh_asymmetric(track_abundance):
+def test_mh_jaccard_asymmetric_num(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)

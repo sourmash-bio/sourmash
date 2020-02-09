@@ -559,7 +559,7 @@ impl KmerMinHash {
 
         if self.abunds.is_none() || other.abunds.is_none() {
             // TODO: throw error, we need abundance for this
-            unimplemented!()
+            unimplemented!() // @CTB fixme
         }
 
         let abunds = self.abunds.as_ref().unwrap();
@@ -614,17 +614,11 @@ impl KmerMinHash {
             };
             let downsampled_mh = second.downsample_max_hash(first.max_hash)?;
             first.similarity(&downsampled_mh, ignore_abundance, false)
-        } else if ignore_abundance {
+        } else if ignore_abundance || self.abunds.is_none() || other.abunds.is_none() {
             self.jaccard(&other)
         } else {
             self.angular_similarity(&other)
         }
-    }
-
-    pub fn containment_ignore_maxhash(&self, other: &KmerMinHash) -> Result<f64, Error> {
-        let it = Intersection::new(self.mins.iter(), other.mins.iter());
-
-        Ok(it.count() as f64 / self.size() as f64)
     }
 
     pub fn dayhoff(&self) -> bool {

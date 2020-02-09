@@ -11,8 +11,11 @@ its Python API.  Please also see `examples of using the API <api-example.html>`_
 ``MinHash``: basic MinHash sketch functionality
 ===============================================
 
-.. automodule:: sourmash
+.. autoclass:: sourmash.MinHash
    :members:
+
+   .. automethod:: __init__
+
 
 ``SourmashSignature``: save and load MinHash sketches in JSON
 =============================================================
