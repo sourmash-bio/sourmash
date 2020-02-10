@@ -46,9 +46,6 @@ pub enum SourmashError {
     StorageError(#[from] crate::index::storage::StorageError),
 
     #[error(transparent)]
-    Panic(#[from] crate::ffi::utils::Panic),
-
-    #[error(transparent)]
     SerdeError(#[from] serde_json::error::Error),
 
     #[error(transparent)]
@@ -59,6 +56,10 @@ pub enum SourmashError {
 
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+
+    #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
+    #[error(transparent)]
+    Panic(#[from] crate::ffi::utils::Panic),
 }
 
 #[repr(u32)]

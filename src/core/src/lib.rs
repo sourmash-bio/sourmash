@@ -19,6 +19,8 @@
 pub mod errors;
 pub use errors::SourmashError as Error;
 
+pub mod cmd;
+
 pub mod index;
 
 pub mod signature;
@@ -35,8 +37,6 @@ cfg_if! {
         pub mod wasm;
     } else {
         pub mod ffi;
-
-        pub mod cmd;
     }
 }
 

@@ -2,7 +2,8 @@ use wasm_bindgen::prelude::*;
 
 use serde_json;
 
-use crate::signature::SigsTrait;
+use crate::cmd::ComputeParameters;
+use crate::signature::{Signature, SigsTrait};
 use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
 
 #[wasm_bindgen]
@@ -56,4 +57,42 @@ impl KmerMinHash {
     pub fn to_json(&mut self) -> String {
         serde_json::to_string(self).unwrap()
     }
+}
+
+#[wasm_bindgen]
+impl ComputeParameters {
+    #[wasm_bindgen(constructor)]
+    pub fn new_with_params() -> ComputeParameters {
+        let params = ComputeParameters::default();
+        params
+    }
+}
+
+#[wasm_bindgen]
+impl Signature {
+    #[wasm_bindgen(constructor)]
+    pub fn new_from_params(params: &ComputeParameters) -> Signature {
+        //let params = ComputeParameters::default();
+
+        Signature::from_params(&params)
+    }
+
+    #[wasm_bindgen]
+    pub fn add_sequence_js(&mut self, buf: &str) {
+        self.add_sequence(buf.as_bytes(), true)
+            .expect("Error adding sequence");
+    }
+
+    #[wasm_bindgen]
+    pub fn to_json(&mut self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn wasm_test() {}
 }
