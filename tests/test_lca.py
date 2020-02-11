@@ -551,6 +551,25 @@ def test_single_classify():
         assert 'loaded 1 LCA databases' in err
 
 
+def test_single_classify_to_output():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
+               '-o', 'outfile.txt']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open('outfile.txt', 'rt').read()
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 LCA databases' in err
+
+
 def test_single_classify_empty():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/both.lca.json')
