@@ -860,7 +860,7 @@ def test_single_summarize_to_output():
         outdata = open('output.txt', 'rt').read()
 
         assert 'loaded 1 signatures from 1 files total.' in err
-        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in outdata
+        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
 
 
 def test_single_summarize_scaled():
