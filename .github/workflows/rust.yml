@@ -165,21 +165,6 @@ jobs:
       - name: run wasm-pack
         run: wasm-pack build src/core -d ../../pkg
 
-      # Publish to NPM on tags
-      - name: Prepare node for NPM publishing
-        uses: actions/setup-node@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          node-version: 12
-          registry-url: https://registry.npmjs.org/
-
-      # Publish to NPM on tags
-      - name: Publish to NPM
-        run: '(cd pkg && npm publish)'
-        if: startsWith(github.ref, 'refs/tags/r')
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   wasm32-wasi:
     name: Run tests under wasm32-wasi
     runs-on: ubuntu-latest
@@ -230,22 +215,6 @@ jobs:
         with:
           command: publish
           args: --dry-run --manifest-path src/core/Cargo.toml
-
-      # Login to crates.io on tags
-      - name: login to crates.io
-        uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          command: login
-          args: ${{ secrets.CRATES_IO_TOKEN }}
-
-      # Publish to crates.io on tags
-      - name: Publish to crates.io
-        uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          command: publish
-          args: --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest
