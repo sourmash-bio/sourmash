@@ -1,0 +1,68 @@
+name: Rust publish
+
+on:
+  push:
+    tags:
+      - 'r*'
+
+jobs:
+  wasm-pack:
+    name: Check if wasm-pack builds a valid package for the sourmash crate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --force wasm-pack --version 0.8.1
+      - name: run wasm-pack
+        run: wasm-pack build src/core -d ../../pkg
+
+      - name: Prepare node for NPM publishing
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - name: Publish to NPM
+        run: '(cd pkg && npm publish)'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Make sure we can publish the sourmash crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --dry-run --manifest-path src/core/Cargo.toml
+
+      # Login to crates.io on tags
+      - name: login to crates.io
+        uses: actions-rs/cargo@v1
+        with:
+          command: login
+          args: ${{ secrets.CRATES_IO_TOKEN }}
+
+      # Publish to crates.io on tags
+      - name: Publish to crates.io
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --manifest-path src/core/Cargo.toml
