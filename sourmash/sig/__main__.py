@@ -97,14 +97,7 @@ def describe(args):
     for (sig, signature_file) in siglist:
         mh = sig.minhash
         ksize = mh.ksize
-        moltype = 'DNA'
-        if mh.is_protein:
-            if mh.dayhoff:
-                moltype = 'dayhoff'
-            elif mh.hp:
-                moltype = 'hp'
-            else:
-                moltype = 'protein'
+        moltype = sourmash_args.get_moltype(sig)
         scaled = mh.scaled
         num = mh.num
         seed = mh.seed
