@@ -882,6 +882,59 @@ signature license: CC0
         assert cleaned_line in expected_output
 
 
+def test_describe_bug_905():
+    # Explicitly test https://github.com/dib-lab/sourmash/issues/905
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('protein_905.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['signature', 'describe',
+                                            testdata1],
+                                           in_directory=location)
+        expected_output == """== This is sourmash version 3.2.2. ==
+== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==
+
+loaded 3 signatures total.
+---
+signature filename: test.sig
+signature: test.prot
+source file: test.prot
+md5: 57ae47c24a08a24b630dae80f0c6e256
+k=11 molecule=protein num=0 scaled=20 seed=42 track_abundance=1
+size: 34
+signature license: CC0
+
+---
+signature filename: test.sig
+signature: test.prot
+source file: test.prot
+md5: 407a774f7a2e13c650ff67255d2056f8
+k=11 molecule=dayhoff num=0 scaled=20 seed=42 track_abundance=1
+size: 4
+signature license: CC0
+
+---
+signature filename: test.sig
+signature: test.prot
+source file: test.prot
+md5: 72560192a7f4c23f0b4d71b3eaaa44db
+k=11 molecule=hp num=0 scaled=20 seed=42 track_abundance=1
+size: 2
+signature license: CC0"""
+        print(out)
+        print(err)
+        assert status == 0
+
+        # Add final trailing slash for this OS
+        testdata_dirname = os.path.dirname(testdata1) + os.sep
+        location = c.location + os.sep
+
+        for line in out.splitlines():
+            cleaned_line = line.strip().replace(
+                testdata_dirname, '').replace(location, '')
+            assert cleaned_line in expected_output
+
+
 @utils.in_tempdir
 def test_sig_describe_1_multisig(c):
     # get basic info on multiple signatures in a single file
