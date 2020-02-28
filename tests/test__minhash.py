@@ -36,6 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import itertools
 import pickle
 import math
 
@@ -1365,3 +1366,13 @@ def test_add_many(track_abundance):
 
     assert len(b) == 50
     assert a == b
+
+
+def test_set_abundances_huge():
+    max_hash = 4000000
+    a = MinHash(0, 10, track_abundance=True, max_hash=max_hash)
+
+    hashes = list(range(max_hash))
+    abundances = itertools.repeat(2)
+
+    a.set_abundances(dict(zip(hashes, abundances)))
