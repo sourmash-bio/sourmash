@@ -54,6 +54,29 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
+def load_and_combine(filenames, ksize, scaled):
+    total_count = 0
+    n = 0
+    total_n = len(filenames)
+    hashvals = defaultdict(int)
+    for query_filename in filenames:
+        n += 1
+        for query_sig in load_signatures(query_filename, ksize=ksize):
+            notify(u'\r\033[K', end=u'')
+            notify('... loading {} (file {} of {})', query_sig.name(), n,
+                   total_n, end='\r')
+            total_count += 1
+
+            mh = query_sig.minhash.downsample_scaled(scaled)
+            for hashval in mh.get_mins():
+                hashvals[hashval] += 1
+
+    notify(u'\r\033[K', end=u'')
+    notify('loaded {} signatures from {} files total.', total_count, n)
+
+    return hashvals
+
+
 def output_results(lineage_counts, total_counts):
     """\
     Output results in ~human-readable format.
@@ -123,25 +146,8 @@ def summarize_main(args):
     else:
         inp_files = list(args.query)
 
-    # for each query, gather all the hashvals across databases
-    total_count = 0
-    n = 0
-    total_n = len(inp_files)
-    hashvals = defaultdict(int)
-    for query_filename in inp_files:
-        n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
-            total_count += 1
-
-            mh = query_sig.minhash.downsample_scaled(scaled)
-            for hashval in mh.get_mins():
-                hashvals[hashval] += 1
-
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
+    # load all the signatures in all the files
+    hashvals = load_and_combine(inp_files, ksize, scaled)
 
     # get the full counted list of lineage counts in this signature
     lineage_counts = summarize(hashvals, dblist, args.threshold)
