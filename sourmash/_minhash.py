@@ -89,6 +89,7 @@ class MinHash(RustObject):
 
     Basic usage:
 
+    ```
     >>> from sourmash import MinHash
     >>> mh1 = MinHash(n=20, ksize=3)
     >>> mh1.add_sequence('ATGAGAGACGATAGACAGATGAC')
@@ -98,6 +99,7 @@ class MinHash(RustObject):
 
     >>> round(mh1.similarity(mh2), 2)
     0.85
+    ```
     """
     __dealloc_func__ = lib.kmerminhash_free
 
@@ -117,11 +119,11 @@ class MinHash(RustObject):
         """\
         Create a sourmash.MinHash object.
 
-        To create a standard (``num``) MinHash, use:
-           ``MinHash(<num>, <ksize>, ...)``
+        To create a standard (`num`) MinHash, use:
+           `MinHash(<num>, <ksize>, ...)`
 
-        To create a ``scaled`` MinHash, use
-            ``MinHash(0, <ksize>, scaled=<int>, ...)``
+        To create a `scaled` MinHash, use
+            `MinHash(0, <ksize>, scaled=<int>, ...)`
 
         Optional arguments:
            * is_protein (default False) - aa k-mers
@@ -132,7 +134,7 @@ class MinHash(RustObject):
            * seed (default 42) - murmurhash seed
 
         Deprecated: @CTB
-           * ``max_hash=<int>``; use ``scaled`` instead.
+           * `max_hash=<int>``; use ``scaled` instead.
         """
         if max_hash and scaled:
             raise ValueError("cannot set both max_hash and scaled")
@@ -250,8 +252,8 @@ class MinHash(RustObject):
     def add_many(self, hashes):
         """Add many hashes to the sketch at once.
 
-        ``hashes`` can be either an iterable (list, set, etc.), or another
-        ``MinHash`` object.
+        `hashes` can be either an iterable (list, set, etc.), or another
+        `MinHash` object.
         """
         if isinstance(hashes, MinHash):
             self._methodcall(lib.kmerminhash_add_from, hashes._objptr)
@@ -259,7 +261,7 @@ class MinHash(RustObject):
             self._methodcall(lib.kmerminhash_add_many, list(hashes), len(hashes))
 
     def remove_many(self, hashes):
-        "Remove many hashes at once; ``hashes`` must be an iterable."
+        "Remove many hashes at once; `hashes` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
     def update(self, other):
@@ -271,7 +273,7 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_get_mins_size)
 
     def get_mins(self, with_abundance=False):
-        """Return list of hashes or if ``with_abundance`` a list
+        """Return list of hashes or if `with_abundance` a list
         of (hash, abund).
         """
         size = self._methodcall(lib.kmerminhash_get_mins_size)
@@ -295,7 +297,7 @@ class MinHash(RustObject):
 
     def subtract_mins(self, other):
         """Get the list of mins in this MinHash, after removing the ones in
-        ``other``.
+        `other`.
         """
         a = set(self.get_mins())
         b = set(other.get_mins())
@@ -369,16 +371,16 @@ class MinHash(RustObject):
 
     def count_common(self, other, downsample=False):
         """\
-        Return the number of hashes in common between ``self`` and ``other``.
+        Return the number of hashes in common between `self` and `other`.
 
-        Optionally downsample ``scaled`` objects to highest ``scaled`` value.
+        Optionally downsample `scaled` objects to highest `scaled` value.
         """
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
     def downsample_n(self, new_num):
-        "Copy this object and downsample new object to num=``new_num``."
+        "Copy this object and downsample new object to num=`new_num`."
         if self.num and self.num < new_num:
             raise ValueError("new sample n is higher than current sample n")
 
@@ -393,9 +395,9 @@ class MinHash(RustObject):
         return a
 
     def downsample_max_hash(self, *others):
-        """Copy this object and downsample new object to min of ``*others``.
+        """Copy this object and downsample new object to min of `*others`.
 
-        Here, ``*others`` is one or more MinHash objects.
+        Here, `*others` is one or more MinHash objects.
         """
         max_hashes = [x.max_hash for x in others]
         new_max_hash = min(self.max_hash, *max_hashes)
@@ -404,7 +406,7 @@ class MinHash(RustObject):
         return self.downsample_scaled(new_scaled)
 
     def downsample_scaled(self, new_scaled):
-        """Copy this object and downsample new object to scaled=``new_scaled``.
+        """Copy this object and downsample new object to scaled=`new_scaled`.
         """
         if self.num:
             raise ValueError("num != 0 - cannot downsample a standard MinHash")
@@ -444,11 +446,11 @@ class MinHash(RustObject):
                 current_version=VERSION,
                 details='Use count_common or set methods instead.')
     def intersection(self, other, in_common=False):
-        """Calculate the intersection between ``self`` and ``other``, and
-        return ``(mins, size)`` where ``mins`` are the hashes in common, and
-        ``size`` is the number of hashes.
+        """Calculate the intersection between `self` and `other`, and
+        return `(mins, size)` where `mins` are the hashes in common, and
+        `size` is the number of hashes.
 
-        if ``in_common``, return the actual hashes. Otherwise, mins will be
+        if `in_common`, return the actual hashes. Otherwise, mins will be
         empty.
         """
         if not isinstance(other, MinHash):
@@ -492,7 +494,7 @@ class MinHash(RustObject):
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
 
-        If the sketches are not abundance weighted, or ignore_abundance=True,
+        If the sketches are not abundance weighted, or `ignore_abundance=True`,
         compute Jaccard similarity.
 
         If the sketches are abundance weighted, calculate the angular
@@ -541,8 +543,8 @@ class MinHash(RustObject):
     merge = __iadd__
 
     def set_abundances(self, values):
-        """Set abundances for hashes from ``values``, where
-        ``values[hash] = abund``
+        """Set abundances for hashes from `values`, where
+        `values[hash] = abund`
         """
         if self.track_abundance:
             hashes = []

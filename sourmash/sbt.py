@@ -2,8 +2,9 @@
 """
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
-To try it out, do::
+To try it out, do:
 
+```
     factory = GraphFactory(ksize, tablesizes, n_tables)
     root = Node(factory)
 
@@ -11,9 +12,11 @@ To try it out, do::
     # ... add stuff to graph1 ...
     leaf1 = Leaf("a", graph1)
     root.insert(leaf1)
+```
 
-For example, ::
+For example,
 
+```
     # filenames: list of fa/fq files
     # ksize: k-mer size
     # tablesizes: Bloom filter table sizes
@@ -27,9 +30,11 @@ For example, ::
         graph.consume_fasta(filename)
         leaf = Leaf(filename, graph)
         root.insert(leaf)
+```
 
 then define a search function, ::
 
+```
     def kmers(k, seq):
         for start in range(len(seq) - k + 1):
             yield seq[start:start + k]
@@ -39,6 +44,7 @@ then define a search function, ::
         if sum(presence) >= int(threshold * len(seq)):
             return 1
         return 0
+```
 """
 
 from __future__ import print_function, unicode_literals, division
