@@ -303,3 +303,17 @@ source_parsers = {
 }
 
 autodoc_mock_imports = ["sourmash._minhash"]
+
+### parse docstrings as markdown instead of ReST.
+
+import commonmark
+
+def docstring(app, what, name, obj, options, lines):
+    md  = '\n'.join(lines)
+    ast = commonmark.Parser().parse(md)
+    rst = commonmark.ReStructuredTextRenderer().render(ast)
+    lines.clear()
+    lines += rst.splitlines()
+
+def setup(app):
+    app.connect('autodoc-process-docstring', docstring)
