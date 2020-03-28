@@ -54,6 +54,37 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
+def output_results(lineage_counts, total_counts):
+    """\
+    Output results in ~human-readable format.
+    """
+    for (lineage, count) in lineage_counts.items():
+        if lineage:
+            lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
+            lineage = ';'.join(lineage)
+        else:
+            lineage = '(root)'
+
+        p = count / total_counts * 100.
+        p = '{:.1f}%'.format(p)
+
+        print_results('{:5} {:>5}   {}'.format(p, count, lineage))
+
+
+def output_csv(lineage_counts, csv_fp):
+    """\
+    Output results in CSV.
+    """
+    w = csv.writer(csv_fp)
+    headers = ['count'] + list(lca_utils.taxlist())
+    w.writerow(headers)
+
+    for (lineage, count) in lineage_counts.items():
+        debug('lineage:', lineage)
+        row = [count] + lca_utils.zip_lineage(lineage)
+        w.writerow(row)
+
+
 def summarize_main(args):
     """
     main summarization function.
@@ -117,29 +148,12 @@ def summarize_main(args):
 
     # output!
     total = float(len(hashvals))
-    for (lineage, count) in lineage_counts.items():
-        if lineage:
-            lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
-            lineage = ';'.join(lineage)
-        else:
-            lineage = '(root)'
-
-        p = count / total * 100.
-        p = '{:.1f}%'.format(p)
-
-        print_results('{:5} {:>5}   {}'.format(p, count, lineage))
+    output_results(lineage_counts, total)
 
     # CSV:
     if args.output:
         with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
-            w = csv.writer(csv_fp)
-            headers = ['count'] + list(lca_utils.taxlist())
-            w.writerow(headers)
-
-            for (lineage, count) in lineage_counts.items():
-                debug('lineage:', lineage)
-                row = [count] + lca_utils.zip_lineage(lineage)
-                w.writerow(row)
+            output_csv(lineage_counts, csv_fp)
 
 
 if __name__ == '__main__':
