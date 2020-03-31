@@ -44,6 +44,7 @@ then define a search function, ::
 from __future__ import print_function, unicode_literals, division
 
 from collections import namedtuple
+
 try:
     from collections.abc import Mapping
 except ImportError:  # Python 2...
@@ -278,6 +279,7 @@ class SBT(Index):
         do_containment = kwargs['do_containment']
         best_only = kwargs['best_only']
         unload_data = kwargs.get('unload_data', False)
+        return_leaf = kwargs.get('return_leaf', False)
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -309,7 +311,10 @@ class SBT(Index):
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, None))
+            if return_leaf:
+                results.append((similarity, leaf, None))
+            else:
+                results.append((similarity, leaf.data, None))
 
         return results
         
