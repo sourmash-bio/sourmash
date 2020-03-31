@@ -280,6 +280,9 @@ class SBT(Index):
         do_containment = kwargs['do_containment']
         best_only = kwargs['best_only']
         unload_data = kwargs.get('unload_data', False)
+
+        # If True, returns the leaf node (rather than the signature data) and the
+        # position of the leaf on the tree
         return_leaf = kwargs.get('return_leaf', False)
 
         # figure out scaled value of tree, downsample query if needed.
@@ -288,7 +291,7 @@ class SBT(Index):
 
         tree_query = query
         if tree_mh.scaled and query.minhash.scaled and \
-          tree_mh.scaled > query.minhash.scaled:
+                tree_mh.scaled > query.minhash.scaled:
             resampled_query_mh = tree_query.minhash
             resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
