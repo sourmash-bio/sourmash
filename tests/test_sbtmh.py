@@ -62,8 +62,12 @@ def test_localized_add_node(track_abundance):
 
     # verify most similar leaves are sharing same parent node
     if track_abundance:
+        # Currently leaf_pos = {'a': 3, 'd': 4, 'c': 5, 'b': 6}
+        # Expected leaf_pos = {'a': 3, 'd': 5, 'c': 4, 'b': 6}
         assert root.parent(leaf_pos["a"]) == root.parent(leaf_pos["c"])
         assert root.parent(leaf_pos["b"]) == root.parent(leaf_pos["d"])
     else:
+        # Currently leaf_pos = {'a': 3, 'd': 4, 'c': 5, 'b': 6}
+        # Expected leaf_pos = {'a': 3, 'd': 6, 'c': 5, 'b': 4}
         assert root.parent(leaf_pos["a"]) == root.parent(leaf_pos["b"])
         assert root.parent(leaf_pos["c"]) == root.parent(leaf_pos["d"])
