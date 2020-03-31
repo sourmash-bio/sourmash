@@ -226,6 +226,13 @@ class LocalizedSBT(SBT):
     and another for the leaves (datasets).
     """
 
+    def __init__(self, factory, d=2, storage=None, track_abundance=False,
+                 do_containment=False):
+        SBT.__init__(self, factory=factory, d=d, storage=storage)
+        self.track_abundance = track_abundance
+        self.ignore_abundance = not self.track_abundance
+        self.do_containment = do_containment
+
     def new_node_pos(self, node):
         if not self._nodes:
             self.next_node = 1
@@ -255,52 +262,3 @@ class LocalizedSBT(SBT):
             self.next_node = next_internal_node
 
         return self.next_node
-
-    def add_node(self, node):
-
-        pos = self.new_node_pos(node)
-
-        if pos == 0:  # empty tree; initialize w/node.
-            n = Node(self.factory, name="internal." + str(pos))
-            self._nodes[0] = n
-            pos = self.new_node_pos(node)
-
-        # Cases:
-        # 1) parent is a Leaf (already covered)
-        # 2) parent is a Node (with empty position available)
-        #    - add Leaf, update parent
-        # 3) parent is a Node (no position available)
-        #    - this is covered by case 1
-        # 4) parent is None
-        #    this can happen with d != 2, in this case create the parent node
-        p = self.parent(pos)
-        if isinstance(p.node, Leaf):
-            # Create a new internal node
-            # node and parent are children of new internal node
-            n = Node(self.factory, name="internal." + str(p.pos))
-            self._nodes[p.pos] = n
-
-            c1, c2 = self.children(p.pos)[:2]
-
-            self._leaves[c1.pos] = p.node
-            self._leaves[c2.pos] = node
-            del self._leaves[p.pos]
-
-            for child in (p.node, node):
-                child.update(n)
-        elif isinstance(p.node, Node):
-            self._leaves[pos] = node
-            node.update(p.node)
-        elif p.node is None:
-            n = Node(self.factory, name="internal." + str(p.pos))
-            self._nodes[p.pos] = n
-            c1 = self.children(p.pos)[0]
-            self._leaves[c1.pos] = node
-            node.update(n)
-
-        # update all parents!
-        p = self.parent(p.pos)
-        while p:
-            self._rebuild_node(p.pos)
-            node.update(self._nodes[p.pos])
-            p = self.parent(p.pos)
