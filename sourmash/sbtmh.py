@@ -122,10 +122,11 @@ class LocalizedSBT(SBT):
         # What is the final item of the tuple returned by search() supposed to
         # represent? It seems to be always 'None.'
         try:
-            new_leaf_similarity, most_similar_leaf, most_similar_pos = self.search(
-                node.data, threshold=0, best_only=True,
+            search_result = self.search(
+                node.data, threshold=sys.float_info.epsilon, best_only=True,
                 ignore_abundance=self.ignore_abundance,
-                do_containment=self.do_containment, return_leaf=True)[0]
+                do_containment=self.do_containment, return_leaf=True)
+            new_leaf_similarity, most_similar_leaf, most_similar_pos = search_result[0]
 
             # Get parent of the most similar node
             localized_parent = self.parent(most_similar_pos)
