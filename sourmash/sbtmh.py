@@ -101,6 +101,9 @@ class LocalizedSBT(SBT):
 
     def __init__(self, factory, d=2, storage=None, track_abundance=False,
                  do_containment=False):
+        if d != 2:
+            raise NotImplementedError("LocalizedSBT is only implemented for when the "
+                                      "number of children is 2, d=2")
         SBT.__init__(self, factory=factory, d=d, storage=storage)
         self.track_abundance = track_abundance
         self.ignore_abundance = not self.track_abundance
