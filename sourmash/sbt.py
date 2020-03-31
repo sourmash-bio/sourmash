@@ -255,7 +255,8 @@ class SBT(Index):
 
                     # leaf node? it's a match!
                     if isinstance(node_g, Leaf):
-                        matches.append(node_g)
+                        # Return tuple of node data and position
+                        matches.append((node_g, node_p))
                     # internal node? descend.
                     elif isinstance(node_g, Node):
                         if kwargs.get('dfs', True):  # defaults search to dfs
@@ -305,14 +306,15 @@ class SBT(Index):
 
         # now, search!
         results = []
-        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+        for leaf, pos in self.find(search_fn, tree_query, threshold,
+                                   unload_data=unload_data):
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
             if return_leaf:
-                results.append((similarity, leaf, None))
+                results.append((similarity, leaf, pos))
             else:
                 results.append((similarity, leaf.data, None))
 

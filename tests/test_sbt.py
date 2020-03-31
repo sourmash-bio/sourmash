@@ -119,13 +119,13 @@ def test_longer_search(n_children):
             return 1
         return 0
 
-    try1 = [ x.metadata for x in root.find(search_transcript, "AAAAT", 1.0) ]
+    try1 = [x[0].metadata for x in root.find(search_transcript, "AAAAT", 1.0)]
     assert set(try1) == set([ 'a', 'b', 'c', 'e' ]), try1 # no 'd'
 
-    try2 = [ x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6) ]
+    try2 = [x[0].metadata for x in root.find(search_transcript, "GAAAAAT", 0.6)]
     assert set(try2) == set([ 'a', 'b', 'c', 'd', 'e' ])
 
-    try3 = [ x.metadata for x in root.find(search_transcript, "GAAAA", 1.0) ]
+    try3 = [x[0].metadata for x in root.find(search_transcript, "GAAAA", 1.0)]
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
