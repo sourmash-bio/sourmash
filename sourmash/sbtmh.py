@@ -1,11 +1,11 @@
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
-from io import BytesIO, TextIOWrapper
 import sys
+from io import BytesIO, TextIOWrapper
 
-from .sbt import Leaf, SBT, GraphFactory
 from . import signature
+from .sbt import Leaf, SBT, GraphFactory, Node
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -202,3 +202,105 @@ class GatherMinHashes(object):
             return 1
 
         return 0
+
+
+class LocalizedSBT(SBT):
+    """A Sequence Bloom Tree implementation which guarantees new leaves are plaaced in
+
+    The default node is a Bloom Filter (like the original implementation),
+    and the leaves are MinHash leaf class (in the sourmash.sbtmh.SigLeaf class)
+
+    Parameters
+    ----------
+    factory: Factory
+        Callable for generating new datastores for internal nodes.
+    d: int
+        Number of children for each internal node. Defaults to 2 (a binary tree)
+    storage: Storage, default: None
+        A Storage is any place where we can save and load data for the nodes.
+        If set to None, will use a FSStorage.
+
+    Notes
+    -----
+    We use two dicts to store the tree structure: One for the internal nodes,
+    and another for the leaves (datasets).
+    """
+
+    def new_node_pos(self, node):
+        if not self._nodes:
+            self.next_node = 1
+            return 0
+
+        if not self._leaves:
+            self.next_node = 2
+            return 1
+
+        # Not an empty tree, can search
+        closest_node = self.search(node, best_only=1)
+
+        min_leaf = min(self._leaves.keys())
+
+        next_internal_node = None
+        if self.next_node <= min_leaf:
+            for i in range(min_leaf):
+                if all((i not in self._nodes,
+                        i not in self._leaves,
+                        i not in self._missing_nodes)):
+                    next_internal_node = i
+                    break
+
+        if next_internal_node is None:
+            self.next_node = max(self._leaves.keys()) + 1
+        else:
+            self.next_node = next_internal_node
+
+        return self.next_node
+
+    def add_node(self, node):
+
+        pos = self.new_node_pos(node)
+
+        if pos == 0:  # empty tree; initialize w/node.
+            n = Node(self.factory, name="internal." + str(pos))
+            self._nodes[0] = n
+            pos = self.new_node_pos(node)
+
+        # Cases:
+        # 1) parent is a Leaf (already covered)
+        # 2) parent is a Node (with empty position available)
+        #    - add Leaf, update parent
+        # 3) parent is a Node (no position available)
+        #    - this is covered by case 1
+        # 4) parent is None
+        #    this can happen with d != 2, in this case create the parent node
+        p = self.parent(pos)
+        if isinstance(p.node, Leaf):
+            # Create a new internal node
+            # node and parent are children of new internal node
+            n = Node(self.factory, name="internal." + str(p.pos))
+            self._nodes[p.pos] = n
+
+            c1, c2 = self.children(p.pos)[:2]
+
+            self._leaves[c1.pos] = p.node
+            self._leaves[c2.pos] = node
+            del self._leaves[p.pos]
+
+            for child in (p.node, node):
+                child.update(n)
+        elif isinstance(p.node, Node):
+            self._leaves[pos] = node
+            node.update(p.node)
+        elif p.node is None:
+            n = Node(self.factory, name="internal." + str(p.pos))
+            self._nodes[p.pos] = n
+            c1 = self.children(p.pos)[0]
+            self._leaves[c1.pos] = node
+            node.update(n)
+
+        # update all parents!
+        p = self.parent(p.pos)
+        while p:
+            self._rebuild_node(p.pos)
+            node.update(self._nodes[p.pos])
+            p = self.parent(p.pos)
