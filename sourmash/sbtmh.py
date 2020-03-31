@@ -117,63 +117,74 @@ class LocalizedSBT(SBT):
         if not self._leaves:
             self.next_node = 2
             return 1
-
         # Not an empty tree, can search
-        new_leaf_similarity, most_similar_leaf = self.search(
-            node.data, threshold=0, best_only=1,
-            ignore_abundance=self.ignore_abundance,
-            do_containment=self.do_containment, return_leaf=True)[0]
 
-        # Get parent of the most similar node
-        localized_parent = self.parent(most_similar_leaf.pos)
+        # What is the final item of the tuple returned by search() supposed to
+        # represent? It seems to be always 'None.'
+        try:
+            new_leaf_similarity, most_similar_leaf, most_similar_pos = self.search(
+                node.data, threshold=0, best_only=True,
+                ignore_abundance=self.ignore_abundance,
+                do_containment=self.do_containment, return_leaf=True)[0]
 
-        # If the parent has one child: easy, insert the new child here
-        children = self.children(localized_parent.pos)
-        if children[1].node is None:
-            return children[1].pos
-        else:
+            # Get parent of the most similar node
+            localized_parent = self.parent(most_similar_pos)
 
-            # If parent has two children, check if the other child is more similar to
-            # the most_similar_leaf --> then no displacement is necessary
-            child_similarity = children[1].data.similarity(children[0].data)
-
-            if new_leaf_similarity > child_similarity:
-                # New leaf is *more* similar than the existing child
-                # --> displace existing child
-
-                # Get the leaf information of the other child
-                if most_similar_leaf == children[0]:
-                    other_child = children[1]
-                else:
-                    other_child = children[0]
-
-                # Get this child's displaced position
-                displaced_position = other_child.pos
-
-                # Need to find a new place for the displaced child
-                # (this sounds really sad)
-                self.add_node(other_child)
-
-                return displaced_position
+            # If the parent has one child: easy, insert the new child here
+            children = self.children(localized_parent.pos)
+            if children[1].node is None:
+                return children[1].pos
             else:
-                # New leaf is *less* similar than the existing child
-                # --> Create new adjacent parent as done previously
-                min_leaf = min(self._leaves.keys())
+                # If parent has two children, check if the other child is more similar
+                # to the most_similar_leaf --> then no displacement is necessary
+                child_similarity = children[1].data.similarity(children[0].data)
 
-                next_internal_node = None
-                if self.next_node <= min_leaf:
-                    for i in range(min_leaf):
-                        if all((i not in self._nodes,
-                                i not in self._leaves,
-                                i not in self._missing_nodes)):
-                            next_internal_node = i
-                            break
-                if next_internal_node is None:
-                    self.next_node = max(self._leaves.keys()) + 1
+                if new_leaf_similarity > child_similarity:
+                    # New leaf is *more* similar than the existing child
+                    # --> displace existing child
+
+                    # Get the leaf information of the other child
+                    if most_similar_leaf == children[0]:
+                        other_child = children[1]
+                    else:
+                        other_child = children[0]
+
+                    # Get this child's displaced position
+                    displaced_position = other_child.pos
+                    self._leaves[displaced_position] = node
+
+                    # Need to find a new home with better parents for the displaced
+                    # child (this sounds really sad)
+                    other_child.pos = self.new_node_pos(other_child)
+                    self._leaves[other_child.pos] = other_child
+
+                    return displaced_position
                 else:
-                    self.next_node = next_internal_node
+                    self.next_node = self._insert_next_position(self.next_node)
+        except IndexError:
+            # No nodes are similar so just insert in the next place
+            self.next_node = self._insert_next_position(self.next_node)
 
         return self.next_node
+
+    def _insert_next_position(self, next_node):
+        # New leaf is *less* similar than the existing child
+        # --> Create new adjacent parent as done previously
+        min_leaf = min(self._leaves.keys())
+        next_internal_node = None
+        if next_node <= min_leaf:
+            for i in range(min_leaf):
+                if all((i not in self._nodes,
+                        i not in self._leaves,
+                        i not in self._missing_nodes)):
+                    next_internal_node = i
+                    break
+        if next_internal_node is None:
+            next_node = max(self._leaves.keys()) + 1
+        else:
+            next_node = next_internal_node
+
+        return next_node
 
 
 ### Search functionality.
