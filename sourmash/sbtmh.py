@@ -5,7 +5,7 @@ import sys
 from io import BytesIO, TextIOWrapper
 
 from . import signature
-from .sbt import Leaf, SBT, GraphFactory, Node
+from .sbt import Leaf, SBT, GraphFactory
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -243,8 +243,28 @@ class LocalizedSBT(SBT):
             return 1
 
         # Not an empty tree, can search
-        closest_node = self.search(node, best_only=1)
+        most_similar_node = self.search(node.data, threshold=0, best_only=1,
+                                        ignore_abundance=self.ignore_abundance,
+                                        do_containment=self.do_containment)
 
+        # Get parent of the most similar node
+        localized_parent = self.parent(most_similar_node[0])
+
+        # If the parent has one child: easy, insert the new child here
+        children = self.children(localized_parent.pos)
+        if children[1].node is None:
+            return children[1].pos
+        else:
+            # If parent has two children, check if the other child is more similar to
+            # the most_similar_node --> then no displacement is necessary
+            children[1]
+
+        # If the parent has two children .. then need to find a new place for the
+        # displaced child
+
+        # Insert node under this parent
+        import pdb;
+        pdb.set_trace()
         min_leaf = min(self._leaves.keys())
 
         next_internal_node = None
