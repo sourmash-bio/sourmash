@@ -31,3 +31,4 @@ Cargo.lock
 .asv
 pkg/
 wasm-pack.log
+.hypothesis

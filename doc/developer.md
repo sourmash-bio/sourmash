@@ -17,7 +17,7 @@ To install all of the necessary Python dependencies, do:
 ```
 pip install -r requirements.txt
 ```
-Briefly, we use `py.test` for testing, and `coverage` for code
+Briefly, we use `py.test` and `cargo test` for testing, and `coverage` for code
 coverage analysis.
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
@@ -28,8 +28,9 @@ python -m virtualenv dev
 pip install -e .
 ```
 
-You can run tests by invoking `make test` or `python -m pytest` in the sourmash
-directory.
+You can run tests by invoking `make test` in the sourmash directory;
+`python -m pytest` will run the Python tests, and `cargo test` will
+run the Rust tests.
 
 ## Automated tests and code coverage calculation
 

@@ -57,7 +57,6 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
-from deprecation import deprecated
 import khmer
 
 try:
@@ -169,7 +168,7 @@ class SBT(Index):
         "Add a new SourmashSignature in to the SBT."
         from .sbtmh import SigLeaf
         
-        leaf = SigLeaf(signature.name(), signature)
+        leaf = SigLeaf(signature.md5sum(), signature)
         self.add_node(leaf)
 
     def add_node(self, node):
@@ -332,7 +331,7 @@ class SBT(Index):
         results = []
         for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
             leaf_e = leaf.data.minhash
-            similarity = query.minhash.containment_ignore_maxhash(leaf_e)
+            similarity = query.minhash.contained_by(leaf_e, True)
             if similarity > 0.0:
                 results.append((similarity, leaf.data, None))
 
