@@ -1,6 +1,6 @@
 from sourmash import MinHash, SourmashSignature
 from sourmash.sbt import GraphFactory
-from sourmash.sbtmh import SigLeaf, LocalizedSBT
+from sourmash.sbtmh import LocalizedSBT
 
 
 def test_localized_add_node(n_children, track_abundance):
@@ -12,37 +12,34 @@ def test_localized_add_node(n_children, track_abundance):
     a.add("AAAAA")  # add k-mer twice for track abundance
     a.add('AAAAT')
     a.add('AAAAC')
-    sig1 = SourmashSignature(a, name='a')
-    leaf1 = SigLeaf(sig1.name(), sig1)
+    sig_a = SourmashSignature(a, name='a')
 
     b = MinHash(n=1, ksize=5, track_abundance=track_abundance)
     b.add("AAAAA")
     b.add("AAAAC")
     b.add('AAAAT')
     b.add('AAAAG')  # Different k-mer from above, but most similar
-    sig2 = SourmashSignature(b, name='b')
-    leaf2 = SigLeaf(sig2.name(), sig2)
+    sig_b = SourmashSignature(b, name='b')
 
     c = MinHash(n=1, ksize=5, track_abundance=track_abundance)
     c.add("AAAAA")
     c.add("AAAAA")  # add k-mer twice for track abundance
     c.add('AAAAT')
     c.add('GAAAA')
-    sig3 = SourmashSignature(c, name='c')
-    leaf3 = SigLeaf(sig3.name(), sig3)
+    sig_c = SourmashSignature(c, name='c')
 
     d = MinHash(n=1, ksize=5, track_abundance=track_abundance)
     d.add("CAAAA")
     d.add("CAAAA")
     d.add('TAAAA')
     d.add('GAAAA')
-    sig4 = SourmashSignature(d, name='d')
-    leaf4 = SigLeaf(sig4.name(), sig2)
+    sig_d = SourmashSignature(d, name='d')
 
-    root.add_node(leaf1)
-    root.add_node(leaf2)
-    root.add_node(leaf3)
-    root.add_node(leaf4)
+    # Add "b" signature in adversarial order. Most similar to "a" but added last
+    root.insert(sig_a)
+    root.insert(sig_c)
+    root.insert(sig_d)
+    root.insert(sig_b)
 
     # create mapping from leaf name to node pos
     leaf_nodes = {
