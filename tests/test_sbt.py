@@ -63,14 +63,41 @@ def test_simple(n_children):
         return set(x)
 
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == search_kmer_in_list(kmer)
+        found_kmers = [x[0] for x in root.find(search_kmer, kmer)]
+        assert set(found_kmers) == search_kmer_in_list(kmer)
+
+    search1 = [x for x in root.find(search_kmer, "AAAAA")]
+    search2 = [x for x in root.find(search_kmer, "AAAAT")]
+    search3 = [x for x in root.find(search_kmer, "AAAAG")]
+    search4 = [x for x in root.find(search_kmer, "CAAAA")]
+    search5 = [x for x in root.find(search_kmer, "GAAAA")]
+
+    # Assert positions
+    if n_children == 2:
+        assert [x[1] for x in search1] == [6, 5, 4, 8, 7]
+        assert [x[1] for x in search2] == [5, 4, 8, 7]
+        assert [x[1] for x in search3] == [5]
+        assert [x[1] for x in search4] == [6, 4]
+        assert [x[1] for x in search5] == [6, 8]
+    if n_children == 5:
+        assert [x[1] for x in search1] == [5, 4, 3, 2, 1]
+        assert [x[1] for x in search2] == [5, 3, 2, 1]
+        assert [x[1] for x in search3] == [2]
+        assert [x[1] for x in search4] == [4, 3]
+        assert [x[1] for x in search5] == [5, 4]
+    if n_children == 10:
+        assert [x[1] for x in search1] == [5, 4, 3, 2, 1]
+        assert [x[1] for x in search2] == [5, 3, 2, 1]
+        assert [x[1] for x in search3] == [2]
+        assert [x[1] for x in search4] == [4, 3]
+        assert [x[1] for x in search5] == [5, 4]
 
     print('-----')
-    print([ x.metadata for x in root.find(search_kmer, "AAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAT") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAG") ])
-    print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
+    print([x[0].metadata for x in root.find(search_kmer, "AAAAA")])
+    print([x[0].metadata for x in root.find(search_kmer, "AAAAT")])
+    print([x[0].metadata for x in root.find(search_kmer, "AAAAG")])
+    print([x[0].metadata for x in root.find(search_kmer, "CAAAA")])
+    print([x[0].metadata for x in root.find(search_kmer, "GAAAA")])
 
 
 def test_longer_search(n_children):
