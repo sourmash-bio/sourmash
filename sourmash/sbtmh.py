@@ -243,42 +243,58 @@ class LocalizedSBT(SBT):
             return 1
 
         # Not an empty tree, can search
-        most_similar_node = self.search(node.data, threshold=0, best_only=1,
-                                        ignore_abundance=self.ignore_abundance,
-                                        do_containment=self.do_containment)
+        new_leaf_similarity, most_similar_leaf = self.search(
+            node.data, threshold=0, best_only=1,
+            ignore_abundance=self.ignore_abundance,
+            do_containment=self.do_containment, return_leaf=True)[0]
 
         # Get parent of the most similar node
-        localized_parent = self.parent(most_similar_node[0])
+        localized_parent = self.parent(most_similar_leaf.pos)
 
         # If the parent has one child: easy, insert the new child here
         children = self.children(localized_parent.pos)
         if children[1].node is None:
             return children[1].pos
         else:
+
             # If parent has two children, check if the other child is more similar to
-            # the most_similar_node --> then no displacement is necessary
-            children[1]
+            # the most_similar_leaf --> then no displacement is necessary
+            child_similarity = children[1].data.similarity(children[0].data)
 
-        # If the parent has two children .. then need to find a new place for the
-        # displaced child
+            if new_leaf_similarity > child_similarity:
+                # New leaf is *more* similar than the existing child
+                # --> displace existing child
 
-        # Insert node under this parent
-        import pdb;
-        pdb.set_trace()
-        min_leaf = min(self._leaves.keys())
+                # Get the leaf information of the other child
+                if most_similar_leaf == children[0]:
+                    other_child = children[1]
+                else:
+                    other_child = children[0]
 
-        next_internal_node = None
-        if self.next_node <= min_leaf:
-            for i in range(min_leaf):
-                if all((i not in self._nodes,
-                        i not in self._leaves,
-                        i not in self._missing_nodes)):
-                    next_internal_node = i
-                    break
+                # Get this child's displaced position
+                displaced_position = other_child.pos
 
-        if next_internal_node is None:
-            self.next_node = max(self._leaves.keys()) + 1
-        else:
-            self.next_node = next_internal_node
+                # Need to find a new place for the displaced child
+                # (this sounds really sad)
+                self.add_node(other_child)
+
+                return displaced_position
+            else:
+                # New leaf is *less* similar than the existing child
+                # --> Create new adjacent parent as done previously
+                min_leaf = min(self._leaves.keys())
+
+                next_internal_node = None
+                if self.next_node <= min_leaf:
+                    for i in range(min_leaf):
+                        if all((i not in self._nodes,
+                                i not in self._leaves,
+                                i not in self._missing_nodes)):
+                            next_internal_node = i
+                            break
+                if next_internal_node is None:
+                    self.next_node = max(self._leaves.keys()) + 1
+                else:
+                    self.next_node = next_internal_node
 
         return self.next_node
