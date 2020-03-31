@@ -3,9 +3,9 @@ from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
 
 
-def test_localized_add_node(n_children, track_abundance):
+def test_localized_add_node(track_abundance):
     factory = GraphFactory(5, 100, 3)
-    root = LocalizedSBT(factory, d=n_children)
+    root = LocalizedSBT(factory, track_abundance=track_abundance)
 
     a = MinHash(n=1, ksize=5, track_abundance=track_abundance)
     a.add("AAAAA")
