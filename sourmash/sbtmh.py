@@ -77,6 +77,102 @@ class SigLeaf(Leaf):
         self._data = new_data
 
 
+class LocalizedSBT(SBT):
+    """A Sequence Bloom Tree implementation which guarantees new leaves are plaaced in
+
+    The default node is a Bloom Filter (like the original implementation),
+    and the leaves are MinHash leaf class (in the sourmash.sbtmh.SigLeaf class)
+
+    Parameters
+    ----------
+    factory: Factory
+        Callable for generating new datastores for internal nodes.
+    d: int
+        Number of children for each internal node. Defaults to 2 (a binary tree)
+    storage: Storage, default: None
+        A Storage is any place where we can save and load data for the nodes.
+        If set to None, will use a FSStorage.
+
+    Notes
+    -----
+    We use two dicts to store the tree structure: One for the internal nodes,
+    and another for the leaves (datasets).
+    """
+
+    def __init__(self, factory, d=2, storage=None, track_abundance=False,
+                 do_containment=False):
+        SBT.__init__(self, factory=factory, d=d, storage=storage)
+        self.track_abundance = track_abundance
+        self.ignore_abundance = not self.track_abundance
+        self.do_containment = do_containment
+
+    def new_node_pos(self, node):
+        if not self._nodes:
+            self.next_node = 1
+            return 0
+
+        if not self._leaves:
+            self.next_node = 2
+            return 1
+
+        # Not an empty tree, can search
+        new_leaf_similarity, most_similar_leaf = self.search(
+            node.data, threshold=0, best_only=1,
+            ignore_abundance=self.ignore_abundance,
+            do_containment=self.do_containment, return_leaf=True)[0]
+
+        # Get parent of the most similar node
+        localized_parent = self.parent(most_similar_leaf.pos)
+
+        # If the parent has one child: easy, insert the new child here
+        children = self.children(localized_parent.pos)
+        if children[1].node is None:
+            return children[1].pos
+        else:
+
+            # If parent has two children, check if the other child is more similar to
+            # the most_similar_leaf --> then no displacement is necessary
+            child_similarity = children[1].data.similarity(children[0].data)
+
+            if new_leaf_similarity > child_similarity:
+                # New leaf is *more* similar than the existing child
+                # --> displace existing child
+
+                # Get the leaf information of the other child
+                if most_similar_leaf == children[0]:
+                    other_child = children[1]
+                else:
+                    other_child = children[0]
+
+                # Get this child's displaced position
+                displaced_position = other_child.pos
+
+                # Need to find a new place for the displaced child
+                # (this sounds really sad)
+                self.add_node(other_child)
+
+                return displaced_position
+            else:
+                # New leaf is *less* similar than the existing child
+                # --> Create new adjacent parent as done previously
+                min_leaf = min(self._leaves.keys())
+
+                next_internal_node = None
+                if self.next_node <= min_leaf:
+                    for i in range(min_leaf):
+                        if all((i not in self._nodes,
+                                i not in self._leaves,
+                                i not in self._missing_nodes)):
+                            next_internal_node = i
+                            break
+                if next_internal_node is None:
+                    self.next_node = max(self._leaves.keys()) + 1
+                else:
+                    self.next_node = next_internal_node
+
+        return self.next_node
+
+
 ### Search functionality.
 
 def _max_jaccard_underneath_internal_node(node, hashes):
@@ -202,99 +298,3 @@ class GatherMinHashes(object):
             return 1
 
         return 0
-
-
-class LocalizedSBT(SBT):
-    """A Sequence Bloom Tree implementation which guarantees new leaves are plaaced in
-
-    The default node is a Bloom Filter (like the original implementation),
-    and the leaves are MinHash leaf class (in the sourmash.sbtmh.SigLeaf class)
-
-    Parameters
-    ----------
-    factory: Factory
-        Callable for generating new datastores for internal nodes.
-    d: int
-        Number of children for each internal node. Defaults to 2 (a binary tree)
-    storage: Storage, default: None
-        A Storage is any place where we can save and load data for the nodes.
-        If set to None, will use a FSStorage.
-
-    Notes
-    -----
-    We use two dicts to store the tree structure: One for the internal nodes,
-    and another for the leaves (datasets).
-    """
-
-    def __init__(self, factory, d=2, storage=None, track_abundance=False,
-                 do_containment=False):
-        SBT.__init__(self, factory=factory, d=d, storage=storage)
-        self.track_abundance = track_abundance
-        self.ignore_abundance = not self.track_abundance
-        self.do_containment = do_containment
-
-    def new_node_pos(self, node):
-        if not self._nodes:
-            self.next_node = 1
-            return 0
-
-        if not self._leaves:
-            self.next_node = 2
-            return 1
-
-        # Not an empty tree, can search
-        new_leaf_similarity, most_similar_leaf = self.search(
-            node.data, threshold=0, best_only=1,
-            ignore_abundance=self.ignore_abundance,
-            do_containment=self.do_containment, return_leaf=True)[0]
-
-        # Get parent of the most similar node
-        localized_parent = self.parent(most_similar_leaf.pos)
-
-        # If the parent has one child: easy, insert the new child here
-        children = self.children(localized_parent.pos)
-        if children[1].node is None:
-            return children[1].pos
-        else:
-
-            # If parent has two children, check if the other child is more similar to
-            # the most_similar_leaf --> then no displacement is necessary
-            child_similarity = children[1].data.similarity(children[0].data)
-
-            if new_leaf_similarity > child_similarity:
-                # New leaf is *more* similar than the existing child
-                # --> displace existing child
-
-                # Get the leaf information of the other child
-                if most_similar_leaf == children[0]:
-                    other_child = children[1]
-                else:
-                    other_child = children[0]
-
-                # Get this child's displaced position
-                displaced_position = other_child.pos
-
-                # Need to find a new place for the displaced child
-                # (this sounds really sad)
-                self.add_node(other_child)
-
-                return displaced_position
-            else:
-                # New leaf is *less* similar than the existing child
-                # --> Create new adjacent parent as done previously
-                min_leaf = min(self._leaves.keys())
-
-                next_internal_node = None
-                if self.next_node <= min_leaf:
-                    for i in range(min_leaf):
-                        if all((i not in self._nodes,
-                                i not in self._leaves,
-                                i not in self._missing_nodes)):
-                            next_internal_node = i
-                            break
-                if next_internal_node is None:
-                    self.next_node = max(self._leaves.keys()) + 1
-                else:
-                    self.next_node = next_internal_node
-
-        return self.next_node
