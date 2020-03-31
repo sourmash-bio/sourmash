@@ -43,7 +43,7 @@ def test_localized_add_node(track_abundance):
 
     # create mapping from leaf name to node pos
     leaf_nodes = {
-        sig.name: n
+        sig.data.name(): n
         for n, sig in
         root._leaves.items()
     }

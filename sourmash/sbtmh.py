@@ -137,29 +137,34 @@ class LocalizedSBT(SBT):
             else:
                 # If parent has two children, check if the other child is more similar
                 # to the most_similar_leaf --> then no displacement is necessary
-                child_similarity = children[1].data.similarity(children[0].data)
+                try:
+                    child_similarity = children[1].data.similarity(children[0].data)
 
-                if new_leaf_similarity > child_similarity:
-                    # New leaf is *more* similar than the existing child
-                    # --> displace existing child
+                    if new_leaf_similarity > child_similarity:
+                        # New leaf is *more* similar than the existing child
+                        # --> displace existing child
 
-                    # Get the leaf information of the other child
-                    if most_similar_leaf == children[0]:
-                        other_child = children[1]
+                        # Get the leaf information of the other child
+                        if most_similar_leaf == children[0]:
+                            other_child = children[1]
+                        else:
+                            other_child = children[0]
+
+                        # Get this child's displaced position
+                        displaced_position = other_child.pos
+                        self._leaves[displaced_position] = node
+
+                        # Need to find a new home with better parents for the displaced
+                        # child (this sounds really sad)
+                        other_child.pos = self.new_node_pos(other_child)
+                        self._leaves[other_child.pos] = other_child
+
+                        return displaced_position
                     else:
-                        other_child = children[0]
-
-                    # Get this child's displaced position
-                    displaced_position = other_child.pos
-                    self._leaves[displaced_position] = node
-
-                    # Need to find a new home with better parents for the displaced
-                    # child (this sounds really sad)
-                    other_child.pos = self.new_node_pos(other_child)
-                    self._leaves[other_child.pos] = other_child
-
-                    return displaced_position
-                else:
+                        self.next_node = self._insert_next_position(self.next_node)
+                except AttributeError:
+                    # One of the children is a Node rather than a SigLeaf --> replace
+                    # the node with the SigLeaf
                     self.next_node = self._insert_next_position(self.next_node)
         except IndexError:
             # No nodes are similar so just insert in the next place
