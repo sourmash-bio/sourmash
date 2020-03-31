@@ -39,7 +39,7 @@ def search_sbt_index(tree, query, threshold):
 class SigLeaf(Leaf):
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
-                name=self.name, metadata=self.metadata)
+            name=self.name, metadata=self.metadata)
 
     def save(self, path):
         # this is here only for triggering the property load
