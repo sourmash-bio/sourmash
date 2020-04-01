@@ -230,6 +230,9 @@ class SBT(Index):
 
         unload_data = kwargs.get("unload_data", False)
 
+        # If true, return (Leaf, position) tuples of matches
+        return_pos = kwargs.get('return_pos', False)
+
         # initialize search queue with top node of tree
         matches = []
         visited, queue = set(), [0]
@@ -261,7 +264,10 @@ class SBT(Index):
                     # leaf node? it's a match!
                     if isinstance(node_g, Leaf):
                         # Return tuple of node data and position
-                        matches.append((node_g, node_p))
+                        if return_pos:
+                            matches.append((node_g, node_p))
+                        else:
+                            matches.append(node_g)
                     # internal node? descend.
                     elif isinstance(node_g, Node):
                         if kwargs.get('dfs', True):  # defaults search to dfs
@@ -315,7 +321,7 @@ class SBT(Index):
         # now, search!
         results = []
         for leaf, pos in self.find(search_fn, tree_query, threshold,
-                                   unload_data=unload_data):
+                                   unload_data=unload_data, return_pos=True):
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
