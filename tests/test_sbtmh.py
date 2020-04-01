@@ -69,7 +69,13 @@ def test_localized_add_node(track_abundance):
     #   /  \
     # a: 1  c: 2
     root.insert(sig_d)
-    # Tree: (track_abundance=True and track_abundance=False)
+    # Tree: (track_abundance=True)
+    #          0
+    #        /  \
+    #      1     d: 2
+    #    /   \
+    # c: 3  a: 4
+    # Tree: (track_abundance=False)
     #          0
     #        /  \
     #      1     d: 2

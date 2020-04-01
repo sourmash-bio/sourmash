@@ -149,15 +149,18 @@ class LocalizedSBT(SBT):
                 # to the most_similar_leaf --> then no displacement is necessary
 
                 # Get the leaf information of the other child
-                if most_similar_leaf == children[0]:
+                if most_similar_leaf == children[0].node:
                     other_child = children[1]
-                else:
+                elif most_similar_leaf == children[1].node:
                     other_child = children[0]
+                else:
+                    raise ValueError("Neither children in node show up as most similar"
+                                     " leaf. Something weird happened in search.")
                 child_nodes = [x.node for x in children]
                 all_leaves = all(isinstance(x, SigLeaf) for x in child_nodes)
                 if all_leaves:
-                    child_similarity = child_nodes[1].data.similarity(
-                        child_nodes[0].data, ignore_abundance=self.ignore_abundance)
+                    child_similarity = most_similar_leaf.data.similarity(
+                        other_child.node.data, ignore_abundance=self.ignore_abundance)
 
                     if new_leaf_similarity > child_similarity:
                         # New leaf is *more* similar than the existing child
@@ -166,12 +169,21 @@ class LocalizedSBT(SBT):
                         # Get this child's displaced position
                         displaced_position = other_child.pos
 
-                        # Need to find a new home with better parents for the displaced
-                        # child (this sounds really sad)
-                        other_child.pos = self.new_node_pos(other_child)
-                        self._leaves[other_child.pos] = node
-                        self._leaves.pop(displaced_position)
+                        # Place the less similar child in the neighboring node
+                        new_pos = max(displaced_position, most_similar_pos) + 1
+                        # Bump up all the previous leaves by 1
+                        new_leaves = {i + 1: self._leaves[i] for i in
+                                      range(displaced_position, max(self._leaves))}
+                        # self._leaves.update(new_leaves)
+                        # Remove the old location
+                        # self._leaves[new_pos] = other_child.node
+                        grandparent = self.parent(most_similar_parent.pos)
+                        parent_sibling = [x for x in self.children(grandparent.pos)
+                                          if x != most_similar_parent][0]
+                        self.insert_new_internal_node_with_children(other_child.node,
+                                                                    parent_sibling)
 
+                        del self._leaves[displaced_position]
                         return displaced_position
                     else:
                         self.next_node = self._insert_next_position(self.next_node)
