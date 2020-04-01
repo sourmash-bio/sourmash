@@ -191,37 +191,37 @@ class SBT(Index):
         #    - this is covered by case 1
         # 4) parent is None
         #    this can happen with d != 2, in this case create the parent node
-        p = self.parent(pos)
-        if isinstance(p.node, Leaf):
+        parent = self.parent(pos)
+        if isinstance(parent.node, Leaf):
             # Create a new internal node
             # node and parent are children of new internal node
-            n = Node(self.factory, name="internal." + str(p.pos))
-            self._nodes[p.pos] = n
+            n = Node(self.factory, name="internal." + str(parent.pos))
+            self._nodes[parent.pos] = n
 
-            c1, c2 = self.children(p.pos)[:2]
+            c1, c2 = self.children(parent.pos)[:2]
 
-            self._leaves[c1.pos] = p.node
-            self._leaves[c2.pos] = node 
-            del self._leaves[p.pos]
+            self._leaves[c1.pos] = parent.node
+            self._leaves[c2.pos] = node
+            del self._leaves[parent.pos]
 
-            for child in (p.node, node):
+            for child in (parent.node, node):
                 child.update(n)
-        elif isinstance(p.node, Node):
-            self._leaves[pos] = node 
-            node.update(p.node)
-        elif p.node is None:
-            n = Node(self.factory, name="internal." + str(p.pos))
-            self._nodes[p.pos] = n
-            c1 = self.children(p.pos)[0]
-            self._leaves[c1.pos] = node 
+        elif isinstance(parent.node, Node):
+            self._leaves[pos] = node
+            node.update(parent.node)
+        elif parent.node is None:
+            n = Node(self.factory, name="internal." + str(parent.pos))
+            self._nodes[parent.pos] = n
+            c1 = self.children(parent.pos)[0]
+            self._leaves[c1.pos] = node
             node.update(n)
 
         # update all parents!
-        p = self.parent(p.pos)
-        while p:
-            self._rebuild_node(p.pos)
-            node.update(self._nodes[p.pos])
-            p = self.parent(p.pos)
+        parent = self.parent(parent.pos)
+        while parent:
+            self._rebuild_node(parent.pos)
+            node.update(self._nodes[parent.pos])
+            parent = self.parent(parent.pos)
 
     def find(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
