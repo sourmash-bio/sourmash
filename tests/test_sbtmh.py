@@ -21,13 +21,13 @@ def test_localized_add_node(track_abundance):
     b.add("AAAAC")
     b.add('AAAAT')
     b.add('TTTTT')
-    b.add('AAAAG')  # Different k-mer from above, but most similar
+    b.add('AAAAC')  # Same k-mer from above
     sig_b = SourmashSignature(b, name='b')
 
     c = MinHash(n=n_hashes, ksize=5, track_abundance=track_abundance)
     c.add("AAAAA")
     c.add("AAAAA")  # add k-mer twice for track abundance
-    c.add("AAAAA")  # add k-mer thrice for track abundance
+    c.add("AAAAG")  # add k-mer thrice for track abundance
     c.add('AAAAT')
     c.add('AAAAC')
     sig_c = SourmashSignature(c, name='c')
@@ -53,12 +53,18 @@ def test_localized_add_node(track_abundance):
         root._leaves.items()
     }
 
-    # Compute similarities
-    from sourmash.compare import compare_all_pairs
-    sigs = [sig_a, sig_b, sig_c, sig_d]
-    ignore_abundance = not track_abundance
-    print('\n--- ignore_abundance: {0} ---'.format(ignore_abundance))
-    print(compare_all_pairs(sigs, ignore_abundance=ignore_abundance))
+    # --- track_abundance: False (ignore_abundance: True) similarity matrix ---
+    #   a    b    c    d
+    # [[1.   1.   0.75 0.  ]
+    #  [1.   1.   0.75 0.  ]
+    #  [0.75 0.75 1.   0.  ]
+    #  [0.   0.   0.   1.  ]]
+    # --- track_abundance: True (ignore_abundance: False)  similarity matrix ---
+    #   a          b          c          d
+    # [[1.         0.7195622  0.73043556 0.        ]
+    #  [0.7195622  1.         0.68749438 0.        ]
+    #  [0.73043556 0.68749438 1.         0.        ]
+    #  [0.         0.         0.         1.        ]]
 
     # verify most similar leaves are sharing same parent node
     if track_abundance:
