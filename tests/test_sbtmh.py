@@ -40,7 +40,8 @@ def test_localized_add_node(track_abundance):
     d.add('CCCCC')
     sig_d = SourmashSignature(d, name='d')
 
-    # Add "b" signature in adversarial order. Most similar to "a" but added last
+    # Add "b" signature in adversarial order. When track_abundance=False, is most
+    # similar to "a" but added last
     root.insert(sig_a)
     root.insert(sig_c)
     root.insert(sig_d)
@@ -53,18 +54,18 @@ def test_localized_add_node(track_abundance):
         root._leaves.items()
     }
 
-    # --- track_abundance: False (ignore_abundance: True) similarity matrix ---
-    #   a    b    c    d
-    # [[1.   1.   0.75 0.  ]
-    #  [1.   1.   0.75 0.  ]
-    #  [0.75 0.75 1.   0.  ]
-    #  [0.   0.   0.   1.  ]]
     # --- track_abundance: True (ignore_abundance: False)  similarity matrix ---
     #   a          b          c          d
     # [[1.         0.7195622  0.73043556 0.        ]
     #  [0.7195622  1.         0.68749438 0.        ]
     #  [0.73043556 0.68749438 1.         0.        ]
     #  [0.         0.         0.         1.        ]]
+    # --- track_abundance: False (ignore_abundance: True) similarity matrix ---
+    #   a    b    c    d
+    # [[1.   1.   0.75 0.  ]
+    #  [1.   1.   0.75 0.  ]
+    #  [0.75 0.75 1.   0.  ]
+    #  [0.   0.   0.   1.  ]]
 
     # verify most similar leaves are sharing same parent node
     if track_abundance:
