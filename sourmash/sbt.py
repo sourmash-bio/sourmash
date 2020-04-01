@@ -123,9 +123,11 @@ class SBT(Index):
     -----
     We use two dicts to store the tree structure: One for the internal nodes,
     and another for the leaves (datasets). The positions of all internal nodes are
-    smaller than of leaves. If pos is the position of a leaf, then its parent position can be found with:
+    smaller than of leaves. If pos is the position of a leaf, then its parent position
+    can be found with:
         parent_position = int(math.floor((pos - 1) / d))
-    For example, if d=2, then the parent position 5 corresponds to the children at leaf positions 10 and 11
+    For example, if d=2, then the parent position 5 corresponds to the children at leaf
+    positions 11 and 12
     """
 
     def __init__(self, factory, d=2, storage=None):
