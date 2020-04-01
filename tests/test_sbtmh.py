@@ -99,7 +99,7 @@ def test_localized_add_node(track_abundance):
         root._leaves.items()
     }
 
-    # verify most similar leaves are sharing same parent node
+    # Verify most similar leaves are sharing same parent node
     if track_abundance:
         # Currently leaf_pos = {'a': 3, 'd': 4, 'c': 5, 'b': 6}
         # Expected leaf_pos = {'a': 3, 'd': 5, 'c': 4, 'b': 6}
