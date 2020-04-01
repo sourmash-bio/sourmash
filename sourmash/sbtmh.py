@@ -173,19 +173,12 @@ class LocalizedSBT(SBT):
                         displaced_position = other_child.pos
 
                         # Place the less similar child in the neighboring node
-                        new_pos = max(displaced_position, most_similar_pos) + 1
-                        # Bump up all the previous leaves by 1
-                        new_leaves = {i + 1: self._leaves[i] for i in
-                                      range(displaced_position, max(self._leaves))}
-                        # self._leaves.update(new_leaves)
-                        # Remove the old location
-                        # self._leaves[new_pos] = other_child.node
                         grandparent = self.parent(most_similar_parent.pos)
                         parent_sibling = [x for x in self.children(grandparent.pos)
                                           if x != most_similar_parent][0]
                         self.insert_new_internal_node_with_children(other_child.node,
                                                                     parent_sibling)
-
+                        # Remove the old location
                         del self._leaves[displaced_position]
                         return displaced_position
                     else:
