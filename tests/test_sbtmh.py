@@ -1,3 +1,5 @@
+from itertools import product
+
 from sourmash import MinHash, SourmashSignature
 from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
@@ -40,20 +42,7 @@ def test_localized_add_node(track_abundance):
     d.add('CCCCC')
     sig_d = SourmashSignature(d, name='d')
 
-    # Add "b" signature in adversarial order. When track_abundance=False, is most
-    # similar to "a" but added last
-    root.insert(sig_a)
-    root.insert(sig_c)
-    root.insert(sig_d)
-    root.insert(sig_b)
-
-    # create mapping from leaf name to node pos
-    leaf_pos = {
-        sig.data.name(): n
-        for n, sig in
-        root._leaves.items()
-    }
-
+    # Similarity matrices for reference
     # --- track_abundance: True (ignore_abundance: False)  similarity matrix ---
     #   a          b          c          d
     # [[1.         0.7195622  0.73043556 0.        ]
@@ -66,6 +55,49 @@ def test_localized_add_node(track_abundance):
     #  [1.   1.   0.75 0.  ]
     #  [0.75 0.75 1.   0.  ]
     #  [0.   0.   0.   1.  ]]
+
+    # Add "b" signature in adversarial order. When track_abundance=False, is most
+    # similar to "a" but added last
+    root.insert(sig_a)
+    # Tree: (track_abundance=True and track_abundance=False)
+    #     0
+    #   /  \
+    # a: 1  None
+    root.insert(sig_c)
+    # Tree: (track_abundance=True and track_abundance=False)
+    #     0
+    #   /  \
+    # a: 1  c: 2
+    root.insert(sig_d)
+    # Tree: (track_abundance=True and track_abundance=False)
+    #          0
+    #        /  \
+    #      1     d: 2
+    #    /   \
+    # a: 3  c: 4
+    root.insert(sig_b)
+    # Tree: (track_abundance=True)
+    #             0
+    #         /      \
+    #      1           2
+    #    /   \       /   \
+    # a: 3  c: 4   d: 5  b: 6
+    # Tree: (track_abundance=False)
+    #             0
+    #         /      \
+    #      1           2
+    #    /   \       /   \
+    # a: 3  b: 4   c: 5  d: 6
+
+    # Make sure tree construction happened properly
+    assert all(node < leaf for leaf, node in product(root._leaves, root._nodes))
+
+    # create mapping from leaf name to node pos
+    leaf_pos = {
+        sig.data.name(): n
+        for n, sig in
+        root._leaves.items()
+    }
 
     # verify most similar leaves are sharing same parent node
     if track_abundance:
