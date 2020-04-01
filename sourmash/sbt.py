@@ -195,19 +195,7 @@ class SBT(Index):
         #    this can happen with d != 2, in this case create the parent node
         parent = self.parent(pos)
         if isinstance(parent.node, Leaf):
-            # Create a new internal node
-            # node and parent are children of new internal node
-            n = Node(self.factory, name="internal." + str(parent.pos))
-            self._nodes[parent.pos] = n
-
-            c1, c2 = self.children(parent.pos)[:2]
-
-            self._leaves[c1.pos] = parent.node
-            self._leaves[c2.pos] = node
-            del self._leaves[parent.pos]
-
-            for child in (parent.node, node):
-                child.update(n)
+            self.insert_new_internal_node_with_children(node, parent)
         elif isinstance(parent.node, Node):
             self._leaves[pos] = node
             node.update(parent.node)
@@ -224,6 +212,18 @@ class SBT(Index):
             self._rebuild_node(parent.pos)
             node.update(self._nodes[parent.pos])
             parent = self.parent(parent.pos)
+
+    def insert_new_internal_node_with_children(self, node, parent):
+        # Create a new internal node
+        # node and parent are children of new internal node
+        n = Node(self.factory, name="internal." + str(parent.pos))
+        self._nodes[parent.pos] = n
+        c1, c2 = self.children(parent.pos)[:2]
+        self._leaves[c1.pos] = parent.node
+        self._leaves[c2.pos] = node
+        del self._leaves[parent.pos]
+        for child in (parent.node, node):
+            child.update(n)
 
     def find(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
