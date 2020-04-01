@@ -14,10 +14,13 @@ def load_sbt_index(filename, print_version_warning=True):
                     print_version_warning=print_version_warning)
 
 
-def create_sbt_index(bloom_filter_size=1e5, n_children=2):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2, localized=False):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
-    tree = SBT(factory, d=n_children)
+    if localized:
+        tree = LocalizedSBT(factory, d=n_children)
+    else:
+        tree = SBT(factory, d=n_children)
     return tree
 
 

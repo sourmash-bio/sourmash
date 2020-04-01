@@ -9,19 +9,17 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs
+
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
+from .compare import compare_all_pairs
 from .logging import notify, error, print_results, set_quiet
-from .sbtmh import SearchMinHashesFindBest, SigLeaf
-
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput
+from .sbtmh import SearchMinHashesFindBest
+from .sourmash_args import FileOutput
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
-
-from .command_compute import compute
 
 
 def info(args):
@@ -338,7 +336,8 @@ def index(args):
     if args.append:
         tree = load_sbt_index(args.sbt_name)
     else:
-        tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+        tree = create_sbt_index(args.bf_size, n_children=args.n_children,
+                                localized=args.localized)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
