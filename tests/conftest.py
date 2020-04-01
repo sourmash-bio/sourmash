@@ -1,7 +1,7 @@
 import os
 
-from hypothesis import settings, Verbosity
 import pytest
+from hypothesis import settings, Verbosity
 
 
 @pytest.fixture(params=[True, False])
@@ -16,6 +16,11 @@ def dayhoff(request):
 
 @pytest.fixture(params=[True, False])
 def hp(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def localized(request):
     return request.param
 
 
