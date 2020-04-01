@@ -5,7 +5,7 @@ import sys
 from io import BytesIO, TextIOWrapper
 
 from . import signature
-from .sbt import Leaf, SBT, GraphFactory
+from .sbt import Leaf, SBT, GraphFactory, Node
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -121,54 +121,61 @@ class LocalizedSBT(SBT):
 
         # What is the final item of the tuple returned by search() supposed to
         # represent? It seems to be always 'None.'
-        try:
-            search_result = self.search(
-                node.data, threshold=sys.float_info.epsilon, best_only=True,
-                ignore_abundance=self.ignore_abundance,
-                do_containment=self.do_containment, return_leaf=True)
-            new_leaf_similarity, most_similar_leaf, most_similar_pos = search_result[0]
+        if isinstance(node, SigLeaf):
+            try:
+                search_result = self.search(
+                    node.data, threshold=sys.float_info.epsilon, best_only=True,
+                    ignore_abundance=self.ignore_abundance,
+                    do_containment=self.do_containment, return_leaf=True)
+                new_leaf_similarity, most_similar_leaf, most_similar_pos = \
+                search_result[0]
 
-            # Get parent of the most similar node
-            localized_parent = self.parent(most_similar_pos)
+                # Get parent of the most similar node
+                most_similar_parent = self.parent(most_similar_pos)
 
-            # If the parent has one child: easy, insert the new child here
-            children = self.children(localized_parent.pos)
-            if children[1].node is None:
-                return children[1].pos
-            else:
-                # If parent has two children, check if the other child is more similar
-                # to the most_similar_leaf --> then no displacement is necessary
-                try:
-                    child_similarity = children[1].data.similarity(children[0].data)
-
-                    if new_leaf_similarity > child_similarity:
-                        # New leaf is *more* similar than the existing child
-                        # --> displace existing child
-
-                        # Get the leaf information of the other child
-                        if most_similar_leaf == children[0]:
-                            other_child = children[1]
-                        else:
-                            other_child = children[0]
-
-                        # Get this child's displaced position
-                        displaced_position = other_child.pos
-                        self._leaves[displaced_position] = node
-
-                        # Need to find a new home with better parents for the displaced
-                        # child (this sounds really sad)
-                        other_child.pos = self.new_node_pos(other_child)
-                        self._leaves[other_child.pos] = other_child
-
-                        return displaced_position
-                    else:
-                        self.next_node = self._insert_next_position(self.next_node)
-                except AttributeError:
-                    # One of the children is a Node rather than a SigLeaf --> replace
-                    # the node with the SigLeaf
+                # If the parent has one child: easy, insert the new child here
+                children = self.children(most_similar_parent.pos)
+                if children[1].node is None:
+                    # Use the default next node position
                     self.next_node = self._insert_next_position(self.next_node)
-        except IndexError:
-            # No nodes are similar so just insert in the next place
+                else:
+                    # If parent has two children, check if the other child is more similar
+                    # to the most_similar_leaf --> then no displacement is necessary
+
+                    # Get the leaf information of the other child
+                    if most_similar_leaf == children[0]:
+                        other_child = children[1]
+                    else:
+                        other_child = children[0]
+                    all_leaves = all(isinstance(x, SigLeaf) for x in children)
+                    if all_leaves:
+                        child_similarity = children[1].data.similarity(children[0].data)
+
+                        if new_leaf_similarity > child_similarity:
+                            # New leaf is *more* similar than the existing child
+                            # --> displace existing child
+
+                            # Get this child's displaced position
+                            displaced_position = other_child.pos
+
+                            # Need to find a new home with better parents for the displaced
+                            # child (this sounds really sad)
+                            other_child.pos = self.new_node_pos(other_child)
+                            self._leaves[other_child.pos] = node
+                            self._leaves.pop(displaced_position)
+
+                            return displaced_position
+                        else:
+                            self.next_node = self._insert_next_position(self.next_node)
+                    else:
+                        # One of the children is a Node rather than a SigLeaf --> replace
+                        # the node with the SigLeaf
+                        self.next_node = self._insert_next_position(self.next_node)
+
+            except IndexError:
+                # No nodes are similar so just insert in the next place
+                self.next_node = self._insert_next_position(self.next_node)
+        else:
             self.next_node = self._insert_next_position(self.next_node)
 
         return self.next_node
@@ -191,6 +198,73 @@ class LocalizedSBT(SBT):
             next_node = next_internal_node
 
         return next_node
+
+    def add_node(self, node):
+        pos = self.new_node_pos(node)
+
+        if pos == 0:  # empty tree; initialize w/node.
+            new_internal_node = Node(self.factory, name="internal." + str(pos))
+            self._nodes[0] = new_internal_node
+            pos = self.new_node_pos(node)
+
+        # Cases:
+        # 1) parent is a Leaf (already covered)
+        # 2) parent is a Node (with empty position available)
+        #    - add Leaf, update parent
+        # 3) parent is a Node (no position available)
+        #    - this is covered by case 1
+        # 4) parent is None
+        #    this can happen with d != 2, in this case create the parent node
+        parent = self.parent(pos)
+        if isinstance(parent.node, Leaf):
+            # Create a new internal node
+            # node and parent are children of new internal node
+            # Move children of grandparent internal node to new inserted internal node
+            # below, and bump new node up to grandparent node
+            grandparent = self.parent(parent.pos)
+            grandparent_children = self.children(grandparent.pos)
+            if grandparent_children[0] == parent:
+                parent_sibling = grandparent_children[1]
+            else:
+                parent_sibling = grandparent_children[0]
+            if isinstance(parent_sibling.node, Node):
+                self.insert_new_internal_node_with_children(node, parent)
+            else:
+                self.relocate_children_to_new_internal_node(grandparent, node, parent,
+                                                            parent_sibling)
+        elif isinstance(parent.node, Node):
+            self._leaves[pos] = node
+            node.update(parent.node)
+        elif parent.node is None:
+            new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
+            self._nodes[parent.pos] = new_internal_node
+            c1 = self.children(parent.pos)[0]
+            self._leaves[c1.pos] = node
+            node.update(new_internal_node)
+
+        # update all parents!
+        parent = self.parent(parent.pos)
+        while parent:
+            self._rebuild_node(parent.pos)
+            node.update(self._nodes[parent.pos])
+            parent = self.parent(parent.pos)
+
+    def relocate_children_to_new_internal_node(self, grandparent, node, parent,
+                                               parent_sibling):
+        new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
+        self._nodes[parent.pos] = new_internal_node
+        c1, c2 = self.children(parent.pos)[:2]
+        # Update new internal node
+        self._leaves[c1.pos] = parent.node
+        self._leaves[c2.pos] = parent_sibling.node
+        del self._leaves[parent.pos]
+        # Swap position of previous parent's sibling
+        self._leaves[parent_sibling.pos] = node
+        # Set the parent of the new node as the grandparent
+        node.update(grandparent.node)
+        # Update data for the moved parent and parent's sibling
+        for child in (parent.node, parent_sibling.node):
+            child.update(new_internal_node)
 
 
 ### Search functionality.
