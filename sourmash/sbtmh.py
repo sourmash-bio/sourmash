@@ -329,6 +329,7 @@ class SearchMinHashesFindBest(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
+        """May return a list of matches under a node --> doesn't return a single sig"""
         mins = sig.minhash.get_mins()
         score = 0
 
