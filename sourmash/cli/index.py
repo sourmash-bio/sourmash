@@ -41,8 +41,9 @@ def subparser(subparsers):
         'from 0.0 (save all nodes) to 1.0 (no nodes saved)'
     )
     subparser.add_argument(
-        '--scaled', metavar='FLOAT', type=float, default=0,
-        help='downsample signatures to the specified scaled factor'
+        '-l', '--localized', action='store_true', default=False,
+        help='Create a localized SBT index, which guarantees that any two leaves '
+             'sharing a parent are more similar to leaves not sharing a parent'
     )
     add_moltype_args(subparser)
 
