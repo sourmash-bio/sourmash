@@ -72,7 +72,7 @@ subcommand. See [the LCA tutorial](tutorials-lca.html) for a
 walkthrough of these commands.
 
 * `lca classify` classifies many signatures against an LCA database.
-* `lca summarize` summarizes the content of a metagenome using an LCA database.
+* `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca gather` finds non-overlapping matches to a metagenome in an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
@@ -312,7 +312,9 @@ exploring metagenomes and metagenome-assembled genome bins.
 
 Note, unlike `sourmash lca classify`, `lca summarize` merges all
 of the query signatures into one and reports on the combined contents.
-This may be changed in the future.
+To report on individual signatures, use the `--singleton` flag; this will
+become default in sourmash 4.0 and beyond, and the merging behavior will
+be removed.
 
 Usage:
 
