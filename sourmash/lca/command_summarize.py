@@ -112,7 +112,8 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
     Output results in ~human-readable format.
     """
     if filename or sig:                   # require both
-        assert filename and sig
+        if not filename and sig:
+            raise ValueError("must include both filename and sig arguments")
 
     for (lineage, count) in lineage_counts.items():
         if lineage:
@@ -215,8 +216,9 @@ def summarize_main(args):
             if csv_fp:
                 csv_fp.close()
 
-    elif args.merge:
+    else:
         # load and merge all the signatures in all the files
+        # DEPRECATE for 4.0.
         hashvals = load_and_combine(inp_files, ksize, scaled)
 
         # get the full counted list of lineage counts across signatures
@@ -229,9 +231,7 @@ def summarize_main(args):
         # CSV:
         if args.output:
             with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
-                output_csv(lineage_counts, csv_fp)
-    else:
-        raise Exception("invalid arguments; must specify --singleton or --merge")
+                output_csv(lineage_counts, csv_fp, None, None)
 
 
 if __name__ == '__main__':

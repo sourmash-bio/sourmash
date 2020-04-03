@@ -22,8 +22,6 @@ def subparser(subparsers):
 
     subparser.add_argument('--singleton', action='store_true',
                            help='classify each signature independently')
-    subparser.add_argument('--merge', action='store_true', default=True,
-                           help='merge all signatures and classify merged (default in 3.x)')
 
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
