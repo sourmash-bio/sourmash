@@ -1,14 +1,14 @@
-"""Compute sourmash signatures for input sequences.
+"""compute sequence signatures for inputs"""
 
-Basic usage:
+usage="""
 
    sourmash compute -k 21,31,51 *.fa *.fq
 
 This will create MinHash sketches at k-mer sizes of 21, 31 and 51, for
 all FASTA and FASTQ files in the current directory, and save them in
 signature files ending in '.sig'. You can rapidly compare these files
-with `compare`, query them with `search`, among other operations; see
-the full documentation http://sourmash.rtfd.io/.
+with `compare` and query them with `search`, among other operations;
+see the full documentation http://sourmash.rtfd.io/.
 
 The key options for compute are:
 
@@ -44,7 +44,7 @@ def ksize_parser(ksizes):
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('compute', usage=__doc__)
+    subparser = subparsers.add_parser('compute', description=__doc__, usage=usage)
 
     sketch_args = subparser.add_argument_group('Sketching options')
     sketch_args.add_argument(
