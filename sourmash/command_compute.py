@@ -109,11 +109,11 @@ def compute(args):
         sys.exit(-1)
 
     if args.merge and not args.output:
-        error("must specify -o with --merge")
+        error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
     if args.output and args.outdir:
-        error("--outdir doesn't make sense with -o/--output")
+        error("ERROR: --outdir doesn't make sense with -o/--output")
         sys.exit(-1)
 
     if args.track_abundance:
