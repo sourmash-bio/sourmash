@@ -112,6 +112,10 @@ def compute(args):
         error("must specify -o with --merge")
         sys.exit(-1)
 
+    if args.output and args.outdir:
+        error("--outdir doesn't make sense with -o/--output")
+        sys.exit(-1)
+
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
@@ -125,6 +129,9 @@ def _compute_individual(args):
 
     for filename in args.filenames:
         sigfile = os.path.basename(filename) + '.sig'
+        if args.outdir:
+            sigfile = os.path.join(args.outdir, sigfile)
+
         if not args.output and os.path.exists(sigfile) and not \
             args.force:
             notify('skipping {} - already done', filename)
