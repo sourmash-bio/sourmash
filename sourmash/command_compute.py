@@ -219,10 +219,10 @@ def compute(args):
                        len(sigs), n + 1, filename)
 
             if not args.output:
-                save_siglist(siglist, args.output, sigfile)
+                save_siglist(siglist, sigfile)
 
         if args.output:
-            save_siglist(siglist, args.output, sigfile)
+            save_siglist(siglist, args.output)
     else:                             # single name specified - combine all
         # make minhashes for the whole file
         Elist = make_minhashes(ksizes, args.seed, args.protein,
@@ -274,20 +274,12 @@ def build_siglist(sig, filename, name=None):
     return [sig]
 
 
-def save_siglist(siglist, sigfile_name, filename=None):
+def save_siglist(siglist, sigfile_name):
     # save!
-    if sigfile_name:
-        with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
-            save_signatures(siglist, fp)
-    else:
-        if filename is None:
-            raise Exception("internal error, filename is None")
-        with sourmash_args.FileOutput(filename, 'w') as fp:
-            sigfile_name = filename
-            save_signatures(siglist, fp)
-    notify(
-        'saved signature(s) to {}. Note: signature license is CC0.',
-        sigfile_name)
+    with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
+        save_signatures(siglist, fp)
+    notify('saved signature(s) to {}. Note: signature license is CC0.',
+           sigfile_name)
 
 
 class ComputeParameters(RustObject):
