@@ -11,6 +11,7 @@ from ..sig import downsample
 from ..sig import extract
 from ..sig import filter
 from ..sig import flatten
+from ..sig import abundhist
 from ..sig import intersect
 from ..sig import merge
 from ..sig import rename

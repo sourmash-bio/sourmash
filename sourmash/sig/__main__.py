@@ -31,6 +31,7 @@ subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
 overlap <signature1> <signature2>         - see detailed comparison of sigs
+abundhist <signature> [<sig> ...]         - calculate abundance histogram
 
 ** Use '-h' to get subcommand-specific help, e.g.
 
@@ -651,6 +652,61 @@ def export(args):
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
     notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
+
+
+
+
+def abundhist(args):
+    """
+    output abundance histogram and/or raw abundances.
+    """
+    import numpy, collections
+    import termplotlib as tpl
+
+    set_quiet(args.quiet)
+    moltype = sourmash_args.calculate_moltype(args)
+
+    outlist = []
+    total_loaded = 0
+    for filename in args.signatures:
+        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+                                           select_moltype=moltype,
+                                           do_raise=True)
+        siglist = list(siglist)
+
+        total_loaded += len(siglist)
+
+        # select!
+        if args.md5 is not None:
+            siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
+        if args.name is not None:
+            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+
+    notify("loaded {} total that matched ksize & molecule type",
+           total_loaded)
+    if len(siglist) != total_loaded:
+        notify("selected {} via name / md5 selectors".format(len(siglist)))
+    notify('')
+
+    counts_d = collections.defaultdict(int)
+    for ss in siglist:
+        abunds = ss.minhash.get_mins(with_abundance=True)
+        for hashval, abund in abunds.items():
+            counts_d[hashval] += abund
+
+    all_counts = list(counts_d.values())
+
+    # make hist
+    counts, bin_edges = numpy.histogram(all_counts)
+    bin_edges = bin_edges.astype(int)
+
+    # plot
+    fig = tpl.figure()
+    f = fig.barh(counts, [ str(x) for x in bin_edges[:-1] ], force_ascii=True)
+    fig.show()
+
+#    with FileOutput(args.output, 'wt') as fp:
+#        sourmash.save_signatures(outlist, fp=fp)
 
 
 def main(arglist=None):
