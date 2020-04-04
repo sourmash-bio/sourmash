@@ -220,7 +220,36 @@ class SearchDatabaseLoader(object):
         self.num_db = set()
         self.scaled_db = set()
 
+    @property
+    def ksize(self):
+        if not self.ksizes:
+            raise ValueError('no ksizes yet')
+        if len(self.ksizes) > 1:
+            raise ValueError('too many ksizes!')
+        return next(iter(self.ksizes))
+
+    @property
+    def moltype(self):
+        if not self.moltypes:
+            raise ValueError('no moltypes yet')
+        if len(self.moltypes) > 1:
+            raise ValueError('too many moltypes!')
+        return next(iter(self.moltypes))
+
+    @property
+    def scaled(self):
+        if self.scaled_db and self.num_db:
+            raise ValueError('cannot have both scaled and num DBs')
+        if not self.scaled_db and not self.num_db:
+            raise ValueError('no information yet on scaled/num')
+        if self.scaled_db:
+            assert not self.num_db
+            return True
+        else: # num_db
+            return False
+
     def load_list_of_signatures(self, filename):
+        "Load a directory or path full of signatures."
         # are we collecting signatures from a directory/path?
         if not (self.traverse and os.path.isdir(filename)):
             return False
@@ -228,7 +257,6 @@ class SearchDatabaseLoader(object):
         for sigfile in traverse_find_sigs([filename]):
             try:
                 siglist = sig.load_signatures(sigfile)
-                #siglist = filter_compatible_signatures(query, siglist, 1)
                 linear = LinearIndex(siglist, filename=sigfile)
                 self.databases.append((linear, filename, 'linear'))
                 notify('loaded {} signatures from {}', len(linear),
@@ -240,7 +268,7 @@ class SearchDatabaseLoader(object):
         return True
 
     def load_SBT(self, filename):
-        # are we loading an SBT?
+        "Load an SBT database."
         try:
             tree = SBT.load(filename, leaf_loader=SigLeaf.load)
 
@@ -261,13 +289,14 @@ class SearchDatabaseLoader(object):
         return True
 
     def load_LCA(self, filename):
+        "Load an LCA database."
         try:
             lca_db = lca_utils.LCA_Database()
             lca_db.load(filename)
 
+            self.ksizes.add(lca_db.ksize)
             # LCA databases are always made from --scaled signatures
             self.scaled_db.add(filename)
-            self.ksizes.add(lca_db.ksize)
             # LCA databases are always DNA
             self.moltypes.add('DNA')
 
@@ -281,13 +310,13 @@ class SearchDatabaseLoader(object):
         return True
 
     def load_signature_file(self, filename):
+        "Load a one or more signatures from a file."
         try:
             siglist = sig.load_signatures(filename)
             siglist = list(siglist)
             if len(siglist) == 0:         # file not found, or parse error?
                 raise ValueError
 
-            #siglist = filter_compatible_signatures(query, siglist, False)
             linear = LinearIndex(siglist, filename=filename)
             self.databases.append((linear, filename, 'linear'))
 
@@ -314,6 +343,7 @@ class SearchDatabaseLoader(object):
                 error("\nCannot load signatures from file '{}'", filename)
                 sys.exit(-1)
 
+            # if we loaded a database, and it is incompatible, break out here!
             if self.num_db and self.scaled_db:
                 if filename in self.num_db:
                     assert self.scaled_db
@@ -322,40 +352,42 @@ class SearchDatabaseLoader(object):
                           filename)
                     error('the signatures in it were calculated with --num')
                     error('the other databases have --scaled signatures')
-                elif filename in self.scaled_db:
+                else:
+                    assert filename in self.scaled_db
                     assert self.num_db
                     assert len(self.scaled_db) == 1
                     error('file {} is incompatible with the other databases',
                           filename)
                     error('the signatures in it were calculated with --scaled')
                     error('the other databases have --num signatures')
-                else:
-                    assert 0
 
     def filter_signatures(self):
-        assert (self.scaled_db and not self.num_db) or \
-               (self.num_db and not self.scaled_db)
-        assert len(self.ksizes) == 1
-        assert len(self.moltypes) == 1
+        """
+        Run through all the signatures that we loaded, filtering out the
+        ones that are incompatible with set parameters.
+        """
+        ksize = self.ksize
+        moltype = self.moltype
+        is_scaled = self.scaled
 
-        ksize = list(self.ksizes)[0]
-        moltype = list(self.moltypes)[0]
-        is_scaled = bool(self.scaled_db)
+        def select_matching_sigs(sigiter):
+            for sig in sigiter:
+                # eliminate for a variety of reasons...
+                if sig.minhash.ksize != ksize:
+                    continue
+                if get_moltype(sig) != moltype:
+                    continue
+                if sig.minhash.scaled and not is_scaled:
+                    continue
+                if not sig.minhash.scaled and is_scaled:
+                    continue
+
+                # keep!
+                yield sig
 
         for (obj, filename, objtype) in self.databases:
             if objtype == 'linear':
-                siglist = []
-                for sig in obj.signatures():
-                    if sig.minhash.ksize != ksize:
-                        continue
-                    if get_moltype(sig) != moltype:
-                        continue
-                    if sig.minhash.scaled and not is_scaled:
-                        continue
-                    if not sig.minhash.scaled and is_scaled:
-                        continue
-
-                    siglist.append(sig)
+                siglist = list(select_matching_sigs(obj.signatures()))
 
                 if not siglist:
                     error("No compatible signatures in {}", filename)
@@ -365,6 +397,7 @@ class SearchDatabaseLoader(object):
                 obj._signatures = siglist
 
     def summarize_files(self):
+        "Summarize counts of signatures and databases"
         n_signatures = 0
         n_databases = 0
 
@@ -378,8 +411,6 @@ class SearchDatabaseLoader(object):
         return n_signatures, n_databases
 
 
-
-
 def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     """
     Load one or more SBTs, LCAs, and/or signatures.
@@ -391,6 +422,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     # this loads all the databases and signatures without filtering
     loader.load_all()
 
+    # now we need to figure out what the parameters are ...
     ksize = query.minhash.ksize
     scaled = query.minhash.scaled
     moltype = get_moltype(query)
@@ -416,9 +448,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         else:
             loader.num_db.add('foo')
 
-    # now, see if we can filter the signatures down to match.
+    # ok, see if we can filter the signatures down to match.
     loader.filter_signatures()
 
+    # get final counts --
     n_signatures, n_databases = loader.summarize_files()
 
     notify(' '*79, end='\r')
