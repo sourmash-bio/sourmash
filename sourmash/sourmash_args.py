@@ -228,6 +228,12 @@ class SearchDatabaseLoader(object):
             raise ValueError('too many ksizes!')
         return next(iter(self.ksizes))
 
+    @ksize.setter
+    def ksize(self, value):
+        self.ksizes.add(value)
+        if len(self.ksizes) > 1:
+            raise ValueError('too many ksizes!')
+
     @property
     def moltype(self):
         if not self.moltypes:
@@ -235,6 +241,12 @@ class SearchDatabaseLoader(object):
         if len(self.moltypes) > 1:
             raise ValueError('too many moltypes!')
         return next(iter(self.moltypes))
+
+    @moltype.setter
+    def moltype(self, value):
+        self.moltypes.add(value)
+        if len(self.moltypes) > 1:
+            raise ValueError('too many moltypes')
 
     @property
     def scaled(self):

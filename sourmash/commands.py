@@ -570,6 +570,8 @@ def gather(args):
     from .search import gather_databases, format_bp
 
     set_quiet(args.quiet, args.debug)
+
+    # dup
     moltype = sourmash_args.calculate_moltype(args)
 
     # load the query signature & figure out all the things
@@ -596,9 +598,28 @@ def gather(args):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
+    db_loader = sourmash_args.SearchDatabaseLoader(args.databases, False,
+                                                   args.traverse_directory)
+
+    if args.ksize:
+        db_loader.ksize = args.ksize
+    moltype = sourmash_args.calculate_moltype(args)
+    if moltype:
+        db_loader.moltype = moltype
+
+    db_loader.load_all()
+
+    # ok, see if we can filter the signatures down to match.
+    db_loader.filter_signatures()
+
+    # get final counts --
+    n_signatures, n_databases = db_loader.summarize_files()
+
+    databases = db_loader.databases
+
     # set up the search databases
-    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                args.traverse_directory)
+#    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
+#                                                args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
