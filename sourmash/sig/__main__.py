@@ -696,13 +696,27 @@ def abundhist(args):
 
     all_counts = list(counts_d.values())
 
+    min_range = 1
+    if args.min is not None:
+        min_range = args.min
+    max_range = max(all_counts)
+    if args.max is not None:
+        max_range = args.max
+
+    n_bins = 10
+    if max_range - min_range + 1 < n_bins:
+        n_bins = max_range - min_range + 1
+
+
     # make hist
-    counts, bin_edges = numpy.histogram(all_counts)
+    counts, bin_edges = numpy.histogram(all_counts,
+                                        range=(min_range, max_range),
+                                        bins=n_bins)
     bin_edges = bin_edges.astype(int)
 
     # plot
     fig = tpl.figure()
-    f = fig.barh(counts, [ str(x) for x in bin_edges[:-1] ], force_ascii=True)
+    f = fig.barh(counts, [ str(x) for x in bin_edges[1:] ], force_ascii=True)
     fig.show()
 
 #    with FileOutput(args.output, 'wt') as fp:

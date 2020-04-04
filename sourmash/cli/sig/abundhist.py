@@ -27,6 +27,12 @@ def subparser(subparsers):
         '--name', default=None,
         help='select signatures whose name contains this substring'
     )
+    subparser.add_argument(
+        '--max', type=int, default=None,
+        help='max value for histgram range (default none)')
+    subparser.add_argument(
+        '--min', type=int, default=None,
+        help='min value for histgram range (default none)')
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
