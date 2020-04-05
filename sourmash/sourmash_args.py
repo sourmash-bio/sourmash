@@ -154,6 +154,28 @@ class SignatureParams(object):
             scaled_vals.remove(0)
         self.scaled_vals = scaled_vals
 
+    def compatible_with_ksize(self, ksize):
+        if ksize in self.ksizes:
+            return True
+        return False
+
+    def select_ksize(self, ksize):
+        if ksize in self.ksizes:
+            self.ksizes = { ksize }       # this one only!
+            return True
+        return False
+
+    def compatible_with_moltype(self, moltype):
+        if moltype in self.moltypes:
+            return True
+        return False
+
+    def select_moltype(self, moltype):
+        if moltype in self.moltypes:
+            self.moltypes = { moltype }
+            return True
+        return False
+
     def contains_compatible(self, ksize, moltype, is_scaled):
         if ksize in self.ksizes and moltype in self.moltypes:
             if is_scaled and self.scaled_vals:
@@ -238,7 +260,7 @@ def load_signatures_from_file_with_params(filename):
     assert not os.path.isdir(filename)
 
     ksizes = set()
-    moltype = set()
+    moltypes = set()
     scaled_vals = set()
     num_vals = set()
 
@@ -257,7 +279,7 @@ def load_signatures_from_file_with_params(filename):
     if not siglist:
         return None, None
 
-    linear_index = LinearIndex(siglist, path)
+    linear_index = LinearIndex(siglist, filename)
     params = SignatureParams(ksizes, moltypes, num_vals, scaled_vals)
 
     return linear_index, params
@@ -330,6 +352,56 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
         return 0
 
     return 1
+
+
+class SearchDBLoader2(object):
+    def __init__(self, require_scaled):
+        self.required_scaled = require_scaled
+        self.is_query_loaded = False
+        self.query_sigs = None
+        self.query_params = None
+        self.query_filename = None
+
+        self.is_args_selector_loaded = False
+        self.moltype_selector = None
+        self.ksize_selector = None
+
+    def load_query(self, query_filename):
+        assert not self.is_query_loaded
+        (query_sigs, query_params) = load_signatures_from_file_with_params(query_filename)
+        self.query_sigs = query_sigs
+        self.query_params = query_params
+        self.is_query_loaded = True
+
+    def parse_args_selectors(self, args):
+        assert not self.is_args_selector_loaded
+        moltype = calculate_moltype(args)   # rename this function!!
+        ksize = None
+        if args.ksize:
+            ksize = args.ksize
+
+        self.moltype_selector = moltype
+        self.ksize_selector = ksize
+        self.is_args_selector_loaded = True
+
+    def check_query_against_arg_selectors(self):
+        if not self.is_args_selector_loaded:
+            raise Exception
+        if not self.is_query_loaded:
+            raise Exception
+
+        moltype_ok = True
+        print('ZZZ', self.moltype_selector)
+        if self.moltype_selector:
+            if not self.query_params.select_moltype(self.moltype_selector):
+                moltype_ok = False        # fail! not compatible.
+            
+        ksize_ok = True
+        if self.ksize_selector:
+            if not self.query_params.select_ksize(self.ksize_selector):
+                ksize_ok = False          # fail! not compatible
+
+        return moltype_ok and ksize_ok
 
 
 class SearchDatabaseLoader(object):

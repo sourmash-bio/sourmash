@@ -571,6 +571,14 @@ def gather(args):
 
     set_quiet(args.quiet, args.debug)
 
+    db_loader = sourmash_args.SearchDBLoader2(require_scaled=True)
+
+    db_loader.parse_args_selectors(args)
+    db_loader.load_query(args.query)
+    db_loader.check_query_against_arg_selectors()
+    
+    return
+
     # dup
     moltype = sourmash_args.calculate_moltype(args)
 
