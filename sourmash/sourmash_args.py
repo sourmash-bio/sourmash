@@ -139,6 +139,130 @@ def traverse_find_sigs(dirnames, yield_all_files=False):
                     yield fullname
 
 
+class SignatureParams(object):
+    def __init__(self, ksizes, moltypes, num_vals, scaled_vals):
+        self.ksizes = set(ksizes)
+        self.moltypes = set(moltypes)
+
+        num_vals = set(num_vals)
+        if 0 in num_vals:
+            num_vals.remove(0)
+        self.num_vals = num_vals
+
+        scaled_vals = set(scaled_vals)
+        if 0 in scaled_vals:
+            scaled_vals.remove(0)
+        self.scaled_vals = scaled_vals
+
+    def contains_compatible(self, ksize, moltype, is_scaled):
+        if ksize in self.ksizes and moltype in self.moltypes:
+            if is_scaled and self.scaled_vals:
+                return True
+            elif not is_scaled and self.num_vals:
+                return True
+
+        return False
+
+
+def load_SBT_with_params(filename):
+    "Load an SBT, construct a params object, return both."
+    try:
+        tree = SBT.load(filename, leaf_loader=SigLeaf.load)
+        num_val, scaled_val, ksize, moltype = get_SBT_info(tree)
+    except (ValueError, EnvironmentError):
+        return None, None
+
+    assert not (num_val and scaled_val)
+    params = SignatureParams([ksize], [moltype], [num_val], [scaled_val])
+
+    return tree, params
+
+
+def load_LCA_with_params(filename):
+    "Load an LCA database, construct a params object, return both."
+    try:
+        lca_db = lca_utils.LCA_Database()
+        lca_db.load(filename)
+    except (ValueError, TypeError, EnvironmentError):
+        return None, None
+
+    ksize = lca_db.ksize
+    # LCA databases are always DNA
+    moltype = 'DNA'
+    # LCA databases are always made from --scaled signatures
+    scaled = lca_db.scaled
+
+    params = SignatureParams([ksize], [moltype], {}, [scaled_val])
+
+    return lca_db, params
+
+
+def load_signatures_from_directory_with_params(path):
+    """Traverse into a directory path and load all signatures; return w/params.
+
+    This returns union of params across all signatures.
+    """
+    assert os.path.isdir(path)
+
+    ksizes = set()
+    moltype = set()
+    scaled_vals = set()
+    num_vals = set()
+
+    siglist = []
+    for sigfile in traverse_find_sigs([filename]):
+        try:
+            sigs = sig.load_signatures(sigfile)
+        except Exception:        # ignore errors!
+            continue
+
+        for ss in sigs:
+            # construct union of params across all sigs
+            ksizes.add(ss.minhash.ksize)
+            moltypes.add(get_moltype(ss))
+            scaled_vals.add(ss.minhash.scaled)
+            num_vals.add(ss.minhash.num)
+
+            siglist.append(ss)
+
+    if not siglist:
+        return None, None
+
+    linear_index = LinearIndex(siglist, path)
+    params = SignatureParams(ksizes, moltypes, num_vals, scaled_vals)
+
+    return linear_index, params
+
+
+def load_signatures_from_file_with_params(filename):
+    assert not os.path.isdir(filename)
+
+    ksizes = set()
+    moltype = set()
+    scaled_vals = set()
+    num_vals = set()
+
+    siglist = []
+    sigs = sig.load_signatures(filename)
+
+    for ss in sigs:
+        # construct union of params across all sigs
+        ksizes.add(ss.minhash.ksize)
+        moltypes.add(get_moltype(ss))
+        scaled_vals.add(ss.minhash.scaled)
+        num_vals.add(ss.minhash.num)
+
+        siglist.append(ss)
+
+    if not siglist:
+        return None, None
+
+    linear_index = LinearIndex(siglist, path)
+    params = SignatureParams(ksizes, moltypes, num_vals, scaled_vals)
+
+    return linear_index, params
+
+
 def filter_compatible_signatures(query, siglist, force=False):
     for ss in siglist:
         if check_signatures_are_compatible(query, ss):
