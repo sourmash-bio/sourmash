@@ -214,7 +214,7 @@ def load_LCA_with_params(filename):
     # LCA databases are always made from --scaled signatures
     scaled = lca_db.scaled
 
-    params = SignatureParams([ksize], [moltype], {}, [scaled_val])
+    params = SignatureParams([ksize], [moltype], {}, [scaled])
 
     return lca_db, params
 
@@ -224,7 +224,8 @@ def load_signatures_from_directory_with_params(path):
 
     This returns union of params across all signatures.
     """
-    assert os.path.isdir(path)
+    if not os.path.isdir(path):
+        return None, None
 
     ksizes = set()
     moltype = set()
@@ -283,6 +284,20 @@ def load_signatures_from_file_with_params(filename):
     params = SignatureParams(ksizes, moltypes, num_vals, scaled_vals)
 
     return linear_index, params
+
+
+def load_target_with_params(filename):
+    ordered_loaders = [load_signatures_from_directory_with_params,
+                       load_SBT_with_params,
+                       load_LCA_with_params,
+                       load_signatures_from_file_with_params]
+
+    for loader in ordered_loaders:
+        target, params = loader(filename)
+        if target:
+            return target, params
+
+    return None, None
 
 
 def filter_compatible_signatures(query, siglist, force=False):
@@ -358,6 +373,7 @@ class SearchDBLoader2(object):
     def __init__(self, require_scaled):
         self.required_scaled = require_scaled
         self.is_query_loaded = False
+        self.is_query_checked = False
         self.query_sigs = None
         self.query_params = None
         self.query_filename = None
@@ -366,7 +382,10 @@ class SearchDBLoader2(object):
         self.moltype_selector = None
         self.ksize_selector = None
 
+        self.database_params = []
+
     def load_query(self, query_filename):
+        "Load all the signatures in the given filename, as potential queries"
         assert not self.is_query_loaded
         (query_sigs, query_params) = load_signatures_from_file_with_params(query_filename)
         self.query_sigs = query_sigs
@@ -374,6 +393,7 @@ class SearchDBLoader2(object):
         self.is_query_loaded = True
 
     def parse_args_selectors(self, args):
+        "Parse an ArgumentParser instance for moltype & k-mer size."
         assert not self.is_args_selector_loaded
         moltype = calculate_moltype(args)   # rename this function!!
         ksize = None
@@ -385,13 +405,15 @@ class SearchDBLoader2(object):
         self.is_args_selector_loaded = True
 
     def check_query_against_arg_selectors(self):
+        "Narrow down query parameters against arguments; potentially set 'em."
         if not self.is_args_selector_loaded:
             raise Exception
         if not self.is_query_loaded:
             raise Exception
 
+        assert not self.is_query_checked
+
         moltype_ok = True
-        print('ZZZ', self.moltype_selector)
         if self.moltype_selector:
             if not self.query_params.select_moltype(self.moltype_selector):
                 moltype_ok = False        # fail! not compatible.
@@ -401,8 +423,33 @@ class SearchDBLoader2(object):
             if not self.query_params.select_ksize(self.ksize_selector):
                 ksize_ok = False          # fail! not compatible
 
+        self.is_query_checked = True
         return moltype_ok and ksize_ok
 
+    def add_database(self, identifier, params):
+        if not self.is_query_checked:
+            raise Exception
+
+        ksize_intersection = params.ksizes.intersection(self.query_params.ksizes)
+        moltype_intersection = params.moltypes.intersection(self.query_params.moltypes)
+
+        if len(ksize_intersection) and len(moltype_intersection):
+            # database currently only have one ksize and one moltype
+            assert len(ksize_intersection) == 1
+            assert len(moltype_intersection) == 1
+
+            # save it!
+            self.database_params.append((identifier, params))
+
+            # narrow down the query some more.
+            self.query_params.select_ksize(ksize_intersection.pop())
+            self.query_params.select_moltype(moltype_intersection.pop())
+            return True
+
+        return False
+
+    def add_signature_list(self, identifier, params):
+        self.database_params.append((identifier, params))
 
 class SearchDatabaseLoader(object):
     def __init__(self, filenames, is_similarity_query, traverse):

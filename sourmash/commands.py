@@ -576,6 +576,14 @@ def gather(args):
     db_loader.parse_args_selectors(args)
     db_loader.load_query(args.query)
     db_loader.check_query_against_arg_selectors()
+
+    for filename in args.databases:
+        db, params = sourmash_args.load_target_with_params(filename)
+        if not db:
+            error("couldn't load {}", filename)
+            sys.exit(-1)
+        if not db_loader.add_database(filename, params):
+            error("couldn't match {}", filename)
     
     return
 

@@ -70,6 +70,65 @@ def test_search_dbl2_3():
     assert not dbl2.check_query_against_arg_selectors()
 
 
+def test_search_dbl2_4():
+    # test database match after basic arg/query selection with --dna
+    # and ksize=31.
+    dbl2 = sourmash_args.SearchDBLoader2(require_scaled=True)
+    query_params = sourmash_args.SignatureParams([31], ['DNA'], {}, {1000})
+
+    args_selectors = make_args_selector(moltype='DNA', ksize=31)
+
+    dbl2.query_params = query_params
+    dbl2.is_query_loaded = True
+
+    dbl2.parse_args_selectors(args_selectors)
+    dbl2.check_query_against_arg_selectors()
+
+    # now, try to construct a new query params for a database, does it work?
+    db_params = sourmash_args.SignatureParams([31], ['DNA'], {}, {1000})
+    assert dbl2.add_database('filename', db_params)
+
+
+def test_search_dbl2_5():
+    # test bad database match after basic arg/query selection with --dna
+    # and ksize=31.
+    dbl2 = sourmash_args.SearchDBLoader2(require_scaled=True)
+    query_params = sourmash_args.SignatureParams([31], ['DNA'], {}, {1000})
+
+    args_selectors = make_args_selector(moltype='DNA', ksize=31)
+
+    dbl2.query_params = query_params
+    dbl2.is_query_loaded = True
+
+    dbl2.parse_args_selectors(args_selectors)
+    dbl2.check_query_against_arg_selectors()
+
+    # now, try to construct a new query params for a database, does it work?
+    # for ksize=33, it shouldn't:
+    db_params = sourmash_args.SignatureParams([33], ['DNA'], {}, {1000})
+    assert not dbl2.add_database('filename', db_params)
+
+
+def test_search_dbl2_6():
+    # test database match after basic arg/query selection with --dna
+    # and ksize=31.
+    dbl2 = sourmash_args.SearchDBLoader2(require_scaled=True)
+    query_params = sourmash_args.SignatureParams([31], ['DNA'], {}, {1000})
+
+    args_selectors = make_args_selector(moltype='DNA', ksize=31)
+
+    dbl2.query_params = query_params
+    dbl2.is_query_loaded = True
+
+    dbl2.parse_args_selectors(args_selectors)
+    dbl2.check_query_against_arg_selectors()
+
+    # now, try to construct a new query params for a database, does it work?
+    # for molecule 'protein' it shouldn't.
+    db_params = sourmash_args.SignatureParams([31], ['protein'], {}, {1000})
+    assert not dbl2.add_database('filename', db_params)
+
+
 @utils.in_tempdir
 def test_load_dbs_and_sigs(c):
     from sourmash.sourmash_args import load_dbs_and_sigs, SearchDatabaseLoader
