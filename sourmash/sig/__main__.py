@@ -707,7 +707,6 @@ def abundhist(args):
     if max_range - min_range + 1 < n_bins:
         n_bins = max_range - min_range + 1
 
-
     # make hist
     counts, bin_edges = numpy.histogram(all_counts,
                                         range=(min_range, max_range),
@@ -719,8 +718,21 @@ def abundhist(args):
     f = fig.barh(counts, [ str(x) for x in bin_edges[1:] ], force_ascii=True)
     fig.show()
 
-#    with FileOutput(args.output, 'wt') as fp:
-#        sourmash.save_signatures(outlist, fp=fp)
+    # output histogram in csv?
+    if args.output:
+        with FileOutput(args.output, 'wt') as fp:
+            w = csv.writer(fp)
+            w.writerow(['count', 'n_count'])
+            for nc, c in zip(counts, bin_edges[1:]):
+                w.writerow([c, nc])
+
+    # output raw counts tagged with hashval?
+    if args.abundances:
+        with FileOutput(args.abundances, 'wt') as fp:
+            w = csv.writer(fp)
+            w.writerow(['hashval', 'count'])
+            for hashval, count in counts_d.items():
+                w.writerow([hashval, count])
 
 
 def main(arglist=None):
