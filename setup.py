@@ -63,7 +63,8 @@ SETUP_METADATA = {
         ]
     },
     "install_requires": ["screed>=0.9", "khmer>=2.1", "cffi>=1.14.0", 'numpy',
-                         'matplotlib', 'scipy', "deprecation>=2.0.6"],
+                         'matplotlib', 'scipy', "deprecation>=2.0.6",
+                         'termplotlib==0.3.0'],
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",
