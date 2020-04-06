@@ -598,6 +598,16 @@ def gather(args):
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
+    from .index import LinearIndex
+    new_db_list = []
+    for (db, filename, _) in loaded_db_list:
+        if isinstance(db, LinearIndex):
+            new_db = LinearIndex(sourmash_args.filter_compatible_signatures(query, db.signatures(), force=True))
+            new_db_list.append((new_db, filename, 'XXX'))
+        else:
+            new_db_list.append((db, filename, 'XXX'))
+    loaded_db_list = new_db_list
+
     # verify signature was computed right.
     if query.minhash.scaled == 0:
         error('query signature needs to be created with --scaled')

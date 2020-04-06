@@ -307,7 +307,11 @@ def filter_compatible_signatures(query, siglist, force=False):
                 raise ValueError("incompatible signature")
 
 
+# @CTB only for scaled/num values !?
 def check_signatures_are_compatible(query, subject):
+    if query.minhash.ksize != subject.minhash.ksize:
+        return 0
+
     # is one scaled, and the other not? cannot do search
     if query.minhash.scaled and not subject.minhash.scaled or \
        not query.minhash.scaled and subject.minhash.scaled:
