@@ -264,6 +264,10 @@ def load_signatures_from_file_with_params(filename):
     num_vals = set()
 
     siglist = []
+    if not os.path.exists(filename):
+        error("Cannot open file {}", filename)
+        raise IOError
+
     sigs = sig.load_signatures(filename)
 
     for ss in sigs:
@@ -390,10 +394,18 @@ class SearchDBLoader2(object):
     def load_query(self, query_filename):
         "Load all the signatures in the given filename, as potential queries"
         assert not self.is_query_loaded
-        (query_sigs, query_params) = load_signatures_from_file_with_params(query_filename)
+        try:
+            (query_sigs, query_params) = load_signatures_from_file_with_params(query_filename)
+        except IOError as e:
+            query_sigs = None
+
+        if not query_sigs:
+            return False
+
         self.query_sigs = query_sigs
         self.query_params = query_params
         self.is_query_loaded = True
+        return True
 
     def parse_args_selectors(self, args):
         "Parse an ArgumentParser instance for moltype & k-mer size."

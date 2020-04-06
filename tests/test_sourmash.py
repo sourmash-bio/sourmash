@@ -1251,10 +1251,8 @@ def test_search_containment():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
+                                           ['search', 'short.fa.sig', '-k', '31',
                                             'short2.fa.sig', '--containment'],
                                            in_directory=location)
         print(status, out, err)
@@ -1306,7 +1304,7 @@ def test_search_gzip():
             fp.write(data)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['search', 'zzz.gz',
+                                           ['search', '-k', '31', 'zzz.gz',
                                             'yyy.gz'],
                                            in_directory=location)
         print(status, out, err)
@@ -1324,10 +1322,8 @@ def test_search_2():
                                             testdata3],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
+                                           ['search', 'short.fa.sig', '-k', '31',
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
         print(status, out, err)
@@ -1346,10 +1342,8 @@ def test_search_3():
                                             testdata3],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
-                                           ['search', '-n', '1',
+                                           ['search', '-n', '1', '-k', '31',
                                             'short.fa.sig',
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
@@ -1370,7 +1364,7 @@ def test_search_4():
 
 
         status, out, err = utils.runscript('sourmash',
-                                           ['search', '-n', '0',
+                                           ['search', '-n', '0', '-k', '31',
                                             'short.fa.sig',
                                             'short2.fa.sig', 'short3.fa.sig'],
                                            in_directory=location)
@@ -2505,7 +2499,7 @@ def test_gather_nomatch():
         testdata_query = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
         testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = 'gather {} {}'.format(testdata_query, testdata_match)
+        cmd = 'gather -k 31 {} {}'.format(testdata_query, testdata_match)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
