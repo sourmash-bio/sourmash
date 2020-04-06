@@ -154,27 +154,25 @@ class SignatureParams(object):
             scaled_vals.remove(0)
         self.scaled_vals = scaled_vals
 
-    def compatible_with_ksize(self, ksize):
-        if ksize in self.ksizes:
-            return True
-        return False
-
     def select_ksize(self, ksize):
         if ksize in self.ksizes:
             self.ksizes = { ksize }       # this one only!
             return True
         return False
 
-    def compatible_with_moltype(self, moltype):
-        if moltype in self.moltypes:
-            return True
-        return False
+    def intersect_ksizes(self, ksizes):
+        assert ksizes.intersection(self.ksizes)
+        self.ksizes.intersection_update(ksizes)
 
     def select_moltype(self, moltype):
         if moltype in self.moltypes:
             self.moltypes = { moltype }
             return True
         return False
+
+    def intersect_moltypes(self, moltypes):
+        assert moltypes.intersection(self.moltypes)
+        self.moltypes.intersection_update(moltypes)
 
     def contains_compatible(self, ksize, moltype, is_scaled):
         if ksize in self.ksizes and moltype in self.moltypes:
@@ -377,6 +375,7 @@ class SearchDBLoader2(object):
         self.query_sigs = None
         self.query_params = None
         self.query_filename = None
+        self.chosen_query = None
 
         self.is_args_selector_loaded = False
         self.moltype_selector = None
@@ -434,22 +433,40 @@ class SearchDBLoader2(object):
         moltype_intersection = params.moltypes.intersection(self.query_params.moltypes)
 
         if len(ksize_intersection) and len(moltype_intersection):
-            # database currently only have one ksize and one moltype
-            assert len(ksize_intersection) == 1
-            assert len(moltype_intersection) == 1
-
             # save it!
             self.database_params.append((identifier, params))
 
-            # narrow down the query some more.
-            self.query_params.select_ksize(ksize_intersection.pop())
-            self.query_params.select_moltype(moltype_intersection.pop())
+            # can we nail it down exactly?
+            if len(ksize_intersection) == 1 and len(moltype_intersection) == 1:
+                self.query_params.select_ksize(ksize_intersection.pop())
+                self.query_params.select_moltype(moltype_intersection.pop())
+            else:
+                # narrow down the query some more.
+                self.query_params.intersect_moltypes(params.moltypes)
+                self.query_params.intersect_ksizes(params.ksizes)
+
             return True
 
         return False
 
-    def add_signature_list(self, identifier, params):
-        self.database_params.append((identifier, params))
+    def decide_query(self):
+        if len(self.query_params.ksizes) == 1 and len(self.query_params.moltypes) == 1:
+            ksize = next(iter(self.query_params.ksizes))
+            moltype = next(iter(self.query_params.moltypes))
+
+            siglist = []
+            for sig in self.query_sigs:
+                if sig.minhash.ksize == ksize and get_moltype(sig) == moltype:
+                    siglist.append(sig)
+
+            if len(siglist) == 1:
+                self.chosen_query = siglist[0]
+                return True
+        else:
+            print('XXX', len(self.query_params.ksizes), len(self.query_params.moltypes))
+
+        return False
+        
 
 class SearchDatabaseLoader(object):
     def __init__(self, filenames, is_similarity_query, traverse):
