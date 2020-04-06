@@ -226,12 +226,12 @@ def load_signatures_from_directory_with_params(path):
         return None, None
 
     ksizes = set()
-    moltype = set()
+    moltypes = set()
     scaled_vals = set()
     num_vals = set()
 
     siglist = []
-    for sigfile in traverse_find_sigs([filename]):
+    for sigfile in traverse_find_sigs([path]):
         try:
             sigs = sig.load_signatures(sigfile)
         except Exception:        # ignore errors!
@@ -462,8 +462,8 @@ class SearchDBLoader2(object):
             if len(siglist) == 1:
                 self.chosen_query = siglist[0]
                 return True
-        else:
-            print('XXX', len(self.query_params.ksizes), len(self.query_params.moltypes))
+#        else:
+#            print('XXX', len(self.query_params.ksizes), len(self.query_params.moltypes))
 
         return False
         
