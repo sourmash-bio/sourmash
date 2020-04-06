@@ -215,3 +215,25 @@ def test_linear_index_save_load():
     print([s[1].name() for s in sr])
     assert len(sr) == 1
     assert sr[0][1] == ss2
+
+
+def test_linear_index_multik_select():
+    # this loads three ksizes, 21/31/51
+    sig2 = utils.get_test_data('2.fa.sig')
+    siglist = sourmash.load_signatures(sig2)
+
+    linear = LinearIndex()
+    for ss in siglist:
+        linear.insert(ss)
+
+    # select most specifically
+    linear2 = linear.select(ksize=31, moltype='DNA')
+    assert len(linear2) == 1
+
+    # can leave off moltype, selects all moltypes (TEST THIS :)
+    linear2 = linear.select(ksize=31)
+    assert len(linear2) == 1
+
+    # all are DNA:
+    linear2 = linear.select(moltype='DNA')
+    assert len(linear2) == 3
