@@ -1716,7 +1716,7 @@ def test_do_sourmash_sbt_search_downsample_2():
         assert 'Cannot do similarity search.' in err
 
 
-def test_do_sourmash_index_single(localized):
+def test_do_sourmash_index_single(not_localized):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -1725,8 +1725,8 @@ def test_do_sourmash_index_single(localized):
                                            in_directory=location)
 
         index_flags = ['index', '-k', '31']
-        if localized:
-            index_flags.append('--localized')
+        if not_localized:
+            index_flags.append('--not-localized')
         status, out, err = utils.runscript('sourmash',
                                            index_flags + ['zzz', 'short.fa.sig'],
                                            in_directory=location)

@@ -20,7 +20,7 @@ def hp(request):
 
 
 @pytest.fixture(params=[True, False])
-def localized(request):
+def not_localized(request):
     return request.param
 
 
