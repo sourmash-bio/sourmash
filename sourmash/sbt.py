@@ -143,7 +143,7 @@ class SBT(Index):
         ok = True
         if ksize is not None and first_sig.minhash.ksize != ksize:
             ok = False
-        if moltype is not None and first_sig.moltype != moltype:
+        if moltype is not None and first_sig.minhash.moltype != moltype:
             ok = False
 
         if ok:
