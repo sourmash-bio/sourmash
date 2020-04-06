@@ -571,12 +571,13 @@ def gather(args):
 
     set_quiet(args.quiet, args.debug)
 
+    # load the command line argument selectors & query signature(s).
     db_loader = sourmash_args.SearchDBLoader2(require_scaled=True)
-
     db_loader.parse_args_selectors(args)
     db_loader.load_query(args.query)
     db_loader.check_query_against_arg_selectors()
 
+    # load the databases.
     loaded_db_list = []
     for filename in args.databases:
         db, params = sourmash_args.load_target_with_params(filename)
@@ -589,23 +590,17 @@ def gather(args):
 
         loaded_db_list.append((db, filename, 'XYZ'))
 
+    # now that we've loaded the databases, figure out which query (queries?)
+    # are compatible. If there's exactly one, perfect!
     if not db_loader.decide_query():
         error("couldn't find acceptable query.")
 
     query = db_loader.chosen_query
-
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
-    from .index import LinearIndex
-    new_db_list = []
-    for (db, filename, _) in loaded_db_list:
-        new_db = db.select(ksize=query.minhash.ksize, moltype=query.moltype)
-        new_db_list.append((new_db, filename, 'XXX'))
-    loaded_db_list = new_db_list
-
-    # verify signature was computed right.
+    # verify signature was computed with --scaled.
     if query.minhash.scaled == 0:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
@@ -621,23 +616,20 @@ def gather(args):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
+    # now that we have the query, apply the same selector to the databaess.
+    databases = []
+    for (db, filename, _) in loaded_db_list:
+        new_db = db.select(ksize=query.minhash.ksize, moltype=query.moltype)
+        # @CTB: here is also where we select the scaled.
+        databases.append((new_db, filename, 'XXX'))
+
     databases = loaded_db_list
-
-#    db_loader = sourmash_args.SearchDatabaseLoader(args.databases, False,
-#                                                   args.traverse_directory)
-
-    # get final counts --
-#    n_signatures, n_databases = db_loader.summarize_files()
-
-#    databases = db_loader.databases
-
-    # set up the search databases
-#    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-#                                                args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
+
+    ### execute the gather algorithm.
 
     found = []
     weighted_missed = 1
