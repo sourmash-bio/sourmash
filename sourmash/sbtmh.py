@@ -4,8 +4,10 @@ from __future__ import division
 from io import BytesIO, TextIOWrapper
 import sys
 
-from .sbt import Leaf, SBT, GraphFactory
+from .sbt import Leaf, Node, SBT, GraphFactory
 from . import signature
+from .logging import notify
+
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -14,13 +16,16 @@ def load_sbt_index(filename, print_version_warning=True):
                     print_version_warning=print_version_warning)
 
 
-def create_sbt_index(bloom_filter_size=1e5, n_children=2, localized=False):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2, not_localized=False):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
-    if localized:
-        tree = LocalizedSBT(factory, d=n_children)
-    else:
+    if not_localized or n_children != 2:
+        if n_children != 2:
+            notify("n_children != 2 in tree, defaulting to non-localized sequence "
+                   "bloom tree (SBT) index")
         tree = SBT(factory, d=n_children)
+    else:
+        tree = LocalizedSBT(factory, d=n_children)
     return tree
 
 
