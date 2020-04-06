@@ -1,11 +1,11 @@
-from __future__ import division
 from __future__ import print_function
+from __future__ import division
 
-import sys
 from io import BytesIO, TextIOWrapper
+import sys
 
+from .sbt import Leaf, SBT, GraphFactory
 from . import signature
-from .sbt import Leaf, SBT, GraphFactory, Node
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -42,7 +42,7 @@ def search_sbt_index(tree, query, threshold):
 class SigLeaf(Leaf):
     def __str__(self):
         return '**Leaf:{name} -> {metadata}'.format(
-            name=self.name, metadata=self.metadata)
+                name=self.name, metadata=self.metadata)
 
     def save(self, path):
         # this is here only for triggering the property load

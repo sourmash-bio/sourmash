@@ -6,19 +6,15 @@ import pytest
 
 from sourmash import load_one_signature
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash.sbt_storage import (FSStorage, TarStorage,
-                                  RedisStorage, IPFSStorage)
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
+from sourmash.sbt_storage import (FSStorage, TarStorage,
+                                  RedisStorage, IPFSStorage)
+
 from . import sourmash_tst_utils as utils
 
 
-@pytest.fixture(params=[True, False])
-def return_pos(request):
-    return request.param
-
-
-def test_simple(n_children, return_pos):
+def test_simple(n_children):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
@@ -56,7 +52,7 @@ def test_simple(n_children, return_pos):
     def search_kmer(obj, seq):
         return obj.data.get(seq)
 
-    leaves = [leaf1, leaf2, leaf3, leaf4, leaf5]
+    leaves = [leaf1, leaf2, leaf3, leaf4, leaf5 ]
     kmers = [ "AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA" ]
 
     def search_kmer_in_list(kmer):
@@ -151,13 +147,13 @@ def test_longer_search(n_children):
             return 1
         return 0
 
-    try1 = [x.metadata for x in root.find(search_transcript, "AAAAT", 1.0)]
+    try1 = [ x.metadata for x in root.find(search_transcript, "AAAAT", 1.0) ]
     assert set(try1) == set([ 'a', 'b', 'c', 'e' ]), try1 # no 'd'
 
-    try2 = [x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6)]
+    try2 = [ x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6) ]
     assert set(try2) == set([ 'a', 'b', 'c', 'd', 'e' ])
 
-    try3 = [x.metadata for x in root.find(search_transcript, "GAAAA", 1.0)]
+    try3 = [ x.metadata for x in root.find(search_transcript, "GAAAA", 1.0) ]
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 

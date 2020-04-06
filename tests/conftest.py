@@ -1,7 +1,7 @@
 import os
 
-import pytest
 from hypothesis import settings, Verbosity
+import pytest
 
 
 @pytest.fixture(params=[True, False])

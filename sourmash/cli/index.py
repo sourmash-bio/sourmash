@@ -38,7 +38,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '-s', '--sparseness', metavar='FLOAT', type=float, default=.0,
         help='What percentage of internal nodes will not be saved; ranges '
-             'from 0.0 (save all nodes) to 1.0 (no nodes saved)'
+        'from 0.0 (save all nodes) to 1.0 (no nodes saved)'
     )
     subparser.add_argument(
         '--scaled', metavar='FLOAT', type=float, default=0,
