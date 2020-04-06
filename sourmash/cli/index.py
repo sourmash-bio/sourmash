@@ -45,9 +45,11 @@ def subparser(subparsers):
         help='downsample signatures to the specified scaled factor'
     )
     subparser.add_argument(
-        '-l', '--localized', action='store_true', default=False,
-        help='Create a localized SBT index, which guarantees that any two leaves '
-             'sharing a parent are more similar to leaves not sharing a parent'
+        '--not-localized', action='store_true', default=False,
+        help='Do not create a localized SBT index. A localized index guarantees that '
+             'any two leaves sharing a parent are more similar to leaves not sharing '
+             'a parent. Localized indices are required for building a nearest neighbor'
+             ' graph from the SBT.'
     )
     add_moltype_args(subparser)
 

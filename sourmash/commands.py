@@ -339,7 +339,7 @@ def index(args):
         tree = load_sbt_index(args.sbt_name)
     else:
         tree = create_sbt_index(args.bf_size, n_children=args.n_children,
-                                localized=args.localized)
+                                not_localized=args.not_localized)
 
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
