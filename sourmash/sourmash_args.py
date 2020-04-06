@@ -455,7 +455,7 @@ class SearchDBLoader2(object):
             moltype = next(iter(self.query_params.moltypes))
 
             siglist = []
-            for sig in self.query_sigs:
+            for sig in self.query_sigs.signatures():
                 if sig.minhash.ksize == ksize and get_moltype(sig) == moltype:
                     siglist.append(sig)
 

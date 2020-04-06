@@ -236,7 +236,7 @@ def test_search_dbl2_10():
     assert dbl2.add_database('filename', db_params)
 
     ss = make_empty_signature(scaled=1000, ksize=31, moltype='DNA')
-    dbl2.query_sigs = [ss]
+    dbl2.query_sigs = LinearIndex([ss])
     assert dbl2.decide_query()
     assert dbl2.chosen_query == ss
 

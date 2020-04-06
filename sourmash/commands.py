@@ -577,6 +577,7 @@ def gather(args):
     db_loader.load_query(args.query)
     db_loader.check_query_against_arg_selectors()
 
+    loaded_db_list = []
     for filename in args.databases:
         db, params = sourmash_args.load_target_with_params(filename)
         if not db:
@@ -584,16 +585,15 @@ def gather(args):
             sys.exit(-1)
         if not db_loader.add_database(filename, params):
             error("couldn't match {}", filename)
-    
-    return
+            sys.exit(-1)
 
-    # dup
-    moltype = sourmash_args.calculate_moltype(args)
+        loaded_db_list.append((db, filename, 'XYZ'))
 
-    # load the query signature & figure out all the things
-    query = sourmash_args.load_query_signature(args.query,
-                                               ksize=args.ksize,
-                                               select_moltype=moltype)
+    if not db_loader.decide_query():
+        error("couldn't find acceptable query.")
+
+    query = db_loader.chosen_query
+
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
@@ -614,24 +614,15 @@ def gather(args):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    db_loader = sourmash_args.SearchDatabaseLoader(args.databases, False,
-                                                   args.traverse_directory)
+    databases = loaded_db_list
 
-    if args.ksize:
-        db_loader.ksize = args.ksize
-    moltype = sourmash_args.calculate_moltype(args)
-    if moltype:
-        db_loader.moltype = moltype
-
-    db_loader.load_all()
-
-    # ok, see if we can filter the signatures down to match.
-    db_loader.filter_signatures()
+#    db_loader = sourmash_args.SearchDatabaseLoader(args.databases, False,
+#                                                   args.traverse_directory)
 
     # get final counts --
-    n_signatures, n_databases = db_loader.summarize_files()
+#    n_signatures, n_databases = db_loader.summarize_files()
 
-    databases = db_loader.databases
+#    databases = db_loader.databases
 
     # set up the search databases
 #    databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
