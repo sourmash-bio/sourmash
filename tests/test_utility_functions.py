@@ -4,6 +4,7 @@ import pytest
 import sourmash
 from sourmash import sourmash_args
 from . import sourmash_tst_utils as utils
+from sourmash.index import LinearIndex
 
 
 def make_args_selector(**kw):
