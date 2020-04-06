@@ -601,11 +601,8 @@ def gather(args):
     from .index import LinearIndex
     new_db_list = []
     for (db, filename, _) in loaded_db_list:
-        if isinstance(db, LinearIndex):
-            new_db = LinearIndex(sourmash_args.filter_compatible_signatures(query, db.signatures(), force=True))
-            new_db_list.append((new_db, filename, 'XXX'))
-        else:
-            new_db_list.append((db, filename, 'XXX'))
+        new_db = db.select(ksize=query.minhash.ksize, moltype=query.moltype)
+        new_db_list.append((new_db, filename, 'XXX'))
     loaded_db_list = new_db_list
 
     # verify signature was computed right.
