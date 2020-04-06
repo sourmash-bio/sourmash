@@ -14,7 +14,12 @@ from sourmash.sbt_storage import (FSStorage, TarStorage,
 from . import sourmash_tst_utils as utils
 
 
-def test_simple(n_children):
+@pytest.fixture(params=[True, False])
+def return_pos(request):
+    return request.param
+
+
+def test_simple(n_children, return_pos):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
