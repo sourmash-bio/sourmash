@@ -185,6 +185,22 @@ class SourmashSignature(RustObject):
         )
 
 
+    @property
+    def moltype(self):
+        if self.minhash.is_molecule_type('DNA'):
+            moltype = 'DNA'
+        elif self.minhash.is_molecule_type('dayhoff'):
+            moltype = 'dayhoff'
+        elif self.minhash.is_molecule_type('hp'):
+            moltype = 'hp'
+        elif self.minhash.is_molecule_type('protein'):
+            moltype = 'protein'
+        else:
+            raise ValueError('unknown molecule type for sig {}'.format(self.name()))
+
+        return moltype
+
+
 def load_signatures(
     data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=False,
     quiet=False
