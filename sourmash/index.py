@@ -133,7 +133,7 @@ class LinearIndex(Index):
         def select_sigs(siglist, ksize, moltype):
             for ss in siglist:
                 if (ksize is None or ss.minhash.ksize == ksize) and \
-                   (moltype is None or ss.moltype == moltype):
+                   (moltype is None or ss.minhash.moltype == moltype):
                    yield ss
 
         siglist=select_sigs(self._signatures, ksize, moltype)
