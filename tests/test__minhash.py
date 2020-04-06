@@ -125,7 +125,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     if dayhoff:
         expected_moltype = 'dayhoff'
     assert mh.moltype == expected_moltype
-        
+
     mh.add_protein('AGYYG')
     mh.add_protein('AGYYG')
     mh.add_protein(b'AGYYG')
