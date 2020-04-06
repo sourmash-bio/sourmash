@@ -81,17 +81,20 @@ class SigLeaf(Leaf):
 
 
 class LocalizedSBT(SBT):
-    """A Sequence Bloom Tree implementation which guarantees new leaves are plaaced in
+    """An SBT implementation which inserts new leaves next to most similar existing leaf
 
-    The default node is a Bloom Filter (like the original implementation),
-    and the leaves are MinHash leaf class (in the sourmash.sbtmh.SigLeaf class)
+    In this Sequence Bloom Tree (SBT) implementation, the default node is a Bloom Filter
+    (like the original implementation), and the leaves are MinHash leaf class (in the
+    sourmash.sbtmh.SigLeaf class). This is called "localized" because leaves that are
+    similar to one another are constrained to sharing parents.
 
     Parameters
     ----------
     factory: Factory
         Callable for generating new datastores for internal nodes.
     d: int
-        Number of children for each internal node. Defaults to 2 (a binary tree)
+        Number of children for each internal node. Defaults to 2 (a binary tree).
+        Currently only implemented for d=2, binary trees
     storage: Storage, default: None
         A Storage is any place where we can save and load data for the nodes.
         If set to None, will use a FSStorage.
