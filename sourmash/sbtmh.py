@@ -275,7 +275,7 @@ class LocalizedSBT(SBT):
                                                parent_sibling):
         new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
         self._nodes[parent.pos] = new_internal_node
-        c1, c2 = self.children(parent.pos)[:2]
+        c1, c2 = *self.children(parent.pos)
         # Update new internal node
         self._leaves[c1.pos] = parent.node
         self._leaves[c2.pos] = parent_sibling.node
