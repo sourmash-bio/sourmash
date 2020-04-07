@@ -45,12 +45,6 @@ def compare_serial_containment(siglist, downsample=False):
     process. Best to use when there is few signatures.
 
     :param list siglist: list of signatures to compare
-    :param boolean ignore_abundance
-        If the sketches are not abundance weighted, or ignore_abundance=True,
-        compute Jaccard similarity.
-
-        If the sketches are abundance weighted, calculate the angular
-        similarity.
     :param boolean downsample by max_hash if True
     :return: np.array similarity matrix
     """
