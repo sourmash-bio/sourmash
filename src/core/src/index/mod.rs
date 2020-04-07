@@ -190,7 +190,7 @@ impl SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.count_common(&omh).unwrap() as u64;
+                return mh.count_common(&omh, false).unwrap() as u64;
             }
         }
         unimplemented!();
@@ -247,7 +247,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                return mh.compare(&omh).unwrap();
+                return mh.similarity(&omh, true, false).unwrap();
             }
         }
 
@@ -270,7 +270,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
-                let common = mh.count_common(&omh).unwrap();
+                let common = mh.count_common(&omh, false).unwrap();
                 let size = mh.mins.len();
                 return common as f64 / size as f64;
             }
@@ -285,7 +285,7 @@ impl Comparable<Signature> for Signature {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
-                return mh.compare(&omh).unwrap();
+                return mh.similarity(&omh, true, false).unwrap();
             }
         }
 
@@ -305,7 +305,7 @@ impl Comparable<Signature> for Signature {
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
-                let common = mh.count_common(&omh).unwrap();
+                let common = mh.count_common(&omh, false).unwrap();
                 let size = mh.mins.len();
                 return common as f64 / size as f64;
             }

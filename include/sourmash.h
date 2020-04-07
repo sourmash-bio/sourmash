@@ -98,8 +98,6 @@ void computeparams_set_scaled(ComputeParameters *ptr, uint64_t scaled);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
-void kmerminhash_abunds_push(KmerMinHash *ptr, uint64_t val);
-
 void kmerminhash_add_from(KmerMinHash *ptr, const KmerMinHash *other);
 
 void kmerminhash_add_hash(KmerMinHash *ptr, uint64_t h);
@@ -110,13 +108,12 @@ void kmerminhash_add_protein(KmerMinHash *ptr, const char *sequence);
 
 void kmerminhash_add_word(KmerMinHash *ptr, const char *word);
 
-double kmerminhash_compare(KmerMinHash *ptr, const KmerMinHash *other);
+double kmerminhash_jaccard(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
 
-double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance);
+double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
+double kmerminhash_angular_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
 
-double kmerminhash_containment_ignore_maxhash(KmerMinHash *ptr, const KmerMinHash *other);
-
-uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other);
+uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
 
 bool kmerminhash_dayhoff(KmerMinHash *ptr);
 
@@ -162,8 +159,6 @@ void kmerminhash_merge(KmerMinHash *ptr, const KmerMinHash *other);
 
 bool kmerminhash_is_compatible(const KmerMinHash *ptr, const KmerMinHash *other);
 
-void kmerminhash_mins_push(KmerMinHash *ptr, uint64_t val);
-
 KmerMinHash *kmerminhash_new(uint32_t n,
                              uint32_t k,
                              bool prot,
@@ -180,6 +175,8 @@ void kmerminhash_remove_hash(KmerMinHash *ptr, uint64_t h);
 void kmerminhash_remove_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
 
 uint64_t kmerminhash_seed(KmerMinHash *ptr);
+
+void kmerminhash_set_abundances(KmerMinHash *ptr, const uint64_t *hashes_ptr, const uint64_t *abunds_ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(KmerMinHash *ptr);
 

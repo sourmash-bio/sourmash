@@ -19,7 +19,7 @@ dist: FORCE
 	$(PYTHON) setup.py sdist
 
 test: all
-	pip install -e '.[test]'
+	$(PYTHON) -m pip install -e '.[test]'
 	$(PYTHON) -m pytest
 	cargo test
 

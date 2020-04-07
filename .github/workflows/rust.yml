@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/core/**'
   pull_request:
-    branches: [master]
     paths:
       - 'src/core/**'
 
@@ -108,51 +107,18 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+      - name: Coverage with tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
         with:
-          python-version: "3.8"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .[test]
-        env:
-          'CARGO_INCREMENTAL': '0'
-          'RUSTFLAGS': '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'
-
-      - name: Run Rust tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-fail-fast --all --all-features
-        env:
-          'CARGO_INCREMENTAL': '0'
-          'RUSTFLAGS': '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'
-
-      - name: Run Python tests
-        run: python -m pytest --cov=. --cov-report=xml
-
-      - name: Collect coverage and generate report with grcov
-        uses: actions-rs/grcov@5fe6a05253e7b682e01c8097b6e3ea4ce1aaeacc
-        id: coverage
-
-      - name: Upload Python coverage to codecov
-        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          flags: pytests
-          fail_ci_if_error: true
+          args: '--all --all-features -- --test-threads 1'
 
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ steps.coverage.outputs.report }}
           flags: rusttests
           fail_ci_if_error: true
 
@@ -195,24 +161,9 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --force wasm-pack
+          args: --force wasm-pack --version 0.8.1
       - name: run wasm-pack
         run: wasm-pack build src/core -d ../../pkg
-
-      # Publish to NPM on tags
-      - name: Prepare node for NPM publishing
-        uses: actions/setup-node@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          node-version: 12
-          registry-url: https://registry.npmjs.org/
-
-      # Publish to NPM on tags
-      - name: Publish to NPM
-        run: '(cd pkg && npm publish)'
-        if: startsWith(github.ref, 'refs/tags/r')
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   wasm32-wasi:
     name: Run tests under wasm32-wasi
@@ -264,22 +215,6 @@ jobs:
         with:
           command: publish
           args: --dry-run --manifest-path src/core/Cargo.toml
-
-      # Login to crates.io on tags
-      - name: login to crates.io
-        uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          command: login
-          args: ${{ secrets.CRATES_IO_TOKEN }}
-
-      # Publish to crates.io on tags
-      - name: Publish to crates.io
-        uses: actions-rs/cargo@v1
-        if: startsWith(github.ref, 'refs/tags/r')
-        with:
-          command: publish
-          args: --manifest-path src/core/Cargo.toml
 
   minimum_rust_version:
     runs-on: ubuntu-latest

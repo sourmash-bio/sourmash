@@ -113,40 +113,41 @@ def classify(args):
     notify("outputting classifications to {}", args.output)
     with sourmash_args.FileOutput(args.output, 'wt') as outfp:
         csvfp = csv.writer(outfp)
-    csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
 
-    # for each query, gather all the matches across databases
-    total_count = 0
-    n = 0
-    total_n = len(inp_files)
-    for query_filename in inp_files:
-        n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... classifying {} (file {} of {})', query_sig.name(),
-                   n, total_n, end='\r')
-            debug('classifying', query_sig.name())
-            total_count += 1
+        csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))
 
-            # make sure we're looking at the same scaled value as database
-            query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
-
-            # do the classification
-            lineage, status = classify_signature(query_sig, dblist,
-                                                 args.threshold)
-            debug(lineage)
-
-            # output each classification to the spreadsheet
-            row = [query_sig.name(), status]
-            row += lca_utils.zip_lineage(lineage)
-
-            # when outputting to stdout, make output intelligible
-            if not args.output:
+        # for each query, gather all the matches across databases
+        total_count = 0
+        n = 0
+        total_n = len(inp_files)
+        for query_filename in inp_files:
+            n += 1
+            for query_sig in load_signatures(query_filename, ksize=ksize):
                 notify(u'\r\033[K', end=u'')
-            csvfp.writerow(row)
+                notify('... classifying {} (file {} of {})', query_sig.name(),
+                       n, total_n, end='\r')
+                debug('classifying', query_sig.name())
+                total_count += 1
 
-    notify(u'\r\033[K', end=u'')
-    notify('classified {} signatures total', total_count)
+                # make sure we're looking at the same scaled value as database
+                query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+
+                # do the classification
+                lineage, status = classify_signature(query_sig, dblist,
+                                                     args.threshold)
+                debug(lineage)
+
+                # output each classification to the spreadsheet
+                row = [query_sig.name(), status]
+                row += lca_utils.zip_lineage(lineage)
+
+                # when outputting to stdout, make output intelligible
+                if not args.output:
+                    notify(u'\r\033[K', end=u'')
+                csvfp.writerow(row)
+
+        notify(u'\r\033[K', end=u'')
+        notify('classified {} signatures total', total_count)
 
 
 if __name__ == '__main__':

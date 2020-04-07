@@ -252,13 +252,41 @@ pub unsafe extern "C" fn kmerminhash_get_mins_size(ptr: *mut KmerMinHash) -> usi
     mh.mins.len()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn kmerminhash_mins_push(ptr: *mut KmerMinHash, val: u64) {
+ffi_fn! {
+unsafe fn kmerminhash_set_abundances(
+    ptr: *mut KmerMinHash,
+    hashes_ptr: *const u64,
+    abunds_ptr: *const u64,
+    insize: usize,
+) -> Result<()> {
     let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    mh.mins.push(val)
+
+    let hashes = {
+        assert!(!hashes_ptr.is_null());
+        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+    };
+
+    let abunds = {
+        assert!(!abunds_ptr.is_null());
+        slice::from_raw_parts(abunds_ptr as *const u64, insize)
+    };
+
+    let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
+    pairs.sort();
+
+    // Reset the minhash
+    mh.mins.clear();
+    if let Some(ref mut abunds) = mh.abunds {
+        abunds.clear();
+    }
+
+    mh.add_many_with_abund(&pairs)?;
+
+    Ok(())
+}
 }
 
 ffi_fn! {
@@ -285,17 +313,6 @@ pub unsafe extern "C" fn kmerminhash_get_abunds_size(ptr: *mut KmerMinHash) -> u
         abunds.len()
     } else {
         0
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn kmerminhash_abunds_push(ptr: *mut KmerMinHash, val: u64) {
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    if let Some(ref mut abunds) = mh.abunds {
-        abunds.push(val)
     }
 }
 
@@ -471,7 +488,7 @@ unsafe fn kmerminhash_add_from(ptr: *mut KmerMinHash, other: *const KmerMinHash)
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinHash, downsample: bool)
     -> Result<u64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -482,7 +499,7 @@ unsafe fn kmerminhash_count_common(ptr: *mut KmerMinHash, other: *const KmerMinH
        &*other
     };
 
-    mh.count_common(other_mh)
+    mh.count_common(other_mh, downsample)
 }
 }
 
@@ -506,7 +523,7 @@ unsafe fn kmerminhash_intersection(ptr: *mut KmerMinHash, other: *const KmerMinH
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+unsafe fn kmerminhash_jaccard(ptr: *mut KmerMinHash, other: *const KmerMinHash)
     -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -517,12 +534,12 @@ unsafe fn kmerminhash_containment_ignore_maxhash(ptr: *mut KmerMinHash, other: *
        &*other
     };
 
-    mh.containment_ignore_maxhash(&other_mh)
+    mh.jaccard(other_mh)
 }
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool, downsample: bool)
     -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
@@ -533,13 +550,12 @@ unsafe fn kmerminhash_compare(ptr: *mut KmerMinHash, other: *const KmerMinHash)
        &*other
     };
 
-    mh.compare(other_mh)
+    mh.similarity(other_mh, ignore_abundance, downsample)
 }
 }
-
 ffi_fn! {
-unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash, ignore_abundance: bool)
-    -> Result<f64> {
+unsafe fn kmerminhash_angular_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHash)
+                                         -> Result<f64> {
     let mh = {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -549,6 +565,6 @@ unsafe fn kmerminhash_similarity(ptr: *mut KmerMinHash, other: *const KmerMinHas
        &*other
     };
 
-    mh.similarity(other_mh, ignore_abundance)
+    mh.angular_similarity(other_mh)
 }
 }

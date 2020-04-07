@@ -38,6 +38,7 @@ git push --tags git@github.com:dib-lab/sourmash.git
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
+set -e
 python -m pip install -U setuptools pip virtualenv wheel
 
 cd ..
@@ -90,7 +91,7 @@ You will need to [change your PyPI credentials].
 We will be using `twine` to upload the package to TestPyPI and verify
 everything works before sending it to PyPI:
 ```
-pip install twine
+python -m pip install twine
 twine upload --repository-url https://test.pypi.org/legacy/ dist/sourmash-${new_version}${rc}.tar.gz
 ```
 Test the PyPI release in a new virtualenv:
@@ -98,10 +99,10 @@ Test the PyPI release in a new virtualenv:
 cd ../../testenv4
 deactivate
 source bin/activate
-pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
-pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta deprecation
-pip install -i https://test.pypi.org/simple --pre sourmash
+python -m pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta deprecation cffi
+python -m pip install -i https://test.pypi.org/simple --pre sourmash
 sourmash info  # should print "sourmash version ${new_version}${rc}"
 ```
 
@@ -174,5 +175,5 @@ Examples:
 
 ```
 apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
-pip install sourmash[test]
+python -m pip install sourmash[test]
 ```

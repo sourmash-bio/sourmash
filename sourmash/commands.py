@@ -59,7 +59,12 @@ def compare(args):
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
-        notify('loading {}', filename, end='\r')
+        if not os.path.exists(filename) and not \
+               (args.force or args.traverse_directory):
+            error("file '{}' does not exist! exiting.", filename)
+            sys.exit(-1)
+
+        notify("loading '{}'", filename, end='\r')
         loaded = sig.load_signatures(filename,
                                      ksize=args.ksize,
                                      select_moltype=moltype)
@@ -76,6 +81,10 @@ def compare(args):
         # error out while loading if we have more than one ksize/moltype
         if len(ksizes) > 1 or len(moltypes) > 1:
             break
+
+    if not siglist:
+        error('no signatures found! exiting.')
+        sys.exit(-1)
 
     # check ksizes and type
     if len(ksizes) > 1:
@@ -525,6 +534,7 @@ def categorize(args):
         results = []
         search_fn = SearchMinHashesFindBest().search
 
+        # note, "ignore self" here may prevent using newer 'tree.search' fn.
         for leaf in tree.find(search_fn, query, args.threshold):
             if leaf.data.md5sum() != query.md5sum(): # ignore self.
                 similarity = query.similarity(
@@ -852,13 +862,14 @@ def watch(args):
     notify('Computing signature for k={}, {} from stdin', ksize, moltype)
 
     def do_search():
-        search_fn = SearchMinHashesFindBest().search
-
         results = []
         streamsig = sig.SourmashSignature(E, filename='stdin', name=args.name)
-        for leaf in tree.find(search_fn, streamsig, args.threshold):
-            results.append((streamsig.similarity(leaf.data),
-                            leaf.data))
+        for similarity, match, _ in tree.search(streamsig,
+                                                threshold=args.threshold,
+                                                best_only=True,
+                                                ignore_abundance=True,
+                                                do_containment=False):
+            results.append((similarity, match))
 
         return results
 
