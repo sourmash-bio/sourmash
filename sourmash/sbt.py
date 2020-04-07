@@ -728,12 +728,18 @@ class SBT(object):
                 yield p.pos
                 p = self.parent(p.pos)
 
-
     def _leaves(self, pos=0):
         for i, node in self:
-            if isinstance(node, Leaf):  
+            if isinstance(node, Leaf):
                 if pos in self._parents(i):
                     yield (i, node)
+
+    def leaves(self, with_pos=False):
+        for pos, data in self._leaves.items():
+            if with_pos:
+                yield (pos, data)
+            else:
+                yield data
 
     def leaves_under(self, node_position):
         """Generator for all leaf nodes under this position"""
@@ -749,11 +755,6 @@ class SBT(object):
             else:
                 queue.extend(c.pos for c in self.children(position))
         return leaves
-
-    def leaves(self):
-        for c in self.nodes.values():
-            if isinstance(c, Leaf):
-                yield c
 
     def combine(self, other):
         larger, smaller = self, other
