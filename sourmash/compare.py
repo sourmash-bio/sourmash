@@ -39,6 +39,34 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
     return similarities
 
 
+def compare_serial_containment(siglist, downsample=False):
+    """Compare all combinations of signatures and return a matrix
+    of containments. Processes combinations serially on a single
+    process. Best to use when there is few signatures.
+
+    :param list siglist: list of signatures to compare
+    :param boolean ignore_abundance
+        If the sketches are not abundance weighted, or ignore_abundance=True,
+        compute Jaccard similarity.
+
+        If the sketches are abundance weighted, calculate the angular
+        similarity.
+    :param boolean downsample by max_hash if True
+    :return: np.array similarity matrix
+    """
+    import numpy as np
+
+    n = len(siglist)
+
+    containments = np.ones((n, n))
+    for i in range(n):
+        for j in range(n):
+            containments[i][j] = siglist[j].contained_by(siglist[i],
+                                                         downsample=downsample)
+
+    return containments
+
+
 def similarity_args_unpack(args, ignore_abundance, downsample):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
@@ -49,9 +77,10 @@ def similarity_args_unpack(args, ignore_abundance, downsample):
 
 
 def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
-    """Returns similarities of all the combinations of signature at index in the
-    siglist with the rest of the indices starting at index + 1. Doesn't redundantly
-    calculate signatures with all the other indices prior to index - 1
+    """Returns similarities of all the combinations of signature at index in
+    the siglist with the rest of the indices starting at index + 1. Doesn't
+    redundantly calculate signatures with all the other indices prior to
+    index - 1
 
     :param int index: generate masks from this image
     :param boolean ignore_abundance
@@ -62,8 +91,8 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
         similarity.
     :param boolean downsample by max_hash if True
     :param siglist list of signatures
-    :return: list of similarities for the combinations of signature at index with
-    rest of the signatures from index+1
+    :return: list of similarities for the combinations of signature at index
+        with rest of the signatures from index+1
     """
     startt = time.time()
     sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
