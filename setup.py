@@ -83,6 +83,7 @@ SETUP_METADATA = {
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
         '10x': ['bam2fasta==1.0.1'],
+        'umap': ['umap-learn', 'scikit-learn'],
         'storage': ["ipfshttpclient", "redis"]
     },
     "include_package_data": True,

@@ -2,3 +2,4 @@
 -e .[doc]
 -e .[10x]
 -e .[storage]
+-e .[umap]
