@@ -51,6 +51,7 @@ except ImportError:  # Python 2...
 
 from copy import copy
 import json
+from itertools import groupby
 import math
 import os
 from random import randint, random
@@ -58,6 +59,7 @@ import sys
 from tempfile import NamedTemporaryFile
 
 import khmer
+import numpy as np
 
 try:
     load_nodegraph = khmer.load_nodegraph
