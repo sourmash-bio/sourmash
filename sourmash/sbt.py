@@ -1041,6 +1041,7 @@ class SBT(Index):
         self._nodes = new_nodes
         self._leaves = new_leaves
         return self
+
     def nearest_neighbors(self, n_neighbors, ignore_abundance, downsample,
                           verbose=False):
         """Convert SBT to adjecency list of nearest neighbor graph
@@ -1062,8 +1063,6 @@ class SBT(Index):
         # initialize search queue with top node of tree
         queue = [0]
 
-        visited_leaves = set([])
-
         # while the queue is not empty, load each node and apply search
         # function.
         while queue:
@@ -1080,7 +1079,7 @@ class SBT(Index):
                 else:
                     continue
 
-            # Add
+            # If current node is leaf, then visit its neighboring nodes
             if isinstance(current_node, Leaf):
                 if verbose:
                     notify("Visiting {}", current_node.data, end='\r')
@@ -1108,8 +1107,7 @@ class SBT(Index):
 
                 # take `n_neighbors` leaves with largest similarities
                 # adjacency list of: (node1, node2, similarity)
-                adjacent = sorted(similarities, key=lambda x: x[2])[
-                           -n_neighbors:]
+                adjacent = sorted(similarities, key=lambda x: x[2])[-n_neighbors:]
                 adjacencies.extend(adjacent)
 
             else:
@@ -1145,7 +1143,7 @@ class SBT(Index):
             for u, v, similarity in items:
                 knn_indices_line.append(self.leaf_to_index[v])
 
-                # Dissimilarity = 1-similarity
+                # Dissimilarity aka "distance-ish" = 1-similarity
                 knn_dists_line.append(1 - similarity)
             knn_indices.append(knn_indices_line)
             knn_dists.append(knn_dists_line)
@@ -1351,3 +1349,5 @@ def convert_cmd(name, backend):
     with backend(*options) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)
         sbt.save(name, storage=storage)
+
+def knn(sbt):
