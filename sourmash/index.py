@@ -132,8 +132,8 @@ class LinearIndex(Index):
     def select(self, ksize=None, moltype=None):
         def select_sigs(siglist, ksize, moltype):
             for ss in siglist:
-                print(self.filename, ss, ss.minhash.ksize, ss.minhash.moltype,
-                      ksize, moltype)
+#                print(self.filename, ss, ss.minhash.ksize, ss.minhash.moltype,
+#                      ksize, moltype)
                 if (ksize is None or ss.minhash.ksize == ksize) and \
                    (moltype is None or ss.minhash.moltype == moltype):
                    yield ss
