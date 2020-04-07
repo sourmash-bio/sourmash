@@ -1219,7 +1219,8 @@ def test_search_deduce_ksize_not_unique():
                                            fail_ok=True)
         print(status, out, err)
         assert status == -1
-        assert '2 signatures matching ksize' in err
+        # assert '2 signatures matching ksize' in err
+        assert "couldn't find acceptable query" in err # @CTB improve err msg
 
 
 def test_search_deduce_ksize_vs_user_specified():
@@ -1239,7 +1240,8 @@ def test_search_deduce_ksize_vs_user_specified():
                                            fail_ok=True)
         print(status, out, err)
         assert status == -1
-        assert '0 signatures matching ksize' in err
+        #assert '0 signatures matching ksize' in err
+        assert "Cannot match query signature with args; exiting." in err # @CTB
 
 
 def test_search_containment():
@@ -1594,8 +1596,12 @@ def test_do_sourmash_sbt_search_wrong_ksize():
                                            in_directory=location,
                                            fail_ok=True)
 
+        print(out)
+        print(err)
+
         assert status == -1
-        assert 'this is different from' in err
+        #assert 'this is different from' in err
+        assert "couldn't match" in err # @CTB fixme improve error message
 
 
 def test_do_sourmash_sbt_search_multiple():

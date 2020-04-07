@@ -154,6 +154,12 @@ class SignatureParams(object):
             scaled_vals.remove(0)
         self.scaled_vals = scaled_vals
 
+    def __repr__(self):
+        return "SignatureParams({}, {}, {}, {})".format(repr(self.ksizes),
+                                                        repr(self.moltypes),
+                                                        repr(self.num_vals),
+                                                        repr(self.scaled_vals))
+
     def select_ksize(self, ksize):
         if ksize in self.ksizes:
             self.ksizes = { ksize }       # this one only!

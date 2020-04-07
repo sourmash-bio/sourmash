@@ -421,7 +421,9 @@ def search(args):
     if not db_loader.load_query(args.query):
         error("Cannot load query signature; exiting.")
         sys.exit(-1)
-    db_loader.check_query_against_arg_selectors()
+    if not db_loader.check_query_against_arg_selectors():
+        error("Cannot match query signature with args; exiting.")
+        sys.exit(-1)
 
     # load the databases.
     loaded_db_list = []
@@ -604,7 +606,9 @@ def gather(args):
     if not db_loader.load_query(args.query):
         error("Cannot load query signature; exiting.")
         sys.exit(-1)
-    db_loader.check_query_against_arg_selectors()
+    if not db_loader.check_query_against_arg_selectors():
+        error("Cannot match query signature with args; exiting.")
+        sys.exit(-1)
 
     # load the databases.
     loaded_db_list = []
