@@ -4,16 +4,22 @@ dist: xenial
 
 cache:
   directories:
-    - $HOME/.cache/pip
+    - "$HOME/.cache/pip"
+    - "$HOME/.cargo"
+    - "target"
 
-branches:
-  only:
-  - master
-  - "/^v.*$/"
+if: |
+  (type = push AND (branch = master)) OR \
+  (tag =~ ^v) OR \
+  (type = pull_request) OR \
+  (type = cron)
 
-script: tox
+script: tox -vv
 
-install: pip install tox-travis
+install:
+  - source .travis/install_cargo.sh
+
+before_script: pip install tox-travis
 
 jobs:
   allow_failures:
@@ -22,15 +28,19 @@ jobs:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
       python: 3.7
+      env:
+        - PYTHONDEVMODE=1
 
     - &test
       stage: test
-      python: 2.7
+      python: 3.6
     - <<: *test
       os: osx
+      osx_image: xcode10.1
+      python: 3.7
       language: generic
       env:
-        - TOXENV=py36
+        - TOXENV=py37
     - <<: *test
       python: 3.7
       name: integration (ipfs/redis)
@@ -42,7 +52,7 @@ jobs:
         - redis-server
         - docker
     - <<: *test
-      python: 3.6
+      python: 2.7
     - <<: *test
       python: 3.5
 
@@ -52,12 +62,16 @@ jobs:
       services:
         - docker
       env:
-        - PIP=pip
-        - CIBW_SKIP='*-manylinux1_i686'
-      install: skip
+        - CIBW_BUILD='cp37-*'
+        - CIBW_SKIP='*-manylinux_i686'
+        - CIBW_BEFORE_BUILD='source .travis/install_cargo.sh'
+        - CIBW_ENVIRONMENT='PATH="$HOME/.cargo/bin:$PATH"'
+        - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
+      before_script: skip
       script:
-        - sudo $PIP install cibuildwheel==0.10.2
-        - cibuildwheel --output-dir wheelhouse
+        - python -m pip install -U pip setuptools
+        - python -m pip install cibuildwheel==1.1.0
+        - python -m cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
         api_key:
@@ -70,12 +84,7 @@ jobs:
     - <<: *wheel
       os: osx
       osx_image: xcode10.1
-      language: generic
-      before_script:
-        - sudo $PIP install -U pip setuptools
-      env:
-        - PIP=pip2
-        - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
+      language: shell
 
 stages:
   - check

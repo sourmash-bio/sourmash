@@ -1,0 +1,12 @@
+# Configuration for pull request documentation previews via Netlify
+
+[build]
+publish = "_build/html"
+base = "doc"
+command = '''
+    cd .. && \
+    curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+    source $HOME/.cargo/env && \
+    pip install -e .[doc] && \
+    make doc
+'''

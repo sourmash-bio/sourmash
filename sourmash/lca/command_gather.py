@@ -6,16 +6,14 @@ Mimics `sourmash gather` but provides taxonomic information.
 """
 from __future__ import print_function, division
 import sys
-import argparse
 import csv
 from collections import Counter, defaultdict, namedtuple
 
 from .. import sourmash_args, save_signatures, SourmashSignature
-from ..logging import notify, error, print_results, set_quiet, debug
+from ..logging import notify, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
 from ..search import format_bp
-from ..sourmash_args import SourmashArgumentParser
 
 
 LCAGatherResult = namedtuple('LCAGatherResult',
@@ -78,11 +76,6 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         orig_abunds = { k: 1 for k in query_mins }
     sum_abunds = sum(orig_abunds.values())
 
-
-    # collect all mentioned lineage_ids -> md5s, from across the databases
-    md5_to_lineage = {}
-    md5_to_name = {}
-
     # now! do the gather:
     while 1:
         # find all of the assignments for the current set of hashes
@@ -105,14 +98,18 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                 counts[(lca_db, idx)] += 1
 
         # collect the most abundant assignments
-        common_iter = iter(counts.most_common())
         best_list = []
-        (best_lca_db, best_idx), top_count = next(common_iter)
+        top_count = 0
 
-        best_list.append((best_lca_db, best_idx))
-        for (lca_db, idx), count in common_iter:
+        for (lca_db, idx), count in counts.most_common():
+            if not best_list:
+                top_count = count
+                best_list.append((lca_db, idx))
+                continue
+
             if count != top_count:
                 break
+
             best_list.append((lca_db, idx))
 
         # sort on idx and pick the lowest (for consistency).
@@ -185,21 +182,6 @@ def gather_main(args):
     full lineage information for each known hash, as opposed to storing only
     the least-common-ancestor information for it.
     """
-    p = SourmashArgumentParser(prog="sourmash lca gather")
-    p.add_argument('query')
-    p.add_argument('db', nargs='+')
-    p.add_argument('-o', '--output', type=argparse.FileType('wt'),
-                   help='output CSV containing matches to this file')
-    p.add_argument('--output-unassigned', type=argparse.FileType('wt'),
-                   help='output unassigned portions of the query as a signature to this file')
-    p.add_argument('--ignore-abundance',  action='store_true',
-                   help='do NOT use k-mer abundances if present')
-    p.add_argument('-q', '--quiet', action='store_true',
-                   help='suppress non-error output')
-    p.add_argument('-d', '--debug', action='store_true',
-                   help='output debugging output')
-    args = p.parse_args(args)
-
     set_quiet(args.quiet, args.debug)
 
     if not check_files_exist(args.query, *args.db):
@@ -262,17 +244,18 @@ def gather_main(args):
         fieldnames = ['intersect_bp', 'f_match', 'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'name', 'n_equal_matches'] + list(lca_utils.taxlist())
 
-        w = csv.DictWriter(args.output, fieldnames=fieldnames)
-        w.writeheader()
-        for result in found:
-            lineage = result.lineage
-            d = dict(result._asdict())
-            del d['lineage']
+        with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
+            w = csv.DictWriter(csv_fp, fieldnames=fieldnames)
+            w.writeheader()
+            for result in found:
+                lineage = result.lineage
+                d = dict(result._asdict())
+                del d['lineage']
 
-            for (rank, value) in lineage:
-                d[rank] = value
+                for (rank, value) in lineage:
+                    d[rank] = value
 
-            w.writerow(d)
+                w.writerow(d)
 
     if args.output_unassigned:
         if not found:
@@ -280,13 +263,13 @@ def gather_main(args):
         elif not remaining_mins:
             notify('no unassigned hashes! not saving.')
         else:
-            outname = args.output_unassigned.name
-            notify('saving unassigned hashes to "{}"', outname)
+            notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
             e = query_sig.minhash.copy_and_clear()
             e.add_many(remaining_mins)
 
-            save_signatures([ SourmashSignature(e) ], args.output_unassigned)
+            with sourmash_args.FileOutput(args.output_unassigned, 'wt') as fp:
+                save_signatures([ SourmashSignature(e) ], fp)
 
 
 if __name__ == '__main__':

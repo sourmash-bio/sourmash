@@ -4,12 +4,12 @@ import os
 
 import pytest
 
-from sourmash import signature
+from sourmash import load_one_signature
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
-                                search_minhashes_containment)
+                            search_minhashes_containment)
 from sourmash.sbt_storage import (FSStorage, TarStorage,
-                                      RedisStorage, IPFSStorage)
+                                  RedisStorage, IPFSStorage)
 
 from . import sourmash_tst_utils as utils
 
@@ -134,11 +134,11 @@ def test_tree_v1_load():
     tree_v1 = SBT.load(utils.get_test_data('v1.sbt.json'),
                        leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v3.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = next(signature.load_signatures(testdata1))
+    to_search = load_one_signature(testdata1)
 
     results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
                                                to_search, 0.1)}
@@ -153,11 +153,49 @@ def test_tree_v2_load():
     tree_v2 = SBT.load(utils.get_test_data('v2.sbt.json'),
                        leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v3.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = next(signature.load_signatures(testdata1))
+    to_search = load_one_signature(testdata1)
+
+    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
+                                               to_search, 0.1)}
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
+                                                 to_search, 0.1)}
+
+    assert results_v2 == results_cur
+    assert len(results_v2) == 4
+
+
+def test_tree_v3_load():
+    tree_v2 = SBT.load(utils.get_test_data('v3.sbt.json'),
+                       leaf_loader=SigLeaf.load)
+
+    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
+                        leaf_loader=SigLeaf.load)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
+
+    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
+                                               to_search, 0.1)}
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
+                                                 to_search, 0.1)}
+
+    assert results_v2 == results_cur
+    assert len(results_v2) == 4
+
+
+def test_tree_v5_load():
+    tree_v2 = SBT.load(utils.get_test_data('v5.sbt.json'),
+                       leaf_loader=SigLeaf.load)
+
+    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
+                        leaf_loader=SigLeaf.load)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
 
     results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
                                                to_search, 0.1)}
@@ -173,7 +211,7 @@ def test_tree_save_load(n_children):
     tree = SBT(factory, d=n_children)
 
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
@@ -198,13 +236,43 @@ def test_tree_save_load(n_children):
         assert old_result == new_result
 
 
+def test_tree_save_load_v5(n_children):
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=n_children)
+
+    for f in utils.SIG_FILES:
+        sig = load_one_signature(utils.get_test_data(f))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    old_result = {str(s) for s in tree.find(search_minhashes,
+                                            to_search.data, 0.1)}
+    print(*old_result, sep='\n')
+
+    with utils.TempDirectory() as location:
+        tree._save_v5(os.path.join(location, 'demo'))
+        tree = SBT.load(os.path.join(location, 'demo'),
+                        leaf_loader=SigLeaf.load)
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*new_result, sep='\n')
+
+        assert old_result == new_result
+
+
 def test_search_minhashes():
     factory = GraphFactory(31, 1e5, 4)
     tree = SBT(factory)
 
     n_leaves = 0
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
 
@@ -227,7 +295,7 @@ def test_binary_nary_tree():
 
     n_leaves = 0
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         for tree in trees.values():
             tree.add_node(leaf)
@@ -255,7 +323,7 @@ def test_sbt_combine(n_children):
 
     n_leaves = 0
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         if n_leaves < 4:
@@ -273,8 +341,7 @@ def test_sbt_combine(n_children):
     assert len(t_leaves) == len(t1_leaves)
     assert t1_leaves == t_leaves
 
-    to_search = next(signature.load_signatures(
-                        utils.get_test_data(utils.SIG_FILES[0])))
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
     t1_result = {str(s) for s in tree_1.find(search_minhashes,
                                              to_search, 0.1)}
     tree_result = {str(s) for s in tree.find(search_minhashes,
@@ -285,14 +352,14 @@ def test_sbt_combine(n_children):
 
     # check if adding a new node will use the next empty position
     next_empty = 0
-    for n, d in enumerate(tree_1.nodes):
+    for n, (d, _) in enumerate(tree_1):
         if n != d:
             next_empty = n
             break
     if not next_empty:
         next_empty = n + 1
 
-    tree_1.add_node(leaf)
+    tree_1.add_node(SigLeaf(to_search.name(), to_search))
     assert tree_1.next_node == next_empty
 
 
@@ -302,7 +369,8 @@ def test_sbt_fsstorage():
         tree = SBT(factory)
 
         for f in utils.SIG_FILES:
-            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            sig = load_one_signature(utils.get_test_data(f))
+
             leaf = SigLeaf(os.path.basename(f), sig)
             tree.add_node(leaf)
             to_search = leaf
@@ -335,7 +403,8 @@ def test_sbt_tarstorage():
         tree = SBT(factory)
 
         for f in utils.SIG_FILES:
-            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            sig = load_one_signature(utils.get_test_data(f))
+
             leaf = SigLeaf(os.path.basename(f), sig)
             tree.add_node(leaf)
             to_search = leaf
@@ -371,7 +440,8 @@ def test_sbt_ipfsstorage():
         tree = SBT(factory)
 
         for f in utils.SIG_FILES:
-            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            sig = load_one_signature(utils.get_test_data(f))
+
             leaf = SigLeaf(os.path.basename(f), sig)
             tree.add_node(leaf)
             to_search = leaf
@@ -409,7 +479,8 @@ def test_sbt_redisstorage():
         tree = SBT(factory)
 
         for f in utils.SIG_FILES:
-            sig = next(signature.load_signatures(utils.get_test_data(f)))
+            sig = load_one_signature(utils.get_test_data(f))
+
             leaf = SigLeaf(os.path.basename(f), sig)
             tree.add_node(leaf)
             to_search = leaf
@@ -448,7 +519,7 @@ def test_tree_repair():
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = next(signature.load_signatures(testdata1))
+    to_search = load_one_signature(testdata1)
 
     results_repair = {str(s) for s in tree_repair.find(search_minhashes,
                                                        to_search, 0.1)}
@@ -459,16 +530,16 @@ def test_tree_repair():
     assert len(results_repair) == 2
 
 
-def test_tree_repair_add_node():
+def test_tree_repair_insert():
     tree_repair = SBT.load(utils.get_test_data('leaves.sbt.json'),
                            leaf_loader=SigLeaf.load)
 
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree_repair.add_node(leaf)
 
-    for pos, node in list(tree_repair.nodes.items()):
+    for pos, node in tree_repair:
         # Every parent of a node must be an internal node (and not a leaf),
         # except for node 0 (the root), whose parent is None.
         if pos != 0:
@@ -484,7 +555,7 @@ def test_save_sparseness(n_children):
     tree = SBT(factory, d=n_children)
 
     for f in utils.SIG_FILES:
-        sig = next(signature.load_signatures(utils.get_test_data(f)))
+        sig = load_one_signature(utils.get_test_data(f))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
@@ -499,7 +570,7 @@ def test_save_sparseness(n_children):
         tree.save(os.path.join(location, 'demo'), sparseness=1.0)
         tree_loaded = SBT.load(os.path.join(location, 'demo'),
                                leaf_loader=SigLeaf.load)
-        assert all(not isinstance(n, Node) for n in tree_loaded.nodes.values())
+        assert all(not isinstance(n, Node) for _, n in tree_loaded)
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
@@ -509,7 +580,7 @@ def test_save_sparseness(n_children):
 
         assert old_result == new_result
 
-        for pos, node in list(tree_loaded.nodes.items()):
+        for pos, node in tree_loaded:
             # Every parent of a node must be an internal node (and not a leaf),
             # except for node 0 (the root), whose parent is None.
             if pos != 0:
@@ -518,3 +589,21 @@ def test_save_sparseness(n_children):
             # Leaf nodes can't have children
             if isinstance(node, Leaf):
                 assert all(c.node is None for c in tree_loaded.children(pos))
+
+
+def test_sbt_as_index_signatures():
+    # test 'signatures' method from Index base class.
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    xx = list(tree.signatures())
+    assert len(xx) == 2
+
+    assert sig47 in xx
+    assert sig63 in xx

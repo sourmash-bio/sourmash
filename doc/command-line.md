@@ -20,12 +20,12 @@ taken.
 Grab three bacterial genomes from NCBI:
 ```
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.1_ASM694v1/GCF_000006945.1_ASM694v1_genomic.fna.gz
+curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Sphingobacteriaceae_bacterium_DW12/latest_assembly_versions/GCF_000783305.1_ASM78330v1/GCF_000783305.1_ASM78330v1_genomic.fna.gz
 ```
 Compute signatures for each:
 ```
-   sourmash compute *.fna.gz
+   sourmash compute -k 31 *.fna.gz
 ```
 This will produce three `.sig` files containing MinHash signatures at k=31.
 
@@ -42,7 +42,7 @@ sourmash compare -p 8 *.sig -o cmp
 
 Finally, plot a dendrogram:
 ```
-sourmash plot cmp
+sourmash plot cmp --labels
 ```
 This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
@@ -432,14 +432,16 @@ for an example use case.
 
 These commands manipulate signatures from the command line. Currently
 supported subcommands are `merge`, `rename`, `intersect`,
-`extract`, `downsample`, `subtract`, `import`, `export`, `info`, and
-`flatten`.
+`extract`, `downsample`, `subtract`, `import`, `export`, `info`,
+`flatten`, and `filter`.
 
-All of the signature commands work only on compatible signatures, where
-the k-mer size and nucleotide/protein sequences match.  If working directly
-with the hash values (e.g. `merge`, `intersect`, `subtract`) then the
-scaled values must also match; you can use `downsample` to convert a bunch
-of samples to the same scaled value.
+The signature commands that combine or otherwise have multiple
+signatures interacting (`merge`, `intersect`, `subtract`) work only on
+compatible signatures, where the k-mer size and nucleotide/protein
+sequences match each other.  If working directly with the hash values
+(e.g. `merge`, `intersect`, `subtract`) then the scaled values must
+also match; you can use `downsample` to convert a bunch of samples to
+the same scaled value.
 
 If there are multiple signatures in a file with different ksizes and/or
 from nucleotide and protein sequences, you can choose amongst them with
@@ -572,6 +574,23 @@ will remove all abundances from all of the .sig files in the current
 directory.
 
 The `flatten` command accepts the same selectors as `extract`.
+
+### `sourmash signature filter`
+
+Filter the hashes in the specified signature(s) by abundance, by either
+`-m/--min-abundance` or `-M/--max-abundance` or both. Abundance selection is
+inclusive, so `-m 2 -M 5` will select hashes with abundance greater than
+or equal to 2, and less than or equal to 5.
+
+For example,
+```
+sourmash signature -m 2 *.sig
+```
+
+will output new signatures containing only hashes that occur two or
+more times in each signature.
+
+The `filter` command accepts the same selectors as `extract`.
 
 ### `sourmash signature import`
 

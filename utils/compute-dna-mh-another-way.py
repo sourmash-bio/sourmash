@@ -6,7 +6,6 @@ external check on our C++ implementation.
 
 The output of this is used in test_sourmash.py to verify our C++ code.
 """
-import ctypes
 
 __complementTranslation = { "A": "T", "C": "G", "G": "C", "T": "A", "N": "N" }
 def complement(s):
@@ -37,7 +36,6 @@ import sys, screed
 import mmh3
 import sourmash
 print('imported sourmash:', sourmash, file=sys.stderr)
-from sourmash import MinHash
 import sourmash.signature
 
 record = next(iter(screed.open(sys.argv[1])))

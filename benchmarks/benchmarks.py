@@ -1,22 +1,26 @@
 from __future__ import unicode_literals
-
-from screed.fasta import fasta_iter
-from sourmash._minhash import MinHash
-from tests.sourmash_tst_utils import get_test_data
+import random
 
 
-def load_sequences(filepath):
+try:
+    from sourmash._minhash import MinHash
+except:
+    from sourmash.minhash import MinHash
+
+
+def load_sequences():
     sequences = []
-    with open(filepath, 'rb') as f:
-        for s in fasta_iter(f):
-            sequences.append(s['sequence'])
+    for i in range(10):
+        random_seq = random.sample("A,C,G,T".split(",") * 3000, 300)
+        sequences.append("".join(random_seq))
     return sequences
 
 
 class TimeMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=False)
-        self.sequences = load_sequences(get_test_data('ecoli.genes.fna')) * 10
+        self.protein_mh = MinHash(500, 21, is_protein=True, track_abundance=False)
+        self.sequences = load_sequences()
 
         self.populated_mh = MinHash(500, 21, track_abundance=False)
         for seq in self.sequences:
@@ -28,6 +32,12 @@ class TimeMinHashSuite:
         for seq in sequences:
             mh.add_sequence(seq)
 
+    def time_add_protein(self):
+        mh = self.protein_mh
+        sequences = self.sequences
+        for seq in sequences:
+            mh.add_protein(seq)
+
     def time_get_mins(self):
         mh = self.populated_mh
         for i in range(500):
@@ -37,6 +47,10 @@ class TimeMinHashSuite:
         mh = self.mh
         for i in range(10000):
             mh.add_hash(i)
+
+    def time_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
 
     def time_compare(self):
         mh = self.mh
@@ -67,19 +81,33 @@ class TimeMinHashSuite:
         for i in range(500):
             mh += other_mh
 
-    # TODO: add_protein
-
 
 class PeakmemMinHashSuite:
     def setup(self):
         self.mh = MinHash(500, 21, track_abundance=True)
-        self.sequences = load_sequences(get_test_data('ecoli.genes.fna'))
+        self.protein_mh = MinHash(500, 21, is_protein=True, track_abundance=True)
+        self.sequences = load_sequences()
 
     def peakmem_add_sequence(self):
         mh = self.mh
         sequences = self.sequences
         for seq in sequences:
             mh.add_sequence(seq)
+
+    def peakmem_add_protein(self):
+        mh = self.protein_mh
+        sequences = self.sequences
+        for seq in sequences:
+            mh.add_protein(seq)
+
+    def peakmem_add_hash(self):
+        mh = self.mh
+        for i in range(10000):
+            mh.add_hash(i)
+
+    def peakmem_add_many(self):
+        mh = self.mh
+        mh.add_many(list(range(1000)))
 
 
 ####################

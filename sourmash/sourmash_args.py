@@ -7,104 +7,26 @@ import argparse
 from . import signature
 from .logging import notify, error
 
+from .index import LinearIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
 from .lca import lca_utils
 import sourmash
 
-DEFAULT_LOAD_K=31
-
-
-class SourmashArgumentParser(argparse.ArgumentParser):
-    """Specialize ArgumentParser for sourmash.
-
-    In particular, set up printing of citation information.
-    """
-    def __init__(self, no_citation=False, **kwargs):
-        super(SourmashArgumentParser, self).__init__(add_help=False, **kwargs)
-        self.no_citation = no_citation
-
-    def parse_args(self, args=None, namespace=None):
-        args = super(SourmashArgumentParser, self).parse_args(args=args,
-                                                              namespace=namespace)
-
-        # some scripts do not have a quiet flag, assume quiet=False for those
-        if ('quiet' not in args or not args.quiet) and not self.no_citation:
-            citation()
-
-        return args
-
-
-_citation_printed = False
-def citation():
-    global _citation_printed
-    if not _citation_printed:
-        notify("== This is sourmash version {version}. ==", version=sourmash.VERSION)
-        notify("== Please cite Brown and Irber (2016), doi:10.21105/joss.00027. ==\n")
-        _citation_printed = True
-
-
-def add_moltype_args(parser):
-    parser.add_argument('--protein', dest='protein', action='store_true',
-                        help='choose a protein signature (default: False)')
-    parser.add_argument('--no-protein', dest='protein',
-                        action='store_false',
-                        help='do not choose a protein signature')
-    parser.set_defaults(protein=False)
-
-    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
-                        help='build Dayhoff-encoded amino acid signatures (default: False)')
-    parser.add_argument('--no-dayhoff', dest='dayhoff',
-                        action='store_false',
-                        help='do not build Dayhoff-encoded amino acid signatures')
-    parser.set_defaults(dayhoff=False)
-
-    parser.add_argument('--dna', '--rna', dest='dna', default=None,
-                        action='store_true',
-                        help='choose a nucleotide signature (default: True)')
-    parser.add_argument('--no-dna', '--no-rna', dest='dna',
-                        action='store_false',
-                        help='do not choose a nucleotide signature')
-    parser.set_defaults(dna=None)
-
-
-def add_construct_moltype_args(parser):
-    parser.add_argument('--protein', dest='protein', action='store_true',
-                        help='build protein signatures (default: False)')
-    parser.add_argument('--no-protein', dest='protein',
-                        action='store_false',
-                        help='do not build protein signatures')
-    parser.set_defaults(protein=False)
-
-    parser.add_argument('--dayhoff', dest='dayhoff', action='store_true',
-                        help='build Dayhoff-encoded amino acid signatures (default: False)')
-    parser.add_argument('--no-dayhoff', dest='dayhoff',
-                        action='store_false',
-                        help='do not build Dayhoff-encoded amino acid signatures')
-    parser.set_defaults(dayhoff=False)
-
-    parser.add_argument('--dna', '--rna', dest='dna', default=None,
-                        action='store_true',
-                        help='build nucleotide signatures (default: True)')
-    parser.add_argument('--no-dna', '--no-rna', dest='dna',
-                        action='store_false',
-                        help='do not build nucleotide signatures')
-    parser.set_defaults(dna=True)
-
-
-def add_ksize_arg(parser, default):
-    parser.add_argument('-k', '--ksize', default=None, type=int,
-                        help='k-mer size (default: {d})'.format(d=default))
+DEFAULT_LOAD_K = 31
+DEFAULT_N = 500
 
 
 def get_moltype(sig, require=False):
     if sig.minhash.is_molecule_type('DNA'):
         moltype = 'DNA'
-    elif sig.minhash.is_molecule_type('protein'):
-        moltype = 'protein'
     elif sig.minhash.is_molecule_type('dayhoff'):
         moltype = 'dayhoff'
+    elif sig.minhash.is_molecule_type('hp'):
+        moltype = 'hp'
+    elif sig.minhash.is_molecule_type('protein'):
+        moltype = 'protein'
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
@@ -119,12 +41,14 @@ def calculate_moltype(args, default=None):
         args.dna = False
 
     moltype = default
-    if args.protein:
-        moltype = 'protein'
-    elif args.dna:
+    if args.dna:
         moltype = 'DNA'
     elif args.dayhoff:
         moltype = 'dayhoff'
+    elif args.hp:
+        moltype = 'hp'
+    elif args.protein:
+        moltype = 'protein'
 
     return moltype
 
@@ -136,7 +60,7 @@ def load_query_signature(filename, ksize, select_moltype):
                                        select_moltype=select_moltype,
                                        do_raise=True)
         sl = list(sl)
-    except IOError:
+    except (IOError, ValueError):
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
 
@@ -149,8 +73,8 @@ def load_query_signature(filename, ksize, select_moltype):
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
             notify('selecting default query k={}.', DEFAULT_LOAD_K)
-        elif ksize:
-            notify('selecting specified query k={}', ksize)
+    elif ksize:
+        notify('selecting specified query k={}', ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
@@ -195,10 +119,11 @@ class LoadSingleSignatures(object):
                 self.ksizes.add(query_ksize)
                 self.moltypes.add(query_moltype)
 
-                yield filename, query, query_moltype, query_ksize
-
             if len(self.ksizes) > 1 or len(self.moltypes) > 1:
                 raise ValueError('multiple k-mer sizes/molecule types present')
+
+            for query in sl:
+                yield filename, query, query_moltype, query_ksize
 
 
 def traverse_find_sigs(dirnames, yield_all_files=False):
@@ -296,12 +221,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                                                   ksize=query_ksize,
                                                   select_moltype=query_moltype)
                     siglist = filter_compatible_signatures(query, siglist, 1)
-                    siglist = list(siglist)
-                    databases.append((siglist, sbt_or_sigfile, False))
-                    notify('loaded {} signatures from {}', len(siglist),
+                    linear = LinearIndex(siglist, filename=sigfile)
+                    databases.append((linear, sbt_or_sigfile, False))
+                    notify('loaded {} signatures from {}', len(linear),
                            sigfile, end='\r')
-                    n_signatures += len(siglist)
-                except:                       # ignore errors with traverse
+                    n_signatures += len(linear)
+                except Exception:                       # ignore errors with traverse
                     pass
 
             # done! jump to beginning of main 'for' loop
@@ -332,7 +257,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
             assert query_ksize == lca_db.ksize
             query_scaled = query.minhash.scaled
-            assert query_scaled and query_scaled <= lca_db.scaled
 
             notify('loaded LCA {}', sbt_or_sigfile, end='\r')
             n_databases += 1
@@ -354,12 +278,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
-            siglist = list(siglist)
+            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
+            databases.append((linear, sbt_or_sigfile, 'signature'))
 
-            databases.append((siglist, sbt_or_sigfile, 'signature'))
-            notify('loaded {} signatures from {}', len(siglist),
+            notify('loaded {} signatures from {}', len(linear),
                    sbt_or_sigfile, end='\r')
-            n_signatures += len(siglist)
+            n_signatures += len(linear)
         except (EnvironmentError, ValueError):
             error("\nCannot open file '{}'", sbt_or_sigfile)
             sys.exit(-1)
@@ -379,3 +303,46 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         print('')
 
     return databases
+
+
+class FileOutput(object):
+    """A context manager for file outputs that handles sys.stdout gracefully.
+
+    Usage:
+
+       with FileOutput(filename, mode) as fp:
+          ...
+
+    does what you'd expect, but it handles the situation where 'filename'
+    is '-' or None. This makes it nicely compatible with argparse usage,
+    e.g.
+
+    p = argparse.ArgumentParser()
+    p.add_argument('--output')
+    args = p.parse_args()
+    ...
+    with FileOutput(args.output, 'wt') as fp:
+       ...
+
+    will properly handle no argument or '-' as sys.stdout.
+    """
+    def __init__(self, filename, mode='wt'):
+        self.filename = filename
+        self.mode = mode
+        self.fp = None
+
+    def open(self):
+        if self.filename == '-' or self.filename is None:
+            return sys.stdout
+        self.fp = open(self.filename, self.mode)
+        return self.fp
+
+    def __enter__(self):
+        return self.open()
+
+    def __exit__(self, type, value, traceback):
+        # do we need to handle exceptions here?
+        if self.fp:
+            self.fp.close()
+
+        return False
