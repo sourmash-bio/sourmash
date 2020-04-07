@@ -1755,7 +1755,8 @@ def test_do_sourmash_sbt_search_selectprot():
 
 
 def test_do_sourmash_sbt_search_dnaprotquery():
-    # sbt_search should fail if non-single query sig given
+    # search should succeed if one of multiple queries have a signature
+    # type match match with the subject(s).
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -1774,11 +1775,10 @@ def test_do_sourmash_sbt_search_dnaprotquery():
 
         args = ['search', 'short.fa.sig', 'zzz']
         status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-        assert status != 0
+                                           in_directory=location)
         print(out)
         print(err)
-        assert 'need exactly one' in err
+        assert '2 matches:' in out
 
 
 def test_do_sourmash_index_traverse():
