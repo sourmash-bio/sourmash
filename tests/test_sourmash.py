@@ -360,8 +360,8 @@ def test_compare_containment(c):
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
-    c.run_sourmash('compare', '--containment', '-k', '31', *testdata_sigs,
-                   '--csv', 'output.csv')
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
 
     # load the matrix output of compare --containment
     with open(c.output('output.csv'), 'rt') as fp:
