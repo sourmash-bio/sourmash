@@ -353,6 +353,46 @@ min similarity in matrix: 0.940'''.splitlines()
         assert status == 0
 
 
+@utils.in_tempdir
+def test_compare_containment(c):
+    import numpy
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '-k', '31', *testdata_sigs,
+                   '--csv', 'output.csv')
+
+    # load the matrix output of compare --containment
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = ss_j.contained_by(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
