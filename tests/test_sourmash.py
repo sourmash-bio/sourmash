@@ -393,6 +393,33 @@ def test_compare_containment(c):
             assert containment == mat_val, (i, j)
 
 
+@utils.in_tempdir
+def test_compare_containment_abund_flatten(c):
+    s47 = utils.get_test_data('track_abund/47.fa.sig')
+    s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'NOTE: --containment means signature abundances are flattened' in \
+        c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_containment_require_scaled(c):
+    s47 = utils.get_test_data('num/47.fa.sig')
+    s63 = utils.get_test_data('num/63.fa.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
+                       fail_ok=True)
+
+    assert 'must use scaled signatures with --containment option' in \
+        c.last_result.err
+    assert c.last_result.status != 0
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

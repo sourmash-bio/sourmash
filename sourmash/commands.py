@@ -120,7 +120,7 @@ def compare(args):
     if args.containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment implies --ignore-abundance')
+            notify('NOTE: --containment means signature abundances are flattened.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
