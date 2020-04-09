@@ -140,10 +140,11 @@ Options:
 ```
 --output -- save the distance matrix to this file (as a numpy binary matrix)
 --ksize -- do the comparisons at this k-mer size.
---containment -- compute containment instead of similarity. The value at `[i,j]` is the containment of `j` by `i`.
+--containment -- compute containment instead of similarity.
+        The value at `[i,j]` is the containment of `j` by `i`.
 ```
 
-**Note:** compare by default produces a symmetic similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
+**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
 ### `sourmash plot`
 
