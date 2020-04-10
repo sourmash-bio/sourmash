@@ -19,7 +19,6 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('input_seqs')
     p.add_argument('sbt_database')
-    p.add_argument('--threshold', type=float, default=0.05)
     p.add_argument('--output-nomatch', type=argparse.FileType('wt'))
     p.add_argument('--output-match', type=argparse.FileType('wt'))
     p.add_argument('--csv', type=argparse.FileType('wt'))
@@ -65,10 +64,8 @@ def main():
             print(f'note: skipping {query.name[:20]}, no hashes in sketch')
             continue
 
-        for result in tree.search(query, threshold=args.threshold,
-                                do_containment=True, ignore_abundance=True,
-                                best_only=True):
-            (similarity, match, filename) = result
+        for result in tree.gather(query):
+            (similarity, match, name) = result
             found = True
             matches += 1
             found_list.append((record.name, match.name(), similarity))
