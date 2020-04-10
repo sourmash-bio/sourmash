@@ -2500,6 +2500,67 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
+@utils.in_tempdir
+def test_gather_f_match_orig(c):
+    import copy
+
+    testdata_combined = utils.get_test_data('gather/combined.sig')
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv',
+                   *testdata_sigs)
+
+    combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
+    remaining_mh = copy.copy(combined_sig.minhash)
+
+    def approx_equal(a, b, n=5):
+        return round(a, n) == round(b, n)
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        for n, row in enumerate(r):
+            print(n, row['f_match'], row['f_match_orig'])
+
+            # each match is completely in the original query
+            assert row['f_match_orig'] == "1.0"
+
+            # double check -- should match 'search --containment'.
+            # (this is kind of useless for a 1.0 contained_by, I guess)
+            filename = row['filename']
+            match = sourmash.load_one_signature(filename, ksize=21)
+            assert match.contained_by(combined_sig) == 1.0
+
+            # check other fields, too.
+            f_orig_query = float(row['f_orig_query'])
+            f_match_orig = float(row['f_match_orig'])
+            f_match = float(row['f_match'])
+            f_unique_to_query = float(row['f_unique_to_query'])
+
+            # f_orig_query is the ... #@CTB contained_By
+            # (note, this only works because containment is 100% in combined).
+            assert approx_equal(match.similarity(combined_sig), f_orig_query)
+
+            # just redoing above, for completeness; this is always 1.0 for
+            # this data set.
+            assert approx_equal(match.contained_by(combined_sig), f_match_orig)
+
+            # f_match is how much of the match is in the unallocated hashes
+            assert approx_equal(match.minhash.contained_by(remaining_mh),
+                                f_match)
+
+            # f_unique_to_query is how much of the match is unique wrt
+            # the original query.
+            a = set(remaining_mh.get_mins())
+            b = set(match.minhash.get_mins())
+            n_intersect = len(a.intersection(b))
+            f_intersect = n_intersect / len(combined_sig.minhash)
+            assert approx_equal(f_unique_to_query, f_intersect)
+
+            # now, subtract current match from remaining... and iterate!
+            remaining_mh.remove_many(match.minhash.get_mins())
+
+
 def test_gather_nomatch():
     with utils.TempDirectory() as location:
         testdata_query = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
