@@ -3,6 +3,8 @@
 Walk through a file of long contigs and analyze each one for contamination
 against an SBT database.
 
+See http://ivory.idyll.org/blog/2018-detecting-contamination-in-long-read-assemblies.html as well.
+
 Author: C. Titus Brown, titus@idyll.org
 
 Requires sourmash 3.x and Python 3.6
@@ -65,11 +67,13 @@ def main():
             print(f'note: skipping {query.name[:20]}, no hashes in sketch')
             continue
 
-        for leaf in tree.find(search_fn, query, args.threshold):
+        for result in tree.search(query, threshold=args.threshold,
+                                do_containment=True, ignore_abundance=True,
+                                best_only=True):
+            (similarity, match, filename) = result
             found = True
             matches += 1
-            similarity = query.similarity(leaf.data)
-            found_list.append((record.name, leaf.data.name(), similarity))
+            found_list.append((record.name, match.name(), similarity))
             break
 
         if not found:
@@ -82,7 +86,7 @@ def main():
             match_bp += len(record.sequence)
         else: # not found
             if args.output_nomatch:
-                args.output_match.write(f'>{record.name}\n{record.sequence}')
+                args.output_nomatch.write(f'>{record.name}\n{record.sequence}')
             nomatch_seqs += 1
             nomatch_bp += len(record.sequence)
 
