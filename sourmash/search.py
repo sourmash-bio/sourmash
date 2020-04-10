@@ -175,8 +175,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         # calculate fraction of subject match with orig query
-        intersect_match_orig = found_mins.intersection(orig_query_mins)
-        f_match_orig = len(intersect_match_orig) / float(genome_n_mins)
+        f_match_orig = best_match.contained_by(orig_query_mh)
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mins))
