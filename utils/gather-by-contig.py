@@ -13,7 +13,6 @@ import argparse
 import screed
 import sourmash
 from sourmash import sourmash_args, search
-from sourmash.sbtmh import SearchMinHashesFindBest
 import csv
 
 
@@ -57,7 +56,6 @@ def main():
         total_seqs += 1
         total_bp += len(record.sequence)
         found = False
-        search_fn = SearchMinHashesFindBest().search
 
         query_mh = mh.copy_and_clear()
         query_mh.add_sequence(record.sequence, force=True)
