@@ -59,7 +59,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_match_orig, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match,f_match_orig')
 
 
 # build a new query object, subtracting found mins and downsampling
@@ -175,7 +175,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
         # calculate fraction of subject match with orig query
-        f_match_orig = best_match.contained_by(orig_query_mh)
+        f_match_orig = best_match.minhash.contained_by(orig_query_mh,
+                                                       downsample=True)
 
         # calculate scores weighted by abundances
         f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mins))
