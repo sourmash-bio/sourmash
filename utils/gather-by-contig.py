@@ -12,7 +12,6 @@ Requires sourmash 3.x and Python 3.6
 import argparse
 import screed
 import sourmash
-from sourmash import sourmash_args, search
 import csv
 
 
