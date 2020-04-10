@@ -25,6 +25,7 @@ def main():
     p.add_argument('--output-nomatch', type=argparse.FileType('wt'))
     p.add_argument('--output-match', type=argparse.FileType('wt'))
     p.add_argument('--csv', type=argparse.FileType('wt'))
+    p.add_argument('-t', '--use-tabs', action='store_true')
     args = p.parse_args()
 
     tree = sourmash.load_sbt_index(args.sbt_database)
@@ -99,7 +100,11 @@ def main():
     print('')
 
     if args.csv:
-        w = csv.DictWriter(args.csv, fieldnames=['query', 'match', 'score'])
+        delimiter = ','
+        if args.use_tabs:
+            delimiter = '\t'
+        w = csv.DictWriter(args.csv, fieldnames=['query', 'match', 'score'],
+                           delimiter=delimiter)
         w.writeheader()
         for (query, match, score) in found_list:
             w.writerow(dict(query=query, match=match, score=score))
