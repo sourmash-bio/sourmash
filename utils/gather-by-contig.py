@@ -24,6 +24,8 @@ def main():
     p.add_argument('--output-match', type=argparse.FileType('wt'))
     p.add_argument('--csv', type=argparse.FileType('wt'))
     p.add_argument('-t', '--use-tabs', action='store_true')
+    p.add_argument('--threshold-bp', default=10000, type=float,
+                   help='est number of bp to require before reporting match')
     args = p.parse_args()
 
     tree = sourmash.load_sbt_index(args.sbt_database)
@@ -67,11 +69,14 @@ def main():
 
         for result in tree.gather(query, threshold_bp=query_mh.scaled * len(query_mh)):
             (containment, match, name) = result
-            found = True
-            matches += 1
 
             in_common = match.minhash.count_common(query_mh)
             contamination_min = in_common * query_mh.scaled
+            if contamination_min < args.threshold_bp:
+                break
+
+            found = True
+            matches += 1
             found_list.append((record.name, match.name(), contamination_min))
             break
 
