@@ -9,6 +9,7 @@ Author: C. Titus Brown, titus@idyll.org
 
 Requires sourmash 3.x and Python 3.6
 """
+import sys
 import argparse
 import screed
 import sourmash
@@ -61,14 +62,17 @@ def main():
 
         # too small a sequence/not enough hashes? notify
         if not query_mh.get_mins():
-            print(f'note: skipping {query.name[:20]}, no hashes in sketch')
+            print(f'note: skipping {query.name()[:20]}, no hashes in sketch')
             continue
 
         for result in tree.gather(query, threshold_bp=query_mh.scaled * len(query_mh)):
-            (similarity, match, name) = result
+            (containment, match, name) = result
             found = True
             matches += 1
-            found_list.append((record.name, match.name(), similarity))
+
+            in_common = match.minhash.count_common(query_mh)
+            contamination_min = in_common * query_mh.scaled
+            found_list.append((record.name, match.name(), contamination_min))
             break
 
         if not found:
@@ -85,10 +89,12 @@ def main():
             nomatch_seqs += 1
             nomatch_bp += len(record.sequence)
 
-            print(f'searched {total_seqs}, found {matches}', end='\r')
-            sys.stdout.flush()
+        print(f'PROGRESS: searched {total_seqs}, found {matches} ({int(matches/total_seqs*100)}%)')
+        if found:
+            print(f'found: est {int(contamination_min/1e3)} kb matches to {match.name()}')
+        sys.stdout.flush()
 
-    print(f'searched {total_seqs} seqs with {int(total_bp/1e3)}kb, found {matches}')
+    print(f'searched {total_seqs} seqs with {int(total_bp/1e3)}kb, found {matches} in database')
     print(f'MATCHED {match_seqs} sequences with {int(match_bp/1e3)}kb.')
     print(f'NOMATCH {nomatch_seqs} sequences with {int(nomatch_bp/1e3)}kb.')
 
@@ -98,11 +104,12 @@ def main():
         delimiter = ','
         if args.use_tabs:
             delimiter = '\t'
-        w = csv.DictWriter(args.csv, fieldnames=['query', 'match', 'score'],
+        w = csv.DictWriter(args.csv,
+                           fieldnames=['query', 'match', 'min_bp_found'],
                            delimiter=delimiter)
         w.writeheader()
-        for (query, match, score) in found_list:
-            w.writerow(dict(query=query, match=match, score=score))
+        for (query, match, min_bp) in found_list:
+            w.writerow(dict(query=query, match=match, min_bp_found=min_bp))
 
 if __name__ == '__main__':
     main()
