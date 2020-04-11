@@ -64,7 +64,7 @@ def main():
             print(f'note: skipping {query.name[:20]}, no hashes in sketch')
             continue
 
-        for result in tree.gather(query):
+        for result in tree.gather(query, threshold_bp=query_mh.scaled * len(query_mh)):
             (similarity, match, name) = result
             found = True
             matches += 1
@@ -86,6 +86,7 @@ def main():
             nomatch_bp += len(record.sequence)
 
             print(f'searched {total_seqs}, found {matches}', end='\r')
+            sys.stdout.flush()
 
     print(f'searched {total_seqs} seqs with {int(total_bp/1e3)}kb, found {matches}')
     print(f'MATCHED {match_seqs} sequences with {int(match_bp/1e3)}kb.')
