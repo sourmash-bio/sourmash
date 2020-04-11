@@ -76,12 +76,12 @@ def main():
 
         if found:
             if args.output_match:
-                args.output_match.write(f'>{record.name}\n{record.sequence}')
+                args.output_match.write(f'>{record.name}\n{record.sequence}\n')
             match_seqs += 1
             match_bp += len(record.sequence)
         else: # not found
             if args.output_nomatch:
-                args.output_nomatch.write(f'>{record.name}\n{record.sequence}')
+                args.output_nomatch.write(f'>{record.name}\n{record.sequence}\n')
             nomatch_seqs += 1
             nomatch_bp += len(record.sequence)
 
