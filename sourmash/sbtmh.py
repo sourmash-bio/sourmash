@@ -188,6 +188,9 @@ class GatherMinHashes(object):
             get = node.data.get
             matches = sum(1 for value in mins if get(value))
 
+        if not matches:
+            return 0
+
         score = float(matches) / len(query.minhash)
 
         # store results if we have passed in an appropriate dictionary
