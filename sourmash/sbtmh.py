@@ -177,7 +177,6 @@ class GatherMinHashes(object):
         self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
-        score = 0
         if not len(query.minhash):
             return 0
 
