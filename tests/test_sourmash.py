@@ -2554,7 +2554,7 @@ def test_gather_f_match_orig(c):
             a = set(remaining_mh.get_mins())
             b = set(match.minhash.get_mins())
             n_intersect = len(a.intersection(b))
-            f_intersect = n_intersect / len(combined_sig.minhash)
+            f_intersect = n_intersect / float(len(combined_sig.minhash))
             assert approx_equal(f_unique_to_query, f_intersect)
 
             # now, subtract current match from remaining... and iterate!
