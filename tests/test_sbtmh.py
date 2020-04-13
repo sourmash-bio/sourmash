@@ -1,8 +1,8 @@
 from itertools import product
+from string import ascii_uppercase
 
 from . import sourmash_tst_utils as utils
 from sourmash import MinHash, SourmashSignature
-from sourmash.compare import compare_all_pairs
 from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
 from sourmash import signature as sig
@@ -126,19 +126,25 @@ def test_localized_sbt_more_files():
     root = LocalizedSBT(factory, track_abundance=False)
 
     with utils.TempDirectory() as location:
-        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+        # Sort to ensure consistent ordering across operating systems
+        files = sorted([utils.get_test_data(f) for f in utils.SIG_FILES])
         signatures = []
+        i = 0
         for filename in files:
             loaded = sig.load_signatures(filename, ksize=31)
-            signatures.extend(loaded)
+            for signature in loaded:
+                # Rename to A, B, C, D for simplicity
+                signature._name = ascii_uppercase[i]
+                signatures.append(signature)
+                i += 1
 
-        compare = compare_all_pairs(signatures, ignore_abundance=True)
-        print([x.name().split('.')[0] for x in signatures])
-        print(compare)
-
-        # --- track_abundance=False, ignore_abundance=True ---
-        # ['SRR2060939_1', 'SRR2060939_2', 'SRR2241509_1', 'SRR2255622_1',
-        #  'SRR453566_1', 'SRR453569_1', 'SRR453570_1']
+        # --- Create all-by-all similarity matrix for reference ---
+        # from sourmash.compare import compare_all_pairs
+        # compare = compare_all_pairs(signatures, ignore_abundance=True)
+        # print([x.name() for x in signatures])
+        # print(compare)
+        # --- Similarity matrix ---
+        # ['A',  'B',   'C',  'D', 'E',  'F',  'G']
         # [[1.    0.356 0.078 0.086 0.    0.    0.   ]
         #  [0.356 1.    0.072 0.078 0.    0.    0.   ]
         #  [0.078 0.072 1.    0.074 0.    0.    0.   ]
@@ -147,6 +153,64 @@ def test_localized_sbt_more_files():
         #  [0.    0.    0.    0.    0.382 1.    0.386]
         #  [0.    0.    0.    0.    0.364 0.386 1.   ]]
 
-        # for signature in signatures:
-        #     root.insert(signature)
+        # --- Insert: A ---
+        # Tree:
+        #     0
+        #   /  \
+        # A: 1  None
+
+        # --- Insert: B ---
+        # Tree:
+        #     0
+        #   /  \
+        # A: 1  B: 2
+
+        # --- Insert: C ---
+        # Tree:
+        #          0
+        #        /  \
+        #      1     C: 2
+        #    /   \
+        # A: 3  B: 4
+
+        # --- Insert: D ---
+        # Tree:
+        #             0
+        #        /        \
+        #      1           2
+        #    /   \       /   \
+        # A: 3  B: 4   D: 5  C: 6
+
+        # --- Insert: E ---
+        # Tree:
+        #                    0
+        #               /       \
+        #             1            2
+        #        /        \      /   \
+        #      3           4    E: 5  None: 6
+        #    /   \       /   \
+        # A: 7  B: 8   D: 9  C: 10
+
+        # --- Insert: F ---
+        # Tree:
+        #                    0
+        #               /       \
+        #             1            2
+        #        /        \      /   \
+        #      3           4    E: 5  F: 6
+        #    /   \       /   \
+        # A: 7  B: 8   D: 9  C: 10
+
+        # --- Insert: G ---
+        # Tree:
+        #                           0
+        #               /                        \
+        #             1                           2
+        #        /        \                 /            \
+        #      3           4              5               6
+        #    /   \       /   \         /     \         /    \
+        # A: 7  B: 8   D: 9  C: 10   F: 11  G: 12    E: 13  None: 14
+
+        for signature in signatures:
+            root.insert(signature)
 
