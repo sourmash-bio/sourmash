@@ -1,8 +1,11 @@
 from itertools import product
 
+from . import sourmash_tst_utils as utils
 from sourmash import MinHash, SourmashSignature
+from sourmash.compare import compare_all_pairs
 from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
+from sourmash import signature as sig
 
 
 def test_localized_add_node(track_abundance):
@@ -116,3 +119,34 @@ def test_localized_add_node(track_abundance):
         # Expected leaf_pos = {'a': 3, 'd': 6, 'c': 5, 'b': 4}
         assert root.parent(leaf_pos["a"]) == root.parent(leaf_pos["b"])
         assert root.parent(leaf_pos["c"]) == root.parent(leaf_pos["d"])
+
+
+def test_localized_sbt_more_files():
+    factory = GraphFactory(5, 100, 3)
+    root = LocalizedSBT(factory, track_abundance=False)
+
+    with utils.TempDirectory() as location:
+        files = [utils.get_test_data(f) for f in utils.SIG_FILES]
+        signatures = []
+        for filename in files:
+            loaded = sig.load_signatures(filename, ksize=31)
+            signatures.extend(loaded)
+
+        compare = compare_all_pairs(signatures, ignore_abundance=True)
+        print([x.name().split('.')[0] for x in signatures])
+        print(compare)
+
+        # --- track_abundance=False, ignore_abundance=True ---
+        # ['SRR2060939_1', 'SRR2060939_2', 'SRR2241509_1', 'SRR2255622_1',
+        #  'SRR453566_1', 'SRR453569_1', 'SRR453570_1']
+        # [[1.    0.356 0.078 0.086 0.    0.    0.   ]
+        #  [0.356 1.    0.072 0.078 0.    0.    0.   ]
+        #  [0.078 0.072 1.    0.074 0.    0.    0.   ]
+        #  [0.086 0.078 0.074 1.    0.    0.    0.   ]
+        #  [0.    0.    0.    0.    1.    0.382 0.364]
+        #  [0.    0.    0.    0.    0.382 1.    0.386]
+        #  [0.    0.    0.    0.    0.364 0.386 1.   ]]
+
+        # for signature in signatures:
+        #     root.insert(signature)
+

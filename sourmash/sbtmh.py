@@ -120,6 +120,58 @@ class LocalizedSBT(SBT):
         self.ignore_abundance = not self.track_abundance
         self.do_containment = do_containment
 
+    def find_most_similar_leaf(self, node):
+            search_results = self.search(
+                node.data,
+                threshold=sys.float_info.epsilon,
+                best_only=True,
+                ignore_abundance=self.ignore_abundance,
+                do_containment=self.do_containment,
+                return_leaf=True
+            )
+            if len(search_results) == 1:
+                best_result = search_results.pop()
+            elif search_results:
+                # Use the computed similarity to pick the best result
+                # Note: if there are ties, this takes the first one (I think)
+                best_result = max(search_results, key=lambda x: x[0])
+            else:
+                # no similarity overlap found; search_results empty
+                best_result = None
+
+            return best_result
+
+    def get_sibling_of_similar_leaf(self, children, most_similar_leaf):
+        # if most similar node has two children already, return node
+        # of least similar child (displaced)
+        # Get the leaf information of the other child
+        if most_similar_leaf == children[0].node:
+            other_child = children[1]
+        elif most_similar_leaf == children[1].node:
+            other_child = children[0]
+        else:
+            raise ValueError(
+                "Neither children in node show up as most similar"
+                " leaf. Something weird happened in search."
+            )
+
+        return other_child
+
+    def get_child_nodes(self, children):
+        return [c.node for c in children]
+
+    def check_if_all_sigleafs(self, child_nodes):
+        return all(
+            isinstance(x, SigLeaf)
+            for x in child_nodes
+        )
+
+    def get_siblings(self, grandparent, most_similar_parent):
+        return [
+            x for x in self.children(grandparent.pos)
+            if x != most_similar_parent
+        ]
+
     def new_node_pos(self, node):
         if not self._nodes:
             self.next_node = 1
@@ -145,6 +197,7 @@ class LocalizedSBT(SBT):
             else:
                 self.next_node = self._insert_next_position(self.next_node)
                 return self.next_node
+
             new_leaf_similarity, most_similar_leaf, most_similar_pos = best_result
 
             # Get parent of the most similar node
@@ -158,17 +211,10 @@ class LocalizedSBT(SBT):
             else:
                 # If parent has two children, check if the other child is more similar
                 # to the most_similar_leaf --> then no displacement is necessary
+                other_child = self.get_sibling_of_similar_leaf(children, most_similar_leaf)
+                child_nodes = self.get_child_nodes(children)
+                all_leaves = self.check_if_all_sigleafs(child_nodes)
 
-                # Get the leaf information of the other child
-                if most_similar_leaf == children[0].node:
-                    other_child = children[1]
-                elif most_similar_leaf == children[1].node:
-                    other_child = children[0]
-                else:
-                    raise ValueError("Neither children in node show up as most similar"
-                                     " leaf. Something weird happened in search.")
-                child_nodes = [x.node for x in children]
-                all_leaves = all(isinstance(x, SigLeaf) for x in child_nodes)
                 if all_leaves:
                     child_similarity = most_similar_leaf.data.similarity(
                         other_child.node.data, ignore_abundance=self.ignore_abundance)
@@ -275,7 +321,7 @@ class LocalizedSBT(SBT):
                                                parent_sibling):
         new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
         self._nodes[parent.pos] = new_internal_node
-        c1, c2 = *self.children(parent.pos)
+        c1, c2 = self.children(parent.pos)
         # Update new internal node
         self._leaves[c1.pos] = parent.node
         self._leaves[c2.pos] = parent_sibling.node
