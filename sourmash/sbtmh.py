@@ -192,7 +192,7 @@ class LocalizedSBT(SBT):
 
         # TODO: There is probably a way better way to write this logic - @olgabot
         if isinstance(node, SigLeaf):
-            best_result = self.find_best_matching_nodes(node)
+            best_result = self.find_most_similar_leaf(node)
 
             if not best_result:
                 # if no results return next_available node
