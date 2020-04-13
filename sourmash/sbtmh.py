@@ -213,7 +213,7 @@ class LocalizedSBT(SBT):
             else:
                 # If parent has two children, check if the other child is more similar
                 # to the most_similar_leaf --> then no displacement is necessary
-                other_child = self.compare_child_leaves(children, most_similar_leaf)
+                other_child = self. get_sibling_of_similar_leaf(children, most_similar_leaf)
                 child_nodes = self.get_child_nodes(children)
                 all_leaves = self.check_if_all_sigleafs(child_nodes)
                 
