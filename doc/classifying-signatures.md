@@ -59,11 +59,12 @@ genome; it then subtracts that match from the metagenome, and repeats.
 At the end it reports how much of the metagenome remains unknown.  The
 [basic sourmash
 tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#what-s-in-my-metagenome)
-has some sample output from using gather with GenBank.
+has some sample output from using gather with GenBank.  See the appendix at
+the bottom of this page for more technical details.
 
-Our preliminary benchmarking suggests that `gather` is the most accurate
-method available for doing strain-level resolution of genomes. More on that
-as we move forward!
+Some benchmarking on CAMI suggests that `gather` is a very accurate
+method for doing strain-level resolution of genomes. More on
+that as we move forward!
 
 ## To do taxonomy, or not to do taxonomy?
 
@@ -116,3 +117,51 @@ We suggest the following approach:
 This helps us figure out what people are actually interested in doing, and
 any help we provide via the issue tracker will eventually be added into the
 documentation.
+
+## Appendix: how `sourmash gather` works.
+
+The sourmash gather algorithm works as follows:
+
+* find the best match in the database, based on containment;
+* subtract that match from the query;
+* repeat.
+
+The output below is the CSV output for a fictional metagenome.
+
+The first column, `f_unique_to_query`, is the fraction of the database
+match that is _unique_ with respect to the original query. It will
+always decrease as you get more matches.
+
+The second column, `f_match_orig`, is how much of the match is in the
+_original_ query.  For this fictional metagenome, each match is
+entirely contained in the original query. This is the number you would
+get by running `sourmash search --containment <match> <metagenome>`.
+
+The third column, `f_match`, is how much of the match is in the remaining
+query metagenome, after all of the previous matches have been removed.
+
+The fourth column, `f_orig_query`, is how much of the original query
+belongs to the match. This is the number you'd get by running
+`sourmash search --containment <metagenome> <match>`.
+
+```
+f_unique_to_query      f_match_orig  f_match                f_orig_query
+0.3321964529331514     1.0           1.0                    0.3321964529331514
+0.13096862210095497    1.0           1.0                    0.13096862210095497
+0.11527967257844475    1.0           0.898936170212766      0.12824010914051842
+0.10709413369713507    1.0           1.0                    0.10709413369713507
+0.10368349249658936    1.0           0.3134020618556701     0.33083219645293316
+```
+
+A few quick notes for the algorithmic folk out there --
+
+* unlike `sourmash search`, `sourmash gather` cannot easily be
+  parallelized on a per-signature level because it is doing a greedy
+  iterative search across all the databases at each step.
+* the key innovation for gather is that it looks for **collections**
+  of k-mers in the databases, and picks the best collection (by
+  containment). It does not treat k-mers individually.
+* because of this, gather does not saturate as databases grow in size,
+  and in fact should only become more sensitive and specific as we
+  increase database size. (Although of course it may get a lot
+  slower...)
