@@ -2537,9 +2537,9 @@ def test_gather_f_match_orig(c):
             f_match = float(row['f_match'])
             f_unique_to_query = float(row['f_unique_to_query'])
 
-            # f_orig_query is the ... #@CTB contained_By
+            # f_orig_query is the containment of the query by the match.
             # (note, this only works because containment is 100% in combined).
-            assert approx_equal(match.similarity(combined_sig), f_orig_query)
+            assert approx_equal(combined_sig.contained_by(match), f_orig_query)
 
             # just redoing above, for completeness; this is always 1.0 for
             # this data set.
