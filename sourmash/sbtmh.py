@@ -110,76 +110,16 @@ class LocalizedSBT(SBT):
     and another for the leaves (datasets).
     """
 
-    def __init__(
-            self,
-            factory,
-            d=2,
-            storage=None,
-            track_abundance=False,
-            do_containment=False
-    ):
+    def __init__(self, factory, d=2, storage=None, track_abundance=False,
+                 do_containment=False):
         if d != 2:
-            raise NotImplementedError(
-                "LocalizedSBT is only implemented for when the "
-                "number of children is 2, d=2"
-            )
+            raise NotImplementedError("LocalizedSBT is only implemented for when the "
+                                      "number of children is 2, d=2")
         super().__init__(factory=factory, d=d, storage=storage)
         self.track_abundance = track_abundance
         self.ignore_abundance = not self.track_abundance
         self.do_containment = do_containment
 
-    def find_most_similar_leaf(self, node):
-            search_results = self.search(
-                node.data,
-                threshold=sys.float_info.epsilon,
-                best_only=True,
-                ignore_abundance=self.ignore_abundance,
-                do_containment=self.do_containment,
-                return_leaf=True
-            )
-            if len(search_results) == 1:
-                best_result = search_results.pop()
-            elif search_results:
-                # Use the computed similarity to pick the best result
-                # Note: if there are ties, this takes the first one (I think)
-                best_result = max(search_results, key=lambda x: x[0])
-            else:
-                # no similarity overlap found; search_results empty
-                best_result = None
-
-            return best_result
-
-    def compare_child_leaves(self, children, most_similar_leaf):
-        # if most similar node has two children already, return node
-        # of least similar child (displaced)
-        # Get the leaf information of the other child
-        if most_similar_leaf == children[0].node:
-            other_child = children[1]
-        elif most_similar_leaf == children[1].node:
-            other_child = children[0]
-        else:
-            raise ValueError(
-                "Neither children in node show up as most similar"
-                " leaf. Something weird happened in search."
-            )
-
-        return other_child
-
-    def get_child_nodes(self, children):
-        return [c.node for c in children]
-
-    def check_if_all_sigleafs(self, child_nodes):
-        return all(
-            isinstance(x, SigLeaf)
-            for x in child_nodes
-        )
-
-    def get_siblings(self, grandparent, most_similar_parent):
-        return [
-            x for x in self.children(grandparent.pos)
-            if x != most_similar_parent
-        ]
-        
     def new_node_pos(self, node):
         if not self._nodes:
             self.next_node = 1
@@ -192,13 +132,19 @@ class LocalizedSBT(SBT):
 
         # TODO: There is probably a way better way to write this logic - @olgabot
         if isinstance(node, SigLeaf):
-            best_result = self.find_most_similar_leaf(node)
-
-            if not best_result:
-                # if no results return next_available node
+            search_results = self.search(
+                node.data, threshold=sys.float_info.epsilon, best_only=True,
+                ignore_abundance=self.ignore_abundance,
+                do_containment=self.do_containment, return_leaf=True)
+            if len(search_results) == 1:
+                best_result = search_results.pop()
+            elif search_results:
+                # Use the computed similarity to pick the best result
+                # Note: if there are ties, this takes the first one (I think)
+                best_result = max(search_results, key=lambda x: x[0])
+            else:
                 self.next_node = self._insert_next_position(self.next_node)
                 return self.next_node
-            
             new_leaf_similarity, most_similar_leaf, most_similar_pos = best_result
 
             # Get parent of the most similar node
@@ -209,19 +155,23 @@ class LocalizedSBT(SBT):
             if children[1].node is None:
                 # Use the default next node position
                 self.next_node = self._insert_next_position(self.next_node)
-                return self.next_node
             else:
                 # If parent has two children, check if the other child is more similar
                 # to the most_similar_leaf --> then no displacement is necessary
-                other_child = self. get_sibling_of_similar_leaf(children, most_similar_leaf)
-                child_nodes = self.get_child_nodes(children)
-                all_leaves = self.check_if_all_sigleafs(child_nodes)
-                
+
+                # Get the leaf information of the other child
+                if most_similar_leaf == children[0].node:
+                    other_child = children[1]
+                elif most_similar_leaf == children[1].node:
+                    other_child = children[0]
+                else:
+                    raise ValueError("Neither children in node show up as most similar"
+                                     " leaf. Something weird happened in search.")
+                child_nodes = [x.node for x in children]
+                all_leaves = all(isinstance(x, SigLeaf) for x in child_nodes)
                 if all_leaves:
                     child_similarity = most_similar_leaf.data.similarity(
-                        other_child.node.data,
-                        ignore_abundance=self.ignore_abundance
-                    )
+                        other_child.node.data, ignore_abundance=self.ignore_abundance)
 
                     if new_leaf_similarity > child_similarity:
                         # New leaf is *more* similar than the existing child
@@ -232,14 +182,10 @@ class LocalizedSBT(SBT):
 
                         # Place the less similar child in the neighboring node
                         grandparent = self.parent(most_similar_parent.pos)
-                        parent_sibling = self.get_siblings(
-                            grandparent,
-                            most_similar_parent
-                        )[0]
-                        self.insert_new_internal_node_with_children(
-                            other_child.node,
-                            parent_sibling
-                        )
+                        parent_sibling = [x for x in self.children(grandparent.pos)
+                                          if x != most_similar_parent][0]
+                        self.insert_new_internal_node_with_children(other_child.node,
+                                                                    parent_sibling)
                         # Remove the old location
                         del self._leaves[displaced_position]
                         return displaced_position
@@ -325,17 +271,9 @@ class LocalizedSBT(SBT):
             node.update(self._nodes[parent.pos])
             parent = self.parent(parent.pos)
 
-    def relocate_children_to_new_internal_node(
-            self,
-            grandparent,
-            node,
-            parent,
-            parent_sibling
-    ):
-        new_internal_node = Node(
-            self.factory,
-            name="internal." + str(parent.pos)
-        )
+    def relocate_children_to_new_internal_node(self, grandparent, node, parent,
+                                               parent_sibling):
+        new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
         self._nodes[parent.pos] = new_internal_node
         c1, c2 = *self.children(parent.pos)
         # Update new internal node
