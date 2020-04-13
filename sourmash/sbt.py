@@ -1154,6 +1154,13 @@ class SBT(Index):
 
         return knn_indices, knn_dists, rp_forest
 
+    def knn(self, n_neighbors, ignore_abundance, downsample, verbose=False):
+        nn_adjacencies = self.nearest_neighbors(n_neighbors, ignore_abundance,
+                                                downsample, verbose=verbose)
+        indices, dists, rp_forest = self.similarity_adjacency_to_knn(nn_adjacencies)
+        return indices, dists, rp_forest
+
+
 class Node(object):
     "Internal node of SBT."
 
@@ -1349,5 +1356,3 @@ def convert_cmd(name, backend):
     with backend(*options) as storage:
         sbt = SBT.load(name, leaf_loader=SigLeaf.load)
         sbt.save(name, storage=storage)
-
-def knn(sbt):
