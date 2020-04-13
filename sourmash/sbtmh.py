@@ -149,7 +149,7 @@ class LocalizedSBT(SBT):
 
             return best_result
 
-    def compare_child_leaves(self, children, most_similar_leaf):
+    def get_sibling_of_similar_leaf(self, children, most_similar_leaf):
         # if most similar node has two children already, return node
         # of least similar child (displaced)
         # Get the leaf information of the other child
@@ -337,7 +337,7 @@ class LocalizedSBT(SBT):
             name="internal." + str(parent.pos)
         )
         self._nodes[parent.pos] = new_internal_node
-        c1, c2 = *self.children(parent.pos)
+        c1, c2 = self.children(parent.pos)
         # Update new internal node
         self._leaves[c1.pos] = parent.node
         self._leaves[c2.pos] = parent_sibling.node
