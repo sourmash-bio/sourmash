@@ -128,7 +128,7 @@ class LocalizedSBT(SBT):
         self.ignore_abundance = not self.track_abundance
         self.do_containment = do_containment
 
-    def find_best_matching_nodes(self, node):
+    def find_most_similar_leaf(self, node):
             search_results = self.search(
                 node.data,
                 threshold=sys.float_info.epsilon,
