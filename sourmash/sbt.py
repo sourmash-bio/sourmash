@@ -51,6 +51,7 @@ except ImportError:  # Python 2...
 
 from copy import copy
 import json
+from itertools import groupby
 import math
 import os
 from random import randint, random
@@ -58,6 +59,7 @@ import sys
 from tempfile import NamedTemporaryFile
 
 import khmer
+import numpy as np
 
 try:
     load_nodegraph = khmer.load_nodegraph
@@ -167,7 +169,7 @@ class SBT(Index):
     def insert(self, signature):
         "Add a new SourmashSignature in to the SBT."
         from .sbtmh import SigLeaf
-        
+
         leaf = SigLeaf(signature.md5sum(), signature)
         self.add_node(leaf)
 
@@ -197,19 +199,19 @@ class SBT(Index):
             c1, c2 = self.children(p.pos)[:2]
 
             self._leaves[c1.pos] = p.node
-            self._leaves[c2.pos] = node 
+            self._leaves[c2.pos] = node
             del self._leaves[p.pos]
 
             for child in (p.node, node):
                 child.update(n)
         elif isinstance(p.node, Node):
-            self._leaves[pos] = node 
+            self._leaves[pos] = node
             node.update(p.node)
         elif p.node is None:
             n = Node(self.factory, name="internal." + str(p.pos))
             self._nodes[p.pos] = n
             c1 = self.children(p.pos)[0]
-            self._leaves[c1.pos] = node 
+            self._leaves[c1.pos] = node
             node.update(n)
 
         # update all parents!
@@ -312,7 +314,7 @@ class SBT(Index):
             results.append((similarity, leaf.data, None))
 
         return results
-        
+
 
     def gather(self, query, *args, **kwargs):
         from .sbtmh import GatherMinHashes
@@ -988,6 +990,21 @@ class SBT(Index):
             else:
                 yield data
 
+    def leaves_under(self, node_position):
+        """Generator for all leaf nodes under this position"""
+        visited, queue = set(), [node_position]
+        leaves = []
+
+        while queue:
+            position = queue.pop(0)
+            node = self.nodes.get(position, None)
+
+            if isinstance(node, Leaf):
+                leaves.append(node)
+            else:
+                queue.extend(c.pos for c in self.children(position))
+        return leaves
+
     def combine(self, other):
         larger, smaller = self, other
         if len(other) > len(self):
@@ -1024,6 +1041,124 @@ class SBT(Index):
         self._nodes = new_nodes
         self._leaves = new_leaves
         return self
+
+    def nearest_neighbors(self, n_neighbors, ignore_abundance, downsample,
+                          verbose=False):
+        """Convert SBT to adjecency list of nearest neighbor graph
+
+        Parameters
+        ----------
+        n_neighbors : int
+            Number of neighboring samples to consider, where each sample is a
+            leaf
+        ignore_abundance : bool
+            Whether or not to ignore the abundance of k-mers
+        downsample : bool
+            Whether or not to downsample the number of min hashes observed
+        """
+        adjacencies = []
+
+        n_parent_levels = math.ceil(math.log2(n_neighbors)) + 1
+
+        # initialize search queue with top node of tree
+        queue = [0]
+
+        # while the queue is not empty, load each node and apply search
+        # function.
+        while queue:
+            position = queue.pop(0)
+            current_node = self.nodes.get(position, None)
+
+            # repair while searching.
+            if current_node is None:
+                if verbose:
+                    notify("repairing missing node {} ...", position, end='\r')
+                if position in self.missing_nodes:
+                    self._rebuild_node(current_node)
+                    current_node = self.nodes[position]
+                else:
+                    continue
+
+            # If current node is leaf, then visit its neighboring nodes
+            if isinstance(current_node, Leaf):
+                if verbose:
+                    notify("Visiting {}", current_node.data, end='\r')
+                n = 0
+                upper_internal_node = self.parent(position)
+                while n < n_parent_levels:
+                    upper_internal_node = self.parent(upper_internal_node.pos)
+                    n += 1
+                leaves = self.leaves_under(upper_internal_node.pos)
+
+                similarities = []
+                for leaf in leaves:
+                    # Ignore self-similarity
+                    if leaf == current_node:
+                        continue
+                    similarity = current_node.data.similarity(
+                        leaf.data, ignore_abundance=ignore_abundance,
+                        downsample=downsample)
+                    # Don't filter for minimum similarity as some samples are bad
+                    # and don't have many neighbors, and arrays containing lists
+                    # of multiple sizes won't cast to int/float in numpy, so
+                    # similarity_adjacency_to_knn won't work on the adjacencies
+                    similarities.append(
+                        [current_node.data.name(), leaf.data.name(), similarity])
+
+                # take `n_neighbors` leaves with largest similarities
+                # adjacency list of: (node1, node2, similarity)
+                adjacent = sorted(similarities, key=lambda x: x[2])[-n_neighbors:]
+                adjacencies.extend(adjacent)
+
+            else:
+                queue.extend(c.pos for c in self.children(position))
+        return adjacencies
+
+    def similarity_adjacency_to_knn(self, adjacencies):
+        """Convert adjacency list to k-nearest neighbor indices and distances
+
+        "distance" = dissimilarity = 1-similarity
+
+        :param adjacencies:
+        :param tree:
+        :return:
+        """
+        # Make arbitrary index integers for each leaf
+        self.leaf_to_position = dict(
+            (node.data.name(), position) for position, node in
+            self.nodes.items()
+            if isinstance(node, Leaf))
+        self.leaf_to_index = dict((name, i) for i, name in enumerate(
+            self.leaf_to_position.keys()))
+        if len(self.leaf_to_index) == 0:
+            raise ValueError(
+                "leaf_to_index dictionary not properly constructed! "
+                "Length is zero :(")
+        knn_indices = []
+        knn_dists = []
+
+        for u, items in groupby(adjacencies, key=lambda x: x[0]):
+            knn_indices_line = []
+            knn_dists_line = []
+            for u, v, similarity in items:
+                knn_indices_line.append(self.leaf_to_index[v])
+
+                # Dissimilarity aka "distance-ish" = 1-similarity
+                knn_dists_line.append(1 - similarity)
+            knn_indices.append(knn_indices_line)
+            knn_dists.append(knn_dists_line)
+        knn_indices = np.array(knn_indices)
+        knn_dists = np.array(knn_dists)
+
+        rp_forest = []
+
+        return knn_indices, knn_dists, rp_forest
+
+    def knn(self, n_neighbors, ignore_abundance, downsample, verbose=False):
+        nn_adjacencies = self.nearest_neighbors(n_neighbors, ignore_abundance,
+                                                downsample, verbose=verbose)
+        indices, dists, rp_forest = self.similarity_adjacency_to_knn(nn_adjacencies)
+        return indices, dists, rp_forest
 
 
 class Node(object):
