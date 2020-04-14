@@ -155,11 +155,8 @@ f_unique_to_query      f_match_orig  f_match                f_orig_query
 
 A few quick notes for the algorithmic folk out there --
 
-* unlike `sourmash search`, `sourmash gather` cannot easily be
-  parallelized on a per-signature level because it is doing a greedy
-  iterative search across all the databases at each step.
-* the key innovation for gather is that it looks for **collections**
-  of k-mers in the databases, and picks the best collection (by
+* the key innovation for gather is that it looks for **groups** of
+  k-mers in the databases, and picks the best group (based on
   containment). It does not treat k-mers individually.
 * because of this, gather does not saturate as databases grow in size,
   and in fact should only become more sensitive and specific as we
