@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use fixedbitset::FixedBitSet;
 use primal_check;
@@ -163,13 +163,23 @@ impl Nodegraph {
         wtr.write_u8(self.bs.len() as u8)?; // n_tables
         wtr.write_u64::<LittleEndian>(self.occupied_bins as u64)?; // n_occupied
         for count in &self.bs {
-            wtr.write_u64::<LittleEndian>(count.len() as u64)?;
+            let tablesize = count.len();
+            wtr.write_u64::<LittleEndian>(tablesize as u64)?;
+
+            /*
+            let byte_size = tablesize / 8 + 1;
+            let (div, rem) = (byte_size / 4, byte_size % 4);
+
+            // https://github.com/BurntSushi/byteorder/issues/155
+            //wtr.write_u32_from(&count.as_slice()[..div]);
+            */
+
             for (i, chunk) in count.as_slice().iter().enumerate() {
                 let next = (i + 1) * 32;
-                if next <= count.len() {
+                if next <= tablesize {
                     wtr.write_u32::<LittleEndian>(*chunk).unwrap()
                 } else {
-                    let rem = count.len() - (i * 32);
+                    let rem = tablesize - (i * 32);
                     let remainder = if rem % 8 != 0 { rem / 8 + 1 } else { rem / 8 };
 
                     if remainder == 0 {
@@ -190,9 +200,17 @@ impl Nodegraph {
     where
         R: io::Read,
     {
+        /*
         // TODO: see https://github.com/brainstorm/bio-index-formats for an
         // example of using nom to parse binary data.
         // Use it here instead of byteorder
+        // TODO: how to avoid loading all into mem?
+        let mut contents: Vec<u8> = Vec::new();
+        rdr.read_to_end(&mut contents)?;
+        // TODO: map error instead of using `expect`
+        let (_, ng) = parse_nodegraph(&contents).expect("Error parsing nodegraph");
+        Ok(ng)
+        */
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
@@ -211,21 +229,57 @@ impl Nodegraph {
         for _i in 0..n_tables {
             let tablesize: usize = rdr.read_u64::<LittleEndian>()? as usize;
             let byte_size = tablesize / 8 + 1;
+            let mut _n_occupied = 0;
 
-            let mut counts = FixedBitSet::with_capacity(tablesize);
-            for pos in 0..byte_size {
-                let byte = rdr.read_u8()?;
-                if byte == 0 {
-                    continue;
+            // This needs a modified fixedbitset with the
+            // with_capacity_and_blocks method
+            let rem = byte_size % 4;
+            let blocks: Vec<u32> = if rem == 0 {
+                let mut blocks = vec![0; byte_size / 4];
+                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
+                blocks
+            } else {
+                // TODO: need to figure out how many more u8 to read and convert
+                // to u32, and push block to blocks
+                let mut blocks = vec![0; byte_size / 4];
+                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
+
+                let mut values = [0u8; 4];
+                for i in 0..rem {
+                    let byte = rdr.read_u8().expect("error reading bins");
+                    values[i] = byte;
+                }
+                let mut block = vec![0u32; 1];
+                LittleEndian::read_u32_into(&values, &mut block);
+                blocks.push(block[0]);
+                blocks
+            };
+            let counts = FixedBitSet::with_capacity_and_blocks(tablesize, blocks);
+
+            // This doesn't need fixedbitset changes, but it is 16000x slower...
+            /*
+            let set_bits = (0..byte_size).flat_map(|block| {
+                let byte = rdr.read_u8().expect("error reading bins");
+                if byte != 0 {
+                    _n_occupied += 1;
                 }
 
-                _n_occupied += 1;
-                for i in 0..8u32 {
-                    if byte & (1 << i) != 0 {
-                        counts.insert(pos * 8 + i as usize);
+                (0..8u32).filter_map(move |i| {
+                    if byte & (1 << i) == 0 {
+                        None
+                    } else {
+                        let pos = block * 8 + i as usize;
+                        if pos < tablesize {
+                            Some(pos)
+                        } else {
+                            None
+                        }
                     }
-                }
-            }
+                })
+            });
+            let mut counts = FixedBitSet::with_capacity(tablesize);
+            counts.extend(set_bits);
+            */
 
             bs.push(counts);
         }
@@ -371,23 +425,29 @@ mod test {
 
     #[test]
     fn load_save_nodegraph() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/.sbt.v3/internal.0");
-        let data = std::fs::read(filename).unwrap();
+        let mut datadir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        datadir.push("../../tests/test-data/.sbt.v3/");
 
-        let mut reader = BufReader::new(&data[..]);
+        for i in 0..=5 {
+            let mut filename = datadir.clone();
+            filename.push(format!("internal.{}", i));
+            let data = std::fs::read(filename).unwrap();
 
-        let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+            let mut reader = BufReader::new(&data[..]);
 
-        let mut buf = Vec::new();
-        {
-            let mut writer = BufWriter::new(&mut buf);
-            ng.save_to_writer(&mut writer).unwrap();
-        }
+            let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
 
-        let chunk_size = 8;
-        for (c1, c2) in data.to_vec().chunks(chunk_size).zip(buf.chunks(chunk_size)) {
-            assert_eq!(c1, c2);
+            let mut buf = Vec::new();
+            {
+                let mut writer = BufWriter::new(&mut buf);
+                ng.save_to_writer(&mut writer).unwrap();
+            }
+
+            let chunk_size = 8;
+            for (c1, c2) in data.to_vec().chunks(chunk_size).zip(buf.chunks(chunk_size)) {
+                assert_eq!(c1, c2);
+            }
+            assert_eq!(data.len(), buf.len());
         }
     }
 
@@ -972,3 +1032,69 @@ mod test {
         }
     }
 }
+
+/*
+use nom::bits::bits;
+use nom::bits::streaming::take;
+use nom::bytes::streaming::tag;
+use nom::multi::many_m_n;
+use nom::number::streaming::{le_u32, le_u64, le_u8};
+use nom::IResult;
+
+fn parse_bins<'i>(
+    input: &'i [u8],
+    size: u64,
+    counts: &mut FixedBitSet,
+) -> IResult<&'i [u8], usize> {
+    let mut n_occupied = 0;
+    let mut current = 0;
+    for pos in 0..size {
+        let (input, bit): (&[u8], u8) = bits(take(1usize))(input)?;
+        if bit == 1u8 {
+            counts.insert(pos as usize);
+        }
+    }
+
+    Ok((input, n_occupied))
+}
+
+fn parse_tables(input: &[u8]) -> IResult<&[u8], FixedBitSet> {
+    let (input, size) = le_u64(input)?;
+    let byte_size = (size as usize / 8) + 1;
+
+    let mut counts = FixedBitSet::with_capacity(size as usize);
+
+    // TODO: bit parsing
+    let (input, n) = parse_bins(input, size, &mut counts)?;
+    n_occupied += n;
+
+    Ok((input, counts))
+}
+
+fn parse_nodegraph(input: &[u8]) -> IResult<&[u8], Nodegraph> {
+    let (input, magic) = tag("OXLI")(input)?;
+    assert_eq!(magic, b"OXLI");
+
+    let (input, version) = le_u8(input)?;
+    assert_eq!(version, 4);
+
+    let (input, ht_type) = le_u8(input)?;
+    assert_eq!(ht_type, 2);
+
+    let (input, ksize) = le_u32(input)?;
+    let (input, n_tables) = le_u8(input)?;
+    let (input, occupied_bins) = le_u64(input)?;
+
+    let (input, bs) = many_m_n(0, n_tables as usize, parse_tables)(input)?;
+
+    Ok((
+        input,
+        Nodegraph {
+            bs,
+            ksize: ksize as usize,
+            occupied_bins: occupied_bins as usize,
+            unique_kmers: 0, // This is a khmer issue, it doesn't save unique_kmers
+        },
+    ))
+}
+*/
