@@ -119,8 +119,11 @@ Optional arguments:
 
 
 The `compare` subcommand compares one or more signature files
-(created with `compute`) using estimated [Jaccard index][3].
-  The default output
+(created with `compute`) using estimated [Jaccard index][3] or
+(if signatures are computed with `--track-abundance`) the [angular
+similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
+
+The default output
 is a text display of a similarity matrix where each entry `[i, j]`
 contains the estimated Jaccard index between input signature `i` and
 input signature `j`.  The output matrix can be saved to a file
@@ -137,7 +140,11 @@ Options:
 ```
 --output -- save the distance matrix to this file (as a numpy binary matrix)
 --ksize -- do the comparisons at this k-mer size.
+--containment -- compute containment instead of similarity.
+        C(i, j) = size(i intersection j) / size(i).
 ```
+
+**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
 ### `sourmash plot`
 
