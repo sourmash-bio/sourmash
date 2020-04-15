@@ -1,4 +1,4 @@
-"""compare genomes"""
+"""compare sequence signatures made by compute"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
