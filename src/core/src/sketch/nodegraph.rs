@@ -166,30 +166,16 @@ impl Nodegraph {
             let tablesize = count.len();
             wtr.write_u64::<LittleEndian>(tablesize as u64)?;
 
-            /*
             let byte_size = tablesize / 8 + 1;
             let (div, rem) = (byte_size / 4, byte_size % 4);
 
             // https://github.com/BurntSushi/byteorder/issues/155
-            //wtr.write_u32_from(&count.as_slice()[..div]);
-            */
-
-            for (i, chunk) in count.as_slice().iter().enumerate() {
-                let next = (i + 1) * 32;
-                if next <= tablesize {
-                    wtr.write_u32::<LittleEndian>(*chunk).unwrap()
-                } else {
-                    let rem = tablesize - (i * 32);
-                    let remainder = if rem % 8 != 0 { rem / 8 + 1 } else { rem / 8 };
-
-                    if remainder == 0 {
-                        wtr.write_u8(0).unwrap()
-                    } else {
-                        for pos in 0..remainder {
-                            let byte: u8 = (chunk.wrapping_shr(pos as u32 * 8) & 0xff) as u8;
-                            wtr.write_u8(byte).unwrap()
-                        }
-                    }
+            wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
+            if rem != 0 {
+                let mut cursor = [0u8; 4];
+                LittleEndian::write_u32(&mut cursor, count.as_slice()[div]);
+                for i in 0..rem {
+                    wtr.write_u8(cursor[i])?;
                 }
             }
         }

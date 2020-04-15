@@ -25,7 +25,8 @@ parallel = ["rayon"]
 #cbindgen = "~0.6.7"
 
 [dependencies]
-byteorder = "1.3.2"
+#byteorder = "1.3.2"
+byteorder = { git = "https://github.com/luizirber/byteorder", branch="write_u32_from" }
 cfg-if = "0.1.10"
 failure = "0.1.6"
 failure_derive = "0.1.6"
