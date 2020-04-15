@@ -1,5 +1,8 @@
 from itertools import product
 from string import ascii_uppercase
+import random
+
+import pytest
 
 from . import sourmash_tst_utils as utils
 from sourmash import MinHash, SourmashSignature
@@ -10,7 +13,7 @@ from sourmash import signature as sig
 
 def test_localized_add_node(track_abundance):
     factory = GraphFactory(5, 100, 3)
-    root = LocalizedSBT(factory, track_abundance=track_abundance)
+    sbt = LocalizedSBT(factory, track_abundance=track_abundance)
 
     n_hashes = 5
     a = MinHash(n=n_hashes, ksize=5, track_abundance=track_abundance)
@@ -61,17 +64,17 @@ def test_localized_add_node(track_abundance):
 
     # Add "b" signature in adversarial order. When track_abundance=False, is most
     # similar to "a" but added last
-    root.insert(sig_a)
+    sbt.insert(sig_a)
     # Tree: (track_abundance=True and track_abundance=False)
     #     0
     #   /  \
     # a: 1  None
-    root.insert(sig_c)
+    sbt.insert(sig_c)
     # Tree: (track_abundance=True and track_abundance=False)
     #     0
     #   /  \
     # a: 1  c: 2
-    root.insert(sig_d)
+    sbt.insert(sig_d)
     # Tree: (track_abundance=True)
     #          0
     #        /  \
@@ -84,7 +87,7 @@ def test_localized_add_node(track_abundance):
     #      1     d: 2
     #    /   \
     # a: 3  c: 4
-    root.insert(sig_b)
+    sbt.insert(sig_b)
     # Tree: (track_abundance=True)
     #             0
     #         /      \
@@ -99,31 +102,33 @@ def test_localized_add_node(track_abundance):
     # a: 3  b: 4   c: 5  d: 6
 
     # Make sure tree construction happened properly
-    assert all(node < leaf for leaf, node in product(root._leaves, root._nodes))
+    assert all(node < leaf for leaf, node in product(sbt._leaves, sbt._nodes))
 
     # create mapping from leaf name to node pos
     leaf_pos = {
         sig.data.name(): n
         for n, sig in
-        root._leaves.items()
+        sbt._leaves.items()
     }
 
     # Verify most similar leaves are sharing same parent node
     if track_abundance:
         # Currently leaf_pos = {'a': 3, 'd': 4, 'c': 5, 'b': 6}
         # Expected leaf_pos = {'a': 3, 'd': 5, 'c': 4, 'b': 6}
-        assert root.parent(leaf_pos["a"]) == root.parent(leaf_pos["c"])
-        assert root.parent(leaf_pos["b"]) == root.parent(leaf_pos["d"])
+        assert sbt.parent(leaf_pos["a"]) == sbt.parent(leaf_pos["c"])
+        assert sbt.parent(leaf_pos["b"]) == sbt.parent(leaf_pos["d"])
     else:
         # Currently leaf_pos = {'a': 3, 'd': 4, 'c': 5, 'b': 6}
         # Expected leaf_pos = {'a': 3, 'd': 6, 'c': 5, 'b': 4}
-        assert root.parent(leaf_pos["a"]) == root.parent(leaf_pos["b"])
-        assert root.parent(leaf_pos["c"]) == root.parent(leaf_pos["d"])
+        assert sbt.parent(leaf_pos["a"]) == sbt.parent(leaf_pos["b"])
+        assert sbt.parent(leaf_pos["c"]) == sbt.parent(leaf_pos["d"])
 
 
-def test_localized_sbt_more_files():
+@pytest.mark.filterwarnings("ignore")
+def test_localized_sbt_sorted_vs_randomized():
     factory = GraphFactory(5, 100, 3)
-    root = LocalizedSBT(factory, track_abundance=False)
+    sbt = LocalizedSBT(factory, track_abundance=False)
+    sbt_randomized = LocalizedSBT(factory, track_abundance=False)
 
     with utils.TempDirectory() as location:
         # Sort to ensure consistent ordering across operating systems
@@ -212,5 +217,26 @@ def test_localized_sbt_more_files():
         # A: 7  B: 8   D: 9  C: 10   F: 11  G: 12    E: 13  None: 14
 
         for signature in signatures:
-            root.insert(signature)
+            sbt.insert(signature)
 
+        # - Randomly shuffle signatures and ensure the same leaves are sharing parents -
+        # Set random seed for reproducibility/debugging
+        random.seed(0)
+        random.shuffle(signatures)
+        for signature in signatures:
+            sbt_randomized.insert(signature)
+
+        # Ensure all leaves are present
+        assert set(sbt.leaves()) == set(sbt_randomized.leaves())
+
+        # Ensure that the most similar pairs, (A, B) and (F, G) share parents
+        # regardless of construction order
+        for tree in (sbt, sbt_randomized):
+            # create mapping from leaf name to node pos
+            leaf_pos = {
+                sig.data.name(): n
+                for n, sig in
+                tree._leaves.items()
+            }
+            assert tree.parent(leaf_pos["A"]) == tree.parent(leaf_pos["B"])
+            assert tree.parent(leaf_pos["F"]) == tree.parent(leaf_pos["G"])
