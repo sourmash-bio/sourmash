@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from io import BytesIO, TextIOWrapper
+import math
 import sys
 
 from .sbt import Leaf, Node, SBT, GraphFactory
@@ -182,20 +183,12 @@ class LocalizedSBT(SBT):
             return 1
         # Not an empty tree, can search
 
-        # TODO: There is probably a way better way to write this logic - @olgabot
         if isinstance(node, SigLeaf):
-            search_results = self.search(
-                node.data, threshold=sys.float_info.epsilon, best_only=True,
-                ignore_abundance=self.ignore_abundance,
-                do_containment=self.do_containment, return_leaf=True)
-            if len(search_results) == 1:
-                best_result = search_results.pop()
-            elif search_results:
-                # Use the computed similarity to pick the best result
-                # Note: if there are ties, this takes the first one (I think)
-                best_result = max(search_results, key=lambda x: x[0])
-            else:
-                self.next_node = self._insert_next_position(self.next_node)
+            best_result = self.find_most_similar_leaf(node)
+            if best_result is None:
+                # No best position for this node. Push current tree down as-is, and
+                # insert this new leaf in adjacent neighbors
+                self.next_node = self._push_existing_tree_down(self.next_node)
                 return self.next_node
 
             new_leaf_similarity, most_similar_leaf, most_similar_pos = best_result
@@ -209,44 +202,60 @@ class LocalizedSBT(SBT):
                 # Use the default next node position
                 self.next_node = self._insert_next_position(self.next_node)
             else:
-                # If parent has two children, check if the other child is more similar
-                # to the most_similar_leaf --> then no displacement is necessary
-                other_child = self.get_sibling_of_similar_leaf(children, most_similar_leaf)
-                child_nodes = self.get_child_nodes(children)
-                all_leaves = self.check_if_all_sigleafs(child_nodes)
-
-                if all_leaves:
-                    child_similarity = most_similar_leaf.data.similarity(
-                        other_child.node.data, ignore_abundance=self.ignore_abundance)
-
-                    if new_leaf_similarity > child_similarity:
-                        # New leaf is *more* similar than the existing child
-                        # --> displace existing child
-
-                        # Get this child's displaced position
-                        displaced_position = other_child.pos
-
-                        # Place the less similar child in the neighboring node
-                        grandparent = self.parent(most_similar_parent.pos)
-                        parent_sibling = [x for x in self.children(grandparent.pos)
-                                          if x != most_similar_parent][0]
-                        self.insert_new_internal_node_with_children(other_child.node,
-                                                                    parent_sibling)
-                        # Remove the old location
-                        del self._leaves[displaced_position]
-                        return displaced_position
-                    else:
-                        self.next_node = self._insert_next_position(self.next_node)
-                else:
-                    # One of the children is a Node rather than a SigLeaf --> replace
-                    # the node with the SigLeaf
-                    self.next_node = self._insert_next_position(self.next_node)
-
-
+                self.next_node = self.maybe_displace_child(
+                    new_leaf_similarity,
+                    children,
+                    most_similar_leaf,
+                    most_similar_parent)
         else:
             self.next_node = self._insert_next_position(self.next_node)
 
         return self.next_node
+
+    def maybe_displace_child(self, new_leaf_similarity, children, most_similar_leaf,
+                             most_similar_parent):
+        # If parent has two children, check if the other child is more similar
+        # to the most_similar_leaf --> then no displacement is necessary
+        other_child = self.get_sibling_of_similar_leaf(children, most_similar_leaf)
+        child_nodes = self.get_child_nodes(children)
+        all_leaves = self.check_if_all_sigleafs(child_nodes)
+
+        if all_leaves:
+            child_similarity = most_similar_leaf.data.similarity(
+                other_child.node.data, ignore_abundance=self.ignore_abundance)
+
+            if new_leaf_similarity > child_similarity:
+                # New leaf is *more* similar than the existing child
+                # --> displace existing child
+
+                # Get this child's displaced position
+                displaced_position = other_child.pos
+
+                # Place the less similar child in the neighboring node
+                grandparent = self.parent(most_similar_parent.pos)
+                parent_sibling = [x for x in self.children(grandparent.pos)
+                                  if x != most_similar_parent][0]
+                self.insert_new_internal_node_with_children(other_child.node,
+                                                            parent_sibling)
+                # Remove the old location
+                del self._leaves[displaced_position]
+                return displaced_position
+            else:
+                return self._insert_next_position(self.next_node)
+        else:
+            # One of the children is a Node rather than a SigLeaf --> replace
+            # the node with the SigLeaf
+            return self._insert_next_position(self.next_node)
+
+    def _push_existing_tree_down(self, next_node):
+        current_tree_depth = int(math.floor(math.log2(next_node)))
+        add_to_leaves = 2 ** current_tree_depth
+        new_leaves = {}
+        for i, leaf in self._leaves.items():
+            new_leaves[i + add_to_leaves] = leaf
+        self._leaves = new_leaves
+        next_node = i + add_to_leaves + 1
+        return next_node
 
     def _insert_next_position(self, next_node):
         # New leaf is *less* similar than the existing child
