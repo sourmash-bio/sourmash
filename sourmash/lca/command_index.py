@@ -59,6 +59,30 @@ class LCA_Database_Creation(LCA_Database):
 
         return lid
 
+    def insert_signature(self, ident, sig, require_taxonomy=False):
+        # store full name
+        self.ident_to_name[ident] = sig.name()
+
+        # connect hashvals to identity (and maybe lineage)
+        idx = self.build_get_ident_index(ident)
+        lid = self.idx_to_lid.get(idx)
+
+        lineage = None
+        if lid is not None:
+            lineage = self.lid_to_lineage.get(lid)
+
+        if lineage is None and require_taxonomy:
+            return None
+
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        minhash = sig.minhash.downsample_scaled(self.scaled)
+
+        for hashval in minhash.get_mins():
+            self.hashval_to_idx[hashval].add(idx)
+
+        return lineage
+
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
@@ -256,8 +280,13 @@ def index(args):
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 ident = ident.split(' ')[0].split('.')[0]
 
-            # store full name
-            db.ident_to_name[ident] = sig.name()
+            lineage = db.insert_signature(ident, sig,
+                                       require_taxonomy=args.require_taxonomy)
+
+            if lineage is None and args.require_taxonomy:
+                debug('(skipping, because --require-taxonomy was specified)')
+                n_skipped += 1
+                continue
 
             # store md5 -> name too
             md5_to_name[sig.md5sum()] = sig.name()
@@ -271,34 +300,13 @@ def index(args):
 
             record_used_idents.add(ident)
 
-            # downsample to specified scaled; this has the side effect of
-            # making sure they're all at the same scaled value!
-            minhash = sig.minhash.downsample_scaled(args.scaled)
-
-            # connect hashvals to identity (and maybe lineage)
-            idx = db.build_get_ident_index(ident)
-            lid = db.idx_to_lid.get(idx)
-
-            lineage = None
-            if lid is not None:
-                lineage = db.lid_to_lineage.get(lid)
-
             if lineage is None:
                 debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
 
-            if lineage is None and args.require_taxonomy:
-                debug('(skipping, because --require-taxonomy was specified)')
-                n_skipped += 1
-                continue
-
-            for hashval in minhash.get_mins():
-                db.hashval_to_idx[hashval].add(idx)
-
     notify(u'\r\033[K', end=u'')
-
     if n == 0:
         error('ERROR: no signatures found. ??')
         if args.traverse_directory and not args.force:
