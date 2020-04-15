@@ -7,7 +7,7 @@ import sys
 
 from .sbt import Leaf, Node, SBT, GraphFactory
 from . import signature
-from .logging import notify
+from .logging import notify, debug
 
 
 
@@ -186,9 +186,15 @@ class LocalizedSBT(SBT):
         if isinstance(node, SigLeaf):
             best_result = self.find_most_similar_leaf(node)
             if best_result is None:
-                # No best position for this node. Push current tree down as-is, and
-                # insert this new leaf in adjacent neighbors
-                self.next_node = self._push_existing_tree_down(self.next_node)
+                potential_next_node = self._insert_next_position(self.next_node)
+                parent_potential_next_node = self.parent(potential_next_node)
+                if parent_potential_next_node.pos in self._leaves:
+                    # No best position for this node. Push current tree down as-is, and
+                    # insert this new leaf in adjacent neighbors
+                    self.next_node = self._push_existing_tree_down()
+                else:
+                    # There's an available empty leaf! Put this new one here
+                    self.next_node = potential_next_node
                 return self.next_node
 
             new_leaf_similarity, most_similar_leaf, most_similar_pos = best_result
@@ -233,29 +239,98 @@ class LocalizedSBT(SBT):
 
                 # Place the less similar child in the neighboring node
                 grandparent = self.parent(most_similar_parent.pos)
-                parent_sibling = [x for x in self.children(grandparent.pos)
-                                  if x != most_similar_parent][0]
+                has_grandparent = grandparent is not None
+
+                # Check if any currently created parental nodes have an empty
+                # leaf child slot
+                exists_free_leaf = self.check_exists_free_leaf()
+
+                if has_grandparent and exists_free_leaf:
+                    childs_new_parent = [x for x in self.children(grandparent.pos)
+                                             if x != most_similar_parent][0]
+                else:
+                    childs_new_position = self._push_existing_tree_down()
+                    # Update displaced position to where the child was in the new
+                    # position when the tree was pushed down
+                    for pos, leaf in self._leaves.items():
+                        if leaf == other_child.node:
+                            displaced_position = pos
+                            break
+                    childs_new_parent = self.parent(childs_new_position)
+                next_node = displaced_position
                 self.insert_new_internal_node_with_children(other_child.node,
-                                                            parent_sibling)
-                # Remove the old location
+                                                            childs_new_parent.pos)
+
                 del self._leaves[displaced_position]
-                return displaced_position
             else:
-                return self._insert_next_position(self.next_node)
+                next_node = self._insert_next_position(self.next_node)
         else:
             # One of the children is a Node rather than a SigLeaf --> replace
             # the node with the SigLeaf
-            return self._insert_next_position(self.next_node)
+            next_node = self._insert_next_position(self.next_node)
+        return next_node
 
-    def _push_existing_tree_down(self, next_node):
-        current_tree_depth = int(math.floor(math.log2(next_node)))
+    def check_exists_free_leaf(self):
+        potential_next_position = self._insert_next_position(self.next_node)
+        potential_next_position_parent = self.parent(potential_next_position)
+        if potential_next_position_parent.pos in self._nodes:
+            exists_free_leaf = True
+        else:
+            exists_free_leaf = False
+        return exists_free_leaf
+
+    def _push_existing_tree_down(self):
+        current_tree_depth = int(math.floor(math.log2(max(self._leaves))))
         add_to_leaves = 2 ** current_tree_depth
+        add_to_nodes = 2 ** (current_tree_depth - 1)
+
         new_leaves = {}
         for i, leaf in self._leaves.items():
             new_leaves[i + add_to_leaves] = leaf
         self._leaves = new_leaves
-        next_node = i + add_to_leaves + 1
+
+        new_nodes = {}
+        for i, (pos, node) in enumerate(self._nodes.items()):
+            new_position = pos + add_to_nodes
+            node.name = "internal." + str(new_position)
+            new_nodes[new_position] = node
+
+        new_first_node_pos = min(new_nodes) - 1
+
+        self._nodes = new_nodes
+        # Rebuild all nodes, starting from the node previous to existing ones
+        self._rebuild_node_bottom_up(new_first_node_pos)
+
+        next_node = max(new_leaves) + 1
         return next_node
+
+    def _rebuild_node_bottom_up(self, pos=0):
+        """Rebuilds internal nodes (if it is not present), recursively up the tree
+
+        Parameters
+        ----------
+        pos: int
+            node to be rebuild. Any internal node under it will be rebuild too.
+            If you want to rebuild all missing internal nodes you can use pos=0
+            (the default).
+        """
+
+        node = self._nodes.get(pos, None)
+        if node is not None:
+            # this node was already build, skip
+            return
+
+        node = Node(self.factory, name="internal.{}".format(pos))
+        self._nodes[pos] = node
+        for c in self.children(pos):
+            if c.node is not None:
+                # Node may be empty because of bottom up building
+                c.node.update(node)
+
+        if pos > 0:
+            for parent_pos in self.parent(pos):
+                if parent_pos in self._missing_nodes:
+                    self._rebuild_node_bottom_up(parent_pos)
 
     def _insert_next_position(self, next_node):
         # New leaf is *less* similar than the existing child
@@ -305,7 +380,8 @@ class LocalizedSBT(SBT):
             else:
                 parent_sibling = grandparent_children[0]
             if isinstance(parent_sibling.node, Node):
-                self.insert_new_internal_node_with_children(node, parent)
+                self.insert_new_internal_node_with_children(node, parent.pos,
+                                                            parent.node)
             else:
                 self.relocate_children_to_new_internal_node(grandparent, node, parent,
                                                             parent_sibling)
@@ -343,6 +419,33 @@ class LocalizedSBT(SBT):
         for child in (parent.node, parent_sibling.node):
             child.update(new_internal_node)
 
+    def insert_new_internal_node_with_children(self, node, parent_pos,
+                                               parent_node=None):
+        """Create a new internal node at parent.pos with child, 'node'"""
+        # Create a new internal node
+        # node and parent are children of new internal node
+        if parent_pos not in self._nodes:
+            n = Node(self.factory, name="internal." + str(parent_pos))
+            self._nodes[parent_pos] = n
+        else:
+            n = self._nodes[parent_pos]
+        c1, c2 = self.children(parent_pos)[:2]
+        if parent_node is None:
+            # Don't split this node into a parent - just keep it empty
+            if c1.node is None:
+                # First position is empty
+                self._leaves[c1.pos] = node
+            else:
+                # First position is taken
+                # The other position is free
+                self._leaves[c2.pos] = node
+            node.update(n)
+        if parent_node is not None:
+            self._leaves[c1.pos] = parent_node
+            self._leaves[c2.pos] = node
+            del self._leaves[parent_pos]
+            for child in (parent_node, node):
+                child.update(n)
 
 ### Search functionality.
 

@@ -125,7 +125,7 @@ def test_localized_add_node(track_abundance):
 
 
 @pytest.mark.filterwarnings("ignore")
-def test_localized_sbt_sorted_vs_randomized():
+def test_localized_sbt_sorted_vs_randomized(capsys):
     factory = GraphFactory(5, 100, 3)
     sbt = LocalizedSBT(factory, track_abundance=False)
     sbt_randomized = LocalizedSBT(factory, track_abundance=False)
@@ -221,13 +221,18 @@ def test_localized_sbt_sorted_vs_randomized():
 
         # - Randomly shuffle signatures and ensure the same leaves are sharing parents -
         # Set random seed for reproducibility/debugging
-        random.seed(0)
+        random.seed(2)
         random.shuffle(signatures)
         for signature in signatures:
             sbt_randomized.insert(signature)
 
-        # Ensure all leaves are present
-        assert set(sbt.leaves()) == set(sbt_randomized.leaves())
+        # Ensure all leaves are present in both
+        signatures_in_sbt = sorted([
+            leaf.data for leaf in sbt.leaves()], key=lambda x: x.name())
+        signatures_in_sbt_randomized = sorted(
+            [leaf.data for leaf in sbt_randomized.leaves()],  key=lambda x: x.name())
+        assert all([s in signatures_in_sbt for s in signatures])
+        assert signatures_in_sbt == signatures_in_sbt_randomized
 
         # Ensure that the most similar pairs, (A, B) and (F, G) share parents
         # regardless of construction order
