@@ -10,6 +10,10 @@ from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
 from sourmash import signature as sig
 
+@pytest.fixture(params=range(10))
+def random_seed(request):
+    return request.param
+
 
 def test_localized_add_node(track_abundance):
     factory = GraphFactory(5, 100, 3)
@@ -125,7 +129,7 @@ def test_localized_add_node(track_abundance):
 
 
 @pytest.mark.filterwarnings("ignore")
-def test_localized_sbt_sorted_vs_randomized(capsys):
+def test_localized_sbt_sorted_vs_randomized(random_seed):
     factory = GraphFactory(5, 100, 3)
     sbt = LocalizedSBT(factory, track_abundance=False)
     sbt_randomized = LocalizedSBT(factory, track_abundance=False)
@@ -221,7 +225,7 @@ def test_localized_sbt_sorted_vs_randomized(capsys):
 
         # - Randomly shuffle signatures and ensure the same leaves are sharing parents -
         # Set random seed for reproducibility/debugging
-        random.seed(2)
+        random.seed(random_seed)
         random.shuffle(signatures)
         for signature in signatures:
             sbt_randomized.insert(signature)
