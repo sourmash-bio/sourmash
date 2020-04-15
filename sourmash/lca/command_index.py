@@ -15,26 +15,30 @@ from ..sourmash_args import DEFAULT_LOAD_K
 
 
 class LCA_Database_Creation(LCA_Database):
-    def build_get_ident_index(self, ident, arg_d, fail_on_duplicate=False):
+    def build_get_ident_index(self, ident, fail_on_duplicate=False):
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
 
         if idx is None:
-            idx = arg_d['next_index']
-            arg_d['next_index'] += 1
+            idx = self._next_index
+            self._next_index += 1
 
             self.ident_to_idx[ident] = idx
 
         return idx
 
-    def build_get_lineage_id(self, lineage, arg_d):
-        # lineage -> id
+    def build_get_lineage_id(self, lineage):
+        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
+        # does one exist already?
         lid = self.lineage_to_lid.get(lineage)
-        if lid is None:
-            lid = arg_d['next_lid']
-            arg_d['next_lid'] += 1
 
+        # nope - create one. Increment next_lid.
+        if lid is None:
+            lid = self._next_lid
+            self._next_lid += 1
+
+            # build mappings
             self.lineage_to_lid[lineage] = lid
             self.lid_to_lineage[lid] = lineage
 
@@ -180,6 +184,10 @@ def index(args):
                                                force=args.force)
 
     db = LCA_Database_Creation()
+
+    # @CTB move to constructor
+    db._next_index = 0
+    db._next_lid = 0
     db.ident_to_name = {}
     db.ident_to_idx = {}
     db.idx_to_lid = {}
@@ -187,17 +195,18 @@ def index(args):
     db.lid_to_lineage = {}
     db.hashval_to_idx = defaultdict(set)
 
+    # @CTB move to constructor
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
 
     # convert identities to numbers.
-    arg_d = dict(next_index=0, next_lid=0)          # hack to keep from using nonlocal
-
     for (ident, lineage) in assignments.items():
-        idx = db.build_get_ident_index(ident, arg_d, fail_on_duplicate=True)
-        lid = db.build_get_lineage_id(lineage, arg_d)
+        # identifiers -> integer indices (idx
+        idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
+        # (LineagePairs*) -> integer lineage ids (lids)
+        lid = db.build_get_lineage_id(lineage)
         
-        # index -> lineage id
+        # map from idx to lid, too.
         db.idx_to_lid[idx] = lid
 
     notify('{} distinct identities in spreadsheet out of {} rows.',
@@ -266,7 +275,7 @@ def index(args):
             minhash = sig.minhash.downsample_scaled(args.scaled)
 
             # connect hashvals to identity (and maybe lineage)
-            idx = db.build_get_ident_index(ident, arg_d)
+            idx = db.build_get_ident_index(ident)
             lid = db.idx_to_lid.get(idx)
 
             lineage = None
@@ -310,7 +319,7 @@ def index(args):
     unused_identifiers = set(assignments) - record_used_idents
     for ident in unused_identifiers:
         assert ident not in db.ident_to_name
-        idx = db.build_get_ident_index(ident, arg_d)
+        idx = db.build_get_ident_index(ident)
         del db.ident_to_idx[ident]
         if idx in db.idx_to_lid:
             del db.idx_to_lid[idx]
