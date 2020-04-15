@@ -32,6 +32,15 @@ You can run tests by invoking `make test` in the sourmash directory;
 `python -m pytest` will run the Python tests, and `cargo test` will
 run the Rust tests.
 
+### If you're having trouble installing or using the development environment
+
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash._minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+
+```
+make clean
+```
+
+
 ## Automated tests and code coverage calculation
 
 We use [Travis][0] and [GitHub Actions][2] for continuous integration.
