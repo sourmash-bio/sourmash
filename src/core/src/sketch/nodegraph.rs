@@ -180,8 +180,8 @@ impl Nodegraph {
             if rem != 0 {
                 let mut cursor = [0u8; 4];
                 LittleEndian::write_u32(&mut cursor, count.as_slice()[div]);
-                for i in 0..rem {
-                    wtr.write_u8(cursor[i])?;
+                for item in cursor.iter().take(rem) {
+                    wtr.write_u8(*item)?;
                 }
             }
         }
@@ -222,9 +222,9 @@ impl Nodegraph {
                 rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
 
                 let mut values = [0u8; 4];
-                for i in 0..rem {
+                for item in values.iter_mut().take(rem) {
                     let byte = rdr.read_u8().expect("error reading bins");
-                    values[i] = byte;
+                    *item = byte;
                 }
                 let mut block = vec![0u32; 1];
                 LittleEndian::read_u32_into(&values, &mut block);
@@ -255,7 +255,6 @@ impl Nodegraph {
     }
 
     pub fn n_occupied_bins(&self) -> usize {
-        //self.bs.iter().map(|x| x.count_ones(..)).sum::<usize>() / 8
         self.occupied_bins
     }
 
@@ -320,28 +319,28 @@ fn uniqify_rc(f: HashIntoType, r: HashIntoType) -> HashIntoType {
 }
 
 fn _hash(kmer: &[u8]) -> HashIntoType {
-    let k = kmer.len();
-    let mut h = 0;
-    let mut r = 0;
+    let ksize = kmer.len();
+    let mut hash = 0;
+    let mut rev = 0;
 
-    h |= twobit_repr(kmer[0]);
-    r |= twobit_comp(kmer[k - 1]);
+    hash |= twobit_repr(kmer[0]);
+    rev |= twobit_comp(kmer[ksize - 1]);
 
     let mut i = 1;
-    let mut j: isize = (k - 2) as isize;
+    let mut j: isize = (ksize - 2) as isize;
 
-    while i < k {
-        h = h << 2;
-        r = r << 2;
+    while i < ksize {
+        hash <<= 2;
+        rev <<= 2;
 
-        h |= twobit_repr(kmer[i]);
-        r |= twobit_comp(kmer[j as usize]);
+        hash |= twobit_repr(kmer[i]);
+        rev |= twobit_comp(kmer[j as usize]);
 
         i += 1;
         j -= 1;
     }
 
-    uniqify_rc(h, r)
+    uniqify_rc(hash, rev)
 }
 
 #[cfg(test)]

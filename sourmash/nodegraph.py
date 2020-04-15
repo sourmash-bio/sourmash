@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from __future__ import unicode_literals, division
 
+import sys
 from tempfile import NamedTemporaryFile
 
 from ._compat import string_types, range_type

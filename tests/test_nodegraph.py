@@ -8,7 +8,7 @@ from . import sourmash_tst_utils as utils
 
 
 def test_nodegraph_to_khmer_basic():
-    khmer = pytest.importorskip('khmer')
+    pytest.importorskip('khmer')
 
     ng_file = utils.get_test_data('.sbt.v3/internal.0')
 
@@ -30,16 +30,23 @@ def test_nodegraph_same_file():
 
     khmer_ng = khmer.load_nodegraph(ng_file)
 
-    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2, NamedTemporaryFile() as f3:
         sourmash_ng.save(f1.name)
-        khmer_ng.save(f2.name)
+        khmer_sm_ng.save(f2.name)
+        khmer_ng.save(f3.name)
 
         f1.seek(0)
         sm_data = f1.read()
 
         f2.seek(0)
-        kh_data = f2.read()
+        kh_sm_data = f2.read()
+
+        f3.seek(0)
+        kh_data = f3.read()
 
         assert sm_data == kh_data
+        assert sm_data == kh_sm_data
+
         assert ng_data == sm_data
         assert ng_data == kh_data
+        assert ng_data == kh_sm_data

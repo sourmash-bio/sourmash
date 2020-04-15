@@ -109,13 +109,13 @@ def search_minhashes(node, sig, threshold, results=None):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
-    mins = sig.minhash.get_mins()
+    sig_mh = sig.minhash
     score = 0
 
     if isinstance(node, SigLeaf):
-        score = node.data.minhash.similarity(sig.minhash)
+        score = node.data.minhash.similarity(sig_mh)
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, sig.minhash)
+        score = _max_jaccard_underneath_internal_node(node, sig_mh)
 
     if results is not None:
         results[node.name] = score
@@ -131,13 +131,13 @@ class SearchMinHashesFindBest(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
-        mins = sig.minhash.get_mins()
+        sig_mh = sig.minhash
         score = 0
 
         if isinstance(node, SigLeaf):
-            score = node.data.minhash.similarity(sig.minhash)
+            score = node.data.minhash.similarity(sig_mh)
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, sig.minhash)
+            score = _max_jaccard_underneath_internal_node(node, sig_mh)
 
         if results is not None:
             results[node.name] = score
@@ -162,7 +162,7 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
         matches = node.data.matches(mh)
 
     if results is not None:
-        results[node.name] = float(matches) / len(sig)
+        results[node.name] = float(matches) / len(mh)
 
     if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
@@ -174,18 +174,19 @@ class GatherMinHashes(object):
         self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
-        if not len(query.minhash):
+        mh = query.minhash
+        if not len(mh):
             return 0
 
         if isinstance(node, SigLeaf):
-            matches = query.minhash.count_common(node.data.minhash, True)
+            matches = mh.count_common(node.data.minhash, True)
         else:  # Nodegraph by minhash comparison
-            matches = node.data.matches(query.minhash)
+            matches = node.data.matches(mh)
 
         if not matches:
             return 0
 
-        score = float(matches) / len(query.minhash)
+        score = float(matches) / len(mh)
 
         # store results if we have passed in an appropriate dictionary
         if results is not None:
