@@ -21,6 +21,14 @@ pub unsafe extern "C" fn nodegraph_free(ptr: *mut Nodegraph) {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nodegraph_buffer_free(ptr: *mut u8, insize: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    Vec::from_raw_parts(ptr as *mut u8, insize, insize);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nodegraph_with_tables(
     ksize: usize,
     starting_size: usize,
