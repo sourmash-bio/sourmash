@@ -1,5 +1,4 @@
-"""search a metagenome signature for multiple non-
-                                  overlapping matches"""
+"""search a metagenome signature against dbs"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
