@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io;
 use std::path::Path;
+use std::slice;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
@@ -175,8 +176,20 @@ impl Nodegraph {
             let byte_size = tablesize / 8 + 1;
             let (div, rem) = (byte_size / 4, byte_size % 4);
 
+            // Once this issue and PR are solved, this is a one liner:
             // https://github.com/BurntSushi/byteorder/issues/155
-            wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
+            // https://github.com/BurntSushi/byteorder/pull/166
+            //wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
+            let slice = &count.as_slice()[..div];
+            let buf = unsafe {
+                use std::mem::size_of;
+
+                let len = size_of::<u32>() * slice.len();
+                slice::from_raw_parts(slice.as_ptr() as *const u8, len)
+            };
+            wtr.write_all(&buf)?;
+            // Replace when byteorder PR is released
+
             if rem != 0 {
                 let mut cursor = [0u8; 4];
                 LittleEndian::write_u32(&mut cursor, count.as_slice()[div]);
