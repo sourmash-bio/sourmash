@@ -181,22 +181,11 @@ def index(args):
 
     db = LCA_Database_Creation()
     db.ident_to_name = {}
-    ident_to_name = db.ident_to_name
-
     db.ident_to_idx = {}
-    ident_to_idx = db.ident_to_idx
-
     db.idx_to_lid = {}
-    idx_to_lid = db.idx_to_lid
-
     db.lineage_to_lid = {}
-    lineage_to_lid = db.lineage_to_lid
-
     db.lid_to_lineage = {}
-    lid_to_lineage = db.lid_to_lineage
-
     db.hashval_to_idx = defaultdict(set)
-    hashval_to_idx = db.hashval_to_idx
 
     db.ksize = int(args.ksize)
     db.scaled = int(args.scaled)
@@ -209,12 +198,12 @@ def index(args):
         lid = db.build_get_lineage_id(lineage, arg_d)
         
         # index -> lineage id
-        idx_to_lid[idx] = lid
+        db.idx_to_lid[idx] = lid
 
     notify('{} distinct identities in spreadsheet out of {} rows.',
-           len(idx_to_lid), num_rows)
+           len(db.idx_to_lid), num_rows)
     notify('{} distinct lineages in spreadsheet out of {} rows.',
-           len(set(idx_to_lid.values())), num_rows)
+           len(set(db.idx_to_lid.values())), num_rows)
 
     # load signatures, construct index of hashvals to ident
     md5_to_name = {}
@@ -237,7 +226,7 @@ def index(args):
     total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
-    record_remnants = set(ident_to_idx.keys())
+    record_remnants = set(db.ident_to_idx.keys())
     record_used_lineages = set()
     record_used_idents = set()
     n_skipped = 0
@@ -258,7 +247,7 @@ def index(args):
                 ident = ident.split(' ')[0].split('.')[0]
 
             # store full name
-            ident_to_name[ident] = sig.name()
+            db.ident_to_name[ident] = sig.name()
 
             # store md5 -> name too
             md5_to_name[sig.md5sum()] = sig.name()
@@ -278,11 +267,11 @@ def index(args):
 
             # connect hashvals to identity (and maybe lineage)
             idx = db.build_get_ident_index(ident, arg_d)
-            lid = idx_to_lid.get(idx)
+            lid = db.idx_to_lid.get(idx)
 
             lineage = None
             if lid is not None:
-                lineage = lid_to_lineage.get(lid)
+                lineage = db.lid_to_lineage.get(lid)
 
             if lineage is None:
                 debug('WARNING: no lineage assignment for {}.', ident)
@@ -296,7 +285,7 @@ def index(args):
                 continue
 
             for hashval in minhash.get_mins():
-                hashval_to_idx[hashval].add(idx)
+                db.hashval_to_idx[hashval].add(idx)
 
     notify(u'\r\033[K', end=u'')
 
@@ -306,7 +295,7 @@ def index(args):
             error('(note, with --traverse-directory, you may want to use -f)')
         sys.exit(1)
 
-    if not hashval_to_idx:
+    if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
 
@@ -320,17 +309,17 @@ def index(args):
     # remove unused identifiers
     unused_identifiers = set(assignments) - record_used_idents
     for ident in unused_identifiers:
-        assert ident not in ident_to_name
+        assert ident not in db.ident_to_name
         idx = db.build_get_ident_index(ident, arg_d)
-        del ident_to_idx[ident]
-        if idx in idx_to_lid:
-            del idx_to_lid[idx]
+        del db.ident_to_idx[ident]
+        if idx in db.idx_to_lid:
+            del db.idx_to_lid[idx]
 
     # remove unusued lineages and lids
     for lineage in unused_lineages:
-        lid = lineage_to_lid[lineage]
-        del lineage_to_lid[lineage]
-        del lid_to_lineage[lid]
+        lid = db.lineage_to_lid[lineage]
+        del db.lineage_to_lid[lineage]
+        del db.lid_to_lineage[lid]
 
     # now, save!
     db_outfile = args.lca_db_out
