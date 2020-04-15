@@ -4,11 +4,11 @@ usage="""
 
    sourmash compute -k 21,31,51 *.fa *.fq
 
-This will create MinHash sketches at k-mer sizes of 21, 31 and 51, for
+Create MinHash sketches at k-mer sizes of 21, 31 and 51, for
 all FASTA and FASTQ files in the current directory, and save them in
 signature files ending in '.sig'. You can rapidly compare these files
 with `compare` and query them with `search`, among other operations;
-see the full documentation http://sourmash.rtfd.io/.
+see the full documentation at http://sourmash.rtfd.io/.
 
 The key options for compute are:
 
@@ -21,7 +21,7 @@ The key options for compute are:
  * `--name-from-first`: set name of signature from first sequence in file.
  * `-o/--output`: save all computed signatures to this file.
 
-Please see -h for more options and more detailed help.
+Please see -h for all of the options as well as more detailed help.
 
 ---
 """
