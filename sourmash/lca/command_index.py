@@ -10,8 +10,35 @@ from collections import defaultdict
 from .. import sourmash_args, load_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import LineagePair
+from .lca_utils import LineagePair, LCA_Database
 from ..sourmash_args import DEFAULT_LOAD_K
+
+
+class LCA_Database_Creation(LCA_Database):
+    def build_get_ident_index(self, ident, arg_d, fail_on_duplicate=False):
+        idx = self.ident_to_idx.get(ident)
+        if fail_on_duplicate:
+            assert idx is None     # should be no duplicate identities
+
+        if idx is None:
+            idx = arg_d['next_index']
+            arg_d['next_index'] += 1
+
+            self.ident_to_idx[ident] = idx
+
+        return idx
+
+    def build_get_lineage_id(self, lineage, arg_d):
+        # lineage -> id
+        lid = self.lineage_to_lid.get(lineage)
+        if lid is None:
+            lid = arg_d['next_lid']
+            arg_d['next_lid'] += 1
+
+            self.lineage_to_lid[lineage] = lid
+            self.lid_to_lineage[lid] = lineage
+
+        return lid
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -152,43 +179,34 @@ def index(args):
                                                use_headers=not args.no_headers,
                                                force=args.force)
 
+    db = LCA_Database_Creation()
+    db.ident_to_name = {}
+    ident_to_name = db.ident_to_name
+
+    db.ident_to_idx = {}
+    ident_to_idx = db.ident_to_idx
+
+    db.idx_to_lid = {}
+    idx_to_lid = db.idx_to_lid
+
+    db.lineage_to_lid = {}
+    lineage_to_lid = db.lineage_to_lid
+
+    db.lid_to_lineage = {}
+    lid_to_lineage = db.lid_to_lineage
+
+    db.hashval_to_idx = defaultdict(set)
+    hashval_to_idx = db.hashval_to_idx
+
+    db.ksize = int(args.ksize)
+    db.scaled = int(args.scaled)
+
     # convert identities to numbers.
-    ident_to_idx = {}
-    idx_to_lid = {}
-
-    lid_to_lineage = {}
-    lineage_to_lid = {}
-
     arg_d = dict(next_index=0, next_lid=0)          # hack to keep from using nonlocal
 
-    def get_ident_index(ident, fail_on_duplicate=False, arg_d=arg_d):
-        idx = ident_to_idx.get(ident)
-        if fail_on_duplicate:
-            assert idx is None     # should be no duplicate identities
-
-        if idx is None:
-            idx = arg_d['next_index']
-            arg_d['next_index'] += 1
-
-            ident_to_idx[ident] = idx
-
-        return idx
-
-    def get_lineage_id(lineage, arg_d=arg_d):
-        # lineage -> id
-        lid = lineage_to_lid.get(lineage)
-        if lid is None:
-            lid = arg_d['next_lid']
-            arg_d['next_lid'] += 1
-            
-            lineage_to_lid[lineage] = lid
-            lid_to_lineage[lid] = lineage
-
-        return lid
-
     for (ident, lineage) in assignments.items():
-        idx = get_ident_index(ident, fail_on_duplicate=True)
-        lid = get_lineage_id(lineage)
+        idx = db.build_get_ident_index(ident, arg_d, fail_on_duplicate=True)
+        lid = db.build_get_lineage_id(lineage, arg_d)
         
         # index -> lineage id
         idx_to_lid[idx] = lid
@@ -199,9 +217,7 @@ def index(args):
            len(set(idx_to_lid.values())), num_rows)
 
     # load signatures, construct index of hashvals to ident
-    hashval_to_idx = defaultdict(set)
     md5_to_name = {}
-    ident_to_name = {}
 
 #    notify('finding signatures...')
     if args.traverse_directory:
@@ -261,7 +277,7 @@ def index(args):
             minhash = sig.minhash.downsample_scaled(args.scaled)
 
             # connect hashvals to identity (and maybe lineage)
-            idx = get_ident_index(ident)
+            idx = db.build_get_ident_index(ident, arg_d)
             lid = idx_to_lid.get(idx)
 
             lineage = None
@@ -305,7 +321,7 @@ def index(args):
     unused_identifiers = set(assignments) - record_used_idents
     for ident in unused_identifiers:
         assert ident not in ident_to_name
-        idx = get_ident_index(ident)
+        idx = db.build_get_ident_index(ident, arg_d)
         del ident_to_idx[ident]
         if idx in idx_to_lid:
             del idx_to_lid[idx]
@@ -322,17 +338,6 @@ def index(args):
                 db_outfile.endswith('.lca.json.gz')):
         db_outfile += '.lca.json'
     notify('saving to LCA DB: {}'.format(db_outfile))
-
-    db = lca_utils.LCA_Database()
-    db.ident_to_name = ident_to_name
-    db.ident_to_idx = ident_to_idx
-    db.idx_to_lid = idx_to_lid
-    db.lineage_to_lid = lineage_to_lid
-    db.lid_to_lineage = lid_to_lineage
-    db.hashval_to_idx = hashval_to_idx
-
-    db.ksize = int(args.ksize)
-    db.scaled = int(args.scaled)
 
     db.save(db_outfile)
 
