@@ -225,49 +225,60 @@ class LocalizedSBT(SBT):
         other_child = self.get_sibling_of_similar_leaf(children, most_similar_leaf)
         child_nodes = self.get_child_nodes(children)
         all_leaves = self.check_if_all_sigleafs(child_nodes)
+        # Check if any currently created parental nodes have an empty
+        # leaf child slot
+        exists_free_leaf = self.check_exists_free_leaf()
 
         if all_leaves:
             child_similarity = most_similar_leaf.data.similarity(
                 other_child.node.data, ignore_abundance=self.ignore_abundance)
 
             if new_leaf_similarity > child_similarity:
-                # New leaf is *more* similar than the existing child
-                # --> displace existing child
-
-                # Get this child's displaced position
-                displaced_position = other_child.pos
-
-                # Place the less similar child in the neighboring node
-                grandparent = self.parent(most_similar_parent.pos)
-                has_grandparent = grandparent is not None
-
-                # Check if any currently created parental nodes have an empty
-                # leaf child slot
-                exists_free_leaf = self.check_exists_free_leaf()
-
-                if has_grandparent and exists_free_leaf:
-                    childs_new_parent = [x for x in self.children(grandparent.pos)
-                                             if x != most_similar_parent][0]
-                else:
-                    childs_new_position = self._push_existing_tree_down()
-                    # Update displaced position to where the child was in the new
-                    # position when the tree was pushed down
-                    for pos, leaf in self._leaves.items():
-                        if leaf == other_child.node:
-                            displaced_position = pos
-                            break
-                    childs_new_parent = self.parent(childs_new_position)
-                next_node = displaced_position
-                self.insert_new_internal_node_with_children(other_child.node,
-                                                            childs_new_parent.pos)
-
-                del self._leaves[displaced_position]
+                next_node = self.displace_child_with_new_leaf(exists_free_leaf,
+                                                              other_child)
             else:
-                next_node = self._insert_next_position(self.next_node)
+                next_node = self.insert_dissimilar_leaf(exists_free_leaf)
         else:
             # One of the children is a Node rather than a SigLeaf --> replace
             # the node with the SigLeaf
             next_node = self._insert_next_position(self.next_node)
+        return next_node
+
+    def insert_dissimilar_leaf(self, exists_free_leaf):
+        # This node isn't similar to anything
+        if exists_free_leaf:
+            # If there is a next available spot, take it
+            next_node = self._insert_next_position(self.next_node)
+        else:
+            # Otherwise, keep the current structure as-is and insert a new node,
+            # bottom-up
+            next_node = self._push_existing_tree_down()
+        return next_node
+
+    def displace_child_with_new_leaf(self, exists_free_leaf, other_child):
+        # New leaf is *more* similar than the existing child
+        # --> displace existing child
+        # Get this child's displaced position
+        displaced_position = other_child.pos
+        if exists_free_leaf:
+            childs_new_position = self._insert_next_position(self.next_node)
+            childs_new_parent = self.parent(childs_new_position)
+        # elif has_grandparent and exists_free_leaf:
+        #     childs_new_parent = [x for x in self.children(grandparent.pos)
+        #                              if x != most_similar_parent][0]
+        else:
+            childs_new_position = self._push_existing_tree_down()
+            # Update displaced position to where the child was in the new
+            # position when the tree was pushed down
+            for pos, leaf in self._leaves.items():
+                if leaf == other_child.node:
+                    displaced_position = pos
+                    break
+            childs_new_parent = self.parent(childs_new_position)
+        next_node = displaced_position
+        self.insert_new_internal_node_with_children(other_child.node,
+                                                    childs_new_parent.pos)
+        del self._leaves[displaced_position]
         return next_node
 
     def check_exists_free_leaf(self):
