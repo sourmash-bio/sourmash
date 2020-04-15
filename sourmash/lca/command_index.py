@@ -15,7 +15,22 @@ from ..sourmash_args import DEFAULT_LOAD_K
 
 
 class LCA_Database_Creation(LCA_Database):
+    def __init__(self, ksize, scaled):
+        super().__init__()
+        self.ksize = int(ksize)
+        self.scaled = int(scaled)
+
+        self._next_index = 0
+        self._next_lid = 0
+        self.ident_to_name = {}
+        self.ident_to_idx = {}
+        self.idx_to_lid = {}
+        self.lineage_to_lid = {}
+        self.lid_to_lineage = {}
+        self.hashval_to_idx = defaultdict(set)
+
     def build_get_ident_index(self, ident, fail_on_duplicate=False):
+        "Get (create if nec) a unique int id, idx, for each identifier."
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
             assert idx is None     # should be no duplicate identities
@@ -183,30 +198,16 @@ def index(args):
                                                use_headers=not args.no_headers,
                                                force=args.force)
 
-    db = LCA_Database_Creation()
-
-    # @CTB move to constructor
-    db._next_index = 0
-    db._next_lid = 0
-    db.ident_to_name = {}
-    db.ident_to_idx = {}
-    db.idx_to_lid = {}
-    db.lineage_to_lid = {}
-    db.lid_to_lineage = {}
-    db.hashval_to_idx = defaultdict(set)
-
-    # @CTB move to constructor
-    db.ksize = int(args.ksize)
-    db.scaled = int(args.scaled)
+    db = LCA_Database_Creation(args.ksize, args.scaled)
 
     # convert identities to numbers.
     for (ident, lineage) in assignments.items():
-        # identifiers -> integer indices (idx
+        # identifiers -> integer indices (idx)
         idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
         # (LineagePairs*) -> integer lineage ids (lids)
         lid = db.build_get_lineage_id(lineage)
         
-        # map from idx to lid, too.
+        # map idx to lid.
         db.idx_to_lid[idx] = lid
 
     notify('{} distinct identities in spreadsheet out of {} rows.',
