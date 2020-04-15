@@ -172,9 +172,10 @@ class SBT(Index):
 
     def insert(self, signature):
         "Add a new SourmashSignature in to the SBT."
+        # TODO: Why does this not cause a race condition/circular import? - @olgabot
         from .sbtmh import SigLeaf
         
-        leaf = SigLeaf(signature.md5sum(), signature)
+        leaf = SigLeaf(signature.md5sum(), signature, name=signature.name())
         self.add_node(leaf)
 
     def add_node(self, node):
