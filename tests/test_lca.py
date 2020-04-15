@@ -842,6 +842,28 @@ def test_single_summarize():
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
 
 
+def test_single_summarize_singleton():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+               '--singleton']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+        # --singleton adds info about signature filename, md5, and signature name
+        assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
+
+
 def test_single_summarize_to_output():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
@@ -926,6 +948,62 @@ def test_multi_summarize_with_unassigned():
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
+        assert not out_lines
+
+
+def test_multi_summarize_with_unassigned_singleton():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               input_sig2, '--singleton']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 2 signatures from 2 files total.' in err
+
+        out_lines = out.splitlines()
+        def remove_line_startswith(x, check=None):
+           for line in out_lines:
+               if line.startswith(x):
+                   out_lines.remove(line)
+                   if check:
+                       # make sure the check value is in there
+                       assert check in line
+                   return line
+           assert 0, "couldn't find {}".format(x)
+
+        # note, proportions/percentages are now per-file
+        remove_line_startswith('100.0%   200   Bacteria ', 'TARA_ASE_MAG_00031.sig:5b438c6c')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
+        remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
         assert not out_lines
 
 
