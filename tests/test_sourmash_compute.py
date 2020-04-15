@@ -38,6 +38,21 @@ def test_do_sourmash_compute():
         assert sig.name().endswith('short.fa')
 
 
+@utils.in_tempdir
+def test_do_sourmash_compute_outdir(c):
+    testdata1 = utils.get_test_data('short.fa')
+    status, out, err = utils.runscript('sourmash',
+                                       ['compute', '-k', '31', testdata1,
+                                        '--outdir', c.location])
+
+
+    sigfile = os.path.join(c.location, 'short.fa.sig')
+    assert os.path.exists(sigfile)
+
+    sig = next(signature.load_signatures(sigfile))
+    assert sig.name().endswith('short.fa')
+
+
 def test_do_sourmash_compute_output_valid_file():
     """ Trigger bug #123 """
     with utils.TempDirectory() as location:
@@ -117,6 +132,23 @@ def test_do_sourmash_compute_output_and_name_valid_file():
             data_merged = json.load(f)
 
         assert data[0]['signatures'][0]['mins'] == data_merged[0]['signatures'][0]['mins']
+
+
+@utils.in_tempdir
+def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = os.path.join(c.location, 'short.fa.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compute', '-k', '31', '-o', sigfile,
+                       '--merge', '"name"',
+                       testdata1, testdata2, testdata3,
+                       '--outdir', c.location)
+
+    errmsg = c.last_result.err
+    assert "ERROR: --outdir doesn't make sense with -o/--output" in errmsg
 
 
 def test_do_sourmash_compute_singleton():

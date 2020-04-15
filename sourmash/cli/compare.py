@@ -23,6 +23,10 @@ def subparser(subparsers):
         help='do NOT use k-mer abundances even if present'
     )
     subparser.add_argument(
+        '--containment', action='store_true',
+        help='calculate containment instead of similarity'
+    )
+    subparser.add_argument(
         '--traverse-directory', action='store_true',
         help='compare all signatures underneath directories'
     )
