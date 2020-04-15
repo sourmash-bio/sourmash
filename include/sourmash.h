@@ -208,6 +208,8 @@ uintptr_t nodegraph_ntables(Nodegraph *ptr);
 
 void nodegraph_save(Nodegraph *ptr, const char *filename);
 
+uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uintptr_t *size);
+
 uintptr_t nodegraph_tablesize(Nodegraph *ptr);
 
 void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);

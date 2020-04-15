@@ -62,7 +62,7 @@ SETUP_METADATA = {
         'sourmash = sourmash.__main__:main'
         ]
     },
-    "install_requires": ["screed>=0.9", "khmer>=2.1", "cffi>=1.14.0", 'numpy',
+    "install_requires": ["screed>=0.9", "cffi>=1.14.0", 'numpy',
                          'matplotlib', 'scipy', "deprecation>=2.0.6"],
     "setup_requires": [
         "setuptools>=38.6.0",

@@ -192,17 +192,6 @@ impl Nodegraph {
     where
         R: io::Read,
     {
-        /*
-        // TODO: see https://github.com/brainstorm/bio-index-formats for an
-        // example of using nom to parse binary data.
-        // Use it here instead of byteorder
-        // TODO: how to avoid loading all into mem?
-        let mut contents: Vec<u8> = Vec::new();
-        rdr.read_to_end(&mut contents)?;
-        // TODO: map error instead of using `expect`
-        let (_, ng) = parse_nodegraph(&contents).expect("Error parsing nodegraph");
-        Ok(ng)
-        */
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
@@ -223,16 +212,12 @@ impl Nodegraph {
             let byte_size = tablesize / 8 + 1;
             let mut _n_occupied = 0;
 
-            // This needs a modified fixedbitset with the
-            // with_capacity_and_blocks method
             let rem = byte_size % 4;
             let blocks: Vec<u32> = if rem == 0 {
                 let mut blocks = vec![0; byte_size / 4];
                 rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
                 blocks
             } else {
-                // TODO: need to figure out how many more u8 to read and convert
-                // to u32, and push block to blocks
                 let mut blocks = vec![0; byte_size / 4];
                 rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
 
@@ -246,33 +231,8 @@ impl Nodegraph {
                 blocks.push(block[0]);
                 blocks
             };
+
             let counts = FixedBitSet::with_capacity_and_blocks(tablesize, blocks);
-
-            // This doesn't need fixedbitset changes, but it is 16000x slower...
-            /*
-            let set_bits = (0..byte_size).flat_map(|block| {
-                let byte = rdr.read_u8().expect("error reading bins");
-                if byte != 0 {
-                    _n_occupied += 1;
-                }
-
-                (0..8u32).filter_map(move |i| {
-                    if byte & (1 << i) == 0 {
-                        None
-                    } else {
-                        let pos = block * 8 + i as usize;
-                        if pos < tablesize {
-                            Some(pos)
-                        } else {
-                            None
-                        }
-                    }
-                })
-            });
-            let mut counts = FixedBitSet::with_capacity(tablesize);
-            counts.extend(set_bits);
-            */
-
             bs.push(counts);
         }
 
@@ -1024,69 +984,3 @@ mod test {
         }
     }
 }
-
-/*
-use nom::bits::bits;
-use nom::bits::streaming::take;
-use nom::bytes::streaming::tag;
-use nom::multi::many_m_n;
-use nom::number::streaming::{le_u32, le_u64, le_u8};
-use nom::IResult;
-
-fn parse_bins<'i>(
-    input: &'i [u8],
-    size: u64,
-    counts: &mut FixedBitSet,
-) -> IResult<&'i [u8], usize> {
-    let mut n_occupied = 0;
-    let mut current = 0;
-    for pos in 0..size {
-        let (input, bit): (&[u8], u8) = bits(take(1usize))(input)?;
-        if bit == 1u8 {
-            counts.insert(pos as usize);
-        }
-    }
-
-    Ok((input, n_occupied))
-}
-
-fn parse_tables(input: &[u8]) -> IResult<&[u8], FixedBitSet> {
-    let (input, size) = le_u64(input)?;
-    let byte_size = (size as usize / 8) + 1;
-
-    let mut counts = FixedBitSet::with_capacity(size as usize);
-
-    // TODO: bit parsing
-    let (input, n) = parse_bins(input, size, &mut counts)?;
-    n_occupied += n;
-
-    Ok((input, counts))
-}
-
-fn parse_nodegraph(input: &[u8]) -> IResult<&[u8], Nodegraph> {
-    let (input, magic) = tag("OXLI")(input)?;
-    assert_eq!(magic, b"OXLI");
-
-    let (input, version) = le_u8(input)?;
-    assert_eq!(version, 4);
-
-    let (input, ht_type) = le_u8(input)?;
-    assert_eq!(ht_type, 2);
-
-    let (input, ksize) = le_u32(input)?;
-    let (input, n_tables) = le_u8(input)?;
-    let (input, occupied_bins) = le_u64(input)?;
-
-    let (input, bs) = many_m_n(0, n_tables as usize, parse_tables)(input)?;
-
-    Ok((
-        input,
-        Nodegraph {
-            bs,
-            ksize: ksize as usize,
-            occupied_bins: occupied_bins as usize,
-            unique_kmers: 0, // This is a khmer issue, it doesn't save unique_kmers
-        },
-    ))
-}
-*/

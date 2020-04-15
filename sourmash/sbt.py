@@ -55,7 +55,6 @@ import math
 import os
 from random import randint, random
 import sys
-from tempfile import NamedTemporaryFile
 
 from deprecation import deprecated
 
@@ -1064,14 +1063,8 @@ class Node(object):
                 fpr=calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        # FIXME: with the internal Nodegraph we can skip the temp file
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes()
+        return self.storage.save(path, buf)
 
     @property
     def data(self):
@@ -1132,8 +1125,6 @@ class Leaf(object):
     def data(self):
         if self._data is None:
             data = self.storage.load(self._path)
-            # We need to do this tempfile dance because khmer only load
-            # data from files.
             self._data = Nodegraph.from_buffer(data)
         return self._data
 
@@ -1145,14 +1136,8 @@ class Leaf(object):
         self._data = None
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        # FIXME: with the internal Nodegraph we can skip the temp file
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes()
+        return self.storage.save(path, buf)
 
     def update(self, parent):
         parent.data.update(self.data)

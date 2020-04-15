@@ -29,6 +29,12 @@ class Nodegraph(RustObject):
     def save(self, filename):
         self._methodcall(lib.nodegraph_save, to_bytes(filename))
 
+    def to_bytes(self):
+        size = ffi.new("uintptr_t *")
+        rawbuf = self._methodcall(lib.nodegraph_to_buffer, size)
+        size = ffi.unpack(size, 1)[0]
+        return ffi.buffer(rawbuf, size)[:]
+
     def update(self, other):
         if isinstance(other, Nodegraph):
             return self._methodcall(lib.nodegraph_update, other._objptr)

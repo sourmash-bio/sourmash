@@ -226,3 +226,20 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
     Ok(())
 }
 }
+
+ffi_fn! {
+unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, size: *mut usize) -> Result<*const u8> {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let mut st: Vec<u8> = Vec::new();
+    ng.save_to_writer(&mut st)?;
+
+    let b = st.into_boxed_slice();
+    *size = b.len();
+
+    Ok(Box::into_raw(b) as *const u8)
+}
+}
