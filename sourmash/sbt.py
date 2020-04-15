@@ -133,11 +133,15 @@ class SBT(Index):
     def __init__(self, factory, d=2, storage=None):
         self.factory = factory
         self._nodes = {}
-        self._missing_nodes = set()
         self._leaves = {}
         self.d = d
         self.next_node = 0
         self.storage = storage
+
+    @property
+    def _missing_nodes(self):
+        return {i for i in range(max(self._nodes))
+                if i not in self._nodes and i not in self._leaves}
 
     def signatures(self):
         for k in self.leaves():
@@ -784,8 +788,6 @@ class SBT(Index):
         tree = cls(factory, d=info['d'], storage=storage)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
-        tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
 
         if print_version_warning:
             error("WARNING: this is an old index version, please run `sourmash migrate` to update it.")
@@ -828,9 +830,6 @@ class SBT(Index):
         tree = cls(factory, d=info['d'], storage=storage)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
-        tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
-
         tree.next_node = max_node
 
         return tree
@@ -870,8 +869,6 @@ class SBT(Index):
         tree = cls(factory, d=info['d'], storage=storage)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
-        tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
 
         return tree
 
