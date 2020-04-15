@@ -353,6 +353,73 @@ min similarity in matrix: 0.940'''.splitlines()
         assert status == 0
 
 
+@utils.in_tempdir
+def test_compare_containment(c):
+    import numpy
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --containment
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = ss_j.contained_by(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+@utils.in_tempdir
+def test_compare_containment_abund_flatten(c):
+    s47 = utils.get_test_data('track_abund/47.fa.sig')
+    s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'NOTE: --containment means signature abundances are flattened' in \
+        c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_containment_require_scaled(c):
+    s47 = utils.get_test_data('num/47.fa.sig')
+    s63 = utils.get_test_data('num/63.fa.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
+                       fail_ok=True)
+
+    assert 'must use scaled signatures with --containment option' in \
+        c.last_result.err
+    assert c.last_result.status != 0
+
+
 def test_do_plot_comparison():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -2498,6 +2565,67 @@ def test_gather_file_output():
             output = f.read()
             print((output,))
             assert '910,1.0,1.0' in output
+
+
+@utils.in_tempdir
+def test_gather_f_match_orig(c):
+    import copy
+
+    testdata_combined = utils.get_test_data('gather/combined.sig')
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv',
+                   *testdata_sigs)
+
+    combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
+    remaining_mh = copy.copy(combined_sig.minhash)
+
+    def approx_equal(a, b, n=5):
+        return round(a, n) == round(b, n)
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        for n, row in enumerate(r):
+            print(n, row['f_match'], row['f_match_orig'])
+
+            # each match is completely in the original query
+            assert row['f_match_orig'] == "1.0"
+
+            # double check -- should match 'search --containment'.
+            # (this is kind of useless for a 1.0 contained_by, I guess)
+            filename = row['filename']
+            match = sourmash.load_one_signature(filename, ksize=21)
+            assert match.contained_by(combined_sig) == 1.0
+
+            # check other fields, too.
+            f_orig_query = float(row['f_orig_query'])
+            f_match_orig = float(row['f_match_orig'])
+            f_match = float(row['f_match'])
+            f_unique_to_query = float(row['f_unique_to_query'])
+
+            # f_orig_query is the containment of the query by the match.
+            # (note, this only works because containment is 100% in combined).
+            assert approx_equal(combined_sig.contained_by(match), f_orig_query)
+
+            # just redoing above, for completeness; this is always 1.0 for
+            # this data set.
+            assert approx_equal(match.contained_by(combined_sig), f_match_orig)
+
+            # f_match is how much of the match is in the unallocated hashes
+            assert approx_equal(match.minhash.contained_by(remaining_mh),
+                                f_match)
+
+            # f_unique_to_query is how much of the match is unique wrt
+            # the original query.
+            a = set(remaining_mh.get_mins())
+            b = set(match.minhash.get_mins())
+            n_intersect = len(a.intersection(b))
+            f_intersect = n_intersect / float(len(combined_sig.minhash))
+            assert approx_equal(f_unique_to_query, f_intersect)
+
+            # now, subtract current match from remaining... and iterate!
+            remaining_mh.remove_many(match.minhash.get_mins())
 
 
 def test_gather_nomatch():
