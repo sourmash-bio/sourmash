@@ -97,8 +97,6 @@ def load_singletons_and_count(filenames, ksize, scaled):
     notify(u'\r\033[K', end=u'')
     notify('loaded {} signatures from {} files total.', total_count, n)
 
-    return hashvals
-
 
 def count_signature(sig, scaled, hashvals):
     "Downsample sig to given scaled, count hashvalues."
