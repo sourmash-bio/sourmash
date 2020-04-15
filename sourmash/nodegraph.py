@@ -80,7 +80,7 @@ class Nodegraph(RustObject):
         except AttributeError:
             load_nodegraph = khmer.Nodegraph.load
 
-        with NamedTemporaryFile(suffix=".gz") as f:
+        with NamedTemporaryFile() as f:
             self.save(f.name)
             f.file.flush()
             f.file.seek(0)
