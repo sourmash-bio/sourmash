@@ -212,6 +212,8 @@ uintptr_t nodegraph_tablesize(Nodegraph *ptr);
 
 void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);
 
+void nodegraph_update_mh(Nodegraph *ptr, KmerMinHash *optr);
+
 Nodegraph *nodegraph_with_tables(uintptr_t ksize, uintptr_t starting_size, uintptr_t n_tables);
 
 void signature_add_sequence(Signature *ptr, const char *sequence, bool force);

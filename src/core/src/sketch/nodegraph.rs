@@ -115,6 +115,12 @@ impl Nodegraph {
             .sum();
     }
 
+    pub fn update_mh(&mut self, other: &KmerMinHash) {
+        for h in other.mins() {
+            self.count(h);
+        }
+    }
+
     pub fn expected_collisions(&self) -> f64 {
         let min_size = self.bs.iter().map(|x| x.len()).min().unwrap();
         let n_ht = self.bs.len();

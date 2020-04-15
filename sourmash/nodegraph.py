@@ -30,10 +30,12 @@ class Nodegraph(RustObject):
         self._methodcall(lib.nodegraph_save, to_bytes(filename))
 
     def update(self, other):
-        if not isinstance(other, Nodegraph):
-            raise TypeError("Must be a Nodegraph")
-
-        return self._methodcall(lib.nodegraph_update, other._objptr)
+        if isinstance(other, Nodegraph):
+            return self._methodcall(lib.nodegraph_update, other._objptr)
+        elif isinstance(other, MinHash):
+            return self._methodcall(lib.nodegraph_update_mh, other._objptr)
+        else:
+            raise TypeError("Must be a Nodegraph or MinHash")
 
     def count(self, h):
         if isinstance(h, string_types):

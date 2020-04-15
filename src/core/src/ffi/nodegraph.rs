@@ -165,6 +165,21 @@ pub unsafe extern "C" fn nodegraph_update(ptr: *mut Nodegraph, optr: *mut Nodegr
     ng.update(ong);
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_update_mh(ptr: *mut Nodegraph, optr: *mut KmerMinHash) {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let ong = {
+        assert!(!optr.is_null());
+        &mut *optr
+    };
+
+    ng.update_mh(ong);
+}
+
 ffi_fn! {
 unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut Nodegraph> {
     let c_str = {
