@@ -59,7 +59,8 @@ class LCA_Database_Creation(LCA_Database):
 
         return lid
 
-    def insert_signature(self, ident, sig, require_taxonomy=False):
+    def insert_signature(self, ident, sig, require_lineage=False):
+        "Add a new signature into the LCA database."
         # store full name
         self.ident_to_name[ident] = sig.name()
 
@@ -71,7 +72,7 @@ class LCA_Database_Creation(LCA_Database):
         if lid is not None:
             lineage = self.lid_to_lineage.get(lid)
 
-        if lineage is None and require_taxonomy:
+        if lineage is None and require_lineage:
             return None
 
         # downsample to specified scaled; this has the side effect of
@@ -224,7 +225,8 @@ def index(args):
 
     db = LCA_Database_Creation(args.ksize, args.scaled)
 
-    # convert identities to numbers.
+    # make integer identifiers for lineages and indices for everything
+    # in the spreadsheet.
     for (ident, lineage) in assignments.items():
         # identifiers -> integer indices (idx)
         idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
@@ -239,9 +241,6 @@ def index(args):
     notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(db.idx_to_lid.values())), num_rows)
 
-    # load signatures, construct index of hashvals to ident
-    md5_to_name = {}
-
 #    notify('finding signatures...')
     if args.traverse_directory:
         yield_all_files = False           # only pick up *.sig files?
@@ -251,6 +250,9 @@ def index(args):
                                                           yield_all_files=yield_all_files))
     else:
         inp_files = list(args.signatures)
+
+    # track duplicates
+    md5_to_name = {}
 
     #
     # main loop, connecting lineage ID to signature.
@@ -271,52 +273,63 @@ def index(args):
             notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
+            # block off duplicates.
             if sig.md5sum() in md5_to_name:
                 debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
                 record_duplicates.add(filename)
                 continue
 
+            md5_to_name[sig.md5sum()] = sig.name()
+
+            # parse identifier, potentially with splitting
             ident = sig.name()
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 ident = ident.split(' ')[0].split('.')[0]
 
+            # add the signature into the database.
             lineage = db.insert_signature(ident, sig,
-                                       require_taxonomy=args.require_taxonomy)
+                                       require_lineage=args.require_taxonomy)
 
+            # punt if no lineage and --require-taxonomy
             if lineage is None and args.require_taxonomy:
                 debug('(skipping, because --require-taxonomy was specified)')
                 n_skipped += 1
                 continue
 
-            # store md5 -> name too
-            md5_to_name[sig.md5sum()] = sig.name()
-            
-            # remove from our list of remnant lineages
+            # remove from our list of remaining lineages
             try:
                 record_remnants.remove(ident)
             except KeyError:
                 # @CTB
                 pass
 
+            # track ident as used
             record_used_idents.add(ident)
 
+            # track lineage info - either no lineage, or this lineage used.
             if lineage is None:
                 debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
 
+    # end main add signatures loop
+
     notify(u'\r\033[K', end=u'')
+
+    # check -- did we find any signatures?
     if n == 0:
         error('ERROR: no signatures found. ??')
         if args.traverse_directory and not args.force:
             error('(note, with --traverse-directory, you may want to use -f)')
         sys.exit(1)
 
+    # check -- did the signatures we found have any hashes?
     if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
 
+    # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
            len(record_used_lineages), len(set(assignments.values())))
     unused_lineages = set(assignments.values()) - record_used_lineages
@@ -348,6 +361,9 @@ def index(args):
 
     db.save(db_outfile)
 
+    ## done!
+
+    # output a record of stuff if requested/available:
     if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
         if record_duplicates:
             notify('WARNING: {} duplicate signatures.', len(record_duplicates))
