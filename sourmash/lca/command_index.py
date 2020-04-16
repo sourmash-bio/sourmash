@@ -324,6 +324,7 @@ def index(args):
 
     notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
            len(record_used_idents), len(set(assignments)))
+    unused_identifiers = set(assignments) - record_used_idents
 
     # now, save!
     db_outfile = args.lca_db_out
