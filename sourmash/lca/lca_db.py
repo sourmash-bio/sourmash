@@ -95,6 +95,10 @@ class LCA_Database(Index):
         if ident in self.ident_to_name:
             raise ValueError("signature {} is already in this LCA db.".format(ident))
 
+        # before adding, invalide any caching from @cached_property
+        if hasattr(self, '_cache'):
+            del self._cache
+
         # store full name
         self.ident_to_name[ident] = sig.name()
 
@@ -120,15 +124,15 @@ class LCA_Database(Index):
         return "LCA_Database('{}')".format(self.filename)
 
     def signatures(self):
-        from .. import SourmashSignature
+        from sourmash import SourmashSignature
         for v in self._signatures.values():
-            yield SourmashSignature(v)
+            yield SourmashSignature(v)    # @CTB check names?
 
     @classmethod
     def load(cls, db_name):
+        "Load from a JSON file."
         from .lca_utils import taxlist, LineagePair
 
-        "Load from a JSON file."
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -228,6 +232,7 @@ class LCA_Database(Index):
             json.dump(save_d, fp)
 
     def search(self, query, *args, **kwargs):
+        "@CTB doc."
         # check arguments
         if 'threshold' not in kwargs:
             raise TypeError("'search' requires 'threshold'")
@@ -247,6 +252,7 @@ class LCA_Database(Index):
         return results
 
     def gather(self, query, *args, **kwargs):
+        "@CTB doc."
         if not query.minhash:
             return []
 
@@ -275,7 +281,7 @@ class LCA_Database(Index):
 
         NOTE: we probably need to invalidate some of the dynamically
         calculated members of this object, like _signatures, when we do this.
-        But we aren't going to right now.
+        But we aren't going to right now. @CTB
         """
         if scaled == self.scaled:
             return
@@ -344,6 +350,8 @@ class LCA_Database(Index):
                        ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search.
+
+        @CTB check this. => find method. Also, document/comment.
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:

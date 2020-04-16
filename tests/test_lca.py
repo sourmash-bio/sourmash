@@ -147,6 +147,24 @@ def test_api_create_gather():
     assert match.minhash == ss.minhash
 
 
+def test_api_insert_update():
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert_signature(ss)
+
+    all_mh = [ x.minhash for x in lca_db.signatures() ]
+    assert ss.minhash in all_mh
+
+    lca_db.insert_signature(ss2)
+    all_mh = [ x.minhash for x in lca_db.signatures() ]
+    assert ss.minhash in all_mh
+    assert ss2.minhash in all_mh
+
+
 def test_load_single_db():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
