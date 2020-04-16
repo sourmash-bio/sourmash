@@ -59,21 +59,16 @@ class LCA_Database_Creation(LCA_Database):
 
         return lid
 
-    def insert_signature(self, ident, sig, require_lineage=False):
+    def insert_signature(self, ident, sig, lineage=None):
         "Add a new signature into the LCA database."
         # store full name
         self.ident_to_name[ident] = sig.name()
 
         # connect hashvals to identity (and maybe lineage)
-        idx = self.build_get_ident_index(ident)
-        lid = self.idx_to_lid.get(idx)
-
-        lineage = None
-        if lid is not None:
-            lineage = self.lid_to_lineage.get(lid)
-
-        if lineage is None and require_lineage:
-            return None
+        idx = self.build_get_ident_index(ident, fail_on_duplicate=True)
+        if lineage:
+            lid = self.build_get_lineage_id(lineage)
+            self.idx_to_lid[idx] = lid
 
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!
@@ -227,19 +222,19 @@ def index(args):
 
     # make integer identifiers for lineages and indices for everything
     # in the spreadsheet.
-    for (ident, lineage) in assignments.items():
+#    for (ident, lineage) in assignments.items():
         # identifiers -> integer indices (idx)
-        idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
+#        idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
         # (LineagePairs*) -> integer lineage ids (lids)
-        lid = db.build_get_lineage_id(lineage)
+#        lid = db.build_get_lineage_id(lineage)
         
         # map idx to lid.
-        db.idx_to_lid[idx] = lid
+#        db.idx_to_lid[idx] = lid
 
-    notify('{} distinct identities in spreadsheet out of {} rows.',
-           len(db.idx_to_lid), num_rows)
-    notify('{} distinct lineages in spreadsheet out of {} rows.',
-           len(set(db.idx_to_lid.values())), num_rows)
+#    notify('{} distinct identities in spreadsheet out of {} rows.',
+#           len(db.idx_to_lid), num_rows)
+#    notify('{} distinct lineages in spreadsheet out of {} rows.',
+#           len(set(db.idx_to_lid.values())), num_rows)
 
 #    notify('finding signatures...')
     if args.traverse_directory:
@@ -286,15 +281,16 @@ def index(args):
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 ident = ident.split(' ')[0].split('.')[0]
 
-            # add the signature into the database.
-            lineage = db.insert_signature(ident, sig,
-                                       require_lineage=args.require_taxonomy)
+            lineage = assignments.get(ident)
 
             # punt if no lineage and --require-taxonomy
             if lineage is None and args.require_taxonomy:
                 debug('(skipping, because --require-taxonomy was specified)')
                 n_skipped += 1
                 continue
+
+            # add the signature into the database.
+            db.insert_signature(ident, sig, lineage)
 
             # remove from our list of remaining lineages
             try:
@@ -347,10 +343,10 @@ def index(args):
             del db.idx_to_lid[idx]
 
     # remove unusued lineages and lids
-    for lineage in unused_lineages:
-        lid = db.lineage_to_lid[lineage]
-        del db.lineage_to_lid[lineage]
-        del db.lid_to_lineage[lid]
+#    for lineage in unused_lineages:
+#        lid = db.lineage_to_lid[lineage]
+#        del db.lineage_to_lid[lineage]
+#        del db.lid_to_lineage[lid]
 
     # now, save!
     db_outfile = args.lca_db_out
