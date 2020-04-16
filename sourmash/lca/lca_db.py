@@ -10,6 +10,7 @@ from sourmash._minhash import get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 
+
 def cached_property(fun):
     """A memoize decorator for class properties."""
     @functools.wraps(fun)
@@ -34,16 +35,71 @@ class LCA_Database(Index):
     obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
     obj.hashval_to_idx: key 'hashval' => set('idx')
     """
-    def __init__(self):
-        self.ksize = None
-        self.scaled = None
-        
-        self.ident_to_idx = None
-        self.idx_to_lid = None
-        self.lid_to_lineage = None
-        self.hashval_to_idx = None
-    
-        self.filename = None
+    def __init__(self, ksize, scaled):
+        self.ksize = int(ksize)
+        self.scaled = int(scaled)
+
+        self._next_index = 0
+        self._next_lid = 0
+        self.ident_to_name = {}
+        self.ident_to_idx = {}
+        self.idx_to_lid = {}
+        self.lineage_to_lid = {}
+        self.lid_to_lineage = {}
+        self.hashval_to_idx = defaultdict(set)
+
+    def _get_ident_index(self, ident, fail_on_duplicate=False):
+        "Get (create if nec) a unique int id, idx, for each identifier."
+        idx = self.ident_to_idx.get(ident)
+        if fail_on_duplicate:
+            assert idx is None     # should be no duplicate identities
+
+        if idx is None:
+            idx = self._next_index
+            self._next_index += 1
+
+            self.ident_to_idx[ident] = idx
+
+        return idx
+
+    def _get_lineage_id(self, lineage):
+        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
+        # does one exist already?
+        lid = self.lineage_to_lid.get(lineage)
+
+        # nope - create one. Increment next_lid.
+        if lid is None:
+            lid = self._next_lid
+            self._next_lid += 1
+
+            # build mappings
+            self.lineage_to_lid[lineage] = lid
+            self.lid_to_lineage[lid] = lineage
+
+        return lid
+
+    def insert_signature(self, ident, sig, lineage=None): # @CTB -> insert
+        "Add a new signature into the LCA database."
+        # store full name
+        self.ident_to_name[ident] = sig.name()
+
+        # identifier -> integer index (idx)
+        idx = self._get_ident_index(ident, fail_on_duplicate=True)
+        if lineage:
+            # (LineagePairs*) -> integer lineage ids (lids)
+            lid = self._get_lineage_id(lineage)
+
+            # map idx to lid as well.
+            self.idx_to_lid[idx] = lid
+
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        minhash = sig.minhash.downsample_scaled(self.scaled)
+
+        for hashval in minhash.get_mins():
+            self.hashval_to_idx[hashval].add(idx)
+
+        return lineage
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -53,7 +109,8 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield SourmashSignature(v)
 
-    def load(self, db_name):
+    @classmethod
+    def load(cls, db_name):
         from .lca_utils import taxlist, LineagePair
 
         "Load from a JSON file."
@@ -87,8 +144,8 @@ class LCA_Database(Index):
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
-            self.ksize = ksize
-            self.scaled = scaled
+
+            db = cls(ksize, scaled)
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
             lid_to_lineage_2 = load_d['lid_to_lineage']
@@ -101,7 +158,7 @@ class LCA_Database(Index):
                     vv.append(LineagePair(rank, name))
 
                 lid_to_lineage[int(k)] = tuple(vv)
-            self.lid_to_lineage = lid_to_lineage
+            db.lid_to_lineage = lid_to_lineage
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
@@ -110,16 +167,18 @@ class LCA_Database(Index):
 
             for k, v in hashval_to_idx_2.items():
                 hashval_to_idx[int(k)] = v
-            self.hashval_to_idx = hashval_to_idx
+            db.hashval_to_idx = hashval_to_idx
 
-            self.ident_to_name = load_d['ident_to_name']
-            self.ident_to_idx = load_d['ident_to_idx']
+            db.ident_to_name = load_d['ident_to_name']
+            db.ident_to_idx = load_d['ident_to_idx']
 
-            self.idx_to_lid = {}
+            db.idx_to_lid = {}
             for k, v in load_d['idx_to_lid'].items():
-                self.idx_to_lid[int(k)] = v
+                db.idx_to_lid[int(k)] = v
 
-        self.filename = db_name
+        db.filename = db_name
+
+        return db
 
     def save(self, db_name):
         "Save to a JSON file."
@@ -354,8 +413,7 @@ def load_databases(filenames, scaled=None, verbose=True):
             notify(u'\r\033[K', end=u'')
             notify('... loading database {}'.format(db_name), end='\r')
 
-        lca_db = LCA_Database()
-        lca_db.load(db_name)
+        lca_db = LCA_Database.load(db_name)
 
         ksize_vals.add(lca_db.ksize)
         if len(ksize_vals) > 1:

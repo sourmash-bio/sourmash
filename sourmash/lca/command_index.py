@@ -15,75 +15,6 @@ from .lca_db import LCA_Database
 from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
-class LCA_Database_Creation(LCA_Database):
-    def __init__(self, ksize, scaled):
-        super().__init__()
-        self.ksize = int(ksize)
-        self.scaled = int(scaled)
-
-        self._next_index = 0
-        self._next_lid = 0
-        self.ident_to_name = {}
-        self.ident_to_idx = {}
-        self.idx_to_lid = {}
-        self.lineage_to_lid = {}
-        self.lid_to_lineage = {}
-        self.hashval_to_idx = defaultdict(set)
-
-    def _get_ident_index(self, ident, fail_on_duplicate=False):
-        "Get (create if nec) a unique int id, idx, for each identifier."
-        idx = self.ident_to_idx.get(ident)
-        if fail_on_duplicate:
-            assert idx is None     # should be no duplicate identities
-
-        if idx is None:
-            idx = self._next_index
-            self._next_index += 1
-
-            self.ident_to_idx[ident] = idx
-
-        return idx
-
-    def _get_lineage_id(self, lineage):
-        "Get (create if nec) a unique lineage ID for each LineagePair tuples."
-        # does one exist already?
-        lid = self.lineage_to_lid.get(lineage)
-
-        # nope - create one. Increment next_lid.
-        if lid is None:
-            lid = self._next_lid
-            self._next_lid += 1
-
-            # build mappings
-            self.lineage_to_lid[lineage] = lid
-            self.lid_to_lineage[lid] = lineage
-
-        return lid
-
-    def insert_signature(self, ident, sig, lineage=None):
-        "Add a new signature into the LCA database."
-        # store full name
-        self.ident_to_name[ident] = sig.name()
-
-        # identifier -> integer index (idx)
-        idx = self._get_ident_index(ident, fail_on_duplicate=True)
-        if lineage:
-            # (LineagePairs*) -> integer lineage ids (lids)
-            lid = self._get_lineage_id(lineage)
-
-            # map idx to lid as well.
-            self.idx_to_lid[idx] = lid
-
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        minhash = sig.minhash.downsample_scaled(self.scaled)
-
-        for hashval in minhash.get_mins():
-            self.hashval_to_idx[hashval].add(idx)
-
-        return lineage
-
-
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
                               use_headers=True, force=False):
     """
@@ -227,7 +158,7 @@ def index(args):
     notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(assignments.values())), num_rows)
 
-    db = LCA_Database_Creation(args.ksize, args.scaled)
+    db = LCA_Database(args.ksize, args.scaled)
 
 #    notify('finding signatures...')
     if args.traverse_directory:
