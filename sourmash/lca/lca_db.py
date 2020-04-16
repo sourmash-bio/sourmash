@@ -378,7 +378,7 @@ class LCA_Database(Index):
 
         query_mins = set(minhash.get_mins())
 
-        # collect matching hashes:
+        # collect matching hashes for the query:
         c = Counter()
         for hashval in query_mins:
             idx_list = self.hashval_to_idx.get(hashval, [])
@@ -387,16 +387,20 @@ class LCA_Database(Index):
 
         debug('number of matching signatures for hashes: {}', len(c))
 
+        # for each match, in order of highest overlap,
         for idx, count in c.items():
+            # retrieve the identifier and name
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
 
+            # pull in the hashes
             match_mh = self._signatures[idx]
             match_size = len(match_mh)
 
             debug('count: {}; query_mins: {}; match size: {}',
                   count, len(query_mins), match_size)
 
+            # calculate the containment or similarity
             if containment:
                 score = count / len(query_mins)
             else:
@@ -405,6 +409,8 @@ class LCA_Database(Index):
             debug('score: {} (containment? {}), threshold: {}',
                   score, containment, threshold)
 
+            # ...and return. NOTE that for similarity this may not be in
+            # the right sorted order @CTB.
             if score >= threshold:
                 match_sig = sourmash.SourmashSignature(match_mh, name=name)
 
