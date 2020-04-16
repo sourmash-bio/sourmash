@@ -7,11 +7,12 @@ import sys
 import csv
 from collections import defaultdict
 
-from .. import sourmash_args, load_signatures
-from ..logging import notify, error, debug, set_quiet
+from sourmash import sourmash_args, load_signatures
+from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
-from .lca_utils import LineagePair, LCA_Database
-from ..sourmash_args import DEFAULT_LOAD_K
+from .lca_utils import LineagePair
+from .lca_db import LCA_Database
+from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
 class LCA_Database_Creation(LCA_Database):
@@ -29,7 +30,7 @@ class LCA_Database_Creation(LCA_Database):
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
 
-    def build_get_ident_index(self, ident, fail_on_duplicate=False):
+    def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
@@ -43,7 +44,7 @@ class LCA_Database_Creation(LCA_Database):
 
         return idx
 
-    def build_get_lineage_id(self, lineage):
+    def _get_lineage_id(self, lineage):
         "Get (create if nec) a unique lineage ID for each LineagePair tuples."
         # does one exist already?
         lid = self.lineage_to_lid.get(lineage)
@@ -65,10 +66,10 @@ class LCA_Database_Creation(LCA_Database):
         self.ident_to_name[ident] = sig.name()
 
         # identifier -> integer index (idx)
-        idx = self.build_get_ident_index(ident, fail_on_duplicate=True)
+        idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
             # (LineagePairs*) -> integer lineage ids (lids)
-            lid = self.build_get_lineage_id(lineage)
+            lid = self._get_lineage_id(lineage)
 
             # map idx to lid as well.
             self.idx_to_lid[idx] = lid
