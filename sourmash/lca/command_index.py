@@ -64,10 +64,13 @@ class LCA_Database_Creation(LCA_Database):
         # store full name
         self.ident_to_name[ident] = sig.name()
 
-        # connect hashvals to identity (and maybe lineage)
+        # identifier -> integer index (idx)
         idx = self.build_get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
+            # (LineagePairs*) -> integer lineage ids (lids)
             lid = self.build_get_lineage_id(lineage)
+
+            # map idx to lid as well.
             self.idx_to_lid[idx] = lid
 
         # downsample to specified scaled; this has the side effect of
@@ -218,23 +221,12 @@ def index(args):
                                                use_headers=not args.no_headers,
                                                force=args.force)
 
+    notify('{} distinct identities in spreadsheet out of {} rows.',
+           len(assignments), num_rows)
+    notify('{} distinct lineages in spreadsheet out of {} rows.',
+           len(set(assignments.values())), num_rows)
+
     db = LCA_Database_Creation(args.ksize, args.scaled)
-
-    # make integer identifiers for lineages and indices for everything
-    # in the spreadsheet.
-#    for (ident, lineage) in assignments.items():
-        # identifiers -> integer indices (idx)
-#        idx = db.build_get_ident_index(ident, fail_on_duplicate=True)
-        # (LineagePairs*) -> integer lineage ids (lids)
-#        lid = db.build_get_lineage_id(lineage)
-        
-        # map idx to lid.
-#        db.idx_to_lid[idx] = lid
-
-#    notify('{} distinct identities in spreadsheet out of {} rows.',
-#           len(db.idx_to_lid), num_rows)
-#    notify('{} distinct lineages in spreadsheet out of {} rows.',
-#           len(set(db.idx_to_lid.values())), num_rows)
 
 #    notify('finding signatures...')
     if args.traverse_directory:
@@ -257,7 +249,7 @@ def index(args):
     total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
-    record_remnants = set(db.ident_to_idx.keys())
+    record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
     n_skipped = 0
@@ -333,25 +325,10 @@ def index(args):
     notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
            len(record_used_idents), len(set(assignments)))
 
-    # remove unused identifiers
-    unused_identifiers = set(assignments) - record_used_idents
-    for ident in unused_identifiers:
-        assert ident not in db.ident_to_name
-        idx = db.build_get_ident_index(ident)
-        del db.ident_to_idx[ident]
-        if idx in db.idx_to_lid:
-            del db.idx_to_lid[idx]
-
-    # remove unusued lineages and lids
-#    for lineage in unused_lineages:
-#        lid = db.lineage_to_lid[lineage]
-#        del db.lineage_to_lid[lineage]
-#        del db.lid_to_lineage[lid]
-
     # now, save!
     db_outfile = args.lca_db_out
     if not (db_outfile.endswith('.lca.json') or \
-                db_outfile.endswith('.lca.json.gz')):
+                db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
         db_outfile += '.lca.json'
     notify('saving to LCA DB: {}'.format(db_outfile))
 
