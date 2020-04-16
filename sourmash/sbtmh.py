@@ -306,42 +306,53 @@ class LocalizedSBT(SBT):
             node.name = "internal." + str(new_position)
             new_nodes[new_position] = node
 
-        new_first_node_pos = min(new_nodes) - 1
-
         self._nodes = new_nodes
-        # Rebuild all nodes, starting from the node previous to existing ones
-        self._rebuild_node_bottom_up(new_first_node_pos)
-
         next_node = max(new_leaves) + 1
         return next_node
 
-    def _rebuild_node_bottom_up(self, pos=0):
+    def _rebuild_nodes_bottom_up(self, pos=None):
         """Rebuilds internal nodes (if it is not present), recursively up the tree
 
         Parameters
         ----------
         pos: int
-            node to be rebuild. Any internal node under it will be rebuild too.
-            If you want to rebuild all missing internal nodes you can use pos=0
+            node to be rebuild. Any internal node *above* it will be rebuild too.
+            If you want to rebuild all missing internal nodes you can use pos=None
             (the default).
         """
+        if pos is None:
+            pos = min(self._leaves.keys()) - 1
 
         node = self._nodes.get(pos, None)
         if node is not None:
             # this node was already build, skip
+
+            # But make sure its parents are built
+            self._rebuild_from_position(pos)
             return
 
         node = Node(self.factory, name="internal.{}".format(pos))
         self._nodes[pos] = node
+        self.update_children_nodes_below_position(node, pos)
+
+        self._rebuild_from_position(pos)
+
+    def update_children_nodes_below_position(self, node, pos):
         for c in self.children(pos):
             if c.node is not None:
                 # Node may be empty because of bottom up building
                 c.node.update(node)
+            if c.pos in self._missing_nodes:
+                node = Node(self.factory, name="internal.{}".format(c.pos))
+                self._nodes[c.pos] = node
+                self.update_children_nodes_below_position(node, c.pos)
 
-        if pos > 0:
-            for parent_pos in self.parent(pos):
-                if parent_pos in self._missing_nodes:
-                    self._rebuild_node_bottom_up(parent_pos)
+    def _rebuild_from_position(self, pos):
+        """Check parent of current nodes"""
+        parent = self.parent(pos)
+        # Rebuild all the way to the top!
+        if parent is not None:
+            self._rebuild_nodes_bottom_up(parent.pos)
 
     def _insert_next_position(self, next_node):
         # New leaf is *less* similar than the existing child
@@ -405,6 +416,9 @@ class LocalizedSBT(SBT):
             c1 = self.children(parent.pos)[0]
             self._leaves[c1.pos] = node
             node.update(new_internal_node)
+
+        # Rebuild all nodes, starting from the node previous to existing ones
+        self._rebuild_nodes_bottom_up()
 
         # update all parents!
         parent = self.parent(parent.pos)
