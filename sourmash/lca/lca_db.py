@@ -6,6 +6,7 @@ import gzip
 from collections import OrderedDict, defaultdict, Counter
 import functools
 
+import sourmash
 from sourmash._minhash import get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
@@ -133,7 +134,7 @@ class LCA_Database(Index):
 
     @classmethod
     def load(cls, db_name):
-        "Load from a JSON file."
+        "Load LCA_Database from a JSON file."
         from .lca_utils import taxlist, LineagePair
 
         xopen = open
@@ -203,7 +204,7 @@ class LCA_Database(Index):
         return db
 
     def save(self, db_name):
-        "Save to a JSON file."
+        "Save LCA_Database to a JSON file."
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -285,23 +286,24 @@ class LCA_Database(Index):
         return results
 
     def find(self, search_fn, *args, **kwargs):
+        "This cannot be implemented efficiently on an LCA database."
         raise NotImplementedError
 
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
         that don't fall in the required range.
-
-        NOTE: we probably need to invalidate some of the dynamically
-        calculated members of this object, like _signatures, when we do this.
-        But we aren't going to right now. @CTB
         """
         if scaled == self.scaled:
             return
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
+        self._invalidate_cache()
+
         max_hash = get_max_hash_for_scaled(scaled)
+
+        # filter out all hashes over max_hash in value.
         new_hashvals = {}
         for k, v in self.hashval_to_idx.items():
             if k < max_hash:
@@ -364,7 +366,8 @@ class LCA_Database(Index):
         """
         Do a Jaccard similarity or containment search.
 
-        @CTB check this. => find method. Also, document/comment.
+        This is essentially a fast implementation of find that collects all
+        the signatures with overlapping hash values.
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:
@@ -403,8 +406,7 @@ class LCA_Database(Index):
                   score, containment, threshold)
 
             if score >= threshold:
-                from .. import SourmashSignature
-                match_sig = SourmashSignature(match_mh, name=name)
+                match_sig = sourmash.SourmashSignature(match_mh, name=name)
 
                 yield score, match_sig, self.filename
 
@@ -470,5 +472,3 @@ def load_databases(filenames, scaled=None, verbose=True):
                ksize, scaled)
 
     return dblist, ksize, scaled
-
-
