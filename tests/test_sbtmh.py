@@ -249,3 +249,82 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
             }
             assert tree.parent(leaf_pos["A"]) == tree.parent(leaf_pos["B"])
             assert tree.parent(leaf_pos["F"]) == tree.parent(leaf_pos["G"])
+
+
+@pytest.mark.skip(reason="Not currently working but not a show-stopping bug")
+def test_localized_sbt_adversarial_identical_signatures():
+    factory = GraphFactory(5, 100, 3)
+    sbt = LocalizedSBT(factory, track_abundance=False)
+
+    with utils.TempDirectory() as location:
+        # Sort to ensure consistent ordering across operating systems
+        files = sorted([utils.get_test_data(f) for f in utils.SIG_FILES])
+        i = 0
+        for filename in files:
+            loaded = sig.load_signatures(filename, ksize=31)
+            for signature in loaded:
+                # Rename to A, B, C, D for simplicity
+                signature._name = ascii_uppercase[i]
+                for j in range(10):
+                    # Fails when i = 0 and j = 5
+                    # (the fifth insertion of the first signature)
+                    sbt.insert(signature)
+                i += 1
+
+
+def test_localized_sbt_adversarial_dissimilar_signatures():
+    """CHeck that tree construction doesn't fail when all signatures are dissimilar"""
+    factory = GraphFactory(5, 100, 3)
+    sbt = LocalizedSBT(factory)
+
+    n_hashes = 3
+    a = MinHash(n=n_hashes, ksize=5)
+    a.add("AAAAA")
+    a.add('AAAAC')
+    a.add("AAAAG")
+    a.add('AAAAT')
+    sig_a = SourmashSignature(a, name='a')
+
+    b = MinHash(n=n_hashes, ksize=5)
+    b.add("TTTTA")
+    b.add('TTTTC')
+    b.add('TTTTG')
+    b.add('TTTTT')  # Same k-mer from above
+    sig_b = SourmashSignature(b, name='b')
+
+    c = MinHash(n=n_hashes, ksize=5)
+    c.add("CCCCA")
+    c.add('CCCCC')
+    c.add('CCCCG')
+    c.add('CCCCGT')
+    sig_c = SourmashSignature(c, name='c')
+
+    d = MinHash(n=n_hashes, ksize=5)
+    d.add("GGGGA")
+    d.add("GGGGC")
+    d.add("GGGGG")
+    d.add("GGGGT")
+    sig_d = SourmashSignature(d, name='d')
+
+    e = MinHash(n=n_hashes, ksize=5)
+    e.add("TAAAA")
+    e.add("TAAAC")
+    e.add("TAAAG")
+    e.add("TAAAT")
+    sig_e = SourmashSignature(e, name='e')
+
+    sigs = (sig_a, sig_b, sig_c, sig_d, sig_e)
+    for sig in sigs:
+        sbt.insert(sig)
+
+    # Make sure tree construction happened properly
+    assert all(node < leaf for leaf, node in product(sbt._leaves, sbt._nodes))
+
+    # create mapping from leaf name to node pos
+    leaf_pos = {
+        sig.data.name(): n
+        for n, sig in
+        sbt._leaves.items()
+    }
+    # Ensure signatures were added as leaves
+    assert all(x in leaf_pos.keys() for x in list('abcde'))
