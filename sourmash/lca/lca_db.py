@@ -38,6 +38,7 @@ class LCA_Database(Index):
     def __init__(self, ksize, scaled):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
+        self.filename = None
 
         self._next_index = 0
         self._next_lid = 0

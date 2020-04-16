@@ -119,6 +119,34 @@ def test_find_lca_2():
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
+def test_api_create_search():
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert_signature(ss.name(), ss)
+
+    results = lca_db.search(ss, threshold=0.0)
+    print(results)
+    assert len(results) == 1
+    (similarity, match, filename) = results[0]
+    assert match.minhash == ss.minhash
+
+
+def test_api_create_gather():
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert_signature(ss.name(), ss)
+
+    results = lca_db.gather(ss, threshold_bp=0)
+    print(results)
+    assert len(results) == 1
+    (similarity, match, filename) = results[0]
+    assert match.minhash == ss.minhash
+
+
 def test_load_single_db():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
