@@ -79,8 +79,22 @@ class LCA_Database(Index):
 
         return lid
 
-    def insert_signature(self, ident, sig, lineage=None): # @CTB -> insert
-        "Add a new signature into the LCA database."
+    def insert_signature(self, sig, ident=None, lineage=None): # @CTB -> insert
+        """Add a new signature into the LCA database.
+
+        Takes optional arguments 'ident' and 'lineage'.
+
+        'ident' must be a unique string identifer across this database;
+        if not specified, the signature name (sig.name()) is used.
+
+        'lineage', if specified, must contain a tuple of LineagePair objects.
+        """
+        if ident is None:
+            ident = sig.name()
+
+        if ident in self.ident_to_name:
+            raise ValueError("signature {} is already in this LCA db.".format(ident))
+
         # store full name
         self.ident_to_name[ident] = sig.name()
 

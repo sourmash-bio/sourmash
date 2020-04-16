@@ -214,7 +214,7 @@ def index(args):
                 continue
 
             # add the signature into the database.
-            db.insert_signature(ident, sig, lineage)
+            db.insert_signature(sig, ident=ident, lineage=lineage)
 
             # remove from our list of remaining lineages
             try:

@@ -124,7 +124,7 @@ def test_api_create_search():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert_signature(ss.name(), ss)
+    lca_db.insert_signature(ss)
 
     results = lca_db.search(ss, threshold=0.0)
     print(results)
@@ -138,7 +138,7 @@ def test_api_create_gather():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert_signature(ss.name(), ss)
+    lca_db.insert_signature(ss)
 
     results = lca_db.gather(ss, threshold_bp=0)
     print(results)
