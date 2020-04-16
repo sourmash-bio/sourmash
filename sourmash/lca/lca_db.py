@@ -49,6 +49,10 @@ class LCA_Database(Index):
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
 
+    def _invalidate_cache(self):
+        if hasattr(self, '_cache'):
+            del self._cache
+
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
         idx = self.ident_to_idx.get(ident)
@@ -79,7 +83,7 @@ class LCA_Database(Index):
 
         return lid
 
-    def insert_signature(self, sig, ident=None, lineage=None): # @CTB -> insert
+    def insert(self, sig, ident=None, lineage=None): # @CTB -> insert
         """Add a new signature into the LCA database.
 
         Takes optional arguments 'ident' and 'lineage'.
@@ -96,8 +100,7 @@ class LCA_Database(Index):
             raise ValueError("signature {} is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
-        if hasattr(self, '_cache'):
-            del self._cache
+        self._invalidate_cache()
 
         # store full name
         self.ident_to_name[ident] = sig.name()
@@ -232,7 +235,20 @@ class LCA_Database(Index):
             json.dump(save_d, fp)
 
     def search(self, query, *args, **kwargs):
-        "@CTB doc."
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments:
+          * do_containment: default False. If True, use Jaccard containment.
+          * best_only: default False. If True, allow optimizations that
+            may. May discard matches better than threshold, but first match
+            is guaranteed to be best.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
+
+        Note, the "best only" hint is ignored by LCA_Database
+        """
         # check arguments
         if 'threshold' not in kwargs:
             raise TypeError("'search' requires 'threshold'")
@@ -252,7 +268,7 @@ class LCA_Database(Index):
         return results
 
     def gather(self, query, *args, **kwargs):
-        "@CTB doc."
+        "Return the match with the best Jaccard containment in the database."
         if not query.minhash:
             return []
 
@@ -267,9 +283,6 @@ class LCA_Database(Index):
                 break
 
         return results
-
-    def insert(self, node):
-        raise NotImplementedError
 
     def find(self, search_fn, *args, **kwargs):
         raise NotImplementedError

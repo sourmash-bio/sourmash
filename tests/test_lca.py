@@ -124,7 +124,7 @@ def test_api_create_search():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert_signature(ss)
+    lca_db.insert(ss)
 
     results = lca_db.search(ss, threshold=0.0)
     print(results)
@@ -138,7 +138,7 @@ def test_api_create_gather():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert_signature(ss)
+    lca_db.insert(ss)
 
     results = lca_db.gather(ss, threshold_bp=0)
     print(results)
@@ -154,12 +154,12 @@ def test_api_insert_update():
                                       ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert_signature(ss)
+    lca_db.insert(ss)
 
     all_mh = [ x.minhash for x in lca_db.signatures() ]
     assert ss.minhash in all_mh
 
-    lca_db.insert_signature(ss2)
+    lca_db.insert(ss2)
     all_mh = [ x.minhash for x in lca_db.signatures() ]
     assert ss.minhash in all_mh
     assert ss2.minhash in all_mh
@@ -201,17 +201,6 @@ def test_lca_index_signatures_method():
 
     siglist = list(db.signatures())
     assert len(siglist) == 2
-
-
-def test_lca_index_insert_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.insert(sig)
 
 
 def test_lca_index_find_method():
