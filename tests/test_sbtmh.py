@@ -253,16 +253,15 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
 
 
 @pytest.mark.filterwarnings("ignore")
-def test_localized_sbt_sorted_vs_randomized(random_seed):
+def test_localized_sbt_on_gather_data():
     factory = GraphFactory(5, 100, 3)
     sbt = LocalizedSBT(factory, track_abundance=False)
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        files = glob.glob(testdata_glob)
-
         # Sort to ensure consistent ordering across operating systems
-        files = sorted([utils.get_test_data(f) for f in utils.SIG_FILES])
+        files = sorted(glob.glob(testdata_glob))
+
         signatures = []
         for filename in files:
             loaded = sig.load_signatures(filename, ksize=31)
@@ -270,66 +269,65 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
                 signatures.append(signature)
 
         n_signatures = len(signatures)
-        for signature in signatures:
-
+        for i, signature in enumerate(signatures):
+            # Rename to ... X, Y, Z for simplicity
+            signature._name = ascii_uppercase[-(n_signatures - i)]
 
         # --- Create all-by-all similarity matrix for reference ---
-        # from sourmash.compare import compare_all_pairs
-        # compare = compare_all_pairs(signatures, ignore_abundance=True)
-        # print([x.name() for x in signatures])
-        # print(compare)
+        from sourmash.compare import compare_all_pairs
+        compare = compare_all_pairs(signatures, ignore_abundance=True)
+        print([x.name() for x in signatures])
+        print('[' + ',\n '.join(['[' + ', '.join([f"{x:.2f}"  for x in row]) + "]" for row in compare]) + "]")
+
         # --- Similarity matrix ---
+        # [ 'O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z']
+        # [[1.00, 0.48, 0.58, 0.00, 0.00, 0.61, 0.58, 0.52, 0.58, 0.00, 0.00, 0.45],
+        #  [0.48, 1.00, 0.44, 0.00, 0.00, 0.51, 0.50, 0.60, 0.46, 0.00, 0.00, 0.90],
+        #  [0.58, 0.44, 1.00, 0.00, 0.00, 0.57, 0.55, 0.47, 0.54, 0.00, 0.00, 0.41],
+        #  [0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.26, 0.05, 0.00],
+        #  [0.00, 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+        #  [0.61, 0.51, 0.57, 0.00, 0.00, 1.00, 0.92, 0.52, 0.60, 0.00, 0.00, 0.47],
+        #  [0.58, 0.50, 0.55, 0.00, 0.00, 0.92, 1.00, 0.50, 0.57, 0.00, 0.00, 0.46],
+        #  [0.52, 0.60, 0.47, 0.00, 0.00, 0.52, 0.50, 1.00, 0.49, 0.00, 0.00, 0.57],
+        #  [0.58, 0.46, 0.54, 0.00, 0.00, 0.60, 0.57, 0.49, 1.00, 0.00, 0.00, 0.43],
+        #  [0.00, 0.00, 0.00, 0.26, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 0.03, 0.00],
+        #  [0.00, 0.00, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0.03, 1.00, 0.00],
+        #  [0.45, 0.90, 0.41, 0.00, 0.00, 0.47, 0.46, 0.57, 0.43, 0.00, 0.00, 1.00]]
 
-
-        # --- Insert: A ---
+        # --- Insert: O ("oh") ---
+        # First leaf --> take first position
         # Tree:
         #     0
         #   /  \
-        # A: 1  None
+        # O: 1  None
 
-        # --- Insert: B ---
+        # --- Insert: P ---
+        # Only one available --> Take next available
         # Tree:
         #     0
         #   /  \
-        # A: 1  B: 2
+        # O: 1  P: 2
 
-        # --- Insert: C ---
-        # Tree:
-        #          0
-        #        /  \
-        #      1     C: 2
-        #    /   \
-        # A: 3  B: 4
-
-        # --- Insert: D ---
+        # --- Insert: Q ---
+        # Most similar to O, displace P
         # Tree:
         #             0
         #        /        \
         #      1           2
         #    /   \       /   \
-        # A: 3  B: 4   D: 5  C: 6
+        # O: 3  Q: 4   P: 5  None
 
-        # --- Insert: E ---
+        # --- Insert: R ---
         # Tree:
-        #                    0
-        #               /       \
-        #             1            2
-        #        /        \      /   \
-        #      3           4    E: 5  None: 6
+        #             0
+        #        /        \
+        #      1           2
         #    /   \       /   \
-        # A: 7  B: 8   D: 9  C: 10
+        # O: 3  Q: 4   P: 5  R: 6
 
-        # --- Insert: F ---
-        # Tree:
-        #                    0
-        #               /       \
-        #             1            2
-        #        /        \      /   \
-        #      3           4    E: 5  F: 6
-        #    /   \       /   \
-        # A: 7  B: 8   D: 9  C: 10
-
-        # --- Insert: G ---
+        # --- Insert: S ---
+        # S is not similar to anything
+        #  --> Push existing tree down and insert next position
         # Tree:
         #                           0
         #               /                        \
@@ -337,7 +335,28 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
         #        /        \                 /            \
         #      3           4              5               6
         #    /   \       /   \         /     \         /    \
-        # A: 7  B: 8   D: 9  C: 10   F: 11  G: 12    E: 13  None: 14
+        # O: 7  Q: 8   P: 9  R: 10   S: 11   None   None    None
+
+        # --- Insert: T ---
+        # - T is most similar to O ("oh") and should displace Q
+        # - Q is most similar to P and should displace R
+        # Desired Tree:
+        #                           0
+        #               /                        \
+        #             1                           2
+        #        /        \                 /            \
+        #      3           4              5               6
+        #    /   \       /   \         /     \         /    \
+        # O: 7  T: 8   P: 9  Q: 10   S: 11  R: 12   None    None
+        # - Currently there is no recursion to displace R to a new place
+        # Actual Tree:
+        #                           0
+        #               /                        \
+        #             1                           2
+        #        /        \                 /            \
+        #      3           4              5               6
+        #    /   \       /   \         /     \         /    \
+        # O: 7  T: 8   P: 9  R: 10   S: 11  Q: 12   None    None
 
         for signature in signatures:
             sbt.insert(signature)
