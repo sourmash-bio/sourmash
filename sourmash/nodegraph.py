@@ -33,9 +33,11 @@ class Nodegraph(RustObject):
     def to_bytes(self):
         size = ffi.new("uintptr_t *")
         rawbuf = self._methodcall(lib.nodegraph_to_buffer, size)
-        size = ffi.unpack(size, 1)[0]
-        buf = ffi.buffer(rawbuf, size)[:]
-        lib.nodegraph_buffer_free(rawbuf, size)
+        size = size[0]
+
+        rawbuf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
+        buf = ffi.buffer(rawbuf, size)
+
         return buf
 
     def update(self, other):
