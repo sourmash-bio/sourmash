@@ -2,8 +2,10 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::f64::consts::PI;
+use std::fmt::Write;
 use std::iter::{Iterator, Peekable};
 use std::str;
+use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 use serde::de::{Deserialize, Deserializer};
@@ -73,7 +75,7 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
 }
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[derive(Debug, Clone, PartialEq, TypedBuilder)]
+#[derive(Debug, TypedBuilder)]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
@@ -92,6 +94,31 @@ pub struct KmerMinHash {
 
     #[builder(default)]
     abunds: Option<Vec<u64>>,
+
+    #[builder(default)]
+    md5sum: Mutex<Option<String>>,
+}
+
+impl PartialEq for KmerMinHash {
+    fn eq(&self, other: &KmerMinHash) -> bool {
+        // TODO: check all other fields?
+        self.md5sum() == other.md5sum()
+    }
+}
+
+impl Clone for KmerMinHash {
+    fn clone(&self) -> Self {
+        KmerMinHash {
+            num: self.num,
+            ksize: self.ksize,
+            hash_function: self.hash_function,
+            seed: self.seed,
+            max_hash: self.max_hash,
+            mins: self.mins.clone(),
+            abunds: self.abunds.clone(),
+            md5sum: Mutex::new(Some(self.md5sum())),
+        }
+    }
 }
 
 impl Default for KmerMinHash {
@@ -104,6 +131,7 @@ impl Default for KmerMinHash {
             max_hash: 0,
             mins: Vec::with_capacity(1000),
             abunds: None,
+            md5sum: Mutex::new(None),
         }
     }
 }
@@ -147,7 +175,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: u32,
             seed: u64,
             max_hash: u64,
-            //md5sum: String,
+            md5sum: String,
             mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
@@ -183,6 +211,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
+            md5sum: Mutex::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -222,6 +251,7 @@ impl KmerMinHash {
             max_hash,
             mins,
             abunds,
+            md5sum: Mutex::new(None),
         }
     }
 
@@ -293,13 +323,30 @@ impl KmerMinHash {
         self.abunds = None;
     }
 
+    fn reset_md5sum(&self) {
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_some() {
+            *data = None;
+        }
+    }
+
     pub fn md5sum(&self) -> String {
-        let mut md5_ctx = md5::Context::new();
-        md5_ctx.consume(self.ksize().to_string());
-        self.mins
-            .iter()
-            .for_each(|x| md5_ctx.consume(x.to_string()));
-        format!("{:x}", md5_ctx.compute())
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_none() {
+            let mut buffer = String::with_capacity(20);
+
+            let mut md5_ctx = md5::Context::new();
+            write!(&mut buffer, "{}", self.ksize()).unwrap();
+            md5_ctx.consume(&buffer);
+            buffer.clear();
+            for x in &self.mins {
+                write!(&mut buffer, "{}", x).unwrap();
+                md5_ctx.consume(&buffer);
+                buffer.clear();
+            }
+            *data = Some(format!("{:x}", md5_ctx.compute()));
+        }
+        data.clone().unwrap()
     }
 
     pub fn add_hash(&mut self, hash: u64) {
@@ -334,6 +381,7 @@ impl KmerMinHash {
             self.mins.push(hash);
             if let Some(ref mut abunds) = self.abunds {
                 abunds.push(abundance);
+                self.reset_md5sum();
             }
             return;
         }
@@ -350,6 +398,7 @@ impl KmerMinHash {
                 // at end - must still be growing, we know the list won't
                 // get too long
                 self.mins.push(hash);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.push(abundance);
                 }
@@ -368,6 +417,7 @@ impl KmerMinHash {
                         abunds.pop();
                     }
                 }
+                self.reset_md5sum();
             } else if let Some(ref mut abunds) = self.abunds {
                 // pos == hash: hash value already in mins, inc count by abundance
                 abunds[pos] += abundance;
@@ -384,6 +434,7 @@ impl KmerMinHash {
         if let Ok(pos) = self.mins.binary_search(&hash) {
             if self.mins[pos] == hash {
                 self.mins.remove(pos);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(pos);
                 }
@@ -505,6 +556,8 @@ impl KmerMinHash {
                 Some(merged_abunds.into_iter().take(self.num as usize).collect())
             }
         }
+
+        self.reset_md5sum();
         Ok(())
     }
 
@@ -690,6 +743,10 @@ impl KmerMinHash {
 
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
+    }
+
+    pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
+        self.mins.iter()
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
@@ -1224,7 +1281,7 @@ const VALID: [bool; 256] = {
 // A MinHash implementation for low scaled or large cardinalities
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[derive(Debug, Clone, PartialEq, TypedBuilder)]
+#[derive(Debug, TypedBuilder)]
 pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
@@ -1246,6 +1303,32 @@ pub struct KmerMinHashBTree {
 
     #[builder(default_code = "0u64")]
     current_max: u64,
+
+    #[builder(default)]
+    md5sum: Mutex<Option<String>>,
+}
+
+impl PartialEq for KmerMinHashBTree {
+    fn eq(&self, other: &KmerMinHashBTree) -> bool {
+        // TODO: check all other fields?
+        self.md5sum() == other.md5sum()
+    }
+}
+
+impl Clone for KmerMinHashBTree {
+    fn clone(&self) -> Self {
+        KmerMinHashBTree {
+            num: self.num,
+            ksize: self.ksize,
+            hash_function: self.hash_function,
+            seed: self.seed,
+            max_hash: self.max_hash,
+            mins: self.mins.clone(),
+            abunds: self.abunds.clone(),
+            current_max: self.current_max,
+            md5sum: Mutex::new(Some(self.md5sum())),
+        }
+    }
 }
 
 impl Default for KmerMinHashBTree {
@@ -1259,6 +1342,7 @@ impl Default for KmerMinHashBTree {
             mins: Default::default(),
             abunds: None,
             current_max: 0,
+            md5sum: Mutex::new(None),
         }
     }
 }
@@ -1303,7 +1387,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             ksize: u32,
             seed: u64,
             max_hash: u64,
-            //md5sum: String,
+            md5sum: String,
             mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
@@ -1340,6 +1424,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
+            md5sum: Mutex::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -1374,6 +1459,7 @@ impl KmerMinHashBTree {
             mins,
             abunds,
             current_max: 0,
+            md5sum: Mutex::new(None),
         }
     }
 
@@ -1446,13 +1532,30 @@ impl KmerMinHashBTree {
         self.abunds = None;
     }
 
+    fn reset_md5sum(&self) {
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_some() {
+            *data = None;
+        }
+    }
+
     pub fn md5sum(&self) -> String {
-        let mut md5_ctx = md5::Context::new();
-        md5_ctx.consume(self.ksize().to_string());
-        self.mins
-            .iter()
-            .for_each(|x| md5_ctx.consume(x.to_string()));
-        format!("{:x}", md5_ctx.compute())
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_none() {
+            let mut buffer = String::with_capacity(20);
+
+            let mut md5_ctx = md5::Context::new();
+            write!(&mut buffer, "{}", self.ksize()).unwrap();
+            md5_ctx.consume(&buffer);
+            buffer.clear();
+            for x in &self.mins {
+                write!(&mut buffer, "{}", x).unwrap();
+                md5_ctx.consume(&buffer);
+                buffer.clear();
+            }
+            *data = Some(format!("{:x}", md5_ctx.compute()));
+        }
+        data.clone().unwrap()
     }
 
     pub fn add_hash(&mut self, hash: u64) {
@@ -1480,6 +1583,7 @@ impl KmerMinHashBTree {
         // empty mins? add it.
         if self.mins.is_empty() {
             self.mins.insert(hash);
+            self.reset_md5sum();
             if let Some(ref mut abunds) = self.abunds {
                 abunds.insert(hash, abundance);
             }
@@ -1491,8 +1595,11 @@ impl KmerMinHashBTree {
         {
             // "good" hash - within range, smaller than current entry, or
             // still have space available
-            if self.mins.insert(hash) && hash > self.current_max {
-                self.current_max = hash;
+            if self.mins.insert(hash) {
+                self.reset_md5sum();
+                if hash > self.current_max {
+                    self.current_max = hash;
+                }
             }
             if let Some(ref mut abunds) = self.abunds {
                 *abunds.entry(hash).or_insert(0) += abundance;
@@ -1502,6 +1609,7 @@ impl KmerMinHashBTree {
             if self.num != 0 && self.mins.len() > (self.num as usize) {
                 let last = *self.mins.iter().rev().next().unwrap();
                 self.mins.remove(&last);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(&last);
                 }
@@ -1517,6 +1625,7 @@ impl KmerMinHashBTree {
 
     pub fn remove_hash(&mut self, hash: u64) {
         if self.mins.remove(&hash) {
+            self.reset_md5sum();
             if let Some(ref mut abunds) = self.abunds {
                 abunds.remove(&hash);
             }
@@ -1556,6 +1665,9 @@ impl KmerMinHashBTree {
                 self.abunds = Some(new_abunds)
             }
         }
+        // Better safe than sorry, but could check in other places to avoid
+        // always resetting
+        self.reset_md5sum();
 
         Ok(())
     }
@@ -1730,6 +1842,10 @@ impl KmerMinHashBTree {
 
     pub fn mins(&self) -> Vec<u64> {
         self.mins.iter().cloned().collect()
+    }
+
+    pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
+        self.mins.iter()
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
