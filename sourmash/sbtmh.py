@@ -20,10 +20,7 @@ def load_sbt_index(filename, print_version_warning=True):
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
-    if not_localized or n_children != 2:
-        if n_children != 2:
-            notify("n_children != 2 in tree, defaulting to non-localized sequence "
-                   "bloom tree (SBT) index")
+    if n_children != 2:
         tree = SBT(factory, d=n_children)
     else:
         tree = LocalizedSBT(factory, d=n_children)
