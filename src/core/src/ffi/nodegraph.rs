@@ -4,6 +4,7 @@ use std::slice;
 
 use niffler::get_input;
 
+use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::nodegraph::Nodegraph;
 
@@ -170,7 +171,7 @@ pub unsafe extern "C" fn nodegraph_update(ptr: *mut Nodegraph, optr: *mut Nodegr
         &mut *optr
     };
 
-    ng.update(ong);
+    ong.update(ng).unwrap();
 }
 
 #[no_mangle]
@@ -180,12 +181,12 @@ pub unsafe extern "C" fn nodegraph_update_mh(ptr: *mut Nodegraph, optr: *mut Kme
         &mut *ptr
     };
 
-    let ong = {
+    let mh = {
         assert!(!optr.is_null());
-        &mut *optr
+        &*optr
     };
 
-    ng.update_mh(ong);
+    mh.update(ng).unwrap();
 }
 
 ffi_fn! {

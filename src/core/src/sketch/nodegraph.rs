@@ -8,6 +8,7 @@ use failure::Error;
 use fixedbitset::FixedBitSet;
 use primal_check;
 
+use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
 use crate::HashIntoType;
 
@@ -26,6 +27,35 @@ impl PartialEq for Nodegraph {
         self.bs == other.bs
             && self.occupied_bins == other.occupied_bins
             && self.ksize == other.ksize
+    }
+}
+
+impl Update<Nodegraph> for Nodegraph {
+    fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
+        other.occupied_bins = other
+            .bs
+            .iter_mut()
+            .zip(&self.bs)
+            .enumerate()
+            .map(|(i, (bs, bs_me))| {
+                bs.union_with(bs_me);
+                if i == 0 {
+                    bs.count_ones(..)
+                } else {
+                    0
+                }
+            })
+            .sum();
+        Ok(())
+    }
+}
+
+impl Update<Nodegraph> for KmerMinHash {
+    fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
+        for h in self.mins() {
+            other.count(h);
+        }
+        Ok(())
     }
 }
 
@@ -102,30 +132,6 @@ impl Nodegraph {
     pub(crate) fn get_kmer(&self, kmer: &[u8]) -> usize {
         let h = _hash(kmer);
         self.get(h)
-    }
-
-    // update
-    pub fn update(&mut self, other: &Nodegraph) {
-        self.occupied_bins = self
-            .bs
-            .iter_mut()
-            .zip(&other.bs)
-            .enumerate()
-            .map(|(i, (bs, bs_other))| {
-                bs.union_with(bs_other);
-                if i == 0 {
-                    bs.count_ones(..)
-                } else {
-                    0
-                }
-            })
-            .sum();
-    }
-
-    pub fn update_mh(&mut self, other: &KmerMinHash) {
-        for h in other.mins() {
-            self.count(h);
-        }
     }
 
     pub fn expected_collisions(&self) -> f64 {
@@ -501,8 +507,8 @@ mod test {
         let ng_2: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         let mut ng_0: Nodegraph = Nodegraph::new(&[99991, 99989, 99971, 99961], 1);
-        ng_0.update(&ng_1);
-        ng_0.update(&ng_2);
+        ng_1.update(&mut ng_0).expect("Error in update");
+        ng_2.update(&mut ng_0).expect("Error in update");
         assert_eq!(ng_0.bs, ng_parent.bs);
         //assert_eq!(ng_0.occupied_bins, ng_parent.occupied_bins);
     }
