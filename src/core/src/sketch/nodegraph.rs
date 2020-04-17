@@ -272,8 +272,8 @@ impl Nodegraph {
         Ok(Nodegraph::from_reader(&mut reader)?)
     }
 
-    pub fn tablesizes(&self) -> Vec<usize> {
-        self.bs.iter().map(|x| x.len()).collect()
+    pub fn tablesizes(&self) -> Vec<u64> {
+        self.bs.iter().map(|x| x.len() as u64).collect()
     }
 
     pub fn n_occupied_bins(&self) -> usize {

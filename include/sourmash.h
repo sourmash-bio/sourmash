@@ -212,7 +212,7 @@ uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uintptr_t *size);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
-uintptr_t nodegraph_tablesize(Nodegraph *ptr);
+uint64_t *nodegraph_hashsizes(Nodegraph *ptr, uintptr_t *size);
 
 void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);
 

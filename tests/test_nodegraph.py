@@ -2,7 +2,7 @@ from tempfile import NamedTemporaryFile
 
 import pytest
 
-from sourmash.nodegraph import Nodegraph
+from sourmash.nodegraph import Nodegraph, extract_nodegraph_info
 
 from . import sourmash_tst_utils as utils
 
@@ -32,8 +32,7 @@ def test_nodegraph_khmer_compare():
     sm_ng.count("CGA")
 
     assert sm_ng.ksize == khmer_ng.ksize()
-    assert sm_ng.n_tables == len(khmer_ng.hashsizes())
-    assert sm_ng.tablesize == sum(khmer_ng.hashsizes())
+    assert sm_ng.hashsizes == khmer_ng.hashsizes()
     assert sm_ng.get("ACG")
     assert sm_ng.get("TTA")
     assert sm_ng.get("CGA")
@@ -68,6 +67,10 @@ def test_nodegraph_same_file():
 
         f3.seek(0)
         kh_data = f3.read()
+
+        assert extract_nodegraph_info(f1.name) == extract_nodegraph_info(f2.name)
+        assert extract_nodegraph_info(f3.name) == extract_nodegraph_info(f2.name)
+        assert extract_nodegraph_info(f1.name) == extract_nodegraph_info(f3.name)
 
         assert sm_data == kh_data
         assert sm_data == kh_sm_data

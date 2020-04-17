@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from __future__ import unicode_literals, division
 
+from struct import pack, unpack
 import sys
 from tempfile import NamedTemporaryFile
 
@@ -67,12 +68,14 @@ class Nodegraph(RustObject):
         return self._methodcall(lib.nodegraph_ksize)
 
     @property
-    def tablesize(self):
-        return self._methodcall(lib.nodegraph_tablesize)
+    def hashsizes(self):
+        size = ffi.new("uintptr_t *")
+        ptr = self._methodcall(lib.nodegraph_hashsizes, size)
+        size = size[0]
+        hashsizes = ffi.unpack(ptr, size)
+        lib.kmerminhash_slice_free(ptr, size)
 
-    @property
-    def n_tables(self):
-        return self._methodcall(lib.nodegraph_ntables)
+        return hashsizes
 
     @property
     def expected_collisions(self):
@@ -99,8 +102,42 @@ class Nodegraph(RustObject):
 
 
 def extract_nodegraph_info(filename):
-    ng = Nodegraph.load(filename)
-    return ng.ksize, ng.tablesize, ng.n_tables
+    """Open the given nodegraph file and return a tuple of information.
+
+    Returns: the k-mer size, the table size, the number of tables, the version
+    of the table format, and the type of table flag.
+
+    Keyword argument:
+    filename -- the name of the nodegraph file to inspect
+    """
+    ksize = None
+    n_tables = None
+    table_size = None
+    signature = None
+    version = None
+    ht_type = None
+    occupied = None
+
+    uint_size = len(pack('I', 0))
+    uchar_size = len(pack('B', 0))
+    ulonglong_size = len(pack('Q', 0))
+
+    try:
+        with open(filename, 'rb') as nodegraph:
+            signature, = unpack('4s', nodegraph.read(4))
+            version, = unpack('B', nodegraph.read(1))
+            ht_type, = unpack('B', nodegraph.read(1))
+            ksize, = unpack('I', nodegraph.read(uint_size))
+            n_tables, = unpack('B', nodegraph.read(uchar_size))
+            occupied, = unpack('Q', nodegraph.read(ulonglong_size))
+            table_size, = unpack('Q', nodegraph.read(ulonglong_size))
+        if signature != b"OXLI":
+            raise ValueError("Node graph '{}' is missing file type "
+                             "signature".format(filename) + str(signature))
+    except:
+        raise ValueError("Node graph '{}' is corrupt ".format(filename))
+
+    return ksize, round(table_size, -2), n_tables, version, ht_type, occupied
 
 
 def calc_expected_collisions(graph, force=False, max_false_pos=.2):

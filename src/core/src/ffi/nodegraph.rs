@@ -115,13 +115,18 @@ pub unsafe extern "C" fn nodegraph_ksize(ptr: *mut Nodegraph) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_tablesize(ptr: *mut Nodegraph) -> usize {
+pub unsafe extern "C" fn nodegraph_hashsizes(ptr: *mut Nodegraph, size: *mut usize) -> *const u64 {
     let ng = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
 
-    ng.tablesize()
+    let st = ng.tablesizes();
+
+    let b = st.into_boxed_slice();
+    *size = b.len();
+
+    Box::into_raw(b) as *const u64
 }
 
 #[no_mangle]
