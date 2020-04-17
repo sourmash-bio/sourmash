@@ -147,6 +147,23 @@ def test_api_create_gather():
     assert match.minhash == ss.minhash
 
 
+def test_api_add_genome_lineage():
+    # LCA_Databases can store/retrieve arbitrary lineages/taxonomies.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    lineage = ((LineagePair('rank1', 'name1'),
+               (LineagePair('rank2', 'name2'))))
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, lineage=lineage)
+
+    somehash = next(iter(ss.minhash.get_mins()))
+
+    lineages = lca_db.get_lineage_assignments(somehash)
+    assert len(lineages) == 1
+    assert lineage in lineages
+
+
 def test_api_insert_update():
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
