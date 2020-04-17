@@ -19,12 +19,13 @@ pub struct Nodegraph {
     unique_kmers: usize,
 }
 
-// TODO: only checking for the bitset for now,
-// since unique_kmers is not saved in a khmer nodegraph
-// and occupied_bins also has issues...
+// TODO: not checking for unique_kmers,
+// since it is not saved in a khmer nodegraph
 impl PartialEq for Nodegraph {
     fn eq(&self, other: &Nodegraph) -> bool {
         self.bs == other.bs
+            && self.occupied_bins == other.occupied_bins
+            && self.ksize == other.ksize
     }
 }
 
@@ -105,15 +106,18 @@ impl Nodegraph {
 
     // update
     pub fn update(&mut self, other: &Nodegraph) {
-        // TODO: occupied bins seems to be broken in khmer? I don't get the same
-        // values...
         self.occupied_bins = self
             .bs
             .iter_mut()
             .zip(&other.bs)
-            .map(|(bs, bs_other)| {
+            .enumerate()
+            .map(|(i, (bs, bs_other))| {
                 bs.union_with(bs_other);
-                bs.count_ones(..)
+                if i == 0 {
+                    bs.count_ones(..)
+                } else {
+                    0
+                }
             })
             .sum();
     }
@@ -220,12 +224,10 @@ impl Nodegraph {
         let n_tables = rdr.read_u8()?;
         let occupied_bins = rdr.read_u64::<LittleEndian>()? as usize;
 
-        let mut _n_occupied = 0;
         let mut bs = Vec::with_capacity(n_tables as usize);
         for _i in 0..n_tables {
             let tablesize: usize = rdr.read_u64::<LittleEndian>()? as usize;
             let byte_size = tablesize / 8 + 1;
-            let mut _n_occupied = 0;
 
             let rem = byte_size % 4;
             let blocks: Vec<u32> = if rem == 0 {
@@ -251,7 +253,6 @@ impl Nodegraph {
             bs.push(counts);
         }
 
-        //assert_eq!(occupied_bins, _n_occupied);
         Ok(Nodegraph {
             bs,
             ksize: ksize as usize,
@@ -553,7 +554,7 @@ mod test {
         let ng: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         assert_eq!(ng.tablesizes(), [99991, 99989, 99971, 99961]);
-        //assert_eq!(ng.n_occupied_bins(), 2416);
+        assert_eq!(ng.n_occupied_bins(), 2416);
         assert_eq!(ng.get(1877811740), 0);
         for h in [
             1877811749,
