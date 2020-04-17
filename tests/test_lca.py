@@ -133,6 +133,105 @@ def test_api_create_search():
     assert match.minhash == ss.minhash
 
 
+def test_api_create_insert():
+    # test some internal implementation stuff
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    ident = ss.name()
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ident
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+    
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+
+
+def test_api_create_insert_ident():
+    # test some internal implementation stuff
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, ident='foo')
+
+    ident = 'foo'
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ss.name()
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+    
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+    assert not lca_db.lineage_to_lid
+    assert not lca_db.lid_to_idx
+
+
+def test_api_create_insert_w_lineage():
+    # test some internal implementation stuff
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lineage = ((LineagePair('rank1', 'name1'),
+               (LineagePair('rank2', 'name2'))))
+    
+    lca_db.insert(ss, lineage=lineage)
+
+    # basic ident stuff
+    ident = ss.name()
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ident
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    # all hash values added
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+
+    # check lineage stuff
+    assert len(lca_db.idx_to_lid) == 1
+    assert lca_db.idx_to_lid[0] == 0
+    assert len(lca_db.lid_to_lineage) == 1
+    assert lca_db.lid_to_lineage[0] == lineage
+    assert lca_db.lid_to_idx[0] == { 0 }
+
+    assert len(lca_db.lineage_to_lids) == 1
+    assert len(lca_db.lineage_to_lids[lineage]) == 1
+    assert lca_db.lineage_to_lids[lineage] == { 0 }
+
+
 def test_api_create_gather():
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
