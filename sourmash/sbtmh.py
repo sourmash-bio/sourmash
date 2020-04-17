@@ -17,7 +17,7 @@ def load_sbt_index(filename, print_version_warning=True):
                     print_version_warning=print_version_warning)
 
 
-def create_sbt_index(bloom_filter_size=1e5, n_children=2, not_localized=False):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2):
     "Create an empty SBT index."
     factory = GraphFactory(1, bloom_filter_size, 4)
     if not_localized or n_children != 2:
