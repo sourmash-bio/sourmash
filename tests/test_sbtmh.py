@@ -1,3 +1,4 @@
+import glob
 from itertools import product
 from string import ascii_uppercase
 import random
@@ -249,6 +250,97 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
             }
             assert tree.parent(leaf_pos["A"]) == tree.parent(leaf_pos["B"])
             assert tree.parent(leaf_pos["F"]) == tree.parent(leaf_pos["G"])
+
+
+@pytest.mark.filterwarnings("ignore")
+def test_localized_sbt_sorted_vs_randomized(random_seed):
+    factory = GraphFactory(5, 100, 3)
+    sbt = LocalizedSBT(factory, track_abundance=False)
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        files = glob.glob(testdata_glob)
+
+        # Sort to ensure consistent ordering across operating systems
+        files = sorted([utils.get_test_data(f) for f in utils.SIG_FILES])
+        signatures = []
+        for filename in files:
+            loaded = sig.load_signatures(filename, ksize=31)
+            for signature in loaded:
+                signatures.append(signature)
+
+        n_signatures = len(signatures)
+        for signature in signatures:
+
+
+        # --- Create all-by-all similarity matrix for reference ---
+        # from sourmash.compare import compare_all_pairs
+        # compare = compare_all_pairs(signatures, ignore_abundance=True)
+        # print([x.name() for x in signatures])
+        # print(compare)
+        # --- Similarity matrix ---
+
+
+        # --- Insert: A ---
+        # Tree:
+        #     0
+        #   /  \
+        # A: 1  None
+
+        # --- Insert: B ---
+        # Tree:
+        #     0
+        #   /  \
+        # A: 1  B: 2
+
+        # --- Insert: C ---
+        # Tree:
+        #          0
+        #        /  \
+        #      1     C: 2
+        #    /   \
+        # A: 3  B: 4
+
+        # --- Insert: D ---
+        # Tree:
+        #             0
+        #        /        \
+        #      1           2
+        #    /   \       /   \
+        # A: 3  B: 4   D: 5  C: 6
+
+        # --- Insert: E ---
+        # Tree:
+        #                    0
+        #               /       \
+        #             1            2
+        #        /        \      /   \
+        #      3           4    E: 5  None: 6
+        #    /   \       /   \
+        # A: 7  B: 8   D: 9  C: 10
+
+        # --- Insert: F ---
+        # Tree:
+        #                    0
+        #               /       \
+        #             1            2
+        #        /        \      /   \
+        #      3           4    E: 5  F: 6
+        #    /   \       /   \
+        # A: 7  B: 8   D: 9  C: 10
+
+        # --- Insert: G ---
+        # Tree:
+        #                           0
+        #               /                        \
+        #             1                           2
+        #        /        \                 /            \
+        #      3           4              5               6
+        #    /   \       /   \         /     \         /    \
+        # A: 7  B: 8   D: 9  C: 10   F: 11  G: 12    E: 13  None: 14
+
+        for signature in signatures:
+            sbt.insert(signature)
 
 
 @pytest.mark.skip(reason="Not currently working but not a show-stopping bug")
