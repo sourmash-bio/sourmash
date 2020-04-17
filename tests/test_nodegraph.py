@@ -18,6 +18,31 @@ def test_nodegraph_to_khmer_basic():
     assert sourmash_ng.ksize == khmer_sm_ng.ksize()
 
 
+def test_nodegraph_khmer_compare():
+    khmer = pytest.importorskip('khmer')
+
+    khmer_ng = khmer.Nodegraph(3, 23, 6)
+    khmer_ng.count("ACG")
+    khmer_ng.count("TTA")
+    khmer_ng.count("CGA")
+
+    sm_ng = Nodegraph(3, 23, 6)
+    sm_ng.count("ACG")
+    sm_ng.count("TTA")
+    sm_ng.count("CGA")
+
+    assert sm_ng.ksize == khmer_ng.ksize()
+    assert sm_ng.n_tables == len(khmer_ng.hashsizes())
+    assert sm_ng.tablesize == sum(khmer_ng.hashsizes())
+    assert sm_ng.get("ACG")
+    assert sm_ng.get("TTA")
+    assert sm_ng.get("CGA")
+
+    assert khmer_ng.get("ACG")
+    assert khmer_ng.get("TTA")
+    assert khmer_ng.get("CGA")
+
+
 def test_nodegraph_same_file():
     khmer = pytest.importorskip('khmer')
 

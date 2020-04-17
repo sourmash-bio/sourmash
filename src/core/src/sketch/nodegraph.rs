@@ -48,7 +48,7 @@ impl Nodegraph {
 
         let mut i = (tablesize - 1) as u64;
         if i % 2 == 0 {
-            i += 1
+            i -= 1
         }
 
         while tablesizes.len() != n_tables {
@@ -72,10 +72,12 @@ impl Nodegraph {
     pub fn count(&mut self, hash: HashIntoType) -> bool {
         let mut is_new_kmer = false;
 
-        for bitset in &mut self.bs {
+        for (i, bitset) in self.bs.iter_mut().enumerate() {
             let bin = hash % bitset.len() as u64;
             if !bitset.put(bin as usize) {
-                self.occupied_bins += 1;
+                if i == 0 {
+                    self.occupied_bins += 1;
+                }
                 is_new_kmer = true;
             }
         }
@@ -366,6 +368,23 @@ mod test {
     use proptest::num::u64;
     use proptest::proptest;
 
+    // Generate with khmer:
+    // >>> a = khmer.Nodegraph(3, 23, 6)
+    // >>> a.count("ACG")
+    // >>> a.count("TTA")
+    // >>> a.count("CGA")
+    // >>> a.save("test.ng")
+    // and dumping test.ng with xxd:
+    // $ xxd -i test.ng
+    static RAW_DATA: &'static [u8] = &[
+        0x4f, 0x58, 0x4c, 0x49, 0x04, 0x02, 0x03, 0x00, 0x00, 0x00, 0x06, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x01,
+        0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x01, 0x0d, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x0a, 0x08, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21,
+        0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x06,
+    ];
+
     proptest! {
       #[test]
       fn count_and_get(hashes in vec(u64::ANY, 1..500)) {
@@ -413,6 +432,54 @@ mod test {
             }
             assert_eq!(data.len(), buf.len());
         }
+    }
+
+    #[test]
+    fn binary_repr_load() {
+        let mut reader = BufReader::new(&RAW_DATA[..]);
+        let khmer_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(khmer_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(khmer_ng.ksize(), 3);
+        assert_eq!(khmer_ng.get_kmer(b"ACG"), 1);
+        assert_eq!(khmer_ng.get_kmer(b"TTA"), 1);
+        assert_eq!(khmer_ng.get_kmer(b"CGA"), 1);
+
+        let mut ng = Nodegraph::with_tables(23, 6, 3);
+        ng.count_kmer(b"ACG");
+        ng.count_kmer(b"TTA");
+        ng.count_kmer(b"CGA");
+
+        let mut buf = Vec::new();
+        {
+            let mut writer = BufWriter::new(&mut buf);
+            ng.save_to_writer(&mut writer).unwrap();
+        }
+        assert_eq!(buf.len(), 79);
+        assert_eq!(&RAW_DATA, &buf.as_slice());
+    }
+
+    #[test]
+    fn binary_repr_save() {
+        let mut ng = Nodegraph::with_tables(23, 6, 3);
+        ng.count_kmer(b"ACG");
+        ng.count_kmer(b"TTA");
+        ng.count_kmer(b"CGA");
+
+        let mut buf = Vec::new();
+        {
+            let mut writer = BufWriter::new(&mut buf);
+            ng.save_to_writer(&mut writer).unwrap();
+        }
+        let mut reader = BufReader::new(&buf[..]);
+        let new_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(new_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(new_ng.ksize(), 3);
+        assert_eq!(new_ng.get_kmer(b"ACG"), 1);
+        assert_eq!(new_ng.get_kmer(b"TTA"), 1);
+        assert_eq!(new_ng.get_kmer(b"CGA"), 1);
+
+        assert_eq!(buf.len(), 79);
+        assert_eq!(&RAW_DATA, &buf.as_slice());
     }
 
     #[test]
