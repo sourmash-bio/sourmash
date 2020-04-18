@@ -128,6 +128,7 @@ class LCA_Database(Index):
         return "LCA_Database('{}')".format(self.filename)
 
     def signatures(self):
+        "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
         for v in self._signatures.values():
             yield SourmashSignature(v)    # @CTB check names?
@@ -163,7 +164,7 @@ class LCA_Database(Index):
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
             if version != '2.0' or 'lid_to_lineage' not in load_d:
-                raise ValueError("Error! This is an old-style LCA DB. You'll need to build or download a newer one.")
+                raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
@@ -339,8 +340,9 @@ class LCA_Database(Index):
     @cached_property
     def _signatures(self):
         "Create a _signatures member dictionary that contains {idx: minhash}."
-        from .. import MinHash
+        from sourmash import MinHash
 
+        # CTB: if we wanted to support protein/other minhashes, do it here.
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
 
         debug('creating signatures for LCA DB...')
@@ -404,7 +406,10 @@ class LCA_Database(Index):
             ident = self.idx_to_ident[idx]
             name = self.ident_to_name[ident]
 
-            # pull in the hashes
+            # pull in the hashes. This reconstructs & caches all input
+            # minhashes, which is kinda memory intensive...!
+            # NOTE: one future low-mem optimization could be to support doing
+            # this piecemeal by iterating across all the hashes, instead.
             match_mh = self._signatures[idx]
             match_size = len(match_mh)
 
