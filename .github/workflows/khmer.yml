@@ -1,4 +1,4 @@
-name: Hypothesis tests
+name: khmer compatibility tests
 
 on:
   push:
@@ -21,10 +21,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .[test]
+          python -m pip install khmer
 
-      - name: Run Hypothesis tests
+      - name: Run khmer tests
         run: |
-          python -m pytest --cov=. --cov-report=xml --run-hypothesis --hypothesis-show-statistics --hypothesis-profile ci
+          python -m pytest -k test_nodegraph --cov=. --cov-report=xml
 
       - name: Upload coverage to Codecov  
         uses: codecov/codecov-action@v1
