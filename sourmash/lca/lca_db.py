@@ -84,7 +84,7 @@ class LCA_Database(Index):
 
         return lid
 
-    def insert(self, sig, ident=None, lineage=None): # @CTB -> insert
+    def insert(self, sig, ident=None, lineage=None):
         """Add a new signature into the LCA database.
 
         Takes optional arguments 'ident' and 'lineage'.
@@ -297,10 +297,12 @@ class LCA_Database(Index):
         an LCA database."""
         raise NotImplementedError
 
-    def downsample_scaled(self, scaled): # @CTB test
+    def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
         that don't fall in the required range.
+
+        This applies to this database in place.
         """
         if scaled == self.scaled:
             return

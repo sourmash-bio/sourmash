@@ -336,6 +336,51 @@ def test_api_insert_update():
     assert ss2.minhash in all_mh
 
 
+def test_api_create_insert_two_then_scale():
+    # construct database, THEN downsample
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+    lca_db.insert(ss2)
+
+    # downsample everything to 5000
+    lca_db.downsample_scaled(5000)
+
+    ss.minhash = ss.minhash.downsample_scaled(5000)
+    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+
+    # & check...
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+
+def test_api_create_insert_scale_two():
+    # downsample while constructing database
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    # downsample to 5000 while inserting:
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
+    lca_db.insert(ss)
+    lca_db.insert(ss2)
+
+    # downsample sigs to 5000
+    ss.minhash = ss.minhash.downsample_scaled(5000)
+    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+
+    # & check...
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+
 def test_load_single_db():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
