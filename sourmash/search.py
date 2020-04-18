@@ -127,7 +127,9 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     while query.minhash:
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
-        if not best_match:          # no matches at all!
+        if not best_match:          # no matches at all for this cutoff!
+            notify('found less than {} in common. => exiting',
+                   format_bp(threshold_bp))
             break
 
         # subtract found hashes from search hashes, construct new search
@@ -157,11 +159,6 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         intersect_mins = query_mins.intersection(found_mins)
         intersect_orig_query_mins = orig_query_mins.intersection(found_mins)
         intersect_bp = cmp_scaled * len(intersect_orig_query_mins)
-
-        if intersect_bp < threshold_bp:   # hard cutoff for now
-            notify('found less than {} in common. => exiting',
-                   format_bp(threshold_bp))
-            break
 
         # calculate fractions wrt first denominator - genome size
         genome_n_mins = len(found_mins)

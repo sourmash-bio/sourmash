@@ -2659,7 +2659,7 @@ def test_gather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        cmd = 'gather {} gcf_all -k 21'.format(query_sig)
+        cmd = 'gather {} gcf_all -k 21 --threshold-bp=0'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -2719,7 +2719,7 @@ def test_multigather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        cmd = 'multigather --query {} --db gcf_all -k 21'.format(query_sig)
+        cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -2747,7 +2747,7 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --traverse-directory'
+        cmd = 'gather {} {} -k 21 --traverse-directory --threshold-bp=0'
         cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -2833,7 +2833,8 @@ def test_gather_metagenome_downsample():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
-                                            '-k', '21', '--scaled', '100000'],
+                                            '-k', '21', '--scaled', '100000',
+                                            '--threshold-bp', '0'],
                                            in_directory=location)
 
         print(out)
@@ -2885,7 +2886,8 @@ def test_gather_save_matches():
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21',
-                                            '--save-matches', 'save.sigs'],
+                                            '--save-matches', 'save.sigs',
+                                            '--threshold-bp', '0'],
                                            in_directory=location)
 
         print(out)

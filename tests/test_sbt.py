@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from sourmash import load_one_signature
+from sourmash import load_one_signature, SourmashSignature
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
@@ -607,3 +607,104 @@ def test_sbt_as_index_signatures():
 
     assert sig47 in xx
     assert sig63 in xx
+
+
+def test_sbt_gather_threshold_1():
+    # test gather() method, in some detail
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+    tree.insert(sig2)
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures all have scaled=1000.
+
+    mins = list(sorted(sig2.minhash.get_mins()))
+    new_mh = sig2.minhash.copy_and_clear()
+
+    # query with empty hashes
+    assert not new_mh
+    assert not tree.gather(SourmashSignature(new_mh))
+
+    # add one hash
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 1
+
+    results = tree.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig == sig2
+    assert name is None
+
+    # check with a threshold -> should be no results.
+    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert not results
+
+    # add three more hashes => length of 4
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 4
+
+    results = tree.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig == sig2
+    assert name is None
+
+    # check with a too-high threshold -> should be no results.
+    print('len mh', len(new_mh))
+    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert not results
+
+
+def test_sbt_gather_threshold_5():
+    # test gather() method above threshold
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig2 = load_one_signature(utils.get_test_data('2.fa.sig'), ksize=31)
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'), ksize=31)
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'), ksize=31)
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+    tree.insert(sig2)
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures all have scaled=1000.
+
+    mins = list(sorted(sig2.minhash.get_mins()))
+    new_mh = sig2.minhash.copy_and_clear()
+
+    # add five hashes
+    for i in range(5):
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+
+    # should get a result with no threshold (any match at all is returned)
+    results = tree.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig == sig2
+    assert name is None
+
+    # now, check with a threshold_bp that should be meet-able.
+    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig == sig2
+    assert name is None
