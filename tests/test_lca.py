@@ -120,6 +120,7 @@ def test_find_lca_2():
 
 
 def test_api_create_search():
+    # create a database and then search for result.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
@@ -134,7 +135,7 @@ def test_api_create_search():
 
 
 def test_api_create_insert():
-    # test some internal implementation stuff
+    # test some internal implementation stuff: create & then insert a sig.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
@@ -162,7 +163,8 @@ def test_api_create_insert():
 
 
 def test_api_create_insert_ident():
-    # test some internal implementation stuff
+    # test some internal implementation stuff: signature inserted with
+    # different ident than name.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
@@ -191,8 +193,51 @@ def test_api_create_insert_ident():
     assert not lca_db.lid_to_idx
 
 
+def test_api_create_insert_two():
+    # check internal details if multiple signatures are inserted.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, ident='foo')
+    lca_db.insert(ss2, ident='bar')
+
+    ident = 'foo'
+    ident2 = 'bar'
+    assert len(lca_db.ident_to_name) == 2
+    assert ident in lca_db.ident_to_name
+    assert ident2 in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ss.name()
+    assert lca_db.ident_to_name[ident2] == ss2.name()
+
+    assert len(lca_db.ident_to_idx) == 2
+    assert lca_db.ident_to_idx[ident] == 0
+    assert lca_db.ident_to_idx[ident2] == 1
+
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+    assert len(lca_db.idx_to_ident) == 2
+    assert lca_db.idx_to_ident[0] == ident
+    assert lca_db.idx_to_ident[1] == ident2
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 2
+    assert set_of_values == { 0, 1 }
+
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+    assert not lca_db.lineage_to_lid
+    assert not lca_db.lid_to_idx
+
+
 def test_api_create_insert_w_lineage():
-    # test some internal implementation stuff
+    # test some internal implementation stuff - insert signature w/linage
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
@@ -233,6 +278,7 @@ def test_api_create_insert_w_lineage():
 
 
 def test_api_create_gather():
+    # create a database, and then run gather on it.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
@@ -264,6 +310,8 @@ def test_api_add_genome_lineage():
 
 
 def test_api_insert_update():
+    # check that cached parts of LCA_Database are updated when a new
+    # signature is inserted.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
     ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
@@ -275,7 +323,14 @@ def test_api_insert_update():
     all_mh = [ x.minhash for x in lca_db.signatures() ]
     assert ss.minhash in all_mh
 
+    # see decorator @cached_property
+    assert hasattr(lca_db, '_cache')
+    assert lca_db._cache
+    # inserting a signature should delete the cache
     lca_db.insert(ss2)
+    assert not hasattr(lca_db, '_cache')
+
+    # check that it's rebuilt etc. etc.
     all_mh = [ x.minhash for x in lca_db.signatures() ]
     assert ss.minhash in all_mh
     assert ss2.minhash in all_mh

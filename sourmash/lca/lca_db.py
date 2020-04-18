@@ -250,6 +250,9 @@ class LCA_Database(Index):
 
         Note, the "best only" hint is ignored by LCA_Database
         """
+        if not query.minhash:
+            return []
+
         # check arguments
         if 'threshold' not in kwargs:
             raise TypeError("'search' requires 'threshold'")
@@ -260,8 +263,9 @@ class LCA_Database(Index):
         if ignore_abundance:
             mh.track_abundance = False
 
+        # find all the matches, then sort & return.
         results = []
-        for x in self.find_signatures(mh, threshold, do_containment):
+        for x in self._find_signatures(mh, threshold, do_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
@@ -276,20 +280,24 @@ class LCA_Database(Index):
         results = []
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = threshold_bp / (len(query.minhash) * self.scaled)
-        for x in self.find_signatures(query.minhash, threshold,
-                                      containment=True, ignore_scaled=True):
+
+        # grab first match, if any, and return that; since _find_signatures
+        # is a generator, this will truncate further searches.
+        for x in self._find_signatures(query.minhash, threshold,
+                                       containment=True, ignore_scaled=True):
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
-                break
+            break
 
         return results
 
     def find(self, search_fn, *args, **kwargs):
-        "This cannot be implemented efficiently on an LCA database."
+        """Not implemented; 'find' cannot be implemented efficiently on
+        an LCA database."""
         raise NotImplementedError
 
-    def downsample_scaled(self, scaled):
+    def downsample_scaled(self, scaled): # @CTB test
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
         that don't fall in the required range.
@@ -361,13 +369,14 @@ class LCA_Database(Index):
         debug('=> {} signatures!', len(sigd))
         return sigd
 
-    def find_signatures(self, minhash, threshold, containment=False,
+    def _find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search.
 
         This is essentially a fast implementation of find that collects all
-        the signatures with overlapping hash values.
+        the signatures with overlapping hash values. Note that similarity
+        searches (containment=False) will not be returned in sorted order.
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:
@@ -387,7 +396,7 @@ class LCA_Database(Index):
 
         debug('number of matching signatures for hashes: {}', len(c))
 
-        # for each match, in order of highest overlap,
+        # for each match, in order of largest overlap,
         for idx, count in c.items():
             # retrieve the identifier and name
             ident = self.idx_to_ident[idx]
@@ -409,8 +418,7 @@ class LCA_Database(Index):
             debug('score: {} (containment? {}), threshold: {}',
                   score, containment, threshold)
 
-            # ...and return. NOTE that for similarity this may not be in
-            # the right sorted order @CTB.
+            # ...and return.
             if score >= threshold:
                 match_sig = sourmash.SourmashSignature(match_mh, name=name)
 
