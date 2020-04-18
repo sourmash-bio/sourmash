@@ -22,8 +22,6 @@ install:
 before_script: pip install tox-travis
 
 jobs:
-  allow_failures:
-    - name: integration (ipfs/redis)
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing

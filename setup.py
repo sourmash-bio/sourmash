@@ -83,7 +83,7 @@ SETUP_METADATA = {
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
         '10x': ['bam2fasta==1.0.1'],
-        'storage': ["ipfshttpclient", "redis"]
+        'storage': ["ipfshttpclient>=0.4.13", "redis"]
     },
     "include_package_data": True,
     "classifiers": CLASSIFIERS,
