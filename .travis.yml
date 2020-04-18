@@ -68,7 +68,7 @@ jobs:
       before_script: skip
       script:
         - python -m pip install -U pip setuptools
-        - python -m pip install cibuildwheel==1.1.0
+        - python -m pip install cibuildwheel==1.3.0
         - python -m cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
@@ -83,6 +83,19 @@ jobs:
       os: osx
       osx_image: xcode10.1
       language: shell
+    - <<: *wheel
+      os: windows
+      language: shell
+      before_install:
+        - choco install python --version 3.8.0
+        - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
+        - ln -s /c/Python38/python.exe /c/Python38/python3.exe
+    - <<: *wheel
+      arch: aarch64
+    - <<: *wheel
+      arch: ppc64le
+    - <<: *wheel
+      arch: s390x
 
 stages:
   - check
