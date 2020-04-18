@@ -7,11 +7,12 @@ import sys
 import csv
 from collections import defaultdict
 
-from .. import sourmash_args, load_signatures
-from ..logging import notify, error, debug, set_quiet
+from sourmash import sourmash_args, load_signatures
+from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
-from ..sourmash_args import DEFAULT_LOAD_K
+from .lca_db import LCA_Database
+from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
 def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
@@ -152,56 +153,12 @@ def index(args):
                                                use_headers=not args.no_headers,
                                                force=args.force)
 
-    # convert identities to numbers.
-    ident_to_idx = {}
-    idx_to_lid = {}
-
-    lid_to_lineage = {}
-    lineage_to_lid = {}
-
-    arg_d = dict(next_index=0, next_lid=0)          # hack to keep from using nonlocal
-
-    def get_ident_index(ident, fail_on_duplicate=False, arg_d=arg_d):
-        idx = ident_to_idx.get(ident)
-        if fail_on_duplicate:
-            assert idx is None     # should be no duplicate identities
-
-        if idx is None:
-            idx = arg_d['next_index']
-            arg_d['next_index'] += 1
-
-            ident_to_idx[ident] = idx
-
-        return idx
-
-    def get_lineage_id(lineage, arg_d=arg_d):
-        # lineage -> id
-        lid = lineage_to_lid.get(lineage)
-        if lid is None:
-            lid = arg_d['next_lid']
-            arg_d['next_lid'] += 1
-            
-            lineage_to_lid[lineage] = lid
-            lid_to_lineage[lid] = lineage
-
-        return lid
-
-    for (ident, lineage) in assignments.items():
-        idx = get_ident_index(ident, fail_on_duplicate=True)
-        lid = get_lineage_id(lineage)
-        
-        # index -> lineage id
-        idx_to_lid[idx] = lid
-
     notify('{} distinct identities in spreadsheet out of {} rows.',
-           len(idx_to_lid), num_rows)
+           len(assignments), num_rows)
     notify('{} distinct lineages in spreadsheet out of {} rows.',
-           len(set(idx_to_lid.values())), num_rows)
+           len(set(assignments.values())), num_rows)
 
-    # load signatures, construct index of hashvals to ident
-    hashval_to_idx = defaultdict(set)
-    md5_to_name = {}
-    ident_to_name = {}
+    db = LCA_Database(args.ksize, args.scaled)
 
 #    notify('finding signatures...')
     if args.traverse_directory:
@@ -213,6 +170,9 @@ def index(args):
     else:
         inp_files = list(args.signatures)
 
+    # track duplicates
+    md5_to_name = {}
+
     #
     # main loop, connecting lineage ID to signature.
     #
@@ -221,7 +181,7 @@ def index(args):
     total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
-    record_remnants = set(ident_to_idx.keys())
+    record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
     n_skipped = 0
@@ -232,110 +192,84 @@ def index(args):
             notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
+            # block off duplicates.
             if sig.md5sum() in md5_to_name:
                 debug('WARNING: in file {}, duplicate md5sum: {}; skipping', filename, sig.md5sum())
                 record_duplicates.add(filename)
                 continue
 
+            md5_to_name[sig.md5sum()] = sig.name()
+
+            # parse identifier, potentially with splitting
             ident = sig.name()
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 ident = ident.split(' ')[0].split('.')[0]
 
-            # store full name
-            ident_to_name[ident] = sig.name()
+            lineage = assignments.get(ident)
 
-            # store md5 -> name too
-            md5_to_name[sig.md5sum()] = sig.name()
-            
-            # remove from our list of remnant lineages
+            # punt if no lineage and --require-taxonomy
+            if lineage is None and args.require_taxonomy:
+                debug('(skipping, because --require-taxonomy was specified)')
+                n_skipped += 1
+                continue
+
+            # add the signature into the database.
+            db.insert(sig, ident=ident, lineage=lineage)
+
+            # remove from our list of remaining lineages
             try:
                 record_remnants.remove(ident)
             except KeyError:
                 # @CTB
                 pass
 
+            # track ident as used
             record_used_idents.add(ident)
 
-            # downsample to specified scaled; this has the side effect of
-            # making sure they're all at the same scaled value!
-            minhash = sig.minhash.downsample_scaled(args.scaled)
-
-            # connect hashvals to identity (and maybe lineage)
-            idx = get_ident_index(ident)
-            lid = idx_to_lid.get(idx)
-
-            lineage = None
-            if lid is not None:
-                lineage = lid_to_lineage.get(lid)
-
+            # track lineage info - either no lineage, or this lineage used.
             if lineage is None:
                 debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
             else:
                 record_used_lineages.add(lineage)
 
-            if lineage is None and args.require_taxonomy:
-                debug('(skipping, because --require-taxonomy was specified)')
-                n_skipped += 1
-                continue
-
-            for hashval in minhash.get_mins():
-                hashval_to_idx[hashval].add(idx)
+    # end main add signatures loop
 
     notify(u'\r\033[K', end=u'')
 
+    # check -- did we find any signatures?
     if n == 0:
         error('ERROR: no signatures found. ??')
         if args.traverse_directory and not args.force:
             error('(note, with --traverse-directory, you may want to use -f)')
         sys.exit(1)
 
-    if not hashval_to_idx:
+    # check -- did the signatures we found have any hashes?
+    if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
 
+    # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
            len(record_used_lineages), len(set(assignments.values())))
     unused_lineages = set(assignments.values()) - record_used_lineages
 
     notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
            len(record_used_idents), len(set(assignments)))
-
-    # remove unused identifiers
     unused_identifiers = set(assignments) - record_used_idents
-    for ident in unused_identifiers:
-        assert ident not in ident_to_name
-        idx = get_ident_index(ident)
-        del ident_to_idx[ident]
-        if idx in idx_to_lid:
-            del idx_to_lid[idx]
-
-    # remove unusued lineages and lids
-    for lineage in unused_lineages:
-        lid = lineage_to_lid[lineage]
-        del lineage_to_lid[lineage]
-        del lid_to_lineage[lid]
 
     # now, save!
     db_outfile = args.lca_db_out
     if not (db_outfile.endswith('.lca.json') or \
-                db_outfile.endswith('.lca.json.gz')):
+                db_outfile.endswith('.lca.json.gz')):   # logic -> db.save
         db_outfile += '.lca.json'
     notify('saving to LCA DB: {}'.format(db_outfile))
 
-    db = lca_utils.LCA_Database()
-    db.ident_to_name = ident_to_name
-    db.ident_to_idx = ident_to_idx
-    db.idx_to_lid = idx_to_lid
-    db.lineage_to_lid = lineage_to_lid
-    db.lid_to_lineage = lid_to_lineage
-    db.hashval_to_idx = hashval_to_idx
-
-    db.ksize = int(args.ksize)
-    db.scaled = int(args.scaled)
-
     db.save(db_outfile)
 
+    ## done!
+
+    # output a record of stuff if requested/available:
     if record_duplicates or record_no_lineage or record_remnants or unused_lineages:
         if record_duplicates:
             notify('WARNING: {} duplicate signatures.', len(record_duplicates))
