@@ -1,4 +1,4 @@
-"""search a signature against a list of signatures"""
+"""search a signature against other signatures"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
