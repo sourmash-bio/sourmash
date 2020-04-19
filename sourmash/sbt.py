@@ -57,7 +57,6 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
-from deprecation import deprecated
 import khmer
 
 try:
@@ -138,6 +137,20 @@ class SBT(Index):
         for k in self.leaves():
             yield k.data
 
+    def select(self, ksize=None, moltype=None):
+        first_sig = next(iter(self.signatures()))
+
+        ok = True
+        if ksize is not None and first_sig.minhash.ksize != ksize:
+            ok = False
+        if moltype is not None and first_sig.moltype != moltype:
+            ok = False
+
+        if ok:
+            return self
+
+        raise ValueError("cannot select SBT on ksize {} / moltype {}".format(ksize, moltype))
+
     def new_node_pos(self, node):
         if not self._nodes:
             self.next_node = 1
@@ -169,7 +182,7 @@ class SBT(Index):
         "Add a new SourmashSignature in to the SBT."
         from .sbtmh import SigLeaf
         
-        leaf = SigLeaf(signature.name(), signature)
+        leaf = SigLeaf(signature.md5sum(), signature)
         self.add_node(leaf)
 
     def add_node(self, node):
@@ -317,6 +330,10 @@ class SBT(Index):
 
     def gather(self, query, *args, **kwargs):
         from .sbtmh import GatherMinHashes
+
+        if not query.minhash:             # empty query? quit.
+            return []
+
         # use a tree search function that keeps track of its best match.
         search_fn = GatherMinHashes().search
 
@@ -327,14 +344,29 @@ class SBT(Index):
         scaled = tree_mh.scaled
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * scaled)
+        threshold = 0.0
 
+        # are we setting a threshold?
+        if threshold_bp:
+            # if we have a threshold_bp of N, then that amounts to N/scaled
+            # hashes:
+            n_threshold_hashes = threshold_bp / scaled
+
+            # that then requires the following containment:
+            threshold = n_threshold_hashes / len(query.minhash)
+
+            # is it too high to ever match? if so, exit.
+            if threshold > 1.0:
+                return []
+
+        # actually do search!
         results = []
-        for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
-            leaf_e = leaf.data.minhash
-            similarity = query.minhash.containment_ignore_maxhash(leaf_e)
-            if similarity > 0.0:
-                results.append((similarity, leaf.data, None))
+        for leaf in self.find(search_fn, query, threshold,
+                              unload_data=unload_data):
+            leaf_mh = leaf.data.minhash
+            containment = query.minhash.contained_by(leaf_mh, True)
+            if containment >= threshold:
+                results.append((containment, leaf.data, None))
 
         return results
 

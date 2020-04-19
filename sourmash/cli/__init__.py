@@ -34,6 +34,7 @@ from . import watch
 # Subcommand groups
 from . import lca
 from . import sig
+from . import signature
 from . import storage
 
 
@@ -94,6 +95,9 @@ def get_parser():
         'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
     }
+    alias = {
+        "sig": "signature"
+    }
     expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
@@ -107,9 +111,13 @@ def get_parser():
     cmd_group_dirs = next(os.walk(clidir))[1]
     cmd_group_dirs = filter(utils.opfilter, cmd_group_dirs)
     cmd_group_dirs = sorted(cmd_group_dirs)
-    for dirpath in cmd_group_dirs:
+
+    cmd_group_usage = [cmd for cmd in cmd_group_dirs if cmd not in alias.values()]
+    for dirpath in cmd_group_usage:
         usage += '\n    ' + module_descs[dirpath] + '\n'
         usage += '        sourmash {gd:s} --help\n'.format(gd=dirpath)
+        if dirpath in alias:
+            usage += '        sourmash {gd:s} --help\n'.format(gd=alias[dirpath])
 
     desc = 'Compute, compare, manipulate, and analyze MinHash sketches of DNA sequences.\n\nUsage instructions:\n' + usage
     parser = SourmashParser(prog='sourmash', description=desc, formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)

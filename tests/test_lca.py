@@ -14,6 +14,7 @@ import pytest
 
 from . import sourmash_tst_utils as utils
 import sourmash
+from sourmash import load_one_signature, SourmashSignature
 
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import *
@@ -119,6 +120,284 @@ def test_find_lca_2():
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
+def test_api_create_search():
+    # create a database and then search for result.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    results = lca_db.search(ss, threshold=0.0)
+    print(results)
+    assert len(results) == 1
+    (similarity, match, filename) = results[0]
+    assert match.minhash == ss.minhash
+
+
+def test_api_create_insert():
+    # test some internal implementation stuff: create & then insert a sig.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    ident = ss.name()
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ident
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+    
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+
+
+def test_api_create_insert_ident():
+    # test some internal implementation stuff: signature inserted with
+    # different ident than name.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, ident='foo')
+
+    ident = 'foo'
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ss.name()
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+    
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+    assert not lca_db.lineage_to_lid
+    assert not lca_db.lid_to_idx
+
+
+def test_api_create_insert_two():
+    # check internal details if multiple signatures are inserted.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, ident='foo')
+    lca_db.insert(ss2, ident='bar')
+
+    ident = 'foo'
+    ident2 = 'bar'
+    assert len(lca_db.ident_to_name) == 2
+    assert ident in lca_db.ident_to_name
+    assert ident2 in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ss.name()
+    assert lca_db.ident_to_name[ident2] == ss2.name()
+
+    assert len(lca_db.ident_to_idx) == 2
+    assert lca_db.ident_to_idx[ident] == 0
+    assert lca_db.ident_to_idx[ident2] == 1
+
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+    assert len(lca_db.idx_to_ident) == 2
+    assert lca_db.idx_to_ident[0] == ident
+    assert lca_db.idx_to_ident[1] == ident2
+
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 2
+    assert set_of_values == { 0, 1 }
+
+    assert not lca_db.idx_to_lid          # no lineage added
+    assert not lca_db.lid_to_lineage      # no lineage added
+    assert not lca_db.lineage_to_lid
+    assert not lca_db.lid_to_idx
+
+
+def test_api_create_insert_w_lineage():
+    # test some internal implementation stuff - insert signature w/linage
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lineage = ((LineagePair('rank1', 'name1'),
+               (LineagePair('rank2', 'name2'))))
+    
+    lca_db.insert(ss, lineage=lineage)
+
+    # basic ident stuff
+    ident = ss.name()
+    assert len(lca_db.ident_to_name) == 1
+    assert ident in lca_db.ident_to_name
+    assert lca_db.ident_to_name[ident] == ident
+    assert len(lca_db.ident_to_idx) == 1
+    assert lca_db.ident_to_idx[ident] == 0
+    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
+    assert len(lca_db.idx_to_ident) == 1
+    assert lca_db.idx_to_ident[0] == ident
+
+    # all hash values added
+    set_of_values = set()
+    for vv in lca_db.hashval_to_idx.values():
+        set_of_values.update(vv)
+    assert len(set_of_values) == 1
+    assert set_of_values == { 0 }
+
+    # check lineage stuff
+    assert len(lca_db.idx_to_lid) == 1
+    assert lca_db.idx_to_lid[0] == 0
+    assert len(lca_db.lid_to_lineage) == 1
+    assert lca_db.lid_to_lineage[0] == lineage
+    assert lca_db.lid_to_idx[0] == { 0 }
+
+    assert len(lca_db.lineage_to_lids) == 1
+    assert len(lca_db.lineage_to_lids[lineage]) == 1
+    assert lca_db.lineage_to_lids[lineage] == { 0 }
+
+
+def test_api_create_gather():
+    # create a database, and then run gather on it.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    results = lca_db.gather(ss, threshold_bp=0)
+    print(results)
+    assert len(results) == 1
+    (similarity, match, filename) = results[0]
+    assert match.minhash == ss.minhash
+
+
+def test_api_add_genome_lineage():
+    # LCA_Databases can store/retrieve arbitrary lineages/taxonomies.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    lineage = ((LineagePair('rank1', 'name1'),
+               (LineagePair('rank2', 'name2'))))
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss, lineage=lineage)
+
+    somehash = next(iter(ss.minhash.get_mins()))
+
+    lineages = lca_db.get_lineage_assignments(somehash)
+    assert len(lineages) == 1
+    assert lineage in lineages
+
+
+def test_api_insert_update():
+    # check that cached parts of LCA_Database are updated when a new
+    # signature is inserted.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    all_mh = [ x.minhash for x in lca_db.signatures() ]
+    assert ss.minhash in all_mh
+
+    # see decorator @cached_property
+    assert hasattr(lca_db, '_cache')
+    assert lca_db._cache
+    # inserting a signature should delete the cache
+    lca_db.insert(ss2)
+    assert not hasattr(lca_db, '_cache')
+
+    # check that it's rebuilt etc. etc.
+    all_mh = [ x.minhash for x in lca_db.signatures() ]
+    assert ss.minhash in all_mh
+    assert ss2.minhash in all_mh
+
+
+def test_api_insert_retrieve_check_name():
+    # check that signatures retrieved from LCA_Database objects have the
+    # right name.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    sigs = list(lca_db.signatures())
+    assert len(sigs) == 1
+    retrieved_sig = sigs[0]
+    assert retrieved_sig.name() == ss.name()
+    assert retrieved_sig.minhash == ss.minhash
+
+
+def test_api_create_insert_two_then_scale():
+    # construct database, THEN downsample
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+    lca_db.insert(ss2)
+
+    # downsample everything to 5000
+    lca_db.downsample_scaled(5000)
+
+    ss.minhash = ss.minhash.downsample_scaled(5000)
+    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+
+    # & check...
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+
+def test_api_create_insert_scale_two():
+    # downsample while constructing database
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+
+    # downsample to 5000 while inserting:
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
+    lca_db.insert(ss)
+    lca_db.insert(ss2)
+
+    # downsample sigs to 5000
+    ss.minhash = ss.minhash.downsample_scaled(5000)
+    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+
+    # & check...
+    combined_mins = set(ss.minhash.get_mins())
+    combined_mins.update(set(ss2.minhash.get_mins()))
+    assert len(lca_db.hashval_to_idx) == len(combined_mins)
+
+
 def test_load_single_db():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
@@ -155,17 +434,6 @@ def test_lca_index_signatures_method():
 
     siglist = list(db.signatures())
     assert len(siglist) == 2
-
-
-def test_lca_index_insert_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.insert(sig)
 
 
 def test_lca_index_find_method():
@@ -551,6 +819,25 @@ def test_single_classify():
         assert 'loaded 1 LCA databases' in err
 
 
+def test_single_classify_to_output():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
+               '-o', 'outfile.txt']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open('outfile.txt', 'rt').read()
+        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 LCA databases' in err
+
+
 def test_single_classify_empty():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/both.lca.json')
@@ -822,6 +1109,50 @@ def test_single_summarize():
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
 
 
+def test_single_summarize_singleton():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+               '--singleton']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+        # --singleton adds info about signature filename, md5, and signature name
+        assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
+
+
+def test_single_summarize_to_output():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
+               '-o', 'output.txt']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open('output.txt', 'rt').read()
+
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
+
+
 def test_single_summarize_scaled():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
@@ -884,6 +1215,62 @@ def test_multi_summarize_with_unassigned():
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
+        assert not out_lines
+
+
+def test_multi_summarize_with_unassigned_singleton():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               input_sig2, '--singleton']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert 'loaded 2 signatures from 2 files total.' in err
+
+        out_lines = out.splitlines()
+        def remove_line_startswith(x, check=None):
+           for line in out_lines:
+               if line.startswith(x):
+                   out_lines.remove(line)
+                   if check:
+                       # make sure the check value is in there
+                       assert check in line
+                   return line
+           assert 0, "couldn't find {}".format(x)
+
+        # note, proportions/percentages are now per-file
+        remove_line_startswith('100.0%   200   Bacteria ', 'TARA_ASE_MAG_00031.sig:5b438c6c')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta ')
+        remove_line_startswith('100.0%  1231   Eukaryota ', 'TARA_PSW_MAG_00136.sig:db50b713')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria ')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae ')
+        remove_line_startswith('100.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned ')
+        remove_line_startswith('100.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus ')
         assert not out_lines
 
 
@@ -1239,3 +1626,121 @@ def test_incompat_lca_db_ksize(c):
         c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
 
     assert '0 signatures matching ksize and molecule type;' in str(e.value)
+
+
+@utils.in_tempdir
+def test_lca_gather_threshold_1(c):
+    # test gather() method, in some detail; see same tests for sbt.
+    sig2file = utils.get_test_data('2.fa.sig')
+    sig47file = utils.get_test_data('47.fa.sig')
+    sig63file = utils.get_test_data('63.fa.sig')
+
+    sig2 = load_one_signature(sig2file, ksize=31)
+    sig47 = load_one_signature(sig47file, ksize=31)
+    sig63 = load_one_signature(sig63file, ksize=31)
+
+    # create an empty spreadsheet
+    with open(c.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
+                   sig2file, sig47file, sig63file, '--scaled', '1000')
+
+
+    lca_db_filename = c.output('xxx.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures all have scaled=1000.
+
+    mins = list(sorted(sig2.minhash.get_mins()))
+    new_mh = sig2.minhash.copy_and_clear()
+
+    # query with empty hashes
+    assert not new_mh
+    assert not db.gather(SourmashSignature(new_mh))
+
+    # add one hash
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 1
+
+    results = db.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == sig2.minhash
+    assert name == lca_db_filename
+
+    # check with a threshold -> should be no results.
+    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert not results
+
+    # add three more hashes => length of 4
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    new_mh.add_hash(mins.pop())
+    assert len(new_mh) == 4
+
+    results = db.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == sig2.minhash
+    assert name == lca_db_filename
+
+    # check with a too-high threshold -> should be no results.
+    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert not results
+
+
+@utils.in_tempdir
+def test_lca_gather_threshold_5(c):
+    # test gather() method, in some detail; see same tests for sbt.
+    sig2file = utils.get_test_data('2.fa.sig')
+    sig47file = utils.get_test_data('47.fa.sig')
+    sig63file = utils.get_test_data('63.fa.sig')
+
+    sig2 = load_one_signature(sig2file, ksize=31)
+    sig47 = load_one_signature(sig47file, ksize=31)
+    sig63 = load_one_signature(sig63file, ksize=31)
+
+    # create an empty spreadsheet
+    with open(c.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
+                   sig2file, sig47file, sig63file, '--scaled', '1000')
+
+
+    lca_db_filename = c.output('xxx.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+
+    # now construct query signatures with specific numbers of hashes --
+    # note, these signatures both have scaled=1000.
+
+    mins = list(sorted(sig2.minhash.get_mins()))
+    new_mh = sig2.minhash.copy_and_clear()
+
+    # add five hashes
+    for i in range(5):
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+        new_mh.add_hash(mins.pop())
+
+    # should get a result with no threshold (any match at all is returned)
+    results = db.gather(SourmashSignature(new_mh))
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == sig2.minhash
+    assert name == lca_db_filename
+
+    # now, check with a threshold_bp that should be meet-able.
+    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == sig2.minhash
+    assert name == lca_db_filename

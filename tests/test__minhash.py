@@ -36,6 +36,7 @@
 from __future__ import print_function
 from __future__ import absolute_import, unicode_literals
 
+import itertools
 import pickle
 import math
 
@@ -64,6 +65,8 @@ from . import sourmash_tst_utils as utils
 def test_basic_dna(track_abundance):
     # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
     mh = MinHash(1, 4, track_abundance=track_abundance)
+    assert mh.moltype == 'DNA'
+
     mh.add_sequence('ATGC')
     a = mh.get_mins()
 
@@ -115,7 +118,14 @@ def test_bytes_dna(track_abundance):
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False,
+                 track_abundance=track_abundance)
+
+    expected_moltype = 'protein'
+    if dayhoff:
+        expected_moltype = 'dayhoff'
+    assert mh.moltype == expected_moltype
+
     mh.add_protein('AGYYG')
     mh.add_protein('AGYYG')
     mh.add_protein(b'AGYYG')
@@ -134,6 +144,11 @@ def test_protein_dayhoff(track_abundance, dayhoff):
 def test_bytes_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
     mh = MinHash(10, 6, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    expected_moltype = 'protein'
+    if hp:
+        expected_moltype = 'hp'
+    assert mh.moltype == expected_moltype
+
     mh.add_protein('AGYYG')
     mh.add_protein(u'AGYYG')
     mh.add_protein(b'AGYYG')
@@ -158,6 +173,8 @@ def test_protein_hp(track_abundance, hp):
 def test_translate_codon(track_abundance):
     # Ensure that translation occurs properly
     mh = MinHash(10, 6, is_protein=True)
+    assert mh.moltype == 'protein'
+
     assert "S" == mh.translate_codon('TCT')
     assert "S" == mh.translate_codon('TC')
     assert "X" == mh.translate_codon("T")
@@ -186,6 +203,8 @@ def test_hp(track_abundance):
     # verify that we can hash to hp-encoded protein/aa sequences
     mh_hp = MinHash(10, 6, is_protein=True,
                     dayhoff=False, hp=True, track_abundance=track_abundance)
+    assert mh_hp.moltype == 'hp'
+
     mh_hp.add_sequence('ACTGAC')
 
     assert len(mh_hp.get_mins()) == 2
@@ -541,6 +560,8 @@ def test_intersection_errors(track_abundance):
         a.intersection(c)
 
 
+# this filter doesn't work, but leaving it in pour encourages les autres.
+@pytest.mark.filterwarnings("ignore")
 def test_intersection_1(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
@@ -696,7 +717,7 @@ def test_mh_downsample_n_error(track_abundance):
         a.downsample_n(30)
 
 
-def test_mh_asymmetric(track_abundance):
+def test_mh_jaccard_asymmetric_num(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -1093,7 +1114,8 @@ def test_set_abundance():
 
 
 def test_set_abundance_2():
-    sig = sourmash.load_one_signature(utils.get_test_data("genome-s12.fa.gz.sig"),
+    datapath = utils.get_test_data("genome-s12.fa.gz.sig")
+    sig = sourmash.load_one_signature(datapath,
                                       ksize=30,
                                       select_moltype='dna')
     new_mh = sig.minhash.copy_and_clear()
@@ -1136,6 +1158,14 @@ def test_reviving_minhash():
 
     for m in mins:
         mh.add_hash(m)
+
+
+def test_set_abundance_num():
+    a = MinHash(2, 10, track_abundance=True)
+
+    a.set_abundances({1: 3, 2: 4})
+
+    assert a.get_mins(with_abundance=True) == {1: 3, 2: 4}
 
 
 def test_mh_copy_and_clear(track_abundance):
@@ -1355,3 +1385,13 @@ def test_add_many(track_abundance):
 
     assert len(b) == 50
     assert a == b
+
+
+def test_set_abundances_huge():
+    max_hash = 4000000
+    a = MinHash(0, 10, track_abundance=True, max_hash=max_hash)
+
+    hashes = list(range(max_hash))
+    abundances = itertools.repeat(2)
+
+    a.set_abundances(dict(zip(hashes, abundances)))

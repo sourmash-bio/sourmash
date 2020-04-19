@@ -1,4 +1,30 @@
-"""compute genome signatures"""
+"""compute sequence signatures for inputs"""
+
+usage="""
+
+   sourmash compute -k 21,31,51 *.fa *.fq
+
+Create MinHash sketches at k-mer sizes of 21, 31 and 51, for
+all FASTA and FASTQ files in the current directory, and save them in
+signature files ending in '.sig'. You can rapidly compare these files
+with `compare` and query them with `search`, among other operations;
+see the full documentation at http://sourmash.rtfd.io/.
+
+The key options for compute are:
+
+ * `-k/--ksize <int>[, <int>]: k-mer size(s) to use, e.g. -k 21,31,51
+ * `-n/--num <int>` or `--scaled <int>`: set size or resolution of sketches
+ * `--track-abundance`: track abundances of hashes (default False)
+ * `--dna or --protein`: nucleotide and/or protein signatures (default `--dna`)
+ * `--merge <name>`: compute a merged signature across all inputs.
+ * `--singleton`: compute individual signatures for each sequence.
+ * `--name-from-first`: set name of signature from first sequence in file.
+ * `-o/--output`: save all computed signatures to this file.
+
+Please see -h for all of the options as well as more detailed help.
+
+---
+"""
 
 from argparse import FileType
 
@@ -18,7 +44,7 @@ def ksize_parser(ksizes):
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('compute')
+    subparser = subparsers.add_parser('compute', description=__doc__, usage=usage)
 
     sketch_args = subparser.add_argument_group('Sketching options')
     sketch_args.add_argument(
@@ -97,6 +123,9 @@ def subparser(subparsers):
     file_args.add_argument(
         '-o', '--output',
         help='output computed signatures to this file'
+    )
+    file_args.add_argument(
+        '--outdir', help='output computed signatures to this directory'
     )
     file_args.add_argument(
         '--singleton', action='store_true',

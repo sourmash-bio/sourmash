@@ -17,7 +17,7 @@ To install all of the necessary Python dependencies, do:
 ```
 pip install -r requirements.txt
 ```
-Briefly, we use `py.test` for testing, and `coverage` for code
+Briefly, we use `py.test` and `cargo test` for testing, and `coverage` for code
 coverage analysis.
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
@@ -28,8 +28,18 @@ python -m virtualenv dev
 pip install -e .
 ```
 
-You can run tests by invoking `make test` or `python -m pytest` in the sourmash
-directory.
+You can run tests by invoking `make test` in the sourmash directory;
+`python -m pytest` will run the Python tests, and `cargo test` will
+run the Rust tests.
+
+### If you're having trouble installing or using the development environment
+
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash._minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+
+```
+make clean
+```
+
 
 ## Automated tests and code coverage calculation
 
