@@ -1,5 +1,6 @@
 "An Abstract Base Class for collections of signatures."
 
+from __future__ import division
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
@@ -86,10 +87,34 @@ class Index(ABC):
 
     def gather(self, query, *args, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
+        if not query.minhash:             # empty query? quit.
+            return []
+
+        scaled = query.minhash.scaled
+        if not scaled:
+            raise ValueError('gather requires scaled signatures')
+
+        threshold_bp = kwargs.get('threshold_bp', 0.0)
+        threshold = 0.0
+
+        # are we setting a threshold?
+        if threshold_bp:
+            # if we have a threshold_bp of N, then that amounts to N/scaled
+            # hashes:
+            n_threshold_hashes = float(threshold_bp) / scaled
+
+            # that then requires the following containment:
+            threshold = n_threshold_hashes / len(query.minhash)
+
+            # is it too high to ever match? if so, exit.
+            if threshold > 1.0:
+                return []
+
+        # actually do search!
         results = []
         for ss in self.signatures():
             cont = query.minhash.contained_by(ss.minhash, True)
-            if cont:
+            if cont and cont >= threshold:
                 results.append((cont, ss, self.filename))
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].name()))

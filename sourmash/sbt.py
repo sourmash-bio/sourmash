@@ -330,6 +330,10 @@ class SBT(Index):
 
     def gather(self, query, *args, **kwargs):
         from .sbtmh import GatherMinHashes
+
+        if not query.minhash:             # empty query? quit.
+            return []
+
         # use a tree search function that keeps track of its best match.
         search_fn = GatherMinHashes().search
 
@@ -340,14 +344,29 @@ class SBT(Index):
         scaled = tree_mh.scaled
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * scaled)
+        threshold = 0.0
 
+        # are we setting a threshold?
+        if threshold_bp:
+            # if we have a threshold_bp of N, then that amounts to N/scaled
+            # hashes:
+            n_threshold_hashes = threshold_bp / scaled
+
+            # that then requires the following containment:
+            threshold = n_threshold_hashes / len(query.minhash)
+
+            # is it too high to ever match? if so, exit.
+            if threshold > 1.0:
+                return []
+
+        # actually do search!
         results = []
-        for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
-            leaf_e = leaf.data.minhash
-            similarity = query.minhash.contained_by(leaf_e, True)
-            if similarity > 0.0:
-                results.append((similarity, leaf.data, None))
+        for leaf in self.find(search_fn, query, threshold,
+                              unload_data=unload_data):
+            leaf_mh = leaf.data.minhash
+            containment = query.minhash.contained_by(leaf_mh, True)
+            if containment >= threshold:
+                results.append((containment, leaf.data, None))
 
         return results
 

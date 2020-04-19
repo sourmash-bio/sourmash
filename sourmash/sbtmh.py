@@ -177,7 +177,6 @@ class GatherMinHashes(object):
         self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
-        score = 0
         if not len(query.minhash):
             return 0
 
@@ -187,6 +186,9 @@ class GatherMinHashes(object):
             mins = query.minhash.get_mins()
             get = node.data.get
             matches = sum(1 for value in mins if get(value))
+
+        if not matches:
+            return 0
 
         score = float(matches) / len(query.minhash)
 
