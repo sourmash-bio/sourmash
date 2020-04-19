@@ -133,6 +133,19 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield SourmashSignature(v)    # @CTB check names?
 
+    def select(self, ksize=None, moltype=None):
+        "Selector interface - make sure this database matches requirements."
+        ok = True
+        if ksize is not None and self.ksize != ksize:
+            ok = False
+        if moltype is not None and moltype != 'DNA':
+            ok = False
+
+        if ok:
+            return self
+
+        raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
+
     @classmethod
     def load(cls, db_name):
         "Load LCA_Database from a JSON file."
