@@ -9,7 +9,7 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs
+from .compare import compare_all_pairs, compare_serial_containment
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
@@ -111,6 +111,17 @@ def compare(args):
         error('cannot mix scaled signatures with bounded signatures')
         sys.exit(-1)
 
+    # complain if --containment and not is_scaled
+    if args.containment and not is_scaled:
+        error('must use scaled signatures with --containment option')
+        sys.exit(-1)
+
+    # notify about implicit --ignore-abundance:
+    if args.containment:
+        track_abundances = any(( s.minhash.track_abundance for s in siglist ))
+        if track_abundances:
+            notify('NOTE: --containment means signature abundances are flattened.')
+
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
     if is_scaled:
@@ -134,8 +145,12 @@ def compare(args):
     # do all-by-all calculation
 
     labeltext = [item.name() for item in siglist]
-    similarity = compare_all_pairs(siglist, args.ignore_abundance,
-                                   n_jobs=args.processes)
+    if args.containment:
+        similarity = compare_serial_containment(siglist)
+    else:
+        similarity = compare_all_pairs(siglist, args.ignore_abundance,
+                                       n_jobs=args.processes)
+
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
@@ -152,7 +167,7 @@ def compare(args):
         with open(labeloutname, 'w') as fp:
             fp.write("\n".join(labeltext))
 
-        notify('saving distance matrix to: {}', args.output)
+        notify('saving comparison matrix to: {}', args.output)
         with open(args.output, 'wb') as fp:
             numpy.save(fp, similarity)
 
@@ -660,7 +675,8 @@ def gather(args):
     if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
+                      'average_abund', 'median_abund', 'std_abund', 'name',
+                      'filename', 'md5', 'f_match_orig']
 
         with FileOutput(args.output, 'wt') as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -796,8 +812,9 @@ def multigather(args):
         output_csv = output_base + '.csv'
 
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                  'f_unique_to_query', 'f_unique_weighted',
-                  'average_abund', 'median_abund', 'std_abund', 'name', 'filename', 'md5']
+                      'f_unique_to_query', 'f_unique_weighted',
+                      'average_abund', 'median_abund', 'std_abund', 'name',
+                      'filename', 'md5', 'f_match_orig']
         with open(output_csv, 'wt') as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
