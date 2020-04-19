@@ -131,7 +131,7 @@ class LCA_Database(Index):
         "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
         for v in self._signatures.values():
-            yield SourmashSignature(v)    # @CTB check names?
+            yield v
 
     @classmethod
     def load(cls, db_name):
@@ -339,8 +339,8 @@ class LCA_Database(Index):
 
     @cached_property
     def _signatures(self):
-        "Create a _signatures member dictionary that contains {idx: minhash}."
-        from sourmash import MinHash
+        "Create a _signatures member dictionary that contains {idx: sigobj}."
+        from sourmash import MinHash, SourmashSignature
 
         # CTB: if we wanted to support protein/other minhashes, do it here.
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
@@ -371,8 +371,14 @@ class LCA_Database(Index):
         for sig, vals in temp_vals.items():
             mhd[sig].add_many(vals)
 
-        debug('=> {} signatures!', len(mhd))
-        return mhd
+        sigd = {}
+        for idx, mh in mhd.items():
+            ident = self.idx_to_ident[idx]
+            name = self.ident_to_name[ident]
+            sigd[idx] = SourmashSignature(mh, name=name)
+
+        debug('=> {} signatures!', len(sigd))
+        return sigd
 
     def _find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
@@ -411,7 +417,8 @@ class LCA_Database(Index):
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
-            match_mh = self._signatures[idx]
+            match_sig = self._signatures[idx]
+            match_mh = match_sig.minhash
             match_size = len(match_mh)
 
             debug('count: {}; query_mins: {}; match size: {}',
@@ -428,8 +435,6 @@ class LCA_Database(Index):
 
             # ...and return.
             if score >= threshold:
-                match_sig = sourmash.SourmashSignature(match_mh, name=name)
-
                 yield score, match_sig, self.filename
 
     @cached_property
