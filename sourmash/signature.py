@@ -191,9 +191,10 @@ def load_signatures(
 ):
     """Load a JSON string with signatures into classes.
 
-    Returns list of SourmashSignature objects.
+    Returns list of SourmashSignature objects.  Note, the order is not
+    necessarily the same as what is in the source file.
 
-    Note, the order is not necessarily the same as what is in the source file.
+    Here, `data` is either a file handle, a filename, or a JSON string.
     """
     if ksize:
         ksize = int(ksize)
@@ -297,6 +298,11 @@ def load_signatures(
 
 
 def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=False):
+    """
+    Load exactly one signature (or raise a ValueError).
+
+    Here, `data` is either a file handle, a filename, or a JSON string.
+    """
     sigiter = load_signatures(
         data, ksize=ksize, select_moltype=select_moltype, ignore_md5sum=ignore_md5sum
     )
@@ -315,7 +321,17 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
 
 
 def save_signatures(siglist, fp=None):
-    "Save multiple signatures into a JSON string (or into file handle 'fp')"
+    """\
+    Save multiple signatures into a JSON string (or into file handle 'fp')
+
+    Example:
+
+    ```
+    with open('output.sig', 'wt') as fp:
+         save_signatures([list_of_sig_objects], fp)
+    ```
+    
+    """
     attached_refs = weakref.WeakKeyDictionary()
     collected = []
     for obj in siglist:
