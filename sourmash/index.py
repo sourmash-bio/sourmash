@@ -101,7 +101,7 @@ class Index(ABC):
         if threshold_bp:
             # if we have a threshold_bp of N, then that amounts to N/scaled
             # hashes:
-            n_threshold_hashes = threshold_bp / scaled
+            n_threshold_hashes = float(threshold_bp) / scaled
 
             # that then requires the following containment:
             threshold = n_threshold_hashes / len(query.minhash)
