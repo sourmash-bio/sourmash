@@ -131,7 +131,7 @@ class LCA_Database(Index):
         "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
         for v in self._signatures.values():
-            yield SourmashSignature(v)    # @CTB check names?
+            yield v
 
     def select(self, ksize=None, moltype=None):
         "Selector interface - make sure this database matches requirements."
@@ -352,36 +352,43 @@ class LCA_Database(Index):
 
     @cached_property
     def _signatures(self):
-        "Create a _signatures member dictionary that contains {idx: minhash}."
-        from sourmash import MinHash
+        "Create a _signatures member dictionary that contains {idx: sigobj}."
+        from sourmash import MinHash, SourmashSignature
 
         # CTB: if we wanted to support protein/other minhashes, do it here.
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
 
         debug('creating signatures for LCA DB...')
-        sigd = defaultdict(minhash.copy_and_clear)
+        mhd = defaultdict(minhash.copy_and_clear)
         temp_vals = defaultdict(list)
 
-        for (k, v) in self.hashval_to_idx.items():
-            for vv in v:
-                temp_hashes = temp_vals[vv]
-                temp_hashes.append(k)
+        # invert the hashval_to_idx dictionary
+        for (hashval, idlist) in self.hashval_to_idx.items():
+            for idx in idlist:
+                temp_hashes = temp_vals[idx]
+                temp_hashes.append(hashval)
 
                 # 50 is an arbitrary number. If you really want
                 # to micro-optimize, list is resized and grow in this pattern:
                 # 0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
                 # (from https://github.com/python/cpython/blob/b2b4a51f7463a0392456f7772f33223e57fa4ccc/Objects/listobject.c#L57)
                 if len(temp_hashes) > 50:
-                    sigd[vv].add_many(temp_hashes)
+                    mhd[idx].add_many(temp_hashes)
 
                     # Sigh, python 2... when it goes away,
                     # we can do `temp_hashes.clear()` instead.
-                    del temp_vals[vv]
+                    del temp_vals[idx]
 
         # We loop temp_vals again to add any remainder hashes
         # (each list of hashes is smaller than 50 items)
         for sig, vals in temp_vals.items():
-            sigd[sig].add_many(vals)
+            mhd[sig].add_many(vals)
+
+        sigd = {}
+        for idx, mh in mhd.items():
+            ident = self.idx_to_ident[idx]
+            name = self.ident_to_name[ident]
+            sigd[idx] = SourmashSignature(mh, name=name)
 
         debug('=> {} signatures!', len(sigd))
         return sigd
@@ -415,15 +422,12 @@ class LCA_Database(Index):
 
         # for each match, in order of largest overlap,
         for idx, count in c.items():
-            # retrieve the identifier and name
-            ident = self.idx_to_ident[idx]
-            name = self.ident_to_name[ident]
-
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
-            match_mh = self._signatures[idx]
+            match_sig = self._signatures[idx]
+            match_mh = match_sig.minhash
             match_size = len(match_mh)
 
             debug('count: {}; query_mins: {}; match size: {}',
@@ -440,8 +444,6 @@ class LCA_Database(Index):
 
             # ...and return.
             if score >= threshold:
-                match_sig = sourmash.SourmashSignature(match_mh, name=name)
-
                 yield score, match_sig, self.filename
 
     @cached_property
