@@ -422,10 +422,6 @@ class LCA_Database(Index):
 
         # for each match, in order of largest overlap,
         for idx, count in c.items():
-            # retrieve the identifier and name
-            ident = self.idx_to_ident[idx]
-            name = self.ident_to_name[ident]
-
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
