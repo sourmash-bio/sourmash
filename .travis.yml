@@ -25,22 +25,20 @@ jobs:
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
-      python: 3.7
+      python: 3.8
       env:
         - PYTHONDEVMODE=1
 
     - &test
       stage: test
-      python: 3.6
+      python: 3.7
     - <<: *test
       os: osx
       osx_image: xcode10.1
-      python: 3.7
       language: generic
       env:
         - TOXENV=py37
     - <<: *test
-      python: 3.7
       name: integration (ipfs/redis)
       before_install:
         - sudo snap install ipfs
@@ -49,6 +47,8 @@ jobs:
       services:
         - redis
         - docker
+    - <<: *test
+      python: 3.6
     - <<: *test
       python: 3.5
     - <<: *test
