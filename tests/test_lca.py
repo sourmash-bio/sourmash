@@ -337,6 +337,22 @@ def test_api_insert_update():
     assert ss2.minhash in all_mh
 
 
+def test_api_insert_retrieve_check_name():
+    # check that signatures retrieved from LCA_Database objects have the
+    # right name.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss)
+
+    sigs = list(lca_db.signatures())
+    assert len(sigs) == 1
+    retrieved_sig = sigs[0]
+    assert retrieved_sig.name() == ss.name()
+    assert retrieved_sig.minhash == ss.minhash
+
+
 def test_api_create_insert_two_then_scale():
     # construct database, THEN downsample
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
