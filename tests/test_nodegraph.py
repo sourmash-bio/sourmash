@@ -44,6 +44,10 @@ def test_nodegraph_khmer_compare():
 
 def test_nodegraph_same_file():
     khmer = pytest.importorskip('khmer')
+    try:
+        load_nodegraph = khmer.load_nodegraph
+    except AttributeError:
+        load_nodegraph = khmer.Nodegraph.load
 
     ng_file = utils.get_test_data('.sbt.v3/internal.0')
     with open(ng_file, 'rb') as f:
@@ -52,7 +56,7 @@ def test_nodegraph_same_file():
     sourmash_ng = Nodegraph.load(ng_file)
     khmer_sm_ng = sourmash_ng.to_khmer_nodegraph()
 
-    khmer_ng = khmer.load_nodegraph(ng_file)
+    khmer_ng = load_nodegraph(ng_file)
 
     with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2, NamedTemporaryFile() as f3:
         sourmash_ng.save(f1.name)
