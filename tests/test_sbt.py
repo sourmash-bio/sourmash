@@ -73,6 +73,16 @@ def test_simple(n_children):
     print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
     print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
 
+    with utils.TempDirectory() as location:
+        root.save(os.path.join(location, 'demo'))
+        root = SBT.load(os.path.join(location, 'demo'))
+
+        for kmer in kmers:
+            new_result = {str(r) for r in root.find(search_kmer, kmer)}
+            print(*new_result, sep='\n')
+
+            assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
+
 
 def test_longer_search(n_children):
     ksize = 5

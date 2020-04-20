@@ -47,6 +47,8 @@ class Nodegraph(RustObject):
         elif isinstance(other, MinHash):
             return self._methodcall(lib.nodegraph_update_mh, other._objptr)
         else:
+            # FIXME: we could take sets here too (or anything that can be
+            # converted to a list of ints...)
             raise TypeError("Must be a Nodegraph or MinHash")
 
     def count(self, h):
@@ -59,15 +61,12 @@ class Nodegraph(RustObject):
             return self._methodcall(lib.nodegraph_get_kmer, to_bytes(h))
         return self._methodcall(lib.nodegraph_get, h)
 
-    @property
     def n_occupied(self):
         return self._methodcall(lib.nodegraph_noccupied)
 
-    @property
     def ksize(self):
         return self._methodcall(lib.nodegraph_ksize)
 
-    @property
     def hashsizes(self):
         size = ffi.new("uintptr_t *")
         ptr = self._methodcall(lib.nodegraph_hashsizes, size)
@@ -83,6 +82,8 @@ class Nodegraph(RustObject):
 
     def matches(self, mh):
         if not isinstance(mh, MinHash):
+            # FIXME: we could take sets here too (or anything that can be
+            # converted to a list of ints...)
             raise ValueError("mh must be a MinHash")
 
         return self._methodcall(lib.nodegraph_matches, mh._objptr)
@@ -141,7 +142,7 @@ def extract_nodegraph_info(filename):
 
 
 def calc_expected_collisions(graph, force=False, max_false_pos=.2):
-    fp_all = graph.expected_collisions()
+    fp_all = graph.expected_collisions
 
     if fp_all > max_false_pos:
         print("**", file=sys.stderr)
@@ -157,6 +158,6 @@ def calc_expected_collisions(graph, force=False, max_false_pos=.2):
         print("**", file=sys.stderr)
 
         if not force:
-            sys.exit(1)
+            raise SystemExit(1)
 
     return fp_all
