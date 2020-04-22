@@ -217,6 +217,8 @@ impl Nodegraph {
     where
         R: io::Read,
     {
+        let (mut rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
@@ -392,6 +394,14 @@ mod test {
         0x00, 0x00, 0x00, 0x06,
     ];
 
+    static COMPRESSED_RAW_DATA: &'static [u8] = &[
+        0x1f, 0x8b, 0x08, 0x08, 0x73, 0x88, 0x9f, 0x5e, 0x00, 0x03, 0x74, 0x65, 0x73, 0x74, 0x2e,
+        0x6e, 0x67, 0x00, 0xf3, 0x8f, 0xf0, 0xf1, 0x64, 0x61, 0x62, 0x66, 0x60, 0x60, 0x60, 0x03,
+        0x11, 0x20, 0x20, 0x0c, 0xa5, 0x19, 0x38, 0x19, 0x05, 0x61, 0x4c, 0x1e, 0x46, 0x5e, 0x28,
+        0x8b, 0x8b, 0x83, 0x1b, 0xca, 0x52, 0x64, 0x60, 0x87, 0xb2, 0x42, 0x58, 0xa1, 0x0c, 0x36,
+        0x00, 0x8d, 0xf0, 0xa9, 0x8b, 0x4f, 0x00, 0x00, 0x00,
+    ];
+
     proptest! {
       #[test]
       fn count_and_get(hashes in vec(u64::ANY, 1..500)) {
@@ -401,6 +411,18 @@ mod test {
               assert_eq!(ng.get(hash), 1);
           }
       }
+    }
+
+    #[test]
+    fn load_compressed() {
+        let mut reader = BufReader::new(&COMPRESSED_RAW_DATA[..]);
+
+        let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(ng.ksize(), 3);
+        assert_eq!(ng.get_kmer(b"ACG"), 1);
+        assert_eq!(ng.get_kmer(b"TTA"), 1);
+        assert_eq!(ng.get_kmer(b"CGA"), 1);
     }
 
     #[test]

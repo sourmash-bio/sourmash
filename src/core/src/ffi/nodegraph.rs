@@ -2,8 +2,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use niffler::get_input;
-
 use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::nodegraph::Nodegraph;
@@ -202,7 +200,7 @@ unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut Nodegraph>
         CStr::from_ptr(filename)
     };
 
-    let (mut input, _) = get_input(c_str.to_str()?)?;
+    let (mut input, _) = niffler::from_path(c_str.to_str()?)?;
     let ng = Nodegraph::from_reader(&mut input)?;
 
     Ok(Box::into_raw(Box::new(ng)))
