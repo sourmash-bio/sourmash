@@ -12,9 +12,11 @@ Remember to update release numbers/RC in:
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc2 python=3.7 pip cxx-compiler make \
+conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
     htslib pysam twine
 ```
+
+Then activate it with `conda activate sourmash-rc`.
 
 ## Testing a release
 
@@ -135,7 +137,7 @@ cd ../sourmash
 git tag -a v${new_version}
 ```
 
-2\. Publish the new release on PyPI (requires an authorized account). You may need to install `twine` here again, with `python -m pip install twine` if it's not in your default environment.
+2\. Publish the new release on PyPI (requires an authorized account).
 ```
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
@@ -151,7 +153,7 @@ git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
 Name it 'version X.Y.Z', and copy and paste in the release notes.
 
 5\. Upload wheels from GitHub Releases to PyPI.  You can manually download
-all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that.
+all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
 
 Download the wheels with hub:
 ```
@@ -161,7 +163,7 @@ hub release download v${new_version}
 
 or download them manually.
 
-Then, upload them like so:
+Then, upload them to PyPI like so:
 ```
 twine upload *.whl
 ```
