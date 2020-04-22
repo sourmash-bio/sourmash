@@ -7,6 +7,15 @@ Remember to update release numbers/RC in:
 
 * this document
 
+## Required build environment
+
+The basic build environment needed below can be created as follows:
+
+```
+conda create -y -n sourmash-rc2 python=3.7 pip cxx-compiler make \
+    htslib pysam twine
+```
+
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for master.
@@ -126,7 +135,7 @@ cd ../sourmash
 git tag -a v${new_version}
 ```
 
-2\. Publish the new release on PyPI (requires an authorized account).
+2\. Publish the new release on PyPI (requires an authorized account). You may need to install `twine` here again, with `python -m pip install twine` if it's not in your default environment.
 ```
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
@@ -141,14 +150,22 @@ git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
 4\. Add the release on GitHub, using the tag you just pushed.
 Name it 'version X.Y.Z', and copy and paste in the release notes.
 
-5\. Upload wheels from GitHub Releases to PyPI.
-[`hub`](https://hub.github.com/) makes this easier,
-but you can also manually download all the files from [the releases page].
+5\. Upload wheels from GitHub Releases to PyPI.  You can manually download
+all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that.
+
+Download the wheels with hub:
 ```
 mkdir -p wheel && cd wheel
 hub release download v${new_version}
+```
+
+or download them manually.
+
+Then, upload them like so:
+```
 twine upload *.whl
 ```
+twine will correctly determine the version from the filenames.
 
 ## Bioconda
 
