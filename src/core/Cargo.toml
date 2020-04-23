@@ -47,7 +47,7 @@ version = "0.2.55"
 features = ["serde-serialize"]
 
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies.niffler]
-version = "1.0"
+version = "2.0"
 default-features = false
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
