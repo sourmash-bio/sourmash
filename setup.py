@@ -62,7 +62,7 @@ SETUP_METADATA = {
         'sourmash = sourmash.__main__:main'
         ]
     },
-    "install_requires": ["screed>=0.9", "khmer>=2.1", "cffi>=1.14.0", 'numpy',
+    "install_requires": ["screed>=0.9", "cffi>=1.14.0", 'numpy',
                          'matplotlib', 'scipy', "deprecation>=2.0.6"],
     "setup_requires": [
         "setuptools>=38.6.0",
@@ -82,7 +82,7 @@ SETUP_METADATA = {
         'doc' : ['sphinx', 'recommonmark', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
-        '10x': ['bam2fasta==1.0.1'],
+        '10x': ['bam2fasta==1.0.4'],
         'storage': ["ipfshttpclient>=0.4.13", "redis"]
     },
     "include_package_data": True,

@@ -2,8 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use niffler::get_input;
-
+use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::nodegraph::Nodegraph;
 
@@ -18,6 +17,14 @@ pub unsafe extern "C" fn nodegraph_free(ptr: *mut Nodegraph) {
         return;
     }
     Box::from_raw(ptr);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_buffer_free(ptr: *mut u8, insize: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    Vec::from_raw_parts(ptr as *mut u8, insize, insize);
 }
 
 #[no_mangle]
@@ -44,6 +51,22 @@ pub unsafe extern "C" fn nodegraph_count(ptr: *mut Nodegraph, h: u64) -> bool {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nodegraph_count_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> bool {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let c_str = {
+        assert!(!kmer.is_null());
+
+        CStr::from_ptr(kmer)
+    };
+
+    ng.count_kmer(c_str.to_bytes())
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nodegraph_get(ptr: *mut Nodegraph, h: u64) -> usize {
     let ng = {
         assert!(!ptr.is_null());
@@ -51,6 +74,22 @@ pub unsafe extern "C" fn nodegraph_get(ptr: *mut Nodegraph, h: u64) -> usize {
     };
 
     ng.get(h)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_get_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> usize {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let c_str = {
+        assert!(!kmer.is_null());
+
+        CStr::from_ptr(kmer)
+    };
+
+    ng.get_kmer(c_str.to_bytes())
 }
 
 #[no_mangle]
@@ -74,13 +113,18 @@ pub unsafe extern "C" fn nodegraph_ksize(ptr: *mut Nodegraph) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_tablesize(ptr: *mut Nodegraph) -> usize {
+pub unsafe extern "C" fn nodegraph_hashsizes(ptr: *mut Nodegraph, size: *mut usize) -> *const u64 {
     let ng = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
 
-    ng.tablesize()
+    let st = ng.tablesizes();
+
+    let b = st.into_boxed_slice();
+    *size = b.len();
+
+    Box::into_raw(b) as *const u64
 }
 
 #[no_mangle]
@@ -130,7 +174,22 @@ pub unsafe extern "C" fn nodegraph_update(ptr: *mut Nodegraph, optr: *mut Nodegr
         &mut *optr
     };
 
-    ng.update(ong);
+    ong.update(ng).unwrap();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_update_mh(ptr: *mut Nodegraph, optr: *mut KmerMinHash) {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let mh = {
+        assert!(!optr.is_null());
+        &*optr
+    };
+
+    mh.update(ng).unwrap();
 }
 
 ffi_fn! {
@@ -141,7 +200,7 @@ unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut Nodegraph>
         CStr::from_ptr(filename)
     };
 
-    let (mut input, _) = get_input(c_str.to_str()?)?;
+    let (mut input, _) = niffler::from_path(c_str.to_str()?)?;
     let ng = Nodegraph::from_reader(&mut input)?;
 
     Ok(Box::into_raw(Box::new(ng)))
@@ -177,5 +236,22 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
     ng.save(c_str.to_str()?)?;
 
     Ok(())
+}
+}
+
+ffi_fn! {
+unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, size: *mut usize) -> Result<*const u8> {
+    let ng = {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let mut st: Vec<u8> = Vec::new();
+    ng.save_to_writer(&mut st)?;
+
+    let b = st.into_boxed_slice();
+    *size = b.len();
+
+    Ok(Box::into_raw(b) as *const u8)
 }
 }
