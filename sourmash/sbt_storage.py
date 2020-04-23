@@ -142,6 +142,8 @@ class RedisStorage(Storage):
         self.conn = redis.Redis(**self.redis_args)
 
     def save(self, path, content):
+        if not isinstance(content, bytes):
+            content = bytes(content)
         self.conn.set(path, content)
         return path
 

@@ -182,6 +182,8 @@ bool kmerminhash_track_abundance(KmerMinHash *ptr);
 
 bool nodegraph_count(Nodegraph *ptr, uint64_t h);
 
+bool nodegraph_count_kmer(Nodegraph *ptr, const char *kmer);
+
 double nodegraph_expected_collisions(Nodegraph *ptr);
 
 void nodegraph_free(Nodegraph *ptr);
@@ -191,6 +193,8 @@ Nodegraph *nodegraph_from_buffer(const char *ptr, uintptr_t insize);
 Nodegraph *nodegraph_from_path(const char *filename);
 
 uintptr_t nodegraph_get(Nodegraph *ptr, uint64_t h);
+
+uintptr_t nodegraph_get_kmer(Nodegraph *ptr, const char *kmer);
 
 uintptr_t nodegraph_ksize(Nodegraph *ptr);
 
@@ -204,9 +208,15 @@ uintptr_t nodegraph_ntables(Nodegraph *ptr);
 
 void nodegraph_save(Nodegraph *ptr, const char *filename);
 
-uintptr_t nodegraph_tablesize(Nodegraph *ptr);
+uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uintptr_t *size);
+
+void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
+
+uint64_t *nodegraph_hashsizes(Nodegraph *ptr, uintptr_t *size);
 
 void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);
+
+void nodegraph_update_mh(Nodegraph *ptr, KmerMinHash *optr);
 
 Nodegraph *nodegraph_with_tables(uintptr_t ksize, uintptr_t starting_size, uintptr_t n_tables);
 

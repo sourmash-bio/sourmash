@@ -39,15 +39,19 @@ jobs:
           - build: macos
             os: macos-latest
             rust: stable
+            continue: false
           - build: windows
             os: windows-latest
             rust: stable
+            continue: true
           - build: beta
             os: ubuntu-latest
             rust: beta
+            continue: false
           - build: stable
             os: ubuntu-latest
             rust: stable
+            continue: false
     steps:
       - uses: actions/checkout@v1
 
@@ -57,13 +61,12 @@ jobs:
           override: true
 
       - name: Set up Python 3.8
-        if: matrix.os != 'windows-latest'
         uses: actions/setup-python@v1
         with:
           python-version: "3.8"
 
       - name: Install dependencies
-        if: matrix.os != 'windows-latest'
+        continue-on-error: ${{ matrix.continue }}
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .

@@ -4,7 +4,6 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
-use niffler::get_input;
 use serde_json;
 
 use crate::cmd::ComputeParameters;
@@ -303,7 +302,7 @@ unsafe fn signatures_load_path(ptr: *const c_char,
       x => Some(x)
     };
 
-    let (mut input, _) = get_input(buf.to_str()?)?;
+    let (mut input, _) = niffler::from_path(buf.to_str()?)?;
     let filtered_sigs = Signature::load_signatures(&mut input, k, moltype, None)?;
 
     let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {

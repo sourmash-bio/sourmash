@@ -25,34 +25,34 @@ jobs:
   include:
     - &check
       stage: check # do a pre-screen to make sure this is even worth testing
-      python: 3.7
+      python: 3.8
       env:
         - PYTHONDEVMODE=1
 
     - &test
       stage: test
-      python: 3.6
+      python: 3.7
     - <<: *test
       os: osx
       osx_image: xcode10.1
-      python: 3.7
       language: generic
       env:
         - TOXENV=py37
     - <<: *test
-      python: 3.7
       name: integration (ipfs/redis)
       before_install:
         - sudo snap install ipfs
         - "/snap/bin/ipfs --version"
         - "/snap/bin/ipfs daemon --init --offline &>/dev/null &"
       services:
-        - redis-server
+        - redis
         - docker
     - <<: *test
-      python: 2.7
+      python: 3.6
     - <<: *test
       python: 3.5
+    - <<: *test
+      python: 2.7
 
     - &wheel
       stage: build wheel and send to github releases
@@ -60,19 +60,18 @@ jobs:
       services:
         - docker
       env:
-        - CIBW_BUILD='cp37-*'
-        - CIBW_SKIP='*-manylinux_i686'
+        - CIBW_BUILD: "'cp37-*'"
+        - CIBW_SKIP: "'*-win32 *-manylinux_i686'"
         - CIBW_BEFORE_BUILD='source .travis/install_cargo.sh'
         - CIBW_ENVIRONMENT='PATH="$HOME/.cargo/bin:$PATH"'
         - CIBW_ENVIRONMENT_MACOS='MACOSX_DEPLOYMENT_TARGET=10.11'
-      before_script: skip
+      before_script:
+        - python3 -m pip install cibuildwheel==1.3.0
       script:
-        - python -m pip install -U pip setuptools
-        - python -m pip install cibuildwheel==1.1.0
-        - python -m cibuildwheel --output-dir wheelhouse
+        - python3 -m cibuildwheel --output-dir wheelhouse
       deploy:
         provider: releases
-        api_key:
+        token:
           secure: "FZmx00gL0m0uNVN8fpvqbUZSI20EEk4sgrEv4wpGFr8SFNwPb/VuizQRTapeF2AW9qzbfbUv4bR/+oSKu5jxvd+7+p9HlOZT285a5yfxay9OA8YUbpQz4a9J0CETOpxrA2wRRWBDqzjEWzLTGUquOhyBZn4cwujvA9syOdB7OSNKsB6ARc+zhqPeoMKc9JcjzwiEIh7tcCHoZ1epN5zyfsjqFEY8XlylHTU/WSI3SS9KIGuBqWf6/haoYD7BH+f2g56GMHvBEmGjk5cf/lrCpqiho7Z3fGgJcYf3fRWM3qSVUM9JyHUIqPS6oPZIp7zP40TztiK4Oeen4EpcS/KdoSdu5CjfgMYgF/qdlL28ntgnVYhcA/6IDSRg6V4H3b20qjsn3NlaNVdsSNCu3GzkvM/dtvp5I/41XcFCNqMOljMr3tRw2ZVo44/1vYW0FB0b0FjhjNcnMyTOQjSRR78zetdoorewTJdEmxthMieHIw1Mqzwg4e6JvsC30sh1uSaFq4FHrj2Fe6lAlgwPs1e9vx4w0Zs0kxxusNAdbBB8FH8paFuUEGjgT0Jo9KHOLtvRy+OU2OacQePuhG1kGBRvJz7O4/prAFLGWIW8tyZDnMCuv1vmk6YZd6ih3omkL178X94pjzavtlUip/ugF0NIwS5o+zucRow9txAX2jXgDCM="
         file_glob: true
         file: wheelhouse/sourmash*.whl
@@ -83,6 +82,17 @@ jobs:
       os: osx
       osx_image: xcode10.1
       language: shell
+    - <<: *wheel
+      arch: arm64
+    - <<: *wheel
+      arch: ppc64le
+    #- <<: *wheel
+    #  os: windows
+    #  language: shell
+    #  before_install:
+    #    - choco install python --version 3.8.0
+    #    - export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
+    #    - ln -s /c/Python38/python.exe /c/Python38/python3.exe
 
 stages:
   - check
