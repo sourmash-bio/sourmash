@@ -1629,6 +1629,36 @@ def test_incompat_lca_db_ksize(c):
 
 
 @utils.in_tempdir
+def test_lca_index_empty(c):
+    # test lca index with an empty taxonomy CSV, followed by a load & gather.
+    sig2file = utils.get_test_data('2.fa.sig')
+    sig47file = utils.get_test_data('47.fa.sig')
+    sig63file = utils.get_test_data('63.fa.sig')
+
+    sig63 = load_one_signature(sig63file, ksize=31)
+
+    # create an empty spreadsheet
+    with open(c.output('empty.csv'), 'wt') as fp:
+        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
+
+    # index!
+    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
+                   sig2file, sig47file, sig63file, '--scaled', '1000')
+
+
+    # can we load and search?
+    lca_db_filename = c.output('xxx.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+
+    results = db.gather(sig63)
+    assert len(results) == 1
+    containment, match_sig, name = results[0]
+    assert containment == 1.0
+    assert match_sig.minhash == sig63.minhash
+    assert name == lca_db_filename
+
+
+@utils.in_tempdir
 def test_lca_gather_threshold_1(c):
     # test gather() method, in some detail; see same tests for sbt.
     sig2file = utils.get_test_data('2.fa.sig')
@@ -1639,16 +1669,11 @@ def test_lca_gather_threshold_1(c):
     sig47 = load_one_signature(sig47file, ksize=31)
     sig63 = load_one_signature(sig63file, ksize=31)
 
-    # create an empty spreadsheet
-    with open(c.output('empty.csv'), 'wt') as fp:
-        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
-
-    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
-                   sig2file, sig47file, sig63file, '--scaled', '1000')
-
-
-    lca_db_filename = c.output('xxx.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+    # construct LCA Database
+    db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    db.insert(sig2)
+    db.insert(sig47)
+    db.insert(sig63)
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
@@ -1669,7 +1694,7 @@ def test_lca_gather_threshold_1(c):
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
-    assert name == lca_db_filename
+    assert name == None
 
     # check with a threshold -> should be no results.
     results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
@@ -1686,7 +1711,7 @@ def test_lca_gather_threshold_1(c):
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
-    assert name == lca_db_filename
+    assert name == None
 
     # check with a too-high threshold -> should be no results.
     results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
@@ -1704,16 +1729,11 @@ def test_lca_gather_threshold_5(c):
     sig47 = load_one_signature(sig47file, ksize=31)
     sig63 = load_one_signature(sig63file, ksize=31)
 
-    # create an empty spreadsheet
-    with open(c.output('empty.csv'), 'wt') as fp:
-        fp.write('accession,superkingdom,phylum,class,order,family,genus,species,strain')
-
-    c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
-                   sig2file, sig47file, sig63file, '--scaled', '1000')
-
-
-    lca_db_filename = c.output('xxx.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+    # construct LCA Database
+    db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    db.insert(sig2)
+    db.insert(sig47)
+    db.insert(sig63)
 
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures both have scaled=1000.
@@ -1735,7 +1755,7 @@ def test_lca_gather_threshold_5(c):
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
-    assert name == lca_db_filename
+    assert name == None
 
     # now, check with a threshold_bp that should be meet-able.
     results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
@@ -1743,4 +1763,4 @@ def test_lca_gather_threshold_5(c):
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
-    assert name == lca_db_filename
+    assert name == None
