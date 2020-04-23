@@ -1645,7 +1645,6 @@ def test_lca_index_empty(c):
     c.run_sourmash('lca', 'index', 'empty.csv', 'xxx.lca.json',
                    sig2file, sig47file, sig63file, '--scaled', '1000')
 
-
     # can we load and search?
     lca_db_filename = c.output('xxx.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
