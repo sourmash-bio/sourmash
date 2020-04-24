@@ -127,7 +127,7 @@ class ZipStorage(Storage):
             self.zipfile = zipfile.ZipFile(path, 'r')
         else:
             self.zipfile = zipfile.ZipFile(path, mode='w',
-                                           compression=zipfile.ZIP_BZIP2)
+                                           compression=zipfile.ZIP_STORED)
 
         self.subdir = None
         subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]

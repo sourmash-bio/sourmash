@@ -482,79 +482,6 @@ class SBT(Index):
         str
             full path to the new SBT description
         """
-        version = 4
-
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
-
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
-
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
-
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-
-        info = {}
-        info['d'] = self.d
-        info['version'] = version
-        info['storage'] = {
-            'backend': backend,
-            'args': storage.init_args()
-        }
-        info['factory'] = {
-            'class': GraphFactory.__name__,
-            'args': self.factory.init_args()
-        }
-
-        nodes = {}
-        total_nodes = len(self)
-        for n, (i, node) in enumerate(self):
-            if node is None:
-                continue
-
-            if isinstance(node, Node):
-                if random() - sparseness <= 0:
-                    continue
-
-            data = {
-                # TODO: start using md5sum instead?
-                'filename': os.path.basename(node.name),
-                'name': node.name
-            }
-
-            try:
-                node.metadata.pop('max_n_below')
-            except (AttributeError, KeyError):
-                pass
-
-            data['metadata'] = node.metadata
-
-            if structure_only is False:
-                # trigger data loading before saving to the new place
-                node.data
-
-                node.storage = storage
-
-                data['filename'] = node.save(data['filename'])
-
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
-            nodes[i] = data
-
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
-
-        notify("\nFinished saving nodes, now saving SBT json file.")
-        info['nodes'] = nodes
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
-
-        return fn
-
-    def _save_v5(self, path, storage=None, sparseness=0.0, structure_only=False):
         version = 5
 
         if path.endswith('.sbt.json'):
@@ -622,11 +549,12 @@ class SBT(Index):
             else:
                 leaves[i] = data
 
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
+            if n % 1000 == 0:
+                notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
         notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = nodes
-        info['leaves'] = leaves
+        info['signatures'] = leaves
         with open(fn, 'w') as fp:
             json.dump(info, fp)
 
@@ -857,7 +785,7 @@ class SBT(Index):
     @classmethod
     def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
-        leaves = {int(k): v for (k, v) in info['leaves'].items()}
+        leaves = {int(k): v for (k, v) in info['signatures'].items()}
 
         if not leaves:
             raise ValueError("Empty tree!")

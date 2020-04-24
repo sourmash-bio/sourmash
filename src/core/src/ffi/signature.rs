@@ -5,6 +5,7 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::cmd::ComputeParameters;
+use crate::errors::SourmashError;
 use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
 use crate::sketch::minhash::{HashFunctions, KmerMinHash};
@@ -263,15 +264,30 @@ unsafe fn signature_get_mhs(ptr: *mut Signature, size: *mut usize) -> Result<*mu
 }
 
 ffi_fn! {
-unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize) -> Result<SourmashStr> {
+unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize, compressed: bool, osize: *mut usize) -> Result<*const u8> {
     let sigs = {
         assert!(!ptr.is_null());
         slice::from_raw_parts(ptr, size)
     };
 
     let rsigs: Vec<&Signature> = sigs.iter().map(|x| x.as_ref().unwrap()).collect();
-    let st = serde_json::to_string(&rsigs)?;
-    Ok(SourmashStr::from_string(st))
+
+    let mut buffer = vec![];
+    {
+      let mut writer = if compressed {
+          niffler::get_writer(Box::new(&mut buffer),
+                              niffler::compression::Format::Gzip,
+                              niffler::compression::Level::Nine)?
+      } else {
+          Box::new(&mut buffer)
+      };
+      serde_json::to_writer(&mut writer, &rsigs)?;
+    }
+
+    let b = buffer.into_boxed_slice();
+    *osize = b.len();
+
+    Ok(Box::into_raw(b) as *const u8)
 }
 }
 
@@ -300,7 +316,7 @@ unsafe fn signatures_load_path(ptr: *const c_char,
       x => Some(x)
     };
 
-    let (mut input, _) = niffler::from_path(buf.to_str()?)?;
+    let (mut input, _) = niffler::from_path(buf.to_str()?).map_err(|_| SourmashError::IOError)?;
     let filtered_sigs = Signature::load_signatures(&mut input, k, moltype, None)?;
 
     let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {

@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 import sys
 
 from .sbt import Leaf, SBT, GraphFactory
@@ -47,11 +47,8 @@ class SigLeaf(Leaf):
         # content...)
         self.data
 
-        buf = BytesIO()
-        with TextIOWrapper(buf) as out:
-            signature.save_signatures([self.data], out)
-            out.flush()
-            return self.storage.save(path, buf.getvalue())
+        buf = signature.save_signatures([self.data], compressed=True)
+        return self.storage.save(path, buf)
 
     def update(self, parent):
         mh = self.data.minhash

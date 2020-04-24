@@ -240,16 +240,25 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
 }
 
 ffi_fn! {
-unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, size: *mut usize) -> Result<*const u8> {
+unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compressed: bool, size: *mut usize) -> Result<*const u8> {
     let ng = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
 
-    let mut st: Vec<u8> = Vec::new();
-    ng.save_to_writer(&mut st)?;
+    let mut buffer = vec![];
+    {
+      let mut writer = if compressed {
+          niffler::get_writer(Box::new(&mut buffer),
+                              niffler::compression::Format::Gzip,
+                              niffler::compression::Level::Nine)?
+      } else {
+          Box::new(&mut buffer)
+      };
+      ng.save_to_writer(&mut writer)?;
+    }
 
-    let b = st.into_boxed_slice();
+    let b = buffer.into_boxed_slice();
     *size = b.len();
 
     Ok(Box::into_raw(b) as *const u8)
