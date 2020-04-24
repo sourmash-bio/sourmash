@@ -80,15 +80,6 @@ class TarStorage(Storage):
         else:
             self.tarfile = tarfile.open(path, 'w:gz')
 
-        self.subdir = None
-        try:
-            # TODO: check more than one dir?
-            subdirs = next(f for f in self.tarfile.getmembers() if f.isdir())
-        except StopIteration:
-            pass
-        else:
-            self.subdir = subdirs.name
-
     def save(self, path, content):
         info = tarfile.TarInfo(path)
         info.size = len(content)
@@ -99,10 +90,7 @@ class TarStorage(Storage):
         return path
 
     def load(self, path):
-        try:
-            content = self.tarfile.getmember(path)
-        except KeyError:
-            content = self.tarfile.getmember(os.path.join(self.subdir, path))
+        content = self.tarfile.getmember(path)
         f = self.tarfile.extractfile(content)
         return f.read()
 
@@ -118,9 +106,6 @@ class TarStorage(Storage):
             return tarfile.is_tarfile(location)
         except IOError:
             return False
-
-    def list_sbts(self):
-        return [f for f in self.tarfile.getnames() if f.endswith(".sbt.json")]
 
 
 class ZipStorage(Storage):
