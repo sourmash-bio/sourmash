@@ -11,6 +11,7 @@ import glob
 import json
 import csv
 import pytest
+import pprint
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -1648,13 +1649,23 @@ def test_lca_index_empty(c):
     # can we load and search?
     lca_db_filename = c.output('xxx.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
+    siglist = list(db.signatures())
+    print(siglist)
+
+    linear = sourmash.index.LinearIndex(siglist)
+    pprint.pprint('XXX')
+    pprint.pprint(linear.gather(sig63))
 
     results = db.gather(sig63)
+    pprint.pprint('XYZ')
+    pprint.pprint(results)
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
     assert match_sig.minhash == sig63.minhash
     assert name == lca_db_filename
+
+    assert 0
 
 
 @utils.in_tempdir
