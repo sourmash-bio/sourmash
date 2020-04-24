@@ -421,7 +421,7 @@ class LCA_Database(Index):
         debug('number of matching signatures for hashes: {}', len(c))
 
         # for each match, in order of largest overlap,
-        for idx, count in c.items():
+        for idx, count in c.most_common():
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
