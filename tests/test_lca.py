@@ -1665,8 +1665,6 @@ def test_lca_index_empty(c):
     assert match_sig.minhash == sig63.minhash
     assert name == lca_db_filename
 
-    assert 0
-
 
 @utils.in_tempdir
 def test_lca_gather_threshold_1(c):
