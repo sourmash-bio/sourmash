@@ -629,7 +629,7 @@ def test_basic_index_too_few_species():
         cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '-C', '3']
         status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
 
-        assert 'error: fewer than 20% of lineages' in err
+        assert not '"ERROR: fewer than 20% of lineages have species-level resolution' in err
         assert status != 0
 
 
