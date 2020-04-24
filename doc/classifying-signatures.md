@@ -159,6 +159,12 @@ Benoit et al., 2016. Initial comparisons of metagenome similarity
 approximations computed with sourmash to the output of simka suggest a
 significant correlation.
 
+**Implementation note:** Angular similarity searches cannot be done on
+SBT or LCA databases currently; you have to provide lists of signature
+files to `sourmash search` and `sourmash compare`.  sourmash will
+provide a warning if you run `sourmash search` on an LCA or SBT with
+an abundance-weighted query, and automatically apply `--ignore-abundance`.
+
 ## What commands should I use?
 
 It's not always easy to figure that out, we know! We're thinking about
