@@ -14,14 +14,13 @@ def subparser(subparsers):
 
 
 def info(verbose=False):
+    "Report sourmash version + version of installed dependencies."
     notify('sourmash version {}', sourmash.VERSION)
     notify('- loaded from path: {}', os.path.dirname(__file__))
     notify('')
 
     if verbose:
-        import khmer
-        notify('khmer version {}', khmer.__version__)
-        notify('- loaded from path: {}', os.path.dirname(khmer.__file__))
+        notify('khmer version: None (internal Nodegraph)')
         notify('')
 
         notify('screed version {}', screed.__version__)

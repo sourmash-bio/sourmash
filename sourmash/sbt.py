@@ -55,18 +55,13 @@ import math
 import os
 from random import randint, random
 import sys
-from tempfile import NamedTemporaryFile
 
-import khmer
-
-try:
-    load_nodegraph = khmer.load_nodegraph
-except AttributeError:
-    load_nodegraph = khmer.Nodegraph.load
+from deprecation import deprecated
 
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
 from .logging import error, notify, debug
 from .index import Index
+from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
     'TarStorage': TarStorage,
@@ -96,7 +91,7 @@ class GraphFactory(object):
         self.n_tables = n_tables
 
     def __call__(self):
-        return khmer.Nodegraph(self.ksize, self.starting_size, self.n_tables)
+        return Nodegraph(self.ksize, self.starting_size, self.n_tables)
 
     def init_args(self):
         return (self.ksize, self.starting_size, self.n_tables)
@@ -667,14 +662,6 @@ class SBT(Index):
             5: cls._load_v5,
         }
 
-        # @CTB hack: check to make sure khmer Nodegraph supports the
-        # correct methods.
-        x = khmer.Nodegraph(1, 1, 1)
-        try:
-            x.count(10)
-        except TypeError:
-            raise Exception("khmer version is too old; need >= 2.1,<3")
-
         if leaf_loader is None:
             leaf_loader = Leaf.load
 
@@ -703,7 +690,7 @@ class SBT(Index):
         sbt_nodes = {}
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
-        ksize, tablesize, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        ksize, tablesize, ntables = extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(ksize, tablesize, ntables)
 
         for i, jnode in enumerate(jnodes):
@@ -736,7 +723,7 @@ class SBT(Index):
         sbt_leaves = {}
 
         sample_bf = os.path.join(dirname, nodes[0]['filename'])
-        k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        k, size, ntables = extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(k, size, ntables)
 
         for k, node in nodes.items():
@@ -1073,16 +1060,11 @@ class Node(object):
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
                 name=self.name, nb=self.data.n_occupied(),
-                fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
+                fpr=calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes()
+        return self.storage.save(path, buf)
 
     @property
     def data(self):
@@ -1091,12 +1073,7 @@ class Node(object):
                 self._data = self._factory()
             else:
                 data = self.storage.load(self._path)
-                # We need to do this tempfile dance because khmer only load
-                # data from files.
-                with NamedTemporaryFile(suffix=".gz") as f:
-                    f.write(data)
-                    f.file.flush()
-                    self._data = load_nodegraph(f.name)
+                self._data = Nodegraph.from_buffer(data)
         return self._data
 
     @data.setter
@@ -1142,18 +1119,13 @@ class Leaf(object):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
                 name=self.name, metadata=self.metadata,
                 nb=self.data.n_occupied(),
-                fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
+                fpr=calc_expected_collisions(self.data, True, 1.1))
 
     @property
     def data(self):
         if self._data is None:
             data = self.storage.load(self._path)
-            # We need to do this tempfile dance because khmer only load
-            # data from files.
-            with NamedTemporaryFile(suffix=".gz") as f:
-                f.write(data)
-                f.file.flush()
-                self._data = load_nodegraph(f.name)
+            self._data = Nodegraph.from_buffer(data)
         return self._data
 
     @data.setter
@@ -1164,13 +1136,8 @@ class Leaf(object):
         self._data = None
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes()
+        return self.storage.save(path, buf)
 
     def update(self, parent):
         parent.data.update(self.data)

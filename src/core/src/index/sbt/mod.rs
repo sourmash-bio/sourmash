@@ -817,6 +817,8 @@ impl BinaryTree {
         next_round
     }
 
+    // Remove this when MSRV is >= 1.40
+    #[allow(clippy::mem_replace_with_default)]
     fn new_tree(mut left: BinaryTree, mut right: BinaryTree) -> BinaryTree {
         let in_common = if let BinaryTree::Internal(ref mut el1) = left {
             match right {
