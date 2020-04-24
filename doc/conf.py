@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sourmash'
-copyright = '2016, C. Titus Brown and Luiz Irber'
+copyright = '2016-2020, C. Titus Brown and Luiz Irber'
 author = 'C. Titus Brown and Luiz Irber'
 
 # The version info for the project you're documenting, acts as replacement for
