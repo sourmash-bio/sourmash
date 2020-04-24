@@ -593,42 +593,6 @@ def test_load_zip_uncompressed(tmpdir):
     assert len(new_result) == 2
 
 
-def test_load_tar(tmpdir):
-    testdata = utils.get_test_data("v5.tar.gz")
-    testsbt = tmpdir.join("v5.tar.gz")
-
-    shutil.copyfile(testdata, str(testsbt))
-
-    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
-
-    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-
-    print("*" * 60)
-    print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
-    print(*new_result, sep="\n")
-    assert len(new_result) == 2
-
-
-def test_load_tar_uncompressed(tmpdir):
-    import tarfile
-
-    testdata = utils.get_test_data("v5.tar.gz")
-    testsbt = tmpdir.join("v5.sbt.json")
-    with tarfile.open(testdata, 'r') as t:
-        t.extractall(str(tmpdir))
-
-    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
-
-    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-
-    print("*" * 60)
-    print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
-    print(*new_result, sep="\n")
-    assert len(new_result) == 2
-
-
 def test_tree_repair():
     tree_repair = SBT.load(utils.get_test_data('leaves.sbt.json'),
                            leaf_loader=SigLeaf.load)

@@ -659,23 +659,15 @@ class SBT(Index):
         sbt_name = None
         tree_data = None
 
-        ## TODO: keep it more compatible with FSStorage,
-        ## don't force tree.sbt.json
+        if storage is None and ZipStorage.can_open(location):
+            storage = ZipStorage(location)
 
-        if storage is None:
-            if ZipStorage.can_open(location):
-                storage = ZipStorage(location)
-            elif TarStorage.can_open(location):
-                storage = TarStorage(location)
+            sbts = storage.list_sbts()
+            if len(sbts) != 1:
+                print("no SBT, or too many SBTs!")
+            else:
+                tree_data = storage.load(sbts[0])
 
-            if storage is not None:
-                sbts = storage.list_sbts()
-                if len(sbts) != 1:
-                    print("no SBT, or too many SBTs!")
-                else:
-                    tree_data = storage.load(sbts[0])
-
-        if tree_data is not None:
             tempfile = NamedTemporaryFile()
 
             tempfile.write(tree_data)
