@@ -141,11 +141,12 @@ def test_longer_search(n_children):
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-def test_tree_v1_load():
-    tree_v1 = SBT.load(utils.get_test_data('v1.sbt.json'),
+@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4"])
+def test_tree_old_load(old_version):
+    tree_v1 = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
                        leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('v5.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
@@ -158,63 +159,6 @@ def test_tree_v1_load():
 
     assert results_v1 == results_cur
     assert len(results_v1) == 4
-
-
-def test_tree_v2_load():
-    tree_v2 = SBT.load(utils.get_test_data('v2.sbt.json'),
-                       leaf_loader=SigLeaf.load)
-
-    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
-                        leaf_loader=SigLeaf.load)
-
-    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = load_one_signature(testdata1)
-
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
-
-    assert results_v2 == results_cur
-    assert len(results_v2) == 4
-
-
-def test_tree_v3_load():
-    tree_v2 = SBT.load(utils.get_test_data('v3.sbt.json'),
-                       leaf_loader=SigLeaf.load)
-
-    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
-                        leaf_loader=SigLeaf.load)
-
-    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = load_one_signature(testdata1)
-
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
-
-    assert results_v2 == results_cur
-    assert len(results_v2) == 4
-
-
-def test_tree_v5_load():
-    tree_v2 = SBT.load(utils.get_test_data('v5.sbt.json'),
-                       leaf_loader=SigLeaf.load)
-
-    tree_cur = SBT.load(utils.get_test_data('v4.sbt.json'),
-                        leaf_loader=SigLeaf.load)
-
-    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
-    to_search = load_one_signature(testdata1)
-
-    results_v2 = {str(s) for s in tree_v2.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
-
-    assert results_v2 == results_cur
-    assert len(results_v2) == 4
 
 
 def test_tree_save_load(n_children):
@@ -235,36 +179,6 @@ def test_tree_save_load(n_children):
 
     with utils.TempDirectory() as location:
         tree.save(os.path.join(location, 'demo'))
-        tree = SBT.load(os.path.join(location, 'demo'),
-                        leaf_loader=SigLeaf.load)
-
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
-        print(*new_result, sep='\n')
-
-        assert old_result == new_result
-
-
-def test_tree_save_load_v5(n_children):
-    factory = GraphFactory(31, 1e5, 4)
-    tree = SBT(factory, d=n_children)
-
-    for f in utils.SIG_FILES:
-        sig = load_one_signature(utils.get_test_data(f))
-        leaf = SigLeaf(os.path.basename(f), sig)
-        tree.add_node(leaf)
-        to_search = leaf
-
-    print('*' * 60)
-    print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
-    print(*old_result, sep='\n')
-
-    with utils.TempDirectory() as location:
-        tree._save_v5(os.path.join(location, 'demo'))
         tree = SBT.load(os.path.join(location, 'demo'),
                         leaf_loader=SigLeaf.load)
 

@@ -41,6 +41,9 @@ pub enum SourmashError {
 
     #[fail(display = "Error from deserialization")]
     SerdeError,
+
+    #[fail(display = "I/O Error")]
+    IOError,
 }
 
 #[repr(u32)]
@@ -102,6 +105,7 @@ impl SourmashErrorCode {
                         SourmashErrorCode::InvalidHashFunction
                     }
                     SourmashError::SerdeError => SourmashErrorCode::SerdeError,
+                    SourmashError::IOError => SourmashErrorCode::Io,
                 };
             }
         }

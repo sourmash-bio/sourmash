@@ -186,7 +186,7 @@ where
                     })
                     .collect();
                 let leaves = sbt
-                    .leaves
+                    .signatures
                     .into_iter()
                     .map(|(n, l)| {
                         (
@@ -315,7 +315,7 @@ where
                     (*n, new_node)
                 })
                 .collect(),
-            leaves: self
+            signatures: self
                 .leaves
                 .iter_mut()
                 .map(|(n, l)| {
@@ -630,7 +630,7 @@ struct SBTInfoV5<N, L> {
     storage: StorageInfo,
     factory: Factory,
     nodes: HashMap<u64, N>,
-    leaves: HashMap<u64, L>,
+    signatures: HashMap<u64, L>,
 }
 
 #[derive(Deserialize)]

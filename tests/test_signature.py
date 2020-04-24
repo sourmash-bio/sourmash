@@ -277,8 +277,8 @@ def test_save_minified(track_abundance):
     sig2 = SourmashSignature(e2, name="bar baz")
 
     x = save_signatures([sig1, sig2])
-    assert '\n' not in x
-    assert len(x.split('\n')) == 1
+    assert b'\n' not in x
+    assert len(x.split(b'\n')) == 1
 
     y = list(load_signatures(x))
     assert len(y) == 2
@@ -294,7 +294,7 @@ def test_load_minified(track_abundance):
     with open(sigfile, 'r') as f:
         orig_file = f.read()
     assert len(minified) < len(orig_file)
-    assert '\n' not in minified
+    assert b'\n' not in minified
 
 
 def test_load_compressed(track_abundance):
