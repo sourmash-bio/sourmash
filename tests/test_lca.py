@@ -1649,16 +1649,8 @@ def test_lca_index_empty(c):
     # can we load and search?
     lca_db_filename = c.output('xxx.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(lca_db_filename)
-    siglist = list(db.signatures())
-    print(siglist)
-
-    linear = sourmash.index.LinearIndex(siglist)
-    pprint.pprint('XXX')
-    pprint.pprint(linear.gather(sig63))
 
     results = db.gather(sig63)
-    pprint.pprint('XYZ')
-    pprint.pprint(results)
     assert len(results) == 1
     containment, match_sig, name = results[0]
     assert containment == 1.0
@@ -1772,3 +1764,27 @@ def test_lca_gather_threshold_5(c):
     assert containment == 1.0
     assert match_sig.minhash == sig2.minhash
     assert name == None
+
+
+@utils.in_tempdir
+def test_gather_multiple_return(c):
+    sig2file = utils.get_test_data('2.fa.sig')
+    sig47file = utils.get_test_data('47.fa.sig')
+    sig63file = utils.get_test_data('63.fa.sig')
+
+    sig2 = load_one_signature(sig2file, ksize=31)
+    sig47 = load_one_signature(sig47file, ksize=31)
+    sig63 = load_one_signature(sig63file, ksize=31)
+
+    # construct LCA Database
+    db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    db.insert(sig2)
+    db.insert(sig47)
+    db.insert(sig63)
+
+    # now, run gather. how many results do we get, and are they in the
+    # right order?
+    results = db.gather(sig63)
+    print(len(results))
+    assert len(results) == 1
+    assert results[0][0] == 1.0
