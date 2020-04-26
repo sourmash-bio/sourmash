@@ -273,9 +273,8 @@ def test_api_create_insert_w_lineage():
     assert lca_db.lid_to_lineage[0] == lineage
     assert lca_db.lid_to_idx[0] == { 0 }
 
-    assert len(lca_db.lineage_to_lids) == 1
-    assert len(lca_db.lineage_to_lids[lineage]) == 1
-    assert lca_db.lineage_to_lids[lineage] == { 0 }
+    assert len(lca_db.lineage_to_lid) == 1
+    assert lca_db.lineage_to_lid[lineage] == 0
 
 
 def test_api_create_gather():
@@ -494,11 +493,11 @@ def test_gather_db_scaled_lt_sig_scaled():
     assert sig.minhash == match_sig.minhash
 
 
-def test_db_lineage_to_lids():
+def test_db_lineage_to_lid():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
 
-    d = db.lineage_to_lids
+    d = db.lineage_to_lid
     items = list(d.items())
     items.sort()
     assert len(items) == 2
