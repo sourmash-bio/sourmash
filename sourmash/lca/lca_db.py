@@ -129,6 +129,8 @@ class LCA_Database(Index):
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
+            lineage = tuple(lineage)
+
             # (LineagePairs*) -> integer lineage ids (lids)
             lid = self._get_lineage_id(lineage)
 
@@ -141,8 +143,6 @@ class LCA_Database(Index):
 
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
-
-        return lineage
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
