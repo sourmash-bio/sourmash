@@ -14,6 +14,7 @@ from . import MinHash
 from ._minhash import to_bytes
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
+from ._compat import PY2
 
 
 SIGNATURE_VERSION = 0.4
@@ -200,6 +201,12 @@ def _detect_input_type(data):
         try:
             if data.find("sourmash_signature") > 0:
                 return SigInput.BUFFER
+            elif PY2:
+                try:
+                    if data.startswith(b'\x1F\x8B'):  # gzip compressed
+                        return SigInput.BUFFER
+                except UnicodeDecodeError:
+                    pass
         except TypeError:
             if data.find(b"sourmash_signature") > 0:
                 return SigInput.BUFFER
@@ -271,7 +278,7 @@ def load_signatures(
             )
 
         if input_type == SigInput.BUFFER:
-            if hasattr(data, "encode"):
+            if hasattr(data, "encode") and not PY2:
                 data = data.encode("utf-8")
 
             sigs_ptr = rustcall(
