@@ -374,10 +374,10 @@ def test_sbt_zipstorage(tmpdir):
                                             to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
-    with ZipStorage(tmpdir.join("tree.zip")) as storage:
+    with ZipStorage(str(tmpdir.join("tree.zip"))) as storage:
         tree.save(str(tmpdir.join("tree")), storage=storage)
 
-    with ZipStorage(tmpdir.join("tree.zip")) as storage:
+    with ZipStorage(str(tmpdir.join("tree.zip"))) as storage:
         tree = SBT.load(str(tmpdir.join("tree")),
                         leaf_loader=SigLeaf.load,
                         storage=storage)
@@ -468,6 +468,34 @@ def test_sbt_redisstorage():
             print(*new_result, sep='\n')
 
             assert old_result == new_result
+
+
+def test_save_zip(tmpdir):
+    testdata = utils.get_test_data("v5.zip")
+    testsbt = tmpdir.join("v5.zip")
+    newsbt = tmpdir.join("new.zip")
+
+    shutil.copyfile(testdata, str(testsbt))
+
+    tree = SBT.load(str(testsbt), leaf_loader=SigLeaf.load)
+    tree.save(str(newsbt))
+    assert newsbt.exists()
+
+    new_tree = SBT.load(str(newsbt), leaf_loader=SigLeaf.load)
+    assert isinstance(new_tree.storage, ZipStorage)
+
+    to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
+
+    print("*" * 60)
+    print("{}:".format(to_search))
+    old_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    new_result = {str(s) for s in new_tree.find(search_minhashes, to_search, 0.1)}
+    print(*new_result, sep="\n")
+
+
+    assert old_result == new_result
+    assert len(new_result) == 2
+
 
 
 def test_load_zip(tmpdir):

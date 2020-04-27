@@ -484,26 +484,36 @@ class SBT(Index):
         """
         version = 5
 
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
+        if path.endswith(".zip"):
+            storage = ZipStorage(path)
+            kind = "Zip"
+            backend = "FSStorage"
+            subdir = '.sbt.{}'.format(os.path.basename(path[:-4]))
+            storage_args = FSStorage("", subdir).init_args()
+            storage.save(subdir + "/", "")
+        else:
+            kind = "FS"
+            if path.endswith('.sbt.json'):
+                path = path[:-9]
+            fn = os.path.abspath(path + '.sbt.json')
 
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
+            if storage is None:
+                # default storage
+                location = os.path.dirname(fn)
+                subdir = '.sbt.{}'.format(os.path.basename(path))
 
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
+                storage = FSStorage(location, subdir)
+                fn = os.path.join(location, fn)
 
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            storage_args = storage.init_args()
 
         info = {}
         info['d'] = self.d
         info['version'] = version
         info['storage'] = {
             'backend': backend,
-            'args': storage.init_args()
+            'args': storage_args
         }
         info['factory'] = {
             'class': GraphFactory.__name__,
@@ -540,10 +550,11 @@ class SBT(Index):
 
                 node.storage = storage
 
-                data['filename'] = node.save(data['filename'])
+                if kind == "Zip":
+                    node.save(os.path.join(subdir, data['filename']))
+                elif kind == "FS":
+                    data['filename'] = node.save(data['filename'])
 
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
             if isinstance(node, Node):
                 nodes[i] = data
             else:
@@ -555,10 +566,19 @@ class SBT(Index):
         notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
 
-        return fn
+        if kind == "Zip":
+            tree_data = json.dumps(info)
+            save_path = os.path.basename(path)[:-4] + ".sbt.json"
+            storage.save(save_path, tree_data)
+            storage.close()
+
+        elif kind == "FS":
+            with open(fn, 'w') as fp:
+                json.dump(info, fp)
+
+        return path
+
 
     @classmethod
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):

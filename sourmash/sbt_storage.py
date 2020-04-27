@@ -26,6 +26,9 @@ class Storage(abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})):
         return self
 
     def __exit__(self, type, value, traceback):
+        self.close()
+
+    def close(self):
         pass
 
     def can_open(self, location):
@@ -100,13 +103,6 @@ class TarStorage(Storage):
     def __exit__(self, type, value, traceback):
         self.tarfile.close()
 
-    @staticmethod
-    def can_open(location):
-        try:
-            return tarfile.is_tarfile(location)
-        except IOError:
-            return False
-
 
 class ZipStorage(Storage):
 
@@ -149,6 +145,9 @@ class ZipStorage(Storage):
         return {'path': self.path}
 
     def __exit__(self, type, value, traceback):
+        self.close()
+
+    def close(self):
         self.zipfile.close()
 
     @staticmethod
