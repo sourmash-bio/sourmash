@@ -488,11 +488,11 @@ class SBT(Index):
         """
         version = 5
 
-        if path.endswith(".zip"):
+        if path.endswith(".sbt.zip"):
             storage = ZipStorage(path)
             kind = "Zip"
             backend = "FSStorage"
-            subdir = '.sbt.{}'.format(os.path.basename(path[:-4]))
+            subdir = '.sbt.{}'.format(os.path.basename(path[:-8]))
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", "")
         else:
