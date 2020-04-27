@@ -374,10 +374,10 @@ def test_sbt_zipstorage(tmpdir):
                                             to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
-    with ZipStorage(str(tmpdir.join("tree.zip"))) as storage:
+    with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
         tree.save(str(tmpdir.join("tree")), storage=storage)
 
-    with ZipStorage(str(tmpdir.join("tree.zip"))) as storage:
+    with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
         tree = SBT.load(str(tmpdir.join("tree")),
                         leaf_loader=SigLeaf.load,
                         storage=storage)
@@ -471,9 +471,9 @@ def test_sbt_redisstorage():
 
 
 def test_save_zip(tmpdir):
-    testdata = utils.get_test_data("v5.zip")
-    testsbt = tmpdir.join("v5.zip")
-    newsbt = tmpdir.join("new.zip")
+    testdata = utils.get_test_data("v5.sbt.zip")
+    testsbt = tmpdir.join("v5.sbt.zip")
+    newsbt = tmpdir.join("new.sbt.zip")
 
     shutil.copyfile(testdata, str(testsbt))
 
@@ -492,15 +492,13 @@ def test_save_zip(tmpdir):
     new_result = {str(s) for s in new_tree.find(search_minhashes, to_search, 0.1)}
     print(*new_result, sep="\n")
 
-
     assert old_result == new_result
     assert len(new_result) == 2
 
 
-
 def test_load_zip(tmpdir):
-    testdata = utils.get_test_data("v5.zip")
-    testsbt = tmpdir.join("v5.zip")
+    testdata = utils.get_test_data("v5.sbt.zip")
+    testsbt = tmpdir.join("v5.sbt.zip")
 
     shutil.copyfile(testdata, str(testsbt))
 
@@ -518,7 +516,7 @@ def test_load_zip(tmpdir):
 def test_load_zip_uncompressed(tmpdir):
     import zipfile
 
-    testdata = utils.get_test_data("v5.zip")
+    testdata = utils.get_test_data("v5.sbt.zip")
     testsbt = tmpdir.join("v5.sbt.json")
 
     with zipfile.ZipFile(testdata, 'r') as z:
