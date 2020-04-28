@@ -163,6 +163,28 @@ def test_api_create_insert():
     assert not lca_db.lid_to_lineage      # no lineage added
 
 
+def test_api_create_insert_bad_ksize():
+    # can we insert a ksize=21 signature into a ksize=31 DB? hopefully not.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=21, scaled=1000)
+    with pytest.raises(ValueError):
+        lca_db.insert(ss)
+
+
+def test_api_create_insert_bad_scaled():
+    # can we insert a scaled=1000 signature into a scaled=500 DB?
+    # hopefully not.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    assert ss.minhash.scaled == 1000
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500)
+    with pytest.raises(ValueError):
+        lca_db.insert(ss)
+
+
 def test_api_create_insert_ident():
     # test some internal implementation stuff: signature inserted with
     # different ident than name.

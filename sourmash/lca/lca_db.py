@@ -114,6 +114,16 @@ class LCA_Database(Index):
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
+        minhash = sig.minhash
+
+        if minhash.ksize != self.ksize:
+            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        minhash = minhash.downsample_scaled(self.scaled)
+
+
         if ident is None:
             ident = sig.name()
 
@@ -136,10 +146,6 @@ class LCA_Database(Index):
 
             # map idx to lid as well.
             self.idx_to_lid[idx] = lid
-
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        minhash = sig.minhash.downsample_scaled(self.scaled)
 
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
