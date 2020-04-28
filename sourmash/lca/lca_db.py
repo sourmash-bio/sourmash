@@ -29,12 +29,32 @@ def cached_property(fun):
 
 class LCA_Database(Index):
     """
-    Wrapper class for taxonomic database.
+    An in-memory database that indexes signatures by hash, and provides
+    optional taxonomic lineage classification.
 
-    obj.ident_to_idx: key 'identifier' to 'idx'
-    obj.idx_to_lid: key 'idx' to 'lid'
-    obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
-    obj.hashval_to_idx: key 'hashval' => set('idx')
+    Follows the `Index` API for `insert`, `search`, `gather`, and `signatures`.
+
+    Identifiers `ident` must be unique, and are taken by default as the
+    entire signature name upon insertion. This can be overridden with
+    the `ident` keyword argument in `insert`.
+
+    Integer `idx` indices can be used as keys in dictionary attributes:
+    * `idx_to_lid`, to get an (optional) lineage index.
+    * `idx_to_ident`, to retrieve the unique string identifier for that `idx`.
+
+    Integer `lid` indices can be used as keys in dictionary attributes:
+    * `lid_to_idx`, to get a set of `idx` with that lineage.
+    * `lid_to_lineage`, to get a lineage for that `lid`.
+
+    `lineage_to_lid` is a dictionary with tuples of LineagePair as keys,
+    `lid` as values.
+
+    `ident_to_name` is a dictionary from unique str identifer to a name.
+
+    `ident_to_idx` is a dictionary from unique str identifer to integer `idx`.
+
+    `hashval_to_idx` is a dictionary from individual hash values to sets of
+    `idx`.
     """
     def __init__(self, ksize, scaled):
         self.ksize = int(ksize)
@@ -94,6 +114,15 @@ class LCA_Database(Index):
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
+        minhash = sig.minhash
+
+        if minhash.ksize != self.ksize:
+            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        minhash = minhash.downsample_scaled(self.scaled)
+
         if ident is None:
             ident = sig.name()
 
@@ -109,20 +138,19 @@ class LCA_Database(Index):
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
-            # (LineagePairs*) -> integer lineage ids (lids)
-            lid = self._get_lineage_id(lineage)
+            try:
+                lineage = tuple(lineage)
 
-            # map idx to lid as well.
-            self.idx_to_lid[idx] = lid
+                # (LineagePairs*) -> integer lineage ids (lids)
+                lid = self._get_lineage_id(lineage)
 
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        minhash = sig.minhash.downsample_scaled(self.scaled)
+                # map idx to lid as well.
+                self.idx_to_lid[idx] = lid
+            except TypeError:
+                raise ValueError('lineage cannot be used as a key?!')
 
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
-
-        return lineage
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -187,6 +215,7 @@ class LCA_Database(Index):
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
             lid_to_lineage_2 = load_d['lid_to_lineage']
             lid_to_lineage = {}
+            lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
                 v = dict(v)
                 vv = []
@@ -194,8 +223,11 @@ class LCA_Database(Index):
                     name = v.get(rank, '')
                     vv.append(LineagePair(rank, name))
 
-                lid_to_lineage[int(k)] = tuple(vv)
+                vv = tuple(vv)
+                lid_to_lineage[int(k)] = vv
+                lineage_to_lid[vv] = int(k)
             db.lid_to_lineage = lid_to_lineage
+            db.lineage_to_lid = lineage_to_lid
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
@@ -396,7 +428,7 @@ class LCA_Database(Index):
     def _find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
         """
-        Do a Jaccard similarity or containment search.
+        Do a Jaccard similarity or containment search, yield results.
 
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
@@ -421,7 +453,7 @@ class LCA_Database(Index):
         debug('number of matching signatures for hashes: {}', len(c))
 
         # for each match, in order of largest overlap,
-        for idx, count in c.items():
+        for idx, count in c.most_common():
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
@@ -430,28 +462,18 @@ class LCA_Database(Index):
             match_mh = match_sig.minhash
             match_size = len(match_mh)
 
-            debug('count: {}; query_mins: {}; match size: {}',
-                  count, len(query_mins), match_size)
-
             # calculate the containment or similarity
             if containment:
                 score = count / len(query_mins)
             else:
+                # query_mins is size of query signature
+                # match_size is size of match signature
+                # count is overlap
                 score = count / (len(query_mins) + match_size - count)
-
-            debug('score: {} (containment? {}), threshold: {}',
-                  score, containment, threshold)
 
             # ...and return.
             if score >= threshold:
                 yield score, match_sig, self.filename
-
-    @cached_property
-    def lineage_to_lids(self):
-        d = defaultdict(set)
-        for lid, lineage in self.lid_to_lineage.items():
-            d[lineage].add(lid)
-        return d
 
     @cached_property
     def lid_to_idx(self):
