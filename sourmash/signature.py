@@ -195,6 +195,11 @@ class SourmashSignature(RustObject):
 
 
 def _detect_input_type(data):
+    """\
+    Determine how to load input from `data`. Returns SigInput enum.
+
+    Checks for file objects, JSON-like text, and filename.
+    """
     if hasattr(data, "fileno") or hasattr(data, "mode"):  # file object-like
         return SigInput.FILE_LIKE
     elif hasattr(data, "find"):  # check if it is uncompressed sig
@@ -330,6 +335,8 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
 def save_signatures(siglist, fp=None, compressed=False):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     attached_refs = weakref.WeakKeyDictionary()
+
+    # get list of rust objects
     collected = []
     for obj in siglist:
         rv = obj._get_objptr()
@@ -339,25 +346,22 @@ def save_signatures(siglist, fp=None, compressed=False):
 
     size = ffi.new("uintptr_t *")
 
-    if fp is None:
-        rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected), compressed, size)
-        size = size[0]
-        buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
-        if compressed:
-            return ffi.buffer(buf, size)[:]
-        return ffi.string(buf, size)
-    else:
-        # fp_c = ffi.cast("FILE *", fp)
-        # buf = rustcall(lib.signatures_save_file, siglist_c, len(collected), fp_c)
-        rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected), compressed, size)
-        size = size[0]
-        buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
-        if compressed:
-            result = ffi.buffer(buf, size)[:]
-        else:
-            result = ffi.string(buf, size)
+    # save signature into a string (potentially compressed)
+    rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
+                      compressed, size)
+    size = size[0]
 
-        try:
+    # associate a finalizer with rawbuf so that it gets freed
+    buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
+    if compressed:
+        result = ffi.buffer(buf, size)[:]
+    else:
+        result = ffi.string(buf, size)
+
+    if fp is None:                        # return string
+        return result
+    else:
+        try:                              # write to file
             fp.write(result)
         except TypeError:
             fp.write(result.decode('utf-8'))
