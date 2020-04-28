@@ -359,7 +359,8 @@ def index(args):
     nums = set()
     scaleds = set()
     for f in inp_files:
-        notify('\r...reading from {} ({} signatures so far)', f, n, end='')
+        if n % 100 == 0:
+            notify('\r...reading from {} ({} signatures so far)', f, n, end='')
         siglist = sig.load_signatures(f, ksize=args.ksize,
                                       select_moltype=moltype)
 
