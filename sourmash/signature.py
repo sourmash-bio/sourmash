@@ -223,7 +223,7 @@ def _detect_input_type(data):
 
 
 def load_signatures(
-    data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=True,
+    data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=False,
     quiet=False
 ):
     """Load a JSON string with signatures into classes.

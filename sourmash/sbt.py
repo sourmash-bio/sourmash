@@ -486,11 +486,14 @@ class SBT(Index):
         str
             full path to the new SBT description
         """
-        version = 5
+        info = {}
+        info['d'] = self.d
+        info['version'] = 5
+        info["index_type"] = self.__class__.__name__  # TODO: check
 
         if path.endswith(".sbt.zip"):
-            storage = ZipStorage(path)
             kind = "Zip"
+            storage = ZipStorage(path)
             backend = "FSStorage"
             subdir = '.sbt.{}'.format(os.path.basename(path[:-8]))
             storage_args = FSStorage("", subdir).init_args()
@@ -512,9 +515,6 @@ class SBT(Index):
             backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
             storage_args = storage.init_args()
 
-        info = {}
-        info['d'] = self.d
-        info['version'] = version
         info['storage'] = {
             'backend': backend,
             'args': storage_args
@@ -564,7 +564,7 @@ class SBT(Index):
             else:
                 leaves[i] = data
 
-            if n % 1000 == 0:
+            if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
         notify("\nFinished saving nodes, now saving SBT json file.")
@@ -630,17 +630,6 @@ class SBT(Index):
             if sbt_name.endswith('.sbt.json'):
                 sbt_name = sbt_name[:-9]
 
-        loaders = {
-            1: cls._load_v1,
-            2: cls._load_v2,
-            3: cls._load_v3,
-            4: cls._load_v4,
-            5: cls._load_v5,
-        }
-
-        if leaf_loader is None:
-            leaf_loader = Leaf.load
-
         sbt_fn = os.path.join(dirname, sbt_name)
         if not sbt_fn.endswith('.sbt.json') and tempfile is None:
             sbt_fn += '.sbt.json'
@@ -653,6 +642,21 @@ class SBT(Index):
         version = 1
         if isinstance(jnodes, Mapping):
             version = jnodes['version']
+
+        if leaf_loader is None:
+            leaf_loader = Leaf.load
+
+        loaders = {
+            1: cls._load_v1,
+            2: cls._load_v2,
+            3: cls._load_v3,
+            4: cls._load_v4,
+            5: cls._load_v5,
+        }
+
+        #if version >= 5:
+        #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
+        #        loaders[5] = LocalizedSBT._load_v5
 
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
