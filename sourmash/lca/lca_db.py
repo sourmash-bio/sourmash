@@ -396,7 +396,7 @@ class LCA_Database(Index):
     def _find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
         """
-        Do a Jaccard similarity or containment search.
+        Do a Jaccard similarity or containment search, yield results.
 
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
@@ -421,7 +421,7 @@ class LCA_Database(Index):
         debug('number of matching signatures for hashes: {}', len(c))
 
         # for each match, in order of largest overlap,
-        for idx, count in c.items():
+        for idx, count in c.most_common():
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
@@ -430,17 +430,14 @@ class LCA_Database(Index):
             match_mh = match_sig.minhash
             match_size = len(match_mh)
 
-            debug('count: {}; query_mins: {}; match size: {}',
-                  count, len(query_mins), match_size)
-
             # calculate the containment or similarity
             if containment:
                 score = count / len(query_mins)
             else:
+                # query_mins is size of query signature
+                # match_size is size of match signature
+                # count is overlap
                 score = count / (len(query_mins) + match_size - count)
-
-            debug('score: {} (containment? {}), threshold: {}',
-                  score, containment, threshold)
 
             # ...and return.
             if score >= threshold:
