@@ -25,7 +25,8 @@ One useful modification to `search` is to calculate containment with
 matches where the query is contained within the subject, but the
 subject may have many other k-mers in it. For example, if you are using
 a plasmid as a query, you would use `--containment` to find genomes
-that contained that plasmid.
+that contained that plasmid.  `gather` (discussed below) uses containment
+analysis only.
 
 See [the main sourmash
 tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#make-and-search-a-database-quickly)
@@ -39,17 +40,17 @@ mixture of many different genomes.  While you might use containment to
 see if a query genome is present in one or more metagenomes, a common
 question to ask is the reverse: **what genomes are in my metagenome?**
 
-We have implemented two algorithms in sourmash to do this.
+We have implemented two approaches in sourmash to do this.
 
-One algorithm uses taxonomic information from e.g. GenBank to classify
+One approach uses taxonomic information from e.g. GenBank to classify
 individual k-mers, and then infers taxonomic distributions of
 metagenome contents from the presence of these individual
 k-mers. (This is the approach pioneered by
-[Kraken](https://ccb.jhu.edu/software/kraken/) and many other tools.)
+[Kraken](https://ccb.jhu.edu/software/kraken/) and used by many other tools.)
 `sourmash lca` can be used to classify individual genome bins with
 `classify`, or summarize metagenome taxonomy with `summarize`.  The
 [sourmash lca tutorial](http://sourmash.readthedocs.io/en/latest/tutorials-lca.html)
-shows how to use the `lca classify` and `summarize` commands, and also
+shows how to use the `lca classify` and `lca summarize` commands, and also
 provides guidance on building your own database.
 
 The other approach, `gather`, breaks a metagenome down into individual
@@ -93,12 +94,76 @@ that the particular species isn't known.
 
 ## Abundance weighting
 
+By default, sourmash tracks k-mer presence, *not* their abundance. The
+proportions and fractions reported also ignore abundance. So, if
+`sourmash gather` reports that a genome is 5% of a metagenome, it is
+reporting Jaccard containment of that genome in the metagenome, and it
+is ignoring information like the number of reads in the metagenome
+that come from that genome.  Similarly, when `sourmash compare`
+compares genome or metagenome signatures, it's reporting Jaccard
+similarity *without* abundance.
+
+However, it is possible to take into account abundance information by
+computing signatures with `--track-abundance`. The abundance
+information will be used if it's present in the signature, and it can
+be ignored with `--ignore-abundance` in any signature comparison.
+
+There are two ways that abundance weighting can be used. One is in
+containment queries for metagenomes, e.g. with `sourmash
+gather`, and the other is in comparisons of abundance-weighted signatures,
+e.g. with `sourmash search` and `sourmash compare`.  Below, we refer to the
+first as "abundance projection" and the second as "angular similarity".
+
+### Projecting abundances in `sourmash gather`:
+
+`sourmash gather` can report approximate abundance information for
+containment queries against genome databases.  This will give you
+numbers that (approximately) match what you get from counting mapped
+reads.
+
 If you compute your input signatures with `--track-abundance`, both
 `sourmash gather` and `sourmash lca gather` will use that information
-to calculate an abundance-weighted result.  Briefly, this will weight
+to calculate an abundance-weighted result.  This will weight
 each match to a hash value by the multiplicity of the hash value in
 the query signature.  You can turn off this behavior with
 `--ignore-abundance`.
+
+For example, if you have a metagenome composed of two equal sized genomes
+A and B, with A present at 10 times the abundance of B, `gather` on
+abundance-weighted signatures will report that approximately 91% of the
+metagenome is A and approximately 9% is B. (If you use `--ignore-abundance`,
+then `gather` will report approximately 50:50, since the genomes are equal
+sized.)
+
+You can also get count-like information from the CSV output of `sourmash
+gather`; the column `median_abund` contains the median abundance of the k-mers
+in the match to the given genome.
+
+**Buyer beware:** There are substantial challenges in doing this kind
+of analysis on real metagenomic samples, relating to genome representation
+and strain overlap; see [this issue](https://github.com/dib-lab/sourmash/issues/461) for a discussion.
+
+### Computing signature similarity with angular similarity.
+
+If signatures that have abundance information are compared with
+`sourmash search` or `sourmash compare`, the default comparison is
+done with
+[angular similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity). This
+is a distance metric based on cosine similarity, and it is suitable
+for use in clustering.
+
+For more information on the value of this kind of comparison for
+metagenomics, please see the simka paper,
+[Multiple comparative metagenomics using multiset k-mer counting](https://peerj.com/articles/cs-94/),
+Benoit et al., 2016. Initial comparisons of metagenome similarity
+approximations computed with sourmash to the output of simka suggest a
+significant correlation.
+
+**Implementation note:** Angular similarity searches cannot be done on
+SBT or LCA databases currently; you have to provide lists of signature
+files to `sourmash search` and `sourmash compare`.  sourmash will
+provide a warning if you run `sourmash search` on an LCA or SBT with
+an abundance-weighted query, and automatically apply `--ignore-abundance`.
 
 ## What commands should I use?
 
