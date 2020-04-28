@@ -7,6 +7,17 @@ Remember to update release numbers/RC in:
 
 * this document
 
+## Required build environment
+
+The basic build environment needed below can be created as follows:
+
+```
+conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
+    htslib pysam twine
+```
+
+Then activate it with `conda activate sourmash-rc`.
+
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for master.
@@ -38,7 +49,6 @@ git push --tags git@github.com:dib-lab/sourmash.git
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
-set -e
 python -m pip install -U setuptools pip virtualenv wheel
 
 cd ..
@@ -53,7 +63,7 @@ cd testenv1
 source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip
+python -m pip install -U setuptools pip wheel
 python -m pip install -r requirements.txt
 make test
 
@@ -62,7 +72,7 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip
+python -m pip install -U setuptools pip wheel
 python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
@@ -75,7 +85,7 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip
+python -m pip install -U setuptools pip wheel
 python -m pip install sourmash*tar.gz
 python -m pip install pytest
 tar xzf sourmash-${new_version}${rc}.tar.gz
@@ -126,29 +136,37 @@ cd ../sourmash
 git tag -a v${new_version}
 ```
 
-2\. Publish the new release on PyPI (requires an authorized account).
-```
-make dist
-twine upload dist/sourmash-${new_version}.tar.gz
-```
-
-3\. Delete the release candidate tag and push the tag updates to GitHub:
+2\. Delete the release candidate tag and push the tag updates to GitHub:
 ```
 git tag -d v${new_version}${rc}
 git push --tags git@github.com:dib-lab/sourmash.git
 git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
 ```
-4\. Add the release on GitHub, using the tag you just pushed.
-Name it 'version X.Y.Z', and copy and paste in the release notes.
 
-5\. Upload wheels from GitHub Releases to PyPI.
-[`hub`](https://hub.github.com/) makes this easier,
-but you can also manually download all the files from [the releases page].
+3\. Upload wheels from GitHub Releases to PyPI.  You can manually download
+all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
+
+Download the wheels with hub:
 ```
 mkdir -p wheel && cd wheel
 hub release download v${new_version}
+```
+or download them manually.
+
+Then, upload them to PyPI like so:
+```
 twine upload *.whl
 ```
+twine will correctly determine the version from the filenames.
+
+4\. Publish the new release on PyPI (requires an authorized account).
+```
+make dist
+twine upload dist/sourmash-${new_version}.tar.gz
+```
+
+5\. Add the release on GitHub, using the tag you just pushed.
+Name it 'version X.Y.Z', and copy and paste in the release notes.
 
 ## Bioconda
 
@@ -163,6 +181,7 @@ If a bioinformatics software is released and no one tweets, is it really release
 
 Examples:
 
+- [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
 - [3.1.0](https://twitter.com/luizirber/status/1217639572202409984)
 - [3.0.0](https://twitter.com/luizirber/status/1213588144458649600)
 - [2.3.0](https://twitter.com/luizirber/status/1198027116396171264)
