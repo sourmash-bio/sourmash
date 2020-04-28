@@ -324,6 +324,7 @@ class SBT(Index):
         
 
     def gather(self, query, *args, **kwargs):
+        "Return the match with the best Jaccard containment in the database."
         from .sbtmh import GatherMinHashes
 
         if not query.minhash:             # empty query? quit.
@@ -356,12 +357,15 @@ class SBT(Index):
 
         # actually do search!
         results = []
+
         for leaf in self.find(search_fn, query, threshold,
                               unload_data=unload_data):
             leaf_mh = leaf.data.minhash
             containment = query.minhash.contained_by(leaf_mh, True)
             if containment >= threshold:
                 results.append((containment, leaf.data, None))
+
+        results.sort(key=lambda x: -x[0])
 
         return results
 

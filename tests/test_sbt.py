@@ -718,3 +718,30 @@ def test_sbt_gather_threshold_5():
     assert containment == 1.0
     assert match_sig == sig2
     assert name is None
+
+
+@utils.in_tempdir
+def test_gather_multiple_return(c):
+    # test gather() method number of returns
+    sig2file = utils.get_test_data('2.fa.sig')
+    sig47file = utils.get_test_data('47.fa.sig')
+    sig63file = utils.get_test_data('63.fa.sig')
+
+    sig2 = load_one_signature(sig2file, ksize=31)
+    sig47 = load_one_signature(sig47file, ksize=31)
+    sig63 = load_one_signature(sig63file, ksize=31)
+
+    # construct LCA Database
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    tree.insert(sig2)
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    # now, run gather. how many results do we get, and are they in the
+    # right order?
+    results = tree.gather(sig63)
+    print(len(results))
+    assert len(results) == 2
+    assert results[0][0] == 1.0
