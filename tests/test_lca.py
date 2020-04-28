@@ -260,13 +260,13 @@ def test_api_create_insert_two():
 
 
 def test_api_create_insert_w_lineage():
-    # test some internal implementation stuff - insert signature w/linage
+    # test some internal implementation stuff - insert signature w/lineage
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lineage = ((LineagePair('rank1', 'name1'),
-               (LineagePair('rank2', 'name2'))))
+                LineagePair('rank2', 'name2')))
     
     lca_db.insert(ss, lineage=lineage)
 
@@ -297,6 +297,31 @@ def test_api_create_insert_w_lineage():
 
     assert len(lca_db.lineage_to_lid) == 1
     assert lca_db.lineage_to_lid[lineage] == 0
+
+
+def test_api_create_insert_w_bad_lineage():
+    # test some internal implementation stuff - insert signature w/bad lineage
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lineage = ([LineagePair('rank1', 'name1'),
+                LineagePair('rank2', 'name2')],)
+
+    with pytest.raises(ValueError):
+        lca_db.insert(ss, lineage=lineage)
+
+
+def test_api_create_insert_w_bad_lineage_2():
+    # test some internal implementation stuff - insert signature w/bad lineage
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lineage = 1 # something non-iterable...
+
+    with pytest.raises(ValueError):
+        lca_db.insert(ss, lineage=lineage)
 
 
 def test_api_create_gather():

@@ -123,7 +123,6 @@ class LCA_Database(Index):
         # making sure they're all at the same scaled value!
         minhash = minhash.downsample_scaled(self.scaled)
 
-
         if ident is None:
             ident = sig.name()
 
@@ -139,13 +138,16 @@ class LCA_Database(Index):
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
-            lineage = tuple(lineage)
+            try:
+                lineage = tuple(lineage)
 
-            # (LineagePairs*) -> integer lineage ids (lids)
-            lid = self._get_lineage_id(lineage)
+                # (LineagePairs*) -> integer lineage ids (lids)
+                lid = self._get_lineage_id(lineage)
 
-            # map idx to lid as well.
-            self.idx_to_lid[idx] = lid
+                # map idx to lid as well.
+                self.idx_to_lid[idx] = lid
+            except TypeError:
+                raise ValueError('lineage cannot be used as a key?!')
 
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
