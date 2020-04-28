@@ -491,6 +491,7 @@ class SBT(Index):
         info['version'] = 5
         info["index_type"] = self.__class__.__name__  # TODO: check
 
+        # choose between ZipStorage and FS (file system/directory) storage.
         if path.endswith(".sbt.zip"):
             kind = "Zip"
             storage = ZipStorage(path)
@@ -502,15 +503,15 @@ class SBT(Index):
             kind = "FS"
             if path.endswith('.sbt.json'):
                 path = path[:-9]
-            fn = os.path.abspath(path + '.sbt.json')
+            index_filename = os.path.abspath(path + '.sbt.json')
 
             if storage is None:
                 # default storage
-                location = os.path.dirname(fn)
+                location = os.path.dirname(index_filename)
                 subdir = '.sbt.{}'.format(os.path.basename(path))
 
                 storage = FSStorage(location, subdir)
-                fn = os.path.join(location, fn)
+                index_filename = os.path.join(location, index_filename)
 
             backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
             storage_args = storage.init_args()
@@ -578,7 +579,7 @@ class SBT(Index):
             storage.close()
 
         elif kind == "FS":
-            with open(fn, 'w') as fp:
+            with open(index_filename, 'w') as fp:
                 json.dump(info, fp)
 
         return path

@@ -358,6 +358,7 @@ def test_sbt_tarstorage():
 
 
 def test_sbt_zipstorage(tmpdir):
+    # create tree, save to a zip, then load and search.
     factory = GraphFactory(31, 1e5, 4)
 
     tree = SBT(factory)
@@ -471,6 +472,7 @@ def test_sbt_redisstorage():
 
 
 def test_save_zip(tmpdir):
+    # load from zipped SBT, save to zipped SBT, and then search.
     testdata = utils.get_test_data("v5.sbt.zip")
     testsbt = tmpdir.join("v5.sbt.zip")
     newsbt = tmpdir.join("new.sbt.zip")
@@ -497,6 +499,7 @@ def test_save_zip(tmpdir):
 
 
 def test_load_zip(tmpdir):
+    # search zipped SBT
     testdata = utils.get_test_data("v5.sbt.zip")
     testsbt = tmpdir.join("v5.sbt.zip")
 
@@ -514,6 +517,7 @@ def test_load_zip(tmpdir):
 
 
 def test_load_zip_uncompressed(tmpdir):
+    # uncompress zipped SBT into a tmpdir and search unpacked SBT
     import zipfile
 
     testdata = utils.get_test_data("v5.sbt.zip")

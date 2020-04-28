@@ -70,7 +70,7 @@ class TarStorage(Storage):
 
         if path is None:
             # TODO: Open a temporary file?
-            pass
+            pass                          # CTB: should raise an exception, no?
 
         self.path = os.path.abspath(path)
 
