@@ -667,7 +667,7 @@ class SBT(Index):
 
         #if version >= 6:
         #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
-        #        loaders[5] = LocalizedSBT._load_v5
+        #        loaders[6] = LocalizedSBT._load_v6
 
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
