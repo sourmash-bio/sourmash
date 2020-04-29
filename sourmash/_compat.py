@@ -1,3 +1,4 @@
+import abc
 import sys
 
 
@@ -14,6 +15,7 @@ if PY2:
         cls.__unicode__ = cls.__str__
         cls.__str__ = lambda x: x.__unicode__().encode('utf-8')
         return cls
+    ABC = abc.ABCMeta(str('ABC'), (object,), {'__slots__': ()})
 else:
     text_type = str
     int_types = (int,)
@@ -22,3 +24,4 @@ else:
     itervalues = lambda x: x.values()
     NUL = 0
     implements_to_string = lambda x: x
+    from abc import ABC
