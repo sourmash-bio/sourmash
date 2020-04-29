@@ -264,7 +264,7 @@ unsafe fn signature_get_mhs(ptr: *mut Signature, size: *mut usize) -> Result<*mu
 }
 
 ffi_fn! {
-unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize, compressed: bool, osize: *mut usize) -> Result<*const u8> {
+unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize, compression: u8, osize: *mut usize) -> Result<*const u8> {
     let sigs = {
         assert!(!ptr.is_null());
         slice::from_raw_parts(ptr, size)
@@ -274,10 +274,22 @@ unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize, compress
 
     let mut buffer = vec![];
     {
-      let mut writer = if compressed {
+      let mut writer = if compression > 0 {
+          let level = match compression {
+            1 => niffler::compression::Level::One,
+            2 => niffler::compression::Level::Two,
+            3 => niffler::compression::Level::Three,
+            4 => niffler::compression::Level::Four,
+            5 => niffler::compression::Level::Five,
+            6 => niffler::compression::Level::Six,
+            7 => niffler::compression::Level::Seven,
+            8 => niffler::compression::Level::Eight,
+            _ => niffler::compression::Level::Nine,
+          };
+
           niffler::get_writer(Box::new(&mut buffer),
                               niffler::compression::Format::Gzip,
-                              niffler::compression::Level::Nine)?
+                              level)?
       } else {
           Box::new(&mut buffer)
       };

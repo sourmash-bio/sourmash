@@ -301,7 +301,7 @@ def test_load_compressed(track_abundance):
     e1 = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig1 = SourmashSignature(e1)
 
-    x = save_signatures([sig1], compressed=True)
+    x = save_signatures([sig1], compression=5)
 
     y = load_one_signature(x)
     assert sig1 == y

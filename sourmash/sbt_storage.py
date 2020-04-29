@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals, division
 import abc
 from io import BytesIO
 import os
+import sys
 import tarfile
 import zipfile
 
@@ -119,6 +120,15 @@ class ZipStorage(Storage):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
+        # Turns out we can't delete/modify an entry in a zipfile easily.
+        # For now, if the file already exists open it in read mode,
+        # otherwise open in write mode.
+        # This causes issues when calling the `sourmash index` command
+        # many times in a row, because it will try to write in a read-only file...
+        # Opening in append mode is an alternative but is misleading, because
+        # duplicated entries are written again in the file, generating
+        # potentially large zip files...
+        # More info: https://bugs.python.org/issue6818
         if os.path.exists(self.path):
             self.zipfile = zipfile.ZipFile(path, 'r')
         else:
@@ -131,7 +141,20 @@ class ZipStorage(Storage):
             self.subdir = subdirs[0]
 
     def save(self, path, content):
-        self.zipfile.writestr(path, content)
+        # Sigh. SIGH. When we are Python 3.6+, remove this mode madness.
+        mode = "w"
+        if sys.version_info[:3] < (3, 6):
+            mode = "U"
+        try:
+            with self.zipfile.open(path, mode=mode) as entry:
+                entry.write(content)
+        except KeyError:
+            self.zipfile.writestr(path, content)
+
+        # After 3.6+, we can do just this:
+        #with self.zipfile.open(path, mode='w') as entry:
+        #    entry.write(content)
+
         return path
 
     def load(self, path):

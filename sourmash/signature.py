@@ -336,7 +336,7 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     raise ValueError("expected to load exactly one signature")
 
 
-def save_signatures(siglist, fp=None, compressed=False):
+def save_signatures(siglist, fp=None, compression=0):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     attached_refs = weakref.WeakKeyDictionary()
 
@@ -352,12 +352,12 @@ def save_signatures(siglist, fp=None, compressed=False):
 
     # save signature into a string (potentially compressed)
     rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
-                      compressed, size)
+                      compression, size)
     size = size[0]
 
     # associate a finalizer with rawbuf so that it gets freed
     buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
-    if compressed:
+    if compression:
         result = ffi.buffer(buf, size)[:]
     else:
         result = ffi.string(buf, size)

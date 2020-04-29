@@ -240,7 +240,7 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
 }
 
 ffi_fn! {
-unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compressed: bool, size: *mut usize) -> Result<*const u8> {
+unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compression: u8, size: *mut usize) -> Result<*const u8> {
     let ng = {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -248,10 +248,22 @@ unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compressed: bool, size: *mut 
 
     let mut buffer = vec![];
     {
-      let mut writer = if compressed {
+      let mut writer = if compression > 0 {
+          let level = match compression {
+            1 => niffler::compression::Level::One,
+            2 => niffler::compression::Level::Two,
+            3 => niffler::compression::Level::Three,
+            4 => niffler::compression::Level::Four,
+            5 => niffler::compression::Level::Five,
+            6 => niffler::compression::Level::Six,
+            7 => niffler::compression::Level::Seven,
+            8 => niffler::compression::Level::Eight,
+            _ => niffler::compression::Level::Nine,
+          };
+
           niffler::get_writer(Box::new(&mut buffer),
                               niffler::compression::Format::Gzip,
-                              niffler::compression::Level::Nine)?
+                              level)?
       } else {
           Box::new(&mut buffer)
       };

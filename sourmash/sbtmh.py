@@ -47,7 +47,7 @@ class SigLeaf(Leaf):
         # content...)
         self.data
 
-        buf = signature.save_signatures([self.data], compressed=True)
+        buf = signature.save_signatures([self.data], compression=1)
         return self.storage.save(path, buf)
 
     def update(self, parent):

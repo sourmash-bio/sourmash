@@ -31,9 +31,9 @@ class Nodegraph(RustObject):
     def save(self, filename):
         self._methodcall(lib.nodegraph_save, to_bytes(filename))
 
-    def to_bytes(self, compressed=True):
+    def to_bytes(self, compression=1):
         size = ffi.new("uintptr_t *")
-        rawbuf = self._methodcall(lib.nodegraph_to_buffer, compressed, size)
+        rawbuf = self._methodcall(lib.nodegraph_to_buffer, compression, size)
         size = size[0]
 
         rawbuf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)

@@ -498,7 +498,7 @@ class SBT(Index):
             backend = "FSStorage"
             subdir = '.sbt.{}'.format(os.path.basename(path[:-8]))
             storage_args = FSStorage("", subdir).init_args()
-            storage.save(subdir + "/", "")
+            storage.save(subdir + "/", b"")
         else:
             kind = "FS"
             if path.endswith('.sbt.json'):
@@ -573,8 +573,8 @@ class SBT(Index):
         info['signatures'] = leaves
 
         if kind == "Zip":
-            tree_data = json.dumps(info)
-            save_path = os.path.basename(path)[:-4] + ".sbt.json"
+            tree_data = json.dumps(info).encode("utf-8")
+            save_path = os.path.basename(path)[:-8] + ".sbt.json"
             storage.save(save_path, tree_data)
             storage.close()
 
@@ -1042,7 +1042,7 @@ class Node(object):
                 fpr=calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        buf = self.data.to_bytes()
+        buf = self.data.to_bytes(compression=1)
         return self.storage.save(path, buf)
 
     @property
@@ -1115,7 +1115,7 @@ class Leaf(object):
         self._data = None
 
     def save(self, path):
-        buf = self.data.to_bytes()
+        buf = self.data.to_bytes(compression=1)
         return self.storage.save(path, buf)
 
     def update(self, parent):
