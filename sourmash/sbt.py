@@ -584,7 +584,7 @@ class SBT(Index):
             with open(index_filename, 'w') as fp:
                 json.dump(info, fp)
 
-        notify("\nFinished saving SBT, available at {0}".format(index_filename))
+        notify("\nFinished saving SBT, available at {0}\n".format(index_filename))
 
         return path
 
