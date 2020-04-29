@@ -141,12 +141,12 @@ def test_longer_search(n_children):
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4"])
+@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
 def test_tree_old_load(old_version):
     tree_v1 = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
                        leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v5.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('v6.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
@@ -473,8 +473,8 @@ def test_sbt_redisstorage():
 
 def test_save_zip(tmpdir):
     # load from zipped SBT, save to zipped SBT, and then search.
-    testdata = utils.get_test_data("v5.sbt.zip")
-    testsbt = tmpdir.join("v5.sbt.zip")
+    testdata = utils.get_test_data("v6.sbt.zip")
+    testsbt = tmpdir.join("v6.sbt.zip")
     newsbt = tmpdir.join("new.sbt.zip")
 
     shutil.copyfile(testdata, str(testsbt))
@@ -500,8 +500,8 @@ def test_save_zip(tmpdir):
 
 def test_load_zip(tmpdir):
     # search zipped SBT
-    testdata = utils.get_test_data("v5.sbt.zip")
-    testsbt = tmpdir.join("v5.sbt.zip")
+    testdata = utils.get_test_data("v6.sbt.zip")
+    testsbt = tmpdir.join("v6.sbt.zip")
 
     shutil.copyfile(testdata, str(testsbt))
 
@@ -520,8 +520,8 @@ def test_load_zip_uncompressed(tmpdir):
     # uncompress zipped SBT into a tmpdir and search unpacked SBT
     import zipfile
 
-    testdata = utils.get_test_data("v5.sbt.zip")
-    testsbt = tmpdir.join("v5.sbt.json")
+    testdata = utils.get_test_data("v6.sbt.zip")
+    testsbt = tmpdir.join("v6.sbt.json")
 
     with zipfile.ZipFile(testdata, 'r') as z:
         z.extractall(str(tmpdir))

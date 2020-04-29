@@ -488,7 +488,7 @@ class SBT(Index):
         """
         info = {}
         info['d'] = self.d
-        info['version'] = 5
+        info['version'] = 6
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
@@ -653,9 +653,18 @@ class SBT(Index):
             3: cls._load_v3,
             4: cls._load_v4,
             5: cls._load_v5,
+            6: cls._load_v6,
         }
 
-        #if version >= 5:
+        try:
+            loader = loaders[version]
+        except KeyError:
+            error("The index format in file is not supported this version of sourmash")
+            # TODO: raise another exception and catch in CLI commands instead of
+            # exiting here?
+            raise SystemExit(1)
+
+        #if version >= 6:
         #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
         #        loaders[5] = LocalizedSBT._load_v5
 
@@ -668,8 +677,7 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**jnodes['storage']['args'])
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage,
-                                print_version_warning)
+        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning)
 
     @staticmethod
     def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
@@ -813,6 +821,47 @@ class SBT(Index):
 
     @classmethod
     def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+        leaves = {int(k): v for (k, v) in info['leaves'].items()}
+
+        if not leaves:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = {}
+        sbt_leaves = {}
+
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
+
+        factory = GraphFactory(*info['factory']['args'])
+
+        max_node = 0
+        for k, node in nodes.items():
+            node['factory'] = factory
+            sbt_node = Node.load(node, storage)
+
+            sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
+
+        for k, node in leaves.items():
+            sbt_leaf = leaf_loader(node, storage)
+            sbt_leaves[k] = sbt_leaf
+            max_node = max(max_node, k)
+
+        tree = cls(factory, d=info['d'], storage=storage)
+        tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                              if i not in sbt_nodes and i not in sbt_leaves}
+
+        return tree
+
+    @classmethod
+    def _load_v6(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['signatures'].items()}
 
