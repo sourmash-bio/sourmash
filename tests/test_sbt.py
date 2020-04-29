@@ -1,11 +1,13 @@
 from __future__ import print_function, unicode_literals
 
+import json
 import shutil
 import os
 
 import pytest
 
 from sourmash import load_one_signature, SourmashSignature, load_signatures
+from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
@@ -159,6 +161,16 @@ def test_tree_old_load(old_version):
 
     assert results_v1 == results_cur
     assert len(results_v1) == 4
+
+
+def test_load_future(tmpdir):
+    with open(str(tmpdir.join("v9999.sbt.json")), 'w') as f:
+        json.dump({'version': 9999}, f)
+
+    with pytest.raises(IndexNotSupported) as excinfo:
+        SBT.load(str(tmpdir.join("v9999.sbt.json")))
+
+    assert "index format is not supported" in str(excinfo.value)
 
 
 def test_tree_save_load(n_children):
@@ -485,6 +497,7 @@ def test_save_zip(tmpdir):
 
     new_tree = SBT.load(str(newsbt), leaf_loader=SigLeaf.load)
     assert isinstance(new_tree.storage, ZipStorage)
+    assert new_tree.storage.list_sbts() == ['new.sbt.json']
 
     to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
 

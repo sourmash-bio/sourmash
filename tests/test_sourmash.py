@@ -11,6 +11,7 @@ import json
 import csv
 import pytest
 import sys
+import zipfile
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -3531,3 +3532,28 @@ def test_license_load_non_cc0():
             sig = next(signature.load_signatures(sigfile, do_raise=True))
         except Exception as e:
             assert "sourmash only supports CC0-licensed signatures" in str(e)
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_zipfile(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
+                   *testdata_sigs)
+
+    outfile = c.output('zzz.sbt.zip')
+    assert os.path.exists(outfile)
+
+    print(c)
+    assert c.last_result.status == 0
+    assert 'Finished saving SBT, available at {}'.format(outfile) in c.last_result.err
+
+    with zipfile.ZipFile(outfile) as zf:
+        content = zf.namelist()
+        assert len(content) == 25
+        assert len([c for c in content if 'internal' in c]) == 11
+        assert ".sbt.zzz/" in content
+        sbts = [c for c in content if c.endswith(".sbt.json")]
+        assert len(sbts) == 1
+        assert sbts[0] == "zzz.sbt.json"

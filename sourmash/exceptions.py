@@ -22,6 +22,11 @@ class SourmashError(Exception):
         return rv
 
 
+class IndexNotSupported(Exception):
+    def __init__(self):
+        Exception.__init__(self, "This index format is not supported in this version of sourmash")
+
+
 class SourmashError(Exception):
     code = None
 

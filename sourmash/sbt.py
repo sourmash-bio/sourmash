@@ -59,6 +59,7 @@ from tempfile import NamedTemporaryFile
 
 from deprecation import deprecated
 
+from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
@@ -499,6 +500,7 @@ class SBT(Index):
             subdir = '.sbt.{}'.format(os.path.basename(path[:-8]))
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", b"")
+            index_filename = os.path.abspath(path)
         else:
             kind = "FS"
             if path.endswith('.sbt.json'):
@@ -582,6 +584,8 @@ class SBT(Index):
             with open(index_filename, 'w') as fp:
                 json.dump(info, fp)
 
+        notify("\nFinished saving SBT, available at {0}".format(index_filename))
+
         return path
 
 
@@ -659,10 +663,7 @@ class SBT(Index):
         try:
             loader = loaders[version]
         except KeyError:
-            error("The index format in file is not supported this version of sourmash")
-            # TODO: raise another exception and catch in CLI commands instead of
-            # exiting here?
-            raise SystemExit(1)
+            raise IndexNotSupported()
 
         #if version >= 6:
         #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
