@@ -22,24 +22,9 @@ class SourmashError(Exception):
         return rv
 
 
-class IndexNotSupported(Exception):
+class IndexNotSupported(SourmashError):
     def __init__(self):
-        Exception.__init__(self, "This index format is not supported in this version of sourmash")
-
-
-class SourmashError(Exception):
-    code = None
-
-    def __init__(self, msg):
-        Exception.__init__(self)
-        self.message = msg
-        self.rust_info = None
-
-    def __str__(self):
-        rv = self.message
-        if self.rust_info is not None:
-            return u"%s\n\n%s" % (rv, self.rust_info)
-        return rv
+        SourmashError.__init__(self, "This index format is not supported in this version of sourmash")
 
 
 def _make_error(error_name, base=SourmashError, code=None):
