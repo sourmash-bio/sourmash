@@ -55,10 +55,12 @@ import math
 import os
 from random import randint, random
 import sys
+from tempfile import NamedTemporaryFile
 
 from deprecation import deprecated
 
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
+from .exceptions import IndexNotSupported
+from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
@@ -68,6 +70,7 @@ STORAGES = {
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
     'RedisStorage': RedisStorage,
+    'ZipStorage': ZipStorage,
 }
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
@@ -484,101 +487,44 @@ class SBT(Index):
         str
             full path to the new SBT description
         """
-        version = 4
-
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
-
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
-
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
-
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-
         info = {}
         info['d'] = self.d
-        info['version'] = version
+        info['version'] = 6
+        info["index_type"] = self.__class__.__name__  # TODO: check
+
+        # choose between ZipStorage and FS (file system/directory) storage.
+        if path.endswith(".sbt.zip"):
+            kind = "Zip"
+            storage = ZipStorage(path)
+            backend = "FSStorage"
+            name = os.path.basename(path[:-8])
+            subdir = '.sbt.{}'.format(name)
+            storage_args = FSStorage("", subdir).init_args()
+            storage.save(subdir + "/", b"")
+            index_filename = os.path.abspath(path)
+        else:
+            kind = "FS"
+            name = os.path.basename(path)
+            if path.endswith('.sbt.json'):
+                name = name[:-9]
+                index_filename = os.path.abspath(path)
+            else:
+                index_filename = os.path.abspath(path + '.sbt.json')
+
+            if storage is None:
+                # default storage
+                location = os.path.dirname(index_filename)
+                subdir = '.sbt.{}'.format(name)
+
+                storage = FSStorage(location, subdir)
+                index_filename = os.path.join(location, index_filename)
+
+            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            storage_args = storage.init_args()
+
         info['storage'] = {
             'backend': backend,
-            'args': storage.init_args()
-        }
-        info['factory'] = {
-            'class': GraphFactory.__name__,
-            'args': self.factory.init_args()
-        }
-
-        nodes = {}
-        total_nodes = len(self)
-        for n, (i, node) in enumerate(self):
-            if node is None:
-                continue
-
-            if isinstance(node, Node):
-                if random() - sparseness <= 0:
-                    continue
-
-            data = {
-                # TODO: start using md5sum instead?
-                'filename': os.path.basename(node.name),
-                'name': node.name
-            }
-
-            try:
-                node.metadata.pop('max_n_below')
-            except (AttributeError, KeyError):
-                pass
-
-            data['metadata'] = node.metadata
-
-            if structure_only is False:
-                # trigger data loading before saving to the new place
-                node.data
-
-                node.storage = storage
-
-                data['filename'] = node.save(data['filename'])
-
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
-            nodes[i] = data
-
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
-
-        notify("\nFinished saving nodes, now saving SBT json file.")
-        info['nodes'] = nodes
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
-
-        return fn
-
-    def _save_v5(self, path, storage=None, sparseness=0.0, structure_only=False):
-        version = 5
-
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
-
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
-
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
-
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-
-        info = {}
-        info['d'] = self.d
-        info['version'] = version
-        info['storage'] = {
-            'backend': backend,
-            'args': storage.init_args()
+            'args': storage_args
         }
         info['factory'] = {
             'class': GraphFactory.__name__,
@@ -615,24 +561,37 @@ class SBT(Index):
 
                 node.storage = storage
 
-                data['filename'] = node.save(data['filename'])
+                if kind == "Zip":
+                    node.save(os.path.join(subdir, data['filename']))
+                elif kind == "FS":
+                    data['filename'] = node.save(data['filename'])
 
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
             if isinstance(node, Node):
                 nodes[i] = data
             else:
                 leaves[i] = data
 
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
+            if n % 100 == 0:
+                notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
         notify("\nFinished saving nodes, now saving SBT json file.")
         info['nodes'] = nodes
-        info['leaves'] = leaves
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
+        info['signatures'] = leaves
 
-        return fn
+        if kind == "Zip":
+            tree_data = json.dumps(info).encode("utf-8")
+            save_path = "{}.sbt.json".format(name)
+            storage.save(save_path, tree_data)
+            storage.close()
+
+        elif kind == "FS":
+            with open(index_filename, 'w') as fp:
+                json.dump(info, fp)
+
+        notify("\nFinished saving SBT, available at {0}\n".format(index_filename))
+
+        return path
+
 
     @classmethod
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
@@ -653,10 +612,48 @@ class SBT(Index):
         SBT
             the SBT tree built from the description.
         """
-        dirname = os.path.dirname(os.path.abspath(location))
-        sbt_name = os.path.basename(location)
-        if sbt_name.endswith('.sbt.json'):
-            sbt_name = sbt_name[:-9]
+        tempfile = None
+        sbt_name = None
+        tree_data = None
+
+        if storage is None and ZipStorage.can_open(location):
+            storage = ZipStorage(location)
+
+            sbts = storage.list_sbts()
+            if len(sbts) != 1:
+                print("no SBT, or too many SBTs!")
+            else:
+                tree_data = storage.load(sbts[0])
+
+            tempfile = NamedTemporaryFile()
+
+            tempfile.write(tree_data)
+            tempfile.flush()
+
+            dirname = os.path.dirname(tempfile.name)
+            sbt_name = os.path.basename(tempfile.name)
+
+        if sbt_name is None:
+            dirname = os.path.dirname(os.path.abspath(location))
+            sbt_name = os.path.basename(location)
+            if sbt_name.endswith('.sbt.json'):
+                sbt_name = sbt_name[:-9]
+
+        sbt_fn = os.path.join(dirname, sbt_name)
+        if not sbt_fn.endswith('.sbt.json') and tempfile is None:
+            sbt_fn += '.sbt.json'
+        with open(sbt_fn) as fp:
+            jnodes = json.load(fp)
+
+        if tempfile is not None:
+            tempfile.close()
+
+        version = 1
+        if isinstance(jnodes, Mapping):
+            version = jnodes['version']
+
+        if leaf_loader is None:
+            leaf_loader = Leaf.load
 
         loaders = {
             1: cls._load_v1,
@@ -664,26 +661,28 @@ class SBT(Index):
             3: cls._load_v3,
             4: cls._load_v4,
             5: cls._load_v5,
+            6: cls._load_v6,
         }
 
-        if leaf_loader is None:
-            leaf_loader = Leaf.load
+        try:
+            loader = loaders[version]
+        except KeyError:
+            raise IndexNotSupported()
 
-        sbt_fn = os.path.join(dirname, sbt_name)
-        if not sbt_fn.endswith('.sbt.json'):
-            sbt_fn += '.sbt.json'
-        with open(sbt_fn) as fp:
-            jnodes = json.load(fp)
-
-        version = 1
-        if isinstance(jnodes, Mapping):
-            version = jnodes['version']
+        #if version >= 6:
+        #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
+        #        loaders[6] = LocalizedSBT._load_v6
 
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
+        elif storage is None:
+            klass = STORAGES[jnodes['storage']['backend']]
+            if jnodes['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, jnodes['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**jnodes['storage']['args'])
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage,
-                                print_version_warning)
+        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning)
 
     @staticmethod
     def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
@@ -760,12 +759,6 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
-
         factory = GraphFactory(*info['factory']['args'])
 
         max_node = 0
@@ -807,12 +800,6 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
-
         factory = GraphFactory(*info['factory']['args'])
 
         max_node = 0
@@ -848,11 +835,53 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
+
+        factory = GraphFactory(*info['factory']['args'])
+
+        max_node = 0
+        for k, node in nodes.items():
+            node['factory'] = factory
+            sbt_node = Node.load(node, storage)
+
+            sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
+
+        for k, node in leaves.items():
+            sbt_leaf = leaf_loader(node, storage)
+            sbt_leaves[k] = sbt_leaf
+            max_node = max(max_node, k)
+
+        tree = cls(factory, d=info['d'], storage=storage)
+        tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                              if i not in sbt_nodes and i not in sbt_leaves}
+
+        return tree
+
+    @classmethod
+    def _load_v6(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+        leaves = {int(k): v for (k, v) in info['signatures'].items()}
+
+        if not leaves:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = {}
+        sbt_leaves = {}
+
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
 
         factory = GraphFactory(*info['factory']['args'])
 
@@ -1067,7 +1096,7 @@ class Node(object):
                 fpr=calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        buf = self.data.to_bytes()
+        buf = self.data.to_bytes(compression=1)
         return self.storage.save(path, buf)
 
     @property
@@ -1140,7 +1169,7 @@ class Leaf(object):
         self._data = None
 
     def save(self, path):
-        buf = self.data.to_bytes()
+        buf = self.data.to_bytes(compression=1)
         return self.storage.save(path, buf)
 
     def update(self, parent):

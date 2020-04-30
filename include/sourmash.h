@@ -208,7 +208,7 @@ uintptr_t nodegraph_ntables(Nodegraph *ptr);
 
 void nodegraph_save(Nodegraph *ptr, const char *filename);
 
-uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uintptr_t *size);
+uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uint8_t compression, uintptr_t *size);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
@@ -267,7 +267,7 @@ Signature **signatures_load_path(const char *ptr,
                                  const char *select_moltype,
                                  uintptr_t *size);
 
-SourmashStr signatures_save_buffer(Signature **ptr, uintptr_t size);
+uint8_t *signatures_save_buffer(Signature **ptr, uintptr_t size, uint8_t compression, uintptr_t *osize);
 
 char sourmash_aa_to_dayhoff(char aa);
 

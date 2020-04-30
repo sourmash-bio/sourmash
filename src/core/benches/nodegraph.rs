@@ -13,7 +13,8 @@ fn save_load(c: &mut Criterion) {
     let mut f = File::open("../../tests/test-data/.sbt.v3/internal.0").unwrap();
     let _ = f.read_to_end(&mut data);
 
-    let mut group = c.benchmark_group("save_load");
+    let mut group = c.benchmark_group("nodegraph");
+    group.sample_size(10);
 
     let mut reader = Cursor::new(data.clone());
     let ng = Nodegraph::from_reader(&mut reader).unwrap();
@@ -29,6 +30,20 @@ fn save_load(c: &mut Criterion) {
         b.iter(|| {
             let mut buf = Vec::new();
             let mut writer = BufWriter::new(&mut buf);
+            ng.save_to_writer(&mut writer).unwrap();
+        });
+    });
+
+    group.bench_function("save compressed nodegraph", |b| {
+        b.iter(|| {
+            let mut buf = Vec::new();
+            let mut writer = niffler::get_writer(
+                Box::new(&mut buf),
+                niffler::compression::Format::Gzip,
+                niffler::compression::Level::Five,
+            )
+            .unwrap();
+
             ng.save_to_writer(&mut writer).unwrap();
         });
     });

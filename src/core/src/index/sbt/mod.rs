@@ -154,6 +154,7 @@ where
         let mut st: FSStorage = match sinfo {
             SBTInfo::V4(ref sbt) => (&sbt.storage.args).into(),
             SBTInfo::V5(ref sbt) => (&sbt.storage.args).into(),
+            SBTInfo::V6(ref sbt) => (&sbt.storage.args).into(),
         };
         st.set_base(path.as_ref().to_str().unwrap());
         let storage: Rc<dyn Storage> = Rc::new(st);
@@ -161,14 +162,49 @@ where
         let d = match sinfo {
             SBTInfo::V4(ref sbt) => sbt.d,
             SBTInfo::V5(ref sbt) => sbt.d,
+            SBTInfo::V6(ref sbt) => sbt.d,
         };
 
         let factory = match sinfo {
             SBTInfo::V4(ref sbt) => sbt.factory.clone(),
             SBTInfo::V5(ref sbt) => sbt.factory.clone(),
+            SBTInfo::V6(ref sbt) => sbt.factory.clone(),
         };
 
         let (nodes, leaves) = match sinfo {
+            SBTInfo::V6(sbt) => {
+                let nodes = sbt
+                    .nodes
+                    .into_iter()
+                    .map(|(n, l)| {
+                        (
+                            n,
+                            Node::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
+                    })
+                    .collect();
+                let leaves = sbt
+                    .signatures
+                    .into_iter()
+                    .map(|(n, l)| {
+                        (
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
+                    })
+                    .collect();
+                (nodes, leaves)
+            }
             SBTInfo::V5(sbt) => {
                 let nodes = sbt
                     .nodes
@@ -633,9 +669,20 @@ struct SBTInfoV5<N, L> {
     leaves: HashMap<u64, L>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct SBTInfoV6<N, L> {
+    d: u32,
+    version: u32,
+    storage: StorageInfo,
+    factory: Factory,
+    nodes: HashMap<u64, N>,
+    signatures: HashMap<u64, L>,
+}
+
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum SBTInfo {
+    V6(SBTInfoV6<NodeInfo, DatasetInfo>),
     V5(SBTInfoV5<NodeInfo, DatasetInfo>),
     V4(SBTInfoV4<NodeInfoV4>),
 }

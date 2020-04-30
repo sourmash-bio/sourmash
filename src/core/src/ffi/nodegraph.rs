@@ -240,16 +240,37 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
 }
 
 ffi_fn! {
-unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, size: *mut usize) -> Result<*const u8> {
+unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compression: u8, size: *mut usize) -> Result<*const u8> {
     let ng = {
         assert!(!ptr.is_null());
         &mut *ptr
     };
 
-    let mut st: Vec<u8> = Vec::new();
-    ng.save_to_writer(&mut st)?;
+    let mut buffer = vec![];
+    {
+      let mut writer = if compression > 0 {
+          let level = match compression {
+            1 => niffler::compression::Level::One,
+            2 => niffler::compression::Level::Two,
+            3 => niffler::compression::Level::Three,
+            4 => niffler::compression::Level::Four,
+            5 => niffler::compression::Level::Five,
+            6 => niffler::compression::Level::Six,
+            7 => niffler::compression::Level::Seven,
+            8 => niffler::compression::Level::Eight,
+            _ => niffler::compression::Level::Nine,
+          };
 
-    let b = st.into_boxed_slice();
+          niffler::get_writer(Box::new(&mut buffer),
+                              niffler::compression::Format::Gzip,
+                              level)?
+      } else {
+          Box::new(&mut buffer)
+      };
+      ng.save_to_writer(&mut writer)?;
+    }
+
+    let b = buffer.into_boxed_slice();
     *size = b.len();
 
     Ok(Box::into_raw(b) as *const u8)

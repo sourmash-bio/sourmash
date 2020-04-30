@@ -7,15 +7,24 @@ from __future__ import print_function
 import sys
 import os
 import weakref
+from enum import Enum
 
 from .logging import error
 from . import MinHash
 from ._minhash import to_bytes
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
+from ._compat import PY2
 
 
 SIGNATURE_VERSION = 0.4
+
+
+class SigInput(Enum):
+    FILE_LIKE = 1
+    PATH = 2
+    BUFFER = 3
+    UNKNOWN = 4
 
 
 class SourmashSignature(RustObject):
@@ -185,6 +194,43 @@ class SourmashSignature(RustObject):
         )
 
 
+def _detect_input_type(data):
+    """\
+    Determine how to load input from `data`. Returns SigInput enum.
+
+    Checks for:
+     - Python file-like objects
+     - JSON text (uncompressed sigs)
+     - Compressed memory buffers
+     - filename
+    """
+    if hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
+        return SigInput.FILE_LIKE
+    elif hasattr(data, "find"):  # check if it is uncompressed sig
+        try:
+            if data.find("sourmash_signature") > 0:
+                return SigInput.BUFFER
+            elif PY2:
+                try:
+                    if data.startswith(b'\x1F\x8B'):  # gzip compressed
+                        return SigInput.BUFFER
+                except UnicodeDecodeError:
+                    pass
+        except TypeError:
+            if data.find(b"sourmash_signature") > 0:
+                return SigInput.BUFFER
+            elif data.startswith(b'\x1F\x8B'):  # gzip compressed
+                return SigInput.BUFFER
+
+    try:
+        if os.path.exists(data):  # filename
+            return SigInput.PATH
+    except (ValueError, TypeError):  # No idea...
+        return SigInput.UNKNOWN
+
+    return SigInput.UNKNOWN
+
+
 def load_signatures(
     data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=False,
     quiet=False
@@ -195,35 +241,13 @@ def load_signatures(
 
     Note, the order is not necessarily the same as what is in the source file.
     """
-    if ksize:
+    if ksize is not None:
         ksize = int(ksize)
+    else:
+        ksize = 0
 
     if not data:
         return
-
-    is_fp = False
-    is_filename = False
-    is_fobj = False
-    if hasattr(data, "fileno"):
-        is_fp = True
-    elif os.path.exists(data):  # filename
-        is_filename = True
-    elif hasattr(data, "mode"):  # file object-like
-        is_fobj = True
-        if "t" in data.mode:  # need to reopen handler as binary
-            if sys.version_info >= (3,):
-                data = data.buffer
-    elif hasattr(data, "find") and data.find("sourmash_signature") > 0:
-        # json string containing the data
-        if hasattr(data, "encode"):
-            data = data.encode("utf-8")
-    else:
-        if do_raise:
-            raise ValueError("Can't parse data. No such file or invalid data.")
-        return
-
-    if ksize is None:
-        ksize = 0
 
     if select_moltype is None:
         select_moltype = ffi.NULL
@@ -233,11 +257,26 @@ def load_signatures(
         except AttributeError:
             pass
 
+    input_type = _detect_input_type(data)
+    if input_type == SigInput.UNKNOWN:
+        if not quiet:
+            error("Error in parsing signature; quitting. Cannot open file or invalid signature")
+        return
+
     size = ffi.new("uintptr_t *")
 
     try:
-        # JSON format
-        if is_filename:
+        if input_type == SigInput.FILE_LIKE:
+            if hasattr(data, "mode") and "t" in data.mode:  # need to reopen handler as binary
+                if sys.version_info >= (3,):
+                    data = data.buffer
+
+            buf = data.read()
+            data.close()
+            data = buf
+            input_type = SigInput.BUFFER
+
+        elif input_type == SigInput.PATH:
             sigs_ptr = rustcall(
                 lib.signatures_load_path,
                 data.encode("utf-8"),
@@ -246,24 +285,10 @@ def load_signatures(
                 select_moltype,
                 size,
             )
-        else:
-            if is_fp or is_fobj:
-                # TODO: we still can't pass a file-like object to rust...
-                try:
-                    buf = data.read()
-                    is_fp = False
-                    is_fobj = False
-                    data.close()
-                    data = buf
-                except AttributeError:
-                    pass
 
-                if hasattr(data, "encode"):
-                    data = data.encode("utf-8")
-
-                # TODO: use ffi.cast in the future?
-                # fp_c = ffi.cast("FILE *", data)
-                # sigs_ptr = rustcall(lib.signatures_load_file, fp_c, ignore_md5sum, size)
+        if input_type == SigInput.BUFFER:
+            if hasattr(data, "encode") and not PY2:
+                data = data.encode("utf-8")
 
             sigs_ptr = rustcall(
                 lib.signatures_load_buffer,
@@ -275,7 +300,7 @@ def load_signatures(
                 size,
             )
 
-        size = ffi.unpack(size, 1)[0]
+        size = size[0]
 
         sigs = []
         for i in range(size):
@@ -291,9 +316,6 @@ def load_signatures(
             error("Exception: {}", str(e))
         if do_raise:
             raise
-    finally:
-        if is_fp or is_fobj:
-            data.close()
 
 
 def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=False):
@@ -314,9 +336,11 @@ def load_one_signature(data, ksize=None, select_moltype=None, ignore_md5sum=Fals
     raise ValueError("expected to load exactly one signature")
 
 
-def save_signatures(siglist, fp=None):
+def save_signatures(siglist, fp=None, compression=0):
     "Save multiple signatures into a JSON string (or into file handle 'fp')"
     attached_refs = weakref.WeakKeyDictionary()
+
+    # get list of rust objects
     collected = []
     for obj in siglist:
         rv = obj._get_objptr()
@@ -324,16 +348,25 @@ def save_signatures(siglist, fp=None):
         collected.append(rv)
     siglist_c = ffi.new("Signature*[]", collected)
 
-    if fp is None:
-        buf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected))
-        return decode_str(buf, free=True)
+    size = ffi.new("uintptr_t *")
+
+    # save signature into a string (potentially compressed)
+    rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
+                      compression, size)
+    size = size[0]
+
+    # associate a finalizer with rawbuf so that it gets freed
+    buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
+    if compression:
+        result = ffi.buffer(buf, size)[:]
     else:
-        # fp_c = ffi.cast("FILE *", fp)
-        # buf = rustcall(lib.signatures_save_file, siglist_c, len(collected), fp_c)
-        buf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected))
-        result = decode_str(buf, free=True)
-        try:
+        result = ffi.string(buf, size)
+
+    if fp is None:                        # return string
+        return result
+    else:
+        try:                              # write to file
             fp.write(result)
         except TypeError:
-            fp.write(result.encode('utf-8'))
+            fp.write(result.decode('utf-8'))
         return None
