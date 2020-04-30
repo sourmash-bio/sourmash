@@ -497,20 +497,24 @@ class SBT(Index):
             kind = "Zip"
             storage = ZipStorage(path)
             backend = "FSStorage"
-            subdir = '.sbt.{}'.format(os.path.basename(path[:-8]))
+            name = os.path.basename(path[:-8])
+            subdir = '.sbt.{}'.format(name)
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", b"")
             index_filename = os.path.abspath(path)
         else:
             kind = "FS"
+            name = os.path.basename(path)
             if path.endswith('.sbt.json'):
-                path = path[:-9]
-            index_filename = os.path.abspath(path + '.sbt.json')
+                name = name[:-9]
+                index_filename = os.path.abspath(path)
+            else:
+                index_filename = os.path.abspath(path + '.sbt.json')
 
             if storage is None:
                 # default storage
                 location = os.path.dirname(index_filename)
-                subdir = '.sbt.{}'.format(os.path.basename(path))
+                subdir = '.sbt.{}'.format(name)
 
                 storage = FSStorage(location, subdir)
                 index_filename = os.path.join(location, index_filename)
@@ -576,7 +580,7 @@ class SBT(Index):
 
         if kind == "Zip":
             tree_data = json.dumps(info).encode("utf-8")
-            save_path = os.path.basename(path)[:-8] + ".sbt.json"
+            save_path = "{}.sbt.json".format(name)
             storage.save(save_path, tree_data)
             storage.close()
 

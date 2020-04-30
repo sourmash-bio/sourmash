@@ -109,36 +109,28 @@ class TarStorage(Storage):
 
 class ZipStorage(Storage):
 
-    def __init__(self, path=None):
-        # TODO: leave it open, or close/open every time?
-
-        if path is None:
-            # TODO: Open a temporary file?
-            pass
-
+    def __init__(self, path):
         self.path = os.path.abspath(path)
 
         dirname = os.path.dirname(self.path)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        # Turns out we can't delete/modify an entry in a zipfile easily.
-        # For now, if the file already exists open it in read mode,
-        # otherwise open in write mode.
-        # This causes issues when calling the `sourmash index` command
-        # many times in a row, because it will try to write in a read-only file...
-        # Opening in append mode is an alternative but is misleading, because
-        # duplicated entries are written again in the file, generating
-        # potentially large zip files...
-        # More info: https://bugs.python.org/issue6818
-        if os.path.exists(self.path):
-            self.zipfile = zipfile.ZipFile(path, 'r')
-            self.buffer = BytesIO()
-            self.bufferzip = zipfile.ZipFile(self.buffer, mode="w")
-        else:
+        self.bufferzip = None
+
+        # Turns out we can't delete/modify an entry in a zipfile easily,
+        # so we need to check some things:
+        if not os.path.exists(self.path):
+            # If the file doesn't exist open it in write mode.
             self.zipfile = zipfile.ZipFile(path, mode='w',
                                            compression=zipfile.ZIP_STORED)
-            self.bufferzip = None
+        else:
+            # If it exists, open it in read mode and prepare a buffer for
+            # new/duplicated items. During close() there are checks to see
+            # how the original file needs to be updated (append new items,
+            # deal with duplicates, and so on)
+            self.zipfile = zipfile.ZipFile(path, 'r')
+            self.bufferzip = zipfile.ZipFile(BytesIO(), mode="w")
 
         self.subdir = None
         subdirs = [f for f in self.zipfile.namelist() if f.endswith("/")]
@@ -146,16 +138,12 @@ class ZipStorage(Storage):
             self.subdir = subdirs[0]
 
     def _save_to_zf(self, zf, path, content):
-        # Sigh. SIGH. When we are Python 3.6+, remove this mode madness.
-        # After 3.6+, we can just use mode = "w"
-        mode = "w"
-        if sys.version_info[:3] < (3, 6):
-            mode = "U"
-
+        # we repeat these steps for self.zipfile and self.bufferzip,
+        # so better to have an auxiliary method
         try:
             info = zf.getinfo(path)
 
-            with zf.open(info, mode=mode) as entry:
+            with zf.open(info, mode='r') as entry:
                 if entry.read() == content:
                     # if new content == entry content, skip writing
                     return
@@ -167,6 +155,8 @@ class ZipStorage(Storage):
             zf.writestr(path, content)
 
     def save(self, path, content):
+        # First try to save to self.zipfile, if it is not writable
+        # or would introduce duplicates then try to save it in the buffer
         try:
             self._save_to_zf(self.zipfile, path, content)
         except (ValueError, RuntimeError):
@@ -180,6 +170,8 @@ class ZipStorage(Storage):
         return path
 
     def _load_from_zf(self, zf, path):
+        # we repeat these steps for self.zipfile and self.bufferzip,
+        # so better to have an auxiliary method
         try:
             return zf.read(path)
         except KeyError:
@@ -195,40 +187,58 @@ class ZipStorage(Storage):
     def init_args(self):
         return {'path': self.path}
 
-    def __exit__(self, type, value, traceback):
-        self.close()
-
     def close(self):
-        if self.bufferzip:
+        # This is a bit complicated, but we have to deal with new data
+        # (if the original zipfile is read-only) and possible duplicates.
+
+        if self.bufferzip is None:
+            # The easy case: just close the zipfile, nothing else to do
+            self.zipfile.close()
+        else:
+            # The complicated one. Need to consider:
+            # - Is there data in the buffer?
+            # - If there is, is any of it
+            #    * duplicated?
+            #    * new data?
             buffer_names = set(self.bufferzip.namelist())
             zf_names = set(self.zipfile.namelist())
             if buffer_names:
                 new_data = buffer_names - zf_names
                 duplicated = buffer_names.intersection(zf_names)
+
                 if duplicated:
                     # bad news, need to create new file...
+                    # create a temporary file to write the final version,
+                    # which will be copied to the right place later.
                     tempfile = NamedTemporaryFile()
                     final_file = zipfile.ZipFile(tempfile, mode="w")
                     all_data = buffer_names.union(zf_names)
+
                     for item in all_data:
                         if item in duplicated or item in buffer_names:
+                            # we prioritize writing data from the buffer to the
+                            # final file
                             final_file.writestr(item, self.bufferzip.read(item))
                         else:
+                            # it is only in the zipfile, so write from it
                             final_file.writestr(item, self.zipfile.read(item))
+
+                    # close the files, remove the old one and copy the final
+                    # file to the right place.
                     self.zipfile.close()
                     final_file.close()
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
+
                 elif new_data:
-                    # reopen self.zipfile as append, write new data
+                    # Since there is no duplicated data, we can
+                    # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
                     zf = zipfile.ZipFile(self.path, mode='a')
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
+            # finally, close the buffer and release memory
             self.bufferzip.close()
-        else:
-            # just close the zipfile, nothing else to do
-            self.zipfile.close()
 
     @staticmethod
     def can_open(location):
@@ -247,7 +257,6 @@ class IPFSStorage(Storage):
         self.api = ipfshttpclient.connect(**self.ipfs_args)
 
     def save(self, path, content):
-        # api.add_bytes(b"Mary had a little lamb")
         new_obj = self.api.add_bytes(content)
         if self.pin_on_add:
             self.api.pin.add(new_obj)
@@ -258,6 +267,9 @@ class IPFSStorage(Storage):
         # like putting all the generated objects inside the same dir.
         # Check this call using the files API for an example.
         # api.files_write("/test/file", io.BytesIO(b"hi"), create=True)
+        #
+        # This is also required to bring the IPFSStorage closer to what the
+        # ZipStorage is doing now.
 
     def load(self, path):
         return self.api.cat(path)
