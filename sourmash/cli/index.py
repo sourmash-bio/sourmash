@@ -32,7 +32,7 @@ from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 def subparser(subparsers):
     subparser = subparsers.add_parser('index', description=__doc__,
                                       usage=usage)
-    subparser.add_argument('dbname', help='name to save index into; .sbt.zip or .sbt.json file')
+    subparser.add_argument('sbt_name', help='name to save index into; .sbt.zip or .sbt.json file')
     subparser.add_argument(
         'signatures', nargs='+',
         help='signatures to load into SBT'
