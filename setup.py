@@ -62,8 +62,9 @@ SETUP_METADATA = {
         'sourmash = sourmash.__main__:main'
         ]
     },
-    "install_requires": ["screed>=0.9", "cffi>=1.14.0", "enum-compat", 'numpy',
-                         'matplotlib', 'scipy', "deprecation>=2.0.6"],
+    "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
+                         'enum34; python_version < "3.4"',
+                         'matplotlib', 'scipy', 'deprecation>=2.0.6'],
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",
