@@ -4,55 +4,53 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::cmd::ComputeParameters;
 use crate::errors::SourmashError;
-use crate::ffi::utils::SourmashStr;
 use crate::signature::Signature;
-use crate::sketch::minhash::{HashFunctions, KmerMinHash};
+use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
+
+use crate::ffi::cmd::compute::SourmashComputeParameters;
+use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::utils::{ForeignObject, SourmashStr};
+
+pub struct SourmashSignature;
+
+impl ForeignObject for SourmashSignature {
+    type RustObject = Signature;
+}
 
 // Signature methods
 
 #[no_mangle]
-pub unsafe extern "C" fn signature_new() -> *mut Signature {
-    Box::into_raw(Box::new(Signature::default())) as _
+pub unsafe extern "C" fn signature_new() -> *mut SourmashSignature {
+    SourmashSignature::from_rust(Signature::default())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn signature_from_params(ptr: *mut ComputeParameters) -> *mut Signature {
-    let params = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
-    Box::into_raw(Box::new(Signature::from_params(params))) as _
+pub unsafe extern "C" fn signature_from_params(
+    ptr: *const SourmashComputeParameters,
+) -> *mut SourmashSignature {
+    let params = SourmashComputeParameters::as_rust(ptr);
+    SourmashSignature::from_rust(Signature::from_params(params))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn signature_free(ptr: *mut Signature) {
-    if ptr.is_null() {
-        return;
-    }
-    Box::from_raw(ptr);
+pub unsafe extern "C" fn signature_free(ptr: *mut SourmashSignature) {
+    SourmashSignature::drop(ptr);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn signature_len(ptr: *mut Signature) -> usize {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn signature_len(ptr: *const SourmashSignature) -> usize {
+    let sig = SourmashSignature::as_rust(ptr);
     sig.signatures.len()
 }
 
 ffi_fn! {
-unsafe fn signature_add_sequence(ptr: *mut Signature, sequence: *const c_char, force: bool) ->
+unsafe fn signature_add_sequence(ptr: *mut SourmashSignature, sequence: *const c_char, force: bool) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+    let sig = SourmashSignature::as_rust_mut(ptr);
+
+    // FIXME replace with buffer + len
     let c_str = {
         assert!(!sequence.is_null());
 
@@ -64,12 +62,11 @@ unsafe fn signature_add_sequence(ptr: *mut Signature, sequence: *const c_char, f
 }
 
 ffi_fn! {
-unsafe fn signature_add_protein(ptr: *mut Signature, sequence: *const c_char) ->
+unsafe fn signature_add_protein(ptr: *mut SourmashSignature, sequence: *const c_char) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+    let sig = SourmashSignature::as_rust_mut(ptr);
+
+    // FIXME replace with buffer + len
     let c_str = {
         assert!(!sequence.is_null());
 
@@ -81,12 +78,11 @@ unsafe fn signature_add_protein(ptr: *mut Signature, sequence: *const c_char) ->
 }
 
 ffi_fn! {
-unsafe fn signature_set_name(ptr: *mut Signature, name: *const c_char) ->
+unsafe fn signature_set_name(ptr: *mut SourmashSignature, name: *const c_char) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+    let sig = SourmashSignature::as_rust_mut(ptr);
+
+    // FIXME replace with buffer + len
     let c_str = {
         assert!(!name.is_null());
 
@@ -101,12 +97,11 @@ unsafe fn signature_set_name(ptr: *mut Signature, name: *const c_char) ->
 }
 
 ffi_fn! {
-unsafe fn signature_set_filename(ptr: *mut Signature, name: *const c_char) ->
+unsafe fn signature_set_filename(ptr: *mut SourmashSignature, name: *const c_char) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+    let sig = SourmashSignature::as_rust_mut(ptr);
+
+    // FIXME replace with buffer + len
     let c_str = {
         assert!(!name.is_null());
 
@@ -121,90 +116,63 @@ unsafe fn signature_set_filename(ptr: *mut Signature, name: *const c_char) ->
 }
 
 ffi_fn! {
-unsafe fn signature_push_mh(ptr: *mut Signature, other: *const KmerMinHash) ->
+unsafe fn signature_push_mh(ptr: *mut SourmashSignature, other: *const SourmashKmerMinHash) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    let mh = {
-       assert!(!other.is_null());
-       &*other
-    };
-
+    let sig = SourmashSignature::as_rust_mut(ptr);
+    let mh = SourmashKmerMinHash::as_rust(other);
     sig.signatures.push(Sketch::MinHash(mh.clone()));
     Ok(())
 }
 }
 
 ffi_fn! {
-unsafe fn signature_set_mh(ptr: *mut Signature, other: *const KmerMinHash) ->
+unsafe fn signature_set_mh(ptr: *mut SourmashSignature, other: *const SourmashKmerMinHash) ->
     Result<()> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    let mh = {
-       assert!(!other.is_null());
-       &*other
-    };
-
+    let sig = SourmashSignature::as_rust_mut(ptr);
+    let mh = SourmashKmerMinHash::as_rust(other);
     sig.signatures = vec![Sketch::MinHash(mh.clone())];
     Ok(())
 }
 }
 
 ffi_fn! {
-unsafe fn signature_get_name(ptr: *mut Signature) -> Result<SourmashStr> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn signature_get_name(ptr: *const SourmashSignature) -> Result<SourmashStr> {
+    let sig = SourmashSignature::as_rust(ptr);
 
     if let Some(ref name) = sig.name {
-        Ok(SourmashStr::from_string(name.to_string()))
+        Ok(name.clone().into())
     } else {
-        Ok(SourmashStr::from_string("".to_string()))
+        Ok("".into())
     }
 }
 }
 
 ffi_fn! {
-unsafe fn signature_get_filename(ptr: *mut Signature) -> Result<SourmashStr> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn signature_get_filename(ptr: *const SourmashSignature) -> Result<SourmashStr> {
+    let sig = SourmashSignature::as_rust(ptr);
 
     if let Some(ref name) = sig.filename {
-        Ok(SourmashStr::from_string(name.to_string()))
+        Ok(name.clone().into())
     } else {
-        Ok(SourmashStr::from_string("".to_string()))
+        Ok("".into())
     }
 }
 }
 
 ffi_fn! {
-unsafe fn signature_get_license(ptr: *mut Signature) -> Result<SourmashStr> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
-    Ok(SourmashStr::from_string(sig.license.to_string()))
+unsafe fn signature_get_license(ptr: *const SourmashSignature) -> Result<SourmashStr> {
+    let sig = SourmashSignature::as_rust(ptr);
+    Ok(sig.license.clone().into())
 }
 }
 
 ffi_fn! {
-unsafe fn signature_first_mh(ptr: *mut Signature) -> Result<*mut KmerMinHash> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn signature_first_mh(ptr: *const SourmashSignature) -> Result<*mut SourmashKmerMinHash> {
+    let sig = SourmashSignature::as_rust(ptr);
 
     if let Some(item) = sig.signatures.get(0) {
         if let Sketch::MinHash(mh) = item {
-          Ok(Box::into_raw(Box::new(mh.clone())) as _)
+          Ok(SourmashKmerMinHash::from_rust(mh.clone()))
         } else {
           unimplemented!()
         }
@@ -216,42 +184,29 @@ unsafe fn signature_first_mh(ptr: *mut Signature) -> Result<*mut KmerMinHash> {
 }
 
 ffi_fn! {
-unsafe fn signature_eq(ptr: *mut Signature, other: *mut Signature) -> Result<bool> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
-    let other_sig = {
-        assert!(!other.is_null());
-        &mut *other
-    };
+unsafe fn signature_eq(ptr: *const SourmashSignature, other: *const SourmashSignature) -> Result<bool> {
+    let sig = SourmashSignature::as_rust(ptr);
+    let other_sig = SourmashSignature::as_rust(other);
 
     Ok(sig == other_sig)
 }
 }
 
 ffi_fn! {
-unsafe fn signature_save_json(ptr: *mut Signature) -> Result<SourmashStr> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+unsafe fn signature_save_json(ptr: *const SourmashSignature) -> Result<SourmashStr> {
+    let sig = SourmashSignature::as_rust(ptr);
     let st = serde_json::to_string(sig)?;
     Ok(SourmashStr::from_string(st))
 }
 }
 
 ffi_fn! {
-unsafe fn signature_get_mhs(ptr: *mut Signature, size: *mut usize) -> Result<*mut *mut KmerMinHash> {
-    let sig = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn signature_get_mhs(ptr: *const SourmashSignature, size: *mut usize) -> Result<*mut *mut SourmashKmerMinHash> {
+    let sig = SourmashSignature::as_rust(ptr);
 
     let output = sig.signatures.clone();
 
+    // FIXME: how to fit this into the ForeignObject trait?
     let ptr_sigs: Vec<*mut Signature> = output.into_iter().map(|x| {
       Box::into_raw(Box::new(x)) as *mut Signature
     }).collect();
@@ -259,18 +214,20 @@ unsafe fn signature_get_mhs(ptr: *mut Signature, size: *mut usize) -> Result<*mu
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();
 
-    Ok(Box::into_raw(b) as *mut *mut KmerMinHash)
+    Ok(Box::into_raw(b) as *mut *mut SourmashKmerMinHash)
 }
 }
 
 ffi_fn! {
-unsafe fn signatures_save_buffer(ptr: *mut *mut Signature, size: usize, compression: u8, osize: *mut usize) -> Result<*const u8> {
+unsafe fn signatures_save_buffer(ptr: *const *const SourmashSignature, size: usize, compression: u8, osize: *mut usize) -> Result<*const u8> {
+    // FIXME: review this for ForeignObject
+
     let sigs = {
         assert!(!ptr.is_null());
         slice::from_raw_parts(ptr, size)
     };
 
-    let rsigs: Vec<&Signature> = sigs.iter().map(|x| x.as_ref().unwrap()).collect();
+    let rsigs: Vec<&Signature> = sigs.iter().map(|x| SourmashSignature::as_rust(*x)).collect();
 
     let mut buffer = vec![];
     {
@@ -308,12 +265,14 @@ unsafe fn signatures_load_path(ptr: *const c_char,
                                _ignore_md5sum: bool,
                                ksize: usize,
                                select_moltype: *const c_char,
-                               size: *mut usize) -> Result<*mut *mut Signature> {
+                               size: *mut usize) -> Result<*mut *mut SourmashSignature> {
+    // FIXME use buffer + len instead of cstr
     let buf = {
         assert!(!ptr.is_null());
         CStr::from_ptr(ptr)
     };
 
+    // FIXME take select_moltype as enum
     let moltype: Option<HashFunctions> = if select_moltype.is_null() {
           None
         } else {
@@ -331,14 +290,15 @@ unsafe fn signatures_load_path(ptr: *const c_char,
     let (mut input, _) = niffler::from_path(buf.to_str()?).map_err(|_| SourmashError::IOError)?;
     let filtered_sigs = Signature::load_signatures(&mut input, k, moltype, None)?;
 
-    let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *mut Signature
+    // FIXME: use the ForeignObject trait, maybe define new method there...
+    let ptr_sigs: Vec<*mut SourmashSignature> = filtered_sigs.into_iter().map(|x| {
+      Box::into_raw(Box::new(x)) as *mut SourmashSignature
     }).collect();
 
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();
 
-    Ok(Box::into_raw(b) as *mut *mut Signature)
+    Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
 }
 }
 
@@ -348,12 +308,14 @@ unsafe fn signatures_load_buffer(ptr: *const c_char,
                                  _ignore_md5sum: bool,
                                  ksize: usize,
                                  select_moltype: *const c_char,
-                                 size: *mut usize) -> Result<*mut *mut Signature> {
+                                 size: *mut usize) -> Result<*mut *mut SourmashSignature> {
+    // FIXME use buffer + len instead of cstr
     let buf = {
         assert!(!ptr.is_null());
         slice::from_raw_parts(ptr as *mut u8, insize)
     };
 
+    // FIXME take select_moltype as enum
     let moltype: Option<HashFunctions> = if select_moltype.is_null() {
           None
         } else {
@@ -371,13 +333,14 @@ unsafe fn signatures_load_buffer(ptr: *const c_char,
     let mut reader = io::BufReader::new(buf);
     let filtered_sigs = Signature::load_signatures(&mut reader, k, moltype, None)?;
 
-    let ptr_sigs: Vec<*mut Signature> = filtered_sigs.into_iter().map(|x| {
-      Box::into_raw(Box::new(x)) as *mut Signature
+    // FIXME: use the ForeignObject trait, maybe define new method there...
+    let ptr_sigs: Vec<*mut SourmashSignature> = filtered_sigs.into_iter().map(|x| {
+      Box::into_raw(Box::new(x)) as *mut SourmashSignature
     }).collect();
 
     let b = ptr_sigs.into_boxed_slice();
     *size = b.len();
 
-    Ok(Box::into_raw(b) as *mut *mut Signature)
+    Ok(Box::into_raw(b) as *mut *mut SourmashSignature)
 }
 }

@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{BufReader, Read};
-use std::mem;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -119,7 +118,7 @@ where
                     let _: &L = (*l).data().unwrap();
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     let filename = (*l).save(&l.filename).unwrap();
 

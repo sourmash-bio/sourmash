@@ -16,7 +16,6 @@ use std::fs::File;
 use std::hash::{BuildHasherDefault, Hasher};
 use std::io::{BufReader, Read};
 use std::iter::FromIterator;
-use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -340,7 +339,7 @@ where
                     let _: &U = (*l).data().expect("Couldn't load data");
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     let filename = (*l).save(&l.filename).unwrap();
                     let new_node = NodeInfo {
@@ -359,7 +358,7 @@ where
                     let _: &T = (*l).data().unwrap();
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     // TODO: this should be l.md5sum(), not l.filename
                     let filename = (*l).save(&l.filename).unwrap();

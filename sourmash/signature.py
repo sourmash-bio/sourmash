@@ -80,14 +80,14 @@ class SourmashSignature(RustObject):
 
     def md5sum(self):
         "Calculate md5 hash of the bottom sketch, specifically."
-        return decode_str(self.minhash._methodcall(lib.kmerminhash_md5sum), free=True)
+        return decode_str(self.minhash._methodcall(lib.kmerminhash_md5sum))
 
     def __eq__(self, other):
         return self._methodcall(lib.signature_eq, other._objptr)
 
     @property
     def _name(self):
-        return decode_str(self._methodcall(lib.signature_get_name), free=True)
+        return decode_str(self._methodcall(lib.signature_get_name))
 
     @_name.setter
     def _name(self, value):
@@ -110,7 +110,7 @@ class SourmashSignature(RustObject):
 
     @property
     def filename(self):
-        return decode_str(self._methodcall(lib.signature_get_filename), free=True)
+        return decode_str(self._methodcall(lib.signature_get_filename))
 
     @filename.setter
     def filename(self, value):
@@ -118,7 +118,7 @@ class SourmashSignature(RustObject):
 
     @property
     def license(self):
-        return decode_str(self._methodcall(lib.signature_get_license), free=True)
+        return decode_str(self._methodcall(lib.signature_get_license))
 
     def _display_name(self, max_length):
         name = self._name
@@ -346,7 +346,7 @@ def save_signatures(siglist, fp=None, compression=0):
         rv = obj._get_objptr()
         attached_refs[rv] = obj
         collected.append(rv)
-    siglist_c = ffi.new("Signature*[]", collected)
+    siglist_c = ffi.new("SourmashSignature*[]", collected)
 
     size = ffi.new("uintptr_t *")
 

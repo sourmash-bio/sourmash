@@ -3,20 +3,25 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::index::sbt::Update;
-use crate::sketch::minhash::KmerMinHash;
 use crate::sketch::nodegraph::Nodegraph;
 
-#[no_mangle]
-pub unsafe extern "C" fn nodegraph_new() -> *mut Nodegraph {
-    Box::into_raw(Box::new(Nodegraph::default())) as _
+use crate::ffi::minhash::SourmashKmerMinHash;
+use crate::ffi::utils::ForeignObject;
+
+pub struct SourmashNodegraph;
+
+impl ForeignObject for SourmashNodegraph {
+    type RustObject = Nodegraph;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_free(ptr: *mut Nodegraph) {
-    if ptr.is_null() {
-        return;
-    }
-    Box::from_raw(ptr);
+pub unsafe extern "C" fn nodegraph_new() -> *mut SourmashNodegraph {
+    SourmashNodegraph::from_rust(Nodegraph::default())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nodegraph_free(ptr: *mut SourmashNodegraph) {
+    SourmashNodegraph::drop(ptr);
 }
 
 #[no_mangle]
@@ -32,31 +37,25 @@ pub unsafe extern "C" fn nodegraph_with_tables(
     ksize: usize,
     starting_size: usize,
     n_tables: usize,
-) -> *mut Nodegraph {
-    Box::into_raw(Box::new(Nodegraph::with_tables(
-        starting_size,
-        n_tables,
-        ksize,
-    ))) as _
+) -> *mut SourmashNodegraph {
+    let ng = Nodegraph::with_tables(starting_size, n_tables, ksize);
+    SourmashNodegraph::from_rust(ng)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_count(ptr: *mut Nodegraph, h: u64) -> bool {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_count(ptr: *mut SourmashNodegraph, h: u64) -> bool {
+    let ng = SourmashNodegraph::as_rust_mut(ptr);
     ng.count(h)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_count_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> bool {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+pub unsafe extern "C" fn nodegraph_count_kmer(
+    ptr: *mut SourmashNodegraph,
+    kmer: *const c_char,
+) -> bool {
+    let ng = SourmashNodegraph::as_rust_mut(ptr);
 
+    // FIXME use buffer + len instead of cstr
     let c_str = {
         assert!(!kmer.is_null());
 
@@ -67,22 +66,19 @@ pub unsafe extern "C" fn nodegraph_count_kmer(ptr: *mut Nodegraph, kmer: *const 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_get(ptr: *mut Nodegraph, h: u64) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_get(ptr: *const SourmashNodegraph, h: u64) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
     ng.get(h)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_get_kmer(ptr: *mut Nodegraph, kmer: *const c_char) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+pub unsafe extern "C" fn nodegraph_get_kmer(
+    ptr: *const SourmashNodegraph,
+    kmer: *const c_char,
+) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
 
+    // FIXME use buffer + len instead of cstr
     let c_str = {
         assert!(!kmer.is_null());
 
@@ -93,107 +89,80 @@ pub unsafe extern "C" fn nodegraph_get_kmer(ptr: *mut Nodegraph, kmer: *const c_
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_expected_collisions(ptr: *mut Nodegraph) -> f64 {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_expected_collisions(ptr: *const SourmashNodegraph) -> f64 {
+    let ng = SourmashNodegraph::as_rust(ptr);
     ng.expected_collisions()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_ksize(ptr: *mut Nodegraph) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_ksize(ptr: *const SourmashNodegraph) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
     ng.ksize()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_hashsizes(ptr: *mut Nodegraph, size: *mut usize) -> *const u64 {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_hashsizes(
+    ptr: *const SourmashNodegraph,
+    size: *mut usize,
+) -> *const u64 {
+    let ng = SourmashNodegraph::as_rust(ptr);
     let st = ng.tablesizes();
 
     let b = st.into_boxed_slice();
     *size = b.len();
 
+    // FIXME: Use SourmashSlice_u64?
     Box::into_raw(b) as *const u64
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_ntables(ptr: *mut Nodegraph) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_ntables(ptr: *const SourmashNodegraph) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
     ng.ntables()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_noccupied(ptr: *mut Nodegraph) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_noccupied(ptr: *const SourmashNodegraph) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
     ng.noccupied()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_matches(ptr: *mut Nodegraph, mh_ptr: *mut KmerMinHash) -> usize {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *mh_ptr
-    };
-
+pub unsafe extern "C" fn nodegraph_matches(
+    ptr: *const SourmashNodegraph,
+    mh_ptr: *const SourmashKmerMinHash,
+) -> usize {
+    let ng = SourmashNodegraph::as_rust(ptr);
+    let mh = SourmashKmerMinHash::as_rust(mh_ptr);
     ng.matches(mh)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_update(ptr: *mut Nodegraph, optr: *mut Nodegraph) {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+pub unsafe extern "C" fn nodegraph_update(
+    ptr: *mut SourmashNodegraph,
+    optr: *const SourmashNodegraph,
+) {
+    let ng = SourmashNodegraph::as_rust_mut(ptr);
+    let ong = SourmashNodegraph::as_rust(optr);
 
-    let ong = {
-        assert!(!optr.is_null());
-        &mut *optr
-    };
-
+    // FIXME raise an exception properly
     ong.update(ng).unwrap();
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nodegraph_update_mh(ptr: *mut Nodegraph, optr: *mut KmerMinHash) {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-
-    let mh = {
-        assert!(!optr.is_null());
-        &*optr
-    };
+pub unsafe extern "C" fn nodegraph_update_mh(
+    ptr: *mut SourmashNodegraph,
+    optr: *const SourmashKmerMinHash,
+) {
+    let ng = SourmashNodegraph::as_rust_mut(ptr);
+    let mh = SourmashKmerMinHash::as_rust(optr);
 
     mh.update(ng).unwrap();
 }
 
 ffi_fn! {
-unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut Nodegraph> {
+unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut SourmashNodegraph> {
+    // FIXME use buffer + len instead of c_str
     let c_str = {
         assert!(!filename.is_null());
 
@@ -203,12 +172,13 @@ unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut Nodegraph>
     let (mut input, _) = niffler::from_path(c_str.to_str()?)?;
     let ng = Nodegraph::from_reader(&mut input)?;
 
-    Ok(Box::into_raw(Box::new(ng)))
+    Ok(SourmashNodegraph::from_rust(ng))
 }
 }
 
 ffi_fn! {
-unsafe fn nodegraph_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mut Nodegraph> {
+unsafe fn nodegraph_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mut SourmashNodegraph> {
+    // FIXME use SourmashSlice_u8?
     let buf = {
         assert!(!ptr.is_null());
         slice::from_raw_parts(ptr as *mut u8, insize)
@@ -216,17 +186,15 @@ unsafe fn nodegraph_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mu
 
     let ng = Nodegraph::from_reader(&mut &buf[..])?;
 
-    Ok(Box::into_raw(Box::new(ng)))
+    Ok(SourmashNodegraph::from_rust(ng))
 }
 }
 
 ffi_fn! {
-unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result<()> {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn nodegraph_save(ptr: *const SourmashNodegraph, filename: *const c_char) -> Result<()> {
+    let ng = SourmashNodegraph::as_rust(ptr);
 
+    // FIXME use buffer + len instead of c_str
     let c_str = {
         assert!(!filename.is_null());
 
@@ -240,11 +208,8 @@ unsafe fn nodegraph_save(ptr: *mut Nodegraph, filename: *const c_char) -> Result
 }
 
 ffi_fn! {
-unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compression: u8, size: *mut usize) -> Result<*const u8> {
-    let ng = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
+unsafe fn nodegraph_to_buffer(ptr: *const SourmashNodegraph, compression: u8, size: *mut usize) -> Result<*const u8> {
+    let ng = SourmashNodegraph::as_rust(ptr);
 
     let mut buffer = vec![];
     {
@@ -273,6 +238,7 @@ unsafe fn nodegraph_to_buffer(ptr: *mut Nodegraph, compression: u8, size: *mut u
     let b = buffer.into_boxed_slice();
     *size = b.len();
 
+    // FIXME use SourmashSlice_u8?
     Ok(Box::into_raw(b) as *const u8)
 }
 }

@@ -40,7 +40,7 @@ fn save_load(c: &mut Criterion) {
             let mut writer = niffler::get_writer(
                 Box::new(&mut buf),
                 niffler::compression::Format::Gzip,
-                niffler::compression::Level::Five,
+                niffler::compression::Level::One,
             )
             .unwrap();
 
