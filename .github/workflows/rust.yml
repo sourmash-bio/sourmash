@@ -263,3 +263,8 @@ jobs:
           use-tool-cache: true
 
       - run: make include/sourmash.h
+
+      - name: check if headers have the same content
+        run: |
+          git update-index --refresh
+          git diff-index --quiet HEAD -- include/sourmash.h || echo "::error file=include/sourmash.h::Header doesn't match committed file, did you forget to rerun cbindgen?"
