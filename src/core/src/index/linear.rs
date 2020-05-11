@@ -18,7 +18,7 @@ pub struct LinearIndex<L> {
     storage: Option<Rc<dyn Storage>>,
 
     #[builder(default)]
-    pub(crate) datasets: Vec<SigStore<L>>,
+    datasets: Vec<SigStore<L>>,
 }
 
 #[derive(Serialize, Deserialize)]

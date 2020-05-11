@@ -25,8 +25,8 @@ pub trait ReadData<D> {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct StorageInfo {
-    pub(crate) backend: String,
-    pub(crate) args: StorageArgs,
+    pub backend: String,
+    pub args: StorageArgs,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,8 +68,8 @@ pub trait Storage {
 #[derive(TypedBuilder, Debug, Clone, Default)]
 pub struct FSStorage {
     /// absolute path for the directory where data is saved.
-    pub(crate) fullpath: PathBuf,
-    pub(crate) subdir: String,
+    fullpath: PathBuf,
+    subdir: String,
 }
 
 impl FSStorage {

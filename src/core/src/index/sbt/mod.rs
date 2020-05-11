@@ -566,7 +566,7 @@ pub struct Node<T> {
     storage: Option<Rc<dyn Storage>>,
 
     #[builder(default)]
-    pub(crate) data: OnceCell<T>,
+    data: OnceCell<T>,
 }
 
 impl<T> Node<T>

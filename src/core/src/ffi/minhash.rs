@@ -2,7 +2,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::errors::SourmashError;
 use crate::ffi::utils::SourmashStr;
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::{
@@ -174,7 +173,7 @@ unsafe fn kmerminhash_get_mins(ptr: *mut KmerMinHash) -> Result<*const u64> {
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    let output = mh.mins.clone();
+    let output = mh.mins();
 
     Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
 }
@@ -223,23 +222,12 @@ unsafe fn kmerminhash_get_abunds(ptr: *mut KmerMinHash) -> Result<*const u64> {
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    if let Some(ref abunds) = mh.abunds {
-        let output = abunds.clone();
-        Ok(Box::into_raw(output.into_boxed_slice()) as *const u64)
+    if let Some(abunds) = mh.abunds() {
+        Ok(Box::into_raw(abunds.into_boxed_slice()) as *const u64)
     } else {
         //throw error, can't get abund
         unimplemented!()
     }
-}
-}
-
-ffi_fn! {
-unsafe fn kmerminhash_get_min_idx(ptr: *mut KmerMinHash, idx: u64) -> Result<u64> {
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    Ok(mh.mins[idx as usize])
 }
 }
 
@@ -249,7 +237,7 @@ pub unsafe extern "C" fn kmerminhash_get_mins_size(ptr: *mut KmerMinHash) -> usi
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    mh.mins.len()
+    mh.size()
 }
 
 ffi_fn! {
@@ -278,42 +266,12 @@ unsafe fn kmerminhash_set_abundances(
     pairs.sort();
 
     // Reset the minhash
-    mh.mins.clear();
-    if let Some(ref mut abunds) = mh.abunds {
-        abunds.clear();
-    }
+    mh.clear();
 
     mh.add_many_with_abund(&pairs)?;
 
     Ok(())
 }
-}
-
-ffi_fn! {
-unsafe fn kmerminhash_get_abund_idx(ptr: *mut KmerMinHash, idx: u64) -> Result<u64> {
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    if let Some(ref mut abunds) = mh.abunds {
-      Ok(abunds[idx as usize])
-    } else {
-      Ok(0)
-    }
-}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn kmerminhash_get_abunds_size(ptr: *mut KmerMinHash) -> usize {
-    let mh = {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    if let Some(ref mut abunds) = mh.abunds {
-        abunds.len()
-    } else {
-        0
-    }
 }
 
 #[no_mangle]
@@ -358,7 +316,7 @@ pub unsafe extern "C" fn kmerminhash_track_abundance(ptr: *mut KmerMinHash) -> b
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    mh.abunds.is_some()
+    mh.track_abundance()
 }
 
 #[no_mangle]
@@ -367,7 +325,8 @@ pub unsafe extern "C" fn kmerminhash_disable_abundance(ptr: *mut KmerMinHash) {
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    mh.abunds = None;
+
+    mh.disable_abundance();
 }
 
 ffi_fn! {
@@ -377,11 +336,8 @@ unsafe fn kmerminhash_enable_abundance(ptr: *mut KmerMinHash) -> Result<()> {
         &mut *ptr
     };
 
-    if !mh.mins.is_empty() {
-      return Err(SourmashError::NonEmptyMinHash { message: "track_abundance=True".into()}.into());
-    }
+    mh.enable_abundance()?;
 
-    mh.abunds = Some(vec![]);
     Ok(())
 }
 }
@@ -429,12 +385,7 @@ unsafe fn kmerminhash_hash_function_set(ptr: *mut KmerMinHash, hash_function: Ha
         &mut *ptr
     };
 
-    if !mh.mins.is_empty() {
-      return Err(SourmashError::NonEmptyMinHash { message: "hash_function".into()}.into());
-    }
-
-    mh.hash_function = hash_function;
-    Ok(())
+    mh.set_hash_function(hash_function)
 }
 }
 
