@@ -42,7 +42,7 @@ pub unsafe extern "C" fn signature_free(ptr: *mut SourmashSignature) {
 #[no_mangle]
 pub unsafe extern "C" fn signature_len(ptr: *const SourmashSignature) -> usize {
     let sig = SourmashSignature::as_rust(ptr);
-    sig.signatures.len()
+    sig.size()
 }
 
 ffi_fn! {
@@ -90,7 +90,7 @@ unsafe fn signature_set_name(ptr: *mut SourmashSignature, name: *const c_char) -
     };
 
     if let Ok(name) = c_str.to_str() {
-        sig.name = Some(name.to_string())
+        sig.set_name(name)
     }
     Ok(())
 }
@@ -109,7 +109,7 @@ unsafe fn signature_set_filename(ptr: *mut SourmashSignature, name: *const c_cha
     };
 
     if let Ok(name) = c_str.to_str() {
-        sig.filename = Some(name.to_string())
+        sig.set_filename(name)
     }
     Ok(())
 }
@@ -120,7 +120,7 @@ unsafe fn signature_push_mh(ptr: *mut SourmashSignature, other: *const SourmashK
     Result<()> {
     let sig = SourmashSignature::as_rust_mut(ptr);
     let mh = SourmashKmerMinHash::as_rust(other);
-    sig.signatures.push(Sketch::MinHash(mh.clone()));
+    sig.push(Sketch::MinHash(mh.clone()));
     Ok(())
 }
 }
@@ -130,7 +130,8 @@ unsafe fn signature_set_mh(ptr: *mut SourmashSignature, other: *const SourmashKm
     Result<()> {
     let sig = SourmashSignature::as_rust_mut(ptr);
     let mh = SourmashKmerMinHash::as_rust(other);
-    sig.signatures = vec![Sketch::MinHash(mh.clone())];
+    sig.reset_sketches();
+    sig.push(Sketch::MinHash(mh.clone()));
     Ok(())
 }
 }
@@ -150,19 +151,14 @@ unsafe fn signature_get_name(ptr: *const SourmashSignature) -> Result<SourmashSt
 ffi_fn! {
 unsafe fn signature_get_filename(ptr: *const SourmashSignature) -> Result<SourmashStr> {
     let sig = SourmashSignature::as_rust(ptr);
-
-    if let Some(ref name) = sig.filename {
-        Ok(name.clone().into())
-    } else {
-        Ok("".into())
-    }
+    Ok(sig.filename().into())
 }
 }
 
 ffi_fn! {
 unsafe fn signature_get_license(ptr: *const SourmashSignature) -> Result<SourmashStr> {
     let sig = SourmashSignature::as_rust(ptr);
-    Ok(sig.license.clone().into())
+    Ok(sig.license().into())
 }
 }
 
@@ -204,7 +200,7 @@ ffi_fn! {
 unsafe fn signature_get_mhs(ptr: *const SourmashSignature, size: *mut usize) -> Result<*mut *mut SourmashKmerMinHash> {
     let sig = SourmashSignature::as_rust(ptr);
 
-    let output = sig.signatures.clone();
+    let output = sig.sketches();
 
     // FIXME: how to fit this into the ForeignObject trait?
     let ptr_sigs: Vec<*mut Signature> = output.into_iter().map(|x| {

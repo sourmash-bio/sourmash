@@ -32,7 +32,7 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/errors.rs
 	cd src/core && \
-	RUSTFLAGS='--cfg procmacro2_semver_exempt' RUST_BACKTRACE=1 RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
+	RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
 
 coverage: all
 	$(PYTHON) setup.py build_ext -i
