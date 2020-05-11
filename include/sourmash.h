@@ -22,12 +22,13 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_INTERNAL = 2,
   SOURMASH_ERROR_CODE_MSG = 3,
   SOURMASH_ERROR_CODE_UNKNOWN = 4,
-  SOURMASH_ERROR_CODE_MISMATCH_KSIZES = 101,
-  SOURMASH_ERROR_CODE_MISMATCH_DNAPROT = 102,
-  SOURMASH_ERROR_CODE_MISMATCH_MAX_HASH = 103,
+  SOURMASH_ERROR_CODE_MISMATCH_K_SIZES = 101,
+  SOURMASH_ERROR_CODE_MISMATCH_DNA_PROT = 102,
+  SOURMASH_ERROR_CODE_MISMATCH_SCALED = 103,
   SOURMASH_ERROR_CODE_MISMATCH_SEED = 104,
   SOURMASH_ERROR_CODE_MISMATCH_SIGNATURE_TYPE = 105,
   SOURMASH_ERROR_CODE_NON_EMPTY_MIN_HASH = 106,
+  SOURMASH_ERROR_CODE_MISMATCH_NUM = 107,
   SOURMASH_ERROR_CODE_INVALID_DNA = 1101,
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
@@ -56,45 +57,45 @@ typedef struct {
   bool owned;
 } SourmashStr;
 
-ComputeParameters *computeparams_new(void);
-
-void computeparams_free(ComputeParameters *ptr);
-
-uint64_t computeparams_seed(ComputeParameters *ptr);
-
-void computeparams_set_seed(ComputeParameters *ptr, uint64_t seed);
-
-const uint32_t* computeparams_ksizes(ComputeParameters *ptr, uintptr_t *size);
-
-void computeparams_set_ksizes(ComputeParameters *ptr, const uint32_t *ksizes_ptr, uintptr_t insize);
-
-bool computeparams_protein(ComputeParameters *ptr);
-
-void computeparams_set_protein(ComputeParameters *ptr, bool protein);
-
 bool computeparams_dayhoff(ComputeParameters *ptr);
-
-void computeparams_set_dayhoff(ComputeParameters *ptr, bool dayhoff);
-
-bool computeparams_hp(ComputeParameters *ptr);
-
-void computeparams_set_hp(ComputeParameters *ptr, bool hp);
 
 bool computeparams_dna(ComputeParameters *ptr);
 
-void computeparams_set_dna(ComputeParameters *ptr, bool dna);
+void computeparams_free(ComputeParameters *ptr);
 
-bool computeparams_track_abundance(ComputeParameters *ptr);
+bool computeparams_hp(ComputeParameters *ptr);
 
-void computeparams_set_track_abundance(ComputeParameters *ptr, bool track);
+const uint32_t *computeparams_ksizes(ComputeParameters *ptr, uintptr_t *size);
+
+ComputeParameters *computeparams_new(void);
 
 uint32_t computeparams_num_hashes(ComputeParameters *ptr);
 
-void computeparams_set_num_hashes(ComputeParameters *ptr, uint32_t num);
+bool computeparams_protein(ComputeParameters *ptr);
 
 uint64_t computeparams_scaled(ComputeParameters *ptr);
 
+uint64_t computeparams_seed(ComputeParameters *ptr);
+
+void computeparams_set_dayhoff(ComputeParameters *ptr, bool v);
+
+void computeparams_set_dna(ComputeParameters *ptr, bool v);
+
+void computeparams_set_hp(ComputeParameters *ptr, bool v);
+
+void computeparams_set_ksizes(ComputeParameters *ptr, const uint32_t *ksizes_ptr, uintptr_t insize);
+
+void computeparams_set_num_hashes(ComputeParameters *ptr, uint32_t num);
+
+void computeparams_set_protein(ComputeParameters *ptr, bool v);
+
 void computeparams_set_scaled(ComputeParameters *ptr, uint64_t scaled);
+
+void computeparams_set_seed(ComputeParameters *ptr, uint64_t new_seed);
+
+void computeparams_set_track_abundance(ComputeParameters *ptr, bool v);
+
+bool computeparams_track_abundance(ComputeParameters *ptr);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
@@ -102,16 +103,15 @@ void kmerminhash_add_from(KmerMinHash *ptr, const KmerMinHash *other);
 
 void kmerminhash_add_hash(KmerMinHash *ptr, uint64_t h);
 
-void kmerminhash_add_sequence(KmerMinHash *ptr, const char *sequence, bool force);
+void kmerminhash_add_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
 
 void kmerminhash_add_protein(KmerMinHash *ptr, const char *sequence);
 
+void kmerminhash_add_sequence(KmerMinHash *ptr, const char *sequence, bool force);
+
 void kmerminhash_add_word(KmerMinHash *ptr, const char *word);
 
-double kmerminhash_jaccard(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
-
-double kmerminhash_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
-double kmerminhash_angular_similarity(KmerMinHash *ptr, const KmerMinHash *other, bool ignore_abundance, bool downsample);
+double kmerminhash_angular_similarity(KmerMinHash *ptr, const KmerMinHash *other);
 
 uint64_t kmerminhash_count_common(KmerMinHash *ptr, const KmerMinHash *other, bool downsample);
 
@@ -123,13 +123,9 @@ void kmerminhash_enable_abundance(KmerMinHash *ptr);
 
 void kmerminhash_free(KmerMinHash *ptr);
 
-void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
-
 const uint64_t *kmerminhash_get_abunds(KmerMinHash *ptr);
 
 const uint64_t *kmerminhash_get_mins(KmerMinHash *ptr);
-
-void kmerminhash_add_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
 
 uintptr_t kmerminhash_get_mins_size(KmerMinHash *ptr);
 
@@ -141,7 +137,11 @@ bool kmerminhash_hp(KmerMinHash *ptr);
 
 uint64_t kmerminhash_intersection(KmerMinHash *ptr, const KmerMinHash *other);
 
+bool kmerminhash_is_compatible(const KmerMinHash *ptr, const KmerMinHash *other);
+
 bool kmerminhash_is_protein(KmerMinHash *ptr);
+
+double kmerminhash_jaccard(KmerMinHash *ptr, const KmerMinHash *other);
 
 uint32_t kmerminhash_ksize(KmerMinHash *ptr);
 
@@ -150,8 +150,6 @@ uint64_t kmerminhash_max_hash(KmerMinHash *ptr);
 SourmashStr kmerminhash_md5sum(KmerMinHash *ptr);
 
 void kmerminhash_merge(KmerMinHash *ptr, const KmerMinHash *other);
-
-bool kmerminhash_is_compatible(const KmerMinHash *ptr, const KmerMinHash *other);
 
 KmerMinHash *kmerminhash_new(uint32_t n,
                              uint32_t k,
@@ -170,9 +168,21 @@ void kmerminhash_remove_many(KmerMinHash *ptr, const uint64_t *hashes_ptr, uintp
 
 uint64_t kmerminhash_seed(KmerMinHash *ptr);
 
-void kmerminhash_set_abundances(KmerMinHash *ptr, const uint64_t *hashes_ptr, const uint64_t *abunds_ptr, uintptr_t insize);
+void kmerminhash_set_abundances(KmerMinHash *ptr,
+                                const uint64_t *hashes_ptr,
+                                const uint64_t *abunds_ptr,
+                                uintptr_t insize);
+
+double kmerminhash_similarity(KmerMinHash *ptr,
+                              const KmerMinHash *other,
+                              bool ignore_abundance,
+                              bool downsample);
+
+void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(KmerMinHash *ptr);
+
+void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
 bool nodegraph_count(Nodegraph *ptr, uint64_t h);
 
@@ -190,6 +200,8 @@ uintptr_t nodegraph_get(Nodegraph *ptr, uint64_t h);
 
 uintptr_t nodegraph_get_kmer(Nodegraph *ptr, const char *kmer);
 
+const uint64_t *nodegraph_hashsizes(Nodegraph *ptr, uintptr_t *size);
+
 uintptr_t nodegraph_ksize(Nodegraph *ptr);
 
 uintptr_t nodegraph_matches(Nodegraph *ptr, KmerMinHash *mh_ptr);
@@ -202,11 +214,7 @@ uintptr_t nodegraph_ntables(Nodegraph *ptr);
 
 void nodegraph_save(Nodegraph *ptr, const char *filename);
 
-uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uint8_t compression, uintptr_t *size);
-
-void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
-
-uint64_t *nodegraph_hashsizes(Nodegraph *ptr, uintptr_t *size);
+const uint8_t *nodegraph_to_buffer(Nodegraph *ptr, uint8_t compression, uintptr_t *size);
 
 void nodegraph_update(Nodegraph *ptr, Nodegraph *optr);
 
@@ -214,9 +222,9 @@ void nodegraph_update_mh(Nodegraph *ptr, KmerMinHash *optr);
 
 Nodegraph *nodegraph_with_tables(uintptr_t ksize, uintptr_t starting_size, uintptr_t n_tables);
 
-void signature_add_sequence(Signature *ptr, const char *sequence, bool force);
-
 void signature_add_protein(Signature *ptr, const char *sequence);
+
+void signature_add_sequence(Signature *ptr, const char *sequence, bool force);
 
 bool signature_eq(Signature *ptr, Signature *other);
 
@@ -224,7 +232,7 @@ KmerMinHash *signature_first_mh(Signature *ptr);
 
 void signature_free(Signature *ptr);
 
-Signature *signature_from_params(ComputeParameters *params);
+Signature *signature_from_params(ComputeParameters *ptr);
 
 SourmashStr signature_get_filename(Signature *ptr);
 
@@ -261,7 +269,10 @@ Signature **signatures_load_path(const char *ptr,
                                  const char *select_moltype,
                                  uintptr_t *size);
 
-uint8_t *signatures_save_buffer(Signature **ptr, uintptr_t size, uint8_t compression, uintptr_t *osize);
+const uint8_t *signatures_save_buffer(Signature **ptr,
+                                      uintptr_t size,
+                                      uint8_t compression,
+                                      uintptr_t *osize);
 
 char sourmash_aa_to_dayhoff(char aa);
 

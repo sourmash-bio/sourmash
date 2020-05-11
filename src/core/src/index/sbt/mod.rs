@@ -712,11 +712,9 @@ impl Hasher for NoHashHasher {
     }
 }
 
-type HashIntersection = HashSet<u64, BuildHasherDefault<NoHashHasher>>;
-
 enum BinaryTree {
     Empty,
-    Internal(Box<TreeNode<HashIntersection>>),
+    Internal(Box<TreeNode<HashSet<u64, BuildHasherDefault<NoHashHasher>>>>),
     Leaf(Box<TreeNode<SigStore<Signature>>>),
 }
 
@@ -747,7 +745,9 @@ where
         let (simleaf_tree, in_common) = if datasets.is_empty() {
             (
                 BinaryTree::Empty,
-                HashIntersection::from_iter(next_leaf.mins().into_iter()),
+                HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
+                    next_leaf.mins().into_iter(),
+                ),
             )
         } else {
             let mut similar_leaf_pos = 0;
@@ -762,12 +762,16 @@ where
 
             let similar_leaf = datasets.remove(similar_leaf_pos);
 
-            let in_common = HashIntersection::from_iter(next_leaf.mins().into_iter())
-                .union(&HashIntersection::from_iter(
+            let in_common = HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
+                next_leaf.mins().into_iter(),
+            )
+            .union(
+                &HashSet::<u64, BuildHasherDefault<NoHashHasher>>::from_iter(
                     similar_leaf.mins().into_iter(),
-                ))
-                .cloned()
-                .collect();
+                ),
+            )
+            .cloned()
+            .collect();
 
             let simleaf_tree = BinaryTree::Leaf(Box::new(TreeNode {
                 element: similar_leaf,
@@ -870,17 +874,24 @@ impl BinaryTree {
         let in_common = if let BinaryTree::Internal(ref mut el1) = left {
             match right {
                 BinaryTree::Internal(ref mut el2) => {
-                    let c1 = std::mem::replace(&mut el1.element, HashIntersection::default());
-                    let c2 = std::mem::replace(&mut el2.element, HashIntersection::default());
+                    let c1 = std::mem::replace(
+                        &mut el1.element,
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                    );
+                    let c2 = std::mem::replace(
+                        &mut el2.element,
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                    );
                     c1.union(&c2).cloned().collect()
                 }
-                BinaryTree::Empty => {
-                    std::mem::replace(&mut el1.element, HashIntersection::default())
-                }
+                BinaryTree::Empty => std::mem::replace(
+                    &mut el1.element,
+                    HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default(),
+                ),
                 _ => panic!("Should not see a Leaf at this level"),
             }
         } else {
-            HashIntersection::default()
+            HashSet::<u64, BuildHasherDefault<NoHashHasher>>::default()
         };
 
         BinaryTree::Internal(Box::new(TreeNode {

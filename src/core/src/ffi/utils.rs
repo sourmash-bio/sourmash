@@ -15,7 +15,7 @@ thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
 }
 
-macro_rules! ffi_fn (
+macro_rules! ffi_fn {
     // a function that catches panics and returns a result (err goes to tls)
     (
         $(#[$attr:meta])*
@@ -42,7 +42,7 @@ macro_rules! ffi_fn (
             $crate::ffi::utils::landingpad(|| { $body; Ok(0 as ::std::os::raw::c_int) });
         }
     }
-);
+}
 
 /// An error thrown by `landingpad` in place of panics.
 #[derive(Fail, Debug)]
