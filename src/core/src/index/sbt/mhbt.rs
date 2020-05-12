@@ -49,9 +49,9 @@ impl Update<Node<Nodegraph>> for Signature {
         let mut parent_data = parent.data()?.clone();
 
         if let Sketch::MinHash(sig) = &self.signatures[0] {
-            sig.mins.iter().for_each(|h| {
-                parent_data.count(*h);
-            });
+            for h in sig.mins() {
+                parent_data.count(h);
+            }
 
             let min_n_below = parent
                 .metadata
@@ -97,7 +97,7 @@ impl Comparable<Signature> for Node<Nodegraph> {
                 return 0.0;
             }
 
-            let matches: usize = sig.mins.iter().map(|h| ng.get(*h)).sum();
+            let matches: usize = sig.mins().iter().map(|h| ng.get(*h)).sum();
 
             let min_n_below = self.metadata["min_n_below"] as f64;
 
@@ -119,7 +119,7 @@ impl Comparable<Signature> for Node<Nodegraph> {
                 return 0.0;
             }
 
-            let matches: usize = sig.mins.iter().map(|h| ng.get(*h)).sum();
+            let matches: usize = sig.mins().iter().map(|h| ng.get(*h)).sum();
 
             matches as f64 / sig.size() as f64
         } else {
@@ -225,11 +225,8 @@ mod test {
             linear.insert(l.1.data().unwrap().clone()).unwrap();
         }
 
-        println!(
-            "linear leaves {:?} {:?}",
-            linear.datasets.len(),
-            linear.datasets
-        );
+        let datasets = linear.signatures();
+        println!("linear leaves {:?} {:?}", datasets.len(), datasets);
 
         let results = linear.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);

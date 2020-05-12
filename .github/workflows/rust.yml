@@ -244,3 +244,28 @@ jobs:
         with:
           command: test
           args: --no-fail-fast
+
+  check_cbindgen:
+    name: "Check if cbindgen runs cleanly for generating the C headers"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cbindgen
+          version: 0.14.2
+          use-tool-cache: true
+
+      - run: make include/sourmash.h
+
+      - name: check if headers have the same content
+        run: |
+          git update-index --refresh
+          git diff
+          git diff-index --quiet HEAD -- include/sourmash.h || echo "::error file=include/sourmash.h::Header doesn't match committed file, did you forget to rerun cbindgen?"

@@ -3,8 +3,10 @@ include_guard = "SOURMASH_H_INCLUDED"
 language = "C"
 
 [parse]
-expand = ["sourmash"]
 clean = true
+
+[parse.expand]
+crates = ["sourmash"]
 
 [enum]
 rename_variants = "QualifiedScreamingSnakeCase"

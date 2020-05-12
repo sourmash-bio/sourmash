@@ -13,7 +13,7 @@ use crate::HashIntoType;
 
 #[derive(Debug, Default, Clone)]
 pub struct Nodegraph {
-    pub(crate) bs: Vec<FixedBitSet>,
+    bs: Vec<FixedBitSet>,
     ksize: usize,
     occupied_bins: usize,
     unique_kmers: usize,
@@ -151,7 +151,7 @@ impl Nodegraph {
     }
 
     pub fn matches(&self, mh: &KmerMinHash) -> usize {
-        mh.mins.iter().filter(|x| self.get(**x) == 1).count()
+        mh.mins().iter().filter(|x| self.get(**x) == 1).count()
     }
 
     pub fn ntables(&self) -> usize {
@@ -160,6 +160,10 @@ impl Nodegraph {
 
     pub fn ksize(&self) -> usize {
         self.ksize
+    }
+
+    pub fn into_bitsets(self) -> Vec<FixedBitSet> {
+        self.bs
     }
 
     // save

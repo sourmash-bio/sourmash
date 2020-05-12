@@ -274,12 +274,16 @@ class MinHash(RustObject):
         """Return list of hashes or if ``with_abundance`` a list
         of (hash, abund).
         """
-        size = self._methodcall(lib.kmerminhash_get_mins_size)
-        mins_ptr = self._methodcall(lib.kmerminhash_get_mins)
+        size = ffi.new("uintptr_t *")
+        mins_ptr = self._methodcall(lib.kmerminhash_get_mins, size)
+        size = size[0]
 
         try:
             if with_abundance and self.track_abundance:
-                abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds)
+                size_abunds = ffi.new("uintptr_t *")
+                abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds, size_abunds)
+                size_abunds = size_abunds[0]
+                assert size == size_abunds
                 result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
                 lib.kmerminhash_slice_free(abunds_ptr, size)
             else:

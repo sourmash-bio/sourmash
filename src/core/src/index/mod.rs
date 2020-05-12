@@ -23,7 +23,7 @@ use typed_builder::TypedBuilder;
 use crate::index::sbt::{Node, SBT};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::index::storage::{ReadData, ReadDataError, Storage};
-use crate::signature::Signature;
+use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
 
@@ -131,14 +131,14 @@ pub struct DatasetInfo {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct SigStore<T> {
-    pub(crate) filename: String,
-    pub(crate) name: String,
-    pub(crate) metadata: String,
+    filename: String,
+    name: String,
+    metadata: String,
 
-    pub(crate) storage: Option<Rc<dyn Storage>>,
+    storage: Option<Rc<dyn Storage>>,
 
     #[builder(default)]
-    pub(crate) data: OnceCell<T>,
+    data: OnceCell<T>,
 }
 
 impl<T> SigStore<T> {
@@ -202,7 +202,7 @@ impl SigStore<Signature> {
         // TODO: select the right signatures...
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            mh.mins.to_vec()
+            mh.mins()
         } else {
             unimplemented!()
         }
@@ -271,7 +271,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
                 let common = mh.count_common(&omh, false).unwrap();
-                let size = mh.mins.len();
+                let size = mh.size();
                 return common as f64 / size as f64;
             }
         }
@@ -306,7 +306,7 @@ impl Comparable<Signature> for Signature {
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
                 let common = mh.count_common(&omh, false).unwrap();
-                let size = mh.mins.len();
+                let size = mh.size();
                 return common as f64 / size as f64;
             }
         }
