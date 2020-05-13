@@ -872,14 +872,14 @@ def test_single_classify_to_output():
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
         cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
-               '-o', 'outfile.txt']
+               '-o', os.path.join(location, 'outfile.txt')]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
         print(out)
         print(err)
 
-        outdata = open('outfile.txt', 'rt').read()
+        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
@@ -1187,14 +1187,14 @@ def test_single_summarize_to_output():
         shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
-               '-o', 'output.txt']
+               '-o', os.path.join(location, 'output.txt')]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
         print(out)
         print(err)
 
-        outdata = open('output.txt', 'rt').read()
+        outdata = open(os.path.join(location, 'output.txt'), 'rt').read()
 
         assert 'loaded 1 signatures from 1 files total.' in err
         assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
