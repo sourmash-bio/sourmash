@@ -142,32 +142,47 @@ class ZipStorage(Storage):
         # so better to have an auxiliary method
         try:
             info = zf.getinfo(path)
+        except KeyError:
+            # entry not there yet, write a new one
+            newpath = path
+        else:
             entry_content = zf.read(info)
 
             if entry_content == content:
-                # if new content == entry content, skip writing
-                return
-            else:
-                # Trying to write new content, raise error
-                raise ValueError("This will insert duplicated entries")
-        except KeyError:
-            # entry not there yet, write a new one
-            zf.writestr(path, content)
+                # skip writing
+                return path
+
+            # Trying to write new content:
+            # create newpath based on path
+            newpath = None
+            n = 0
+            while newpath is None:
+                testpath = "{}_{}".format(path, n)
+                try:
+                    zf.getinfo(testpath)
+                except KeyError:
+                    # testpath is available, use it as newpath
+                    newpath = testpath
+                else:
+                    n += 1
+
+        zf.writestr(newpath, content)
+        return newpath
 
     def save(self, path, content):
         # First try to save to self.zipfile, if it is not writable
         # or would introduce duplicates then try to save it in the buffer
         try:
-            self._save_to_zf(self.zipfile, path, content)
+            newpath = self._save_to_zf(self.zipfile, path, content)
         except (ValueError, RuntimeError):
             # Can't write in the zipfile, write in buffer instead
             if self.bufferzip:
-                self._save_to_zf(self.bufferzip, path, content)
+                newpath = self._save_to_zf(self.bufferzip, path, content)
             else:
                 # Throw error, can't write the data
                 raise ValueError("can't write data")
 
-        return path
+        return newpath
 
     def _load_from_zf(self, zf, path):
         # we repeat these steps for self.zipfile and self.bufferzip,
