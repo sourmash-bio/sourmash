@@ -142,14 +142,14 @@ class ZipStorage(Storage):
         # so better to have an auxiliary method
         try:
             info = zf.getinfo(path)
+            entry_content = zf.read(info)
 
-            with zf.open(info, mode='r') as entry:
-                if entry.read() == content:
-                    # if new content == entry content, skip writing
-                    return
-                else:
-                    # Trying to write new content, raise error
-                    raise ValueError("This will insert duplicated entries")
+            if entry_content == content:
+                # if new content == entry content, skip writing
+                return
+            else:
+                # Trying to write new content, raise error
+                raise ValueError("This will insert duplicated entries")
         except KeyError:
             # entry not there yet, write a new one
             zf.writestr(path, content)

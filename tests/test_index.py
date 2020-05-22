@@ -1,6 +1,8 @@
 from __future__ import print_function, unicode_literals
 
+import glob
 import os
+
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex
@@ -362,3 +364,27 @@ def test_linear_index_moltype_select():
     # select something impossible
     linear2 = linear.select(ksize=4)
     assert len(linear2) == 0
+
+
+@utils.in_tempdir
+def test_index_same_md5sum_fsstorage(c):
+    testdata_glob = utils.get_test_data('img/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.json', *testdata_sigs)
+    assert c.last_result.status == 0
+
+    outfile = c.output('zzz.sbt.json')
+    assert os.path.exists(outfile)
+
+
+@utils.in_tempdir
+def test_index_same_md5sum_zipstorage(c):
+    testdata_glob = utils.get_test_data('img/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.zip', *testdata_sigs)
+    assert c.last_result.status == 0
+
+    outfile = c.output('zzz.sbt.zip')
+    assert os.path.exists(outfile)
