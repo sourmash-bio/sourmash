@@ -53,10 +53,32 @@ class FSStorage(Storage):
 
     def save(self, path, content):
         "Save a node/leaf."
-        with open(os.path.join(self.location, self.subdir, path), 'wb') as f:
+        newpath = path
+        fullpath = os.path.join(self.location, self.subdir, path)
+
+        if os.path.exists(fullpath):
+            # check for content, if same return path,
+            with open(fullpath, 'rb') as f:
+                old_content = f.read()
+                if old_content == content:
+                    return path
+
+            # different content, need to find new path to save
+            newpath = None
+            n = 0
+            while newpath is None:
+                testpath = "{}_{}".format(fullpath, n)
+                if os.path.exists(testpath):
+                    n += 1
+                else:
+                    # testpath is available, use it as newpath
+                    newpath = "{}_{}".format(path, n)
+
+        fullpath = os.path.join(self.location, self.subdir, newpath)
+        with open(fullpath, 'wb') as f:
             f.write(content)
 
-        return path
+        return newpath
 
     def load(self, path):
         out = BytesIO()
