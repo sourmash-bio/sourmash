@@ -125,6 +125,11 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
+        # adjust threshold_bp to 0 to maintain sensitivity here
+        if threshold_bp < cmp_scaled:
+            threshold_bp = 0
+
+        # find the best match!
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
         if not best_match:          # no matches at all for this cutoff!
