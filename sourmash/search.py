@@ -80,6 +80,10 @@ def _find_best(dblist, query, threshold_bp):
     best_match = None
     best_filename = None
 
+    # quantize threshold_bp to be an integer multiple of scaled
+    query_scaled = query.minhash.scaled
+    threshold_bp = int(threshold_bp / query_scaled) * query_scaled
+
     # search across all databases
     for (obj, filename, filetype) in dblist:
         for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
@@ -125,10 +129,6 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
-        # adjust threshold_bp to 0 to maintain sensitivity here
-        if threshold_bp < cmp_scaled:
-            threshold_bp = 0
-
         # find the best match!
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
