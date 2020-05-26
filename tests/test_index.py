@@ -369,10 +369,10 @@ def test_linear_index_moltype_select():
 
 @utils.in_tempdir
 def test_index_same_md5sum_fsstorage(c):
-    testdata_glob = utils.get_test_data('img/*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
+    testdata1 = utils.get_test_data('img/2706795855.sig')
+    testdata2 = utils.get_test_data('img/638277004.sig')
 
-    c.run_sourmash('index', '-k', '21', 'zzz.sbt.json', *testdata_sigs)
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.json', testdata1, testdata2)
     assert c.last_result.status == 0
 
     outfile = c.output('zzz.sbt.json')
@@ -383,10 +383,10 @@ def test_index_same_md5sum_fsstorage(c):
 
 @utils.in_tempdir
 def test_index_same_md5sum_zipstorage(c):
-    testdata_glob = utils.get_test_data('img/*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
+    testdata1 = utils.get_test_data('img/2706795855.sig')
+    testdata2 = utils.get_test_data('img/638277004.sig')
 
-    c.run_sourmash('index', '-k', '21', 'zzz.sbt.zip', *testdata_sigs)
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.zip', testdata1, testdata2)
     assert c.last_result.status == 0
 
     outfile = c.output('zzz.sbt.zip')
