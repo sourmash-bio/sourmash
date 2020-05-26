@@ -185,6 +185,9 @@ class GatherMinHashes(object):
 
         score = float(matches) / len(mh)
 
+        if score < threshold:
+            return 0
+
         # store results if we have passed in an appropriate dictionary
         if results is not None:
             results[node.name] = score

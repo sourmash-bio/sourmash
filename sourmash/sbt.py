@@ -367,6 +367,8 @@ class SBT(Index):
             containment = query.minhash.contained_by(leaf_mh, True)
             if containment >= threshold:
                 results.append((containment, leaf.data, None))
+            else:
+                raise Exception
 
         results.sort(key=lambda x: -x[0])
 
