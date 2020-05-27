@@ -190,6 +190,9 @@ The sourmash gather algorithm works as follows:
 * find the best match in the database, based on containment;
 * subtract that match from the query;
 * repeat.
+* when the number of shared hashes between the _remaining_ query and the
+  best match drops below `threshold_bp/scaled` (or is zero), break out of
+  the loop.
 
 The output below is the CSV output for a fictional metagenome.
 
