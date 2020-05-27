@@ -1,6 +1,9 @@
 from __future__ import print_function, unicode_literals
 
+import glob
 import os
+import zipfile
+
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex
@@ -362,3 +365,33 @@ def test_linear_index_moltype_select():
     # select something impossible
     linear2 = linear.select(ksize=4)
     assert len(linear2) == 0
+
+
+@utils.in_tempdir
+def test_index_same_md5sum_fsstorage(c):
+    testdata1 = utils.get_test_data('img/2706795855.sig')
+    testdata2 = utils.get_test_data('img/638277004.sig')
+
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.json', testdata1, testdata2)
+    assert c.last_result.status == 0
+
+    outfile = c.output('zzz.sbt.json')
+    assert os.path.exists(outfile)
+    storage = c.output('.sbt.zzz')
+    assert len(glob.glob(storage + "/*")) == 3
+
+
+@utils.in_tempdir
+def test_index_same_md5sum_zipstorage(c):
+    testdata1 = utils.get_test_data('img/2706795855.sig')
+    testdata2 = utils.get_test_data('img/638277004.sig')
+
+    c.run_sourmash('index', '-k', '21', 'zzz.sbt.zip', testdata1, testdata2)
+    assert c.last_result.status == 0
+
+    outfile = c.output('zzz.sbt.zip')
+    assert os.path.exists(outfile)
+    zout = zipfile.ZipFile(outfile, mode='r')
+    # should have 3 files, 1 internal and two sigs. We check for 4 because the
+    # directory also shows in namelist()
+    assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
