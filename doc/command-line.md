@@ -240,6 +240,11 @@ overlap     p_query p_match
 0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
 ```
 
+The command line option `--threshold-bp` sets the threshold below
+which matches are no longer reported; by default, this is set to
+50kb. see the Appendix in
+[Classifying Signatures](classifying-signatures.html) for details.
+
 Note:
 
 Use `sourmash gather` to classify a metagenome against a collection of
