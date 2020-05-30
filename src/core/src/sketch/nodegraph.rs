@@ -179,9 +179,10 @@ impl Nodegraph {
         W: io::Write,
     {
         wtr.write_all(b"OXLI")?;
-        wtr.write_u8(4)?; // version
+        wtr.write_u8(5)?; // version
         wtr.write_u8(2)?; // ht_type
         wtr.write_u32::<LittleEndian>(self.ksize as u32)?; // ksize
+        wtr.write_u64::<LittleEndian>(self.unique_kmers as u64)?; // unique kmers
         wtr.write_u8(self.bs.len() as u8)?; // n_tables
         wtr.write_u64::<LittleEndian>(self.occupied_bins as u64)?; // n_occupied
         for count in &self.bs {
@@ -226,12 +227,17 @@ impl Nodegraph {
         assert_eq!(signature, 0x4f58_4c49);
 
         let version = rdr.read_u8()?;
-        assert_eq!(version, 0x04);
 
         let ht_type = rdr.read_u8()?;
         assert_eq!(ht_type, 0x02);
 
         let ksize = rdr.read_u32::<LittleEndian>()?;
+        let unique_kmers = if version == 5 {
+            rdr.read_u64::<LittleEndian>()?
+        } else {
+            0
+        };
+
         let n_tables = rdr.read_u8()?;
         let occupied_bins = rdr.read_u64::<LittleEndian>()? as usize;
 
@@ -268,7 +274,7 @@ impl Nodegraph {
             bs,
             ksize: ksize as usize,
             occupied_bins,
-            unique_kmers: 0, // This is a khmer issue, it doesn't save unique_kmers
+            unique_kmers: unique_kmers as usize,
         })
     }
 
