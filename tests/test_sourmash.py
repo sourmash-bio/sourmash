@@ -159,50 +159,50 @@ def test_do_basic_compare_using_rna_arg(c):
     assert (cmp_out == cmp_calc).all()
 
 
-def test_do_compare_quiet():
-    with utils.TempDirectory() as location:
+@utils.in_tempdir
+def test_do_compare_quiet(c):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31',
                                             testdata1, testdata2],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
 
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--csv', 'xxx',
                                             '-q'],
-                                           in_directory=location)
+                                           in_directory=c.location)
         assert not out
         assert not err
 
 
-def test_do_traverse_directory_compare():
-    with utils.TempDirectory() as location:
+@utils.in_tempdir
+def test_do_traverse_directory_compare(c):
         status, out, err = utils.runscript('sourmash',
                                            ['compare', '--traverse-directory',
                                             '-k 21', '--dna', utils.get_test_data('compare')],
-                                           in_directory=location)
+                                           in_directory=c.location)
         print(out)
         assert 'genome-s10.fa.gz' in out
         assert 'genome-s11.fa.gz' in out
 
-def test_do_compare_output_csv():
-    with utils.TempDirectory() as location:
+@utils.in_tempdir
+def test_do_compare_output_csv(c):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
 
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
-        with open(os.path.join(location, 'xxx')) as fp:
+        with open(os.path.join(c.location, 'xxx')) as fp:
             r = iter(csv.reader(fp))
             row = next(r)
             print(row)
@@ -219,50 +219,50 @@ def test_do_compare_output_csv():
                 next(r)
 
 
-def test_do_compare_downsample():
-    with utils.TempDirectory() as location:
+@utils.in_tempdir
+def test_do_compare_downsample(c):
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--scaled', '200',
                                             '-k', '31', testdata1],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
 
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--scaled', '100',
                                             '-k', '31', testdata2],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
         print(status, out, err)
         assert 'downsampling to scaled value of 200' in err
-        with open(os.path.join(location, 'xxx')) as fp:
+        with open(os.path.join(c.location, 'xxx')) as fp:
             lines = fp.readlines()
             assert len(lines) == 3
             assert lines[1].startswith('1.0,0.6666')
             assert lines[2].startswith('0.6666')
 
 
-def test_do_compare_output_multiple_k():
-    with utils.TempDirectory() as location:
+@utils.in_tempdir
+def test_do_compare_output_multiple_k(c):
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '21', testdata1],
-                                           in_directory=location)
+                                           in_directory=c.location)
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31', testdata2],
-                                           in_directory=location)
+                                           in_directory=c.location)
 
         status, out, err = utils.runscript('sourmash',
                                            ['compare', 'short.fa.sig',
                                             'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location,
+                                           in_directory=c.location,
                                            fail_ok=True)
 
         print(status, out, err)
