@@ -1,49 +1,49 @@
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum SourmashError {
     /// Raised for internal errors in the libraries.  Should not happen.
-    #[fail(display = "internal error: {}", message)]
+    #[error("internal error: {message:?}")]
     Internal { message: String },
 
-    #[fail(display = "must have same num: {} != {}", n1, n2)]
+    #[error("must have same num: {n1} != {n2}")]
     MismatchNum { n1: u32, n2: u32 },
 
-    #[fail(display = "different ksizes cannot be compared")]
+    #[error("different ksizes cannot be compared")]
     MismatchKSizes,
 
-    #[fail(display = "DNA/prot minhashes cannot be compared")]
+    #[error("DNA/prot minhashes cannot be compared")]
     MismatchDNAProt,
 
-    #[fail(display = "mismatch in scaled; comparison fail")]
+    #[error("mismatch in scaled; comparison fail")]
     MismatchScaled,
 
-    #[fail(display = "mismatch in seed; comparison fail")]
+    #[error("mismatch in seed; comparison fail")]
     MismatchSeed,
 
-    #[fail(display = "different signatures cannot be compared")]
+    #[error("different signatures cannot be compared")]
     MismatchSignatureType,
 
-    #[fail(display = "Invalid hash function: {}", function)]
+    #[error("Invalid hash function: {function:?}")]
     InvalidHashFunction { function: String },
 
-    #[fail(display = "Can only set {} if the MinHash is empty", message)]
+    #[error("Can only set {message:?} if the MinHash is empty")]
     NonEmptyMinHash { message: String },
 
-    #[fail(display = "invalid DNA character in input k-mer: {}", message)]
+    #[error("invalid DNA character in input k-mer: {message:?}")]
     InvalidDNA { message: String },
 
-    #[fail(display = "invalid protein character in input: {}", message)]
+    #[error("invalid protein character in input: {message:?}")]
     InvalidProt { message: String },
 
-    #[fail(display = "Codon is invalid length: {}", message)]
+    #[error("Codon is invalid length: {message:?}")]
     InvalidCodonLength { message: String },
 
-    #[fail(display = "Error from deserialization")]
-    SerdeError,
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::error::Error),
 
-    #[fail(display = "I/O Error")]
-    IOError,
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
 }
 
 #[repr(u32)]

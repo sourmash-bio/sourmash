@@ -1,7 +1,7 @@
-use failure::Error;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::signature::SigsTrait;
+use crate::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlatUKHS {}

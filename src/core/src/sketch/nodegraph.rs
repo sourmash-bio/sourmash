@@ -4,11 +4,11 @@ use std::path::Path;
 use std::slice;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Error;
 use fixedbitset::FixedBitSet;
 
 use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
+use crate::Error;
 use crate::HashIntoType;
 
 #[derive(Debug, Default, Clone)]

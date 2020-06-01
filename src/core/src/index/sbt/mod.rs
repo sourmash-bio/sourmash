@@ -19,7 +19,6 @@ use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use failure::Error;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
@@ -28,6 +27,7 @@ use typed_builder::TypedBuilder;
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
 use crate::signature::Signature;
+use crate::Error;
 
 pub trait Update<O> {
     fn update(&self, other: &mut O) -> Result<(), Error>;

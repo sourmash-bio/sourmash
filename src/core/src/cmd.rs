@@ -1,9 +1,8 @@
-use failure::Error;
-
 use crate::index::MHBT;
 use crate::signature::Signature;
 use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub fn prepare(index_path: &str) -> Result<(), Error> {
     let mut index = MHBT::from_path(index_path)?;

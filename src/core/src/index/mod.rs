@@ -15,7 +15,6 @@ use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
 
-use failure::Error;
 use once_cell::sync::OnceCell;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
@@ -26,6 +25,7 @@ use crate::index::storage::{ReadData, ReadDataError, Storage};
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 

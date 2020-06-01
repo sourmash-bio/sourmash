@@ -9,8 +9,10 @@ use std::slice;
 use std::str;
 use std::thread;
 
-use crate::errors::SourmashErrorCode;
-use failure::{Error, Fail};
+use failure::Fail;
+use thiserror::Error;
+
+use crate::Error;
 
 thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
@@ -80,8 +82,8 @@ macro_rules! ffi_fn {
 }
 
 /// An error thrown by `landingpad` in place of panics.
-#[derive(Fail, Debug)]
-#[fail(display = "sourmash panicked: {}", _0)]
+#[derive(Error, Debug)]
+#[error("sourmash panicked: {0}")]
 pub struct Panic(String);
 
 /// Returns the last error message.

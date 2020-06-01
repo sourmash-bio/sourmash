@@ -1,0 +1,3 @@
+migrating from failure to thiserror+anyhow. Can help with the .iter_causes
+issue.
+https://github.com/bytecodealliance/wasmtime/pull/436/commits

@@ -9,16 +9,15 @@ use std::path::Path;
 use std::str;
 
 use cfg_if::cfg_if;
-use failure::Error;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::errors::SourmashError;
 use crate::index::storage::ToWriter;
 use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub trait SigsTrait {
     fn size(&self) -> usize;
@@ -58,11 +57,11 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => match other {
                 Sketch::UKHS(ref ot) => ukhs.check_compatible(ot),
-                _ => Err(SourmashError::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType.into()),
             },
             Sketch::MinHash(ref mh) => match other {
                 Sketch::MinHash(ref ot) => mh.check_compatible(ot),
-                _ => Err(SourmashError::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType.into()),
             },
             Sketch::LargeMinHash(ref mh) => match other {
                 Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
@@ -376,7 +375,7 @@ impl ToWriter for Signature {
     {
         match serde_json::to_writer(writer, &vec![&self]) {
             Ok(_) => Ok(()),
-            Err(_) => Err(SourmashError::SerdeError.into()),
+            Err(_) => Err(Error::SerdeError.into()),
         }
     }
 }
