@@ -373,10 +373,8 @@ impl ToWriter for Signature {
     where
         W: io::Write,
     {
-        match serde_json::to_writer(writer, &vec![&self]) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(Error::SerdeError.into()),
-        }
+        serde_json::to_writer(writer, &vec![&self])?;
+        Ok(())
     }
 }
 

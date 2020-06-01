@@ -9,9 +9,10 @@ use std::slice;
 use std::str;
 use std::thread;
 
-use failure::Fail;
+use failure::Fail; // can remove after .backtrace() is available in error...
 use thiserror::Error;
 
+use crate::errors::SourmashErrorCode;
 use crate::Error;
 
 thread_local! {
@@ -92,13 +93,14 @@ pub struct Panic(String);
 /// that needs to be freed with `sourmash_str_free`.
 #[no_mangle]
 pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
-    use std::fmt::Write;
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
-            let mut msg = err.to_string();
+            let msg = err.to_string();
+            /* TODO: iter_causes is a failure method
             for cause in err.iter_causes() {
                 write!(&mut msg, "\n  caused by: {}", cause).ok();
             }
+            */
             SourmashStr::from_string(msg)
         } else {
             Default::default()
@@ -111,11 +113,10 @@ pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
 pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
     LAST_ERROR.with(|e| {
         if let Some(ref error) = *e.borrow() {
-            let backtrace = error.backtrace().to_string();
-            if !backtrace.is_empty() {
+            if let Some(backtrace) = error.backtrace() {
                 use std::fmt::Write;
                 let mut out = String::new();
-                write!(&mut out, "stacktrace: {}", backtrace).ok();
+                write!(&mut out, "stacktrace: {}", backtrace.to_string()).ok();
                 SourmashStr::from_string(out)
             } else {
                 Default::default()

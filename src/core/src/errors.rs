@@ -40,7 +40,22 @@ pub enum SourmashError {
     InvalidCodonLength { message: String },
 
     #[error(transparent)]
+    ReadDataError(#[from] crate::index::storage::ReadDataError),
+
+    #[error(transparent)]
+    StorageError(#[from] crate::index::storage::StorageError),
+
+    #[error(transparent)]
+    Panic(#[from] crate::ffi::utils::Panic),
+
+    #[error(transparent)]
     SerdeError(#[from] serde_json::error::Error),
+
+    #[error(transparent)]
+    NifflerError(#[from] niffler::Error),
+
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
 
     #[error(transparent)]
     IOError(#[from] std::io::Error),
@@ -68,47 +83,40 @@ pub enum SourmashErrorCode {
     InvalidProt = 11_02,
     InvalidCodonLength = 11_03,
     InvalidHashFunction = 11_04,
+    // index-related errors
+    ReadData = 12_01,
+    Storage = 12_02,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
     ParseInt = 100_003,
     SerdeError = 100_004,
+    NifflerError = 100_005,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
 impl SourmashErrorCode {
-    pub fn from_error(error: &failure::Error) -> SourmashErrorCode {
-        for cause in error.iter_chain() {
-            use crate::ffi::utils::Panic;
-            if cause.downcast_ref::<Panic>().is_some() {
-                return SourmashErrorCode::Panic;
-            }
-
-            if let Some(err) = cause.downcast_ref::<SourmashError>() {
-                return match err {
-                    SourmashError::Internal { .. } => SourmashErrorCode::Internal,
-                    SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
-                    SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
-                    SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
-                    SourmashError::MismatchScaled => SourmashErrorCode::MismatchScaled,
-                    SourmashError::MismatchSeed => SourmashErrorCode::MismatchSeed,
-                    SourmashError::MismatchSignatureType => {
-                        SourmashErrorCode::MismatchSignatureType
-                    }
-                    SourmashError::NonEmptyMinHash { .. } => SourmashErrorCode::NonEmptyMinHash,
-                    SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
-                    SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
-                    SourmashError::InvalidCodonLength { .. } => {
-                        SourmashErrorCode::InvalidCodonLength
-                    }
-                    SourmashError::InvalidHashFunction { .. } => {
-                        SourmashErrorCode::InvalidHashFunction
-                    }
-                    SourmashError::SerdeError => SourmashErrorCode::SerdeError,
-                    SourmashError::IOError => SourmashErrorCode::Io,
-                };
-            }
+    pub fn from_error(error: &SourmashError) -> SourmashErrorCode {
+        match error {
+            SourmashError::Internal { .. } => SourmashErrorCode::Internal,
+            SourmashError::Panic { .. } => SourmashErrorCode::Panic,
+            SourmashError::MismatchNum { .. } => SourmashErrorCode::MismatchNum,
+            SourmashError::MismatchKSizes => SourmashErrorCode::MismatchKSizes,
+            SourmashError::MismatchDNAProt => SourmashErrorCode::MismatchDNAProt,
+            SourmashError::MismatchScaled => SourmashErrorCode::MismatchScaled,
+            SourmashError::MismatchSeed => SourmashErrorCode::MismatchSeed,
+            SourmashError::MismatchSignatureType => SourmashErrorCode::MismatchSignatureType,
+            SourmashError::NonEmptyMinHash { .. } => SourmashErrorCode::NonEmptyMinHash,
+            SourmashError::InvalidDNA { .. } => SourmashErrorCode::InvalidDNA,
+            SourmashError::InvalidProt { .. } => SourmashErrorCode::InvalidProt,
+            SourmashError::InvalidCodonLength { .. } => SourmashErrorCode::InvalidCodonLength,
+            SourmashError::InvalidHashFunction { .. } => SourmashErrorCode::InvalidHashFunction,
+            SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
+            SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
+            SourmashError::SerdeError { .. } => SourmashErrorCode::SerdeError,
+            SourmashError::IOError { .. } => SourmashErrorCode::Io,
+            SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
+            SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
         }
-        SourmashErrorCode::Unknown
     }
 }
