@@ -1,5 +1,7 @@
 "LCA database class and utilities."
 
+# TODO: save/load moltype; generate signatures with appropriate types.
+
 from __future__ import print_function, division
 import json
 import gzip
@@ -56,10 +58,11 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
-    def __init__(self, ksize, scaled):
+    def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = None
+        self.moltype = moltype
 
         self._next_index = 0
         self._next_lid = 0
@@ -118,6 +121,9 @@ class LCA_Database(Index):
 
         if minhash.ksize != self.ksize:
             raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+
+        if minhash.moltype != self.moltype:
+            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
 
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!

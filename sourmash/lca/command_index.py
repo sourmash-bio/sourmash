@@ -148,6 +148,14 @@ def index(args):
     if args.ksize is None:
         args.ksize = DEFAULT_LOAD_K
 
+    moltype = None
+    if args.dna:
+        moltype = 'DNA'
+    elif args.protein:
+        moltype = 'protein'
+    else:
+        assert 0
+
     # first, load taxonomy spreadsheet
     delimiter = ','
     if args.tabs:
@@ -163,7 +171,8 @@ def index(args):
     notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(assignments.values())), num_rows)
 
-    db = LCA_Database(args.ksize, args.scaled)
+    print('XXX', moltype)
+    db = LCA_Database(args.ksize, args.scaled, moltype)
 
 #    notify('finding signatures...')
     if args.traverse_directory:
