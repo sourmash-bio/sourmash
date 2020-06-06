@@ -210,7 +210,8 @@ class LCA_Database(Index):
             if db_type != 'sourmash_lca':
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
-            if version != '2.0' or 'lid_to_lineage' not in load_d:
+            version = float(version)
+            if version < 2.0 or 'lid_to_lineage' not in load_d:
                 raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
 
             ksize = int(load_d['ksize'])
@@ -265,7 +266,7 @@ class LCA_Database(Index):
         with xopen(db_name, 'wt') as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '2.0'
+            save_d['version'] = '2.1'
             save_d['type'] = 'sourmash_lca'
             save_d['license'] = 'CC0'
             save_d['ksize'] = self.ksize
