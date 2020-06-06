@@ -609,6 +609,7 @@ def test_basic_index():
 
         assert os.path.exists(lca_db)
 
+        assert 'Building LCA database with ksize=31 scaled=10000 moltype=DNA' in err
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
