@@ -127,7 +127,8 @@ def test_api_create_search():
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss)
+    count = lca_db.insert(ss)
+    assert count == len(ss.minhash)
 
     results = lca_db.search(ss, threshold=0.0)
     print(results)
@@ -182,6 +183,18 @@ def test_api_create_insert_bad_scaled():
     assert ss.minhash.scaled == 1000
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500)
+    with pytest.raises(ValueError):
+        lca_db.insert(ss)
+
+
+def test_api_create_insert_bad_moltype():
+    # can we insert a DNAsignature into a protein DB?
+    # hopefully not.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    assert ss.minhash.moltype == 'DNA'
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500, moltype='protein')
     with pytest.raises(ValueError):
         lca_db.insert(ss)
 
@@ -432,7 +445,9 @@ def test_api_create_insert_scale_two():
 
     # downsample to 5000 while inserting:
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
-    lca_db.insert(ss)
+    count = lca_db.insert(ss)
+    assert count == 1037
+    assert count == len(ss.minhash.downsample_scaled(5000))
     lca_db.insert(ss2)
 
     # downsample sigs to 5000
