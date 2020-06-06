@@ -1906,7 +1906,7 @@ def test_lca_db_protein_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '19', '--protein', '--no-dna') # @CTB
+                   '--scaled', '100', '-k', '19', '--protein')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2015,7 +2015,7 @@ def test_lca_db_hp_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '1', '-k', '19', '--hp', '--no-dna') # @CTB
+                   '--scaled', '1', '-k', '19', '--hp')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2124,7 +2124,7 @@ def test_lca_db_dayhoff_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '19', '--dayhoff', '--no-dna') # @CTB
+                   '--scaled', '100', '-k', '19', '--dayhoff')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]

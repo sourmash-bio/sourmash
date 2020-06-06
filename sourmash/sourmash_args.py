@@ -34,6 +34,7 @@ def get_moltype(sig, require=False):
 
 
 def calculate_moltype(args, default=None):
+    # @CTB remove
     if args.protein:
         if args.dna is True:
             error('cannot specify both --dna/--rna and --protein!')
@@ -41,14 +42,23 @@ def calculate_moltype(args, default=None):
         args.dna = False
 
     moltype = default
+    n = 0
     if args.dna:
         moltype = 'DNA'
+        n += 1
     elif args.dayhoff:
         moltype = 'dayhoff'
+        n += 1
     elif args.hp:
         moltype = 'hp'
+        n += 1
     elif args.protein:
         moltype = 'protein'
+        n += 1
+
+    if n > 1:
+        error("cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff")
+        sys.exit(-1)
 
     return moltype
 

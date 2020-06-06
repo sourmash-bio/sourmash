@@ -1,6 +1,6 @@
 """create LCA database"""
 
-from sourmash.cli.utils import add_ksize_arg, add_construct_moltype_args
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
 def subparser(subparsers):
@@ -15,7 +15,7 @@ def subparser(subparsers):
         '--scaled', metavar='S', default=10000, type=float
     )
     add_ksize_arg(subparser, 31)
-    add_construct_moltype_args(subparser)
+    add_moltype_args(subparser)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

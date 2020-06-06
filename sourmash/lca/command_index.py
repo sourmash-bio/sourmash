@@ -148,16 +148,7 @@ def index(args):
     if args.ksize is None:
         args.ksize = DEFAULT_LOAD_K
 
-    moltype = None
-    if args.dna:
-        moltype = 'DNA'
-    elif args.protein:
-        moltype = 'protein'
-    elif args.dayhoff:
-        moltype = 'dayhoff'
-    elif args.hp:
-        moltype = 'hp'
-    assert moltype
+    moltype = sourmash_args.calculate_moltype(args, default='DNA')
 
     notify('Building LCA database with ksize={} scaled={} moltype={}.',
            args.ksize, args.scaled, moltype)
