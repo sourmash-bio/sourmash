@@ -215,8 +215,9 @@ class LCA_Database(Index):
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
+            moltype = load_d.get('moltype', 'DNA')
 
-            db = cls(ksize, scaled)
+            db = cls(ksize, scaled, moltype)
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
             lid_to_lineage_2 = load_d['lid_to_lineage']
@@ -269,6 +270,7 @@ class LCA_Database(Index):
             save_d['license'] = 'CC0'
             save_d['ksize'] = self.ksize
             save_d['scaled'] = self.scaled
+            save_d['moltype'] = self.moltype
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
@@ -394,7 +396,11 @@ class LCA_Database(Index):
         from sourmash import MinHash, SourmashSignature
 
         # CTB: if we wanted to support protein/other minhashes, do it here.
-        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+        is_protein = False
+        if self.moltype == 'protein':
+            is_protein = True
+        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
+                          is_protein=is_protein)
 
         debug('creating signatures for LCA DB...')
         mhd = defaultdict(minhash.copy_and_clear)
