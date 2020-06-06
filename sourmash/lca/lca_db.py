@@ -156,6 +156,8 @@ class LCA_Database(Index):
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
 
+        return len(minhash)
+
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
 
