@@ -864,7 +864,6 @@ def test_sbt_hp_command_search(c):
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
     assert '2 matches:' in c.last_result.out
 
-    # @CTB why do we have to specify threshold here but not for LCA?
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
@@ -911,7 +910,6 @@ def test_sbt_dayhoff_command_search(c):
     c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
     assert '2 matches:' in c.last_result.out
 
-    # @CTB why do we have to specify threshold here but not for LCA?
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
