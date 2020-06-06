@@ -153,8 +153,11 @@ def index(args):
         moltype = 'DNA'
     elif args.protein:
         moltype = 'protein'
-    else:
-        assert 0
+    elif args.dayhoff:
+        moltype = 'dayhoff'
+    elif args.hp:
+        moltype = 'hp'
+    assert moltype
 
     # first, load taxonomy spreadsheet
     delimiter = ','
@@ -201,7 +204,8 @@ def index(args):
     n_skipped = 0
     for filename in inp_files:
         n += 1
-        for sig in load_signatures(filename, ksize=args.ksize):
+        for sig in load_signatures(filename, ksize=args.ksize,
+                                   select_moltype=moltype):
             notify(u'\r\033[K', end=u'')
             notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())

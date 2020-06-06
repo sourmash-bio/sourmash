@@ -1,7 +1,5 @@
 "LCA database class and utilities."
 
-# TODO: save/load moltype; generate signatures with appropriate types.
-
 from __future__ import print_function, division
 import json
 import gzip
@@ -172,7 +170,7 @@ class LCA_Database(Index):
         ok = True
         if ksize is not None and self.ksize != ksize:
             ok = False
-        if moltype is not None and moltype != 'DNA':
+        if moltype is not None and moltype != self.moltype:
             ok = False
 
         if ok:
@@ -395,12 +393,17 @@ class LCA_Database(Index):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
         from sourmash import MinHash, SourmashSignature
 
-        # CTB: if we wanted to support protein/other minhashes, do it here.
         is_protein = False
+        is_hp = False
+        is_dayhoff = False
         if self.moltype == 'protein':
             is_protein = True
+        elif self.moltype == 'hp':
+            is_hp = True
+        elif self.moltype == 'dayhoff':
+            is_dayhoff = True
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
-                          is_protein=is_protein)
+                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
 
         debug('creating signatures for LCA DB...')
         mhd = defaultdict(minhash.copy_and_clear)
