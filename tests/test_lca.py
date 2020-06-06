@@ -1929,6 +1929,21 @@ def test_lca_db_protein_command_index(c):
     assert results[0][0] == 1.0
 
 
+@utils.in_thisdir
+def test_lca_db_protein_command_search(c):
+    # test command-line search/gather of LCA database with protein sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
 def test_lca_db_hp_build():
     # test programmatic creation of LCA database with hp sigs in it
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
@@ -2023,6 +2038,21 @@ def test_lca_db_hp_command_index(c):
     assert results[0][0] == 1.0
 
 
+@utils.in_thisdir
+def test_lca_db_hp_command_search(c):
+    # test command-line search/gather of LCA database with hp sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/hp.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
 def test_lca_db_dayhoff_build():
     # test programmatic creation of LCA database with dayhoff sigs in it
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
@@ -2115,3 +2145,18 @@ def test_lca_db_dayhoff_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_lca_db_dayhoff_command_search(c):
+    # test command-line search/gather of LCA database with dayhoff sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/dayhoff.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
