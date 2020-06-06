@@ -223,7 +223,10 @@ def index(args):
             # parse identifier, potentially with splitting
             ident = sig.name()
             if args.split_identifiers: # hack for NCBI-style names, etc.
-                ident = ident.split(' ')[0].split('.')[0]
+                # split on space...
+                ident = ident.split(' ')[0]
+                # ...and on period.
+                ident = ident.split('.')[0]
 
             lineage = assignments.get(ident)
 

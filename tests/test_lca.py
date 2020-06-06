@@ -1836,6 +1836,7 @@ def test_gather_multiple_return():
 
 
 def test_lca_db_protein_build():
+    # test programmatic creation of LCA database with protein sigs in it
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1862,6 +1863,7 @@ def test_lca_db_protein_build():
 
 @utils.in_tempdir
 def test_lca_db_protein_save_load(c):
+    # test save/load of programmatically created db with protein sigs in it
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1893,7 +1895,42 @@ def test_lca_db_protein_save_load(c):
     assert results[0][0] == 1.0
 
 
+@utils.in_tempdir
+def test_lca_db_protein_command_index(c):
+    # test command-line creation of LCA database with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('protein.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '100', '-k', '19', '--protein', '--no-dna') # @CTB
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'protein'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
 def test_lca_db_hp_build():
+    # test programmatic creation of LCA database with hp sigs in it
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1920,6 +1957,7 @@ def test_lca_db_hp_build():
 
 @utils.in_tempdir
 def test_lca_db_hp_save_load(c):
+    # test save/load of programmatically created db with hp sigs in it
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1951,7 +1989,42 @@ def test_lca_db_hp_save_load(c):
     assert results[0][0] == 1.0
 
 
+@utils.in_tempdir
+def test_lca_db_hp_command_index(c):
+    # test command-line creation of LCA database with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('hp.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '1', '-k', '19', '--hp', '--no-dna') # @CTB
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'hp'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
 def test_lca_db_dayhoff_build():
+    # test programmatic creation of LCA database with dayhoff sigs in it
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1978,6 +2051,7 @@ def test_lca_db_dayhoff_build():
 
 @utils.in_tempdir
 def test_lca_db_dayhoff_save_load(c):
+    # test save/load of programmatically created db with dayhoff sigs in it
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
@@ -1994,6 +2068,40 @@ def test_lca_db_dayhoff_save_load(c):
     x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
     db2 = x[0]
     assert db2.moltype == 'dayhoff'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_dayhoff_command_index(c):
+    # test command-line creation of LCA database with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('dayhoff.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '100', '-k', '19', '--dayhoff', '--no-dna') # @CTB
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'dayhoff'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
 
     # check reconstruction --
     mh_list = [ x.minhash for x in db2.signatures() ]
