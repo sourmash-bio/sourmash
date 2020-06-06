@@ -1706,8 +1706,7 @@ def test_lca_index_empty(c):
     assert name == lca_db_filename
 
 
-@utils.in_tempdir
-def test_lca_gather_threshold_1(c):
+def test_lca_gather_threshold_1():
     # test gather() method, in some detail; see same tests for sbt.
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
@@ -1766,8 +1765,7 @@ def test_lca_gather_threshold_1(c):
     assert not results
 
 
-@utils.in_tempdir
-def test_lca_gather_threshold_5(c):
+def test_lca_gather_threshold_5():
     # test gather() method, in some detail; see same tests for sbt.
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
@@ -1814,8 +1812,7 @@ def test_lca_gather_threshold_5(c):
     assert name == None
 
 
-@utils.in_tempdir
-def test_gather_multiple_return(c):
+def test_gather_multiple_return():
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
     sig63file = utils.get_test_data('63.fa.sig')
@@ -1836,3 +1833,4 @@ def test_gather_multiple_return(c):
     print(len(results))
     assert len(results) == 1
     assert results[0][0] == 1.0
+
