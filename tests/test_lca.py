@@ -818,7 +818,7 @@ def test_index_traverse_real_spreadsheet_no_report():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' in err
 
@@ -843,7 +843,7 @@ def test_index_traverse_real_spreadsheet_report():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' not in err
         assert os.path.exists(report_loc)

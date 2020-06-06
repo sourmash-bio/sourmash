@@ -159,6 +159,9 @@ def index(args):
         moltype = 'hp'
     assert moltype
 
+    notify('Building LCA database with ksize={} scaled={} moltype={}.',
+           args.ksize, args.scaled, moltype)
+
     # first, load taxonomy spreadsheet
     delimiter = ','
     if args.tabs:
@@ -174,7 +177,6 @@ def index(args):
     notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(assignments.values())), num_rows)
 
-    print('XXX', moltype)
     db = LCA_Database(args.ksize, args.scaled, moltype)
 
 #    notify('finding signatures...')
@@ -207,7 +209,7 @@ def index(args):
         for sig in load_signatures(filename, ksize=args.ksize,
                                    select_moltype=moltype):
             notify(u'\r\033[K', end=u'')
-            notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
+            notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
             # block off duplicates.
@@ -234,26 +236,25 @@ def index(args):
             # add the signature into the database.
             db.insert(sig, ident=ident, lineage=lineage)
 
-            # remove from our list of remaining lineages
-            try:
+            if lineage:
+                # remove from our list of remaining ident -> lineage
                 record_remnants.remove(ident)
-            except KeyError:
-                # @CTB
-                pass
 
-            # track ident as used
-            record_used_idents.add(ident)
+                # track ident as used
+                record_used_idents.add(ident)
+                record_used_lineages.add(lineage)
 
             # track lineage info - either no lineage, or this lineage used.
-            if lineage is None:
+            else:
                 debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
-            else:
-                record_used_lineages.add(lineage)
 
     # end main add signatures loop
 
-    notify(u'\r\033[K', end=u'')
+    if n_skipped:
+        notify('... loaded {} signatures; skipped {} because of --require-taxonomy.', total_n, n_skipped)
+    else:
+        notify('... loaded {} signatures.', total_n)
 
     # check -- did we find any signatures?
     if n == 0:
@@ -266,6 +267,8 @@ def index(args):
     if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
+    notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
+           args.ksize, args.scaled)
 
     # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
@@ -274,6 +277,8 @@ def index(args):
 
     notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
            len(record_used_idents), len(set(assignments)))
+
+    assert record_used_idents.issubset(set(assignments))
     unused_identifiers = set(assignments) - record_used_idents
 
     # now, save!
@@ -295,7 +300,7 @@ def index(args):
             notify('WARNING: no lineage provided for {} signatures.',
                    len(record_no_lineage))
         if record_remnants:
-            notify('WARNING: no signatures for {} lineage assignments.',
+            notify('WARNING: no signatures for {} spreadsheet rows.',
                    len(record_remnants))
         if unused_lineages:
             notify('WARNING: {} unused lineages.', len(unused_lineages))
