@@ -1430,6 +1430,7 @@ def test_rankinfo_on_single():
 
 def test_rankinfo_no_tax():
     with utils.TempDirectory() as location:
+        # note: TARA_PSW_MAG_00136 is _not_ in delmont-1.csv.
         taxcsv = utils.get_test_data('lca/delmont-1.csv')
         input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
         lca_db = os.path.join(location, 'delmont-1.lca.json')
@@ -1445,7 +1446,7 @@ def test_rankinfo_no_tax():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+        assert '0 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'rankinfo', lca_db]
         status, out, err = utils.runscript('sourmash', cmd)
