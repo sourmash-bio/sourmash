@@ -1834,3 +1834,176 @@ def test_gather_multiple_return():
     assert len(results) == 1
     assert results[0][0] == 1.0
 
+
+def test_lca_db_protein_build():
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_protein_save_load(c):
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'protein'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+def test_lca_db_hp_build():
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=1, moltype='hp')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_hp_save_load(c):
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=1, moltype='hp')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'hp'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+def test_lca_db_dayhoff_build():
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_dayhoff_save_load(c):
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'dayhoff'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
