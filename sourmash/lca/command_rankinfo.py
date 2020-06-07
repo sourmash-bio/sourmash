@@ -24,7 +24,7 @@ def make_lca_counts(dblist, min_num=0):
             if min_num and len(idx_list) < min_num:
                 continue
 
-            for idx in idx_list:
+            for idx, abund in idx_list:
                 lid = lca_db.idx_to_lid.get(idx)
                 if lid is not None:
                     lineage = lca_db.lid_to_lineage[lid]

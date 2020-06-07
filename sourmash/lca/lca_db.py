@@ -54,7 +54,7 @@ class LCA_Database(Index):
     `ident_to_idx` is a dictionary from unique str identifer to integer `idx`.
 
     `hashval_to_idx` is a dictionary from individual hash values to sets of
-    `idx`.
+    `idx`. # @CTB
     """
     def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
@@ -153,8 +153,12 @@ class LCA_Database(Index):
             except TypeError:
                 raise ValueError('lineage cannot be used as a key?!')
 
-        for hashval in minhash.get_mins():
-            self.hashval_to_idx[hashval].add(idx)
+        if minhash.track_abundance:
+            for hashval, abund in minhash.get_mins(with_abundance=True).items():
+                self.hashval_to_idx[hashval].add((idx, abund))
+        else:
+            for hashval in minhash.get_mins():
+                self.hashval_to_idx[hashval].add((idx, 1))
 
         return len(minhash)
 
@@ -242,8 +246,20 @@ class LCA_Database(Index):
             hashval_to_idx_2 = load_d['hashval_to_idx']
             hashval_to_idx = {}
 
-            for k, v in hashval_to_idx_2.items():
-                hashval_to_idx[int(k)] = v
+            # legacy load
+            load_no_abunds = False
+            v = next(iter(hashval_to_idx_2.values()))
+            try:
+                len(v[0])
+            except TypeError:
+                load_no_abunds = True
+
+            if load_no_abunds:
+                for k, v in hashval_to_idx_2.items():
+                    hashval_to_idx[int(k)] = [ (vv, 1) for vv in v ]
+            else:
+                for k, v in hashval_to_idx_2.items():
+                    hashval_to_idx[int(k)] = [ tuple(vv) for vv in v ]
             db.hashval_to_idx = hashval_to_idx
 
             db.ident_to_name = load_d['ident_to_name']
@@ -383,7 +399,7 @@ class LCA_Database(Index):
         x = []
 
         idx_list = self.hashval_to_idx.get(hashval, [])
-        for idx in idx_list:
+        for (idx, abund) in idx_list:
             lid = self.idx_to_lid.get(idx, None)
             if lid is not None:
                 lineage = self.lid_to_lineage[lid]
@@ -414,7 +430,7 @@ class LCA_Database(Index):
 
         # invert the hashval_to_idx dictionary
         for (hashval, idlist) in self.hashval_to_idx.items():
-            for idx in idlist:
+            for (idx, abund) in idlist:
                 temp_hashes = temp_vals[idx]
                 temp_hashes.append(hashval)
 
@@ -465,7 +481,7 @@ class LCA_Database(Index):
         c = Counter()
         for hashval in query_mins:
             idx_list = self.hashval_to_idx.get(hashval, [])
-            for idx in idx_list:
+            for (idx, abund) in idx_list:
                 c[idx] += 1
 
         debug('number of matching signatures for hashes: {}', len(c))

@@ -159,7 +159,7 @@ def test_api_create_insert():
     for vv in lca_db.hashval_to_idx.values():
         set_of_values.update(vv)
     assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
+    assert set_of_values == { (0, 1) }
     
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
@@ -222,7 +222,7 @@ def test_api_create_insert_ident():
     for vv in lca_db.hashval_to_idx.values():
         set_of_values.update(vv)
     assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
+    assert set_of_values == { (0, 1) }
     
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
@@ -265,7 +265,7 @@ def test_api_create_insert_two():
     for vv in lca_db.hashval_to_idx.values():
         set_of_values.update(vv)
     assert len(set_of_values) == 2
-    assert set_of_values == { 0, 1 }
+    assert set_of_values == { (0, 1), (1, 1) }
 
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
@@ -300,7 +300,7 @@ def test_api_create_insert_w_lineage():
     for vv in lca_db.hashval_to_idx.values():
         set_of_values.update(vv)
     assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
+    assert set_of_values == { (0, 1) }
 
     # check lineage stuff
     assert len(lca_db.idx_to_lid) == 1

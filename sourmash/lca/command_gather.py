@@ -84,7 +84,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
             for lca_db in dblist:
                 idx_list = lca_db.hashval_to_idx.get(hashval, [])
 
-                for idx in idx_list:
+                for (idx, abund) in idx_list:
                     assignments[hashval].add((lca_db, idx))
 
         # none? quit.
@@ -131,7 +131,13 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         # calculate size of match (# of hashvals belonging to that sig)
         match_size = 0
         for hashval, idx_list in best_lca_db.hashval_to_idx.items():
-            if best_idx in idx_list:
+            found = False
+            for idx, abund in idx_list:
+                if idx == best_idx :
+                    found = True
+                    break
+
+            if found:
                 match_size += 1
 
         # construct 'result' object
@@ -143,6 +149,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         f_match = len(intersect_mins) / match_size
 
         # XXX name and lineage
+        name = None
         for ident, idx in best_lca_db.ident_to_idx.items():
             if idx == best_idx:
                 name = best_lca_db.ident_to_name[ident]
