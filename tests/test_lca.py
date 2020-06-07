@@ -460,6 +460,30 @@ def test_api_create_insert_scale_two():
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
 
+def test_api_abund():
+    # @CTB
+    s1 = sourmash.load_one_signature(utils.get_test_data('track_abund/47.fa.sig'),
+                                     ksize=31)
+    s2 = sourmash.load_one_signature(utils.get_test_data('track_abund/63.fa.sig'),
+                                     ksize=31)
+    
+    
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000, moltype='DNA',
+                                       track_abundance=True)
+    count = lca_db.insert(s1)
+    assert count == len(s1.minhash)
+
+    count = lca_db.insert(s2)
+    assert count == len(s2.minhash)
+
+    siglist = list(lca_db.signatures())
+
+    assert s1 == siglist[0] or s1 == siglist[1]
+    assert s2 == siglist[0] or s2 == siglist[1]
+    assert s1 != s2
+
+
 def test_load_single_db():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)

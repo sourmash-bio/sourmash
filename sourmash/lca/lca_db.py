@@ -56,11 +56,12 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`. # @CTB
     """
-    def __init__(self, ksize, scaled, moltype='DNA'):
+    def __init__(self, ksize, scaled, moltype='DNA', track_abundance=False):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = None
         self.moltype = moltype
+        self.track_abundance = track_abundance
 
         self._next_index = 0
         self._next_lid = 0
@@ -422,24 +423,32 @@ class LCA_Database(Index):
         elif self.moltype == 'dayhoff':
             is_dayhoff = True
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
-                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
+                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff,
+                          track_abundance=self.track_abundance)
 
         debug('creating signatures for LCA DB...')
         mhd = defaultdict(minhash.copy_and_clear)
-        temp_vals = defaultdict(list)
+        temp_vals = defaultdict(dict)
 
         # invert the hashval_to_idx dictionary
         for (hashval, idlist) in self.hashval_to_idx.items():
             for (idx, abund) in idlist:
                 temp_hashes = temp_vals[idx]
-                temp_hashes.append(hashval)
+
+                if self.track_abundance:
+                    temp_hashes[hashval] = abund
+                else:
+                    temp_hashes[hashval] = 1
 
                 # 50 is an arbitrary number. If you really want
                 # to micro-optimize, list is resized and grow in this pattern:
                 # 0, 4, 8, 16, 25, 35, 46, 58, 72, 88, ...
                 # (from https://github.com/python/cpython/blob/b2b4a51f7463a0392456f7772f33223e57fa4ccc/Objects/listobject.c#L57)
                 if len(temp_hashes) > 50:
-                    mhd[idx].add_many(temp_hashes)
+                    if self.track_abundance:
+                        mhd[idx].set_abundances(temp_hashes)
+                    else:
+                        mhd[idx].add_many(list(temp_hashes))
 
                     # Sigh, python 2... when it goes away,
                     # we can do `temp_hashes.clear()` instead.
@@ -448,7 +457,10 @@ class LCA_Database(Index):
         # We loop temp_vals again to add any remainder hashes
         # (each list of hashes is smaller than 50 items)
         for sig, vals in temp_vals.items():
-            mhd[sig].add_many(vals)
+            if self.track_abundance:
+                mhd[sig].set_abundances(vals)
+            else:
+                mhd[sig].add_many(list(vals))
 
         sigd = {}
         for idx, mh in mhd.items():
