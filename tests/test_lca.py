@@ -475,10 +475,11 @@ def test_api_abund():
     count = lca_db.insert(s2)
     assert count == len(s2.minhash)
 
-    siglist = list(lca_db.signatures())
-
-    assert (s1.minhash == siglist[0].minhash or s1.minhash == siglist[1].minhash)
-    assert (s2.minhash == siglist[0].minhash or s2.minhash == siglist[1].minhash)
+    # check that we faithfully reconstructed the minhashes:
+    mh_list = [ x.minhash for x in lca_db.signatures() ]
+    assert len(mh_list) == 2
+    assert s1.minhash in mh_list
+    assert s2.minhash in mh_list
     assert s1.minhash != s2.minhash
 
 
