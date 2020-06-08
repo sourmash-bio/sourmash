@@ -466,8 +466,6 @@ def test_api_abund():
                                      ksize=31)
     s2 = sourmash.load_one_signature(utils.get_test_data('track_abund/63.fa.sig'),
                                      ksize=31)
-    
-    
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000, moltype='DNA',
                                        track_abundance=True)
@@ -479,9 +477,9 @@ def test_api_abund():
 
     siglist = list(lca_db.signatures())
 
-    assert s1 == siglist[0] or s1 == siglist[1]
-    assert s2 == siglist[0] or s2 == siglist[1]
-    assert s1 != s2
+    assert (s1.minhash == siglist[0].minhash or s1.minhash == siglist[1].minhash)
+    assert (s2.minhash == siglist[0].minhash or s2.minhash == siglist[1].minhash)
+    assert s1.minhash != s2.minhash
 
 
 def test_load_single_db():
