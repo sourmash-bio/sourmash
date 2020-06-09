@@ -57,7 +57,7 @@ def compute(args):
         if args.num_hashes != 0:
             notify('setting num_hashes to 0 because --scaled is set')
             args.num_hashes = 0
- 
+
     notify('computing signatures for files: {}', ", ".join(args.filenames))
 
     if args.randomize:
@@ -95,7 +95,7 @@ def compute(args):
                'signatures.')
         num_sigs = len(ksizes)
 
-    if (args.protein or args.dayhoff or args.hp) and not args.input_is_protein:
+    if (args.protein or args.dayhoff or args.hp):
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
@@ -236,7 +236,7 @@ def _compute_individual(args):
         siglist = []
 
     assert not siglist                    # juuuust checking.
-    
+
 
 def _compute_merged(args):
     # make minhashes for the whole file

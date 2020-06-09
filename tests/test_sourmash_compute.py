@@ -576,20 +576,6 @@ def test_do_sourmash_compute_multik_only_protein(c):
         assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short-protein.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '20,32',
-                                            '--protein', '--no-dna',
-                                            '--input-is-protein',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert os.path.exists(outfile)
-
-
 @utils.in_tempdir
 def test_do_sourmash_compute_multik_only_protein_no_rna(c):
     # test --no-rna as well (otherwise identical to previous test)
