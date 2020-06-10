@@ -2818,6 +2818,7 @@ def test_gather_metagenome_output_unassigned_nomatches(c):
 
 
 def test_gather_metagenome_downsample():
+    # downsample w/scaled of 100,000
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -2835,7 +2836,7 @@ def test_gather_metagenome_downsample():
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21', '--scaled', '100000',
-                                            '--threshold-bp', '0'],
+                                            '--threshold-bp', '50000'],
                                            in_directory=location)
 
         print(out)
