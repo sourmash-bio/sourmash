@@ -161,197 +161,151 @@ def test_do_basic_compare_using_rna_arg(c):
 
 @utils.in_tempdir
 def test_do_compare_quiet(c):
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            testdata1, testdata2],
-                                           in_directory=c.location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx', '-q')
+    assert not c.last_result.out
+    assert not c.last_result.err
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx',
-                                            '-q'],
-                                           in_directory=c.location)
-        assert not out
-        assert not err
+#@utils.in_tempdir
+#def test_compare_containment_abund_flatten(c):
+#    s47 = utils.get_test_data('track_abund/47.fa.sig')
+#    s63 = utils.get_test_data('track_abund/63.fa.sig')
+#
+#    c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+#    print(c.last_result.out)
+#    print(c.last_result.err)
+#
+#    assert 'NOTE: --containment means signature abundances are flattened' in \
+#        c.last_result.err
 
 
 @utils.in_tempdir
 def test_do_traverse_directory_compare(c):
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--traverse-directory',
-                                            '-k 21', '--dna', utils.get_test_data('compare')],
-                                           in_directory=c.location)
-        print(out)
-        assert 'genome-s10.fa.gz' in out
-        assert 'genome-s11.fa.gz' in out
+    c.run_sourmash('compare', '--traverse-directory', '-k 21', '--dna', utils.get_test_data('compare'))
+    print(c.last_result.out)
+    assert 'genome-s10.fa.gz' in c.last_result.out
+    assert 'genome-s11.fa.gz' in c.last_result.out
 
 @utils.in_tempdir
 def test_do_compare_output_csv(c):
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=c.location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=c.location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
-        with open(os.path.join(c.location, 'xxx')) as fp:
-            r = iter(csv.reader(fp))
-            row = next(r)
-            print(row)
-            row = next(r)
-            print(row)
-            assert float(row[0]) == 1.0
-            assert float(row[1]) == 0.93
-            row = next(r)
-            assert float(row[0]) == 0.93
-            assert float(row[1]) == 1.0
+    with open(os.path.join(c.location, 'xxx')) as fp:
+        r = iter(csv.reader(fp))
+        row = next(r)
+        print(row)
+        row = next(r)
+        print(row)
+        assert float(row[0]) == 1.0
+        assert float(row[1]) == 0.93
+        row = next(r)
+        assert float(row[0]) == 0.93
+        assert float(row[1]) == 1.0
 
-            # exactly three lines
-            with pytest.raises(StopIteration) as e:
-                next(r)
+        # exactly three lines
+        with pytest.raises(StopIteration) as e:
+            next(r)
 
 
 @utils.in_tempdir
 def test_do_compare_downsample(c):
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '200',
-                                            '-k', '31', testdata1],
-                                           in_directory=c.location)
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '--scaled', '200', '-k', '31', testdata1)
 
 
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '100',
-                                            '-k', '31', testdata2],
-                                           in_directory=c.location)
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '--scaled', '100', '-k', '31', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=c.location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
-        print(status, out, err)
-        assert 'downsampling to scaled value of 200' in err
-        with open(os.path.join(c.location, 'xxx')) as fp:
-            lines = fp.readlines()
-            assert len(lines) == 3
-            assert lines[1].startswith('1.0,0.6666')
-            assert lines[2].startswith('0.6666')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert 'downsampling to scaled value of 200' in c.last_result.err
+    with open(os.path.join(c.location, 'xxx')) as fp:
+        lines = fp.readlines()
+        assert len(lines) == 3
+        assert lines[1].startswith('1.0,0.6666')
+        assert lines[2].startswith('0.6666')
 
 
 @utils.in_tempdir
 def test_do_compare_output_multiple_k(c):
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', testdata1],
-                                           in_directory=c.location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata2],
-                                           in_directory=c.location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', testdata1)
+    c.run_sourmash('compute', '-k', '31', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=c.location,
-                                           fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx', 
+                    fail_ok=True)
 
-        print(status, out, err)
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
 
-        assert status == -1
-        assert 'multiple k-mer sizes loaded; please specify one' in err
-        assert '(saw k-mer sizes 21, 31)' in err
+    assert c.last_result.status == -1
+    assert 'multiple k-mer sizes loaded; please specify one' in c.last_result.err
+    assert '(saw k-mer sizes 21, 31)' in c.last_result.err
 
 
-def test_do_compare_output_multiple_moltype():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dna', testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--protein', testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_compare_output_multiple_moltype(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
+    c.run_sourmash('compute', '-k', '21', '--protein', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location,
-                                           fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', 'short.fa.sig','short2.fa.sig', '--csv', 'xxx', 
+                       fail_ok=True)
 
-        assert status == -1
-        assert 'multiple molecule types loaded;' in err
+    assert c.last_result.status == -1
+    assert 'multiple molecule types loaded;' in c.last_result.err
 
 
+@utils.in_tempdir
+def test_do_compare_dayhoff(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata1)
+    assert c.last_result.status == 0
 
-def test_do_compare_dayhoff():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dayhoff',
-                                            '--no-dna', testdata1],
-                                           in_directory=location)
-        assert status == 0
+    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata2)
+    assert c.last_result.status == 0
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dayhoff',
-                                            '--no-dna', testdata2],
-                                           in_directory=location)
-        assert status == 0
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--dayhoff',
-                                            '--csv', 'xxx'],
-                                           in_directory=location)
-        true_out = '''[1.   0.94]
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--dayhoff', '--csv', 'xxx')
+    true_out = '''[1.   0.94]
 [0.94 1.  ]
 min similarity in matrix: 0.940'''.splitlines()
-        for line in out:
-            cleaned_line = line.split('...')[-1].strip()
-            cleaned_line in true_out
-        assert status == 0
+    for line in c.last_result.out:
+        cleaned_line = line.split('...')[-1].strip()
+        cleaned_line in true_out
+    assert c.last_result.status == 0
 
 
-def test_do_compare_hp():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--hp',
-                                            '--no-dna', testdata1],
-                                           in_directory=location)
-        assert status == 0
+@utils.in_tempdir
+def test_do_compare_hp(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata1)
+    assert c.last_result.status == 0
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--hp',
-                                            '--no-dna', testdata2],
-                                           in_directory=location)
-        assert status == 0
+    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata2)
+    assert c.last_result.status == 0
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--hp',
-                                            '--csv', 'xxx'],
-                                           in_directory=location)
-        true_out = '''[1.   0.94]
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--hp',  '--csv', 'xxx')
+    true_out = '''[1.   0.94]
 [0.94 1.  ]
 min similarity in matrix: 0.940'''.splitlines()
-        for line in out:
-            cleaned_line = line.split('...')[-1].strip()
-            cleaned_line in true_out
-        assert status == 0
+    for line in c.last_result.out:
+        cleaned_line = line.split('...')[-1].strip()
+        cleaned_line in true_out
+    assert c.last_result.status == 0
 
 
 @utils.in_tempdir
@@ -421,129 +375,99 @@ def test_compare_containment_require_scaled(c):
     assert c.last_result.status != 0
 
 
-def test_do_plot_comparison():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
-        status, out, err = utils.runscript('sourmash', ['plot', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('plot', 'cmp')
 
-        assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
+    assert os.path.exists(os.path.join(c.location, "cmp.dendro.png"))
+    assert os.path.exists(os.path.join(c.location, "cmp.matrix.png"))
 
 
-def test_do_plot_comparison_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison_2(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--pdf'],
-                                           in_directory=location)
-        assert os.path.exists(os.path.join(location, "cmp.dendro.pdf"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.pdf"))
+    c.run_sourmash('plot', 'cmp', '--pdf')
+    assert os.path.exists(os.path.join(c.location, "cmp.dendro.pdf"))
+    assert os.path.exists(os.path.join(c.location, "cmp.matrix.pdf"))
 
 
-def test_do_plot_comparison_3():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison_3(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels'],
-                                           in_directory=location)
+    c.run_sourmash('plot', 'cmp', '--labels')
 
-        assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
+    assert os.path.exists(os.path.join(c.location, "cmp.dendro.png"))
+    assert os.path.exists(os.path.join(c.location, "cmp.matrix.png"))
 
 
-def test_do_plot_comparison_4_output_dir():
-    with utils.TempDirectory() as location:
-        output_dir = os.path.join(location, 'xyz_test')
+@utils.in_tempdir
+def test_do_plot_comparison_4_output_dir(c):
+    output_dir = os.path.join(c.location, 'xyz_test')
 
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels',
-                                            '--output-dir', output_dir],
-                                           in_directory=location)
+    c.run_sourmash('plot', 'cmp', '--labels', '--output-dir', output_dir)
 
-        assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
+    assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
+    assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
 
 
-def test_do_plot_comparison_5_force():
+@utils.in_tempdir
+def test_do_plot_comparison_5_force(c):
     import numpy
-    with utils.TempDirectory() as location:
-        D = numpy.zeros([2,2])
-        D[0, 0] = 5
-        with open(os.path.join(location, 'cmp'), 'wb') as fp:
-            numpy.save(fp, D)
+    D = numpy.zeros([2,2])
+    D[0, 0] = 5
+    with open(os.path.join(c.location, 'cmp'), 'wb') as fp:
+        numpy.save(fp, D)
 
-        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
-            fp.write("a\nb\n")
+    with open(os.path.join(c.location, 'cmp.labels.txt'), 'wt') as fp:
+        fp.write("a\nb\n")
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels', '-f'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert status == 0
+    c.run_sourmash('plot', 'cmp', '--labels', '-f')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == 0
 
 
-def test_do_plot_comparison_4_fail_not_distance():
+@utils.in_tempdir
+def test_do_plot_comparison_4_fail_not_distance(c):
     import numpy
-    with utils.TempDirectory() as location:
-        D = numpy.zeros([2,2])
-        D[0, 0] = 5
-        with open(os.path.join(location, 'cmp'), 'wb') as fp:
-            numpy.save(fp, D)
+    D = numpy.zeros([2,2])
+    D[0, 0] = 5
+    with open(os.path.join(c.location, 'cmp'), 'wb') as fp:
+        numpy.save(fp, D)
 
-        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
-            fp.write("a\nb\n")
+    with open(os.path.join(c.location, 'cmp.labels.txt'), 'wt') as fp:
+        fp.write("a\nb\n")
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels'],
-                                           in_directory=location, fail_ok=True)
-        print(status, out, err)
-        assert status != 0
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('plot', 'cmp', '--labels', fail_ok=True)
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status != 0
 
 
 def test_plot_override_labeltext():
