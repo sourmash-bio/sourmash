@@ -54,7 +54,7 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled):
+def load_and_combine(filenames, ksize, scaled, with_abundance):
     "Load individual signatures and combine them all for classification."
     total_count = 0
     n = 0
@@ -68,7 +68,7 @@ def load_and_combine(filenames, ksize, scaled):
                    total_n, end='\r')
             total_count += 1
 
-            count_signature(query_sig, scaled, hashvals)
+            count_signature(query_sig, scaled, hashvals, with_abundance)
 
     notify(u'\r\033[K', end=u'')
     notify('loaded {} signatures from {} files total.', total_count, n)
@@ -76,7 +76,7 @@ def load_and_combine(filenames, ksize, scaled):
     return hashvals
 
 
-def load_singletons_and_count(filenames, ksize, scaled):
+def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
@@ -91,18 +91,24 @@ def load_singletons_and_count(filenames, ksize, scaled):
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
-            count_signature(query_sig, scaled, hashvals)
+            count_signature(query_sig, scaled, hashvals, with_abundance)
             yield query_filename, query_sig, hashvals
 
     notify(u'\r\033[K', end=u'')
     notify('loaded {} signatures from {} files total.', total_count, n)
 
 
-def count_signature(sig, scaled, hashvals):
+def count_signature(sig, scaled, hashvals, with_abundance):
     "Downsample sig to given scaled, count hashvalues."
     mh = sig.minhash.downsample_scaled(scaled)
-    for hashval in mh.get_mins():
-        hashvals[hashval] += 1
+
+    if with_abundance:
+        abunds = mh.get_mins(with_abundance=True)
+        for hashval, count in abunds.items():
+            hashvals[hashval] += count
+    else:
+        for hashval in mh.get_mins():
+            hashvals[hashval] += 1
 
 
 def output_results(lineage_counts, total_counts, filename=None, sig=None):
@@ -168,7 +174,9 @@ def summarize_main(args):
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    # flatten --db and --query
+    with_abundance=False
+
+    # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
 
@@ -198,7 +206,8 @@ def summarize_main(args):
 
         try:
             for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled):
+              load_singletons_and_count(inp_files, ksize, scaled,
+                                        with_abundance):
 
                 # get the full counted list of lineage counts in this signature
                 lineage_counts = summarize(hashvals, dblist, args.threshold)
@@ -217,7 +226,7 @@ def summarize_main(args):
     else:
         # load and merge all the signatures in all the files
         # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled)
+        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance)
 
         # get the full counted list of lineage counts across signatures
         lineage_counts = summarize(hashvals, dblist, args.threshold)
