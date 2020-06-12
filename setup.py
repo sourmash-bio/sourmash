@@ -78,9 +78,9 @@ SETUP_METADATA = {
     "zip_safe": False,
     "platforms": "any",
     "extras_require": {
-        'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
+        'test' : ['pytest', 'pytest-cov', 'myst-parser[sphinx]', 'hypothesis'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx', 'recommonmark', 'alabaster',
+        'doc' : ['sphinx', 'myst-parser[sphinx]', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
         '10x': ['bam2fasta==1.0.4'],
