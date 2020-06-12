@@ -56,10 +56,11 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
-    def __init__(self, ksize, scaled):
+    def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = None
+        self.moltype = moltype
 
         self._next_index = 0
         self._next_lid = 0
@@ -119,6 +120,9 @@ class LCA_Database(Index):
         if minhash.ksize != self.ksize:
             raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
 
+        if minhash.moltype != self.moltype:
+            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
+
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!
         minhash = minhash.downsample_scaled(self.scaled)
@@ -152,6 +156,8 @@ class LCA_Database(Index):
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
 
+        return len(minhash)
+
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
 
@@ -166,7 +172,7 @@ class LCA_Database(Index):
         ok = True
         if ksize is not None and self.ksize != ksize:
             ok = False
-        if moltype is not None and moltype != 'DNA':
+        if moltype is not None and moltype != self.moltype:
             ok = False
 
         if ok:
@@ -204,13 +210,15 @@ class LCA_Database(Index):
             if db_type != 'sourmash_lca':
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
-            if version != '2.0' or 'lid_to_lineage' not in load_d:
+            version = float(version)
+            if version < 2.0 or 'lid_to_lineage' not in load_d:
                 raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
+            moltype = load_d.get('moltype', 'DNA')
 
-            db = cls(ksize, scaled)
+            db = cls(ksize, scaled, moltype)
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
             lid_to_lineage_2 = load_d['lid_to_lineage']
@@ -258,11 +266,12 @@ class LCA_Database(Index):
         with xopen(db_name, 'wt') as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '2.0'
+            save_d['version'] = '2.1'
             save_d['type'] = 'sourmash_lca'
             save_d['license'] = 'CC0'
             save_d['ksize'] = self.ksize
             save_d['scaled'] = self.scaled
+            save_d['moltype'] = self.moltype
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
@@ -387,8 +396,17 @@ class LCA_Database(Index):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
         from sourmash import MinHash, SourmashSignature
 
-        # CTB: if we wanted to support protein/other minhashes, do it here.
-        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+        is_protein = False
+        is_hp = False
+        is_dayhoff = False
+        if self.moltype == 'protein':
+            is_protein = True
+        elif self.moltype == 'hp':
+            is_hp = True
+        elif self.moltype == 'dayhoff':
+            is_dayhoff = True
+        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
+                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
 
         debug('creating signatures for LCA DB...')
         mhd = defaultdict(minhash.copy_and_clear)

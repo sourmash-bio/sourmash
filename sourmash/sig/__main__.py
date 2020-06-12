@@ -97,14 +97,7 @@ def describe(args):
     for (sig, signature_file) in siglist:
         mh = sig.minhash
         ksize = mh.ksize
-        moltype = 'DNA'
-        if mh.is_protein:
-            if mh.dayhoff:
-                moltype = 'dayhoff'
-            elif mh.hp:
-                moltype = 'hp'
-            else:
-                moltype = 'protein'
+        moltype = mh.moltype
         scaled = mh.scaled
         num = mh.num
         seed = mh.seed
@@ -169,9 +162,7 @@ def overlap(args):
     md5_2 = sig2.md5sum()
 
     ksize = sig1.minhash.ksize
-    moltype = 'DNA'
-    if sig1.minhash.is_protein:
-        moltype = 'protein'
+    moltype = sig1.minhash.moltype
 
     num = sig1.minhash.num
     size1 = len(sig1.minhash)

@@ -786,6 +786,34 @@ signature license: CC0
     for line in expected_output:
         assert line.strip() in out
 
+
+@utils.in_thisdir
+def test_sig_describe_protein(c):
+    # test describe on a singleton protein signature
+    testdata = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    c.run_sourmash('sig', 'describe', testdata)
+
+    assert 'k=57 molecule=protein num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_sig_describe_hp(c):
+    # test describe on a singleton hp signature
+    testdata = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    c.run_sourmash('sig', 'describe', testdata)
+
+    assert 'k=57 molecule=hp num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_sig_describe_dayhoff(c):
+    # test describe on a singleton dayhoff signature
+    testdata = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    c.run_sourmash('sig', 'describe', testdata)
+
+    assert 'k=57 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+
+
 @utils.in_tempdir
 def test_sig_describe_1_hp(c):
     # get basic info on a signature
