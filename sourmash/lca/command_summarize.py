@@ -105,10 +105,12 @@ def count_signature(sig, scaled, hashvals, with_abundance):
     if with_abundance:
         if not mh.track_abundance:
             raise ValueError("minhash has no abundances, yet with_abundance=True")
+
         abunds = mh.get_mins(with_abundance=True)
         for hashval, count in abunds.items():
             hashvals[hashval] += count
     else:
+        # CTB: should we complain here if mh.track_abundance?
         for hashval in mh.get_mins():
             hashvals[hashval] += 1
 
@@ -176,7 +178,7 @@ def summarize_main(args):
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    with_abundance=False
+    with_abundance = args.with_abundance
 
     # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
