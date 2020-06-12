@@ -784,9 +784,10 @@ def test_sbt_protein_command_index(c):
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('protein.sbt.zip')
+    db_out = '/tmp/protein.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '19', '--protein')
+                   '--scaled', '100', '-k', '57', '--protein')
 
     db2 = sourmash.load_sbt_index(db_out)
 
@@ -830,9 +831,10 @@ def test_sbt_hp_command_index(c):
     sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('hp.sbt.zip')
+    db_out = '/tmp/hp.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '1', '-k', '19', '--hp')
+                   '--scaled', '100', '-k', '57', '--hp')
 
     db2 = sourmash.load_sbt_index(db_out)
 
@@ -876,9 +878,10 @@ def test_sbt_dayhoff_command_index(c):
     sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('dayhoff.sbt.zip')
+    db_out = '/tmp/dayhoff.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '19', '--dayhoff')
+                   '--scaled', '100', '-k', '57', '--dayhoff')
 
     db2 = sourmash.load_sbt_index(db_out)
 
