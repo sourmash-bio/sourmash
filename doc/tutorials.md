@@ -26,3 +26,18 @@ yourself, or run interactively online via the
 If you are a Python programmer, you might also be interested in our [API examples](api-example.md) as well as a short guide to [Using the `LCA_Database` API.](using-LCA-database-API.ipynb)
 
 If you prefer R, we have [a short guide to using sourmash output with R](other-languages.md).
+
+## Contents:
+
+```{toctree}
+:maxdepth: 2
+
+tutorial-basic
+tutorials-lca
+kmers-and-minhash
+sourmash-examples
+sourmash-collections
+api-example
+using-LCA-database-API
+other-languages
+```

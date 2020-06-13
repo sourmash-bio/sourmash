@@ -134,11 +134,12 @@ command-line
 tutorials
 using-sourmash-a-guide
 classifying-signatures
+databases
 api
 more-info
 support
+developer
 ```
-
 
 # Indices and tables
 
