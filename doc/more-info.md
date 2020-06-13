@@ -2,11 +2,11 @@
 
 ## Computational requirements
 
-Read more about the [compute requirements, here.](requirements.html)
+Read more about the [compute requirements, here.](requirements.md)
 
 ## Prepared search database
 
-We offer a number of [prepared search databases.](databases.html)
+We offer a number of [prepared search databases.](databases.md)
 
 ## Other MinHash implementations for DNA
 
@@ -138,5 +138,5 @@ Newer versions of matplotlib do not seem to have this problem.
 [21]:https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x
 [22]:http://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9
 [23]:https://www.biorxiv.org/content/early/2017/09/04/184150
-[24]:developer.html
-[25]:release.html
+[24]:developer.md
+[25]:release.md

@@ -28,8 +28,7 @@ a plasmid as a query, you would use `--containment` to find genomes
 that contained that plasmid.  `gather` (discussed below) uses containment
 analysis only.
 
-See [the main sourmash
-tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#make-and-search-a-database-quickly)
+See [the main sourmash tutorial](tutorial-basic.md#make-and-search-a-database-quickly)
 for information on using `search` with and without `--containment`.
 
 ## Breaking down metagenomic samples with `gather` and `lca`
@@ -49,7 +48,7 @@ k-mers. (This is the approach pioneered by
 [Kraken](https://ccb.jhu.edu/software/kraken/) and used by many other tools.)
 `sourmash lca` can be used to classify individual genome bins with
 `classify`, or summarize metagenome taxonomy with `summarize`.  The
-[sourmash lca tutorial](http://sourmash.readthedocs.io/en/latest/tutorials-lca.html)
+[sourmash lca tutorial](tutorials-lca.md)
 shows how to use the `lca classify` and `lca summarize` commands, and also
 provides guidance on building your own database.
 
@@ -58,8 +57,7 @@ genomes based on greedy partitioning. Essentially, it takes a query
 metagenome and searches the database for the most highly contained
 genome; it then subtracts that match from the metagenome, and repeats.
 At the end it reports how much of the metagenome remains unknown.  The
-[basic sourmash
-tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#what-s-in-my-metagenome)
+[basic sourmash tutorial](tutorial-basic.md#what-s-in-my-metagenome)
 has some sample output from using gather with GenBank.  See the appendix at
 the bottom of this page for more technical details.
 

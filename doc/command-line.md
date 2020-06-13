@@ -57,7 +57,7 @@ Matrix:
 To get a list of subcommands, run `sourmash` without any arguments.
 
 There are five main subcommands: `compute`, `compare`, `plot`,
-`search`, and `gather`.  See [the tutorial](tutorials.html) for a
+`search`, and `gather`.  See [the tutorial](tutorials.md) for a
 walkthrough of these commands.
 
 * `compute` creates signatures.
@@ -68,7 +68,7 @@ walkthrough of these commands.
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
-subcommand. See [the LCA tutorial](tutorials-lca.html) for a
+subcommand. See [the LCA tutorial](tutorials-lca.md) for a
 walkthrough of these commands.
 
 * `lca classify` classifies many signatures against an LCA database.
@@ -185,7 +185,7 @@ containing the matches.
 be slow and somewhat memory intensive for large collections.  You can
 use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
 be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.html).
+GenBank and other databases](databases.md).
 
 Usage:
 ```
@@ -210,7 +210,7 @@ similarity   match
 
 The `gather` subcommand finds all non-overlapping matches to the
 query.  This is specifically meant for metagenome and genome bin
-analysis.  (See [Classifying Signatures](classifying-signatures.html)
+analysis.  (See [Classifying Signatures](classifying-signatures.md)
 for more information on the different approaches that can be used
 here.)
 
@@ -222,7 +222,7 @@ matches.
 `gather`, like `search`, will load all of provided signatures into
 memory.  You can use `sourmash index` to create a Sequence Bloom Tree
 (SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.html).
+[the same format in which we provide GenBank and other databases](databases.md).
 
 Usage:
 ```
@@ -243,7 +243,7 @@ overlap     p_query p_match
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
 50kb. see the Appendix in
-[Classifying Signatures](classifying-signatures.html) for details.
+[Classifying Signatures](classifying-signatures.md) for details.
 
 Note:
 
@@ -256,7 +256,7 @@ using a collection of genomes with taxonomic information.
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
-[genbank-k31.lca.json.gz](databases.html)).
+[genbank-k31.lca.json.gz](databases.md)).
 
 ### `sourmash lca classify`
 
@@ -377,7 +377,7 @@ The same information is reported in a CSV file if `-o/--output` is used.
 The `sourmash lca gather` command finds all non-overlapping
 matches to the query, similar to the `sourmash gather` command.  This
 is specifically meant for metagenome and genome bin analysis.  (See
-[Classifying Signatures](classifying-signatures.html) for more
+[Classifying Signatures](classifying-signatures.md) for more
 information on the different approaches that can be used here.)
 
 If the input signature was computed with `--track-abundance`, output
@@ -412,7 +412,7 @@ a lineage spreadsheet and a collection of signatures.  This can be used
 to create LCA databases from private collections of genomes, and can
 also be used to create databases for e.g. subsets of GenBank.
 
-See [the `sourmash lca` tutorial](tutorials-lca.html) and the blog
+See [the `sourmash lca` tutorial](tutorials-lca.md) and the blog
 post
 [Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
 for some use cases.
