@@ -592,8 +592,8 @@ def test_search_query_sig_does_not_exist(c):
     c.run_sourmash('compute', '-k', '31', testdata1)
 
 
-
-    c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
@@ -607,8 +607,8 @@ def test_search_subject_sig_does_not_exist(c):
     c.run_sourmash('compute', '-k', '31', testdata1)
 
 
-
-    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
@@ -621,8 +621,8 @@ def test_search_second_subject_sig_does_not_exist(c):
     c.run_sourmash('compute', '-k', '31', testdata1)
 
 
-
-    c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
@@ -680,31 +680,26 @@ def test_search_ignore_abundance():
         assert out1 != out2
 
 
-def test_search_csv():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_csv(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'xxx.csv'],
-                                           in_directory=location)
-        print(status, out, err)
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
 
-        csv_file = os.path.join(location, 'xxx.csv')
+    csv_file = os.path.join(c.location, 'xxx.csv')
 
-        with open(csv_file) as fp:
-            reader = csv.DictReader(fp)
-            row = next(reader)
-            assert float(row['similarity']) == 0.93
-            assert row['name'].endswith('short2.fa')
-            assert row['filename'].endswith('short2.fa.sig')
-            assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        assert float(row['similarity']) == 0.93
+        assert row['name'].endswith('short2.fa')
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
 
 @utils.in_tempdir
