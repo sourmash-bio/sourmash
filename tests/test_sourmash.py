@@ -586,81 +586,61 @@ def test_plot_subsample_2():
         assert expected in out
 
 
-def test_search_query_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_query_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
 
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short2.fa.sig',
-                                            'short.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
 
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
-        assert len(err.split('\n\r')) < 5
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert 'Cannot open file' in c.last_result.err
+    assert len(c.last_result.err.split('\n\r')) < 5
 
 
-def test_search_subject_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_subject_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
 
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert 'Cannot open file' in c.last_result.err
 
 
-def test_search_second_subject_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_second_subject_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
 
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short.fa.sig', 'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert 'Cannot open file' in c.last_result.err
 
 
-def test_search():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '93.0%' in out
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert '1 matches' in c.last_result.out
+    assert '93.0%' in c.last_result.out
 
 
 def test_search_ignore_abundance():
