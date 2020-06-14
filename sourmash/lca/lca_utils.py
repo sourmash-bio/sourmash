@@ -10,7 +10,8 @@ from .lca_db import LCA_Database, load_single_database, load_databases
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair', 'display_lineage']
+           'count_lca_for_assignments', 'LineagePair', 'display_lineage',
+           'gather_assignments_abund', 'count_lca_for_assignments_abund']
 
 try:                                      # py2/py3 compat
     from itertools import zip_longest
