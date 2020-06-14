@@ -140,7 +140,7 @@ class SBT(Index):
 
     @property
     def _missing_nodes(self):
-        return {i for i in range(max(self._nodes))
+        return {i for i in range(max(self._leaves))
                 if i not in self._nodes and i not in self._leaves}
 
     def signatures(self):
@@ -238,6 +238,14 @@ class SBT(Index):
         # If true, return (Leaf, position) tuples of matches
         return_pos = kwargs.get('return_pos', False)
 
+        # Needed for localized SBTs. Don't throw an error if an internal node is empty
+        # and has no children
+        if 'ignore_empty' in kwargs:
+            ignore_empty = kwargs.get('ignore_empty')
+            find_kws = dict(ignore_empty=ignore_empty)
+        else:
+            find_kws = {}
+
         # initialize search queue with top node of tree
         matches = []
         visited, queue = set(), [0]
@@ -264,10 +272,16 @@ class SBT(Index):
                 visited.add(node_p)
 
                 # apply search fn. If return false, truncate search.
-                if search_fn(node_g, *args):
+                if search_fn(node_g, *args, **find_kws):
 
                     # leaf node? it's a match!
                     if isinstance(node_g, Leaf):
+
+                        # For recursively adding new leaves to SBT, need to ignore some
+                        # nodes, e.g. the ones that have already been displaced
+                        if node_g._ignore_in_search:
+                            continue
+
                         # Return tuple of node data and position
                         if return_pos:
                             matches.append((node_g, node_p))
@@ -300,6 +314,9 @@ class SBT(Index):
         # If True, returns the leaf node (rather than the signature data) and the
         # position of the leaf on the tree
         return_leaf = kwargs.get('return_leaf', False)
+        # Needed for localized SBTs. Don't throw an error if an internal node is empty
+        # and has no children
+        ignore_empty = kwargs.get('ignore_empty', False)
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -326,7 +343,8 @@ class SBT(Index):
         # now, search!
         results = []
         for leaf, pos in self.find(search_fn, tree_query, threshold,
-                                   unload_data=unload_data, return_pos=True):
+                                   unload_data=unload_data, return_pos=True,
+                                   ignore_empty=ignore_empty):
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
@@ -382,12 +400,11 @@ class SBT(Index):
         node = Node(self.factory, name="internal.{}".format(pos))
         self._nodes[pos] = node
         for c in self.children(pos):
-            if c.pos in self._missing_nodes or isinstance(c.node, Leaf):
-                cnode = c.node
-                if cnode is None:
-                    self._rebuild_node(c.pos)
-                    cnode = self._nodes[c.pos]
-                cnode.update(node)
+            cnode = c.node
+            if cnode is None:
+                self._rebuild_node(c.pos)
+                cnode = self._nodes[c.pos]
+            cnode.update(node)
 
     def parent(self, pos):
         """Return the parent of the node at position ``pos``.
@@ -1123,6 +1140,12 @@ class Leaf(object):
 
         self._data = data
         self._path = path
+
+        # Attribute to check whether this leaf should be ignored in searching for
+        # similar nodes. Useful for localized SBT when recursively inserting new nodes
+        # and need to ignore or mask away the leaves that are more similar to one
+        # another than the leaf that is getting inserted
+        self._ignore_in_search = False
 
     def __str__(self):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(

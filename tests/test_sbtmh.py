@@ -254,7 +254,7 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
 
 @pytest.mark.filterwarnings("ignore")
 def test_localized_sbt_on_gather_data():
-    factory = GraphFactory(5, 100, 3)
+    factory = GraphFactory(5, 1000, 3)
     sbt = LocalizedSBT(factory, track_abundance=False)
 
     with utils.TempDirectory() as location:
@@ -280,19 +280,19 @@ def test_localized_sbt_on_gather_data():
         print('[' + ',\n '.join(['[' + ', '.join([f"{x:.2f}"  for x in row]) + "]" for row in compare]) + "]")
 
         # --- Similarity matrix ---
-        # [ 'O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z']
-        # [[1.00, 0.48, 0.58, 0.00, 0.00, 0.61, 0.58, 0.52, 0.58, 0.00, 0.00, 0.45],
-        #  [0.48, 1.00, 0.44, 0.00, 0.00, 0.51, 0.50, 0.60, 0.46, 0.00, 0.00, 0.90],
-        #  [0.58, 0.44, 1.00, 0.00, 0.00, 0.57, 0.55, 0.47, 0.54, 0.00, 0.00, 0.41],
-        #  [0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.26, 0.05, 0.00],
-        #  [0.00, 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
-        #  [0.61, 0.51, 0.57, 0.00, 0.00, 1.00, 0.92, 0.52, 0.60, 0.00, 0.00, 0.47],
-        #  [0.58, 0.50, 0.55, 0.00, 0.00, 0.92, 1.00, 0.50, 0.57, 0.00, 0.00, 0.46],
-        #  [0.52, 0.60, 0.47, 0.00, 0.00, 0.52, 0.50, 1.00, 0.49, 0.00, 0.00, 0.57],
-        #  [0.58, 0.46, 0.54, 0.00, 0.00, 0.60, 0.57, 0.49, 1.00, 0.00, 0.00, 0.43],
-        #  [0.00, 0.00, 0.00, 0.26, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 0.03, 0.00],
-        #  [0.00, 0.00, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0.03, 1.00, 0.00],
-        #  [0.45, 0.90, 0.41, 0.00, 0.00, 0.47, 0.46, 0.57, 0.43, 0.00, 0.00, 1.00]]
+        #    ['O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z']
+        # O: [[1.00, 0.48, 0.58, 0.00, 0.00, 0.61, 0.58, 0.52, 0.58, 0.00, 0.00, 0.45],
+        # P:  [0.48, 1.00, 0.44, 0.00, 0.00, 0.51, 0.50, 0.60, 0.46, 0.00, 0.00, 0.90],
+        # Q:  [0.58, 0.44, 1.00, 0.00, 0.00, 0.57, 0.55, 0.47, 0.54, 0.00, 0.00, 0.41],
+        # R:  [0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.26, 0.05, 0.00],
+        # S:  [0.00, 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+        # T:  [0.61, 0.51, 0.57, 0.00, 0.00, 1.00, 0.92, 0.52, 0.60, 0.00, 0.00, 0.47],
+        # U:  [0.58, 0.50, 0.55, 0.00, 0.00, 0.92, 1.00, 0.50, 0.57, 0.00, 0.00, 0.46],
+        # V:  [0.52, 0.60, 0.47, 0.00, 0.00, 0.52, 0.50, 1.00, 0.49, 0.00, 0.00, 0.57],
+        # W:  [0.58, 0.46, 0.54, 0.00, 0.00, 0.60, 0.57, 0.49, 1.00, 0.00, 0.00, 0.43],
+        # X:  [0.00, 0.00, 0.00, 0.26, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 0.03, 0.00],
+        # Y:  [0.00, 0.00, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0.03, 1.00, 0.00],
+        # Z:  [0.45, 0.90, 0.41, 0.00, 0.00, 0.47, 0.46, 0.57, 0.43, 0.00, 0.00, 1.00]]
 
         # --- Insert: O ("oh") ---
         # First leaf --> take first position
@@ -310,6 +310,7 @@ def test_localized_sbt_on_gather_data():
 
         # --- Insert: Q ---
         # Most similar to O, displace P
+        #  --> Push existing tree down when displacing P
         # Tree:
         #             0
         #        /        \
@@ -348,18 +349,107 @@ def test_localized_sbt_on_gather_data():
         #      3           4              5               6
         #    /   \       /   \         /     \         /    \
         # O: 7  T: 8   P: 9  Q: 10   S: 11  R: 12   None    None
-        # - Currently there is no recursion to displace R to a new place
-        # Actual Tree:
+
+        # --- Insert: U ---
+        # - U is most similar to T and should displace O ("oh")
+        # - After T, O ("oh") is most similar to Q and should displace P
+        # Desired Tree:
         #                           0
         #               /                        \
         #             1                           2
         #        /        \                 /            \
         #      3           4              5               6
         #    /   \       /   \         /     \         /    \
-        # O: 7  T: 8   P: 9  R: 10   S: 11  Q: 12   None    None
+        # U: 7  T: 8   O: 9  Q: 10   S: 11  R: 12   P: 13    None
+
+        # --- Insert: V ---
+        # - V is most similar to P and can just join P in its node
+        # Desired Tree:
+        #                           0
+        #               /                        \
+        #             1                           2
+        #        /        \                 /            \
+        #      3           4              5               6
+        #    /   \       /   \         /     \         /    \
+        # U: 7  T: 8   O: 9  Q: 10   S: 11  R: 12   P: 13    V: 14
+
+        # --- Insert: W ---
+        # - W is most similar to T, but not more similar than T's current sibiling, U.
+        #   In fact, W doesn't beat out any of the existing pairs so it should be
+        #   inserted wherever, to the next available node
+        # Desired Tree:
+        #                                            0
+        #                            /                              \
+        #                      1                                       2
+        #              /                 \                     /              \
+        #            3                    4                   5               6
+        #       /       \           /         \            /    \           /  \
+        #     7          8         9          10         11      12      13      14
+        #   /   \     /   \      /   \      /   \      /   \    /  \
+        # U:15 T:16 O:17 Q:18  S:19 R:20  P:21 V:22  W:23 None
+
+        # --- Insert: X ---
+        # - X is most similar to R, and should displace S, which isn't similar to
+        #   anything and goes to its own place
+        # Desired Tree:
+        #                                            0
+        #                            /                              \
+        #                      1                                       2
+        #              /                 \                     /              \
+        #            3                    4                   5               6
+        #       /       \           /         \            /    \           /  \
+        #     7          8         9          10         11      12      13      14
+        #   /   \     /   \      /   \      /   \      /   \    /  \
+        # U:15 T:16 O:17 Q:18  X:19 R:20  P:21 V:22  W:23 S:24
+
+        # --- Insert: Y ---
+        # - Y is most similar to R and X, but doesn't beat out any of their most
+        #    similar nodes, so goes into a node by itself
+        # Desired Tree:
+        #                                            0
+        #                            /                              \
+        #                      1                                       2
+        #              /                 \                     /              \
+        #            3                    4                   5               6
+        #       /       \           /         \            /     \           /  \
+        #     7          8         9          10         11       12      13      14
+        #   /   \     /   \      /   \      /   \      /   \     /  \
+        # U:15 T:16 O:17 Q:18  X:19 R:20  P:21 V:22  W:23 S:24 Y:25
+
+        # --- Insert: Z ---
+        # - Z is most similar to P, and should displace P's sibling V
+        # - After P, V is most similar to W, and so V should displace W's sibling S
+        # Desired Tree:
+        #                                            0
+        #                            /                              \
+        #                      1                                       2
+        #              /                 \                     /              \
+        #            3                    4                   5               6
+        #       /       \           /         \            /     \           /  \
+        #     7          8         9          10         11       12      13      14
+        #   /   \     /   \      /   \      /   \      /   \     /  \
+        # U:15 T:16 O:17 Q:18  X:19 R:20  P:21 Z:22  W:23 V:24 Y:25 S:26
 
         for signature in signatures:
+            print(signature._name)
             sbt.insert(signature)
+
+        # Ensure that the most similar pairs, (P, Z) and (F, G) share parents
+        # regardless of construction order
+        leaf_names_in_order = [v.name for k, v in sorted(sbt._leaves.items(), key=lambda x: x[0])]
+        assert leaf_names_in_order == ['U', 'T', 'O', 'Q', 'X', 'R', 'P', 'Z', 'W',
+                                       'V', 'Y', 'S']
+
+        # --- Double check to make sure parents are shared --- #
+        # create mapping from leaf name to node pos
+        leaf_pos = {
+            sig.data.name(): n
+            for n, sig in
+            sbt._leaves.items()
+        }
+        assert sbt.parent(leaf_pos["P"]) == sbt.parent(leaf_pos["Z"])
+        assert sbt.parent(leaf_pos["U"]) == sbt.parent(leaf_pos["T"])
+        assert sbt.parent(leaf_pos["O"]) == sbt.parent(leaf_pos["Q"])
 
 
 @pytest.mark.skip(reason="Not currently working but not a show-stopping bug")
