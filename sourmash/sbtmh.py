@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from io import BytesIO
+import math
 import sys
 
 from .sbt import Leaf, Node, SBT, GraphFactory
