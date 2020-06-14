@@ -1,14 +1,11 @@
 from __future__ import print_function
 from __future__ import division
 
-from io import BytesIO, TextIOWrapper
-import math
+from io import BytesIO
 import sys
 
 from .sbt import Leaf, Node, SBT, GraphFactory
 from . import signature
-from .logging import notify, debug
-
 
 
 def load_sbt_index(filename, print_version_warning=True):
@@ -53,16 +50,12 @@ class SigLeaf(Leaf):
         # content...)
         self.data
 
-        buf = BytesIO()
-        with TextIOWrapper(buf) as out:
-            signature.save_signatures([self.data], out)
-            out.flush()
-            return self.storage.save(path, buf.getvalue())
+        buf = signature.save_signatures([self.data], compression=1)
+        return self.storage.save(path, buf)
 
     def update(self, parent):
         mh = self.data.minhash
-        for v in mh.get_mins():
-            parent.data.count(v)
+        parent.data.update(mh)
         min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
         min_n_below = min(len(mh), min_n_below)
 
@@ -496,7 +489,7 @@ class LocalizedSBT(SBT):
 
 ### Search functionality.
 
-def _max_jaccard_underneath_internal_node(node, hashes, ignore_empty=False):
+def _max_jaccard_underneath_internal_node(node, mh, ignore_empty=False):
     """\
     calculate the maximum possibility similarity score below
     this node, based on the number of matches in 'hashes' at this node,
@@ -510,12 +503,11 @@ def _max_jaccard_underneath_internal_node(node, hashes, ignore_empty=False):
         an error. Needed for localized SBTs, which many have empty internal nodes in the
         process of building
     """
-    if len(hashes) == 0:
+    if len(mh) == 0:
         return 0.0
 
     # count the maximum number of hash matches beneath this node
-    get = node.data.get
-    matches = sum(1 for value in hashes if get(value))
+    matches = node.data.matches(mh)
 
     # get the size of the smallest collection of hashes below this point
     default = 0 if ignore_empty else -1
@@ -536,13 +528,13 @@ def search_minhashes(node, sig, threshold, results=None, ignore_empty=False):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
-    mins = sig.minhash.get_mins()
+    sig_mh = sig.minhash
     score = 0
 
     if isinstance(node, SigLeaf):
-        score = node.data.minhash.similarity(sig.minhash)
+        score = node.data.minhash.similarity(sig_mh)
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, mins,
+        score = _max_jaccard_underneath_internal_node(node, sig_mh,
                                                       ignore_empty=ignore_empty)
 
     if results is not None:
@@ -560,13 +552,13 @@ class SearchMinHashesFindBest(object):
 
     def search(self, node, sig, threshold, results=None, ignore_empty=False):
         """May return a list of matches under a node --> doesn't return a single sig"""
-        mins = sig.minhash.get_mins()
+        sig_mh = sig.minhash
         score = 0
 
         if isinstance(node, SigLeaf):
-            score = node.data.minhash.similarity(sig.minhash)
+            score = node.data.minhash.similarity(sig_mh)
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, mins,
+            score = _max_jaccard_underneath_internal_node(node, sig_mh,
                                                           ignore_empty=ignore_empty)
 
         if results is not None:
@@ -584,18 +576,17 @@ class SearchMinHashesFindBest(object):
 
 
 def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
-    mins = sig.minhash.get_mins()
+    mh = sig.minhash
 
     if isinstance(node, SigLeaf):
-        matches = node.data.minhash.count_common(sig.minhash, downsample)
+        matches = node.data.minhash.count_common(mh, downsample)
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        get = node.data.get
-        matches = sum(1 for value in mins if get(value))
+        matches = node.data.matches(mh)
 
     if results is not None:
-        results[node.name] = float(matches) / len(mins)
+        results[node.name] = float(matches) / len(mh)
 
-    if len(mins) and float(matches) / len(mins) >= threshold:
+    if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
     return 0
 
@@ -605,18 +596,22 @@ class GatherMinHashes(object):
         self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
-        score = 0
-        if not len(query.minhash):
+        mh = query.minhash
+        if not len(mh):
             return 0
 
         if isinstance(node, SigLeaf):
-            matches = query.minhash.count_common(node.data.minhash, True)
+            matches = mh.count_common(node.data.minhash, True)
         else:  # Nodegraph by minhash comparison
-            mins = query.minhash.get_mins()
-            get = node.data.get
-            matches = sum(1 for value in mins if get(value))
+            matches = node.data.matches(mh)
 
-        score = float(matches) / len(query.minhash)
+        if not matches:
+            return 0
+
+        score = float(matches) / len(mh)
+
+        if score < threshold:
+            return 0
 
         # store results if we have passed in an appropriate dictionary
         if results is not None:

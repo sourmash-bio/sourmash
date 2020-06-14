@@ -39,7 +39,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxcontrib.napoleon',
     'nbsphinx',
-    'IPython.sphinxext.ipython_console_highlighting'
+    'IPython.sphinxext.ipython_console_highlighting',
+    'recommonmark'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -58,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sourmash'
-copyright = '2016, C. Titus Brown and Luiz Irber'
+copyright = '2016-2020, C. Titus Brown and Luiz Irber'
 author = 'C. Titus Brown and Luiz Irber'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -295,11 +296,5 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
-
-from recommonmark.parser import CommonMarkParser
-
-source_parsers = {
-    '.md': CommonMarkParser,
-}
 
 autodoc_mock_imports = ["sourmash._minhash"]

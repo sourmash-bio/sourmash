@@ -11,7 +11,7 @@ from .index import LinearIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
-from .lca import lca_utils
+from .lca import LCA_Database
 import sourmash
 
 DEFAULT_LOAD_K = 31
@@ -34,21 +34,25 @@ def get_moltype(sig, require=False):
 
 
 def calculate_moltype(args, default=None):
-    if args.protein:
-        if args.dna is True:
-            error('cannot specify both --dna/--rna and --protein!')
-            sys.exit(-1)
-        args.dna = False
-
     moltype = default
+
+    n = 0
     if args.dna:
         moltype = 'DNA'
-    elif args.dayhoff:
+        n += 1
+    if args.dayhoff:
         moltype = 'dayhoff'
-    elif args.hp:
+        n += 1
+    if args.hp:
         moltype = 'hp'
-    elif args.protein:
+        n += 1
+    if args.protein:
         moltype = 'protein'
+        n += 1
+
+    if n > 1:
+        error("cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff")
+        sys.exit(-1)
 
     return moltype
 
@@ -252,8 +256,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
         # ok. try loading as an LCA.
         try:
-            lca_db = lca_utils.LCA_Database()
-            lca_db.load(sbt_or_sigfile)
+            lca_db = LCA_Database.load(sbt_or_sigfile)
 
             assert query_ksize == lca_db.ksize
             query_scaled = query.minhash.scaled

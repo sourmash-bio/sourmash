@@ -31,10 +31,8 @@ include/sourmash.h: src/core/src/lib.rs \
                     src/core/src/ffi/signature.rs \
                     src/core/src/ffi/nodegraph.rs \
                     src/core/src/errors.rs
-	rustup override set nightly
 	cd src/core && \
-	RUST_BACKTRACE=1 cbindgen -c cbindgen.toml -o ../../$@
-	rustup override set stable
+	RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
 
 coverage: all
 	$(PYTHON) setup.py build_ext -i

@@ -1,5 +1,4 @@
-"""search a metagenome signature for multiple non-
-                                  overlapping matches"""
+"""search a metagenome signature against dbs"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
@@ -33,7 +32,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,
-        help='threshold (in bp) for reporting results (default=50,000)'
+        help='reporting threshold (in bp) for estimated overlap with remaining query (default=50,000)'
     )
     subparser.add_argument(
         '--output-unassigned', metavar='FILE',

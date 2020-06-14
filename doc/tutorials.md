@@ -23,6 +23,6 @@ yourself, or run interactively online via the
 
 ## More information
 
-If you are a Python programmer, you might also be interested in our [API examples](api-example.html).
+If you are a Python programmer, you might also be interested in our [API examples](api-example.html) as well as a short guide to [Using the `LCA_Database` API.](using-LCA-database-API.html)
 
 If you prefer R, we have [a short guide to using sourmash output with R](other-languages.html).

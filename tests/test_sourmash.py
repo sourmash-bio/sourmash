@@ -11,6 +11,7 @@ import json
 import csv
 import pytest
 import sys
+import zipfile
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -351,6 +352,73 @@ min similarity in matrix: 0.940'''.splitlines()
             cleaned_line = line.split('...')[-1].strip()
             cleaned_line in true_out
         assert status == 0
+
+
+@utils.in_tempdir
+def test_compare_containment(c):
+    import numpy
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('compare', '--containment', '-k', '31',
+                   '--csv', 'output.csv', *testdata_sigs)
+
+    # load the matrix output of compare --containment
+    with open(c.output('output.csv'), 'rt') as fp:
+        r = iter(csv.reader(fp))
+        headers = next(r)
+
+        mat = numpy.zeros((len(headers), len(headers)))
+        for i, row in enumerate(r):
+            for j, val in enumerate(row):
+                mat[i][j] = float(val)
+
+        print(mat)
+
+    # load in all the input signatures
+    idx_to_sig = dict()
+    for idx, filename in enumerate(testdata_sigs):
+        ss = sourmash.load_one_signature(filename, ksize=31)
+        idx_to_sig[idx] = ss
+
+    # check explicit containment against output of compare
+    for i in range(len(idx_to_sig)):
+        ss_i = idx_to_sig[i]
+        for j in range(len(idx_to_sig)):
+            ss_j = idx_to_sig[j]
+            containment = ss_j.contained_by(ss_i)
+            containment = round(containment, 3)
+            mat_val = round(mat[i][j], 3)
+
+            assert containment == mat_val, (i, j)
+
+
+@utils.in_tempdir
+def test_compare_containment_abund_flatten(c):
+    s47 = utils.get_test_data('track_abund/47.fa.sig')
+    s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'NOTE: --containment means signature abundances are flattened' in \
+        c.last_result.err
+
+
+@utils.in_tempdir
+def test_compare_containment_require_scaled(c):
+    s47 = utils.get_test_data('num/47.fa.sig')
+    s63 = utils.get_test_data('num/63.fa.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
+                       fail_ok=True)
+
+    assert 'must use scaled signatures with --containment option' in \
+        c.last_result.err
+    assert c.last_result.status != 0
 
 
 def test_do_plot_comparison():
@@ -1547,7 +1615,7 @@ def test_do_sourmash_index_bad_args():
                                            in_directory=location, fail_ok=True)
 
         print(out, err)
-        assert "cannot specify both --dna/--rna and --protein!" in err
+        assert 'cannot specify more than one of --dna/--rna/--protein/--hp/--dayhoff' in err
         assert status != 0
 
 
@@ -2502,6 +2570,67 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
+@utils.in_tempdir
+def test_gather_f_match_orig(c):
+    import copy
+
+    testdata_combined = utils.get_test_data('gather/combined.sig')
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv',
+                   *testdata_sigs)
+
+    combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
+    remaining_mh = copy.copy(combined_sig.minhash)
+
+    def approx_equal(a, b, n=5):
+        return round(a, n) == round(b, n)
+
+    with open(c.output('out.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        for n, row in enumerate(r):
+            print(n, row['f_match'], row['f_match_orig'])
+
+            # each match is completely in the original query
+            assert row['f_match_orig'] == "1.0"
+
+            # double check -- should match 'search --containment'.
+            # (this is kind of useless for a 1.0 contained_by, I guess)
+            filename = row['filename']
+            match = sourmash.load_one_signature(filename, ksize=21)
+            assert match.contained_by(combined_sig) == 1.0
+
+            # check other fields, too.
+            f_orig_query = float(row['f_orig_query'])
+            f_match_orig = float(row['f_match_orig'])
+            f_match = float(row['f_match'])
+            f_unique_to_query = float(row['f_unique_to_query'])
+
+            # f_orig_query is the containment of the query by the match.
+            # (note, this only works because containment is 100% in combined).
+            assert approx_equal(combined_sig.contained_by(match), f_orig_query)
+
+            # just redoing above, for completeness; this is always 1.0 for
+            # this data set.
+            assert approx_equal(match.contained_by(combined_sig), f_match_orig)
+
+            # f_match is how much of the match is in the unallocated hashes
+            assert approx_equal(match.minhash.contained_by(remaining_mh),
+                                f_match)
+
+            # f_unique_to_query is how much of the match is unique wrt
+            # the original query.
+            a = set(remaining_mh.get_mins())
+            b = set(match.minhash.get_mins())
+            n_intersect = len(a.intersection(b))
+            f_intersect = n_intersect / float(len(combined_sig.minhash))
+            assert approx_equal(f_unique_to_query, f_intersect)
+
+            # now, subtract current match from remaining... and iterate!
+            remaining_mh.remove_many(match.minhash.get_mins())
+
+
 def test_gather_nomatch():
     with utils.TempDirectory() as location:
         testdata_query = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
@@ -2533,7 +2662,7 @@ def test_gather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        cmd = 'gather {} gcf_all -k 21'.format(query_sig)
+        cmd = 'gather {} gcf_all -k 21 --threshold-bp=0'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -2593,7 +2722,7 @@ def test_multigather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        cmd = 'multigather --query {} --db gcf_all -k 21'.format(query_sig)
+        cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -2621,7 +2750,7 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --traverse-directory'
+        cmd = 'gather {} {} -k 21 --traverse-directory --threshold-bp=0'
         cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -2691,6 +2820,7 @@ def test_gather_metagenome_output_unassigned_nomatches(c):
 
 
 def test_gather_metagenome_downsample():
+    # downsample w/scaled of 100,000
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -2707,7 +2837,8 @@ def test_gather_metagenome_downsample():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
-                                            '-k', '21', '--scaled', '100000'],
+                                            '-k', '21', '--scaled', '100000',
+                                            '--threshold-bp', '50000'],
                                            in_directory=location)
 
         print(out)
@@ -2759,7 +2890,8 @@ def test_gather_save_matches():
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21',
-                                            '--save-matches', 'save.sigs'],
+                                            '--save-matches', 'save.sigs',
+                                            '--threshold-bp', '0'],
                                            in_directory=location)
 
         print(out)
@@ -2870,110 +3002,141 @@ def test_gather_deduce_moltype():
         assert '1.9 kbp      100.0%  100.0%' in out
 
 
-def test_gather_abund_1_1():
+@utils.in_thisdir
+def test_gather_abund_1_1(c):
+    #
+    # make r1.fa with 1x coverage of genome s10
+    # make r2.fa with 10x coverage of genome s10.
+    # make r3.fa with 1x coverage of genome s11.
+    #
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
+    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
+
+    #
+    # make signature s10-s11 with r1 and r3, i.e. 1:1 abundance
+    # make signature s10x10-s11 with r2 and r3, i.e. 10:1 abundance
+    #
+    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
+    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
+
+    query = utils.get_test_data('gather-abund/reads-s10-s11.sig')
+    against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                     for i in against_list ]
+    against_list = [ utils.get_test_data(i) for i in against_list ]
+
+    status, out, err = c.run_sourmash('gather', query, *against_list)
+
+    print(out)
+    print(err)
+
+    # when we project s10-s11 (r1+r3), 1:1 abundance,
+    # onto s10 and s11 genomes with gather, we get:
+    # * approximately 50% of each query matching (first column, p_query)
+    # * approximately 80% of subject genomes contents being matched
+    #   (this is due to the low coverage of 2 used to build queries)
+    # * approximately 2.0 abundance (third column, avg_abund)
+
+    assert '49.6%   78.5%       1.8    tests/test-data/genome-s10.fa.gz' in out
+    assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
+    assert 'genome-s12.fa.gz' not in out
+
+
+@utils.in_tempdir
+def test_gather_abund_10_1(c):
+    # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
     # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
     # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
 
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10-s11.sig')
-        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                         for i in against_list ]
-        against_list = [ utils.get_test_data(i) for i in against_list ]
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                     for i in against_list ]
+    against_list = [ utils.get_test_data(i) for i in against_list ]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query] + against_list,
-                                           in_directory=location)
+    status, out, err = c.run_sourmash('gather', query, '-o', 'xxx.csv',
+                                      *against_list)
 
-        print(out)
-        print(err)
+    print(out)
+    print(err)
 
-        assert '49.6%   78.5%       1.8    tests/test-data/genome-s10.fa.gz' in out
-        assert '50.4%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
-        assert 'genome-s12.fa.gz' not in out
+    # when we project s10x10-s11 (r2+r3), 10:1 abundance,
+    # onto s10 and s11 genomes with gather, we get:
+    # * approximately 91% of s10 matching
+    # * approximately 9% of s11 matching
+    # * approximately 100% of the high coverage genome being matched,
+    #       with only 80% of the low coverage genome
+    # * approximately 2.0 abundance (third column, avg_abund) for s11,
+    #   and (very) approximately 20x abundance for genome s10.
+
+    assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
+    assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
+    assert 'genome-s12.fa.gz' not in out
+
+    # check the calculations behind the above output by looking into
+    # the CSV.
+    with open(c.output('xxx.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+
+        overlaps = []
+        f_weighted_list = []
+        average_abunds = []
+
+        for row in r:
+            overlap = float(row['intersect_bp'])
+            f_weighted = float(row['f_unique_weighted'])
+            average_abund = float(row['average_abund'])
+
+            overlaps.append(overlap)
+            f_weighted_list.append(f_weighted)
+            average_abunds.append(average_abund)
+
+        weighted_calc = []
+        for (overlap, average_abund) in zip(overlaps, average_abunds):
+            prod = overlap*average_abund
+            weighted_calc.append(prod)
+
+        total_weighted = sum(weighted_calc)
+        for prod, f_weighted in zip(weighted_calc, f_weighted_list):
+            assert prod / total_weighted == f_weighted, (prod, f_weighted)
 
 
-def test_gather_abund_10_1():
+@utils.in_thisdir
+def test_gather_abund_10_1_ignore_abundance(c):
+    # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
     # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
     # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
 
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                         for i in against_list ]
-        against_list = [ utils.get_test_data(i) for i in against_list ]
+    query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+    against_list = ['genome-s10', 'genome-s11', 'genome-s12']
+    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
+                     for i in against_list ]
+    against_list = [ utils.get_test_data(i) for i in against_list ]
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query, '-o', 'xxx.csv'] \
-                                            + against_list,
-                                           in_directory=location)
+    status, out, err = c.run_sourmash('gather', query,
+                                      '--ignore-abundance',
+                                      *against_list)
 
-        print(out)
-        print(err)
-        assert '91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz' in out
-        assert '9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz' in out
-        assert 'genome-s12.fa.gz' not in out
+    print(out)
+    print(err)
 
-        # check the calculations behind the above output by looking into
-        # the CSV.
-        with open(os.path.join(location, 'xxx.csv'), 'rt') as fp:
-            r = csv.DictReader(fp)
+    # when we project s10x10-s11 (r2+r3), 10:1 abundance,
+    # onto s10 and s11 genomes with gather --ignore-abundance, we get:
+    # * approximately 50% of s10 and s11 matching (first column)
+    # * approximately 100% of the high coverage genome being matched,
+    #       with only 80% of the low coverage genome
+    # no abundance-weighted information is provided here. @CTB check?
 
-            overlaps = []
-            f_weighted_list = []
-            average_abunds = []
-
-            for row in r:
-                overlap = float(row['intersect_bp'])
-                f_weighted = float(row['f_unique_weighted'])
-                average_abund = float(row['average_abund'])
-
-                overlaps.append(overlap)
-                f_weighted_list.append(f_weighted)
-                average_abunds.append(average_abund)
-
-            weighted_calc = []
-            for (overlap, average_abund) in zip(overlaps, average_abunds):
-                prod = overlap*average_abund
-                weighted_calc.append(prod)
-
-            total_weighted = sum(weighted_calc)
-            for prod, f_weighted in zip(weighted_calc, f_weighted_list):
-                assert prod / total_weighted == f_weighted, (prod, f_weighted)
-
-
-def test_gather_abund_10_1_ignore_abundance():
-    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
-    # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
-    # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s11.fa.gz > r3.fa
-    # ./sourmash compute -k 21 --scaled 1000 --merge=1-1 -o reads-s10-s11.sig r[13].fa --track-abundance
-    # ./sourmash compute -k 21 --scaled 1000 --merge=10-1 -o reads-s10x10-s11.sig r[23].fa --track-abundance
-
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-        against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                         for i in against_list ]
-        against_list = [ utils.get_test_data(i) for i in against_list ]
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['gather', query] \
-                                            + ['--ignore-abundance'] + \
-                                            against_list,
-                                           in_directory=location)
-
-        print(out)
-        print(err)
-        assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
-        assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
-        assert 'genome-s12.fa.gz' not in out
+    assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
+    assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
+    assert 'genome-s12.fa.gz' not in out
 
 
 @utils.in_tempdir
@@ -3372,3 +3535,69 @@ def test_license_load_non_cc0():
             sig = next(signature.load_signatures(sigfile, do_raise=True))
         except Exception as e:
             assert "sourmash only supports CC0-licensed signatures" in str(e)
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_zipfile(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
+                   *testdata_sigs)
+
+    outfile = c.output('zzz.sbt.zip')
+    assert os.path.exists(outfile)
+
+    print(c)
+    assert c.last_result.status == 0
+    assert 'Finished saving SBT, available at' in c.last_result.err
+
+    with zipfile.ZipFile(outfile) as zf:
+        content = zf.namelist()
+        assert len(content) == 25
+        assert len([c for c in content if 'internal' in c]) == 11
+        assert ".sbt.zzz/" in content
+        sbts = [c for c in content if c.endswith(".sbt.json")]
+        assert len(sbts) == 1
+        assert sbts[0] == "zzz.sbt.json"
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_zipfile_append(c):
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+    half_point = int(len(testdata_sigs) / 2)
+    first_half = testdata_sigs[:half_point]
+    second_half = testdata_sigs[half_point:]
+
+    with pytest.warns(None) as record:
+        c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
+                       *first_half)
+    # UserWarning is raised when there are duplicated entries in the zipfile
+    assert not record
+
+    outfile = c.output('zzz.sbt.zip')
+    assert os.path.exists(outfile)
+
+    print(c)
+    assert c.last_result.status == 0
+    assert 'Finished saving SBT, available at' in c.last_result.err
+
+    with pytest.warns(None) as record:
+        c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
+                       *second_half)
+    # UserWarning is raised when there are duplicated entries in the zipfile
+    assert not record
+
+    print(c)
+    assert c.last_result.status == 0
+    assert 'Finished saving SBT, available at' in c.last_result.err
+
+    with zipfile.ZipFile(outfile) as zf:
+        content = zf.namelist()
+        assert len(content) == 25
+        assert len([c for c in content if 'internal' in c]) == 11
+        assert ".sbt.zzz/" in content
+        sbts = [c for c in content if c.endswith(".sbt.json")]
+        assert len(sbts) == 1
+        assert sbts[0] == "zzz.sbt.json"

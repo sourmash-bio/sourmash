@@ -20,16 +20,12 @@ fn load_signature() {
     assert_eq!(sigs.len(), 1);
 
     let sig = sigs.get(0).unwrap();
-    assert_eq!(sig.class, "sourmash_signature");
-    assert_eq!(sig.email, "");
-    if let Some(ref filename) = sig.filename {
-        assert_eq!(filename, "-");
-    }
-    assert_eq!(sig.hash_function, "0.murmur64");
-    if let Some(ref name) = sig.name {
-        assert_eq!(name, "s10+s11");
-    }
-    assert_eq!(sig.signatures.len(), 4);
+    assert_eq!(sig.class(), "sourmash_signature");
+    assert_eq!(sig.email(), "");
+    assert_eq!(sig.filename(), "-");
+    assert_eq!(sig.hash_function(), "0.murmur64");
+    assert_eq!(sig.name(), "s10+s11");
+    assert_eq!(sig.size(), 4);
 }
 
 #[test]
@@ -43,11 +39,12 @@ fn signature_from_computeparams() {
     let mut sig = Signature::from_params(&params);
     sig.add_sequence(b"ATGC", false).unwrap();
 
-    assert_eq!(sig.signatures.len(), 3);
-    dbg!(&sig.signatures);
-    assert_eq!(sig.signatures[0].size(), 3);
-    assert_eq!(sig.signatures[1].size(), 2);
-    assert_eq!(sig.signatures[2].size(), 1);
+    assert_eq!(sig.size(), 3);
+    let sketches = sig.sketches();
+    dbg!(&sketches);
+    assert_eq!(sketches[0].size(), 3);
+    assert_eq!(sketches[1].size(), 2);
+    assert_eq!(sketches[2].size(), 1);
 }
 
 #[test]
@@ -61,12 +58,13 @@ fn signature_slow_path() {
     let mut sig = Signature::from_params(&params);
     sig.add_sequence(b"ATGCTN", true).unwrap();
 
-    assert_eq!(sig.signatures.len(), 4);
-    dbg!(&sig.signatures);
-    assert_eq!(sig.signatures[0].size(), 3);
-    assert_eq!(sig.signatures[1].size(), 3);
-    assert_eq!(sig.signatures[2].size(), 2);
-    assert_eq!(sig.signatures[3].size(), 1);
+    assert_eq!(sig.size(), 4);
+    let sketches = sig.sketches();
+    dbg!(&sketches);
+    assert_eq!(sketches[0].size(), 3);
+    assert_eq!(sketches[1].size(), 3);
+    assert_eq!(sketches[2].size(), 2);
+    assert_eq!(sketches[3].size(), 1);
 }
 
 #[test]
@@ -82,10 +80,11 @@ fn signature_add_sequence_protein() {
     let mut sig = Signature::from_params(&params);
     sig.add_sequence(b"ATGCAT", false).unwrap();
 
-    assert_eq!(sig.signatures.len(), 2);
-    dbg!(&sig.signatures);
-    assert_eq!(sig.signatures[0].size(), 3);
-    assert_eq!(sig.signatures[1].size(), 1);
+    assert_eq!(sig.size(), 2);
+    let sketches = sig.sketches();
+    dbg!(&sketches);
+    assert_eq!(sketches[0].size(), 3);
+    assert_eq!(sketches[1].size(), 1);
 }
 
 #[test]
@@ -101,8 +100,9 @@ fn signature_add_protein() {
     let mut sig = Signature::from_params(&params);
     sig.add_protein(b"AGY").unwrap();
 
-    assert_eq!(sig.signatures.len(), 2);
-    dbg!(&sig.signatures);
-    assert_eq!(sig.signatures[0].size(), 3);
-    assert_eq!(sig.signatures[1].size(), 2);
+    assert_eq!(sig.size(), 2);
+    let sketches = sig.sketches();
+    dbg!(&sketches);
+    assert_eq!(sketches[0].size(), 3);
+    assert_eq!(sketches[1].size(), 2);
 }

@@ -80,7 +80,7 @@ pub struct KmerMinHash {
     ksize: u32,
 
     #[builder(default_code = "HashFunctions::murmur64_DNA")]
-    pub(crate) hash_function: HashFunctions,
+    hash_function: HashFunctions,
 
     #[builder(default_code = "42u64")]
     seed: u64,
@@ -89,10 +89,10 @@ pub struct KmerMinHash {
     max_hash: u64,
 
     #[builder(default)]
-    pub(crate) mins: Vec<u64>,
+    mins: Vec<u64>,
 
     #[builder(default)]
-    pub(crate) abunds: Option<Vec<u64>>,
+    abunds: Option<Vec<u64>>,
 }
 
 impl Default for KmerMinHash {
@@ -244,6 +244,50 @@ impl KmerMinHash {
 
     pub fn max_hash(&self) -> u64 {
         self.max_hash
+    }
+
+    pub fn clear(&mut self) {
+        self.mins.clear();
+        if let Some(ref mut abunds) = self.abunds {
+            abunds.clear();
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.mins.is_empty()
+    }
+
+    pub fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        if !self.is_empty() {
+            return Err(SourmashError::NonEmptyMinHash {
+                message: "hash_function".into(),
+            }
+            .into());
+        }
+
+        self.hash_function = h;
+        Ok(())
+    }
+
+    pub fn track_abundance(&self) -> bool {
+        self.abunds.is_some()
+    }
+
+    pub fn enable_abundance(&mut self) -> Result<(), Error> {
+        if !self.mins.is_empty() {
+            return Err(SourmashError::NonEmptyMinHash {
+                message: "track_abundance=True".into(),
+            }
+            .into());
+        }
+
+        self.abunds = Some(vec![]);
+
+        Ok(())
+    }
+
+    pub fn disable_abundance(&mut self) {
+        self.abunds = None;
     }
 
     pub fn md5sum(&self) -> String {
@@ -635,6 +679,10 @@ impl KmerMinHash {
 
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
+    }
+
+    pub fn abunds(&self) -> Option<Vec<u64>> {
+        self.abunds.clone()
     }
 
     // create a downsampled copy of self

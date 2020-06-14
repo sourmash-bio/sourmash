@@ -1,4 +1,4 @@
-"""compare genomes"""
+"""compare sequence signatures made by compute"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
@@ -21,6 +21,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances even if present'
+    )
+    subparser.add_argument(
+        '--containment', action='store_true',
+        help='calculate containment instead of similarity'
     )
     subparser.add_argument(
         '--traverse-directory', action='store_true',

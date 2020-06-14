@@ -83,29 +83,29 @@ impl SigsTrait for Sketch {
 pub struct Signature {
     #[serde(default = "default_class")]
     #[builder(default_code = "default_class()")]
-    pub class: String,
+    class: String,
 
     #[serde(default)]
     #[builder(default)]
-    pub email: String,
+    email: String,
 
-    pub hash_function: String,
+    hash_function: String,
 
     #[builder(default)]
-    pub filename: Option<String>,
+    filename: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub(crate) name: Option<String>,
 
     #[serde(default = "default_license")]
     #[builder(default_code = "default_license()")]
-    pub license: String,
+    license: String,
 
-    pub signatures: Vec<Sketch>,
+    pub(crate) signatures: Vec<Sketch>,
 
     #[serde(default = "default_version")]
     #[builder(default_code = "default_version()")]
-    pub version: f64,
+    version: f64,
 }
 
 fn default_license() -> String {
@@ -127,17 +127,56 @@ impl Signature {
         } else if let Some(filename) = &self.filename {
             filename.clone()
         } else {
-            // TODO md5sum case
-            unimplemented!()
+            self.md5sum()
         }
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = Some(name.into())
     }
 
     pub fn filename(&self) -> String {
         if let Some(filename) = &self.filename {
             filename.clone()
         } else {
-            unimplemented!()
+            "".into()
         }
+    }
+
+    pub fn set_filename(&mut self, name: &str) {
+        self.filename = Some(name.into())
+    }
+
+    pub fn size(&self) -> usize {
+        self.signatures.len()
+    }
+
+    pub fn sketches(&self) -> Vec<Sketch> {
+        self.signatures.clone()
+    }
+
+    pub fn reset_sketches(&mut self) {
+        self.signatures = vec![];
+    }
+
+    pub fn push(&mut self, sketch: Sketch) {
+        self.signatures.push(sketch);
+    }
+
+    pub fn license(&self) -> String {
+        self.license.clone()
+    }
+
+    pub fn class(&self) -> String {
+        self.class.clone()
+    }
+
+    pub fn hash_function(&self) -> String {
+        self.hash_function.clone()
+    }
+
+    pub fn email(&self) -> String {
+        self.email.clone()
     }
 
     pub fn md5sum(&self) -> String {
@@ -152,6 +191,23 @@ impl Signature {
         }
     }
 
+    pub fn select_sketch(&self, sketch: &Sketch) -> Option<&Sketch> {
+        if let Sketch::MinHash(template) = sketch {
+            for sk in &self.signatures {
+                if let Sketch::MinHash(mh) = sk {
+                    if mh.check_compatible(template).is_ok() {
+                        return Some(sk);
+                    }
+                } else {
+                    unimplemented!()
+                }
+            }
+        } else {
+            unimplemented!()
+        }
+        None
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Ok(Signature::from_reader(&mut reader)?)
@@ -161,6 +217,8 @@ impl Signature {
     where
         R: io::Read,
     {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
         let sigs: Vec<Signature> = serde_json::from_reader(rdr)?;
         Ok(sigs)
     }

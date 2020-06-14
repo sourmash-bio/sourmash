@@ -72,7 +72,7 @@ subcommand. See [the LCA tutorial](tutorials-lca.html) for a
 walkthrough of these commands.
 
 * `lca classify` classifies many signatures against an LCA database.
-* `lca summarize` summarizes the content of a metagenome using an LCA database.
+* `lca summarize` summarizes the content of metagenomes using an LCA database.
 * `lca gather` finds non-overlapping matches to a metagenome in an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
@@ -119,8 +119,11 @@ Optional arguments:
 
 
 The `compare` subcommand compares one or more signature files
-(created with `compute`) using estimated [Jaccard index][3].
-  The default output
+(created with `compute`) using estimated [Jaccard index][3] or
+(if signatures are computed with `--track-abundance`) the [angular
+similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
+
+The default output
 is a text display of a similarity matrix where each entry `[i, j]`
 contains the estimated Jaccard index between input signature `i` and
 input signature `j`.  The output matrix can be saved to a file
@@ -137,7 +140,11 @@ Options:
 ```
 --output -- save the distance matrix to this file (as a numpy binary matrix)
 --ksize -- do the comparisons at this k-mer size.
+--containment -- compute containment instead of similarity.
+        C(i, j) = size(i intersection j) / size(i).
 ```
+
+**Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
 
 ### `sourmash plot`
 
@@ -233,6 +240,11 @@ overlap     p_query p_match
 0.7 Mbp       5.3%   17.6%      AE017285.1 Desulfovibrio vulgaris sub...
 ```
 
+The command line option `--threshold-bp` sets the threshold below
+which matches are no longer reported; by default, this is set to
+50kb. see the Appendix in
+[Classifying Signatures](classifying-signatures.html) for details.
+
 Note:
 
 Use `sourmash gather` to classify a metagenome against a collection of
@@ -312,7 +324,9 @@ exploring metagenomes and metagenome-assembled genome bins.
 
 Note, unlike `sourmash lca classify`, `lca summarize` merges all
 of the query signatures into one and reports on the combined contents.
-This may be changed in the future.
+To report on individual signatures, use the `--singleton` flag; this will
+become default in sourmash 4.0 and beyond, and the merging behavior will
+be removed.
 
 Usage:
 

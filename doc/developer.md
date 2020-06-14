@@ -32,6 +32,15 @@ You can run tests by invoking `make test` in the sourmash directory;
 `python -m pytest` will run the Python tests, and `cargo test` will
 run the Rust tests.
 
+### If you're having trouble installing or using the development environment
+
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash._minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+
+```
+make clean
+```
+
+
 ## Automated tests and code coverage calculation
 
 We use [Travis][0] and [GitHub Actions][2] for continuous integration.
@@ -149,6 +158,24 @@ src/core
 │   ├── sketch/          | Sketch methods. A sketch is compressed representation of data.
 │   └── wasm.rs          | Webassembly API.
 └── tests/               | Integration tests (using the public API of the crate)
+```
+
+### Exposing new functions on the FFI
+
+If you change anything in `src/core/src/ffi` (where the boundary between Rust
+and C is defined) you need to regenerate the `include/sourmash.h` header,
+and potentially fix any differences in the Python CFFI layer (which reads the C
+header file and expose functionality to Python).
+
+To regenerate the C header, run
+```
+$ make include/sourmash.h
+```
+This requires a nightly Rust compiler and `cbindgen`.
+They can be installed by running
+```
+$ rustup toolchain add nightly
+$ cargo install --force cbindgen
 ```
 
 ### Changing code touching all layers: an example PR
