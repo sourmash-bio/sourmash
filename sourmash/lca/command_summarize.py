@@ -27,10 +27,12 @@ def summarize(hashvals, dblist, threshold):
     """
 
     # gather assignments from across all the databases
-    assignments = lca_utils.gather_assignments(hashvals, dblist)
+    # @CTB: flattens?
+    assignments = lca_utils.gather_assignments_abund(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    counts = lca_utils.count_lca_for_assignments(assignments)
+    # @CTB: flattens?
+    counts = lca_utils.count_lca_for_assignments_abund(assignments)
     debug(counts.most_common())
 
     # ok, we now have the LCAs for each hashval, and their number

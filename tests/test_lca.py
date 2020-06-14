@@ -121,6 +121,9 @@ def test_find_lca_2():
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
+### command line tests
+
+
 def test_api_create_search():
     # create a database and then search for result.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
