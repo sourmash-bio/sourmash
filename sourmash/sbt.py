@@ -400,11 +400,12 @@ class SBT(Index):
         node = Node(self.factory, name="internal.{}".format(pos))
         self._nodes[pos] = node
         for c in self.children(pos):
-            cnode = c.node
-            if cnode is None:
-                self._rebuild_node(c.pos)
-                cnode = self._nodes[c.pos]
-            cnode.update(node)
+            if c.pos in self._missing_nodes or isinstance(c.node, Leaf) or isinstance(c.node, Node):
+                cnode = c.node
+                if cnode is None:
+                    self._rebuild_node(c.pos)
+                    cnode = self._nodes[c.pos]
+                cnode.update(node)
 
     def parent(self, pos):
         """Return the parent of the node at position ``pos``.
