@@ -16,7 +16,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5
 
 
-def summarize(hashvals, dblist, threshold):
+def summarize(hashvals, dblist, threshold, with_abundance):
     """
     Classify 'hashvals' using the given list of databases.
 
@@ -30,7 +30,10 @@ def summarize(hashvals, dblist, threshold):
     assignments = lca_utils.gather_assignments(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
+    if with_abundance:
+        counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
+    else: # flatten
+        counts = lca_utils.count_lca_for_assignments(assignments, None)
     debug(counts.most_common())
 
     # ok, we now have the LCAs for each hashval, and their number
@@ -54,7 +57,7 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled, with_abundance):
+def load_and_combine(filenames, ksize, scaled):
     "Load individual signatures and combine them all for classification."
     total_count = 0
     n = 0
@@ -68,7 +71,7 @@ def load_and_combine(filenames, ksize, scaled, with_abundance):
                    total_n, end='\r')
             total_count += 1
 
-            count_signature(query_sig, scaled, hashvals, with_abundance)
+            count_signature(query_sig, scaled, hashvals)
 
     notify(u'\r\033[K', end=u'')
     notify('loaded {} signatures from {} files total.', total_count, n)
@@ -76,7 +79,7 @@ def load_and_combine(filenames, ksize, scaled, with_abundance):
     return hashvals
 
 
-def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
+def load_singletons_and_count(filenames, ksize, scaled):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
@@ -91,26 +94,22 @@ def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
-            count_signature(query_sig, scaled, hashvals, with_abundance)
+            count_signature(query_sig, scaled, hashvals)
             yield query_filename, query_sig, hashvals
 
     notify(u'\r\033[K', end=u'')
     notify('loaded {} signatures from {} files total.', total_count, n)
 
 
-def count_signature(sig, scaled, hashvals, with_abundance):
+def count_signature(sig, scaled, hashvals):
     "Downsample sig to given scaled, count hashvalues."
     mh = sig.minhash.downsample_scaled(scaled)
 
-    if with_abundance:
-        if not mh.track_abundance:
-            raise ValueError("minhash has no abundances, yet with_abundance=True")
-
+    if mh.track_abundance:
         abunds = mh.get_mins(with_abundance=True)
         for hashval, count in abunds.items():
             hashvals[hashval] += count
     else:
-        # CTB: should we complain here if mh.track_abundance?
         for hashval in mh.get_mins():
             hashvals[hashval] += 1
 
@@ -210,11 +209,11 @@ def summarize_main(args):
 
         try:
             for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled,
-                                        with_abundance):
+              load_singletons_and_count(inp_files, ksize, scaled):
 
                 # get the full counted list of lineage counts in this signature
-                lineage_counts = summarize(hashvals, dblist, args.threshold)
+                lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                           with_abundance)
                 total = float(len(hashvals))
                 output_results(lineage_counts, total,
                                filename=filename, sig=sig)
@@ -230,10 +229,11 @@ def summarize_main(args):
     else:
         # load and merge all the signatures in all the files
         # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance)
+        hashvals = load_and_combine(inp_files, ksize, scaled)
 
         # get the full counted list of lineage counts across signatures
-        lineage_counts = summarize(hashvals, dblist, args.threshold)
+        lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                   with_abundance)
 
         # output!
         total = float(len(hashvals))

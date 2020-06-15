@@ -138,7 +138,7 @@ def test_count_lca_for_assignments_abund_1():
     db._set_lineage_assignment(hashval, set([ lin ]))
 
     assignments = lca_utils.gather_assignments(hashval_counts.keys(), [db])
-    counts = count_lca_for_assignments_abund(assignments, hashval_counts)
+    counts = count_lca_for_assignments(assignments, hashval_counts)
     print(counts)
 
     assert len(counts) == 1
@@ -158,7 +158,7 @@ def test_count_lca_for_assignments_abund_2():
     db._set_lineage_assignment(hashval, set([ lin, lin2 ]))
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
-    counts = count_lca_for_assignments_abund(assignments, hashval_counts)
+    counts = count_lca_for_assignments(assignments, hashval_counts)
     print(counts)
 
     assert counts[lin] == 0
@@ -186,7 +186,7 @@ def test_count_lca_for_assignments_abund_3():
     db._set_lineage_assignment(hashval2, set([ lin ]))
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
-    counts = count_lca_for_assignments_abund(assignments, hashval_counts)
+    counts = count_lca_for_assignments(assignments, hashval_counts)
     print(counts)
 
     assert len(counts) == 2
