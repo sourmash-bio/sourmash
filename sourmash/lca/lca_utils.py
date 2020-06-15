@@ -10,8 +10,7 @@ from .lca_db import LCA_Database, load_single_database, load_databases
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair', 'display_lineage',
-           'count_lca_for_assignments_abund']
+           'count_lca_for_assignments', 'LineagePair', 'display_lineage']
 
 try:                                      # py2/py3 compat
     from itertools import zip_longest
@@ -180,11 +179,12 @@ def gather_assignments(hashvals, dblist):
     return assignments
 
 
-def count_lca_for_assignments(assignments):
+def count_lca_for_assignments(assignments, hashval_counts=None):
     """
     For each hashval, count the LCA across its assignments.
 
-    Ignores counts for each hashval
+    If hashval_counts is not None, it must be a dictionary that maps
+    { hashval: hashval_count }; this is then used to weight the counts.
     """
     counts = Counter()
     for hashval in assignments:
@@ -196,29 +196,10 @@ def count_lca_for_assignments(assignments):
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
         lca, reason = find_lca(tree)
-        counts[lca] += 1
 
-    return counts
-
-
-def count_lca_for_assignments_abund(assignments, hashval_counts):
-    """
-    For each hashval, count the LCA across its assignments.
-
-    Use hashval_counts to weight lineages.
-    """
-    counts = Counter()
-    for hashval in assignments:
-        assert hashval in hashval_counts
-
-        # for each list of tuple_info [(rank, name), ...] build
-        # a tree that lets us discover lowest-common-ancestor.
-        lineages = assignments[hashval]
-        tree = build_tree(lineages)
-
-        # now find either a leaf or the first node with multiple
-        # children; that's our lowest-common-ancestor node.
-        lca, reason = find_lca(tree)
-        counts[lca] += hashval_counts[hashval]
+        if hashval_counts:
+            counts[lca] += hashval_counts[hashval]
+        else:
+            counts[lca] += 1
 
     return counts
