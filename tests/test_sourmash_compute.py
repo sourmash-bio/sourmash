@@ -587,7 +587,7 @@ def test_do_sourmash_compute_multik_protein_input_bad_ksize():
                                            in_directory=location,
                                            fail_ok=True)
         outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert not os.path.exists(outfile)
+        assert status != 0
         assert 'protein ksizes must be divisible by 3' in err
 
 
