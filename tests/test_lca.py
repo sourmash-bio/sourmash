@@ -1423,7 +1423,7 @@ def test_multi_summarize_with_unassigned_with_abund():
         status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
 
         assert status != 0
-        assert 'ValueError: minhash has no abundances, yet with_abundance=True' in err
+        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
 
 
 def test_multi_summarize_with_unassigned_singleton_abund():
@@ -1455,7 +1455,7 @@ def test_multi_summarize_with_unassigned_singleton_abund():
         print(err)
 
         assert status != 0
-        assert 'ValueError: minhash has no abundances, yet with_abundance=True' in err
+        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
 
 
 def test_summarize_to_root_abund():

@@ -57,7 +57,7 @@ def summarize(hashvals, dblist, threshold, with_abundance):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled):
+def load_and_combine(filenames, ksize, scaled, with_abundance):
     "Load individual signatures and combine them all for classification."
     total_count = 0
     n = 0
@@ -71,6 +71,10 @@ def load_and_combine(filenames, ksize, scaled):
                    total_n, end='\r')
             total_count += 1
 
+            if with_abundance and not query_sig.minhash.track_abundance:
+                notify("** error: minhash has no abundances, yet --with-abundance specified")
+                sys.exit(-1)
+
             count_signature(query_sig, scaled, hashvals)
 
     notify(u'\r\033[K', end=u'')
@@ -79,7 +83,7 @@ def load_and_combine(filenames, ksize, scaled):
     return hashvals
 
 
-def load_singletons_and_count(filenames, ksize, scaled):
+def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
@@ -91,6 +95,10 @@ def load_singletons_and_count(filenames, ksize, scaled):
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
             total_count += 1
+
+            if with_abundance and not query_sig.minhash.track_abundance:
+                notify("** error: minhash has no abundances, yet --with-abundance specified")
+                sys.exit(-1)
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
@@ -209,7 +217,7 @@ def summarize_main(args):
 
         try:
             for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled):
+              load_singletons_and_count(inp_files, ksize, scaled, with_abundance):
 
                 # get the full counted list of lineage counts in this signature
                 lineage_counts = summarize(hashvals, dblist, args.threshold,
@@ -229,7 +237,7 @@ def summarize_main(args):
     else:
         # load and merge all the signatures in all the files
         # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled)
+        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance)
 
         # get the full counted list of lineage counts across signatures
         lineage_counts = summarize(hashvals, dblist, args.threshold,
