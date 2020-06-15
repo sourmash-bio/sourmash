@@ -11,7 +11,7 @@ from .lca_db import LCA_Database, load_single_database, load_databases
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
            'count_lca_for_assignments', 'LineagePair', 'display_lineage',
-           'gather_assignments_abund', 'count_lca_for_assignments_abund']
+           'count_lca_for_assignments_abund']
 
 try:                                      # py2/py3 compat
     from itertools import zip_longest
@@ -168,7 +168,7 @@ def gather_assignments(hashvals, dblist):
     """
     Gather assignments from across all the databases for all the hashvals.
 
-    @CTB ignore counts of the hashvals.
+    Ignores counts of the hashvals.
     """
     assignments = defaultdict(set)
     for hashval in hashvals:
@@ -184,11 +184,10 @@ def count_lca_for_assignments(assignments):
     """
     For each hashval, count the LCA across its assignments.
 
-    # @CTB ignores counts for each hashval
+    Ignores counts for each hashval
     """
     counts = Counter()
     for hashval in assignments:
-
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
         lineages = assignments[hashval]
@@ -202,40 +201,24 @@ def count_lca_for_assignments(assignments):
     return counts
 
 
-def gather_assignments_abund(hashvals, dblist):
-    """
-    Gather assignments from across all the databases for all the hashvals.
-
-    @CTB ignore counts of the hashvals.
-    """
-    assignments = defaultdict(Counter)
-    for hashval in hashvals:
-        for lca_db in dblist:
-            lineages = lca_db.get_lineage_assignments(hashval)
-            for lin in lineages:
-                # track total counts
-                assignments[hashval][lin] += hashvals[hashval]
-
-    return assignments
-
-
-def count_lca_for_assignments_abund(assignments):
+def count_lca_for_assignments_abund(assignments, hashval_counts):
     """
     For each hashval, count the LCA across its assignments.
 
-    # @CTB ignores counts for each hashval
+    Use hashval_counts to weight lineages.
     """
     counts = Counter()
     for hashval in assignments:
+        assert hashval in hashval_counts
 
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
-        lineages = assignments[hashval].keys()
+        lineages = assignments[hashval]
         tree = build_tree(lineages)
 
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
         lca, reason = find_lca(tree)
-        counts[lca] += sum(assignments[hashval].values())
+        counts[lca] += hashval_counts[hashval]
 
     return counts
