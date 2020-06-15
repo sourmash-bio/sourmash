@@ -166,7 +166,7 @@ def test_count_lca_for_assignments_abund_2():
 
     assert len(counts) == 1
     lca_lin = lca_utils.make_lineage('a;b')
-    assert counts[lca_lin] == 3           # should be 3? CTB
+    assert counts[lca_lin] == 3           # yes!
 
 
 def test_count_lca_for_assignments_abund_3():
@@ -194,4 +194,4 @@ def test_count_lca_for_assignments_abund_3():
     assert counts[lin2] == 0              # makes sense
 
     lca_lin = lca_utils.make_lineage('a;b')
-    assert counts[lca_lin] == 2           # CTB: should be 2?
+    assert counts[lca_lin] == 2           # yes!

@@ -30,7 +30,6 @@ def summarize(hashvals, dblist, threshold):
     assignments = lca_utils.gather_assignments(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    # @CTB: flattens?
     counts = lca_utils.count_lca_for_assignments_abund(assignments, hashvals)
     debug(counts.most_common())
 
