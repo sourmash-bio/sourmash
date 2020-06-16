@@ -222,7 +222,11 @@ def summarize_main(args):
                 # get the full counted list of lineage counts in this signature
                 lineage_counts = summarize(hashvals, dblist, args.threshold,
                                            with_abundance)
-                total = float(len(hashvals))
+                if with_abundance:
+                    total = float(sum(hashvals.values()))
+                else:
+                    total = float(len(hashvals))
+
                 output_results(lineage_counts, total,
                                filename=filename, sig=sig)
 
@@ -244,7 +248,11 @@ def summarize_main(args):
                                    with_abundance)
 
         # output!
-        total = float(len(hashvals))
+        if with_abundance:
+            total = float(sum(hashvals.values()))
+        else:
+            total = float(len(hashvals))
+
         output_results(lineage_counts, total)
 
         # CSV:
