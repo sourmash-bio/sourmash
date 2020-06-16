@@ -1518,6 +1518,18 @@ def test_summarize_unknown_hashes_abund():
         assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
 
 
+@utils.in_thisdir
+def test_lca_summarize_abund_hmp(c):
+    # test lca summarize --with-abundance on some real data
+    queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
+    dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--with-abundance')
+
+    assert '58.3%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
+
+
 def test_rankinfo_on_multi():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/dir1.lca.json')
