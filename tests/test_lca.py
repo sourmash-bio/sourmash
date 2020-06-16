@@ -1484,8 +1484,8 @@ def test_summarize_to_root_abund():
         print(out)
         print(err)
 
-        assert '80.2%   101   Archaea' in out
-        assert '21.4%    27   (root)' in out
+        assert '78.9%   101   Archaea' in out
+        assert '21.1%    27   (root)' in out
 
 
 def test_summarize_unknown_hashes_abund():
@@ -1527,7 +1527,7 @@ def test_lca_summarize_abund_hmp(c):
     c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
                    '--with-abundance')
 
-    assert '58.3%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
+    assert '32.1%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
 
 
 def test_rankinfo_on_multi():
