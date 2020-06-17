@@ -9,7 +9,7 @@ import pytest
 
 
 from . import sourmash_tst_utils as utils
-from sourmash.search import search_databases
+from sourmash.search import search_databases, gather_databases
 from sourmash import sourmash_args
 
 
@@ -31,6 +31,11 @@ def scaled():
 @pytest.fixture
 def threshold():
     return 0.08
+
+
+@pytest.fixture
+def threshold_bp():
+    return 5e4
 
 
 @pytest.fixture
@@ -119,5 +124,31 @@ def test_search_databases(
     ]
 
 
-def test_gather_databases():
-    pass
+def test_gather_databases(query, databases, threshold_bp, ignore_abundance):
+    results = list(gather_databases(query, databases, threshold_bp, ignore_abundance,))
+    assert True
+    results_displayable = [
+        (
+            sr[0].match._display_name(40),
+            sr[0].f_unique_weighted,
+            sr[0].f_match,
+            sr[0].average_abund,
+        )
+        for sr in results
+    ]
+    assert results_displayable == [
+        ("NC_003197.2 Salmonella enterica subsp...", 0.33083219645293316, 1.0, 0),
+        ("NC_011978.1 Thermotoga neapolitana DS...", 0.12824010914051842, 1.0, 0),
+        (
+            "NC_006905.1 Salmonella enterica subsp...",
+            0.0791268758526603,
+            0.2457627118644068,
+            0,
+        ),
+        (
+            "NC_011080.1 Salmonella enterica subsp...",
+            0.04433833560709413,
+            0.13859275053304904,
+            0,
+        ),
+    ]
