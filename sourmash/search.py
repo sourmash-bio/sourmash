@@ -35,7 +35,8 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
                                  best_only=best_only,
-                                 unload_data=unload_data)
+                                 unload_data=unload_data,
+                                 ignore_empty=True)
         for (similarity, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
