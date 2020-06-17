@@ -348,8 +348,9 @@ def index(args):
 
     notify('loading {} files into SBT', len(inp_files))
 
-    tree = load_matching_signatures_into_tree(
-        inp_files, args.ksize, moltype, args.scaled, args.append, args.sbt_name)
+    tree, n = load_matching_signatures_into_tree(
+        inp_files, args.ksize, moltype, args.scaled, args.append, args.sbt_name,
+        return_n=True)
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
     tree.save(args.sbt_name, sparseness=args.sparseness)
@@ -357,7 +358,7 @@ def index(args):
 
 def load_matching_signatures_into_tree(filenames, ksize, moltype, scaled=0,
                                        append=False, sbt_name=None, bf_size=1e5,
-                                       n_children=2):
+                                       n_children=2, return_n=False):
     if append:
         tree = load_sbt_index(sbt_name)
     else:
@@ -398,7 +399,10 @@ def load_matching_signatures_into_tree(filenames, ksize, moltype, scaled=0,
     if n == 0:
         error('no signatures found to load into tree!? failing.')
         sys.exit(-1)
-    return tree
+    if return_n:
+        return tree, n
+    else:
+        return tree
 
 
 def check_signature_compatibilty_to_tree(ksizes, moltypes, nums, scaleds):
