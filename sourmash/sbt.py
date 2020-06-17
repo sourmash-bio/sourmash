@@ -264,13 +264,7 @@ class SBT(Index):
         # If true, return (Leaf, position) tuples of matches
         return_pos = kwargs.get('return_pos', False)
 
-        # Needed for localized SBTs. Don't throw an error if an internal node is empty
-        # and has no children
-        if 'ignore_empty' in kwargs:
-            ignore_empty = kwargs.get('ignore_empty')
-            find_kws = dict(ignore_empty=ignore_empty)
-        else:
-            find_kws = {}
+        find_kws = self._get_find_kws(kwargs)
 
         # initialize search queue with top node of tree
         matches = []
@@ -326,6 +320,16 @@ class SBT(Index):
 
         return matches
 
+    def _get_find_kws(self, kwargs):
+        # Needed for localized SBTs. Don't throw an error if an internal node is empty
+        # and has no children
+        if 'ignore_empty' in kwargs:
+            ignore_empty = kwargs.get('ignore_empty')
+            find_kws = dict(ignore_empty=ignore_empty)
+        else:
+            find_kws = {}
+        return find_kws
+
     def search(self, query, *args, **kwargs):
         from .sbtmh import search_minhashes, search_minhashes_containment
         from .sbtmh import SearchMinHashesFindBest
@@ -342,7 +346,7 @@ class SBT(Index):
         return_leaf = kwargs.get('return_leaf', False)
         # Needed for localized SBTs. Don't throw an error if an internal node is empty
         # and has no children
-        ignore_empty = kwargs.get('ignore_empty', False)
+        find_kws = self._get_find_kws(kwargs)
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -370,7 +374,7 @@ class SBT(Index):
         results = []
         for leaf, pos in self.find(search_fn, tree_query, threshold,
                                    unload_data=unload_data, return_pos=True,
-                                   ignore_empty=ignore_empty):
+                                   **find_kws):
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
@@ -601,10 +605,16 @@ class SBT(Index):
                 if random() - sparseness <= 0:
                     continue
 
+            if isinstance(node, Leaf):
+                # Doesn't this also assume the leaf is a SigLeaf?
+                name = node.data.md5sum()
+            else:
+                name = node.name
+
             data = {
                 # TODO: start using md5sum instead?
-                'filename': os.path.basename(node.name),
-                'name': node.name
+                'filename': os.path.basename(name),
+                'name': name
             }
 
             try:
