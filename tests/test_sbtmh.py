@@ -143,7 +143,7 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
         for filename in files:
             loaded = sig.load_signatures(filename, ksize=31)
             for signature in loaded:
-                # Rename to A, B, C, D for simplicity
+                # Rename to A, B, C, D for simplicity of debugging
                 signature._name = ascii_uppercase[i]
                 signatures.append(signature)
                 i += 1
@@ -268,9 +268,9 @@ def test_localized_sbt_on_gather_data():
             for signature in loaded:
                 signatures.append(signature)
 
+        # Rename signatures to ... X, Y, Z for simplicity of debugging
         n_signatures = len(signatures)
         for i, signature in enumerate(signatures):
-            # Rename to ... X, Y, Z for simplicity
             signature._name = ascii_uppercase[-(n_signatures - i)]
 
         # --- Create all-by-all similarity matrix for reference ---
@@ -436,7 +436,9 @@ def test_localized_sbt_on_gather_data():
 
         # Ensure that the most similar pairs, (P, Z) and (F, G) share parents
         # regardless of construction order
-        leaf_names_in_order = [v.name for k, v in sorted(sbt._leaves.items(), key=lambda x: x[0])]
+        leaf_names_in_order = [
+            v.name for k, v in sorted(sbt._leaves.items(), key=lambda x: x[0])
+        ]
         assert leaf_names_in_order == ['U', 'T', 'O', 'Q', 'X', 'R', 'P', 'Z', 'W',
                                        'V', 'Y', 'S']
 
