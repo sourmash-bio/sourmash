@@ -1530,6 +1530,31 @@ def test_lca_summarize_abund_hmp(c):
     assert '32.1%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
 
 
+@utils.in_thisdir
+def test_lca_summarize_abund_fake_no_abund(c):
+    # test lca summarize on some known/fake data; see docs for explanation.
+    queryfile = utils.get_test_data('fake-abund/query.sig.gz')
+    dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
+
+    assert '79.6%   550   Bacteria' in c.last_result.out
+    assert '20.4%   141   Archaea' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_lca_summarize_abund_fake_yes_abund(c):
+    # test lca summarize --with-abundance on some known/fake data
+    queryfile = utils.get_test_data('fake-abund/query.sig.gz')
+    dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--with-abundance')
+
+    assert '43.2%   563   Bacteria' in c.last_result.out
+    assert '56.8%   740   Archaea' in c.last_result.out
+
+
 def test_rankinfo_on_multi():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/dir1.lca.json')
