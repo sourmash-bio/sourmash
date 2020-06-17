@@ -333,11 +333,6 @@ def index(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    if args.append:
-        tree = load_sbt_index(args.sbt_name)
-    else:
-        tree = create_sbt_index(args.bf_size, n_children=args.n_children)
-
     if args.traverse_directory:
         inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
                                                           args.force))
@@ -353,15 +348,30 @@ def index(args):
 
     notify('loading {} files into SBT', len(inp_files))
 
+    tree = load_matching_signatures_into_tree(
+        inp_files, args.ksize, moltype, args.scaled, args.append, args.sbt_name)
+
+    notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
+    tree.save(args.sbt_name, sparseness=args.sparseness)
+
+
+def load_matching_signatures_into_tree(filenames, ksize, moltype, scaled=0,
+                                       append=False, sbt_name=None, bf_size=1e5,
+                                       n_children=2):
+    if append:
+        tree = load_sbt_index(sbt_name)
+    else:
+        tree = create_sbt_index(bf_size, n_children=n_children)
+
     n = 0
     ksizes = set()
     moltypes = set()
     nums = set()
     scaleds = set()
-    for f in inp_files:
+    for f in filenames:
         if n % 100 == 0:
             notify('\r...reading from {} ({} signatures so far)', f, n, end='')
-        siglist = sig.load_signatures(f, ksize=args.ksize,
+        siglist = sig.load_signatures(f, ksize=ksize,
                                       select_moltype=moltype)
 
         # load all matching signatures in this file
@@ -371,8 +381,8 @@ def index(args):
             moltypes.add(sourmash_args.get_moltype(ss))
             nums.add(ss.minhash.num)
 
-            if args.scaled:
-                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
+            if scaled:
+                ss.minhash = ss.minhash.downsample_scaled(scaled)
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -381,32 +391,32 @@ def index(args):
         if not ss:
             continue
 
-        # check to make sure we aren't loading incompatible signatures
-        if len(ksizes) > 1 or len(moltypes) > 1:
-            error('multiple k-mer sizes or molecule types present; fail.')
-            error('specify --dna/--protein and --ksize as necessary')
-            error('ksizes: {}; moltypes: {}',
-                  ", ".join(map(str, ksizes)), ", ".join(moltypes))
-            sys.exit(-1)
-
-        if nums == { 0 } and len(scaleds) == 1:
-            pass # good
-        elif scaleds == { 0 } and len(nums) == 1:
-            pass # also good
-        else:
-            error('trying to build an SBT with incompatible signatures.')
-            error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
-            sys.exit(-1)
-
+        check_signature_compatibilty_to_tree(ksizes, moltypes, nums, scaleds)
     notify('')
 
     # did we load any!?
     if n == 0:
         error('no signatures found to load into tree!? failing.')
         sys.exit(-1)
+    return tree
 
-    notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
-    tree.save(args.sbt_name, sparseness=args.sparseness)
+
+def check_signature_compatibilty_to_tree(ksizes, moltypes, nums, scaleds):
+    # check to make sure we aren't loading incompatible signatures
+    if len(ksizes) > 1 or len(moltypes) > 1:
+        error('multiple k-mer sizes or molecule types present; fail.')
+        error('specify --dna/--protein and --ksize as necessary')
+        error('ksizes: {}; moltypes: {}',
+              ", ".join(map(str, ksizes)), ", ".join(moltypes))
+        sys.exit(-1)
+    if nums == {0} and len(scaleds) == 1:
+        pass  # good
+    elif scaleds == {0} and len(nums) == 1:
+        pass  # also good
+    else:
+        error('trying to build an SBT with incompatible signatures.')
+        error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
+        sys.exit(-1)
 
 
 def search(args):
