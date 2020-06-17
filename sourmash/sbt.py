@@ -65,6 +65,7 @@ from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipSt
 from .logging import error, notify, debug
 from .index import Index
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
+from .utils import cached_property
 
 STORAGES = {
     'TarStorage': TarStorage,
@@ -136,10 +137,23 @@ class SBT(Index):
         self.next_node = 0
         self.storage = storage
 
-    @property
+    @cached_property
     def _missing_nodes(self):
-        return {i for i in range(max(self._leaves))
-                if i not in self._nodes and i not in self._leaves}
+        all_nodes = set()
+        current_level = set()
+        for i in self._leaves:
+            parent = self.parent(i)
+            if parent is not None:
+                current_level.add(parent.pos)
+        while current_level:
+            previous_level = set()
+            for i in current_level:
+                parent = self.parent(i)
+                if parent is not None:
+                    previous_level.add(parent.pos)
+            all_nodes.update(current_level)
+            current_level = previous_level
+        return all_nodes - set(self._nodes)
 
     def signatures(self):
         for k in self.leaves():
