@@ -2844,11 +2844,11 @@ def test_gather_metagenome_downsample():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
+        assert 'found 10 matches total' in out
+        assert 'the recovered matches hit 99.4% of the query' in out
         assert all(('5.2 Mbp       32.9%  100.0%' in out,
                 'NC_003198.1' in out))
-        assert all(('4.1 Mbp        0.6%    2.4%' in out,
+        assert all(('4.4 Mbp        1.9%    6.8%' in out,
                     '4.1 Mbp        4.4%   17.1%' in out))
 
 
@@ -3554,12 +3554,12 @@ def test_do_sourmash_index_zipfile(c):
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 25
-        assert len([c for c in content if 'internal' in c]) == 11
+        assert len(content) == 34
+        assert len([c for c in content if 'internal' in c]) == 20
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
         assert len(sbts) == 1
-        assert sbts[0] == "zzz.sbt.json"
+        assert sbts[0] == '4289d4241be8573145282352215ca3c4.sbt.json'
 
 
 @utils.in_tempdir
@@ -3595,9 +3595,9 @@ def test_do_sourmash_index_zipfile_append(c):
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 25
+        assert len(content) == 26
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
-        assert len(sbts) == 1
-        assert sbts[0] == "zzz.sbt.json"
+        assert len(sbts) == 2
+        assert sbts[0] == '4289d4241be8573145282352215ca3c4.sbt.json'
