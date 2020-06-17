@@ -914,9 +914,6 @@ class SBT(Index):
         tree = cls(factory, d=info['d'], storage=storage)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
-        tree._missing_nodes = {i for i in range(max_node)
-                              if i not in sbt_nodes and i not in sbt_leaves}
-
         return tree
 
     @classmethod
