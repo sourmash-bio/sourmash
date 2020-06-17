@@ -1538,6 +1538,8 @@ def test_lca_summarize_abund_fake_no_abund(c):
 
     c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
 
+    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' not in c.last_result.err
+    assert 'NOTE: discarding abundances in query, since --with-abundance not given' in c.last_result.err
     assert '79.6%   550   Bacteria' in c.last_result.out
     assert '20.4%   141   Archaea' in c.last_result.out
 
@@ -1551,6 +1553,7 @@ def test_lca_summarize_abund_fake_yes_abund(c):
     c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
                    '--with-abundance')
 
+    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' in c.last_result.err
     assert '43.2%   563   Bacteria' in c.last_result.out
     assert '56.8%   740   Archaea' in c.last_result.out
 

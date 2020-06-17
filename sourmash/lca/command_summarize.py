@@ -75,6 +75,9 @@ def load_and_combine(filenames, ksize, scaled, with_abundance):
                 notify("** error: minhash has no abundances, yet --with-abundance specified")
                 sys.exit(-1)
 
+            if not with_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --with-abundance not given")
+
             count_signature(query_sig, scaled, hashvals)
 
     notify(u'\r\033[K', end=u'')
@@ -99,6 +102,9 @@ def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
             if with_abundance and not query_sig.minhash.track_abundance:
                 notify("** error: minhash has no abundances, yet --with-abundance specified")
                 sys.exit(-1)
+
+            if not with_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --with-abundance not given")
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
@@ -200,6 +206,8 @@ def summarize_main(args):
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
+    if with_abundance:
+        notify("Weighting output by k-mer abundances in query, since --with-abundance given.")
 
     # find all the queries
     notify('finding query signatures...')
