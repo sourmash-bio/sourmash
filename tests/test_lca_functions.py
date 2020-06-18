@@ -229,8 +229,8 @@ def test_count_lca_for_assignments_abund_4():
     assert counts[lca_lin] == 2           # yes!
 
 def test_count_lca_for_assignments_abund_5():
-    # test basic mechanics of gather_assignments function with three lineages
-    # and three hashvals
+    # test basic mechanics of gather_assignments function with two lineages
+    # and two hashvals when linages match but one has lower taxo detail
     hashval = 12345678
     hashval2 = 87654321
     hashval_counts = dict()
