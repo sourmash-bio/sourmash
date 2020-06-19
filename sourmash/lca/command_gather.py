@@ -191,7 +191,8 @@ def gather_main(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, None)
 
     # for each query, gather all the matches across databases
-    query_sig = sourmash_args.load_query_signature(args.query, ksize, 'DNA')
+    moltype = dblist[0].moltype
+    query_sig = sourmash_args.load_query_signature(args.query, ksize, moltype)
     debug('classifying', query_sig.name())
 
     # make sure we're looking at the same scaled value as database
