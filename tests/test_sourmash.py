@@ -170,17 +170,17 @@ def test_do_compare_quiet(c):
     assert not c.last_result.out
     assert not c.last_result.err
 
-# @utils.in_tempdir
-# def test_compare_containment_abund_flatten(c):
-#    s47 = utils.get_test_data('track_abund/47.fa.sig')
-#    s63 = utils.get_test_data('track_abund/63.fa.sig')
-#
-#    c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
-#    print(c.last_result.out)
-#    print(c.last_result.err)
-#
-#    assert 'NOTE: --containment means signature abundances are flattened' in \
-#        c.last_result.err
+@utils.in_tempdir
+def test_compare_containment_abund_flatten(c):
+   s47 = utils.get_test_data('track_abund/47.fa.sig')
+   s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+   c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+   print(c.last_result.out)
+   print(c.last_result.err)
+
+   assert 'NOTE: --containment means signature abundances are flattened' in \
+       c.last_result.err
 
 
 @utils.in_tempdir
