@@ -1671,6 +1671,32 @@ def test_incompat_lca_db_scaled(c):
     assert 'new scaled 10000 is lower than current sample scaled 10000' in str(e.value)
 
 
+@utils.in_thisdir
+def test_lca_gather_protein(c):
+    # test lca gather on protein foo
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('lca', 'gather', testquery, db1)
+
+    assert c.last_result.status == 0
+    assert 'loaded 1 LCA databases. ksize=57, scaled=100 moltype=protein' in c.last_result.err
+    assert '340.9 kbp   100.0%  100.0%      s__B26-1 sp001593925 sp.' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_incompat_lca_db_moltype(c):
+    # test load of incompatible LCA DBs
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+    db2 = utils.get_test_data('prot/dayhoff.lca.json.gz')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', testquery, db1, db2)
+
+    assert 'Exception: multiple moltypes, quitting' in str(e.value)
+
+
 @utils.in_tempdir
 def test_incompat_lca_db_ksize(c):
     # create a database with ksize of 25
