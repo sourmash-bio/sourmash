@@ -212,21 +212,21 @@ def test_count_lca_for_assignments_abund_4():
     lin3 = lca_utils.make_lineage('a;b;d;e')
 
     db = FakeLCA_Database()
-    db._set_lineage_assignment(hashval, set([ lin, lin2 ]))
-    db._set_lineage_assignment(hashval2, set([ lin ]))
-    db._set_lineage_assignment(hashval3, set([ lin2, lin3 ]))
+    db._set_lineage_assignment(hashval, set([ lin, lin2 ])) # lca: a;b
+    db._set_lineage_assignment(hashval2, set([ lin ])) # lca: a;b;c
+    db._set_lineage_assignment(hashval3, set([ lin2, lin3 ])) # a;b;d;e
 
     assignments = lca_utils.gather_assignments(hashval_counts, [db])
     counts = count_lca_for_assignments(assignments, hashval_counts)
     print(counts)
 
     assert len(counts) == 3
-    assert counts[lin] == 5               # makes sense
+    assert counts[lin] == 5               # makes sense b/c hashval2
     assert counts[lin2] == 0              # a;b;d (lin2) + a;b;d;e (lin3) -->a;b;d;e (lin3) only
-    assert counts[lin3] == 3
+    assert counts[lin3] == 3              # hashval3
 
     lca_lin = lca_utils.make_lineage('a;b')
-    assert counts[lca_lin] == 2           # yes!
+    assert counts[lca_lin] == 2           # yes, b/c hashval
 
 def test_count_lca_for_assignments_abund_5():
     # test basic mechanics of gather_assignments function with two lineages
