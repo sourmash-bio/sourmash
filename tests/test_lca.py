@@ -121,6 +121,15 @@ def test_find_lca_2():
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
+def test_find_lca_3():
+    lin1 = lca_utils.make_lineage('a;b;c')
+    lin2 = lca_utils.make_lineage('a;b')
+
+    tree = build_tree([lin1, lin2])
+    lca, reason = find_lca(tree)
+    assert lca == lin1                    # find most specific leaf node
+
+
 ### command line tests
 
 
