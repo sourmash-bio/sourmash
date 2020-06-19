@@ -184,6 +184,10 @@ def gather_main(args):
     """
     set_quiet(args.quiet, args.debug)
 
+    notify("** WARNING: lca gather is deprecated as of sourmash 3.4, and will")
+    notify("**    be removed in sourmash 4.0; use 'gather' instead.")
+    notify('')
+
     if not check_files_exist(args.query, *args.db):
         sys.exit(-1)
 

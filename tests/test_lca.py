@@ -1685,6 +1685,18 @@ def test_lca_gather_protein(c):
 
 
 @utils.in_thisdir
+def test_lca_gather_deprecated_message(c):
+    # lca gather is deprecated for 4.0; check message
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('lca', 'gather', testquery, db1)
+
+    assert c.last_result.status == 0
+    assert 'WARNING: lca gather is deprecated as of sourmash 3.4' in c.last_result.err
+
+
+@utils.in_thisdir
 def test_incompat_lca_db_moltype(c):
     # test load of incompatible LCA DBs
     testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
