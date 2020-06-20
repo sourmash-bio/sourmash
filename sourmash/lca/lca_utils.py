@@ -103,6 +103,17 @@ filter_null = lambda x: 'unassigned' if x.strip() in \
 null_names = set(['[Blank]', 'na', 'null'])
 
 
+def make_lineage(lineage_str):
+    "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
+    lin = lineage_str.split(';')
+    if len(lin) == 1:
+        lin = lineage.split(',')
+    lin = [ LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin) ]
+    lin = tuple(lin)
+
+    return lin
+
+
 def build_tree(assignments, initial=None):
     """
     Builds a tree of dictionaries from lists of LineagePair objects
@@ -155,6 +166,8 @@ def find_lca(tree):
 def gather_assignments(hashvals, dblist):
     """
     Gather assignments from across all the databases for all the hashvals.
+
+    Ignores counts of the hashvals.
     """
     assignments = defaultdict(set)
     for hashval in hashvals:
@@ -166,13 +179,15 @@ def gather_assignments(hashvals, dblist):
     return assignments
 
 
-def count_lca_for_assignments(assignments):
+def count_lca_for_assignments(assignments, hashval_counts=None):
     """
     For each hashval, count the LCA across its assignments.
+
+    If hashval_counts is not None, it must be a dictionary that maps
+    { hashval: hashval_count }; this is then used to weight the counts.
     """
     counts = Counter()
     for hashval in assignments:
-
         # for each list of tuple_info [(rank, name), ...] build
         # a tree that lets us discover lowest-common-ancestor.
         lineages = assignments[hashval]
@@ -181,6 +196,10 @@ def count_lca_for_assignments(assignments):
         # now find either a leaf or the first node with multiple
         # children; that's our lowest-common-ancestor node.
         lca, reason = find_lca(tree)
-        counts[lca] += 1
+
+        if hashval_counts:
+            counts[lca] += hashval_counts[hashval]
+        else:
+            counts[lca] += 1
 
     return counts
