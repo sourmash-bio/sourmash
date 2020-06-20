@@ -184,6 +184,10 @@ def gather_main(args):
     """
     set_quiet(args.quiet, args.debug)
 
+    notify("** WARNING: lca gather is deprecated as of sourmash 3.4, and will")
+    notify("**    be removed in sourmash 4.0; use 'gather' instead.")
+    notify('')
+
     if not check_files_exist(args.query, *args.db):
         sys.exit(-1)
 
@@ -191,7 +195,8 @@ def gather_main(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, None)
 
     # for each query, gather all the matches across databases
-    query_sig = sourmash_args.load_query_signature(args.query, ksize, 'DNA')
+    moltype = dblist[0].moltype
+    query_sig = sourmash_args.load_query_signature(args.query, ksize, moltype)
     debug('classifying', query_sig.name())
 
     # make sure we're looking at the same scaled value as database
