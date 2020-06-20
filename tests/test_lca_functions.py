@@ -1,6 +1,12 @@
-# CTB: move other functions from test_lca.py into here.
+"""
+Tests for functions in lca submodule.
+"""
+import pytest
+
 from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import *
+from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
+                                    taxlist, count_lca_for_assignments,
+                                    zip_lineage, display_lineage)
 
 
 class FakeLCA_Database(object):
@@ -15,6 +21,113 @@ class FakeLCA_Database(object):
             return self._assignments[hashval]
         else:
             return None
+
+
+def test_taxlist_1():
+    assert list(taxlist()) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species', 'strain']
+
+
+def test_taxlist_2():
+    assert list(taxlist(include_strain=False)) == ['superkingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+
+
+def test_zip_lineage_1():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x) == ['a', 'b', '', '', '', '', '', '']
+
+
+def test_zip_lineage_2():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert zip_lineage(x, truncate_empty=True) == ['a', 'b']
+
+
+def test_zip_lineage_3():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert zip_lineage(x) == ['a', '', 'c', '', '', '', '', '']
+
+
+def test_zip_lineage_3_truncate():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert zip_lineage(x, truncate_empty=True) == ['a', '', 'c']
+
+
+def test_zip_lineage_4():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('class', 'c') ]
+    with pytest.raises(ValueError) as e:
+        zip_lineage(x)
+
+    assert 'incomplete lineage at phylum - is class instead' in str(e.value)
+
+
+def test_display_lineage_1():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair('phylum', 'b') ]
+    assert display_lineage(x) == "a;b", display_lineage(x)
+
+
+def test_display_lineage_2():
+    x = [ LineagePair('superkingdom', 'a'), LineagePair(None, ''), LineagePair('class', 'c') ]
+    assert display_lineage(x) == "a;;c", display_lineage(x)
+
+
+def test_build_tree():
+    tree = build_tree([[LineagePair('rank1', 'name1'),
+                        LineagePair('rank2', 'name2')]])
+    assert tree == { LineagePair('rank1', 'name1'):
+                         { LineagePair('rank2', 'name2') : {}} }
+
+
+def test_build_tree_2():
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                       [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
+                      ])
+
+    assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
+                                           LineagePair('rank2', 'name2b') : {}} }
+
+
+def test_build_tree_3():                  # empty 'rank2' name
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', '')]])
+    assert tree == { LineagePair('rank1', 'name1'): {} }
+
+
+def test_build_tree_4():
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                      ])
+
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
+                      ], tree)
+
+    assert tree == { LineagePair('rank1', 'name1'): { LineagePair('rank2', 'name2a') : {},
+                                           LineagePair('rank2', 'name2b') : {}} }
+
+def test_build_tree_5():
+    with pytest.raises(ValueError):
+        tree = build_tree([])
+
+
+def test_find_lca():
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2')]])
+    lca = find_lca(tree)
+
+    assert lca == ((LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2'),), 0)
+
+
+def test_find_lca_2():
+    tree = build_tree([[LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2a')],
+                       [LineagePair('rank1', 'name1'), LineagePair('rank2', 'name2b')],
+                      ])
+    lca = find_lca(tree)
+
+    assert lca == ((LineagePair('rank1', 'name1'),), 2)
+
+
+def test_find_lca_3():
+    lin1 = lca_utils.make_lineage('a;b;c')
+    lin2 = lca_utils.make_lineage('a;b')
+
+    tree = build_tree([lin1, lin2])
+    lca, reason = find_lca(tree)
+    assert lca == lin1                    # find most specific leaf node
 
 
 def test_gather_assignments_1():
