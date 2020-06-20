@@ -519,6 +519,7 @@ def load_databases(filenames, scaled=None, verbose=True):
     "Load multiple LCA databases; return (dblist, ksize, scaled)"
     ksize_vals = set()
     scaled_vals = set()
+    moltype_vals = set()
     dblist = []
 
     # load all the databases
@@ -537,14 +538,19 @@ def load_databases(filenames, scaled=None, verbose=True):
             lca_db.downsample_scaled(scaled)
         scaled_vals.add(lca_db.scaled)
 
+        moltype_vals.add(lca_db.moltype)
+        if len(moltype_vals) > 1:
+            raise Exception('multiple moltypes, quitting')
+
         dblist.append(lca_db)
 
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
+    moltype = moltype_vals.pop()
 
     if verbose:
         notify(u'\r\033[K', end=u'')
-        notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
-               ksize, scaled)
+        notify('loaded {} LCA databases. ksize={}, scaled={} moltype={}',
+               len(dblist), ksize, scaled, moltype)
 
     return dblist, ksize, scaled
