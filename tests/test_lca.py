@@ -1,5 +1,5 @@
 """
-Tests for the 'sourmash lca' command line.
+Tests for the 'sourmash lca' command line and high level API.
 """
 from __future__ import print_function, unicode_literals
 import os
