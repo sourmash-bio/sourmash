@@ -23,6 +23,9 @@ def subparser(subparsers):
     subparser.add_argument('--singleton', action='store_true',
                            help='classify each signature independently')
 
+    subparser.add_argument('--with-abundance', action='store_true',
+                           help='use hash abundances from query signature to weight results')
+
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

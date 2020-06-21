@@ -6,6 +6,7 @@ import os
 
 import pytest
 
+import sourmash
 from sourmash import load_one_signature, SourmashSignature, load_signatures
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
@@ -774,3 +775,144 @@ def test_gather_multiple_return(c):
     print(len(results))
     assert len(results) == 2
     assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_sbt_protein_command_index(c):
+    # test command-line creation of SBT database with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('protein.sbt.zip')
+    db_out = '/tmp/protein.sbt.zip'
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '57', '--protein')
+
+    db2 = sourmash.load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0, ignore_abundance=True,
+                         do_containment=False, best_only=False)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_sbt_protein_command_search(c):
+    # test command-line search/gather of LCA database with protein sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.sbt.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_tempdir
+def test_sbt_hp_command_index(c):
+    # test command-line creation of SBT database with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('hp.sbt.zip')
+    db_out = '/tmp/hp.sbt.zip'
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '57', '--hp')
+
+    db2 = sourmash.load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0, ignore_abundance=True,
+                         do_containment=False, best_only=False)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_sbt_hp_command_search(c):
+    # test command-line search/gather of LCA database with hp sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/hp.sbt.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_tempdir
+def test_sbt_dayhoff_command_index(c):
+    # test command-line creation of SBT database with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('dayhoff.sbt.zip')
+    db_out = '/tmp/dayhoff.sbt.zip'
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '57', '--dayhoff')
+
+    db2 = sourmash.load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0, ignore_abundance=True,
+                         do_containment=False, best_only=False)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_sbt_dayhoff_command_search(c):
+    # test command-line search/gather of LCA database with dayhoff sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/dayhoff.sbt.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out

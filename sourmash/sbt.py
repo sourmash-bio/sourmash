@@ -57,8 +57,6 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
-from deprecation import deprecated
-
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
