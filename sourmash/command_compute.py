@@ -9,6 +9,7 @@ import sys
 import random
 import screed
 import time
+import itertools
 
 from . import sourmash_args
 from .signature import SourmashSignature, save_signatures
@@ -124,6 +125,7 @@ def compute(args):
     else:                        # compute individual signatures
         _compute_individual(args)
 
+
 def _compute_individual(args):
     siglist = []
 
@@ -139,7 +141,12 @@ def _compute_individual(args):
 
         if args.singleton:
             siglist = []
-            for n, record in enumerate(screed.open(filename)):
+
+            check_iter, screed_iter = itertools.tee(screed.open(filename), 2)
+            _exit_bad_alphabet(check_iter, filename,
+                               args.input_is_protein, args.force)
+
+            for n, record in enumerate(screed_iter):
                 # make minhashes for each sequence
                 minhashes = make_minhashes(args.ksizes, args.seed, args.protein,
                                        args.dayhoff, args.hp, args.dna,
@@ -179,7 +186,12 @@ def _compute_individual(args):
             # TODO move to bam2fasta since pool imap creates this empty lists and returns them
             fastas = [fasta for fasta in fastas if fasta != []]
 
+            if fastas:                    # check sequence type of one
+                _exit_bad_alphabet(screed.open(fastas[0]), filename,
+                                   args.input_is_protein, args.force)
+
             siglist = []
+
             for fasta in fastas:
                 for n, record in enumerate(screed.open(fasta)):
                     # make minhashes for each sequence
@@ -207,7 +219,13 @@ def _compute_individual(args):
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
             name = None
-            for n, record in enumerate(screed.open(filename)):
+
+            check_iter, screed_iter = itertools.tee(screed.open(filename), 2)
+            _exit_bad_alphabet(check_iter, filename,
+                               args.input_is_protein, args.force)
+
+            # consume!
+            for n, record in enumerate(screed_iter):
                 if n % 10000 == 0:
                     if n:
                         notify('\r...{} {}', filename, n, end='')
@@ -251,7 +269,11 @@ def _compute_merged(args):
         # consume & calculate signatures
         notify('... reading sequences from {}', filename)
 
-        for n, record in enumerate(screed.open(filename)):
+        check_iter, screed_iter = itertools.tee(screed.open(filename), 2)
+        _exit_bad_alphabet(check_iter, filename,
+                           args.input_is_protein, args.force)
+
+        for n, record in enumerate(screed_iter):
             if n % 10000 == 0 and n:
                 notify('\r... {} {}', filename, n, end='')
 
@@ -295,6 +317,54 @@ def save_siglist(siglist, sigfile_name):
         save_signatures(siglist, fp)
     notify('saved signature(s) to {}. Note: signature license is CC0.',
            sigfile_name)
+
+
+def _exit_bad_alphabet(check_iter, filename, input_is_protein, force):
+    """Check the first ~100 bp of a sequence file for correct alphabet type.
+
+    WARNING: consumes the first records! Use itertools.tee.
+    """
+
+    # pull off first sequence and check
+    try:
+        _check_file_alphabet(check_iter, input_is_protein)
+    except ValueError as e:
+        error("** ERROR: for filename {},", filename)
+        error("** ERROR: {}", str(e))
+        if force:
+            notify("** However, --force was specified; continuing.")
+        else:
+            sys.exit(-1)
+
+
+def _check_file_alphabet(it, input_is_protein):
+    seq = ""
+    for record in it:
+        seq += record.sequence[:100]
+
+        if len(seq) > 100:
+            break
+
+    alphabet = _classify_sequence_alphabet(seq)
+    if alphabet == 'protein' and not input_is_protein:
+        raise ValueError("this looks like protein sequence; use --input-is-protein")
+    elif alphabet == 'DNA' and input_is_protein:
+        raise ValueError("this looks like DNA sequence, but you're using --input-is-protein")
+
+
+def _classify_sequence_alphabet(seq):
+    "If more than 20% of the sequence is non-DNA, classify as protein."
+    seq = seq[:100].upper()
+    seq_len = len(seq)
+
+    count = 0
+    for i in 'ATCGN':
+        count += seq.count(i)
+
+    if count < 0.8 * seq_len:
+        return 'protein'
+    else:
+        return 'DNA'
 
 
 class ComputeParameters(RustObject):
