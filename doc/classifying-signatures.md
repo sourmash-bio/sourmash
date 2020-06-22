@@ -87,8 +87,9 @@ LCA database; it reports taxonomy.
 It's important to note that taxonomy based on k-mers is very, very
 specific and if you get a match, it's pretty reliable. On the
 converse, however, k-mer identification is very brittle with respect
-to evolutionary divergence, so if you don't get a match it may only mean
-that the particular species isn't known.
+to evolutionary divergence, so if you don't get a match it may only
+mean that the specific species or genus you're searching for isn't in
+the database.
 
 ## Abundance weighting
 
