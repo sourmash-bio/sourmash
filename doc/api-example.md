@@ -112,8 +112,10 @@ add some metadata to MinHashes.
 
 ```
 >>> from sourmash import SourmashSignature, save_signatures
+>>> from tempfile import mkdtemp
 >>> sig1 = SourmashSignature(minhashes[0], name=genomes[0][:20])
->>> with open('/tmp/genome1.sig', 'wt') as fp:
+>>> tempdir = mkdtemp(suffix = "temp")
+>>> with open(tempdir + '/genome1.sig', 'wt') as fp:
 ...   save_signatures([sig1], fp)
 
 ```
@@ -123,7 +125,7 @@ compared -- first, load:
 
 ```
 >>> from sourmash import load_one_signature
->>> loaded_sig = load_one_signature('/tmp/genome1.sig')
+>>> loaded_sig = load_one_signature(tempdir + '/genome1.sig')
 
 ```
 
@@ -420,7 +422,7 @@ checks.)
 Now, save the tree:
 
 ```
->>> filename = tree.save('/tmp/test.sbt.json')
+>>> filename = tree.save(tempdir + '/test.sbt.json')
 
 ```
 
@@ -431,7 +433,7 @@ from within Python?
 
 The SBT filename is `/tmp/test.sbt.json`, as above:
 ```
->>> SBT_filename = '/tmp/test.sbt.json'
+>>> SBT_filename = tempdir + '/test.sbt.json'
 
 ```
 
