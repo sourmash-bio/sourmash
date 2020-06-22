@@ -3208,50 +3208,34 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
         assert 'multiple k-mer sizes/molecule types present' in err
 
 
-def test_watch():
-    with utils.TempDirectory() as location:
-        testdata0 = utils.get_test_data('genome-s10.fa.gz')
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+@utils.in_tempdir
+def test_watch(c):
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, c.output('1.sig'))
 
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
 
-        cmd = """
+    c.run_sourmash('watch', '--ksize', '21', '--dna', 'zzz', testdata0)
 
-             gunzip -c {} | sourmash watch --ksize 21 --dna zzz
-
-        """.format(testdata0)
-        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
-
-        print(out)
-        print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'FOUND: genome-s10.fa.gz, at 1.000' in c.last_result.out
 
 
-def test_watch_deduce_ksize():
-    with utils.TempDirectory() as location:
-        testdata0 = utils.get_test_data('genome-s10.fa.gz')
-        utils.runscript('sourmash',
-                        ['compute', testdata0, '-k', '29', '-o', '1.sig'],
-                        in_directory=location)
+@utils.in_tempdir
+def test_watch_deduce_ksize(c):
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('compute', testdata0, '-k', '29', '-o', '1.sig')
 
-        args = ['index', '--dna', '-k', '29', 'zzz', '1.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    c.run_sourmash('index', '--dna', '-k', '29', 'zzz', '1.sig')
 
-        cmd = """
+    c.run_sourmash('watch', '--dna', 'zzz', testdata0)
 
-             gunzip -c {} | sourmash watch --dna zzz
-
-        """.format(testdata0)
-        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
-
-        print(out)
-        print(err)
-        assert 'Computing signature for k=29' in err
-        assert 'genome-s10.fa.gz, at 1.000' in out
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'Computing signature for k=29' in c.last_result.err
+    assert 'genome-s10.fa.gz, at 1.000' in c.last_result.out
 
 
 def test_watch_coverage():
