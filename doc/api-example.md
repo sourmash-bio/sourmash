@@ -120,7 +120,7 @@ add some metadata to MinHashes.
 
 ```
 
-Here, `{}/genome1.sig`.format(tempdir) is a JSON file that can now be loaded and
+Here, `genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
@@ -431,7 +431,7 @@ Now, save the tree:
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
 
-The SBT filename is `{}/test.sbt.json`.format(tempdir), as above:
+The SBT filename is `test.sbt.json`, as above:
 ```
 >>> SBT_filename = tempdir + '/test.sbt.json'
 
