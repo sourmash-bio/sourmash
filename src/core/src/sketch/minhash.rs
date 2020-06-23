@@ -103,7 +103,7 @@ impl Default for KmerMinHash {
             hash_function: HashFunctions::murmur64_DNA,
             seed: 42,
             max_hash: 0,
-            mins: Vec::with_capacity(1000),
+            mins: Default::default(),
             abunds: None,
         }
     }

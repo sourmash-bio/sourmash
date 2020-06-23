@@ -109,7 +109,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -126,7 +126,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -143,7 +143,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -160,7 +160,7 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
