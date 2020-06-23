@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::f64::consts::PI;
 use std::iter::{Iterator, Peekable};
@@ -89,10 +89,13 @@ pub struct KmerMinHash {
     max_hash: u64,
 
     #[builder(default)]
-    mins: Vec<u64>,
+    mins: BTreeSet<u64>,
 
     #[builder(default)]
-    abunds: Option<Vec<u64>>,
+    abunds: Option<BTreeMap<u64, u64>>,
+
+    #[builder(default_code = "0u64")]
+    current_max: u64,
 }
 
 impl Default for KmerMinHash {
@@ -105,6 +108,7 @@ impl Default for KmerMinHash {
             max_hash: 0,
             mins: Default::default(),
             abunds: None,
+            current_max: 0,
         }
     }
 }
@@ -149,8 +153,8 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             seed: u64,
             max_hash: u64,
             //md5sum: String,
-            mins: Vec<u64>,
-            abundances: Option<Vec<u64>>,
+            mins: BTreeSet<u64>,
+            abundances: Option<BTreeMap<u64, u64>>,
             molecule: String,
         }
 
@@ -165,18 +169,10 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             _ => unimplemented!(), // TODO: throw error here
         };
 
-        // This shouldn't be necessary, but at some point we
-        // created signatures with unordered mins =(
-        let (mins, abunds) = if let Some(abunds) = tmpsig.abundances {
-            let mut values: Vec<(_, _)> = tmpsig.mins.iter().zip(abunds.iter()).collect();
-            values.sort();
-            let mins = values.iter().map(|(v, _)| **v).collect();
-            let abunds = values.iter().map(|(_, v)| **v).collect();
-            (mins, Some(abunds))
+        let current_max = if tmpsig.abundances.is_some() {
+            *tmpsig.mins.iter().rev().next().unwrap_or(&0)
         } else {
-            let mut values: Vec<_> = tmpsig.mins.into_iter().collect();
-            values.sort();
-            (values, None)
+            0
         };
 
         Ok(KmerMinHash {
@@ -184,9 +180,10 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
-            mins,
-            abunds,
+            mins: tmpsig.mins,
+            abunds: tmpsig.abundances,
             hash_function,
+            current_max,
         })
     }
 }
@@ -200,20 +197,13 @@ impl KmerMinHash {
         max_hash: u64,
         track_abundance: bool,
     ) -> KmerMinHash {
-        let mins: Vec<u64>;
-        let abunds: Option<Vec<u64>>;
+        let mins = Default::default();
 
-        if num > 0 {
-            mins = Vec::with_capacity(num as usize);
+        let abunds = if track_abundance {
+            Some(Default::default())
         } else {
-            mins = Vec::with_capacity(1000);
-        }
-
-        if track_abundance {
-            abunds = Some(Vec::with_capacity(mins.capacity()));
-        } else {
-            abunds = None
-        }
+            None
+        };
 
         KmerMinHash {
             num,
@@ -223,6 +213,7 @@ impl KmerMinHash {
             max_hash,
             mins,
             abunds,
+            current_max: 0,
         }
     }
 
@@ -281,7 +272,7 @@ impl KmerMinHash {
             .into());
         }
 
-        self.abunds = Some(vec![]);
+        self.abunds = Some(Default::default());
 
         Ok(())
     }
@@ -304,11 +295,6 @@ impl KmerMinHash {
     }
 
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
-        let current_max = match self.mins.last() {
-            Some(&x) => x,
-            None => u64::max_value(),
-        };
-
         if hash > self.max_hash && self.max_hash != 0 {
             // This is a scaled minhash, and we don't need to add the new hash
             return;
@@ -328,46 +314,32 @@ impl KmerMinHash {
 
         // empty mins? add it.
         if self.mins.is_empty() {
-            self.mins.push(hash);
+            self.mins.insert(hash);
             if let Some(ref mut abunds) = self.abunds {
-                abunds.push(abundance);
+                abunds.insert(hash, abundance);
             }
+            self.current_max = hash;
             return;
         }
 
-        if hash <= self.max_hash || hash <= current_max || (self.mins.len() as u32) < self.num {
+        if hash <= self.max_hash || hash <= self.current_max || (self.mins.len() as u32) < self.num
+        {
             // "good" hash - within range, smaller than current entry, or
             // still have space available
-            let pos = match self.mins.binary_search(&hash) {
-                Ok(p) => p,
-                Err(p) => p,
-            };
+            if self.mins.insert(hash) {
+                if hash > self.current_max {
+                    self.current_max = hash;
+                }
+            }
+            if let Some(ref mut abunds) = self.abunds {
+                *abunds.entry(hash).or_insert(0) += abundance;
+            }
 
-            if pos == self.mins.len() {
-                // at end - must still be growing, we know the list won't
-                // get too long
-                self.mins.push(hash);
-                if let Some(ref mut abunds) = self.abunds {
-                    abunds.push(abundance);
-                }
-            } else if self.mins[pos] != hash {
-                // didn't find hash in mins, so inserting somewhere
-                // in the middle; shrink list if needed.
-                self.mins.insert(pos, hash);
-                if let Some(ref mut abunds) = self.abunds {
-                    abunds.insert(pos, abundance);
-                }
-
-                // is it too big now?
-                if self.num != 0 && self.mins.len() > (self.num as usize) {
-                    self.mins.pop();
-                    if let Some(ref mut abunds) = self.abunds {
-                        abunds.pop();
-                    }
-                }
-            } else if let Some(ref mut abunds) = self.abunds {
-                // pos == hash: hash value already in mins, inc count by abundance
-                abunds[pos] += abundance;
+            // is it too big now?
+            if self.num != 0 && self.mins.len() > (self.num as usize) {
+                let last = *self.mins.iter().rev().next().unwrap();
+                self.mins.remove(&last);
+                self.current_max = *self.mins.iter().rev().next().unwrap();
             }
         }
     }
@@ -378,14 +350,14 @@ impl KmerMinHash {
     }
 
     pub fn remove_hash(&mut self, hash: u64) {
-        if let Ok(pos) = self.mins.binary_search(&hash) {
-            if self.mins[pos] == hash {
-                self.mins.remove(pos);
-                if let Some(ref mut abunds) = self.abunds {
-                    abunds.remove(pos);
-                }
+        if self.mins.remove(&hash) {
+            if let Some(ref mut abunds) = self.abunds {
+                abunds.remove(&hash);
             }
-        };
+        }
+        if hash == self.current_max {
+            self.current_max = *self.mins.iter().rev().next().unwrap();
+        }
     }
 
     pub fn remove_many(&mut self, hashes: &[u64]) -> Result<(), Error> {
@@ -397,103 +369,28 @@ impl KmerMinHash {
 
     pub fn merge(&mut self, other: &KmerMinHash) -> Result<(), Error> {
         self.check_compatible(other)?;
-        let max_size = self.mins.len() + other.mins.len();
-        let mut merged: Vec<u64> = Vec::with_capacity(max_size);
-        let mut merged_abunds: Vec<u64> = Vec::with_capacity(max_size);
+        let union = self.mins.union(&other.mins);
 
-        {
-            let mut self_iter = self.mins.iter();
-            let mut other_iter = other.mins.iter();
-
-            let mut self_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref mut abunds) = self.abunds {
-                self_abunds_iter = Some(abunds.iter());
-            } else {
-                self_abunds_iter = None;
-            }
-
-            let mut other_abunds_iter: Option<std::slice::Iter<'_, u64>>;
-            if let Some(ref abunds) = other.abunds {
-                other_abunds_iter = Some(abunds.iter());
-            } else {
-                other_abunds_iter = None;
-            }
-
-            let mut self_value = self_iter.next();
-            let mut other_value = other_iter.next();
-            while self_value.is_some() {
-                let value = self_value.unwrap();
-                match other_value {
-                    None => {
-                        merged.push(*value);
-                        merged.extend(self_iter);
-                        if let Some(sai) = self_abunds_iter {
-                            merged_abunds.extend(sai);
-                        }
-                        break;
-                    }
-                    Some(x) if x < value => {
-                        merged.push(*x);
-                        other_value = other_iter.next();
-
-                        if let Some(ref mut oai) = other_abunds_iter {
-                            if let Some(v) = oai.next() {
-                                merged_abunds.push(*v)
-                            }
-                        }
-                    }
-                    Some(x) if x == value => {
-                        merged.push(*x);
-                        other_value = other_iter.next();
-                        self_value = self_iter.next();
-
-                        if let Some(ref mut oai) = other_abunds_iter {
-                            if let Some(v) = oai.next() {
-                                if let Some(ref mut sai) = self_abunds_iter {
-                                    if let Some(s) = sai.next() {
-                                        merged_abunds.push(*v + *s)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Some(x) if x > value => {
-                        merged.push(*value);
-                        self_value = self_iter.next();
-
-                        if let Some(ref mut sai) = self_abunds_iter {
-                            if let Some(v) = sai.next() {
-                                merged_abunds.push(*v)
-                            }
-                        }
-                    }
-                    Some(_) => {}
-                }
-            }
-            if let Some(value) = other_value {
-                merged.push(*value);
-            }
-            merged.extend(other_iter);
-            if let Some(oai) = other_abunds_iter {
-                merged_abunds.extend(oai);
-            }
-        }
-
-        if merged.len() < (self.num as usize) || (self.num as usize) == 0 {
-            self.mins = merged;
-            self.abunds = if merged_abunds.is_empty() {
-                None
-            } else {
-                Some(merged_abunds)
-            };
+        let to_take = if self.num == 0 {
+            usize::max_value()
         } else {
-            self.mins = merged.into_iter().take(self.num as usize).collect();
-            self.abunds = if merged_abunds.is_empty() {
-                None
-            } else {
-                Some(merged_abunds.into_iter().take(self.num as usize).collect())
+            self.num as usize
+        };
+
+        self.mins = union.into_iter().take(to_take).cloned().collect();
+
+        if let Some(abunds) = &self.abunds {
+            if let Some(oabunds) = &self.abunds {
+                let mut new_abunds = BTreeMap::new();
+
+                for hash in &self.mins {
+                    *new_abunds.entry(*hash).or_insert(0) +=
+                        abunds.get(&hash).unwrap_or(&0) + oabunds.get(&hash).unwrap_or(&0);
+                }
+                self.abunds = Some(new_abunds)
             }
         }
+
         Ok(())
     }
 
@@ -555,7 +452,8 @@ impl KmerMinHash {
         // TODO: there is probably a way to avoid this Vec here,
         // and pass the it1 as left in it2.
         let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+        let it2 = Intersection::new(i1.iter(), i2.iter());
 
         let common: Vec<u64> = it2.cloned().collect();
         Ok((common, combined_mh.mins.len() as u64))
@@ -581,7 +479,8 @@ impl KmerMinHash {
         // TODO: there is probably a way to avoid this Vec here,
         // and pass the it1 as left in it2.
         let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+        let it2 = Intersection::new(i1.iter(), i2.iter());
 
         Ok((it2.count() as u64, combined_mh.mins.len() as u64))
     }
@@ -610,27 +509,11 @@ impl KmerMinHash {
         let other_abunds = other.abunds.as_ref().unwrap();
 
         let mut prod = 0;
-        let mut other_iter = other.mins.iter().enumerate();
-        let mut next_hash = other_iter.next();
-        let a_sq: u64 = abunds.iter().map(|a| (a * a)).sum();
-        let b_sq: u64 = other_abunds.iter().map(|a| (a * a)).sum();
+        let a_sq: u64 = abunds.values().map(|a| (a * a)).sum();
+        let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
 
-        for (i, hash) in self.mins.iter().enumerate() {
-            while let Some((j, k)) = next_hash {
-                match k.cmp(hash) {
-                    Ordering::Less => next_hash = other_iter.next(),
-                    Ordering::Equal => {
-                        // Calling `get_unchecked` here is safe since
-                        // both `i` and `j` are valid indices
-                        // (`i` and `j` came from valid iterator calls)
-                        unsafe {
-                            prod += abunds.get_unchecked(i) * other_abunds.get_unchecked(j);
-                        }
-                        break;
-                    }
-                    Ordering::Greater => break,
-                }
-            }
+        for hash in self.mins.iter() {
+            prod += other_abunds.get(&hash).unwrap_or(&0) * abunds[&hash];
         }
 
         let norm_a = (a_sq as f64).sqrt();
@@ -678,11 +561,15 @@ impl KmerMinHash {
     }
 
     pub fn mins(&self) -> Vec<u64> {
-        self.mins.clone()
+        self.mins.iter().cloned().collect()
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
-        self.abunds.clone()
+        if let Some(abunds) = &self.abunds {
+            Some(abunds.values().cloned().collect())
+        } else {
+            None
+        }
     }
 
     // create a downsampled copy of self
@@ -698,18 +585,14 @@ impl KmerMinHash {
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
         } else {
-            new_mh.add_many(&self.mins)?;
+            new_mh.add_many(&self.mins())?;
         }
         Ok(new_mh)
     }
 
     fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
-            self.mins
-                .iter()
-                .cloned()
-                .zip(abunds.iter().cloned())
-                .collect()
+            abunds.iter().map(|(a, b)| (*a, *b)).collect()
         } else {
             self.mins
                 .iter()
@@ -726,7 +609,7 @@ impl SigsTrait for KmerMinHash {
     }
 
     fn to_vec(&self) -> Vec<u64> {
-        self.mins.clone()
+        self.mins()
     }
 
     fn ksize(&self) -> usize {
