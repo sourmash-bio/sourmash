@@ -1476,10 +1476,8 @@ impl KmerMinHashBTree {
         {
             // "good" hash - within range, smaller than current entry, or
             // still have space available
-            if self.mins.insert(hash) {
-                if hash > self.current_max {
-                    self.current_max = hash;
-                }
+            if self.mins.insert(hash) && hash > self.current_max {
+                self.current_max = hash;
             }
             if let Some(ref mut abunds) = self.abunds {
                 *abunds.entry(hash).or_insert(0) += abundance;
@@ -1530,7 +1528,7 @@ impl KmerMinHashBTree {
             self.num as usize
         };
 
-        self.mins = union.into_iter().take(to_take).cloned().collect();
+        self.mins = union.take(to_take).cloned().collect();
 
         if let Some(abunds) = &self.abunds {
             if let Some(oabunds) = &other.abunds {
