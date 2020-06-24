@@ -31,6 +31,7 @@ fn load_signature() {
     let sketches = sig.sketches();
     match sketches[0] {
         Sketch::MinHash(_) => (),
+        Sketch::LargeMinHash(_) => assert!(false),
         Sketch::UKHS(_) => assert!(false),
     }
 }
@@ -60,6 +61,7 @@ fn load_signature_2() {
     let sketches = sig.sketches();
     match sketches[0] {
         Sketch::MinHash(_) => (),
+        Sketch::LargeMinHash(_) => assert!(false),
         Sketch::UKHS(_) => assert!(false),
     }
 }

@@ -1,5 +1,11 @@
 use sourmash::signature::SigsTrait;
-use sourmash::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
+use sourmash::sketch::minhash::{
+    max_hash_for_scaled, HashFunctions, KmerMinHash, KmerMinHashBTree,
+};
+
+use proptest::collection::vec;
+use proptest::num::u64;
+use proptest::proptest;
 
 #[test]
 fn throws_error() {
@@ -136,4 +142,62 @@ fn hp() {
 #[test]
 fn max_for_scaled() {
     assert_eq!(max_hash_for_scaled(100), Some(184467440737095520));
+}
+
+proptest! {
+#[test]
+fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
+    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut b = KmerMinHashBTree::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+
+    let mut c = KmerMinHash::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut d = KmerMinHashBTree::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+
+    for hash in hashes {
+        a.add_hash(hash);
+        b.add_hash(hash);
+
+        if hash % 2 == 0 {
+          c.add_hash(hash);
+          d.add_hash(hash);
+        }
+    }
+    assert_eq!(a.mins(), b.mins());
+    assert_eq!(c.mins(), d.mins());
+
+    assert_eq!(a.abunds(), b.abunds());
+    assert_eq!(c.abunds(), d.abunds());
+
+    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+}
+}
+
+proptest! {
+#[test]
+fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
+    let max_hash = max_hash_for_scaled(100).unwrap();
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    let mut c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    for hash in hashes {
+        a.add_hash(hash);
+        b.add_hash(hash);
+
+        if hash % 2 == 0 {
+          c.add_hash(hash);
+          d.add_hash(hash);
+        }
+    }
+
+    assert_eq!(a.mins(), b.mins());
+    assert_eq!(c.mins(), d.mins());
+
+    assert_eq!(a.abunds(), b.abunds());
+    assert_eq!(c.abunds(), d.abunds());
+
+    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+}
 }
