@@ -154,7 +154,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             seed: u64,
             max_hash: u64,
             //md5sum: String,
-            mins: BTreeSet<u64>,
+            mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
         }
@@ -170,23 +170,19 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             _ => unimplemented!(), // TODO: throw error here
         };
 
-        let current_max = if tmpsig.abundances.is_some() {
-            *tmpsig.mins.iter().rev().next().unwrap_or(&0)
+        let current_max;
+        // This shouldn't be necessary, but at some point we
+        // created signatures with unordered mins =(
+        let (mins, abunds) = if let Some(abunds) = tmpsig.abundances {
+            let mut values: Vec<(_, _)> = tmpsig.mins.iter().zip(abunds.iter()).collect();
+            values.sort();
+            let mins: BTreeSet<_> = values.iter().map(|(v, _)| **v).collect();
+            let abunds = values.into_iter().map(|(v, x)| (*v, *x)).collect();
+            current_max = *mins.iter().rev().next().unwrap_or(&0);
+            (mins, Some(abunds))
         } else {
-            0
-        };
-
-        let abunds = if let Some(abunds) = tmpsig.abundances {
-            Some(
-                tmpsig
-                    .mins
-                    .iter()
-                    .cloned()
-                    .zip(abunds.into_iter())
-                    .collect(),
-            )
-        } else {
-            None
+            current_max = 0;
+            (tmpsig.mins.into_iter().collect(), None)
         };
 
         Ok(KmerMinHash {
@@ -194,7 +190,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
-            mins: tmpsig.mins,
+            mins,
             abunds,
             hash_function,
             current_max,
