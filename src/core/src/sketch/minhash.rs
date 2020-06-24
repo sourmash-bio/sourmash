@@ -132,7 +132,8 @@ impl Serialize for KmerMinHash {
         partial.serialize_field("md5sum", &self.md5sum())?;
 
         if let Some(abunds) = &self.abunds {
-            partial.serialize_field("abundances", abunds)?;
+            let abs: Vec<u64> = abunds.values().cloned().collect();
+            partial.serialize_field("abundances", &abs)?;
         }
 
         partial.serialize_field("molecule", &self.hash_function.to_string())?;
@@ -154,7 +155,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             max_hash: u64,
             //md5sum: String,
             mins: BTreeSet<u64>,
-            abundances: Option<BTreeMap<u64, u64>>,
+            abundances: Option<Vec<u64>>,
             molecule: String,
         }
 
@@ -175,13 +176,26 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             0
         };
 
+        let abunds = if let Some(abunds) = tmpsig.abundances {
+            Some(
+                tmpsig
+                    .mins
+                    .iter()
+                    .cloned()
+                    .zip(abunds.into_iter())
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
         Ok(KmerMinHash {
             num,
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
             mins: tmpsig.mins,
-            abunds: tmpsig.abundances,
+            abunds,
             hash_function,
             current_max,
         })
@@ -242,6 +256,7 @@ impl KmerMinHash {
         if let Some(ref mut abunds) = self.abunds {
             abunds.clear();
         }
+        self.current_max = 0;
     }
 
     pub fn is_empty(&self) -> bool {
@@ -339,6 +354,9 @@ impl KmerMinHash {
             if self.num != 0 && self.mins.len() > (self.num as usize) {
                 let last = *self.mins.iter().rev().next().unwrap();
                 self.mins.remove(&last);
+                if let Some(ref mut abunds) = self.abunds {
+                    abunds.remove(&last);
+                }
                 self.current_max = *self.mins.iter().rev().next().unwrap();
             }
         }
@@ -356,7 +374,7 @@ impl KmerMinHash {
             }
         }
         if hash == self.current_max {
-            self.current_max = *self.mins.iter().rev().next().unwrap();
+            self.current_max = *self.mins.iter().rev().next().unwrap_or(&0);
         }
     }
 
@@ -380,7 +398,7 @@ impl KmerMinHash {
         self.mins = union.into_iter().take(to_take).cloned().collect();
 
         if let Some(abunds) = &self.abunds {
-            if let Some(oabunds) = &self.abunds {
+            if let Some(oabunds) = &other.abunds {
                 let mut new_abunds = BTreeMap::new();
 
                 for hash in &self.mins {
@@ -512,8 +530,10 @@ impl KmerMinHash {
         let a_sq: u64 = abunds.values().map(|a| (a * a)).sum();
         let b_sq: u64 = other_abunds.values().map(|a| (a * a)).sum();
 
-        for hash in self.mins.iter() {
-            prod += other_abunds.get(&hash).unwrap_or(&0) * abunds[&hash];
+        for (hash, value) in abunds.iter() {
+            if let Some(oa) = other_abunds.get(&hash) {
+                prod += value * oa
+            }
         }
 
         let norm_a = (a_sq as f64).sqrt();
