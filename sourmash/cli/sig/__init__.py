@@ -4,6 +4,7 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash sig` operations.
 """
 
+from . import cat
 from . import describe
 from . import downsample
 from . import extract

@@ -19,6 +19,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
+cat <signature> [<signature> ... ]        - concatenate all signatures
 describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
@@ -58,6 +59,36 @@ def _set_num_scaled(mh, num, scaled):
 ##### actual command line functions
 
 
+def cat(args):
+    """
+    concatenate all signatures into one file.
+    """
+    set_quiet(args.quiet)
+
+    siglist = []
+    for sigfile in args.signatures:
+        this_siglist = []
+        try:
+            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(sigfile))
+            error(str(exc))
+            error('(continuing)')
+
+        this_siglist = list(this_siglist)
+
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
+               end='\r')
+        siglist.extend(this_siglist)
+
+    notify('loaded {} signatures total.', len(siglist))
+
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(siglist, fp=fp)
+
+    notify('saved {} signatures', len(siglist))
+
+
 def describe(args):
     """
     provide basic info on signatures
@@ -76,7 +107,7 @@ def describe(args):
             error(str(exc))
             error('(continuing)')
 
-        notify('loaded {} signatures from {}...', len(siglist), sigfile,
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
                end='\r')
 
     notify('loaded {} signatures total.', len(siglist))
