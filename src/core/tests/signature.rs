@@ -1,5 +1,3 @@
-use serde_json;
-
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
@@ -33,8 +31,8 @@ fn load_signature() {
     let sketches = sig.sketches();
     match sketches[0] {
         Sketch::MinHash(_) => (),
-        Sketch::LargeMinHash(_) => assert!(false),
-        Sketch::UKHS(_) => assert!(false),
+        Sketch::LargeMinHash(_) => panic!(),
+        Sketch::UKHS(_) => panic!(),
     }
 }
 
@@ -63,8 +61,8 @@ fn load_signature_2() {
     let sketches = sig.sketches();
     match sketches[0] {
         Sketch::MinHash(_) => (),
-        Sketch::LargeMinHash(_) => assert!(false),
-        Sketch::UKHS(_) => assert!(false),
+        Sketch::LargeMinHash(_) => panic!(),
+        Sketch::UKHS(_) => panic!(),
     }
 }
 

@@ -16,9 +16,8 @@ use proptest::proptest;
 fn throws_error() {
     let mut mh = KmerMinHash::new(1, 4, HashFunctions::murmur64_DNA, 42, 0, false);
 
-    match mh.add_sequence(b"ATGR", false) {
-        Ok(_) => assert!(false, "R is not a valid DNA character"),
-        Err(_) => assert!(true),
+    if mh.add_sequence(b"ATGR", false).is_ok() {
+        panic!("R is not a valid DNA character")
     }
 }
 
@@ -173,7 +172,7 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
 }
 }
 
@@ -214,8 +213,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
-    assert_eq!(a.similarity(&c, true, false).unwrap(), b.similarity(&d, true, false).unwrap());
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < f64::EPSILON);
 }
 }
 
@@ -244,7 +243,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < f64::EPSILON);
 }
 }
 
@@ -285,14 +285,18 @@ fn load_save_minhash_sketches() {
         assert_eq!(bmh.abunds(), new_mh.abunds());
         assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert_eq!(
-            mh.similarity(&new_mh, false, false).unwrap(),
-            bmh.similarity(&new_bmh, false, false).unwrap()
+        assert!(
+            (mh.similarity(&new_mh, false, false).unwrap()
+                - bmh.similarity(&new_bmh, false, false).unwrap())
+            .abs()
+                < f64::EPSILON
         );
 
-        assert_eq!(
-            mh.similarity(&new_mh, true, false).unwrap(),
-            bmh.similarity(&new_bmh, true, false).unwrap()
+        assert!(
+            (mh.similarity(&new_mh, true, false).unwrap()
+                - bmh.similarity(&new_bmh, true, false).unwrap())
+            .abs()
+                < f64::EPSILON
         );
 
         buffer.clear();
@@ -319,14 +323,18 @@ fn load_save_minhash_sketches() {
         assert_eq!(bmh.abunds(), new_mh.abunds());
         assert_eq!(mh.abunds(), new_bmh.abunds());
 
-        assert_eq!(
-            mh.similarity(&new_mh, false, false).unwrap(),
-            bmh.similarity(&new_bmh, false, false).unwrap()
+        assert!(
+            (mh.similarity(&new_mh, false, false).unwrap()
+                - bmh.similarity(&new_bmh, false, false).unwrap())
+            .abs()
+                < f64::EPSILON
         );
 
-        assert_eq!(
-            mh.similarity(&new_mh, true, false).unwrap(),
-            bmh.similarity(&new_bmh, true, false).unwrap()
+        assert!(
+            (mh.similarity(&new_mh, true, false).unwrap()
+                - bmh.similarity(&new_bmh, true, false).unwrap())
+            .abs()
+                < f64::EPSILON
         );
     }
 }

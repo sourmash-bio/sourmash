@@ -1935,7 +1935,7 @@ impl From<KmerMinHashBTree> for KmerMinHash {
 
         let mins = other.mins.into_iter().collect();
         let abunds = if let Some(abunds) = other.abunds {
-            Some(abunds.values().into_iter().cloned().collect())
+            Some(abunds.values().cloned().collect())
         } else {
             None
         };

@@ -150,7 +150,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --all -- -D warnings
 
   wasm-pack:
     name: Check if wasm-pack builds a valid package for the sourmash crate
