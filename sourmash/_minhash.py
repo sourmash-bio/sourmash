@@ -544,13 +544,14 @@ class MinHash(RustObject):
 
     merge = __iadd__
 
-    def set_abundances(self, values):
+    def set_abundances(self, values, no_clear=False):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
         """
         if self.track_abundance:
-            hashes = []
-            abunds = []
+            if not no_clear:
+                hashes = []
+                abunds = []
             for h, v in values.items():
                 hashes.append(h)
                 abunds.append(v)
