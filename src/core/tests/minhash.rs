@@ -201,3 +201,32 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
 }
 }
+
+proptest! {
+#[test]
+fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    let mut c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    a.add_sequence(seq1.as_bytes(), false).unwrap();
+    b.add_sequence(seq1.as_bytes(), false).unwrap();
+
+    c.add_sequence(seq2.as_bytes(), false).unwrap();
+    d.add_sequence(seq2.as_bytes(), false).unwrap();
+
+    a.merge(&c).unwrap();
+    b.merge(&d).unwrap();
+
+    assert_eq!(a.mins(), b.mins());
+    assert_eq!(c.mins(), d.mins());
+
+    assert_eq!(a.abunds(), b.abunds());
+    assert_eq!(c.abunds(), d.abunds());
+
+    assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+}
+}
