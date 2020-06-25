@@ -12,6 +12,9 @@ use proptest::collection::vec;
 use proptest::num::u64;
 use proptest::proptest;
 
+// TODO: use f64::EPSILON when we bump MSRV
+const EPSILON: f64 = 0.01;
+
 #[test]
 fn throws_error() {
     let mut mh = KmerMinHash::new(1, 4, HashFunctions::murmur64_DNA, 42, 0, false);
@@ -69,8 +72,8 @@ fn similarity() -> Result<(), Box<dyn std::error::Error>> {
     b.add_hash(1);
     b.add_hash(2);
 
-    assert!((a.similarity(&a, false, false)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, false, false)? - 0.5).abs() < 0.001);
+    assert!((a.similarity(&a, false, false)? - 1.0).abs() < EPSILON);
+    assert!((a.similarity(&b, false, false)? - 0.5).abs() < EPSILON);
 
     Ok(())
 }
@@ -87,7 +90,7 @@ fn similarity_2() -> Result<(), Box<dyn std::error::Error>> {
     b.add_sequence(b"ATGGA", false)?;
 
     assert!(
-        (a.similarity(&b, false, false)? - 0.705).abs() < 0.001,
+        (a.similarity(&b, false, false)? - 0.705).abs() < EPSILON,
         "{}",
         a.similarity(&b, false, false)?
     );
@@ -110,11 +113,11 @@ fn similarity_3() -> Result<(), Box<dyn std::error::Error>> {
     b.add_hash(3);
     b.add_hash(4);
 
-    assert!((a.similarity(&a, false, false)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, false, false)? - 0.23).abs() < 0.001);
+    assert!((a.similarity(&a, false, false)? - 1.0).abs() < EPSILON);
+    assert!((a.similarity(&b, false, false)? - 0.23).abs() < EPSILON);
 
-    assert!((a.similarity(&a, true, false)? - 1.0).abs() < 0.001);
-    assert!((a.similarity(&b, true, false)? - 0.2).abs() < 0.001);
+    assert!((a.similarity(&a, true, false)? - 1.0).abs() < EPSILON);
+    assert!((a.similarity(&b, true, false)? - 0.2).abs() < EPSILON);
 
     Ok(())
 }
@@ -172,7 +175,7 @@ fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
 }
 }
 
@@ -213,8 +216,8 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
-    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < f64::EPSILON);
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 }
 }
 
@@ -243,8 +246,8 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
-    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < f64::EPSILON);
-    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < f64::EPSILON);
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
 }
 }
 
@@ -289,14 +292,14 @@ fn load_save_minhash_sketches() {
             (mh.similarity(&new_mh, false, false).unwrap()
                 - bmh.similarity(&new_bmh, false, false).unwrap())
             .abs()
-                < f64::EPSILON
+                < EPSILON
         );
 
         assert!(
             (mh.similarity(&new_mh, true, false).unwrap()
                 - bmh.similarity(&new_bmh, true, false).unwrap())
             .abs()
-                < f64::EPSILON
+                < EPSILON
         );
 
         buffer.clear();
@@ -327,14 +330,14 @@ fn load_save_minhash_sketches() {
             (mh.similarity(&new_mh, false, false).unwrap()
                 - bmh.similarity(&new_bmh, false, false).unwrap())
             .abs()
-                < f64::EPSILON
+                < EPSILON
         );
 
         assert!(
             (mh.similarity(&new_mh, true, false).unwrap()
                 - bmh.similarity(&new_bmh, true, false).unwrap())
             .abs()
-                < f64::EPSILON
+                < EPSILON
         );
     }
 }
