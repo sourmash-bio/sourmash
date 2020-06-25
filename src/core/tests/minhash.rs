@@ -1,7 +1,12 @@
-use sourmash::signature::SigsTrait;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::PathBuf;
+
+use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{
     max_hash_for_scaled, HashFunctions, KmerMinHash, KmerMinHashBTree,
 };
+use sourmash::sketch::Sketch;
 
 use proptest::collection::vec;
 use proptest::num::u64;
@@ -195,10 +200,22 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.mins(), b.mins());
     assert_eq!(c.mins(), d.mins());
 
+    assert_eq!(a.md5sum(), b.md5sum());
+    assert_eq!(c.md5sum(), d.md5sum());
+
+    assert_eq!(a.is_protein(), b.is_protein());
+    assert_eq!(a.num(), b.num());
+    assert_eq!(a.seed(), b.seed());
+    assert_eq!(a.ksize(), b.ksize());
+    assert_eq!(a.max_hash(), b.max_hash());
+    assert_eq!(a.track_abundance(), b.track_abundance());
+    assert_eq!(a.hash_function(), b.hash_function());
+
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
     assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
+    assert_eq!(a.similarity(&c, true, false).unwrap(), b.similarity(&d, true, false).unwrap());
 }
 }
 
@@ -230,3 +247,95 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert_eq!(a.similarity(&c, false, false).unwrap(), b.similarity(&d, false, false).unwrap());
 }
 }
+
+#[test]
+fn load_save_minhash_sketches() {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/genome-s10+s11.sig");
+
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+    let sig = sigs.get(0).unwrap();
+    let sketches = sig.sketches();
+    let mut buffer = vec![];
+
+    if let Sketch::MinHash(mh) = &sketches[0] {
+        let bmh: KmerMinHashBTree = mh.clone().into();
+        {
+            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+        }
+
+        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+        assert_eq!(mh.md5sum(), new_mh.md5sum());
+        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+        assert_eq!(bmh.md5sum(), new_mh.md5sum());
+        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+        assert_eq!(mh.mins(), new_mh.mins());
+        assert_eq!(bmh.mins(), new_bmh.mins());
+        assert_eq!(bmh.mins(), new_mh.mins());
+        assert_eq!(mh.mins(), new_bmh.mins());
+
+        assert_eq!(mh.abunds(), new_mh.abunds());
+        assert_eq!(bmh.abunds(), new_bmh.abunds());
+        assert_eq!(bmh.abunds(), new_mh.abunds());
+        assert_eq!(mh.abunds(), new_bmh.abunds());
+
+        assert_eq!(
+            mh.similarity(&new_mh, false, false).unwrap(),
+            bmh.similarity(&new_bmh, false, false).unwrap()
+        );
+
+        assert_eq!(
+            mh.similarity(&new_mh, true, false).unwrap(),
+            bmh.similarity(&new_bmh, true, false).unwrap()
+        );
+
+        buffer.clear();
+        let imh: KmerMinHash = bmh.clone().into();
+        {
+            serde_json::to_writer(&mut buffer, &imh).unwrap();
+        }
+
+        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+        assert_eq!(mh.md5sum(), new_mh.md5sum());
+        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+        assert_eq!(bmh.md5sum(), new_mh.md5sum());
+        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+        assert_eq!(mh.mins(), new_mh.mins());
+        assert_eq!(bmh.mins(), new_bmh.mins());
+        assert_eq!(bmh.mins(), new_mh.mins());
+        assert_eq!(mh.mins(), new_bmh.mins());
+
+        assert_eq!(mh.abunds(), new_mh.abunds());
+        assert_eq!(bmh.abunds(), new_bmh.abunds());
+        assert_eq!(bmh.abunds(), new_mh.abunds());
+        assert_eq!(mh.abunds(), new_bmh.abunds());
+
+        assert_eq!(
+            mh.similarity(&new_mh, false, false).unwrap(),
+            bmh.similarity(&new_bmh, false, false).unwrap()
+        );
+
+        assert_eq!(
+            mh.similarity(&new_mh, true, false).unwrap(),
+            bmh.similarity(&new_bmh, true, false).unwrap()
+        );
+    }
+}
+
+// TODO: test btree ::default()
+// TODO: check .clear(), .is_empty()
+// TODO: set_hash_function?
+// TODO: enable/disable abundance
+// TODO: downsample_max_hash
+// TODO: remove, remove_many
+// TODO: add_from, add_many, add_many_with_abund
+// TODO: count_common, intersection, intersection_size

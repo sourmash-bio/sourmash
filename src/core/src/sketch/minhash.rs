@@ -1921,3 +1921,53 @@ impl SigsTrait for KmerMinHashBTree {
         Ok(())
     }
 }
+
+impl From<KmerMinHashBTree> for KmerMinHash {
+    fn from(other: KmerMinHashBTree) -> KmerMinHash {
+        let mut new_mh = KmerMinHash::new(
+            other.num(),
+            other.ksize() as u32,
+            other.hash_function(),
+            other.seed(),
+            other.max_hash(),
+            other.track_abundance(),
+        );
+
+        let mins = other.mins.into_iter().collect();
+        let abunds = if let Some(abunds) = other.abunds {
+            Some(abunds.values().into_iter().cloned().collect())
+        } else {
+            None
+        };
+
+        new_mh.mins = mins;
+        new_mh.abunds = abunds;
+
+        new_mh
+    }
+}
+
+impl From<KmerMinHash> for KmerMinHashBTree {
+    fn from(other: KmerMinHash) -> KmerMinHashBTree {
+        let mut new_mh = KmerMinHashBTree::new(
+            other.num(),
+            other.ksize() as u32,
+            other.hash_function(),
+            other.seed(),
+            other.max_hash(),
+            other.track_abundance(),
+        );
+
+        let mins: BTreeSet<u64> = other.mins.into_iter().collect();
+        let abunds = if let Some(abunds) = other.abunds {
+            Some(mins.iter().cloned().zip(abunds.into_iter()).collect())
+        } else {
+            None
+        };
+
+        new_mh.mins = mins;
+        new_mh.abunds = abunds;
+
+        new_mh
+    }
+}
