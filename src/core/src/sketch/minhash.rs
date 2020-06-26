@@ -715,7 +715,7 @@ impl KmerMinHash {
         Ok(new_mh)
     }
 
-    fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
+    pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
                 .iter()
@@ -1759,7 +1759,7 @@ impl KmerMinHashBTree {
         Ok(new_mh)
     }
 
-    fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
+    pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             abunds.iter().map(|(a, b)| (*a, *b)).collect()
         } else {

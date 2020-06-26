@@ -400,6 +400,16 @@ fn load_save_minhash_sketches() {
         assert_eq!(bmh.abunds(), new_mh.abunds());
         assert_eq!(mh.abunds(), new_bmh.abunds());
 
+        assert_eq!(mh.to_vec(), new_mh.to_vec());
+        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+        assert_eq!(bmh.to_vec(), new_mh.to_vec());
+        assert_eq!(mh.to_vec(), new_bmh.to_vec());
+
+        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
+
         assert!(
             (mh.similarity(&new_mh, false, false).unwrap()
                 - bmh.similarity(&new_bmh, false, false).unwrap())
@@ -452,6 +462,16 @@ fn load_save_minhash_sketches_abund() {
         assert_eq!(bmh.abunds(), new_bmh.abunds());
         assert_eq!(bmh.abunds(), new_mh.abunds());
         assert_eq!(mh.abunds(), new_bmh.abunds());
+
+        assert_eq!(mh.to_vec(), new_mh.to_vec());
+        assert_eq!(bmh.to_vec(), new_bmh.to_vec());
+        assert_eq!(bmh.to_vec(), new_mh.to_vec());
+        assert_eq!(mh.to_vec(), new_bmh.to_vec());
+
+        assert_eq!(mh.to_vec_abunds(), new_mh.to_vec_abunds());
+        assert_eq!(bmh.to_vec_abunds(), new_bmh.to_vec_abunds());
+        assert_eq!(bmh.to_vec_abunds(), new_mh.to_vec_abunds());
+        assert_eq!(mh.to_vec_abunds(), new_bmh.to_vec_abunds());
 
         assert!(
             (mh.similarity(&new_mh, false, false).unwrap()
@@ -508,7 +528,7 @@ fn load_save_minhash_sketches_abund() {
 }
 
 #[test]
-fn merge_empty() {
+fn merge_empty_scaled() {
     let max_hash = max_hash_for_scaled(10).unwrap();
     let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
     let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
@@ -539,6 +559,14 @@ fn check_errors() {
     let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
     let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
 
+    // sequence too short: OK
+    assert!(a.add_sequence(b"AC", false).is_ok());
+    assert!(b.add_sequence(b"AC", false).is_ok());
+
+    // invalid base, throw error
+    assert!(a.add_sequence(b"ACTGNN", false).is_err());
+    assert!(b.add_sequence(b"ACTGNN", false).is_err());
+
     a.add_hash(1);
     b.add_hash(1);
 
@@ -554,29 +582,110 @@ fn check_errors() {
     assert!(a.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
     assert!(b.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
 
-    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
-    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let c = KmerMinHash::new(0, 7, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let d = KmerMinHashBTree::new(0, 7, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    // different ksize
+    assert!(a.check_compatible(&c).is_err());
+    assert!(b.check_compatible(&d).is_err());
+
+    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_protein, 42, max_hash, true);
+    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_protein, 42, max_hash, true);
+
+    // different hash_function
+    assert!(a.check_compatible(&c).is_err());
+    assert!(b.check_compatible(&d).is_err());
+
+    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 31, max_hash, true);
+    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 31, max_hash, true);
+
+    // different seed
+    assert!(a.check_compatible(&c).is_err());
+    assert!(b.check_compatible(&d).is_err());
 }
 
-// DONE:
-// merge two empty abundance mhs/bmhs
-// clear bmh with abundance
-// serialize bmh with abundance
-// deserialize bmh abundance
-// add_hash_with_abundance 0
-// enable_abundance after insertion, check error
-// set_hash_function in non-empty (check error)
-// count_common downsample (both ways)
-// similarity downsample (both ways)
+//fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
 
-// TODO:
-// deserialize bmh dayhoff/hp/dna
-// similarity downsample (both ways)
-// to_vec_abunds without abundance
-// bmh to_vec
+proptest! {
+#[test]
+fn load_save_minhash_dayhoff(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 3, HashFunctions::murmur64_dayhoff, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 3, HashFunctions::murmur64_dayhoff, 42, max_hash, true);
 
-// check_compatible errors
-// add_sequence small seq (< k)
-// add_sequence invalid kmer
-// add_protein dayhoff and hp
-// From with abundance
+    a.add_protein(seq.as_bytes()).unwrap();
+    b.add_protein(seq.as_bytes()).unwrap();
+
+    let mut buffer_a = vec![];
+    let mut buffer_b = vec![];
+
+    {
+        serde_json::to_writer(&mut buffer_a, &a).unwrap();
+        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+    }
+
+    assert_eq!(buffer_a, buffer_b);
+
+    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+}
+}
+
+proptest! {
+#[test]
+fn load_save_minhash_hp(seq in "FLYS*CWLPGQRMTHINKVADER{0,1000}") {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 3, HashFunctions::murmur64_hp, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 3, HashFunctions::murmur64_hp, 42, max_hash, true);
+
+    a.add_protein(seq.as_bytes()).unwrap();
+    b.add_protein(seq.as_bytes()).unwrap();
+
+    let mut buffer_a = vec![];
+    let mut buffer_b = vec![];
+
+    {
+        serde_json::to_writer(&mut buffer_a, &a).unwrap();
+        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+    }
+
+    assert_eq!(buffer_a, buffer_b);
+
+    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+}
+}
+
+proptest! {
+#[test]
+fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 21, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 21, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    a.add_sequence(seq.as_bytes(), true).unwrap();
+    b.add_sequence(seq.as_bytes(), true).unwrap();
+
+    let mut buffer_a = vec![];
+    let mut buffer_b = vec![];
+
+    {
+        serde_json::to_writer(&mut buffer_a, &a).unwrap();
+        serde_json::to_writer(&mut buffer_b, &b).unwrap();
+    }
+
+    assert_eq!(buffer_a, buffer_b);
+
+    let c: KmerMinHash = serde_json::from_reader(&buffer_b[..]).unwrap();
+    let d: KmerMinHashBTree = serde_json::from_reader(&buffer_a[..]).unwrap();
+
+    assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+}
+}
