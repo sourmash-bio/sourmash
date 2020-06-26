@@ -99,39 +99,31 @@ def test_do_sourmash_compute_output_stdout_valid():
                    for testdata in (testdata1, testdata2, testdata3))
 
 
-def test_do_sourmash_compute_output_and_name_valid_file():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        testdata3 = utils.get_test_data('short3.fa')
-        sigfile = os.path.join(location, 'short.fa.sig')
+@utils.in_tempdir
+def test_do_sourmash_compute_output_and_name_valid_file(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    testdata3 = utils.get_test_data('short3.fa')
+    sigfile = c.output('short.fa.sig')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '-o', sigfile,
-                                            '--merge', '"name"',
-                                            testdata1,
-                                            testdata2, testdata3],
-                                           in_directory=location)
+    c.run_sourmash('compute', '-k', '31', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
 
-        assert os.path.exists(sigfile)
-        assert 'calculated 1 signatures for 4 sequences taken from 3 files' in err
+    assert os.path.exists(sigfile)
+    assert 'calculated 1 signatures for 4 sequences taken from 3 files' in c.last_result.err
 
-        # is it valid json?
-        with open(sigfile, 'r') as f:
-            data = json.load(f)
+    # is it valid json?
+    with open(sigfile, 'r') as f:
+        data = json.load(f)
 
-        assert len(data) == 1
+    assert len(data) == 1
 
-        all_testdata = " ".join([testdata1, testdata2, testdata3])
-        sigfile_merged = os.path.join(location, 'short.all.fa.sig')
-        cmd = "cat {} | sourmash compute -k 31 -o {} -".format(
-                all_testdata, sigfile_merged)
-        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
+    sigfile_merged = c.output('short.all.fa.sig')
+    c.run_sourmash('compute', '-k', '31', '-o', sigfile_merged, '--merge', '"name"', testdata1, testdata2, testdata3)
 
-        with open(sigfile_merged, 'r') as f:
-            data_merged = json.load(f)
+    with open(sigfile_merged, 'r') as f:
+        data_merged = json.load(f)
 
-        assert data[0]['signatures'][0]['mins'] == data_merged[0]['signatures'][0]['mins']
+    assert data[0]['signatures'][0]['mins'] == data_merged[0]['signatures'][0]['mins']
 
 
 @utils.in_tempdir
