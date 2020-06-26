@@ -258,6 +258,10 @@ impl KmerMinHash {
     }
 
     pub fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        if self.hash_function == h {
+            return Ok(());
+        }
+
         if !self.is_empty() {
             return Err(SourmashError::NonEmptyMinHash {
                 message: "hash_function".into(),
@@ -1407,6 +1411,10 @@ impl KmerMinHashBTree {
     }
 
     pub fn set_hash_function(&mut self, h: HashFunctions) -> Result<(), Error> {
+        if self.hash_function == h {
+            return Ok(());
+        }
+
         if !self.is_empty() {
             return Err(SourmashError::NonEmptyMinHash {
                 message: "hash_function".into(),

@@ -19,9 +19,10 @@ const EPSILON: f64 = 0.01;
 fn throws_error() {
     let mut mh = KmerMinHash::new(1, 4, HashFunctions::murmur64_DNA, 42, 0, false);
 
-    if mh.add_sequence(b"ATGR", false).is_ok() {
-        panic!("R is not a valid DNA character")
-    }
+    assert!(
+        mh.add_sequence(b"ATGR", false).is_err(),
+        "R is not a valid DNA character"
+    );
 }
 
 #[test]
@@ -241,7 +242,35 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(c.abunds(), d.abunds());
 
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
+    assert!((c.similarity(&a, false, false).unwrap() - d.similarity(&b, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+    assert!((c.similarity(&a, true, false).unwrap() - d.similarity(&b, true, false).unwrap()).abs() < EPSILON);
+
+    assert_eq!(a.count_common(&c, false).unwrap(), b.count_common(&d, false).unwrap());
+    assert_eq!(c.count_common(&a, false).unwrap(), d.count_common(&b, false).unwrap());
+    assert_eq!(a.count_common(&c, true).unwrap(), b.count_common(&d, true).unwrap());
+    assert_eq!(c.count_common(&a, true).unwrap(), d.count_common(&b, true).unwrap());
+
+    let e = a.downsample_max_hash(100).unwrap();
+    let f = b.downsample_max_hash(100).unwrap();
+
+    // Can't compare different scaled without explicit downsample
+    assert!(c.similarity(&e, false, false).is_err());
+    assert!(d.similarity(&f, false, false).is_err());
+    assert!(c.similarity(&e, true, false).is_err());
+    assert!(d.similarity(&f, true, false).is_err());
+
+    assert!((c.similarity(&e, true, true).unwrap() - d.similarity(&f, true, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
+    assert!((c.similarity(&e, false, true).unwrap() - d.similarity(&f, false, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
+
+    // Can't compare different scaled without explicit downsample
+    assert!(e.count_common(&c, false).is_err());
+    assert!(f.count_common(&d, false).is_err());
+
+    assert_eq!(e.count_common(&c, true).unwrap(), f.count_common(&d, true).unwrap());
+    assert_eq!(c.count_common(&e, true).unwrap(), d.count_common(&f, true).unwrap());
 }
 }
 
@@ -386,3 +415,168 @@ fn load_save_minhash_sketches() {
         );
     }
 }
+
+#[test]
+fn load_save_minhash_sketches_abund() {
+    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("../../tests/test-data/gather-abund/reads-s10-s11.sig");
+
+    let file = File::open(filename).unwrap();
+    let reader = BufReader::new(file);
+    let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+    let sig = sigs.get(0).unwrap();
+    let sketches = sig.sketches();
+    let mut buffer = vec![];
+
+    if let Sketch::MinHash(mh) = &sketches[0] {
+        let bmh: KmerMinHashBTree = mh.clone().into();
+        {
+            serde_json::to_writer(&mut buffer, &bmh).unwrap();
+        }
+
+        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+        assert_eq!(mh.md5sum(), new_mh.md5sum());
+        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+        assert_eq!(bmh.md5sum(), new_mh.md5sum());
+        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+        assert_eq!(mh.mins(), new_mh.mins());
+        assert_eq!(bmh.mins(), new_bmh.mins());
+        assert_eq!(bmh.mins(), new_mh.mins());
+        assert_eq!(mh.mins(), new_bmh.mins());
+
+        assert_eq!(mh.abunds(), new_mh.abunds());
+        assert_eq!(bmh.abunds(), new_bmh.abunds());
+        assert_eq!(bmh.abunds(), new_mh.abunds());
+        assert_eq!(mh.abunds(), new_bmh.abunds());
+
+        assert!(
+            (mh.similarity(&new_mh, false, false).unwrap()
+                - bmh.similarity(&new_bmh, false, false).unwrap())
+            .abs()
+                < EPSILON
+        );
+
+        assert!(
+            (mh.similarity(&new_mh, true, false).unwrap()
+                - bmh.similarity(&new_bmh, true, false).unwrap())
+            .abs()
+                < EPSILON
+        );
+
+        buffer.clear();
+        let imh: KmerMinHash = bmh.clone().into();
+        {
+            serde_json::to_writer(&mut buffer, &imh).unwrap();
+        }
+
+        let new_mh: KmerMinHash = serde_json::from_reader(&buffer[..]).unwrap();
+        let new_bmh: KmerMinHashBTree = serde_json::from_reader(&buffer[..]).unwrap();
+
+        assert_eq!(mh.md5sum(), new_mh.md5sum());
+        assert_eq!(bmh.md5sum(), new_bmh.md5sum());
+        assert_eq!(bmh.md5sum(), new_mh.md5sum());
+        assert_eq!(mh.md5sum(), new_bmh.md5sum());
+
+        assert_eq!(mh.mins(), new_mh.mins());
+        assert_eq!(bmh.mins(), new_bmh.mins());
+        assert_eq!(bmh.mins(), new_mh.mins());
+        assert_eq!(mh.mins(), new_bmh.mins());
+
+        assert_eq!(mh.abunds(), new_mh.abunds());
+        assert_eq!(bmh.abunds(), new_bmh.abunds());
+        assert_eq!(bmh.abunds(), new_mh.abunds());
+        assert_eq!(mh.abunds(), new_bmh.abunds());
+
+        assert!(
+            (mh.similarity(&new_mh, false, false).unwrap()
+                - bmh.similarity(&new_bmh, false, false).unwrap())
+            .abs()
+                < EPSILON
+        );
+
+        assert!(
+            (mh.similarity(&new_mh, true, false).unwrap()
+                - bmh.similarity(&new_bmh, true, false).unwrap())
+            .abs()
+                < EPSILON
+        );
+    }
+}
+
+#[test]
+fn merge_empty() {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+
+    a.merge(&c).unwrap();
+    b.merge(&d).unwrap();
+
+    assert!(a.is_empty());
+    assert!(b.is_empty());
+
+    a.add_hash_with_abundance(0, 0);
+    assert!(a.is_empty());
+    b.add_hash_with_abundance(0, 0);
+    assert!(b.is_empty());
+
+    a.clear();
+    assert!(a.is_empty());
+    b.clear();
+    assert!(b.is_empty());
+}
+
+#[test]
+fn check_errors() {
+    let max_hash = max_hash_for_scaled(10).unwrap();
+    let mut a = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
+    let mut b = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, false);
+
+    a.add_hash(1);
+    b.add_hash(1);
+
+    // Can't set abundance after something was inserted
+    assert!(a.enable_abundance().is_err());
+    assert!(b.enable_abundance().is_err());
+
+    // Can't change hash function after insertion
+    assert!(a.set_hash_function(HashFunctions::murmur64_hp).is_err());
+    assert!(b.set_hash_function(HashFunctions::murmur64_hp).is_err());
+
+    // setting to the same hash function is fine
+    assert!(a.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
+    assert!(b.set_hash_function(HashFunctions::murmur64_DNA).is_ok());
+
+    let c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+    let d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
+}
+
+// DONE:
+// merge two empty abundance mhs/bmhs
+// clear bmh with abundance
+// serialize bmh with abundance
+// deserialize bmh abundance
+// add_hash_with_abundance 0
+// enable_abundance after insertion, check error
+// set_hash_function in non-empty (check error)
+// count_common downsample (both ways)
+// similarity downsample (both ways)
+
+// TODO:
+// deserialize bmh dayhoff/hp/dna
+// similarity downsample (both ways)
+// to_vec_abunds without abundance
+// bmh to_vec
+
+// check_compatible errors
+// add_sequence small seq (< k)
+// add_sequence invalid kmer
+// add_protein dayhoff and hp
+// From with abundance
