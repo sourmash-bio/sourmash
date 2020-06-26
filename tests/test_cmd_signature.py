@@ -530,6 +530,56 @@ def test_sig_rename_2_output_to_same(c):
     assert actual_rename_sig.name() == 'fiz bar'
 
 
+@utils.in_thisdir
+def test_sig_cat_1(c):
+    # cat 47 to 47...
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'cat', sig47)
+
+    # stdout should be same signature
+    out = c.last_result.out
+
+    test_cat_sig = sourmash.load_one_signature(sig47)
+    actual_cat_sig = sourmash.load_one_signature(out)
+
+    assert actual_cat_sig == test_cat_sig
+
+
+@utils.in_thisdir
+def test_sig_cat_2(c):
+    # cat several
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47abund, multisig)
+
+    # stdout should be same signatures
+    out = c.last_result.out
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_2_out(c):
+    # cat several
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47abund, multisig,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
 @utils.in_tempdir
 def test_sig_extract_1(c):
     # extract 47 from 47... :)
