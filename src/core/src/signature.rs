@@ -65,7 +65,7 @@ impl SigsTrait for Sketch {
             },
             Sketch::LargeMinHash(ref mh) => match other {
                 Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
-                _ => Err(SourmashError::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType.into()),
             },
         }
     }
