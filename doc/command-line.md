@@ -491,7 +491,7 @@ for an example use case.
 These commands manipulate signatures from the command line. Currently
 supported subcommands are `merge`, `rename`, `intersect`,
 `extract`, `downsample`, `subtract`, `import`, `export`, `info`,
-`flatten`, and `filter`.
+`flatten`, `filter`, `cat`, and `split`.
 
 The signature commands that combine or otherwise have multiple
 signatures interacting (`merge`, `intersect`, `subtract`) work only on
@@ -507,6 +507,46 @@ from nucleotide and protein sequences, you can choose amongst them with
 such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
+
+### `sourmash signature cat`
+
+Concatenate signature files.
+
+For example,
+```
+sourmash signature cat file1.sig file2.sig -o all.sig
+```
+will combine all signatures in `file1.sig` and `file2.sig` and put them
+in the file `all.sig`.
+
+### `sourmash signature split`
+
+Split each signature in the input file(s) into individual files, with
+standardized names.
+
+For example,
+```
+sourmash signature split tests/test-data/2.fa.sig
+```
+will create 3 files,
+
+`f372e478.k=21.scaled=1000.dup=0.2.fa.sig`,
+`f3a90d4e.k=31.scaled=1000.dup=0.2.fa.sig`, and
+`43f3b48e.k=51.scaled=1000.dup=0.2.fa.sig`, representing the three
+different signatures at different ksizes created from the input file
+`2.fa`.
+
+The format of the names of the output files is standardized and stable
+for major versions of sourmash: currently, they are period-separated
+with fields:
+
+* `md5sum` - a unique hash value based on the contents of the signature.
+* `k=<ksize>` - k-mer size.
+* `scaled=<scaled>` or `num=<num>` - scaled or num value for MinHash.
+* `dup=<n>` - a non-negative integer that prevents duplicate signatures from colliding.
+* `basename` - basename of first input file used to create signature; if none provided, or stdin, this is `none`.
+
+If `--outdir` is specified, all of the signatures are placed in outdir.
 
 ### `sourmash signature merge`
 

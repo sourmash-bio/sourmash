@@ -97,8 +97,8 @@ def split(args):
     set_quiet(args.quiet)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.dup={dup}.{basename}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.dup={dup}.{basename}.sig'
 
     if args.outdir:
         if not os.path.exists(args.outdir):
@@ -126,6 +126,8 @@ def split(args):
             md5sum = sig.md5sum()[:8]
             minhash = sig.minhash
             basename = os.path.basename(sig.filename)
+            if not basename or basename == '-':
+                basename = 'none'
 
             params = dict(basename=basename,
                           md5sum=md5sum,
@@ -138,12 +140,13 @@ def split(args):
             else: # num
                 output_template = output_num_template
 
-            output_name = output_template.format(**params)
-            base_output_name = output_name
 
             n = 0
+            params['dup'] = n
+            output_name = output_template.format(**params)
             while output_name in output_names:
-                output_name = '{}.{}'.format(base_output_name, n)
+                params['dup'] = n
+                output_name = output_template.format(**params)
                 n += 1
 
             output_names.add(output_name)

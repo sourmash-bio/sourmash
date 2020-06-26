@@ -581,6 +581,97 @@ def test_sig_cat_2_out(c):
 
 
 @utils.in_tempdir
+def test_sig_split_1(c):
+    # split 47 into 1 sig :)
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47)
+
+    outname = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+
+    assert os.path.exists(c.output(outname))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+    actual_split_sig = sourmash.load_one_signature(c.output(outname))
+
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_1_overwrite(c):
+    # check message about overwriting
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47)
+
+    outname = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+    assert os.path.exists(c.output(outname))
+
+    c.run_sourmash('sig', 'split', sig47)
+
+    err = c.last_result.err
+    print(err)
+    assert '** overwriting existing file ' + outname in err
+
+
+@utils.in_tempdir
+def test_sig_split_2(c):
+    # split 47 twice
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47, sig47)
+
+    outname1 = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+    outname2 = '09a08691.k=31.scaled=1000.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_2_outdir(c):
+    # split 47 twice, put in outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--outdir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_3_multisig(c):
+    # split 47 and 47+63-multisig.sig
+    sig47 = utils.get_test_data('47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'split', sig47, multisig)
+
+    outlist = ['57e2b22f.k=31.scaled=1000.dup=0.none.sig',
+               'bde81a41.k=31.scaled=1000.dup=0.none.sig',
+               'f033bbd8.k=31.scaled=1000.dup=0.none.sig',
+               '87a9aec4.k=31.scaled=1000.dup=0.none.sig',
+               '837bf2a7.k=31.scaled=1000.dup=0.none.sig',
+               '485c3377.k=31.scaled=1000.dup=0.none.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+@utils.in_tempdir
 def test_sig_extract_1(c):
     # extract 47 from 47... :)
     sig47 = utils.get_test_data('47.fa.sig')
