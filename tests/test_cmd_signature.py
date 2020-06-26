@@ -586,7 +586,7 @@ def test_sig_split_1(c):
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'split', sig47)
 
-    outname = '09a08691.k=31.scaled=1000.dna.dup=0.47.fa.sig'
+    outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
 
     assert os.path.exists(c.output(outname))
 
