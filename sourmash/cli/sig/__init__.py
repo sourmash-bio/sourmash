@@ -5,6 +5,7 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 """
 
 from . import cat
+from . import split
 from . import describe
 from . import downsample
 from . import extract

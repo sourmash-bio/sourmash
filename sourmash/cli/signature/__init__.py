@@ -7,6 +7,7 @@ This can be removed once Python 2.7 is no longer supported, in favor of an
 """
 
 from ..sig import cat
+from ..sig import split
 from ..sig import describe
 from ..sig import downsample
 from ..sig import extract

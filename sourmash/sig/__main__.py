@@ -89,6 +89,54 @@ def cat(args):
     notify('saved {} signatures', len(siglist))
 
 
+def split(args):
+    """
+    split all signatures into individual
+    """
+    set_quiet(args.quiet)
+
+    output_names = {}
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.sig'
+
+    total = 0
+    for sigfile in args.signatures:
+        this_siglist = []
+        try:
+            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(sigfile))
+            error(str(exc))
+            error('(continuing)')
+
+        this_siglist = list(this_siglist)
+
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
+               end='\r')
+        total += len(this_siglist)
+
+        # output here
+        for sig in this_siglist:
+            md5sum = sig.md5sum()[:8]
+            minhash = sig.minhash
+            params = dict(md5sum=md5sum,
+                          scaled=minhash.scaled,
+                          ksize=minhash.ksize,
+                          num=minhash.num)
+
+            if minhash.scaled:
+                output_template = output_scaled_template
+            else: # num
+                output_template = output_num_template
+
+            output_name = output_template.format(**params)
+            with open(output_name, 'wt') as outfp:
+                sourmash.save_signatures([sig], outfp)
+                notify('writing sig to {}', output_name)
+
+    notify('loaded and split {} signatures total.', total)
+
+
 def describe(args):
     """
     provide basic info on signatures
