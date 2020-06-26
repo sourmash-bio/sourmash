@@ -694,7 +694,7 @@ impl KmerMinHash {
     }
 
     // create a downsampled copy of self
-    fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
+    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
         let mut new_mh = KmerMinHash::new(
             self.num,
             self.ksize,
@@ -1734,7 +1734,7 @@ impl KmerMinHashBTree {
     }
 
     // create a downsampled copy of self
-    fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+    pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
         let mut new_mh = KmerMinHashBTree::new(
             self.num,
             self.ksize,

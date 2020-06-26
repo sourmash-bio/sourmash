@@ -154,23 +154,38 @@ fn max_for_scaled() {
 proptest! {
 #[test]
 fn oracle_mins(hashes in vec(u64::ANY, 1..10000)) {
-    let mut a = KmerMinHash::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
-    let mut b = KmerMinHashBTree::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut a = KmerMinHash::new(1000, 21, HashFunctions::murmur64_protein, 42, 0, true);
+    let mut b = KmerMinHashBTree::new(1000, 21, HashFunctions::murmur64_protein, 42, 0, true);
 
-    let mut c = KmerMinHash::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
-    let mut d = KmerMinHashBTree::new(10, 6, HashFunctions::murmur64_DNA, 42, 0, true);
+    let mut c: KmerMinHash = Default::default();
+    c.set_hash_function(HashFunctions::murmur64_protein).unwrap();
+    c.enable_abundance().unwrap();
 
-    for hash in hashes {
-        a.add_hash(hash);
-        b.add_hash(hash);
+    let mut d: KmerMinHashBTree = Default::default();
+    d.set_hash_function(HashFunctions::murmur64_protein).unwrap();
+    d.enable_abundance().unwrap();
+
+    let mut to_remove = vec![];
+    for hash in &hashes {
+        a.add_hash(*hash);
+        b.add_hash(*hash);
 
         if hash % 2 == 0 {
-          c.add_hash(hash);
-          d.add_hash(hash);
+            to_remove.push(*hash);
         }
     }
+
+    c.add_from(&a).unwrap();
+    c.remove_many(&to_remove).unwrap();
+
+    d.add_from(&b).unwrap();
+    d.remove_many(&to_remove).unwrap();
+
     assert_eq!(a.mins(), b.mins());
     assert_eq!(c.mins(), d.mins());
+
+    assert_eq!(a.count_common(&c, false).unwrap(), b.count_common(&d, false).unwrap());
+    assert_eq!(a.count_common(&c, true).unwrap(), b.count_common(&d, true).unwrap());
 
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
@@ -189,15 +204,24 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     let mut c = KmerMinHash::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
     let mut d = KmerMinHashBTree::new(0, 6, HashFunctions::murmur64_DNA, 42, max_hash, true);
 
-    for hash in hashes {
-        a.add_hash(hash);
-        b.add_hash(hash);
+    let mut to_remove = vec![];
+    for hash in &hashes {
+        a.add_hash(*hash);
+        b.add_hash(*hash);
 
         if hash % 2 == 0 {
-          c.add_hash(hash);
-          d.add_hash(hash);
+            to_remove.push(*hash);
         }
     }
+
+    c.add_many(&hashes).unwrap();
+    d.add_many(&hashes).unwrap();
+
+    c.remove_many(&to_remove).unwrap();
+    d.remove_many(&to_remove).unwrap();
+
+    a.remove_hash(hashes[0]);
+    b.remove_hash(hashes[0]);
 
     assert_eq!(a.mins(), b.mins());
     assert_eq!(c.mins(), d.mins());
@@ -246,8 +270,29 @@ fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
     assert_eq!(a.abunds(), b.abunds());
     assert_eq!(c.abunds(), d.abunds());
 
+    assert_eq!(a.intersection_size(&c).unwrap(), b.intersection_size(&d).unwrap());
+    assert_eq!(c.intersection(&a).unwrap(), d.intersection(&b).unwrap());
+
     assert!((a.similarity(&c, false, false).unwrap() - b.similarity(&d, false, false).unwrap()).abs() < EPSILON);
     assert!((a.similarity(&c, true, false).unwrap() - b.similarity(&d, true, false).unwrap()).abs() < EPSILON);
+
+    let mut e = a.downsample_max_hash(100).unwrap();
+    let mut f = b.downsample_max_hash(100).unwrap();
+
+    assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
+
+    e.disable_abundance();
+    f.disable_abundance();
+
+    assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
+
+    e.clear();
+    f.clear();
+
+    assert!(e.is_empty());
+    assert!(f.is_empty());
 }
 }
 
@@ -341,12 +386,3 @@ fn load_save_minhash_sketches() {
         );
     }
 }
-
-// TODO: test btree ::default()
-// TODO: check .clear(), .is_empty()
-// TODO: set_hash_function?
-// TODO: enable/disable abundance
-// TODO: downsample_max_hash
-// TODO: remove, remove_many
-// TODO: add_from, add_many, add_many_with_abund
-// TODO: count_common, intersection, intersection_size
