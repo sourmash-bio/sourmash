@@ -5,6 +5,7 @@ from __future__ import print_function, unicode_literals
 import sys
 import csv
 import json
+import os
 
 import sourmash
 import copy
@@ -95,9 +96,9 @@ def split(args):
     """
     set_quiet(args.quiet)
 
-    output_names = {}
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.sig'
+    output_names = set()
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{basename}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{basename}.sig'
 
     total = 0
     for sigfile in args.signatures:
@@ -119,7 +120,10 @@ def split(args):
         for sig in this_siglist:
             md5sum = sig.md5sum()[:8]
             minhash = sig.minhash
-            params = dict(md5sum=md5sum,
+            basename = os.path.basename(sig.filename)
+
+            params = dict(basename=basename,
+                          md5sum=md5sum,
                           scaled=minhash.scaled,
                           ksize=minhash.ksize,
                           num=minhash.num)
@@ -130,6 +134,21 @@ def split(args):
                 output_template = output_num_template
 
             output_name = output_template.format(**params)
+            base_output_name = output_name
+
+            n = 0
+            while output_name in output_names:
+                output_name = '{}.{}'.format(base_output_name, n)
+                n += 1
+
+            output_names.add(output_name)
+
+            if args.outdir:
+                output_name = os.path.join(args.outdir, output_name)
+
+            if os.path.exists(output_name):
+                notify("** overwriting existing file {}".format(output_name))
+
             with open(output_name, 'wt') as outfp:
                 sourmash.save_signatures([sig], outfp)
                 notify('writing sig to {}', output_name)
