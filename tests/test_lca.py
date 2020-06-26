@@ -121,13 +121,26 @@ def test_find_lca_2():
     assert lca == ((LineagePair('rank1', 'name1'),), 2)
 
 
+def test_find_lca_3():
+    lin1 = lca_utils.make_lineage('a;b;c')
+    lin2 = lca_utils.make_lineage('a;b')
+
+    tree = build_tree([lin1, lin2])
+    lca, reason = find_lca(tree)
+    assert lca == lin1                    # find most specific leaf node
+
+
+### command line tests
+
+
 def test_api_create_search():
     # create a database and then search for result.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
                                      ksize=31)
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss)
+    count = lca_db.insert(ss)
+    assert count == len(ss.minhash)
 
     results = lca_db.search(ss, threshold=0.0)
     print(results)
@@ -182,6 +195,18 @@ def test_api_create_insert_bad_scaled():
     assert ss.minhash.scaled == 1000
 
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500)
+    with pytest.raises(ValueError):
+        lca_db.insert(ss)
+
+
+def test_api_create_insert_bad_moltype():
+    # can we insert a DNAsignature into a protein DB?
+    # hopefully not.
+    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                     ksize=31)
+    assert ss.minhash.moltype == 'DNA'
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500, moltype='protein')
     with pytest.raises(ValueError):
         lca_db.insert(ss)
 
@@ -432,7 +457,9 @@ def test_api_create_insert_scale_two():
 
     # downsample to 5000 while inserting:
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
-    lca_db.insert(ss)
+    count = lca_db.insert(ss)
+    assert count == 1037
+    assert count == len(ss.minhash.downsample_scaled(5000))
     lca_db.insert(ss2)
 
     # downsample sigs to 5000
@@ -609,6 +636,7 @@ def test_basic_index():
 
         assert os.path.exists(lca_db)
 
+        assert 'Building LCA database with ksize=31 scaled=10000 moltype=DNA' in err
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
@@ -818,7 +846,7 @@ def test_index_traverse_real_spreadsheet_no_report():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' in err
 
@@ -843,7 +871,7 @@ def test_index_traverse_real_spreadsheet_report():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 957 distinct identifiers in spreadsheet.' in err
-        assert 'WARNING: no signatures for 956 lineage assignments.' in err
+        assert 'WARNING: no signatures for 956 spreadsheet rows.' in err
         assert 'WARNING: 105 unused lineages.' in err
         assert '(You can use --report to generate a detailed report.)' not in err
         assert os.path.exists(report_loc)
@@ -1379,6 +1407,166 @@ def test_summarize_unknown_hashes():
         assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
 
 
+def test_multi_summarize_with_unassigned_with_abund():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               input_sig2, '--with-abundance']
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        assert status != 0
+        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
+
+
+def test_multi_summarize_with_unassigned_singleton_abund():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca/delmont-6.csv')
+        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+        lca_db = os.path.join(location, 'delmont-1.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               input_sig2, '--singleton', '--with-abundance']
+        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert status != 0
+        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
+
+
+def test_summarize_to_root_abund():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
+               '--with-abundance']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '78.9%   101   Archaea' in out
+        assert '21.1%    27   (root)' in out
+
+
+def test_summarize_unknown_hashes_abund():
+    with utils.TempDirectory() as location:
+        taxcsv = utils.get_test_data('lca-root/tax.csv')
+        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
+        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+        lca_db = os.path.join(location, 'lca-root.lca.json')
+
+        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert os.path.exists(lca_db)
+
+        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
+               '--with-abundance']
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        assert '(root)' not in out
+        assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
+
+
+@utils.in_thisdir
+def test_lca_summarize_abund_hmp(c):
+    # test lca summarize --with-abundance on some real data
+    queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
+    dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--with-abundance')
+
+    assert '32.1%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_lca_summarize_abund_fake_no_abund(c):
+    # test lca summarize on some known/fake data; see docs for explanation.
+    queryfile = utils.get_test_data('fake-abund/query.sig.gz')
+    dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
+
+    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' not in c.last_result.err
+    assert 'NOTE: discarding abundances in query, since --with-abundance not given' in c.last_result.err
+    assert '79.6%   550   Bacteria' in c.last_result.out
+    assert '20.4%   141   Archaea' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_lca_summarize_abund_fake_yes_abund(c):
+    # test lca summarize --with-abundance on some known/fake data
+    queryfile = utils.get_test_data('fake-abund/query.sig.gz')
+    dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
+
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--with-abundance')
+
+    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' in c.last_result.err
+    assert '43.2%   563   Bacteria' in c.last_result.out
+    assert '56.8%   740   Archaea' in c.last_result.out
+
+
 def test_rankinfo_on_multi():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/dir1.lca.json')
@@ -1430,6 +1618,7 @@ def test_rankinfo_on_single():
 
 def test_rankinfo_no_tax():
     with utils.TempDirectory() as location:
+        # note: TARA_PSW_MAG_00136 is _not_ in delmont-1.csv.
         taxcsv = utils.get_test_data('lca/delmont-1.csv')
         input_sig = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
         lca_db = os.path.join(location, 'delmont-1.lca.json')
@@ -1445,7 +1634,7 @@ def test_rankinfo_no_tax():
 
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+        assert '0 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'rankinfo', lca_db]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -1654,6 +1843,44 @@ def test_incompat_lca_db_scaled(c):
     assert 'new scaled 10000 is lower than current sample scaled 10000' in str(e.value)
 
 
+@utils.in_thisdir
+def test_lca_gather_protein(c):
+    # test lca gather on protein foo
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('lca', 'gather', testquery, db1)
+
+    assert c.last_result.status == 0
+    assert 'loaded 1 LCA databases. ksize=57, scaled=100 moltype=protein' in c.last_result.err
+    assert '340.9 kbp   100.0%  100.0%      s__B26-1 sp001593925 sp.' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_lca_gather_deprecated_message(c):
+    # lca gather is deprecated for 4.0; check message
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('lca', 'gather', testquery, db1)
+
+    assert c.last_result.status == 0
+    assert 'WARNING: lca gather is deprecated as of sourmash 3.4' in c.last_result.err
+
+
+@utils.in_thisdir
+def test_incompat_lca_db_moltype(c):
+    # test load of incompatible LCA DBs
+    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db1 = utils.get_test_data('prot/protein.lca.json.gz')
+    db2 = utils.get_test_data('prot/dayhoff.lca.json.gz')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('lca', 'gather', testquery, db1, db2)
+
+    assert 'Exception: multiple moltypes, quitting' in str(e.value)
+
+
 @utils.in_tempdir
 def test_incompat_lca_db_ksize(c):
     # create a database with ksize of 25
@@ -1704,8 +1931,7 @@ def test_lca_index_empty(c):
     assert name == lca_db_filename
 
 
-@utils.in_tempdir
-def test_lca_gather_threshold_1(c):
+def test_lca_gather_threshold_1():
     # test gather() method, in some detail; see same tests for sbt.
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
@@ -1764,8 +1990,7 @@ def test_lca_gather_threshold_1(c):
     assert not results
 
 
-@utils.in_tempdir
-def test_lca_gather_threshold_5(c):
+def test_lca_gather_threshold_5():
     # test gather() method, in some detail; see same tests for sbt.
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
@@ -1812,8 +2037,7 @@ def test_lca_gather_threshold_5(c):
     assert name == None
 
 
-@utils.in_tempdir
-def test_gather_multiple_return(c):
+def test_gather_multiple_return():
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
     sig63file = utils.get_test_data('63.fa.sig')
@@ -1834,3 +2058,330 @@ def test_gather_multiple_return(c):
     print(len(results))
     assert len(results) == 1
     assert results[0][0] == 1.0
+
+
+def test_lca_db_protein_build():
+    # test programmatic creation of LCA database with protein sigs in it
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_protein_save_load(c):
+    # test save/load of programmatically created db with protein sigs in it
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'protein'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_protein_command_index(c):
+    # test command-line creation of LCA database with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('protein.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '100', '-k', '57', '--protein')
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'protein'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_lca_db_protein_command_search(c):
+    # test command-line search/gather of LCA database with protein sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_lca_db_hp_build():
+    # test programmatic creation of LCA database with hp sigs in it
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_hp_save_load(c):
+    # test save/load of programmatically created db with hp sigs in it
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'hp'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_hp_command_index(c):
+    # test command-line creation of LCA database with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('hp.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '100', '-k', '57', '--hp')
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'hp'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_lca_db_hp_command_search(c):
+    # test command-line search/gather of LCA database with hp sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/hp.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_lca_db_dayhoff_build():
+    # test programmatic creation of LCA database with dayhoff sigs in it
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_dayhoff_save_load(c):
+    # test save/load of programmatically created db with dayhoff sigs in it
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+    
+    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    assert db.insert(sig1)
+    assert db.insert(sig2)
+
+    db.save(c.output('xxx.lca.json'))
+    del db
+
+    x = sourmash.lca.lca_db.load_single_database(c.output('xxx.lca.json'))
+    db2 = x[0]
+    assert db2.moltype == 'dayhoff'
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_tempdir
+def test_lca_db_dayhoff_command_index(c):
+    # test command-line creation of LCA database with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+    lineages = utils.get_test_data('prot/gtdb-subset-lineages.csv')
+
+    db_out = c.output('dayhoff.lca.json')
+
+    c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
+                   '-C', '3', '--split-identifiers', '--require-taxonomy',
+                   '--scaled', '100', '-k', '57', '--dayhoff')
+
+    x = sourmash.lca.lca_db.load_single_database(db_out)
+    db2 = x[0]
+    assert db2.moltype == 'dayhoff'
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+    sig2 = sourmash.load_one_signature(sigfile2)
+
+    # check reconstruction --
+    mh_list = [ x.minhash for x in db2.signatures() ]
+    assert len(mh_list) == 2
+    assert sig1.minhash in mh_list
+    assert sig2.minhash in mh_list
+
+    # and search, gather
+    results = db2.search(sig1, threshold=0.0)
+    assert len(results) == 2
+
+    results = db2.gather(sig2)
+    assert results[0][0] == 1.0
+
+
+@utils.in_thisdir
+def test_lca_db_dayhoff_command_search(c):
+    # test command-line search/gather of LCA database with dayhoff sigs
+    # (LCA database created as above)
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/dayhoff.lca.json.gz')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out

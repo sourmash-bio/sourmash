@@ -328,6 +328,11 @@ To report on individual signatures, use the `--singleton` flag; this will
 become default in sourmash 4.0 and beyond, and the merging behavior will
 be removed.
 
+As of sourmash 3.4, `sourmash lca summarize` also supports abundance
+weighted queries; this can be turned on with `--with-abundance`. This flag
+will weight output percentages by the number of times a k-mer is seen.
+This will become default behavior in sourmash 4.0 and beyond.
+
 Usage:
 
 ```
@@ -335,11 +340,10 @@ sourmash lca summarize --query query.sig [query2.sig ...]
     --db <lca db> [<lca db2> ...]
 ```
 
-For example, the command line:
+For example, with the data in `tests/test-data/fake-abund`, the command line:
 
 ```
-sourmash lca summarize --query tests/test-data/63.fa.sig \
-    --db tests/test-data/podar-ref.lca.json 
+sourmash lca summarize --query query.sig.gz --db matches.lca.json.gz
 ```
 
 will produce the following log output to stderr:
@@ -353,14 +357,22 @@ loaded 1 signatures from 1 files total.
 and the following example summarize output to stdout:
 
 ```
-50.5%   278   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica;Shewanella baltica OS223
-100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
-100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
-100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
-100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
-100.0%   550   Bacteria;Proteobacteria;Gammaproteobacteria
-100.0%   550   Bacteria;Proteobacteria
-100.0%   550   Bacteria
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica;Shewanella baltica OS223
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
+79.6%   550   Bacteria;Proteobacteria;Gammaproteobacteria
+79.6%   550   Bacteria;Proteobacteria
+79.6%   550   Bacteria
+20.4%   141   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum;Aciduliprofundum boonei;Aciduliprofundum boonei T469
+20.4%   141   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum;Aciduliprofundum boonei
+20.4%   141   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum
+20.4%   141   Archaea;Euryarchaeota;unassigned;unassigned;unassigned
+20.4%   141   Archaea;Euryarchaeota;unassigned;unassigned
+20.4%   141   Archaea;Euryarchaeota;unassigned
+20.4%   141   Archaea;Euryarchaeota
+20.4%   141   Archaea
 ```
 
 The output is space-separated and consists of three columns: the
@@ -371,6 +383,38 @@ and totals contain all assignments that are at a lower taxonomic level -
 e.g. *Bacteria*, above, contains all the k-mers in *Bacteria;Proteobacteria*.
 
 The same information is reported in a CSV file if `-o/--output` is used.
+
+The proportions reflect the query signature construction, where the
+metagenome contains a 1.5 Mbp Archaeal genome and a 5.4 Mbp Bacterial
+genome.  The Archaeal genome is therefore only ~20% of the distinct
+k-mers in the metagenome (1.5 Mbp divided by 6.9 Mbp).
+
+If `--with-abundance` is given, the output changes to reflect the proportions
+of the query metagenome based on k-mer/read abundances:
+```
+56.8%   740   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum;Aciduliprofundum boonei;Aciduliprofundum boonei T469
+56.8%   740   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum;Aciduliprofundum boonei
+56.8%   740   Archaea;Euryarchaeota;unassigned;unassigned;unassigned;Aciduliprofundum
+56.8%   740   Archaea;Euryarchaeota;unassigned;unassigned;unassigned
+56.8%   740   Archaea;Euryarchaeota;unassigned;unassigned
+56.8%   740   Archaea;Euryarchaeota;unassigned
+56.8%   740   Archaea;Euryarchaeota
+56.8%   740   Archaea
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica;Shewanella baltica OS223
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella;Shewanella baltica
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae;Shewanella
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales;Shewanellaceae
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales
+43.2%   563   Bacteria;Proteobacteria;Gammaproteobacteria
+43.2%   563   Bacteria;Proteobacteria
+43.2%   563   Bacteria
+```
+
+Here, the changed proportions reflect the query signature abundances, where
+the 1.5 Mbp Archaeal genome is present 5 times, while the 5.4 Mbp Bacterial
+genome is present only once; when weighted by abundance, the Bacterial genome
+is only 41.8% of the metagenome content, while the Archaeal genome is
+58.1% of the metagenome content.
 
 ### `sourmash lca gather`
 
