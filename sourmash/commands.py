@@ -607,6 +607,7 @@ def gather(args):
     weighted_missed = 1
     new_max_hash = query.minhash.max_hash
     next_query = query
+
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         if not len(found):                # first result? print header.
             if query.minhash.track_abundance and not args.ignore_abundance:
@@ -635,9 +636,15 @@ def gather(args):
                       name)
         found.append(result)
 
+        if args.num_results and len(found) >= args.num_results:
+            break
+
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
+    if args.num_results and len(found) == args.num_results:
+        print_results('(truncated gather because --num-results={})',
+                      args.num_results)
 
     print_results('the recovered matches hit {:.1f}% of the query',
            (1 - weighted_missed) * 100)
