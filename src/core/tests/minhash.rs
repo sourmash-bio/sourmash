@@ -251,8 +251,30 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
     assert_eq!(a.count_common(&c, true).unwrap(), b.count_common(&d, true).unwrap());
     assert_eq!(c.count_common(&a, true).unwrap(), d.count_common(&b, true).unwrap());
 
-    let e = a.downsample_max_hash(100).unwrap();
-    let f = b.downsample_max_hash(100).unwrap();
+    let mut e = a.downsample_max_hash(100).unwrap();
+    let mut f = b.downsample_max_hash(100).unwrap();
+
+    // Can't compare different scaled without explicit downsample
+    assert!(c.similarity(&e, false, false).is_err());
+    assert!(d.similarity(&f, false, false).is_err());
+    assert!(c.similarity(&e, true, false).is_err());
+    assert!(d.similarity(&f, true, false).is_err());
+
+    assert!((c.similarity(&e, true, true).unwrap() - d.similarity(&f, true, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, true, true).unwrap() - f.similarity(&d, true, true).unwrap()).abs() < EPSILON);
+    assert!((c.similarity(&e, false, true).unwrap() - d.similarity(&f, false, true).unwrap()).abs() < EPSILON);
+    assert!((e.similarity(&c, false, true).unwrap() - f.similarity(&d, false, true).unwrap()).abs() < EPSILON);
+
+    // Can't compare different scaled without explicit downsample
+    assert!(e.count_common(&c, false).is_err());
+    assert!(f.count_common(&d, false).is_err());
+
+    assert_eq!(e.count_common(&c, true).unwrap(), f.count_common(&d, true).unwrap());
+    assert_eq!(c.count_common(&e, true).unwrap(), d.count_common(&f, true).unwrap());
+
+    // disable abundances
+    e.disable_abundance();
+    f.disable_abundance();
 
     // Can't compare different scaled without explicit downsample
     assert!(c.similarity(&e, false, false).is_err());
@@ -671,6 +693,10 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
 
     a.add_sequence(seq.as_bytes(), true).unwrap();
     b.add_sequence(seq.as_bytes(), true).unwrap();
+
+    // Can't add_protein to a DNA sig
+    a.add_protein(seq.as_bytes()).is_err();
+    b.add_protein(seq.as_bytes()).is_err();
 
     let mut buffer_a = vec![];
     let mut buffer_b = vec![];
