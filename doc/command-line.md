@@ -522,7 +522,9 @@ in the file `all.sig`.
 ### `sourmash signature split`
 
 Split each signature in the input file(s) into individual files, with
-standardized names.
+standardized names.  **Note:** unlike the rest of the sourmash sig
+commands, `split` can load signatures from LCA and SBT databases as
+well.
 
 For example,
 ```
@@ -530,10 +532,10 @@ sourmash signature split tests/test-data/2.fa.sig
 ```
 will create 3 files,
 
-`f372e478.k=21.scaled=1000.dup=0.2.fa.sig`,
-`f3a90d4e.k=31.scaled=1000.dup=0.2.fa.sig`, and
-`43f3b48e.k=51.scaled=1000.dup=0.2.fa.sig`, representing the three
-different signatures at different ksizes created from the input file
+`f372e478.k=21.scaled=1000.DNA.dup=0.2.fa.sig`,
+`f3a90d4e.k=31.scaled=1000.DNA.dup=0.2.fa.sig`, and
+`43f3b48e.k=51.scaled=1000.DNA.dup=0.2.fa.sig`, representing the three
+different DNA signatures at different ksizes created from the input file
 `2.fa`.
 
 The format of the names of the output files is standardized and stable
@@ -543,6 +545,7 @@ with fields:
 * `md5sum` - a unique hash value based on the contents of the signature.
 * `k=<ksize>` - k-mer size.
 * `scaled=<scaled>` or `num=<num>` - scaled or num value for MinHash.
+* `<moltype>` - the molecule type (DNA, protein, dayhoff, or hp)
 * `dup=<n>` - a non-negative integer that prevents duplicate signatures from colliding.
 * `basename` - basename of first input file used to create signature; if none provided, or stdin, this is `none`.
 

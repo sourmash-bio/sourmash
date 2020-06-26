@@ -97,8 +97,8 @@ def split(args):
     set_quiet(args.quiet)
 
     output_names = set()
-    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.dup={dup}.{basename}.sig'
-    output_num_template = '{md5sum}.k={ksize}.num={num}.dup={dup}.{basename}.sig'
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
 
     if args.outdir:
         if not os.path.exists(args.outdir):
@@ -108,21 +108,43 @@ def split(args):
     total = 0
     for sigfile in args.signatures:
         this_siglist = []
+
+        # ugly code that needs to be refactored & moved into sourmash_args.
+        loaded = False
         try:
-            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+            with open(sigfile, 'rt') as fp:
+                this_siglist = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+                this_siglist = list(this_siglist)     # force error if needed
+            loaded = True
         except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
-            error(str(exc))
-            error('(continuing)')
+            pass
 
-        this_siglist = list(this_siglist)
+        if not loaded:                    # try load as SBT
+            from sourmash import load_sbt_index
+            try:
+                db = load_sbt_index(sigfile)
+                this_siglist = db.signatures()
+                loaded = True
+            except:
+                pass
 
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
-               end='\r')
-        total += len(this_siglist)
+        if not loaded:                    # try load as LCA
+            from sourmash.lca.lca_db import load_single_database
+            try:
+                db, _, _ = load_single_database(sigfile)
+                this_siglist = db.signatures()
+                loaded = True
+            except:
+                pass
+
+        if not loaded:
+            error('\nError while reading signatures from {}.'.format(sigfile))
+            sys.exit(-1)
 
         # output here
+        n_signatures = 0
         for sig in this_siglist:
+            n_signatures += 1
             md5sum = sig.md5sum()[:8]
             minhash = sig.minhash
             basename = os.path.basename(sig.filename)
@@ -133,13 +155,13 @@ def split(args):
                           md5sum=md5sum,
                           scaled=minhash.scaled,
                           ksize=minhash.ksize,
-                          num=minhash.num)
+                          num=minhash.num,
+                          moltype=minhash.moltype)
 
             if minhash.scaled:
                 output_template = output_scaled_template
             else: # num
                 output_template = output_num_template
-
 
             n = 0
             params['dup'] = n
@@ -160,6 +182,10 @@ def split(args):
             with open(output_name, 'wt') as outfp:
                 sourmash.save_signatures([sig], outfp)
                 notify('writing sig to {}', output_name)
+
+        notify('loaded {} signatures from {}...', n_signatures, sigfile,
+               end='\r')
+        total += n_signatures
 
     notify('loaded and split {} signatures total.', total)
 

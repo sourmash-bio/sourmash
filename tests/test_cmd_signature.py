@@ -586,7 +586,7 @@ def test_sig_split_1(c):
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'split', sig47)
 
-    outname = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+    outname = '09a08691.k=31.scaled=1000.dna.dup=0.47.fa.sig'
 
     assert os.path.exists(c.output(outname))
 
@@ -602,7 +602,7 @@ def test_sig_split_1_overwrite(c):
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'split', sig47)
 
-    outname = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
+    outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
     assert os.path.exists(c.output(outname))
 
     c.run_sourmash('sig', 'split', sig47)
@@ -618,8 +618,8 @@ def test_sig_split_2(c):
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'split', sig47, sig47)
 
-    outname1 = '09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
-    outname2 = '09a08691.k=31.scaled=1000.dup=1.47.fa.sig'
+    outname1 = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = '09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
 
     assert os.path.exists(c.output(outname1))
     assert os.path.exists(c.output(outname2))
@@ -640,8 +640,8 @@ def test_sig_split_2_outdir(c):
     outdir = c.output('sigout/')
     c.run_sourmash('sig', 'split', sig47, sig47, '--outdir', outdir)
 
-    outname1 = 'sigout/09a08691.k=31.scaled=1000.dup=0.47.fa.sig'
-    outname2 = 'sigout/09a08691.k=31.scaled=1000.dup=1.47.fa.sig'
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
 
     assert os.path.exists(c.output(outname1))
     assert os.path.exists(c.output(outname2))
@@ -662,14 +662,61 @@ def test_sig_split_3_multisig(c):
     multisig = utils.get_test_data('47+63-multisig.sig')
     c.run_sourmash('sig', 'split', sig47, multisig)
 
-    outlist = ['57e2b22f.k=31.scaled=1000.dup=0.none.sig',
-               'bde81a41.k=31.scaled=1000.dup=0.none.sig',
-               'f033bbd8.k=31.scaled=1000.dup=0.none.sig',
-               '87a9aec4.k=31.scaled=1000.dup=0.none.sig',
-               '837bf2a7.k=31.scaled=1000.dup=0.none.sig',
-               '485c3377.k=31.scaled=1000.dup=0.none.sig']
+    outlist = ['57e2b22f.k=31.scaled=1000.DNA.dup=0.none.sig',
+               'bde81a41.k=31.scaled=1000.DNA.dup=0.none.sig',
+               'f033bbd8.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '87a9aec4.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '837bf2a7.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '485c3377.k=31.scaled=1000.DNA.dup=0.none.sig']
     for filename in outlist:
         assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_4_sbt_prot(c):
+    # split sbt
+    sbt1 = utils.get_test_data('prot/protein.sbt.zip')
+    sbt2 = utils.get_test_data('prot/dayhoff.sbt.zip')
+    sbt3 = utils.get_test_data('prot/hp.sbt.zip')
+    c.run_sourmash('sig', 'split', sbt1, sbt2, sbt3)
+
+    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '120d311c.k=57.scaled=100.protein.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'ea2a1ad2.k=57.scaled=100.hp.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'bb0e6d90.k=57.scaled=100.hp.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_4_lca_prot(c):
+    # split lca
+    lca1 = utils.get_test_data('prot/protein.lca.json.gz')
+    lca2 = utils.get_test_data('prot/dayhoff.lca.json.gz')
+    lca3 = utils.get_test_data('prot/hp.lca.json.gz')
+    c.run_sourmash('sig', 'split', lca1, lca2, lca3)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.none.sig',
+               '120d311c.k=57.scaled=100.protein.dup=0.none.sig',
+               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.none.sig',
+               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.none.sig',
+               'ea2a1ad2.k=57.scaled=100.hp.dup=0.none.sig',
+               'bb0e6d90.k=57.scaled=100.hp.dup=0.none.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_5_no_exist(c):
+    # no such file
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'split', 'foo')
+
 
 @utils.in_tempdir
 def test_sig_extract_1(c):
