@@ -100,6 +100,11 @@ def split(args):
     output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{basename}.sig'
     output_num_template = '{md5sum}.k={ksize}.num={num}.{basename}.sig'
 
+    if args.outdir:
+        if not os.path.exists(args.outdir):
+            notify('Creating --outdir {}', args.outdir)
+            os.mkdir(args.outdir)
+
     total = 0
     for sigfile in args.signatures:
         this_siglist = []
