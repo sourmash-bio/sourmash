@@ -329,6 +329,7 @@ def load_database(filename):
 
     TODO:
     - add traversal behavior + force load for directories.
+    - add stdin for reading signatures?
     """
     loaded = False
     dbtype = None
