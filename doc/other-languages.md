@@ -11,7 +11,7 @@ Below are some code snippets and links that might be useful.
 `sourmash compare` can output matrices in a CSV format, which can
 easily be read into R.  For example, if you download the Eschericia
 signature collection as in
-[the sourmash tutorial](https://sourmash.readthedocs.io/en/latest/tutorials.html#make-and-search-a-database-quickly),
+[the sourmash tutorial](tutorial-basic.md#make-and-search-a-database-quickly),
 then the shell command
 
 ```shell
@@ -32,7 +32,8 @@ sourmash_comp_matrix <- as.matrix(sourmash_comp_matrix)
 
 ```
 
-[See the output of plotting and clustering this matrix](_static/ecoli-cmp.html), produced by [this RMarkdown file](_static/ecoli-cmp.Rmd).
+[See the output of plotting and clustering this matrix](./_static/ecoli-cmp.html),
+produced by [this RMarkdown file](_static/ecoli-cmp.Rmd).
 
 You can download the `ecoli.cmp.csv` file itself [here](_static/ecoli.cmp.csv).
 

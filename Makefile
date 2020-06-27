@@ -23,7 +23,7 @@ test: all
 	$(PYTHON) -m pytest
 	cargo test
 
-doc: .PHONY
+doc: build .PHONY
 	cd doc && make html
 
 include/sourmash.h: src/core/src/lib.rs \

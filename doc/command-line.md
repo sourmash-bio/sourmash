@@ -57,7 +57,7 @@ Matrix:
 To get a list of subcommands, run `sourmash` without any arguments.
 
 There are five main subcommands: `compute`, `compare`, `plot`,
-`search`, and `gather`.  See [the tutorial](tutorials.html) for a
+`search`, and `gather`.  See [the tutorial](tutorials.md) for a
 walkthrough of these commands.
 
 * `compute` creates signatures.
@@ -68,7 +68,7 @@ walkthrough of these commands.
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
-subcommand. See [the LCA tutorial](tutorials-lca.html) for a
+subcommand. See [the LCA tutorial](tutorials-lca.md) for a
 walkthrough of these commands.
 
 * `lca classify` classifies many signatures against an LCA database.
@@ -185,7 +185,7 @@ containing the matches.
 be slow and somewhat memory intensive for large collections.  You can
 use `sourmash index` to create a Sequence Bloom Tree (SBT) that can
 be quickly searched on disk; this is [the same format in which we provide
-GenBank and other databases](databases.html).
+GenBank and other databases](databases.md).
 
 Usage:
 ```
@@ -210,7 +210,7 @@ similarity   match
 
 The `gather` subcommand finds all non-overlapping matches to the
 query.  This is specifically meant for metagenome and genome bin
-analysis.  (See [Classifying Signatures](classifying-signatures.html)
+analysis.  (See [Classifying Signatures](classifying-signatures.md)
 for more information on the different approaches that can be used
 here.)
 
@@ -222,7 +222,7 @@ matches.
 `gather`, like `search`, will load all of provided signatures into
 memory.  You can use `sourmash index` to create a Sequence Bloom Tree
 (SBT) that can be quickly searched on disk; this is
-[the same format in which we provide GenBank and other databases](databases.html).
+[the same format in which we provide GenBank and other databases](databases.md).
 
 Usage:
 ```
@@ -243,7 +243,7 @@ overlap     p_query p_match
 The command line option `--threshold-bp` sets the threshold below
 which matches are no longer reported; by default, this is set to
 50kb. see the Appendix in
-[Classifying Signatures](classifying-signatures.html) for details.
+[Classifying Signatures](classifying-signatures.md) for details.
 
 Note:
 
@@ -256,7 +256,7 @@ using a collection of genomes with taxonomic information.
 
 These commands use LCA databases (created with `lca index`, below, or
 prepared databases such as
-[genbank-k31.lca.json.gz](databases.html)).
+[genbank-k31.lca.json.gz](databases.md)).
 
 ### `sourmash lca classify`
 
@@ -421,7 +421,7 @@ is only 41.8% of the metagenome content, while the Archaeal genome is
 The `sourmash lca gather` command finds all non-overlapping
 matches to the query, similar to the `sourmash gather` command.  This
 is specifically meant for metagenome and genome bin analysis.  (See
-[Classifying Signatures](classifying-signatures.html) for more
+[Classifying Signatures](classifying-signatures.md) for more
 information on the different approaches that can be used here.)
 
 If the input signature was computed with `--track-abundance`, output
@@ -456,7 +456,7 @@ a lineage spreadsheet and a collection of signatures.  This can be used
 to create LCA databases from private collections of genomes, and can
 also be used to create databases for e.g. subsets of GenBank.
 
-See [the `sourmash lca` tutorial](tutorials-lca.html) and the blog
+See [the `sourmash lca` tutorial](tutorials-lca.md) and the blog
 post
 [Why are taxonomic assignments so different for Tara bins?](http://ivory.idyll.org/blog/2017-taxonomic-disagreements-in-tara-mags.html)
 for some use cases.
@@ -491,7 +491,7 @@ for an example use case.
 These commands manipulate signatures from the command line. Currently
 supported subcommands are `merge`, `rename`, `intersect`,
 `extract`, `downsample`, `subtract`, `import`, `export`, `info`,
-`flatten`, and `filter`.
+`flatten`, `filter`, `cat`, and `split`.
 
 The signature commands that combine or otherwise have multiple
 signatures interacting (`merge`, `intersect`, `subtract`) work only on
@@ -507,6 +507,49 @@ from nucleotide and protein sequences, you can choose amongst them with
 such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
+
+### `sourmash signature cat`
+
+Concatenate signature files.
+
+For example,
+```
+sourmash signature cat file1.sig file2.sig -o all.sig
+```
+will combine all signatures in `file1.sig` and `file2.sig` and put them
+in the file `all.sig`.
+
+### `sourmash signature split`
+
+Split each signature in the input file(s) into individual files, with
+standardized names.  **Note:** unlike the rest of the sourmash sig
+commands, `split` can load signatures from LCA and SBT databases as
+well.
+
+For example,
+```
+sourmash signature split tests/test-data/2.fa.sig
+```
+will create 3 files,
+
+`f372e478.k=21.scaled=1000.DNA.dup=0.2.fa.sig`,
+`f3a90d4e.k=31.scaled=1000.DNA.dup=0.2.fa.sig`, and
+`43f3b48e.k=51.scaled=1000.DNA.dup=0.2.fa.sig`, representing the three
+different DNA signatures at different ksizes created from the input file
+`2.fa`.
+
+The format of the names of the output files is standardized and stable
+for major versions of sourmash: currently, they are period-separated
+with fields:
+
+* `md5sum` - a unique hash value based on the contents of the signature.
+* `k=<ksize>` - k-mer size.
+* `scaled=<scaled>` or `num=<num>` - scaled or num value for MinHash.
+* `<moltype>` - the molecule type (DNA, protein, dayhoff, or hp)
+* `dup=<n>` - a non-negative integer that prevents duplicate signatures from colliding.
+* `basename` - basename of first input file used to create signature; if none provided, or stdin, this is `none`.
+
+If `--outdir` is specified, all of the signatures are placed in outdir.
 
 ### `sourmash signature merge`
 
