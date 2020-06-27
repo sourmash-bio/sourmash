@@ -2,7 +2,7 @@ use failure::Error;
 
 use crate::index::MHBT;
 use crate::signature::Signature;
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
+use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
 use crate::sketch::Sketch;
 
 pub fn prepare(index_path: &str) -> Result<(), Error> {
@@ -101,15 +101,15 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
             let mut ksigs = vec![];
 
             if params.protein {
-                ksigs.push(Sketch::MinHash(
-                    KmerMinHash::builder()
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
                         .hash_function(HashFunctions::murmur64_protein)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -118,15 +118,15 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
             }
 
             if params.dayhoff {
-                ksigs.push(Sketch::MinHash(
-                    KmerMinHash::builder()
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
                         .hash_function(HashFunctions::murmur64_dayhoff)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -135,15 +135,15 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
             }
 
             if params.hp {
-                ksigs.push(Sketch::MinHash(
-                    KmerMinHash::builder()
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
                         .hash_function(HashFunctions::murmur64_hp)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })
@@ -152,15 +152,15 @@ pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
             }
 
             if params.dna {
-                ksigs.push(Sketch::MinHash(
-                    KmerMinHash::builder()
+                ksigs.push(Sketch::LargeMinHash(
+                    KmerMinHashBTree::builder()
                         .num(params.num_hashes)
                         .ksize(*k)
                         .hash_function(HashFunctions::murmur64_DNA)
                         .max_hash(max_hash)
                         .seed(params.seed)
                         .abunds(if params.track_abundance {
-                            Some(vec![])
+                            Some(Default::default())
                         } else {
                             None
                         })

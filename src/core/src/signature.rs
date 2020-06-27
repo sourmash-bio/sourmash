@@ -34,6 +34,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.size(),
             Sketch::MinHash(ref mh) => mh.size(),
+            Sketch::LargeMinHash(ref mh) => mh.size(),
         }
     }
 
@@ -41,6 +42,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.to_vec(),
             Sketch::MinHash(ref mh) => mh.to_vec(),
+            Sketch::LargeMinHash(ref mh) => mh.to_vec(),
         }
     }
 
@@ -48,6 +50,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.ksize(),
             Sketch::MinHash(ref mh) => mh.ksize(),
+            Sketch::LargeMinHash(ref mh) => mh.ksize(),
         }
     }
 
@@ -61,12 +64,17 @@ impl SigsTrait for Sketch {
                 Sketch::MinHash(ref ot) => mh.check_compatible(ot),
                 _ => Err(SourmashError::MismatchSignatureType.into()),
             },
+            Sketch::LargeMinHash(ref mh) => match other {
+                Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
+                _ => Err(SourmashError::MismatchSignatureType.into()),
+            },
         }
     }
 
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
+            Sketch::LargeMinHash(ref mut mh) => mh.add_sequence(seq, force),
             Sketch::UKHS(_) => unimplemented!(),
         }
     }
@@ -74,6 +82,7 @@ impl SigsTrait for Sketch {
     fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
+            Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::UKHS(_) => unimplemented!(),
         }
     }
@@ -183,6 +192,7 @@ impl Signature {
         if self.signatures.len() == 1 {
             match &self.signatures[0] {
                 Sketch::MinHash(mh) => mh.md5sum(),
+                Sketch::LargeMinHash(mh) => mh.md5sum(),
                 Sketch::UKHS(hs) => hs.md5sum(),
             }
         } else {
@@ -252,6 +262,22 @@ impl Signature {
                 .filter(|sig| {
                     match sig {
                         Sketch::MinHash(mh) => {
+                            if let Some(k) = ksize {
+                                if k != mh.ksize() as usize {
+                                    return false;
+                                }
+                            };
+
+                            match moltype {
+                                Some(x) => {
+                                    if mh.hash_function() == x {
+                                        return true;
+                                    }
+                                }
+                                None => return true, // TODO: match previous behavior
+                            };
+                        }
+                        Sketch::LargeMinHash(mh) => {
                             if let Some(k) = ksize {
                                 if k != mh.ksize() as usize {
                                     return false;
