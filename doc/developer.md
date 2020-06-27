@@ -205,3 +205,14 @@ For the Rust core library we use `rMAJOR.MINOR.PATH`
 (note it starts with `r`, and not `v`).
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.
+
+## Contents
+
+```{toctree}
+:maxdepth: 2
+
+release
+requirements
+storage
+release-notes/releases
+```
