@@ -326,6 +326,9 @@ def load_database(filename):
     Return DatabaseType enum.
 
     This will (eventually) supersede load_dbs_and_sigs.
+
+    TODO:
+    - add traversal behavior + force load for directories.
     """
     loaded = False
     dbtype = None
