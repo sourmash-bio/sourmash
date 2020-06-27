@@ -1,6 +1,9 @@
 language: python
 os: linux
 dist: xenial
+addons:
+  apt_packages:
+    - pandoc
 
 cache:
   directories:
@@ -51,6 +54,10 @@ jobs:
       python: 3.6
     - <<: *test
       python: 3.5
+    - <<: *test
+      python: 3.7
+      end:
+        - TOXENV=docs
     - <<: *test
       python: 2.7
 
