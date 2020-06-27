@@ -29,6 +29,7 @@ flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
+split <signatures> [<signature> ...]      - split signatures into single files
 subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
@@ -107,41 +108,10 @@ def split(args):
 
     total = 0
     for sigfile in args.signatures:
-        this_siglist = []
+        # load signatures from input file:
+        this_siglist = sourmash_args.load_file_as_signatures(sigfile)
 
-        # ugly code that needs to be refactored & moved into sourmash_args.
-        loaded = False
-        try:
-            with open(sigfile, 'rt') as fp:
-                this_siglist = sourmash.load_signatures(fp, quiet=True, do_raise=True)
-                this_siglist = list(this_siglist)     # force error if needed
-            loaded = True
-        except Exception as exc:
-            pass
-
-        if not loaded:                    # try load as SBT
-            from sourmash import load_sbt_index
-            try:
-                db = load_sbt_index(sigfile)
-                this_siglist = db.signatures()
-                loaded = True
-            except:
-                pass
-
-        if not loaded:                    # try load as LCA
-            from sourmash.lca.lca_db import load_single_database
-            try:
-                db, _, _ = load_single_database(sigfile)
-                this_siglist = db.signatures()
-                loaded = True
-            except:
-                pass
-
-        if not loaded:
-            error('\nError while reading signatures from {}.'.format(sigfile))
-            sys.exit(-1)
-
-        # output here
+        # save each file individually --
         n_signatures = 0
         for sig in this_siglist:
             n_signatures += 1
@@ -161,8 +131,10 @@ def split(args):
             if minhash.scaled:
                 output_template = output_scaled_template
             else: # num
+                assert minhash.num
                 output_template = output_num_template
 
+            # figure out if this is duplicate, build unique filename
             n = 0
             params['dup'] = n
             output_name = output_template.format(**params)
@@ -179,6 +151,7 @@ def split(args):
             if os.path.exists(output_name):
                 notify("** overwriting existing file {}".format(output_name))
 
+            # save!
             with open(output_name, 'wt') as outfp:
                 sourmash.save_signatures([sig], outfp)
                 notify('writing sig to {}', output_name)

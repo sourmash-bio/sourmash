@@ -4,6 +4,12 @@ Utility functions for dealing with input args to the sourmash command line.
 import sys
 import os
 import argparse
+import itertools
+from enum import Enum
+
+from sourmash import load_sbt_index
+from sourmash.lca.lca_db import load_single_database
+
 from . import signature
 from .logging import notify, error
 
@@ -306,6 +312,68 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         print('')
 
     return databases
+
+
+class DatabaseType(Enum):
+    SIGLIST = 1
+    SBT = 2
+    LCA = 3
+
+
+def load_database(filename):
+    """Load file as a database - list of signatures, LCA, SBT, etc.
+
+    Return DatabaseType enum.
+
+    This will (eventually) supersede load_dbs_and_sigs.
+    """
+    loaded = False
+    dbtype = None
+    try:
+        # CTB: could make this a generator, with some trickery; but for
+        # now, just force into list.
+        with open(filename, 'rt') as fp:
+            db = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+            db = list(db)
+
+        loaded = True
+        dbtype = DatabaseType.SIGLIST
+    except Exception as exc:
+        pass
+
+    if not loaded:                    # try load as SBT
+        try:
+            db = load_sbt_index(filename)
+            loaded = True
+            dbtype = DatabaseType.SBT
+        except:
+            pass
+
+    if not loaded:                    # try load as LCA
+        try:
+            db, _, _ = load_single_database(filename)
+            loaded = True
+            dbtype = DatabaseType.LCA
+        except:
+            pass
+
+    if not loaded:
+        error('\nError while reading signatures from {}.'.format(filename))
+        sys.exit(-1)
+
+    return db, dbtype
+
+
+def load_file_as_signatures(filename):
+    """Load 'filename' as a collection of signatures. Return an iterable.
+
+    If it's an LCA or SBT, call the .signatures() method on it.
+    """
+    db, dbtype = load_database(filename)
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+        return db.signatures()
+    elif dbtype == DatabaseType.SIGLIST:
+        return db
 
 
 class FileOutput(object):
