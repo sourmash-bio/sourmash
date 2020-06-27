@@ -581,6 +581,29 @@ def test_sig_cat_2_out(c):
 
 
 @utils.in_tempdir
+def test_sig_cat_2_out_inplace(c):
+    # cat several; check that we can overwrite one of the input files.
+    sig47 = utils.get_test_data('47.fa.sig')
+    input_sig = c.output('inp.sig')
+    shutil.copyfile(sig47, input_sig)
+
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+
+    # write out to input.
+    c.run_sourmash('sig', 'cat', input_sig, sig47abund, multisig,
+                   '-o', input_sig)
+
+    # stdout should be same signatures
+    out = input_sig
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
 def test_sig_split_1(c):
     # split 47 into 1 sig :)
     sig47 = utils.get_test_data('47.fa.sig')
