@@ -5,6 +5,7 @@ from __future__ import print_function, unicode_literals
 import sys
 import csv
 import json
+import os
 
 import sourmash
 import copy
@@ -19,6 +20,7 @@ sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
+cat <signature> [<signature> ... ]        - concatenate all signatures
 describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
@@ -27,6 +29,7 @@ flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
+split <signatures> [<signature> ...]      - split signatures into single files
 subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
@@ -58,6 +61,108 @@ def _set_num_scaled(mh, num, scaled):
 ##### actual command line functions
 
 
+def cat(args):
+    """
+    concatenate all signatures into one file.
+    """
+    set_quiet(args.quiet)
+
+    siglist = []
+    for sigfile in args.signatures:
+        this_siglist = []
+        try:
+            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(sigfile))
+            error(str(exc))
+            error('(continuing)')
+
+        this_siglist = list(this_siglist)
+
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
+               end='\r')
+        siglist.extend(this_siglist)
+
+    notify('loaded {} signatures total.', len(siglist))
+
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(siglist, fp=fp)
+
+    notify('saved {} signatures', len(siglist))
+
+
+def split(args):
+    """
+    split all signatures into individual
+    """
+    set_quiet(args.quiet)
+
+    output_names = set()
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+
+    if args.outdir:
+        if not os.path.exists(args.outdir):
+            notify('Creating --outdir {}', args.outdir)
+            os.mkdir(args.outdir)
+
+    total = 0
+    for sigfile in args.signatures:
+        # load signatures from input file:
+        this_siglist = sourmash_args.load_file_as_signatures(sigfile)
+
+        # save each file individually --
+        n_signatures = 0
+        for sig in this_siglist:
+            n_signatures += 1
+            md5sum = sig.md5sum()[:8]
+            minhash = sig.minhash
+            basename = os.path.basename(sig.filename)
+            if not basename or basename == '-':
+                basename = 'none'
+
+            params = dict(basename=basename,
+                          md5sum=md5sum,
+                          scaled=minhash.scaled,
+                          ksize=minhash.ksize,
+                          num=minhash.num,
+                          moltype=minhash.moltype)
+
+            if minhash.scaled:
+                output_template = output_scaled_template
+            else: # num
+                assert minhash.num
+                output_template = output_num_template
+
+            # figure out if this is duplicate, build unique filename
+            n = 0
+            params['dup'] = n
+            output_name = output_template.format(**params)
+            while output_name in output_names:
+                params['dup'] = n
+                output_name = output_template.format(**params)
+                n += 1
+
+            output_names.add(output_name)
+
+            if args.outdir:
+                output_name = os.path.join(args.outdir, output_name)
+
+            if os.path.exists(output_name):
+                notify("** overwriting existing file {}".format(output_name))
+
+            # save!
+            with open(output_name, 'wt') as outfp:
+                sourmash.save_signatures([sig], outfp)
+                notify('writing sig to {}', output_name)
+
+        notify('loaded {} signatures from {}...', n_signatures, sigfile,
+               end='\r')
+        total += n_signatures
+
+    notify('loaded and split {} signatures total.', total)
+
+
 def describe(args):
     """
     provide basic info on signatures
@@ -76,7 +181,8 @@ def describe(args):
             error(str(exc))
             error('(continuing)')
 
-        notify('loaded {} signatures from {}...', len(siglist), sigfile,
+        this_siglist = list(this_siglist)
+        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
                end='\r')
 
     notify('loaded {} signatures total.', len(siglist))
