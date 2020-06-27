@@ -152,7 +152,6 @@ mod test {
     use std::path::PathBuf;
 
     use assert_matches::assert_matches;
-    use tempfile;
 
     use super::Factory;
 
@@ -206,9 +205,7 @@ mod test {
             None,
         )
         .unwrap();
-        let sig_data = sigs[0].clone();
-
-        let leaf = sig_data.into();
+        let leaf = sigs[0].clone();
 
         let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);
