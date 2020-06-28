@@ -369,16 +369,27 @@ def load_database(filename):
     return db, dbtype
 
 
-def load_file_as_signatures(filename):
+# note: dup from index.py internal function.
+def _select_sigs(siglist, ksize, moltype):
+    for ss in siglist:
+        if (ksize is None or ss.minhash.ksize == ksize) and \
+           (moltype is None or ss.minhash.moltype == moltype):
+           yield ss
+
+
+def load_file_as_signatures(filename, select_moltype=None, ksize=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If it's an LCA or SBT, call the .signatures() method on it.
+
+    Applies selector function if select_moltype, ksize are given.
     """
     db, dbtype = load_database(filename)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+        db = db.select(moltype=select_moltype, ksize=ksize)
         return db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
-        return db
+        return list(_select_sigs(db, moltype=select_moltype, ksize=ksize))
 
 
 class FileOutput(object):
