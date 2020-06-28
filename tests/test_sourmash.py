@@ -751,7 +751,7 @@ def test_compare_no_such_file(c):
     with pytest.raises(ValueError) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
-    assert "file 'nosuchfile.sig' does not exist! exiting." in c.last_result.err
+    assert 'Error while reading signatures from nosuchfile.sig.' in c.last_result.err
 
 
 @utils.in_tempdir
@@ -760,7 +760,7 @@ def test_compare_no_such_file_force(c):
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
     print(c.last_result.err)
-    assert "no signatures found! exiting." in c.last_result.err
+    assert 'Error while reading signatures from nosuchfile.sig.'
 
 
 @utils.in_tempdir

@@ -31,26 +31,16 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    # check directories for all signatures
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
-    else:
-        inp_files = list(args.signatures)
-
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
-    for filename in inp_files:
-        if not os.path.exists(filename) and not \
-               (args.force or args.traverse_directory):
-            error("file '{}' does not exist! exiting.", filename)
-            sys.exit(-1)
-
+    for filename in args.signatures:
         notify("loading '{}'", filename, end='\r')
-        loaded = sig.load_signatures(filename,
-                                     ksize=args.ksize,
-                                     select_moltype=moltype)
+        loaded = sourmash_args.load_file_as_signatures(filename,
+                                                       ksize=args.ksize,
+                                                       select_moltype=moltype,
+                                                       traverse=args.traverse_directory)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
