@@ -6,7 +6,7 @@ from __future__ import print_function
 import sys
 import csv
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -103,10 +103,7 @@ def classify(args):
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = list(args.query)
 
     # set up output
     csvfp = csv.writer(sys.stdout)
@@ -122,7 +119,7 @@ def classify(args):
         total_n = len(inp_files)
         for query_filename in inp_files:
             n += 1
-            for query_sig in load_signatures(query_filename, ksize=ksize):
+            for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=args.traverse_directory):
                 notify(u'\r\033[K', end=u'')
                 notify('... classifying {} (file {} of {})', query_sig.name(),
                        n, total_n, end='\r')
