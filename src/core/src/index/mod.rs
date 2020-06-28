@@ -16,7 +16,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use once_cell::sync::OnceCell;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::sbt::{Node, SBT};

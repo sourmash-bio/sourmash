@@ -31,6 +31,7 @@ impl Signature {
     }
 }
 
+#[allow(dead_code)]
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 pub struct ComputeParameters {
     pub(crate) ksizes: Vec<u32>,

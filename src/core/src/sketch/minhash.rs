@@ -8,9 +8,9 @@ use std::str;
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
-use serde::de::{Deserialize, Deserializer};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use serde_derive::Deserialize;
+use serde::de::Deserializer;
+use serde::ser::{SerializeStruct, Serializer};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::_hash_murmur;

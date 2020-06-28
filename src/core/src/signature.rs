@@ -11,7 +11,7 @@ use std::str;
 use cfg_if::cfg_if;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
