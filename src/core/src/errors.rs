@@ -30,13 +30,13 @@ pub enum SourmashError {
     #[error("Can only set {message:?} if the MinHash is empty")]
     NonEmptyMinHash { message: String },
 
-    #[error("invalid DNA character in input k-mer: {message:?}")]
+    #[error("invalid DNA character in input k-mer: {message}")]
     InvalidDNA { message: String },
 
-    #[error("invalid protein character in input: {message:?}")]
+    #[error("invalid protein character in input: {message}")]
     InvalidProt { message: String },
 
-    #[error("Codon is invalid length: {message:?}")]
+    #[error("Codon is invalid length: {message}")]
     InvalidCodonLength { message: String },
 
     #[error(transparent)]
