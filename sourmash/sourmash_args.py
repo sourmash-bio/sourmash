@@ -65,10 +65,8 @@ def calculate_moltype(args, default=None):
 
 def load_query_signature(filename, ksize, select_moltype):
     try:
-        sl = signature.load_signatures(filename,
-                                       ksize=ksize,
-                                       select_moltype=select_moltype,
-                                       do_raise=True)
+        sl = load_file_as_signatures(filename, ksize=ksize,
+                                     select_moltype=select_moltype)
         sl = list(sl)
     except (IOError, ValueError):
         error("Cannot open file '{}'", filename)

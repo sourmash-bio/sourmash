@@ -595,7 +595,7 @@ def test_search_query_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Cannot open file' in c.last_result.err
+    assert 'Error while reading signatures from short2.fa.sig' in c.last_result.err
     assert len(c.last_result.err.split('\n\r')) < 5
 
 
