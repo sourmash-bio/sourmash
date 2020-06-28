@@ -223,8 +223,11 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     databases = []
     for sbt_or_sigfile in filenames:
         notify('loading from {}...', sbt_or_sigfile, end='\r')
+
+        db, dbtype = load_database(sbt_or_sigfile)
+
         # are we collecting signatures from a directory/path?
-        if traverse and os.path.isdir(sbt_or_sigfile):
+        if 0 and traverse and os.path.isdir(sbt_or_sigfile):
             for sigfile in traverse_find_sigs([sbt_or_sigfile]):
                 try:
                     siglist = sig.load_signatures(sigfile,
@@ -242,10 +245,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             # done! jump to beginning of main 'for' loop
             continue
 
-        # no traverse? try loading as an SBT.
-        try:
-            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
-
+        if dbtype == DatabaseType.SBT:
+            tree = db
             if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
                                             is_similarity_query):
                 sys.exit(-1)
@@ -256,13 +257,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
             # done! jump to beginning of main 'for' loop
             continue
-        except (ValueError, EnvironmentError):
-            # not an SBT - try as an LCA
-            pass
 
-        # ok. try loading as an LCA.
-        try:
-            lca_db = LCA_Database.load(sbt_or_sigfile)
+        if dbtype == DatabaseType.LCA:
+            lca_db = db
 
             assert query_ksize == lca_db.ksize
             query_scaled = query.minhash.scaled
@@ -273,15 +270,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             databases.append((lca_db, sbt_or_sigfile, 'LCA'))
 
             continue
-        except (ValueError, TypeError, EnvironmentError):
-            # not an LCA database - try as a .sig
-            pass
 
-        # not a tree? try loading as a signature.
-        try:
-            siglist = sig.load_signatures(sbt_or_sigfile,
-                                          ksize=query_ksize,
-                                          select_moltype=query_moltype)
+        if dbtype == DatabaseType.SIGLIST:
+            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
             siglist = list(siglist)
             if len(siglist) == 0:         # file not found, or parse error?
                 raise ValueError
@@ -293,9 +284,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             notify('loaded {} signatures from {}', len(linear),
                    sbt_or_sigfile, end='\r')
             n_signatures += len(linear)
-        except (EnvironmentError, ValueError):
-            error("\nCannot open file '{}'", sbt_or_sigfile)
-            sys.exit(-1)
+
+            continue
 
     notify(' '*79, end='\r')
     if n_signatures and n_databases:
@@ -323,7 +313,7 @@ class DatabaseType(Enum):
 def load_database(filename):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
-    Return DatabaseType enum.
+    Return (db, dbtype), where dbtype is a DatabaseType enum.
 
     This will (eventually) supersede load_dbs_and_sigs.
 
