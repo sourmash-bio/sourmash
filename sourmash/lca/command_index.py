@@ -171,14 +171,14 @@ def index(args):
     db = LCA_Database(args.ksize, args.scaled, moltype)
 
 #    notify('finding signatures...')
-    if args.traverse_directory:
-        yield_all_files = False           # only pick up *.sig files?
-        if args.force:
-            yield_all_files = True
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
-                                                          yield_all_files=yield_all_files))
-    else:
-        inp_files = list(args.signatures)
+#    if args.traverse_directory:
+#        yield_all_files = False           # only pick up *.sig files?
+#        if args.force:
+#            yield_all_files = True        # @CTB
+#        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
+#                                                          yield_all_files=yield_all_files))
+#    else:
+#        inp_files = list(args.signatures)
 
     # track duplicates
     md5_to_name = {}
@@ -188,17 +188,19 @@ def index(args):
     #
 
     n = 0
-    total_n = len(inp_files)
+    total_n = len(args.signatures)
     record_duplicates = set()
     record_no_lineage = set()
     record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
     n_skipped = 0
-    for filename in inp_files:
+    for filename in args.signatures:
         n += 1
-        for sig in load_signatures(filename, ksize=args.ksize,
-                                   select_moltype=moltype):
+        for sig in sourmash_args.load_file_as_signatures(filename,
+                                                         ksize=args.ksize,
+                                                         select_moltype=moltype,
+                                                         traverse=args.traverse_directory):
             notify(u'\r\033[K', end=u'')
             notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
