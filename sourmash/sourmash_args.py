@@ -325,8 +325,15 @@ def load_database(filename, traverse=False, traverse_yield_all=False):
     loaded = False
     dbtype = None
 
+    # special case stdin
+    if not loaded and filename == '-':
+        db = sourmash.load_signatures(sys.stdin, quiet=True, do_raise=True)
+        db = list(db)
+        loaded = True
+        dbtype = DatabaseType.SIGLIST
+
     # load signatures from directory
-    if os.path.isdir(filename) and traverse:
+    if not loaded and os.path.isdir(filename) and traverse:
         all_sigs = []
         for thisfile in traverse_find_sigs([filename], traverse_yield_all):
             try:
