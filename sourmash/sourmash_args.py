@@ -221,65 +221,64 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     n_signatures = 0
     n_databases = 0
     databases = []
-    for sbt_or_sigfile in filenames:
-        notify('loading from {}...', sbt_or_sigfile, end='\r')
+    for filename in filenames:
+        notify('loading from {}...', filename, end='\r')
 
-        db, dbtype = load_database(sbt_or_sigfile, traverse=True)
+        db, dbtype = load_database(filename, traverse=True)
 
         # are we collecting signatures from a directory/path?
-        if traverse and os.path.isdir(sbt_or_sigfile) and dbtype == DatabaseType.SIGLIST:
+        if traverse and os.path.isdir(filename):
+            assert dbtype == DatabaseType.SIGLIST
+
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
             siglist = filter_compatible_signatures(query, siglist, 1)
-            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
-            databases.append((linear, sbt_or_sigfile, False))
+            linear = LinearIndex(siglist, filename=filename)
+            databases.append((linear, filename, False))
             # this kinda changes the CLI b/c collapses under directory @CTB
 
             n_signatures += len(linear)
 
-            # done! jump to beginning of main 'for' loop
-            continue
-
-        if dbtype == DatabaseType.SBT:
-            tree = db
-            if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
+        # SBT
+        elif dbtype == DatabaseType.SBT:
+            if not check_tree_is_compatible(filename, db, query,
                                             is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((tree, sbt_or_sigfile, 'SBT'))
-            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
+            databases.append((db, filename, 'SBT'))
+            notify('loaded SBT {}', filename, end='\r')
             n_databases += 1
 
-            # done! jump to beginning of main 'for' loop
-            continue
-
-        if dbtype == DatabaseType.LCA:
-            lca_db = db
-
-            assert query_ksize == lca_db.ksize
+        # LCA
+        elif dbtype == DatabaseType.LCA:
+            assert query_ksize == db.ksize   # should not be assert!? @CTB
             query_scaled = query.minhash.scaled
 
-            notify('loaded LCA {}', sbt_or_sigfile, end='\r')
+            notify('loaded LCA {}', filename, end='\r')
             n_databases += 1
 
-            databases.append((lca_db, sbt_or_sigfile, 'LCA'))
+            databases.append((db, filename, 'LCA'))
 
-            continue
-
-        if dbtype == DatabaseType.SIGLIST:
+        # signature file
+        elif dbtype == DatabaseType.SIGLIST:
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
             siglist = list(siglist)
-            if len(siglist) == 0:         # file not found, or parse error?
+            if not siglist:          # file not found, or parse error?
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
-            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
-            databases.append((linear, sbt_or_sigfile, 'signature'))
+            linear = LinearIndex(siglist, filename=filename)
+            databases.append((linear, filename, 'signature'))
 
             notify('loaded {} signatures from {}', len(linear),
-                   sbt_or_sigfile, end='\r')
+                   filename, end='\r')
             n_signatures += len(linear)
 
-            continue
+        # unknown!?
+        else:
+            raise Exception("unknown dbtype {}".format(dbtype))
+
+        # END for loop
+
 
     notify(' '*79, end='\r')
     if n_signatures and n_databases:
