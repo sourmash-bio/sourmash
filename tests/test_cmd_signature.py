@@ -530,6 +530,15 @@ def test_sig_rename_2_output_to_same(c):
     assert actual_rename_sig.name() == 'fiz bar'
 
 
+@utils.in_tempdir
+def test_sig_rename_3_file_dne(c):
+    # rename on a file that does not exist should fail!
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
+
+    assert 'Error while reading signatures from no-such-sig' in c.last_result.err
+
+
 @utils.in_thisdir
 def test_sig_cat_1(c):
     # cat 47 to 47...
