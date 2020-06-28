@@ -224,23 +224,17 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     for sbt_or_sigfile in filenames:
         notify('loading from {}...', sbt_or_sigfile, end='\r')
 
-        db, dbtype = load_database(sbt_or_sigfile)
+        db, dbtype = load_database(sbt_or_sigfile, traverse=True)
 
         # are we collecting signatures from a directory/path?
-        if 0 and traverse and os.path.isdir(sbt_or_sigfile):
-            for sigfile in traverse_find_sigs([sbt_or_sigfile]):
-                try:
-                    siglist = sig.load_signatures(sigfile,
-                                                  ksize=query_ksize,
-                                                  select_moltype=query_moltype)
-                    siglist = filter_compatible_signatures(query, siglist, 1)
-                    linear = LinearIndex(siglist, filename=sigfile)
-                    databases.append((linear, sbt_or_sigfile, False))
-                    notify('loaded {} signatures from {}', len(linear),
-                           sigfile, end='\r')
-                    n_signatures += len(linear)
-                except Exception:                       # ignore errors with traverse
-                    pass
+        if traverse and os.path.isdir(sbt_or_sigfile) and dbtype == DatabaseType.SIGLIST:
+            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
+            siglist = filter_compatible_signatures(query, siglist, 1)
+            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
+            databases.append((linear, sbt_or_sigfile, False))
+            # this kinda changes the CLI b/c collapses under directory @CTB
+
+            n_signatures += len(linear)
 
             # done! jump to beginning of main 'for' loop
             continue
@@ -296,6 +290,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     elif n_databases:
         notify('loaded {} databases.', n_databases)
     else:
+        notify('** ERROR: no signatures or databases loaded?') # @CTB testme
         sys.exit(-1)
 
     if databases:
@@ -310,7 +305,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def load_database(filename):
+def load_database(filename, traverse=False, traverse_yield_all=False):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -324,6 +319,25 @@ def load_database(filename):
     """
     loaded = False
     dbtype = None
+
+    # load signatures from directory
+    if os.path.isdir(filename) and traverse:
+        all_sigs = []
+        for thisfile in traverse_find_sigs([filename], traverse_yield_all):
+            try:
+                with open(thisfile, 'rt') as fp:
+                    x = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+                    siglist = list(x)
+                    all_sigs.extend(siglist)
+            except IOError:
+                raise
+                continue
+
+        loaded=True
+        db = all_sigs
+        dbtype = DatabaseType.SIGLIST
+
+    # load signatures from single file
     try:
         # CTB: could make this a generator, with some trickery; but for
         # now, just force into list.
