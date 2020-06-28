@@ -328,12 +328,6 @@ def index(args):
     else:
         tree = create_sbt_index(args.bf_size, n_children=args.n_children)
 
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
-                                                          args.force))
-    else:
-        inp_files = list(args.signatures)
-
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
 
@@ -341,18 +335,22 @@ def index(args):
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
-    notify('loading {} files into SBT', len(inp_files))
+    notify('loading {} files into SBT', len(args.signatures))
 
     n = 0
     ksizes = set()
     moltypes = set()
     nums = set()
     scaleds = set()
-    for f in inp_files:
+    for f in args.signatures:
         if n % 100 == 0:
             notify('\r...reading from {} ({} signatures so far)', f, n, end='')
-        siglist = sig.load_signatures(f, ksize=args.ksize,
-                                      select_moltype=moltype)
+
+        # @CTB what about force?
+        siglist = sourmash_args.load_file_as_signatures(f,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        traverse=args.traverse_directory)
 
         # load all matching signatures in this file
         ss = None
