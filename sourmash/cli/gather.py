@@ -47,6 +47,10 @@ def subparser(subparsers):
         '--ignore-abundance',  action='store_true',
         help='do NOT use k-mer abundances if present'
     )
+    subparser.add_argument(
+        '--md5', default=None,
+        help='select the signature with this md5 as query'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

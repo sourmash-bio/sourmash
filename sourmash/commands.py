@@ -418,7 +418,8 @@ def search(args):
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
-                                               select_moltype=moltype)
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
@@ -574,7 +575,8 @@ def gather(args):
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
-                                               select_moltype=moltype)
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))

@@ -63,7 +63,7 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_query_signature(filename, ksize, select_moltype):
+def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     try:
         sl = load_file_as_signatures(filename, ksize=ksize,
                                      select_moltype=select_moltype)
@@ -71,6 +71,13 @@ def load_query_signature(filename, ksize, select_moltype):
     except (IOError, ValueError):
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
+
+    if len(sl) and select_md5:
+        for sig in sl:
+            sig_md5 = sig.md5sum()
+            if sig_md5.startswith(select_md5.lower()):
+                sl = [sig]
+                break
 
     if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
