@@ -1,6 +1,9 @@
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
+use getset::{CopyGetters, Getters, Setters};
+use typed_builder::TypedBuilder;
+
 use crate::index::MHBT;
 use crate::signature::Signature;
 use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
@@ -33,65 +36,120 @@ impl Signature {
 
 #[allow(dead_code)]
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
+#[derive(TypedBuilder, CopyGetters, Getters, Setters)]
 pub struct ComputeParameters {
-    pub(crate) ksizes: Vec<u32>,
-    pub(crate) check_sequence: bool,
-    pub(crate) dna: bool,
-    pub(crate) dayhoff: bool,
-    pub(crate) hp: bool,
-    pub(crate) singleton: bool,
-    pub(crate) count_valid_reads: usize,
-    pub(crate) barcodes_file: Option<String>, // TODO: check
-    pub(crate) line_count: usize,
-    pub(crate) rename_10x_barcodes: Option<bool>, // TODO: check
-    pub(crate) write_barcode_meta_csv: Option<bool>, // TODO: check
-    pub(crate) save_fastas: Option<bool>,         // TODO: check
-    pub(crate) scaled: u64,
-    pub(crate) force: bool,
-    pub(crate) output: Option<String>, // TODO: check
-    pub(crate) num_hashes: u32,
-    pub(crate) protein: bool,
-    pub(crate) name_from_first: bool,
-    pub(crate) seed: u64,
-    pub(crate) input_is_protein: bool,
-    pub(crate) merge: Option<String>,
-    pub(crate) track_abundance: bool,
-    pub(crate) randomize: bool,
-    pub(crate) license: String,
-    pub(crate) input_is_10x: bool,
-    pub(crate) processes: usize,
+    #[getset(get = "pub", set = "pub")]
+    #[builder(default_code = "vec![21, 31, 51]")]
+    ksizes: Vec<u32>,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    check_sequence: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "true")]
+    dna: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    dayhoff: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    hp: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    singleton: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "0usize")]
+    count_valid_reads: usize,
+
+    #[getset(get = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    barcodes_file: Option<String>, // TODO: check
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "1500usize")]
+    line_count: usize,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    rename_10x_barcodes: Option<bool>, // TODO: check
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    write_barcode_meta_csv: Option<bool>, // TODO: check
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    save_fastas: Option<bool>, // TODO: check
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "0u64")]
+    scaled: u64,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    force: bool,
+
+    #[getset(get = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    output: Option<String>, // TODO: check
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "500u32")]
+    num_hashes: u32,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    protein: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    name_from_first: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "42u64")]
+    seed: u64,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    input_is_protein: bool,
+
+    #[getset(get = "pub", set = "pub")]
+    #[builder(default_code = "None")]
+    merge: Option<String>,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    track_abundance: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    randomize: bool,
+
+    #[getset(get = "pub", set = "pub")]
+    #[builder(default_code = "default_license()")]
+    license: String,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "false")]
+    input_is_10x: bool,
+
+    #[getset(get_copy = "pub", set = "pub")]
+    #[builder(default_code = "2usize")]
+    processes: usize,
+}
+
+fn default_license() -> String {
+    "CC0".to_string()
 }
 
 impl Default for ComputeParameters {
     fn default() -> Self {
-        ComputeParameters {
-            ksizes: vec![21, 31, 51],
-            check_sequence: false,
-            dna: true,
-            dayhoff: false,
-            hp: false,
-            singleton: false,
-            count_valid_reads: 0,
-            barcodes_file: None,
-            line_count: 1500,
-            rename_10x_barcodes: None,
-            write_barcode_meta_csv: None,
-            save_fastas: None,
-            scaled: 0,
-            force: false,
-            output: None,
-            num_hashes: 500,
-            protein: false,
-            name_from_first: false,
-            seed: 42,
-            input_is_protein: false,
-            merge: None,
-            track_abundance: false,
-            randomize: false,
-            license: "CC0".into(),
-            input_is_10x: false,
-            processes: 2,
-        }
+        Self::builder().build()
     }
 }
 

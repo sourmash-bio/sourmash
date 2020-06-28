@@ -475,11 +475,10 @@ mod test {
 
     #[test]
     fn signature_from_computeparams() {
-        let params = ComputeParameters {
-            ksizes: vec![2, 3, 4],
-            num_hashes: 3,
-            ..Default::default()
-        };
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2, 3, 4])
+            .num_hashes(3u32)
+            .build();
 
         let mut sig = Signature::from_params(&params);
         sig.add_sequence(b"ATGC", false).unwrap();
@@ -493,11 +492,10 @@ mod test {
 
     #[test]
     fn signature_slow_path() {
-        let params = ComputeParameters {
-            ksizes: vec![2, 3, 4, 5],
-            num_hashes: 3,
-            ..Default::default()
-        };
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2, 3, 4, 5])
+            .num_hashes(3u32)
+            .build();
 
         let mut sig = Signature::from_params(&params);
         sig.add_sequence(b"ATGCTN", true).unwrap();
@@ -512,13 +510,12 @@ mod test {
 
     #[test]
     fn signature_add_sequence_protein() {
-        let params = ComputeParameters {
-            ksizes: vec![3, 6],
-            num_hashes: 3,
-            protein: true,
-            dna: false,
-            ..Default::default()
-        };
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 6])
+            .num_hashes(3u32)
+            .protein(true)
+            .dna(false)
+            .build();
 
         let mut sig = Signature::from_params(&params);
         sig.add_sequence(b"ATGCAT", false).unwrap();
@@ -531,13 +528,12 @@ mod test {
 
     #[test]
     fn signature_add_protein() {
-        let params = ComputeParameters {
-            ksizes: vec![3, 6],
-            num_hashes: 3,
-            protein: true,
-            dna: false,
-            ..Default::default()
-        };
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 6])
+            .num_hashes(3u32)
+            .protein(true)
+            .dna(false)
+            .build();
 
         let mut sig = Signature::from_params(&params);
         sig.add_protein(b"AGY").unwrap();
@@ -551,10 +547,10 @@ mod test {
     #[test]
     fn signature_add_sequence_cp() {
         let mut cp = ComputeParameters::default();
-        cp.dayhoff = true;
-        cp.protein = true;
-        cp.hp = true;
-        cp.dna = true;
+        cp.set_dayhoff(true);
+        cp.set_protein(true);
+        cp.set_hp(true);
+        cp.set_dna(true);
 
         let mut sig = Signature::from_params(&cp);
 
