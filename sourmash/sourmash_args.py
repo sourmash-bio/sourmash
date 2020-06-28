@@ -138,6 +138,7 @@ class LoadSingleSignatures(object):
 
 def traverse_find_sigs(dirnames, yield_all_files=False):
     for dirname in dirnames:
+        # this first if statement has suspect logic, maybe. clarify/refactor @CTB
         if (dirname.endswith('.sig') or yield_all_files) and os.path.isfile(dirname):
             yield dirname
             continue
