@@ -60,15 +60,15 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => match other {
                 Sketch::UKHS(ref ot) => ukhs.check_compatible(ot),
-                _ => Err(Error::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType),
             },
             Sketch::MinHash(ref mh) => match other {
                 Sketch::MinHash(ref ot) => mh.check_compatible(ot),
-                _ => Err(Error::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType),
             },
             Sketch::LargeMinHash(ref mh) => match other {
                 Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
-                _ => Err(Error::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -426,7 +426,6 @@ mod test {
     use std::path::PathBuf;
 
     use needletail::parse_sequence_reader;
-    use serde_json;
 
     use crate::cmd::ComputeParameters;
     use crate::signature::SigsTrait;

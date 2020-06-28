@@ -295,8 +295,7 @@ impl KmerMinHash {
         if !self.is_empty() {
             return Err(Error::NonEmptyMinHash {
                 message: "hash_function".into(),
-            }
-            .into());
+            });
         }
 
         self.hash_function = h;
@@ -311,8 +310,7 @@ impl KmerMinHash {
         if !self.mins.is_empty() {
             return Err(Error::NonEmptyMinHash {
                 message: "track_abundance=True".into(),
-            }
-            .into());
+            });
         }
 
         self.abunds = Some(vec![]);
@@ -813,17 +811,17 @@ impl SigsTrait for KmerMinHash {
         }
         */
         if self.ksize != other.ksize {
-            return Err(Error::MismatchKSizes.into());
+            return Err(Error::MismatchKSizes);
         }
         if self.hash_function != other.hash_function {
             // TODO: fix this error
-            return Err(Error::MismatchDNAProt.into());
+            return Err(Error::MismatchDNAProt);
         }
         if self.max_hash != other.max_hash {
-            return Err(Error::MismatchScaled.into());
+            return Err(Error::MismatchScaled);
         }
         if self.seed != other.seed {
-            return Err(Error::MismatchSeed.into());
+            return Err(Error::MismatchSeed);
         }
         Ok(())
     }
@@ -876,8 +874,7 @@ impl SigsTrait for KmerMinHash {
                         // throw error if DNA is not valid
                         return Err(Error::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        }
-                        .into());
+                        });
                     }
 
                     continue; // skip invalid k-mer
@@ -934,8 +931,7 @@ impl SigsTrait for KmerMinHash {
             invalid => {
                 return Err(Error::InvalidHashFunction {
                     function: format!("{}", invalid),
-                }
-                .into())
+                })
             }
         };
 
@@ -1228,8 +1224,7 @@ pub(crate) fn translate_codon(codon: &[u8]) -> Result<u8, Error> {
 
     Err(Error::InvalidCodonLength {
         message: format!("{}", codon.len()),
-    }
-    .into())
+    })
 }
 
 #[inline]
@@ -1504,8 +1499,7 @@ impl KmerMinHashBTree {
         if !self.is_empty() {
             return Err(Error::NonEmptyMinHash {
                 message: "hash_function".into(),
-            }
-            .into());
+            });
         }
 
         self.hash_function = h;
@@ -1520,8 +1514,7 @@ impl KmerMinHashBTree {
         if !self.mins.is_empty() {
             return Err(Error::NonEmptyMinHash {
                 message: "track_abundance=True".into(),
-            }
-            .into());
+            });
         }
 
         self.abunds = Some(Default::default());
@@ -1912,17 +1905,17 @@ impl SigsTrait for KmerMinHashBTree {
         }
         */
         if self.ksize != other.ksize {
-            return Err(Error::MismatchKSizes.into());
+            return Err(Error::MismatchKSizes);
         }
         if self.hash_function != other.hash_function {
             // TODO: fix this error
-            return Err(Error::MismatchDNAProt.into());
+            return Err(Error::MismatchDNAProt);
         }
         if self.max_hash != other.max_hash {
-            return Err(Error::MismatchScaled.into());
+            return Err(Error::MismatchScaled);
         }
         if self.seed != other.seed {
-            return Err(Error::MismatchSeed.into());
+            return Err(Error::MismatchSeed);
         }
         Ok(())
     }
@@ -1975,8 +1968,7 @@ impl SigsTrait for KmerMinHashBTree {
                         // throw error if DNA is not valid
                         return Err(Error::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        }
-                        .into());
+                        });
                     }
 
                     continue; // skip invalid k-mer
@@ -2033,8 +2025,7 @@ impl SigsTrait for KmerMinHashBTree {
             invalid => {
                 return Err(Error::InvalidHashFunction {
                     function: format!("{}", invalid),
-                }
-                .into())
+                })
             }
         };
 
