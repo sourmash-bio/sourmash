@@ -141,12 +141,15 @@ class LoadSingleSignatures(object):
                 yield filename, query, query_moltype, query_ksize
 
 
-def traverse_find_sigs(dirnames, yield_all_files=False):
-    for dirname in dirnames:
-        # this first if statement has suspect logic, maybe. clarify/refactor @CTB
-        if (dirname.endswith('.sig') or yield_all_files) and os.path.isfile(dirname):
-            yield dirname
+def traverse_find_sigs(filenames, yield_all_files=False):
+    for filename in filenames:
+        if os.path.isfile(filename) and
+                  (filename.endswith('.sig') or yield_all_files):
+            yield filename
             continue
+
+        # filename is a directory --
+        dirname = filename
 
         for root, dirs, files in os.walk(dirname):
             for name in files:
