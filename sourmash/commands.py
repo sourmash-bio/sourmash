@@ -493,10 +493,11 @@ def search(args):
 
 
 def categorize(args):
-    "Use an SBT to find the best match to many signatures."
+    "Use a database to find the best match to many signatures."
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # eliminate names we've already categorized
     already_names = set()
     if args.load_csv:
         with open(args.load_csv, 'rt') as fp:
@@ -504,8 +505,10 @@ def categorize(args):
             for row in r:
                 already_names.add(row[0])
 
+    # load search database
     tree = load_sbt_index(args.sbt_name)
 
+    # load query filenames
     if args.traverse_directory:
         inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
     else:
