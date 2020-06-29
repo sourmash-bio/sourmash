@@ -5,8 +5,7 @@ def subparser(subparsers):
     subparser = subparsers.add_parser('classify')
     subparser.add_argument('--db', nargs='+', action='append',
                            help='databases to use to classify')
-    subparser.add_argument('--query', nargs='*', default=[],
-                           action='append',
+    subparser.add_argument('--query', nargs='*', default=[], action='append',
                            help='query signatures to classify')
     subparser.add_argument('--query-from-file',
                            help='file containing list of signature files to query')

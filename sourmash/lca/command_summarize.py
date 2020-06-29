@@ -183,10 +183,6 @@ def summarize_main(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     if args.scaled:
@@ -197,10 +193,6 @@ def summarize_main(args):
     # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
 
     if not check_files_exist(*args.db):
         sys.exit(-1)
@@ -213,6 +205,17 @@ def summarize_main(args):
     # find all the queries
     notify('finding query signatures...')
     inp_files = args.query
+
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
+
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query')
+        sys.exit(-1)
+
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
 
     if args.singleton:
         # summarize each signature individually
