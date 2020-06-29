@@ -392,6 +392,25 @@ def test_lca_index_signatures_method():
     assert len(siglist) == 2
 
 
+def test_lca_index_select():
+    # test 'select' method from Index base class.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    xx = db.select(ksize=31)
+    assert xx == db
+
+    xx = db.select(moltype='DNA')
+    assert xx == db
+
+    with pytest.raises(ValueError):
+        db.select(ksize=21)
+
+    with pytest.raises(ValueError):
+        db.select(moltype='protein')
+
+
 def test_lca_index_find_method():
     # test 'signatures' method from base class Index
     filename = utils.get_test_data('lca/47+63.lca.json')
