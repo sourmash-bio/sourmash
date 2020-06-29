@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 import sourmash
+from . import sourmash_tst_utils as utils
 
 
 def test_sourmash_signature_api():
@@ -12,3 +13,28 @@ def test_sourmash_signature_api():
 
     assert sig_x1 == sig
     assert sig_x2 == sig
+
+
+#@CTB also test file not exist...
+def test_load_index_1():
+    testfile = utils.get_test_data('prot/protein.sbt.zip')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 2
+
+
+def test_load_index_2():
+    testfile = utils.get_test_data('prot/protein.lca.json.gz')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 2
+
+
+def test_load_index_3():
+    testfile = utils.get_test_data('prot/protein/')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 2

@@ -393,6 +393,19 @@ def _select_sigs(siglist, ksize, moltype):
            yield ss
 
 
+def load_file_as_index(filename, traverse=True):
+    "Load 'filename' as an Index class; generic database loader."
+    db, dbtype = load_database(filename, traverse)
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+        return db                         # already an index!
+    elif dbtype == DatabaseType.SIGLIST:
+        # turn siglist into a LinearIndex
+        idx = LinearIndex(db, filename)
+        return idx
+    else:
+        assert 0                          # unknown enum!?
+
+
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
                             traverse=False):
     """Load 'filename' as a collection of signatures. Return an iterable.
@@ -407,6 +420,8 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
         return db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
         return list(_select_sigs(db, moltype=select_moltype, ksize=ksize))
+    else:
+        assert 0                          # unknown enum!?
 
 
 def load_file_list_of_signatures(filename):
