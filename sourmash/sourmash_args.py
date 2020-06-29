@@ -230,7 +230,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     for filename in filenames:
         notify('loading from {}...', filename, end='\r')
 
-        db, dbtype = load_database(filename, traverse=True)
+        db, dbtype = _load_database(filename, traverse=True)
 
         # are we collecting signatures from a directory/path?
         if traverse and os.path.isdir(filename):
@@ -310,17 +310,12 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def load_database(filename, traverse=False, traverse_yield_all=False):
+def _load_database(filename, traverse=False, traverse_yield_all=False):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
 
-    This will (eventually) supersede load_dbs_and_sigs.
-
-    TODO:
-    - add traversal behavior + force load for directories.
-    - add stdin for reading signatures?
-    - maybe add file lists?
+    This is an internal function used by other functions in sourmash_args.
     """
     loaded = False
     dbtype = None
@@ -342,7 +337,7 @@ def load_database(filename, traverse=False, traverse_yield_all=False):
                     siglist = list(x)
                     all_sigs.extend(siglist)
             except IOError:
-                raise
+                raise                     # @CTB testme what should we do.
                 continue
 
         loaded=True
@@ -379,8 +374,7 @@ def load_database(filename, traverse=False, traverse_yield_all=False):
             pass
 
     if not loaded:
-        error('\nError while reading signatures from {}.'.format(filename))
-        sys.exit(-1)
+        raise IOError("Error while reading signatures from {}.".format(filename))
 
     return db, dbtype
 
@@ -395,7 +389,7 @@ def _select_sigs(siglist, ksize, moltype):
 
 def load_file_as_index(filename, traverse=True):
     "Load 'filename' as an Index class; generic database loader."
-    db, dbtype = load_database(filename, traverse)
+    db, dbtype = _load_database(filename, traverse)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
@@ -414,7 +408,8 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
 
     Applies selector function if select_moltype, ksize are given.
     """
-    db, dbtype = load_database(filename, traverse=traverse)
+    db, dbtype = _load_database(filename, traverse=traverse)
+
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         db = db.select(moltype=select_moltype, ksize=ksize)
         return db.signatures()
