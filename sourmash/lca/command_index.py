@@ -178,7 +178,11 @@ def index(args):
 #        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
 #                                                          yield_all_files=yield_all_files))
 #    else:
-#        inp_files = list(args.signatures)
+
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
 
     # track duplicates
     md5_to_name = {}
@@ -188,14 +192,14 @@ def index(args):
     #
 
     n = 0
-    total_n = len(args.signatures)
+    total_n = len(inp_files)
     record_duplicates = set()
     record_no_lineage = set()
     record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
     n_skipped = 0
-    for filename in args.signatures:
+    for filename in inp_files:
         n += 1
         for sig in sourmash_args.load_file_as_signatures(filename,
                                                          ksize=args.ksize,
