@@ -732,10 +732,11 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    # @CTB change to sourmash_args?
-    ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
-                                     select_moltype=moltype)
-    mh = ss.minhash
+    query = sourmash_args.load_query_signature(args.filename,
+                                               ksize=args.ksize,
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
+    mh = query.minhash
 
     x = {}
     x['kmer'] = mh.ksize
@@ -750,7 +751,7 @@ def export(args):
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
+    notify("exported signature {} ({})", query.name(), query.md5sum()[:8])
 
 
 def main(arglist=None):

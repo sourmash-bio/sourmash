@@ -1206,6 +1206,21 @@ def test_import_export_1(c):
 
 
 @utils.in_tempdir
+def test_import_export_1_by_md5(c):
+    # check to make sure we can import what we've exported!
+    inp = utils.get_test_data('genome-s11.fa.gz.sig')
+    outp = c.output('export.json')
+
+    c.run_sourmash('sig', 'export', inp, '-o', outp, '--md5', '1437d8eae6')
+    c.run_sourmash('sig', 'import', outp)
+
+    original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')
+    roundtrip = sourmash.load_one_signature(c.last_result.out)
+
+    assert original.minhash == roundtrip.minhash
+
+
+@utils.in_tempdir
 def test_import_export_2(c):
     # check to make sure we can import a mash JSON dump file.
     # NOTE: msh.json_dump file calculated like so:

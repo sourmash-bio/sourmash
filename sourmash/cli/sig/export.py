@@ -16,6 +16,10 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE',
         help='output signature to this file (default stdout)'
     )
+    subparser.add_argument(
+        '--md5', default=None,
+        help='select the signature with this md5 as query'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
