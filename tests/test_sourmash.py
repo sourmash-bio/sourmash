@@ -1350,6 +1350,36 @@ def test_search_4():
         assert 'short3.fa' in out
 
 
+@utils.in_tempdir
+def test_index_metagenome_fromfile(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', '-k', '21', testdata_sigs[0],
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'search {} gcf_all -k 21'.format(query_sig)
+    cmd = cmd.split()
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    print(c.last_result.err)
+
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+    assert '12 matches; showing first 3:' in out
+
+
 def test_search_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')

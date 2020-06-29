@@ -143,7 +143,7 @@ class LoadSingleSignatures(object):
 
 def traverse_find_sigs(filenames, yield_all_files=False):
     for filename in filenames:
-        if os.path.isfile(filename) and
+        if os.path.isfile(filename) and \
                   (filename.endswith('.sig') or yield_all_files):
             yield filename
             continue
