@@ -691,15 +691,18 @@ def multigather(args):
         error('Error! must specify at least one database with --db')
         sys.exit(-1)
 
-    if not args.query:
+    if not args.query and not args.query_from_file:
         error('Error! must specify at least one query signature with --query')
         sys.exit(-1)
 
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
-    args.query = [item for sublist in args.query for item in sublist]
+    inp_files = [item for sublist in args.query for item in sublist]
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
 
-    query = sourmash_args.load_query_signature(args.query[0],
+    query = sourmash_args.load_query_signature(inp_files[0],
                                                ksize=args.ksize,
                                                select_moltype=moltype)
     # set up the search databases
@@ -711,7 +714,7 @@ def multigather(args):
         sys.exit(-1)
 
     # run gather on all the queries.
-    for queryfile in args.query:
+    for queryfile in inp_files:
         # load the query signature & figure out all the things
         query = sourmash_args.load_query_signature(queryfile,
                                                    ksize=args.ksize,
