@@ -335,14 +335,23 @@ def index(args):
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
-    notify('loading {} files into SBT', len(args.signatures))
+    inp_files = args.signatures
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
+
+    if not inp_files:
+        error("ERROR: no files to index!? Supply on command line or use --from-file")
+        sys.exit(-1)
+
+    notify('loading {} files into SBT', len(inp_files))
 
     n = 0
     ksizes = set()
     moltypes = set()
     nums = set()
     scaleds = set()
-    for f in args.signatures:
+    for f in inp_files:
         if n % 100 == 0:
             notify('\r...reading from {} ({} signatures so far)', f, n, end='')
 
