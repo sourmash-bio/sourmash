@@ -2563,35 +2563,36 @@ def test_gather_metagenome():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
-def test_gather_metagenome_num_results():
-    # set a threshold on the gather output
-    with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
-        testdata_sigs = glob.glob(testdata_glob)
+@utils.in_tempdir
+def test_gather_metagenome_num_results(c):
+    # set a threshold on the number of results to be reported by gather
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
 
-        query_sig = utils.get_test_data('gather/combined.sig')
+    query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
-        cmd.extend(testdata_sigs)
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
 
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
+    c.run_sourmash(*cmd)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
 
-        cmd = 'gather {} gcf_all -k 21 --num-results 10'.format(query_sig)
-        status, out, err = utils.runscript('sourmash', cmd.split(' '),
-                                           in_directory=location)
+    cmd = 'gather {} gcf_all -k 21 --num-results 10'.format(query_sig)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
 
-        print(out)
-        print(err)
+    print(c.last_result.out)
+    print(c.last_result.err)
 
-        assert 'found 10 matches total' in out
-        assert '(truncated gather because --num-results=10)' in out
-        assert 'the recovered matches hit 99.4% of the query' in out
-        assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                    'NC_003198.1 Salmonella enterica subsp...' in out))
-        assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
+    out = c.last_result.out
+
+    assert 'found 10 matches total' in out
+    assert '(truncated gather because --num-results=10)' in out
+    assert 'the recovered matches hit 99.4% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
 def test_gather_metagenome_threshold_bp():
