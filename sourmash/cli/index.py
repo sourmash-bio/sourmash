@@ -34,7 +34,7 @@ def subparser(subparsers):
                                       usage=usage)
     subparser.add_argument('sbt_name', help='name to save index into; .sbt.zip or .sbt.json file')
     subparser.add_argument(
-        'signatures', nargs='*', default=[],
+        'signatures', nargs='+',
         help='signatures to load into SBT'
     )
     subparser.add_argument(
