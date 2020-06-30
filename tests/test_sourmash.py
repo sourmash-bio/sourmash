@@ -228,6 +228,23 @@ def test_do_traverse_directory_compare(c):
 
 
 @utils.in_tempdir
+def test_do_traverse_directory_compare_force(c):
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    sig2 = utils.get_test_data('compare/genome-s11.fa.gz.sig')
+    newdir = c.output('newdir')
+    os.mkdir(newdir)
+
+    shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
+    shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
+
+    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+                   '--dna', newdir, '-f')
+    print(c.last_result.out)
+    assert 'genome-s10.fa.gz' in c.last_result.out
+    assert 'genome-s11.fa.gz' in c.last_result.out
+
+
+@utils.in_tempdir
 def test_do_compare_output_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
