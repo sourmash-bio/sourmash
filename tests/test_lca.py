@@ -881,7 +881,7 @@ def test_multi_query_classify_traverse():
 
 
 @utils.in_tempdir
-def test_multi_query_classify_traverse_query_from_file(c):
+def test_multi_query_classify_query_from_file(c):
     # both.lca.json is built from both dir and dir2
     db1 = utils.get_test_data('lca/both.lca.json')
     dir1_glob = utils.get_test_data('lca/dir1/*.sig')
@@ -911,7 +911,7 @@ def test_multi_query_classify_traverse_query_from_file(c):
 
 
 @utils.in_tempdir
-def test_multi_query_classify_traverse_query_from_file_and_query(c):
+def test_multi_query_classify_query_from_file_and_query(c):
     # both.lca.json is built from both dir and dir2
     db1 = utils.get_test_data('lca/both.lca.json')
     dir1_glob = utils.get_test_data('lca/dir1/*.sig')
