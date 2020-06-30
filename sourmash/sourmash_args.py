@@ -244,7 +244,11 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     for filename in filenames:
         notify('loading from {}...', filename, end='\r')
 
-        db, dbtype = _load_database(filename, traverse=True)
+        try:
+            db, dbtype = _load_database(filename, traverse=traverse)
+        except IOError as e:
+            notify(str(e))
+            sys.exit(-1)
 
         # are we collecting signatures from a directory/path?
         # NOTE: error messages about loading will now be attributed to
@@ -311,7 +315,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     elif n_databases:
         notify('loaded {} databases.', n_databases)
     else:
-        notify('** ERROR: no signatures or databases loaded?') # @CTB testme
+        notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 
     if databases:

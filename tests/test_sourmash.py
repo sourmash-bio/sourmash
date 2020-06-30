@@ -3030,6 +3030,33 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
+@utils.in_thisdir
+def test_gather_error_loading_dir(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db = utils.get_test_data('prot/protein/')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, db)
+    assert 'Error while reading signatures from' in str(c.last_result.err)
+
+
+@utils.in_tempdir
+def test_gather_error_no_sigs_traverse(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    emptydir = c.output('')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+
+    err = c.last_result.err
+    print(err)
+    assert '** ERROR: no signatures or databases loaded?' in err
+    assert not 'found 0 matches total;' in err
+
+
 def test_gather_error_no_cardinality_query():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
