@@ -2732,6 +2732,86 @@ def test_multigather_metagenome():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file(c):
+    # test multigather --query-from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file_with_addl_query(c):
+    # test multigather --query-from-file and --query too
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query-from-file {} --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list, another_query)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    # first gather query
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
+    # second gather query
+    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp...' in out
+    assert 'found 1 matches total;' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+
+
 def test_gather_metagenome_traverse():
     with utils.TempDirectory() as location:
         # set up a directory $location/gather that contains
