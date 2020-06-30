@@ -393,9 +393,10 @@ def _select_sigs(siglist, ksize, moltype):
            yield ss
 
 
-def load_file_as_index(filename, traverse=True):
+def load_file_as_index(filename, traverse=True, yield_all_files=False):
     "Load 'filename' as an Index class; generic database loader."
-    db, dbtype = _load_database(filename, traverse)
+    db, dbtype = _load_database(filename, traverse,
+                                traverse_yield_all=yield_all_files)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
@@ -407,14 +408,15 @@ def load_file_as_index(filename, traverse=True):
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            traverse=False):
+                            traverse=False, yield_all_files=False):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If it's an LCA or SBT, call the .signatures() method on it.
 
     Applies selector function if select_moltype, ksize are given.
     """
-    db, dbtype = _load_database(filename, traverse=traverse)
+    db, dbtype = _load_database(filename, traverse=traverse,
+                                traverse_yield_all=yield_all_files)
 
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         db = db.select(moltype=select_moltype, ksize=ksize)

@@ -728,6 +728,63 @@ def test_index_traverse():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+        assert 'WARNING: 1 duplicate signatures.' not in err
+
+
+@utils.in_tempdir
+def test_index_traverse_force(c):
+    # test the use of --force to load all files, not just .sig
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    # name signature .txt instead of .sig:
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.txt'))
+
+    # use --force
+    cmd = ['lca', 'index', taxcsv, lca_db, in_dir, '--traverse-directory',
+           '-f']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    err = c.last_result.err
+    print(out)
+    print(err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert 'WARNING: 1 duplicate signatures.' not in err
+
+
+@utils.in_tempdir
+def test_index_from_file(c):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    file_list = c.output('sigs.list')
+    with open(file_list, 'wt') as fp:
+        print(input_sig, file=fp)
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--from-file', file_list]
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert 'WARNING: 1 duplicate signatures.' in err
 
 
 def test_index_traverse_real_spreadsheet_no_report():
