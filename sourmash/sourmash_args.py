@@ -69,7 +69,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
         sl = load_file_as_signatures(filename, ksize=ksize,
                                      select_moltype=select_moltype)
         sl = list(sl)
-    except (IOError, ValueError):
+    except (OSError, ValueError):
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
 
@@ -396,7 +396,7 @@ def _load_database(filename, traverse=False, traverse_yield_all=False):
             pass
 
     if not loaded:
-        raise IOError("Error while reading signatures from {}.".format(filename))
+        raise OSError("Error while reading signatures from '{}'.".format(filename))
 
     return db, dbtype
 
