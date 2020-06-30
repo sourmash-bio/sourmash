@@ -355,11 +355,11 @@ def index(args):
         if n % 100 == 0:
             notify('\r...reading from {} ({} signatures so far)', f, n, end='')
 
-        # @CTB what about force?
         siglist = sourmash_args.load_file_as_signatures(f,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
-                                                        traverse=args.traverse_directory)
+                                                        traverse=args.traverse_directory,
+                                                        yield_all_files=args.force)
 
         # load all matching signatures in this file
         ss = None

@@ -1814,6 +1814,35 @@ def test_do_sourmash_index_traverse():
         assert 'short2.fa' in out
 
 
+@utils.in_tempdir
+def test_do_sourmash_index_traverse_force(c):
+    # test loading of files that don't end with .sig with --traverse-dir -f
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    outdir = c.output('sigs')
+    os.mkdir(outdir)
+    out1 = os.path.join(outdir, 'short1')
+    out2 = os.path.join(outdir, 'short2')
+
+    c.run_sourmash('compute', testdata1, '-o', out1)
+    c.run_sourmash('compute', testdata2, '-o', out2)
+
+    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+
+    err = c.last_result.err
+    assert os.path.exists(c.output('zzz.sbt.json'))
+    assert 'loaded 2 sigs; saving SBT under' in err
+
+    c.run_sourmash('search', out1, 'zzz')
+
+    out = c.last_result.out
+    print(out)
+
+    assert 'short.fa' in out
+    assert 'short2.fa' in out
+
+
 def test_do_sourmash_index_sparseness():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
