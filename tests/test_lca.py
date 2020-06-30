@@ -1189,9 +1189,6 @@ def test_single_summarize():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -1208,9 +1205,6 @@ def test_single_summarize_singleton():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
                '--singleton']
@@ -1224,6 +1218,49 @@ def test_single_summarize_singleton():
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
         # --singleton adds info about signature filename, md5, and signature name
         assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
+
+
+@utils.in_tempdir
+def test_single_summarize_traverse(c):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
+           '--traverse-directory']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'loaded 1 signatures from 1 files total.' in err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+
+@utils.in_tempdir
+def test_single_summarize_singleton_traverse(c):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
+           '--singleton', '--traverse-directory']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'loaded 1 signatures from 1 files total.' in err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+    # --singleton adds info about signature filename, md5, and signature name
+    assert 'q.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
 def test_single_summarize_to_output():

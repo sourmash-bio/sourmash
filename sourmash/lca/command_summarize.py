@@ -65,7 +65,7 @@ def load_and_combine(filenames, ksize, scaled, with_abundance, traverse):
     hashvals = defaultdict(int)
     for query_filename in filenames:
         n += 1
-        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=traverse):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
@@ -90,11 +90,20 @@ def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
+
+    # in order to get the right reporting out of this function, we need
+    # to do our own traversal to expand the list of filenames, as opposed
+    # to using load_file_as_signatures(..., traverse=True)
+    if traverse:
+        filenames = sourmash_args.traverse_find_sigs(filenames)
+        filenames = list(filenames)
+
     total_n = len(filenames)
+
     for query_filename in filenames:
         n += 1
-        # @CTB test
-        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=traverse):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename,
+                                                               ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
@@ -179,6 +188,7 @@ def summarize_main(args):
     """
     main summarization function.
     """
+    #args.traverse_directory = False
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
