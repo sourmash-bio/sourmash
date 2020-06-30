@@ -2049,8 +2049,35 @@ def test_incompat_lca_db_ksize(c):
     # no compatible ksizes.
     with pytest.raises(ValueError) as e:
         c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+    print(c.last_result)
 
     assert '0 signatures matching ksize and molecule type;' in str(e.value)
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_ksize_2(c):
+    # test on gather, not just lca gather
+    # create a database with ksize of 25
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # this should fail: the LCA database has ksize 25, and the query sig has
+    # no compatible ksizes.
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+
+    err = c.last_result.err
+    print(err)
+
+    assert "ksize on db 'test.lca.json' is 25;" in err
+    assert 'this is different from query ksize of 31.' in err
 
 
 @utils.in_tempdir

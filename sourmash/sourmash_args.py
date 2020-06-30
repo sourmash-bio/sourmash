@@ -219,6 +219,16 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     return 1
 
 
+def check_lca_db_is_compatible(filename, db, query):
+    query_mh = query.minhash
+    if db.ksize != query_mh.ksize:
+        error("ksize on db '{}' is {};", filename, db.ksize)
+        error('this is different from query ksize of {}.', query_mh.ksize)
+        return 0
+
+    return 1
+
+
 def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     """
     Load one or more SBTs, LCAs, and/or signatures.
@@ -237,6 +247,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         db, dbtype = _load_database(filename, traverse=True)
 
         # are we collecting signatures from a directory/path?
+        # NOTE: error messages about loading will now be attributed to
+        # directory, not individual file.
         if traverse and os.path.isdir(filename):
             assert dbtype == DatabaseType.SIGLIST
 
@@ -244,7 +256,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
             siglist = filter_compatible_signatures(query, siglist, 1)
             linear = LinearIndex(siglist, filename=filename)
             databases.append((linear, filename, False))
-            # this kinda changes the CLI b/c collapses under directory @CTB
 
             n_signatures += len(linear)
 
@@ -260,7 +271,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
 
         # LCA
         elif dbtype == DatabaseType.LCA:
-            assert query_ksize == db.ksize   # should not be assert!? @CTB
+            if not check_lca_db_is_compatible(filename, db, query):
+                sys.exit(-1)
             query_scaled = query.minhash.scaled
 
             notify('loaded LCA {}', filename, end='\r')
