@@ -95,11 +95,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
 
-      - name: Run tests
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/install@v0.1
         with:
-          command: test
-          args: --no-fail-fast --all --all-features
+          crate: cargo-all-features
+          version: latest
+          use-tool-cache: true
+
+      - name: Run tests for all feature combinations
+        run: cargo test-all-features --no-fail-fast --all
 
   coverage:
     runs-on: ubuntu-latest
@@ -111,10 +114,15 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Coverage with tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+      - name: Install cargo-tarpaulin
+        uses: actions-rs/install@v0.1
         with:
-          args: '--all --all-features -- --test-threads 1'
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+
+      - name: Coverage with tarpaulin
+        run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
 
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
