@@ -1201,6 +1201,17 @@ signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
         assert line.strip() in out
 
 
+@utils.in_thisdir
+def test_sig_describe_stdin(c):
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    with open(sig, 'rt') as fp:
+        data = fp.read()
+
+    c.run_sourmash('sig', 'describe', '-', stdin_data=data)
+
+    assert 'signature: GCA_001593925.1_ASM159392v1_protein.faa.gz' in c.last_result.out
+
+
 @utils.in_tempdir
 def test_sig_describe_2(c):
     # get info in CSV spreadsheet
