@@ -204,7 +204,7 @@ def _detect_input_type(data):
      - Compressed memory buffers
      - filename
     """
-    if hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
+    if hasattr(data, 'read') or hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
         return SigInput.FILE_LIKE
     elif hasattr(data, "find"):  # check if it is uncompressed sig
         try:
