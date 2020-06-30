@@ -661,7 +661,7 @@ def test_search_subject_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Error while reading signatures from short2.fa.sig.' in c.last_result.err
+    assert "Error while reading signatures from 'short2.fa.sig'" in c.last_result.err
 
 
 @utils.in_tempdir
@@ -675,7 +675,7 @@ def test_search_second_subject_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Error while reading signatures from short2.fa.sig.' in c.last_result.err
+    assert "Error while reading signatures from 'short2.fa.sig'." in c.last_result.err
 
 @utils.in_tempdir
 def test_search(c):
@@ -803,7 +803,7 @@ def test_compare_no_such_file(c):
     with pytest.raises(ValueError) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
-    assert 'Error while reading signatures from nosuchfile.sig.' in c.last_result.err
+    assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -812,7 +812,7 @@ def test_compare_no_such_file_force(c):
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
     print(c.last_result.err)
-    assert 'Error while reading signatures from nosuchfile.sig.'
+    assert "Error while reading signatures from 'nosuchfile.sig'."
 
 
 @utils.in_tempdir
