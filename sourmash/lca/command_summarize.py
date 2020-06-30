@@ -188,7 +188,6 @@ def summarize_main(args):
     """
     main summarization function.
     """
-    #args.traverse_directory = False
     if not args.db:
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
