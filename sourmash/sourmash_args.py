@@ -314,7 +314,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def _load_database(filename, traverse=False, traverse_yield_all=True):
+def _load_database(filename, traverse=False, traverse_yield_all=False):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -341,7 +341,10 @@ def _load_database(filename, traverse=False, traverse_yield_all=True):
                     siglist = list(x)
                     all_sigs.extend(siglist)
             except (IOError, sourmash.exceptions.SourmashError):
-                continue
+                if traverse_yield_all:
+                    continue
+                else:
+                    raise
 
         loaded=True
         db = all_sigs
