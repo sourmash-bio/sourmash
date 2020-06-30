@@ -31,16 +31,22 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
+
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
-    for filename in args.signatures:
+    for filename in inp_files:
         notify("loading '{}'", filename, end='\r')
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
-                                                       traverse=args.traverse_directory)
+                                                       traverse=args.traverse_directory,
+                                                       yield_all_files=args.force)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
@@ -335,7 +341,7 @@ def index(args):
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
 
-    inp_files = args.signatures
+    inp_files = list(args.signatures)
     if args.from_file:
         more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
         inp_files.extend(more_files)

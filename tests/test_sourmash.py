@@ -134,6 +134,41 @@ def test_do_compare_parallel(c):
 
 
 @utils.in_tempdir
+def test_do_serial_compare_with_from_file(c):
+    # try doing a compare serial
+    import numpy
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(testsigs), file=fp)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna',
+                   '--from-file', file_list)
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
+
+
+@utils.in_tempdir
 def test_do_basic_compare_using_rna_arg(c):
     # try doing a basic compare using --rna instead of --dna
     import numpy
