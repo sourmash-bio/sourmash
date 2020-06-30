@@ -47,3 +47,4 @@ from . import sig
 from . import cli
 from . import commands
 from .sourmash_args import load_file_as_index
+from .sourmash_args import load_file_as_signatures
