@@ -6,6 +6,7 @@ import os
 import shutil
 import csv
 import pytest
+import glob
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -877,6 +878,67 @@ def test_multi_query_classify_traverse():
             assert len(fp_lines) == len(out_lines)
             for line1, line2 in zip(fp_lines, out_lines):
                 assert line1.strip() == line2.strip(), (line1, line2)
+
+
+@utils.in_tempdir
+def test_multi_query_classify_traverse_query_from_file(c):
+    # both.lca.json is built from both dir and dir2
+    db1 = utils.get_test_data('lca/both.lca.json')
+    dir1_glob = utils.get_test_data('lca/dir1/*.sig')
+    dir1_files = glob.glob(dir1_glob)
+    dir2_glob = utils.get_test_data('lca/dir2/*.sig')
+    dir2_files = glob.glob(dir2_glob)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(dir1_files), file=fp)
+        print("\n".join(dir2_files), file=fp)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query-from-file', file_list]
+    c.run_sourmash(*cmd)
+    out = c.last_result.out
+
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = out.splitlines()
+
+        fp_lines.sort()
+        out_lines.sort()
+
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
+
+
+@utils.in_tempdir
+def test_multi_query_classify_traverse_query_from_file_and_query(c):
+    # both.lca.json is built from both dir and dir2
+    db1 = utils.get_test_data('lca/both.lca.json')
+    dir1_glob = utils.get_test_data('lca/dir1/*.sig')
+    dir1_files = glob.glob(dir1_glob)
+    dir2_glob = utils.get_test_data('lca/dir2/*.sig')
+    dir2_files = glob.glob(dir2_glob)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(dir1_files[1:]), file=fp)   # leave off first one
+        print("\n".join(dir2_files), file=fp)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', dir1_files[0],
+           '--query-from-file', file_list]
+    c.run_sourmash(*cmd)
+    out = c.last_result.out
+
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = out.splitlines()
+
+        fp_lines.sort()
+        out_lines.sort()
+
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
 
 
 def test_multi_db_multi_query_classify_traverse():
