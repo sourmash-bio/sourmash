@@ -94,13 +94,14 @@ impl SigsTrait for Sketch {
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 pub struct Signature {
     #[serde(default = "default_class")]
-    #[builder(default_code = "default_class()")]
+    #[builder(default = default_class())]
     class: String,
 
     #[serde(default)]
     #[builder(default)]
     email: String,
 
+    #[builder(setter(into))]
     hash_function: String,
 
     #[builder(default)]
@@ -110,13 +111,13 @@ pub struct Signature {
     pub(crate) name: Option<String>,
 
     #[serde(default = "default_license")]
-    #[builder(default_code = "default_license()")]
+    #[builder(default = default_license())]
     license: String,
 
     pub(crate) signatures: Vec<Sketch>,
 
     #[serde(default = "default_version")]
-    #[builder(default_code = "default_version()")]
+    #[builder(default = default_version())]
     version: f64,
 }
 

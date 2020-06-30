@@ -81,13 +81,13 @@ pub struct KmerMinHash {
     num: u32,
     ksize: u32,
 
-    #[builder(default_code = "HashFunctions::murmur64_DNA")]
+    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
     hash_function: HashFunctions,
 
-    #[builder(default_code = "42u64")]
+    #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default_code = "u64::max_value()")]
+    #[builder(default = u64::max_value())]
     max_hash: u64,
 
     #[builder(default)]
@@ -1282,13 +1282,13 @@ pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
 
-    #[builder(default_code = "HashFunctions::murmur64_DNA")]
+    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
     hash_function: HashFunctions,
 
-    #[builder(default_code = "42u64")]
+    #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default_code = "u64::max_value()")]
+    #[builder(default = u64::max_value())]
     max_hash: u64,
 
     #[builder(default)]
@@ -1297,7 +1297,7 @@ pub struct KmerMinHashBTree {
     #[builder(default)]
     abunds: Option<BTreeMap<u64, u64>>,
 
-    #[builder(default_code = "0u64")]
+    #[builder(default = 0u64)]
     current_max: u64,
 
     #[builder(default)]

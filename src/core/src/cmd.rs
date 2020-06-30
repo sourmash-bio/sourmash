@@ -39,112 +39,108 @@ impl Signature {
 #[derive(TypedBuilder, CopyGetters, Getters, Setters)]
 pub struct ComputeParameters {
     #[getset(get = "pub", set = "pub")]
-    #[builder(default_code = "vec![21, 31, 51]")]
+    #[builder(default = vec![21, 31, 51])]
     ksizes: Vec<u32>,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     check_sequence: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "true")]
+    #[builder(default = true)]
     dna: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     dayhoff: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     hp: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     singleton: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "0usize")]
+    #[builder(default = 0usize)]
     count_valid_reads: usize,
 
     #[getset(get = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     barcodes_file: Option<String>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "1500usize")]
+    #[builder(default = 1500usize)]
     line_count: usize,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     rename_10x_barcodes: Option<bool>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     write_barcode_meta_csv: Option<bool>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     save_fastas: Option<bool>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "0u64")]
+    #[builder(default = 0u64)]
     scaled: u64,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     force: bool,
 
     #[getset(get = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     output: Option<String>, // TODO: check
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "500u32")]
+    #[builder(default = 500u32)]
     num_hashes: u32,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     protein: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     name_from_first: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "42u64")]
+    #[builder(default = 42u64)]
     seed: u64,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     input_is_protein: bool,
 
     #[getset(get = "pub", set = "pub")]
-    #[builder(default_code = "None")]
+    #[builder(default = None)]
     merge: Option<String>,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     track_abundance: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     randomize: bool,
 
     #[getset(get = "pub", set = "pub")]
-    #[builder(default_code = "default_license()")]
+    #[builder(default = "CC0".into())]
     license: String,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "false")]
+    #[builder(default = false)]
     input_is_10x: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default_code = "2usize")]
+    #[builder(default = 2usize)]
     processes: usize,
-}
-
-fn default_license() -> String {
-    "CC0".to_string()
 }
 
 impl Default for ComputeParameters {

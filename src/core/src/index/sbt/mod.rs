@@ -46,13 +46,13 @@ pub struct SBT<N, L> {
     #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default_code = r#"Factory::GraphFactory { args: (1, 100000.0, 4) }"#)]
+    #[builder(default = Factory::GraphFactory { args: (1, 100000.0, 4) })]
     factory: Factory,
 
-    #[builder(default_code = "HashMap::default()")]
+    #[builder(default = HashMap::default())]
     nodes: HashMap<u64, N>,
 
-    #[builder(default_code = "HashMap::default()")]
+    #[builder(default = HashMap::default())]
     leaves: HashMap<u64, SigStore<L>>,
 }
 
@@ -558,14 +558,18 @@ pub enum Factory {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct Node<T> {
+    #[builder(setter(into))]
     filename: String,
+
+    #[builder(setter(into))]
     name: String,
+
     metadata: HashMap<String, u64>,
 
     #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default)]
+    #[builder(setter(into), default)]
     data: OnceCell<T>,
 }
 

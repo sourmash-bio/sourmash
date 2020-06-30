@@ -131,13 +131,18 @@ pub struct DatasetInfo {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct SigStore<T> {
+    #[builder(setter(into))]
     filename: String,
+
+    #[builder(setter(into))]
     name: String,
+
+    #[builder(setter(into))]
     metadata: String,
 
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default)]
+    #[builder(setter(into), default)]
     data: OnceCell<T>,
 }
 
