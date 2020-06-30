@@ -1151,6 +1151,57 @@ signature: NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequen
 
 
 @utils.in_tempdir
+def test_sig_describe_1_sbt(c):
+    # get basic info on multiple signatures in an SBT
+    sigs = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_lca(c):
+    # get basic info on multiple signatures in an LCA database
+    sigs = utils.get_test_data('prot/protein.lca.json.gz')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_dir(c):
+    # get basic info on multiple signatures in a directory
+    sigs = utils.get_test_data('prot/protein/')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
 def test_sig_describe_2(c):
     # get info in CSV spreadsheet
     sig47 = utils.get_test_data('47.fa.sig')
