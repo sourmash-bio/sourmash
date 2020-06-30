@@ -7,6 +7,7 @@ import sys
 import csv
 
 from .. import sourmash_args
+from ..sourmash_args import load_file_as_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -121,7 +122,9 @@ def classify(args):
         total_n = len(inp_files)
         for query_filename in inp_files:
             n += 1
-            for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=args.traverse_directory):
+            for query_sig in load_file_as_signatures(query_filename,
+                                                     ksize=ksize,
+                                                     traverse=args.traverse_directory):
                 notify(u'\r\033[K', end=u'')
                 notify('... classifying {} (file {} of {})', query_sig.name(),
                        n, total_n, end='\r')

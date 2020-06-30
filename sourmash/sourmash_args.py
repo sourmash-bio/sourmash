@@ -9,6 +9,7 @@ from enum import Enum
 
 from sourmash import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
+import sourmash.exceptions
 
 from . import signature
 from .logging import notify, error
@@ -313,7 +314,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def _load_database(filename, traverse=False, traverse_yield_all=False):
+def _load_database(filename, traverse=False, traverse_yield_all=True):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -339,8 +340,7 @@ def _load_database(filename, traverse=False, traverse_yield_all=False):
                     x = sourmash.load_signatures(fp, quiet=True, do_raise=True)
                     siglist = list(x)
                     all_sigs.extend(siglist)
-            except IOError:
-                raise                     # @CTB testme what should we do.
+            except (IOError, sourmash.exceptions.SourmashError):
                 continue
 
         loaded=True
