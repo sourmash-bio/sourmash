@@ -21,9 +21,6 @@ bench = false
 from-finch = ["finch"]
 parallel = ["rayon"]
 
-#[build-dependencies]
-#cbindgen = "~0.14.2"
-
 [dependencies]
 backtrace = "=0.3.46" # later versions require rust 1.40
 byteorder = "1.3.4"
@@ -48,9 +45,6 @@ getset = "0.1.1"
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dependencies.wasm-bindgen]
 version = "0.2.62"
 features = ["serde-serialize"]
-
-#[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-#proptest = "0.9.4"
 
 [target.'cfg(all(target_arch = "wasm32", target_vendor="unknown"))'.dev-dependencies]
 wasm-bindgen-test = "0.3.0"
