@@ -773,6 +773,18 @@ def test_gather_query_db_md5(c):
     assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
 
 
+@utils.in_thisdir
+def test_gather_query_db_md5_ambiguous(c):
+    # what if we give an ambiguous md5 prefix?
+    db = utils.get_test_data('prot/protein.sbt.zip')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('gather', db, db, '--md5', '1')
+
+    err = c.last_result.err
+    assert "Error! Multiple signatures start with md5 '1'" in err
+
+
 @utils.in_tempdir
 def test_gather_lca_db(c):
     # can we do a 'sourmash gather' on an LCA database?

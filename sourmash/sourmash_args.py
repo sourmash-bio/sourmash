@@ -74,11 +74,20 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
         sys.exit(-1)
 
     if len(sl) and select_md5:
+        found_sig = None
         for sig in sl:
             sig_md5 = sig.md5sum()
             if sig_md5.startswith(select_md5.lower()):
-                sl = [sig]
-                break
+                # make sure we pick only one --
+                if found_sig is not None:
+                    error("Error! Multiple signatures start with md5 '{}'",
+                          select_md5)
+                    error("Please use a longer --md5 selector.")
+                    sys.exit(-1)
+                else:
+                    found_sig = sig
+
+            sl = [found_sig]
 
     if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
