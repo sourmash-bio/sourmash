@@ -592,7 +592,7 @@ class MinHash(RustObject):
         if self.mins.last():
             current_max = x
         else:
-            current_max = u64::max_value()
+            current_max = sys.maxint
 
         if (hash > self.max_hash) and (self.max_hash):
             # This is a scaled minhash, and we don't need to add the new hash
@@ -620,7 +620,7 @@ class MinHash(RustObject):
             # still have space available
             try:
                 pos = self.mins.index(hash)
-            else:
+            except ValueError:
                 # if self.mins[pos] != hash :
                 # didn't find hash in mins, so inserting somewhere
                 # in the middle; shrink list if needed.
@@ -641,6 +641,4 @@ class MinHash(RustObject):
             else:
                 # pos == hash: hash value already in mins, inc count by abundance
                 self.abunds[pos] += abundance
-            
-        }
-    }
+
