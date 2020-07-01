@@ -43,7 +43,7 @@ pub struct SBT<N, L> {
     #[builder(default = 2)]
     d: u32,
 
-    #[builder(default)]
+    #[builder(default, setter(into))]
     storage: Option<Rc<dyn Storage>>,
 
     #[builder(default = Factory::GraphFactory { args: (1, 100000.0, 4) })]
