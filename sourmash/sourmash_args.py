@@ -245,7 +245,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         notify('loading from {}...', filename, end='\r')
 
         try:
-            db, dbtype = _load_database(filename, traverse=traverse)
+            db, dbtype = _load_database(filename, traverse, False)
         except IOError as e:
             notify(str(e))
             sys.exit(-1)
@@ -330,7 +330,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def _load_database(filename, traverse=False, traverse_yield_all=False):
+def _load_database(filename, traverse, traverse_yield_all):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -410,9 +410,19 @@ def _select_sigs(siglist, ksize, moltype):
 
 
 def load_file_as_index(filename, traverse=True, yield_all_files=False):
-    "Load 'filename' as an Index class; generic database loader."
-    db, dbtype = _load_database(filename, traverse,
-                                traverse_yield_all=yield_all_files)
+    """Load 'filename' as a database; generic database loader.
+
+    If 'filename' contains an SBT or LCA indexed database, will return
+    the appropriate objects.
+
+    If 'filename' is a JSON file containing one or more signatures, will
+    return an Index object containing those signatures.
+
+    If 'filename' is a directory and traverse=True, will load *.sig underneath
+    this directory into an Index object. If yield_all_files=True, will
+    attempt to load all files. (traverse defaults to True here.)
+    """
+    db, dbtype = _load_database(filename, traverse, yield_all_files)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
@@ -427,12 +437,19 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
                             traverse=False, yield_all_files=False):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
-    If it's an LCA or SBT, call the .signatures() method on it.
+    If 'filename' contains an SBT or LCA indexed database, will return
+    a signatures() generator.
 
-    Applies selector function if select_moltype, ksize are given.
+    If 'filename' is a JSON file containing one or more signatures, will
+    return a list of those signatures.
+
+    If 'filename' is a directory and traverse=True, will load *.sig
+    underneath this directory into a list of signatures. If
+    yield_all_files=True, will attempt to load all files.
+
+    Applies selector function if select_moltype and/or ksize are given.
     """
-    db, dbtype = _load_database(filename, traverse=traverse,
-                                traverse_yield_all=yield_all_files)
+    db, dbtype = _load_database(filename, traverse, yield_all_files)
 
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         db = db.select(moltype=select_moltype, ksize=ksize)
@@ -444,6 +461,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
 
 
 def load_file_list_of_signatures(filename):
+    "Load a list-of-files text file."
     with open(filename, 'rt') as fp:
         file_list = [ x.rstrip('\r\n') for x in fp ]
 

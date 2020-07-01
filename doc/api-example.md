@@ -422,7 +422,7 @@ checks.)
 Now, save the tree:
 
 ```
->>> filename = tree.save(tempdir + '/test.sbt.json')
+>>> filename = tree.save(tempdir + '/test.sbt.zip')
 
 ```
 
@@ -431,9 +431,9 @@ Now, save the tree:
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
 
-The SBT filename is `test.sbt.json`, as above:
+The SBT filename is `test.sbt.zip`, as above:
 ```
->>> SBT_filename = tempdir + '/test.sbt.json'
+>>> SBT_filename = tempdir + '/test.sbt.zip'
 
 ```
 
@@ -465,9 +465,7 @@ and create a scaled signature:
 Now do a search --
 
 ```
->>> threshold = 0.1
-                                           
->>> for similarity, found_sig, filename in tree.search(query_sig, threshold=threshold, ignore_abundance=False, do_containment=False, best_only=False):
+>>> for similarity, found_sig, filename in tree.search(query_sig, threshold=0.1):
 ...    print(query_sig.name())
 ...    print(found_sig.name())
 ...    print(similarity)

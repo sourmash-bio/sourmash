@@ -279,14 +279,26 @@ class SBT(Index):
         return matches
 
     def search(self, query, *args, **kwargs):
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments:
+          * do_containment: default False. If True, use Jaccard containment.
+          * best_only: default False. If True, allow optimizations that
+            may. May discard matches better than threshold, but first match
+            is guaranteed to be best.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
+        """
         from .sbtmh import search_minhashes, search_minhashes_containment
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
         threshold = kwargs['threshold']
-        ignore_abundance = kwargs['ignore_abundance']
-        do_containment = kwargs['do_containment']
-        best_only = kwargs['best_only']
+        ignore_abundance = kwargs.get('ignore_abundance', False)
+        do_containment = kwargs.get('do_containment', False)
+        best_only = kwargs.get('best_only', False)
         unload_data = kwargs.get('unload_data', False)
 
         # figure out scaled value of tree, downsample query if needed.
