@@ -108,7 +108,7 @@ jobs:
       python: 3.5
     - <<: *test
       python: 3.7
-      end:
+      env:
         - TOXENV=docs
     - <<: *test
       python: 2.7
