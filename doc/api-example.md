@@ -426,7 +426,7 @@ Now, save the tree:
 
 ```
 
-### Loading and search SBTs
+### Loading and searching SBTs
 
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
@@ -439,7 +439,7 @@ The SBT filename is `test.sbt.json`, as above:
 
 and with it we can load the SBT:
 ```
->>> tree = sourmash.load_sbt_index(SBT_filename)
+>>> tree = sourmash.load_file_as_index(SBT_filename)
 
 ```
 
@@ -467,7 +467,7 @@ Now do a search --
 ```
 >>> threshold = 0.1
                                            
->>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
+>>> for similarity, found_sig, filename in tree.search(query_sig, threshold=threshold, ignore_abundance=False, do_containment=False, best_only=False):
 ...    print(query_sig.name())
 ...    print(found_sig.name())
 ...    print(similarity)

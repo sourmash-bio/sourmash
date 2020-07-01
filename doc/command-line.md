@@ -529,6 +529,10 @@ such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
 
+Most commands will load signatures automatically from indexed databases
+(SBT and LCA formats) as well as from signature files, and you can load
+signatures from stdin using `-` on the command line.
+
 ### `sourmash signature cat`
 
 Concatenate signature files.
