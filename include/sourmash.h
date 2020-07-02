@@ -116,6 +116,8 @@ void kmerminhash_add_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *o
 
 void kmerminhash_add_hash(SourmashKmerMinHash *ptr, uint64_t h);
 
+void kmerminhash_add_hash_with_abundance(SourmashKmerMinHash *ptr, uint64_t h, uint64_t abundance);
+
 void kmerminhash_add_many(SourmashKmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
 
 void kmerminhash_add_protein(SourmashKmerMinHash *ptr, const char *sequence);

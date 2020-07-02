@@ -363,6 +363,10 @@ class MinHash(RustObject):
         "Add a single hash value."
         return self._methodcall(lib.kmerminhash_add_hash, h)
 
+    def add_hash_with_abundance(self, h, a):
+        "Add a single hash value with an abundance."
+        return self._methodcall(lib.kmerminhash_add_hash_with_abundance, h, a)
+
     def translate_codon(self, codon):
         "Translate a codon into an amino acid."
         try:
@@ -544,14 +548,19 @@ class MinHash(RustObject):
 
     merge = __iadd__
 
-    def set_abundances(self, values, no_clear=False):
+    def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
         """
         if self.track_abundance:
-            if not no_clear:
-                hashes = []
-                abunds = []
+            hashes = []
+            abunds = []
+            if not clear:
+                current_values = self.get_mins(with_abundance=True)
+                for h, v in current_values.items():
+                    hashes.append(h)
+                    abunds.append(v)
+
             for h, v in values.items():
                 hashes.append(h)
                 abunds.append(v)
@@ -587,58 +596,3 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
-
-    def add_hash_with_abundance(self, hash, abundance):
-        if self.mins.last():
-            current_max = x
-        else:
-            current_max = sys.maxint
-
-        if (hash > self.max_hash) and (self.max_hash):
-            # This is a scaled minhash, and we don't need to add the new hash
-            return
-        
-
-        if (not self.num) and (not self.max_hash):
-            # why did you create this minhash? it will always be empty...
-            return
-
-        if not abundance:
-            # well, don't add it.
-            return
-
-        # From this point on, hash is within scaled (or no scaled specified).
-
-        # empty mins? add it.
-        if not self.mins:
-            self.mins.append(hash)
-            self.abunds.append(abundance)
-            return
-
-        if (hash <= self.max_hash) or (hash <= current_max) or (len(self.mins) < self.num):
-            # "good" hash - within range, smaller than current entry, or
-            # still have space available
-            try:
-                pos = self.mins.index(hash)
-            except ValueError:
-                # if self.mins[pos] != hash :
-                # didn't find hash in mins, so inserting somewhere
-                # in the middle; shrink list if needed.
-                pos = len(self.mins) / 2
-                self.mins.insert(pos, hash)
-                self.abunds.insert(pos, abundance)
-
-                # is it too big now?
-                if self.num and len(self.mins) > self.num :
-                    self.mins.pop()
-                    self.abunds.pop()
-
-            if pos == len(self.mins):
-                # at end - must still be growing, we know the list won't
-                # get too long
-                self.mins.append(hash)
-                self.abunds.append(abundance)
-            else:
-                # pos == hash: hash value already in mins, inc count by abundance
-                self.abunds[pos] += abundance
-

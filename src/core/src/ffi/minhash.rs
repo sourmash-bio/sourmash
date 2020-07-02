@@ -98,6 +98,13 @@ pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(ptr: *mut SourmashKmerMinHash, h: u64, abundance: u64) {
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    mh.add_hash_with_abundance(h, abundance);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn kmerminhash_add_word(ptr: *mut SourmashKmerMinHash, word: *const c_char) {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
