@@ -163,15 +163,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
-      - uses: actions-rs/cargo@v1
+
+      - uses: actions-rs/install@v0.1
         with:
-          command: install
-          args: --force wasm-pack --version 0.8.1
-      - name: run wasm-pack
+          crate: wasm-pack
+          version: latest
+
+      - name: Prepare node for running tests
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - name: run wasm tests
+        run: wasm-pack test --node src/core
+
+      - name: run wasm-pack build
         run: wasm-pack build src/core -d ../../pkg
 
   wasm32-wasi:

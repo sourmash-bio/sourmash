@@ -96,7 +96,8 @@ mod test {
 
     #[wasm_bindgen_test]
     fn wasm_test() {
-        let params = ComputeParameters::new_with_params();
+        let mut params = ComputeParameters::new_with_params();
+        params.set_ksizes(vec![19, 29, 49]);
         let sig = Signature::new_from_params(&params);
         assert_eq!(sig.size(), 3);
     }
