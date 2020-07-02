@@ -530,6 +530,15 @@ def test_sig_rename_2_output_to_same(c):
     assert actual_rename_sig.name() == 'fiz bar'
 
 
+@utils.in_tempdir
+def test_sig_rename_3_file_dne(c):
+    # rename on a file that does not exist should fail!
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
+
+    assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
+
+
 @utils.in_thisdir
 def test_sig_cat_1(c):
     # cat 47 to 47...
@@ -1142,6 +1151,68 @@ signature: NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequen
 
 
 @utils.in_tempdir
+def test_sig_describe_1_sbt(c):
+    # get basic info on multiple signatures in an SBT
+    sigs = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_lca(c):
+    # get basic info on multiple signatures in an LCA database
+    sigs = utils.get_test_data('prot/protein.lca.json.gz')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_dir(c):
+    # get basic info on multiple signatures in a directory
+    sigs = utils.get_test_data('prot/protein/')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_thisdir
+def test_sig_describe_stdin(c):
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    with open(sig, 'rt') as fp:
+        data = fp.read()
+
+    c.run_sourmash('sig', 'describe', '-', stdin_data=data)
+
+    assert 'signature: GCA_001593925.1_ASM159392v1_protein.faa.gz' in c.last_result.out
+
+
+@utils.in_tempdir
 def test_sig_describe_2(c):
     # get info in CSV spreadsheet
     sig47 = utils.get_test_data('47.fa.sig')
@@ -1188,6 +1259,21 @@ def test_import_export_1(c):
     outp = c.output('export.json')
 
     c.run_sourmash('sig', 'export', inp, '-o', outp, '-k', '21', '--dna')
+    c.run_sourmash('sig', 'import', outp)
+
+    original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')
+    roundtrip = sourmash.load_one_signature(c.last_result.out)
+
+    assert original.minhash == roundtrip.minhash
+
+
+@utils.in_tempdir
+def test_import_export_1_by_md5(c):
+    # check to make sure we can import what we've exported!
+    inp = utils.get_test_data('genome-s11.fa.gz.sig')
+    outp = c.output('export.json')
+
+    c.run_sourmash('sig', 'export', inp, '-o', outp, '--md5', '1437d8eae6')
     c.run_sourmash('sig', 'import', outp)
 
     original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')

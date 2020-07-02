@@ -12,6 +12,10 @@ def subparser(subparsers):
         help='one or more sourmash signatures'
     )
     subparser.add_argument(
+        '--from-file',
+        help='a file containing a list of signatures file to load'
+    )
+    subparser.add_argument(
         '--scaled', metavar='S', default=10000, type=float
     )
     add_ksize_arg(subparser, 31)

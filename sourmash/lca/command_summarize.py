@@ -7,7 +7,7 @@ import sys
 import csv
 from collections import defaultdict
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -57,7 +57,7 @@ def summarize(hashvals, dblist, threshold, with_abundance):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled, with_abundance):
+def load_and_combine(filenames, ksize, scaled, with_abundance, traverse):
     "Load individual signatures and combine them all for classification."
     total_count = 0
     n = 0
@@ -65,7 +65,7 @@ def load_and_combine(filenames, ksize, scaled, with_abundance):
     hashvals = defaultdict(int)
     for query_filename in filenames:
         n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=traverse):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
@@ -86,14 +86,24 @@ def load_and_combine(filenames, ksize, scaled, with_abundance):
     return hashvals
 
 
-def load_singletons_and_count(filenames, ksize, scaled, with_abundance):
+def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
+
+    # in order to get the right reporting out of this function, we need
+    # to do our own traversal to expand the list of filenames, as opposed
+    # to using load_file_as_signatures(..., traverse=True)
+    if traverse:
+        filenames = sourmash_args.traverse_find_sigs(filenames)
+        filenames = list(filenames)
+
     total_n = len(filenames)
+
     for query_filename in filenames:
         n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename,
+                                                               ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
@@ -182,10 +192,6 @@ def summarize_main(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     if args.scaled:
@@ -197,10 +203,6 @@ def summarize_main(args):
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
 
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
-
     if not check_files_exist(*args.db):
         sys.exit(-1)
 
@@ -211,10 +213,18 @@ def summarize_main(args):
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = args.query
+
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
+
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query')
+        sys.exit(-1)
+
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
 
     if args.singleton:
         # summarize each signature individually
@@ -225,7 +235,7 @@ def summarize_main(args):
 
         try:
             for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled, with_abundance):
+              load_singletons_and_count(inp_files, ksize, scaled, with_abundance, args.traverse_directory):
 
                 # get the full counted list of lineage counts in this signature
                 lineage_counts = summarize(hashvals, dblist, args.threshold,
@@ -249,7 +259,8 @@ def summarize_main(args):
     else:
         # load and merge all the signatures in all the files
         # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance)
+        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance,
+                                    args.traverse_directory)
 
         # get the full counted list of lineage counts across signatures
         lineage_counts = summarize(hashvals, dblist, args.threshold,

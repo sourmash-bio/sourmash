@@ -6,6 +6,7 @@ import os
 import shutil
 import csv
 import pytest
+import glob
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -392,6 +393,25 @@ def test_lca_index_signatures_method():
     assert len(siglist) == 2
 
 
+def test_lca_index_select():
+    # test 'select' method from Index base class.
+
+    filename = utils.get_test_data('lca/47+63.lca.json')
+    db, ksize, scaled = lca_utils.load_single_database(filename)
+
+    xx = db.select(ksize=31)
+    assert xx == db
+
+    xx = db.select(moltype='DNA')
+    assert xx == db
+
+    with pytest.raises(ValueError):
+        db.select(ksize=21)
+
+    with pytest.raises(ValueError):
+        db.select(moltype='protein')
+
+
 def test_lca_index_find_method():
     # test 'signatures' method from base class Index
     filename = utils.get_test_data('lca/47+63.lca.json')
@@ -708,6 +728,63 @@ def test_index_traverse():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+        assert 'WARNING: 1 duplicate signatures.' not in err
+
+
+@utils.in_tempdir
+def test_index_traverse_force(c):
+    # test the use of --force to load all files, not just .sig
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    # name signature .txt instead of .sig:
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.txt'))
+
+    # use --force
+    cmd = ['lca', 'index', taxcsv, lca_db, in_dir, '--traverse-directory',
+           '-f']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    err = c.last_result.err
+    print(out)
+    print(err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert 'WARNING: 1 duplicate signatures.' not in err
+
+
+@utils.in_tempdir
+def test_index_from_file(c):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    file_list = c.output('sigs.list')
+    with open(file_list, 'wt') as fp:
+        print(input_sig, file=fp)
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig, '--from-file', file_list]
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+    assert 'WARNING: 1 duplicate signatures.' in err
 
 
 def test_index_traverse_real_spreadsheet_no_report():
@@ -858,6 +935,67 @@ def test_multi_query_classify_traverse():
             assert len(fp_lines) == len(out_lines)
             for line1, line2 in zip(fp_lines, out_lines):
                 assert line1.strip() == line2.strip(), (line1, line2)
+
+
+@utils.in_tempdir
+def test_multi_query_classify_query_from_file(c):
+    # both.lca.json is built from both dir and dir2
+    db1 = utils.get_test_data('lca/both.lca.json')
+    dir1_glob = utils.get_test_data('lca/dir1/*.sig')
+    dir1_files = glob.glob(dir1_glob)
+    dir2_glob = utils.get_test_data('lca/dir2/*.sig')
+    dir2_files = glob.glob(dir2_glob)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(dir1_files), file=fp)
+        print("\n".join(dir2_files), file=fp)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query-from-file', file_list]
+    c.run_sourmash(*cmd)
+    out = c.last_result.out
+
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = out.splitlines()
+
+        fp_lines.sort()
+        out_lines.sort()
+
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
+
+
+@utils.in_tempdir
+def test_multi_query_classify_query_from_file_and_query(c):
+    # both.lca.json is built from both dir and dir2
+    db1 = utils.get_test_data('lca/both.lca.json')
+    dir1_glob = utils.get_test_data('lca/dir1/*.sig')
+    dir1_files = glob.glob(dir1_glob)
+    dir2_glob = utils.get_test_data('lca/dir2/*.sig')
+    dir2_files = glob.glob(dir2_glob)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(dir1_files[1:]), file=fp)   # leave off first one
+        print("\n".join(dir2_files), file=fp)
+
+    cmd = ['lca', 'classify', '--db', db1, '--query', dir1_files[0],
+           '--query-from-file', file_list]
+    c.run_sourmash(*cmd)
+    out = c.last_result.out
+
+    with open(utils.get_test_data('lca/classify-by-both.csv'), 'rt') as fp:
+        fp_lines = fp.readlines()
+        out_lines = out.splitlines()
+
+        fp_lines.sort()
+        out_lines.sort()
+
+        assert len(fp_lines) == len(out_lines)
+        for line1, line2 in zip(fp_lines, out_lines):
+            assert line1.strip() == line2.strip(), (line1, line2)
 
 
 def test_multi_db_multi_query_classify_traverse():
@@ -1051,9 +1189,6 @@ def test_single_summarize():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
@@ -1070,9 +1205,6 @@ def test_single_summarize_singleton():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
                '--singleton']
@@ -1086,6 +1218,49 @@ def test_single_summarize_singleton():
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
         # --singleton adds info about signature filename, md5, and signature name
         assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
+
+
+@utils.in_tempdir
+def test_single_summarize_traverse(c):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
+           '--traverse-directory']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'loaded 1 signatures from 1 files total.' in err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+
+@utils.in_tempdir
+def test_single_summarize_singleton_traverse(c):
+    db1 = utils.get_test_data('lca/delmont-1.lca.json')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    in_dir = c.output('sigs')
+    os.mkdir(in_dir)
+    shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
+           '--singleton', '--traverse-directory']
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'loaded 1 signatures from 1 files total.' in err
+    assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
+    # --singleton adds info about signature filename, md5, and signature name
+    assert 'q.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
 def test_single_summarize_to_output():
@@ -1173,6 +1348,100 @@ def test_multi_summarize_with_unassigned():
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
         out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
         assert not out_lines
+
+
+@utils.in_tempdir
+def test_multi_summarize_with_unassigned_fromfile(c):
+    # test --query-from-file in lca summarize
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(lca_db)
+
+    out = c.last_result.out
+    err = c.last_result.err
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+    queryfile = c.output('query.list')
+    with open(queryfile, 'wt') as fp:
+        print(input_sig1, file=fp)
+        print(input_sig2, file=fp)
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query-from-file', queryfile]
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    err = c.last_result.err
+
+    assert 'loaded 2 signatures from 2 files total.' in err
+
+    out_lines = out.splitlines()
+    out_lines.remove('14.0%   200   Bacteria')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
+    out_lines.remove('86.0%  1231   Eukaryota')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
+    assert not out_lines
+
+
+@utils.in_tempdir
+def test_multi_summarize_with_unassigned_fromfile_and_query(c):
+    # test --query-from-file in lca summarize, with add'l --query sig too
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(lca_db)
+
+    out = c.last_result.out
+    err = c.last_result.err
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
+
+    queryfile = c.output('query.list')
+    with open(queryfile, 'wt') as fp:
+        print(input_sig2, file=fp)
+    cmd = ['lca', 'summarize', '--db', lca_db, '--query-from-file', queryfile,
+           '--query', input_sig1]
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    err = c.last_result.err
+
+    assert 'loaded 2 signatures from 2 files total.' in err
+
+    out_lines = out.splitlines()
+    out_lines.remove('14.0%   200   Bacteria')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
+    out_lines.remove('86.0%  1231   Eukaryota')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
+    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
+    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
+    assert not out_lines
 
 
 def test_multi_summarize_with_unassigned_singleton():
@@ -1780,8 +2049,35 @@ def test_incompat_lca_db_ksize(c):
     # no compatible ksizes.
     with pytest.raises(ValueError) as e:
         c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+    print(c.last_result)
 
     assert '0 signatures matching ksize and molecule type;' in str(e.value)
+
+
+@utils.in_tempdir
+def test_incompat_lca_db_ksize_2(c):
+    # test on gather, not just lca gather
+    # create a database with ksize of 25
+    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
+    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
+                   '-o', 'test_db.sig')
+    print(c)
+
+    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
+                   'test.lca.json', 'test_db.sig',
+                    '-k', '25', '--scaled', '10000')
+    print(c)
+
+    # this should fail: the LCA database has ksize 25, and the query sig has
+    # no compatible ksizes.
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
+
+    err = c.last_result.err
+    print(err)
+
+    assert "ksize on db 'test.lca.json' is 25;" in err
+    assert 'this is different from query ksize of 31.' in err
 
 
 @utils.in_tempdir

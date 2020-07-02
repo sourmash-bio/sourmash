@@ -9,6 +9,7 @@ from enum import Enum
 
 from sourmash import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
+import sourmash.exceptions
 
 from . import signature
 from .logging import notify, error
@@ -63,16 +64,30 @@ def calculate_moltype(args, default=None):
     return moltype
 
 
-def load_query_signature(filename, ksize, select_moltype):
+def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     try:
-        sl = signature.load_signatures(filename,
-                                       ksize=ksize,
-                                       select_moltype=select_moltype,
-                                       do_raise=True)
+        sl = load_file_as_signatures(filename, ksize=ksize,
+                                     select_moltype=select_moltype)
         sl = list(sl)
-    except (IOError, ValueError):
+    except (OSError, ValueError):
         error("Cannot open file '{}'", filename)
         sys.exit(-1)
+
+    if len(sl) and select_md5:
+        found_sig = None
+        for sig in sl:
+            sig_md5 = sig.md5sum()
+            if sig_md5.startswith(select_md5.lower()):
+                # make sure we pick only one --
+                if found_sig is not None:
+                    error("Error! Multiple signatures start with md5 '{}'",
+                          select_md5)
+                    error("Please use a longer --md5 selector.")
+                    sys.exit(-1)
+                else:
+                    found_sig = sig
+
+            sl = [found_sig]
 
     if len(sl) and ksize is None:
         ksizes = set([ ss.minhash.ksize for ss in sl ])
@@ -136,11 +151,15 @@ class LoadSingleSignatures(object):
                 yield filename, query, query_moltype, query_ksize
 
 
-def traverse_find_sigs(dirnames, yield_all_files=False):
-    for dirname in dirnames:
-        if (dirname.endswith('.sig') or yield_all_files) and os.path.isfile(dirname):
-            yield dirname
+def traverse_find_sigs(filenames, yield_all_files=False):
+    for filename in filenames:
+        if os.path.isfile(filename) and \
+                  (filename.endswith('.sig') or yield_all_files):
+            yield filename
             continue
+
+        # filename is a directory --
+        dirname = filename
 
         for root, dirs, files in os.walk(dirname):
             for name in files:
@@ -209,6 +228,16 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     return 1
 
 
+def check_lca_db_is_compatible(filename, db, query):
+    query_mh = query.minhash
+    if db.ksize != query_mh.ksize:
+        error("ksize on db '{}' is {};", filename, db.ksize)
+        error('this is different from query ksize of {}.', query_mh.ksize)
+        return 0
+
+    return 1
+
+
 def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     """
     Load one or more SBTs, LCAs, and/or signatures.
@@ -221,81 +250,70 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     n_signatures = 0
     n_databases = 0
     databases = []
-    for sbt_or_sigfile in filenames:
-        notify('loading from {}...', sbt_or_sigfile, end='\r')
-        # are we collecting signatures from a directory/path?
-        if traverse and os.path.isdir(sbt_or_sigfile):
-            for sigfile in traverse_find_sigs([sbt_or_sigfile]):
-                try:
-                    siglist = sig.load_signatures(sigfile,
-                                                  ksize=query_ksize,
-                                                  select_moltype=query_moltype)
-                    siglist = filter_compatible_signatures(query, siglist, 1)
-                    linear = LinearIndex(siglist, filename=sigfile)
-                    databases.append((linear, sbt_or_sigfile, False))
-                    notify('loaded {} signatures from {}', len(linear),
-                           sigfile, end='\r')
-                    n_signatures += len(linear)
-                except Exception:                       # ignore errors with traverse
-                    pass
+    for filename in filenames:
+        notify('loading from {}...', filename, end='\r')
 
-            # done! jump to beginning of main 'for' loop
-            continue
-
-        # no traverse? try loading as an SBT.
         try:
-            tree = SBT.load(sbt_or_sigfile, leaf_loader=SigLeaf.load)
+            db, dbtype = _load_database(filename, traverse, False)
+        except IOError as e:
+            notify(str(e))
+            sys.exit(-1)
 
-            if not check_tree_is_compatible(sbt_or_sigfile, tree, query,
+        # are we collecting signatures from a directory/path?
+        # NOTE: error messages about loading will now be attributed to
+        # directory, not individual file.
+        if traverse and os.path.isdir(filename):
+            assert dbtype == DatabaseType.SIGLIST
+
+            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
+            siglist = filter_compatible_signatures(query, siglist, 1)
+            linear = LinearIndex(siglist, filename=filename)
+            databases.append((linear, filename, False))
+
+            n_signatures += len(linear)
+
+        # SBT
+        elif dbtype == DatabaseType.SBT:
+            if not check_tree_is_compatible(filename, db, query,
                                             is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((tree, sbt_or_sigfile, 'SBT'))
-            notify('loaded SBT {}', sbt_or_sigfile, end='\r')
+            databases.append((db, filename, 'SBT'))
+            notify('loaded SBT {}', filename, end='\r')
             n_databases += 1
 
-            # done! jump to beginning of main 'for' loop
-            continue
-        except (ValueError, EnvironmentError):
-            # not an SBT - try as an LCA
-            pass
-
-        # ok. try loading as an LCA.
-        try:
-            lca_db = LCA_Database.load(sbt_or_sigfile)
-
-            assert query_ksize == lca_db.ksize
+        # LCA
+        elif dbtype == DatabaseType.LCA:
+            if not check_lca_db_is_compatible(filename, db, query):
+                sys.exit(-1)
             query_scaled = query.minhash.scaled
 
-            notify('loaded LCA {}', sbt_or_sigfile, end='\r')
+            notify('loaded LCA {}', filename, end='\r')
             n_databases += 1
 
-            databases.append((lca_db, sbt_or_sigfile, 'LCA'))
+            databases.append((db, filename, 'LCA'))
 
-            continue
-        except (ValueError, TypeError, EnvironmentError):
-            # not an LCA database - try as a .sig
-            pass
-
-        # not a tree? try loading as a signature.
-        try:
-            siglist = sig.load_signatures(sbt_or_sigfile,
-                                          ksize=query_ksize,
-                                          select_moltype=query_moltype)
+        # signature file
+        elif dbtype == DatabaseType.SIGLIST:
+            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
             siglist = list(siglist)
-            if len(siglist) == 0:         # file not found, or parse error?
+            if not siglist:          # file not found, or parse error?
                 raise ValueError
 
             siglist = filter_compatible_signatures(query, siglist, False)
-            linear = LinearIndex(siglist, filename=sbt_or_sigfile)
-            databases.append((linear, sbt_or_sigfile, 'signature'))
+            linear = LinearIndex(siglist, filename=filename)
+            databases.append((linear, filename, 'signature'))
 
             notify('loaded {} signatures from {}', len(linear),
-                   sbt_or_sigfile, end='\r')
+                   filename, end='\r')
             n_signatures += len(linear)
-        except (EnvironmentError, ValueError):
-            error("\nCannot open file '{}'", sbt_or_sigfile)
-            sys.exit(-1)
+
+        # unknown!?
+        else:
+            raise Exception("unknown dbtype {}".format(dbtype))
+
+        # END for loop
+
 
     notify(' '*79, end='\r')
     if n_signatures and n_databases:
@@ -306,6 +324,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
     elif n_databases:
         notify('loaded {} databases.', n_databases)
     else:
+        notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 
     if databases:
@@ -320,20 +339,43 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def load_database(filename):
+def _load_database(filename, traverse, traverse_yield_all):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
-    Return DatabaseType enum.
+    Return (db, dbtype), where dbtype is a DatabaseType enum.
 
-    This will (eventually) supersede load_dbs_and_sigs.
-
-    TODO:
-    - add traversal behavior + force load for directories.
-    - add stdin for reading signatures?
-    - maybe add file lists?
+    This is an internal function used by other functions in sourmash_args.
     """
     loaded = False
     dbtype = None
+
+    # special case stdin
+    if not loaded and filename == '-':
+        db = sourmash.load_signatures(sys.stdin, quiet=True, do_raise=True)
+        db = list(db)
+        loaded = True
+        dbtype = DatabaseType.SIGLIST
+
+    # load signatures from directory
+    if not loaded and os.path.isdir(filename) and traverse:
+        all_sigs = []
+        for thisfile in traverse_find_sigs([filename], traverse_yield_all):
+            try:
+                with open(thisfile, 'rt') as fp:
+                    x = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+                    siglist = list(x)
+                    all_sigs.extend(siglist)
+            except (IOError, sourmash.exceptions.SourmashError):
+                if traverse_yield_all:
+                    continue
+                else:
+                    raise
+
+        loaded=True
+        db = all_sigs
+        dbtype = DatabaseType.SIGLIST
+
+    # load signatures from single file
     try:
         # CTB: could make this a generator, with some trickery; but for
         # now, just force into list.
@@ -363,22 +405,76 @@ def load_database(filename):
             pass
 
     if not loaded:
-        error('\nError while reading signatures from {}.'.format(filename))
-        sys.exit(-1)
+        raise OSError("Error while reading signatures from '{}'.".format(filename))
 
     return db, dbtype
 
 
-def load_file_as_signatures(filename):
+# note: dup from index.py internal function.
+def _select_sigs(siglist, ksize, moltype):
+    for ss in siglist:
+        if (ksize is None or ss.minhash.ksize == ksize) and \
+           (moltype is None or ss.minhash.moltype == moltype):
+           yield ss
+
+
+def load_file_as_index(filename, traverse=True, yield_all_files=False):
+    """Load 'filename' as a database; generic database loader.
+
+    If 'filename' contains an SBT or LCA indexed database, will return
+    the appropriate objects.
+
+    If 'filename' is a JSON file containing one or more signatures, will
+    return an Index object containing those signatures.
+
+    If 'filename' is a directory and traverse=True, will load *.sig underneath
+    this directory into an Index object. If yield_all_files=True, will
+    attempt to load all files. (traverse defaults to True here.)
+    """
+    db, dbtype = _load_database(filename, traverse, yield_all_files)
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+        return db                         # already an index!
+    elif dbtype == DatabaseType.SIGLIST:
+        # turn siglist into a LinearIndex
+        idx = LinearIndex(db, filename)
+        return idx
+    else:
+        assert 0                          # unknown enum!?
+
+
+def load_file_as_signatures(filename, select_moltype=None, ksize=None,
+                            traverse=False, yield_all_files=False):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
-    If it's an LCA or SBT, call the .signatures() method on it.
+    If 'filename' contains an SBT or LCA indexed database, will return
+    a signatures() generator.
+
+    If 'filename' is a JSON file containing one or more signatures, will
+    return a list of those signatures.
+
+    If 'filename' is a directory and traverse=True, will load *.sig
+    underneath this directory into a list of signatures. If
+    yield_all_files=True, will attempt to load all files.
+
+    Applies selector function if select_moltype and/or ksize are given.
     """
-    db, dbtype = load_database(filename)
+    db, dbtype = _load_database(filename, traverse, yield_all_files)
+
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+        db = db.select(moltype=select_moltype, ksize=ksize)
         return db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
-        return db
+        return list(_select_sigs(db, moltype=select_moltype, ksize=ksize))
+    else:
+        assert 0                          # unknown enum!?
+
+
+def load_file_list_of_signatures(filename):
+    "Load a list-of-files text file."
+    with open(filename, 'rt') as fp:
+        file_list = [ x.rstrip('\r\n') for x in fp ]
+
+    return file_list
 
 
 class FileOutput(object):

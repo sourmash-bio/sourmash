@@ -71,7 +71,7 @@ def cat(args):
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+            this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
         except Exception as exc:
             error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
@@ -88,12 +88,12 @@ def cat(args):
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures(siglist, fp=fp)
 
-    notify('saved {} signatures', len(siglist))
+    notify('output {} signatures', len(siglist))
 
 
 def split(args):
     """
-    split all signatures into individual
+    split all signatures into individual files
     """
     set_quiet(args.quiet)
 
@@ -109,7 +109,7 @@ def split(args):
     total = 0
     for sigfile in args.signatures:
         # load signatures from input file:
-        this_siglist = sourmash_args.load_file_as_signatures(sigfile)
+        this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
 
         # save each file individually --
         n_signatures = 0
@@ -173,7 +173,7 @@ def describe(args):
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
+            this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
             for k in this_siglist:
                 siglist.append((k, sigfile))
         except Exception as exc:
@@ -326,9 +326,10 @@ def merge(args):
     for sigfile in args.signatures:
         notify('loading signatures from {}...', sigfile, end='\r')
         this_n = 0
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
                                                select_moltype=moltype,
-                                               do_raise=True):
+                                                            traverse=True):
+
             # first signature? initialize a bunch of stuff
             if first_sig is None:
                 first_sig = sigobj
@@ -382,9 +383,9 @@ def intersect(args):
     total_loaded = 0
 
     for sigfile in args.signatures:
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
                                                select_moltype=moltype,
-                                               do_raise=True):
+                                               traverse=True):
             if first_sig is None:
                 first_sig = sigobj
                 mins = set(sigobj.minhash.get_mins())
@@ -449,9 +450,9 @@ def subtract(args):
 
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
-                                               select_moltype=moltype,
-                                               do_raise=True):
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                                            select_moltype=moltype,
+                                                            traverse=True):
 
             if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
@@ -488,8 +489,9 @@ def rename(args):
     outlist = []
     for filename in args.sigfiles:
         debug('loading {}', filename)
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype)
+        siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        select_moltype=moltype,
+                                                        traverse=True)
 
         for sigobj in siglist:
             sigobj._name = args.name
@@ -511,9 +513,9 @@ def extract(args):
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+        siglist = sourmash_args.load_file_as_signatures(filename,
                                            select_moltype=moltype,
-                                           do_raise=True)
+                                                        traverse=True)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -549,9 +551,9 @@ def filter(args):
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+        siglist = sourmash_args.load_file_as_signatures(filename,
                                            select_moltype=moltype,
-                                           do_raise=True)
+                                                        traverse=True)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -603,9 +605,9 @@ def flatten(args):
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
+        siglist = sourmash_args.load_file_as_signatures(filename,
                                            select_moltype=moltype,
-                                           do_raise=True)
+                                                        traverse=True)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -652,7 +654,7 @@ def downsample(args):
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
-        siglist = sourmash.load_signatures(sigfile, ksize=args.ksize, select_moltype=moltype, do_raise=True)
+        siglist = sourmash_args.load_file_as_signatures(sigfile, ksize=args.ksize, select_moltype=moltype, traverse=True)
 
         for sigobj in siglist:
             mh = sigobj.minhash
@@ -730,9 +732,11 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
-                                     select_moltype=moltype)
-    mh = ss.minhash
+    query = sourmash_args.load_query_signature(args.filename,
+                                               ksize=args.ksize,
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
+    mh = query.minhash
 
     x = {}
     x['kmer'] = mh.ksize
@@ -747,7 +751,7 @@ def export(args):
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
+    notify("exported signature {} ({})", query.name(), query.md5sum()[:8])
 
 
 def main(arglist=None):

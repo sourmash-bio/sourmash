@@ -86,6 +86,12 @@ Finally, there are a number of utility and information commands:
 * `categorize` is an experimental command to categorize many signatures.
 * `watch` is an experimental command to classify a stream of sequencing data.
 
+Please use the command line option `--help` to get more detailed usage
+information for each command.
+
+Note that as of sourmash v3.4, most commands will load signatures from
+indexed databases (the SBT and LCA formats) as well as from signature files.
+
 ### `sourmash compute`
 
 The `compute` subcommand computes and saves signatures for
@@ -118,7 +124,7 @@ Optional arguments:
 ### `sourmash compare`
 
 
-The `compare` subcommand compares one or more signature files
+The `compare` subcommand compares one or more signatures
 (created with `compute`) using estimated [Jaccard index][3] or
 (if signatures are computed with `--track-abundance`) the [angular
 similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
@@ -142,6 +148,8 @@ Options:
 --ksize -- do the comparisons at this k-mer size.
 --containment -- compute containment instead of similarity.
         C(i, j) = size(i intersection j) / size(i).
+--from-file -- append the list of files in this text file to the input
+        signatures
 ```
 
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
@@ -316,6 +324,11 @@ species level assignments would not be reported.
 (This is the approach that Kraken and other lowest common ancestor
 implementations use, we believe.)
 
+Note: you can specify a list of files to load signatures from in a
+text file passed to `sourmash lca classify` with the
+`--query-from-file` flag; these files will be appended to the `--query`
+input.
+
 ### `sourmash lca summarize`
 
 `sourmash lca summarize` produces a Kraken-style summary of the
@@ -416,6 +429,11 @@ genome is present only once; when weighted by abundance, the Bacterial genome
 is only 41.8% of the metagenome content, while the Archaeal genome is
 58.1% of the metagenome content.
 
+Note: you can specify a list of files to load signatures from in a
+text file passed to `sourmash lca summarize` with the
+`--query-from-file` flag; these files will be appended to the `--query`
+input.
+
 ### `sourmash lca gather`
 
 The `sourmash lca gather` command finds all non-overlapping
@@ -466,6 +484,9 @@ genomes (or building off of NCBI taxonomies more generally), please
 see
 [the NCBI lineage repository](https://github.com/dib-lab/2018-ncbi-lineages).
 
+You can use `--from-file` to pass `lca index` a text file containing a
+list of files to index.
+
 ### `sourmash lca rankinfo`
 
 The `sourmash lca rankinfo` command displays k-mer specificity
@@ -507,6 +528,10 @@ from nucleotide and protein sequences, you can choose amongst them with
 such as `search`, `gather`, and `compare`.
 
 Note, you can use `sourmash sig` as shorthand for all of these commands.
+
+Most commands will load signatures automatically from indexed databases
+(SBT and LCA formats) as well as from signature files, and you can load
+signatures from stdin using `-` on the command line.
 
 ### `sourmash signature cat`
 

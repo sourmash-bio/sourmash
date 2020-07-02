@@ -6,7 +6,8 @@ from __future__ import print_function
 import sys
 import csv
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
+from ..sourmash_args import load_file_as_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -81,19 +82,11 @@ def classify(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
 
     if not check_files_exist(*args.db):
         sys.exit(-1)
@@ -103,10 +96,17 @@ def classify(args):
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = list(args.query)
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
+
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
+
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query or --query-from-file')
+        sys.exit(-1)
 
     # set up output
     csvfp = csv.writer(sys.stdout)
@@ -122,7 +122,9 @@ def classify(args):
         total_n = len(inp_files)
         for query_filename in inp_files:
             n += 1
-            for query_sig in load_signatures(query_filename, ksize=ksize):
+            for query_sig in load_file_as_signatures(query_filename,
+                                                     ksize=ksize,
+                                                     traverse=args.traverse_directory):
                 notify(u'\r\033[K', end=u'')
                 notify('... classifying {} (file {} of {})', query_sig.name(),
                        n, total_n, end='\r')
