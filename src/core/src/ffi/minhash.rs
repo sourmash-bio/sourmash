@@ -91,6 +91,13 @@ unsafe fn kmerminhash_add_protein(ptr: *mut SourmashKmerMinHash, sequence: *cons
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn kmerminhash_clear(ptr: *mut SourmashKmerMinHash) {
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    mh.clear();
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: u64) {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 

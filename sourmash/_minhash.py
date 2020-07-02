@@ -367,6 +367,10 @@ class MinHash(RustObject):
         "Add a single hash value with an abundance."
         return self._methodcall(lib.kmerminhash_add_hash_with_abundance, h, a)
 
+    def clear(self):
+        "Clears all hashes and abundances."
+        return self._methodcall(lib.kmerminhash_clear)
+
     def translate_codon(self, codon):
         "Translate a codon into an amino acid."
         try:

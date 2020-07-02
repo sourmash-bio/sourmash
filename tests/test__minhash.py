@@ -1095,6 +1095,16 @@ def test_set_abundance_no_clear_with_set_hash():
     assert a.get_mins(with_abundance=True) == {10: 4}
 
 
+def test_clear():
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.clear()
+    assert a.get_mins(with_abundance=True) == {}
+
+
 def test_abundance_simple_2():
     a = MinHash(20, 5, False, track_abundance=True)
     b = MinHash(20, 5, False, track_abundance=True)
