@@ -91,8 +91,13 @@ impl Signature {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
-    fn wasm_test() {}
+    fn wasm_test() {
+        let params = ComputeParameters::new_with_params();
+        let sig = Signature::new_from_params(&params);
+        assert_eq!(sig.size(), 3);
+    }
 }
