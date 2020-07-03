@@ -7,6 +7,8 @@ import argparse
 import itertools
 from enum import Enum
 
+import screed
+
 from sourmash import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
@@ -65,6 +67,11 @@ def calculate_moltype(args, default=None):
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
+    """Load a single signature to use as a query.
+
+    Uses load_file_as_signatures underneath, so can load from collections
+    and indexed databases.
+    """
     try:
         sl = load_file_as_signatures(filename, ksize=ksize,
                                      select_moltype=select_moltype)
@@ -403,6 +410,21 @@ def _load_database(filename, traverse, traverse_yield_all):
             dbtype = DatabaseType.LCA
         except:
             pass
+
+    if not loaded:
+        successful_screed_load = False
+        try:
+            # CTB: could be kind of time consuming for big record.
+            # maybe use screed format detection instead?
+            # CTB: also, close this.
+            it = screed.open(filename)
+            record = next(iter(it))
+            successful_screed_load = True
+        except:
+            pass
+
+        if successful_screed_load:
+            raise OSError("Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(filename))
 
     if not loaded:
         raise OSError("Error while reading signatures from '{}'.".format(filename))
