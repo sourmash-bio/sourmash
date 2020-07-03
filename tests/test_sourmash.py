@@ -134,6 +134,41 @@ def test_do_compare_parallel(c):
 
 
 @utils.in_tempdir
+def test_do_serial_compare_with_from_file(c):
+    # try doing a compare serial
+    import numpy
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(testsigs), file=fp)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna',
+                   '--from-file', file_list)
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
+
+
+@utils.in_tempdir
 def test_do_basic_compare_using_rna_arg(c):
     # try doing a basic compare using --rna instead of --dna
     import numpy
@@ -187,6 +222,23 @@ def test_compare_containment_abund_flatten(c):
 def test_do_traverse_directory_compare(c):
     c.run_sourmash('compare', '--traverse-directory', '-k 21',
                    '--dna', utils.get_test_data('compare'))
+    print(c.last_result.out)
+    assert 'genome-s10.fa.gz' in c.last_result.out
+    assert 'genome-s11.fa.gz' in c.last_result.out
+
+
+@utils.in_tempdir
+def test_do_traverse_directory_compare_force(c):
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    sig2 = utils.get_test_data('compare/genome-s11.fa.gz.sig')
+    newdir = c.output('newdir')
+    os.mkdir(newdir)
+
+    shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
+    shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
+
+    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+                   '--dna', newdir, '-f')
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
     assert 'genome-s11.fa.gz' in c.last_result.out
@@ -595,7 +647,7 @@ def test_search_query_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Cannot open file' in c.last_result.err
+    assert "Cannot open file 'short2.fa.sig'" in c.last_result.err
     assert len(c.last_result.err.split('\n\r')) < 5
 
 
@@ -609,7 +661,7 @@ def test_search_subject_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Cannot open file' in c.last_result.err
+    assert "Error while reading signatures from 'short2.fa.sig'" in c.last_result.err
 
 
 @utils.in_tempdir
@@ -623,8 +675,7 @@ def test_search_second_subject_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert 'Cannot open file' in c.last_result.err
-
+    assert "Error while reading signatures from 'short2.fa.sig'." in c.last_result.err
 
 @utils.in_tempdir
 def test_search(c):
@@ -704,6 +755,36 @@ def test_search_lca_db(c):
     assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
 
 
+@utils.in_thisdir
+def test_search_query_db_md5(c):
+    # pull a search query out of a database with an md5sum
+    db = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
+
+    assert '100.0%       GCA_001593925.1_ASM159392v1_protein.faa.gz' in str(c)
+
+
+@utils.in_thisdir
+def test_gather_query_db_md5(c):
+    # pull a search query out of a database with an md5sum
+    db = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
+
+    assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
+
+
+@utils.in_thisdir
+def test_gather_query_db_md5_ambiguous(c):
+    # what if we give an ambiguous md5 prefix?
+    db = utils.get_test_data('prot/protein.sbt.zip')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('gather', db, db, '--md5', '1')
+
+    err = c.last_result.err
+    assert "Error! Multiple signatures start with md5 '1'" in err
+
+
 @utils.in_tempdir
 def test_gather_lca_db(c):
     # can we do a 'sourmash gather' on an LCA database?
@@ -734,7 +815,7 @@ def test_compare_no_such_file(c):
     with pytest.raises(ValueError) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
-    assert "file 'nosuchfile.sig' does not exist! exiting." in c.last_result.err
+    assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -743,7 +824,7 @@ def test_compare_no_such_file_force(c):
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
     print(c.last_result.err)
-    assert "no signatures found! exiting." in c.last_result.err
+    assert "Error while reading signatures from 'nosuchfile.sig'."
 
 
 @utils.in_tempdir
@@ -1333,6 +1414,36 @@ def test_search_4():
         assert 'short3.fa' in out
 
 
+@utils.in_tempdir
+def test_index_metagenome_fromfile(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', '-k', '21', testdata_sigs[0],
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'search {} gcf_all -k 21'.format(query_sig)
+    cmd = cmd.split()
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    print(c.last_result.err)
+
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+    assert '12 matches; showing first 3:' in out
+
+
 def test_search_metagenome():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -1765,6 +1876,35 @@ def test_do_sourmash_index_traverse():
 
         assert 'short.fa' in out
         assert 'short2.fa' in out
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_traverse_force(c):
+    # test loading of files that don't end with .sig with --traverse-dir -f
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    outdir = c.output('sigs')
+    os.mkdir(outdir)
+    out1 = os.path.join(outdir, 'short1')
+    out2 = os.path.join(outdir, 'short2')
+
+    c.run_sourmash('compute', testdata1, '-o', out1)
+    c.run_sourmash('compute', testdata2, '-o', out2)
+
+    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+
+    err = c.last_result.err
+    assert os.path.exists(c.output('zzz.sbt.json'))
+    assert 'loaded 2 sigs; saving SBT under' in err
+
+    c.run_sourmash('search', out1, 'zzz')
+
+    out = c.last_result.out
+    print(out)
+
+    assert 'short.fa' in out
+    assert 'short2.fa' in out
 
 
 def test_do_sourmash_index_sparseness():
@@ -2563,6 +2703,38 @@ def test_gather_metagenome():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
+@utils.in_tempdir
+def test_gather_metagenome_num_results(c):
+    # set a threshold on the number of results to be reported by gather
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'gather {} gcf_all -k 21 --num-results 10'.format(query_sig)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    out = c.last_result.out
+
+    assert 'found 10 matches total' in out
+    assert '(truncated gather because --num-results=10)' in out
+    assert 'the recovered matches hit 99.4% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
+
+
 def test_gather_metagenome_threshold_bp():
     # set a threshold on the gather output
     with utils.TempDirectory() as location:
@@ -2622,6 +2794,86 @@ def test_multigather_metagenome():
                     'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                     'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file(c):
+    # test multigather --query-from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file_with_addl_query(c):
+    # test multigather --query-from-file and --query too
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query-from-file {} --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list, another_query)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    # first gather query
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
+    # second gather query
+    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp...' in out
+    assert 'found 1 matches total;' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
 
 
 def test_gather_metagenome_traverse():
@@ -2788,6 +3040,33 @@ def test_gather_save_matches():
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert os.path.exists(os.path.join(location, 'save.sigs'))
+
+
+@utils.in_thisdir
+def test_gather_error_loading_dir(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db = utils.get_test_data('prot/protein/')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, db)
+    assert 'Error while reading signatures from' in str(c.last_result.err)
+
+
+@utils.in_tempdir
+def test_gather_error_no_sigs_traverse(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    emptydir = c.output('')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+
+    err = c.last_result.err
+    print(err)
+    assert '** ERROR: no signatures or databases loaded?' in err
+    assert not 'found 0 matches total;' in err
 
 
 def test_gather_error_no_cardinality_query():

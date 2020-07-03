@@ -531,6 +531,226 @@ def test_sig_rename_2_output_to_same(c):
 
 
 @utils.in_tempdir
+def test_sig_rename_3_file_dne(c):
+    # rename on a file that does not exist should fail!
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
+
+    assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
+
+
+@utils.in_thisdir
+def test_sig_cat_1(c):
+    # cat 47 to 47...
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'cat', sig47)
+
+    # stdout should be same signature
+    out = c.last_result.out
+
+    test_cat_sig = sourmash.load_one_signature(sig47)
+    actual_cat_sig = sourmash.load_one_signature(out)
+
+    assert actual_cat_sig == test_cat_sig
+
+
+@utils.in_thisdir
+def test_sig_cat_2(c):
+    # cat several
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47abund, multisig)
+
+    # stdout should be same signatures
+    out = c.last_result.out
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_2_out(c):
+    # cat several
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47abund, multisig,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_2_out_inplace(c):
+    # cat several; check that we can overwrite one of the input files.
+    sig47 = utils.get_test_data('47.fa.sig')
+    input_sig = c.output('inp.sig')
+    shutil.copyfile(sig47, input_sig)
+
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+
+    # write out to input.
+    c.run_sourmash('sig', 'cat', input_sig, sig47abund, multisig,
+                   '-o', input_sig)
+
+    # stdout should be same signatures
+    out = input_sig
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_split_1(c):
+    # split 47 into 1 sig :)
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47)
+
+    outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+
+    assert os.path.exists(c.output(outname))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+    actual_split_sig = sourmash.load_one_signature(c.output(outname))
+
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_1_overwrite(c):
+    # check message about overwriting
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47)
+
+    outname = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    assert os.path.exists(c.output(outname))
+
+    c.run_sourmash('sig', 'split', sig47)
+
+    err = c.last_result.err
+    print(err)
+    assert '** overwriting existing file ' + outname in err
+
+
+@utils.in_tempdir
+def test_sig_split_2(c):
+    # split 47 twice
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'split', sig47, sig47)
+
+    outname1 = '09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = '09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_2_outdir(c):
+    # split 47 twice, put in outdir
+    sig47 = utils.get_test_data('47.fa.sig')
+    outdir = c.output('sigout/')
+    c.run_sourmash('sig', 'split', sig47, sig47, '--outdir', outdir)
+
+    outname1 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=0.47.fa.sig'
+    outname2 = 'sigout/09a08691.k=31.scaled=1000.DNA.dup=1.47.fa.sig'
+
+    assert os.path.exists(c.output(outname1))
+    assert os.path.exists(c.output(outname2))
+
+    test_split_sig = sourmash.load_one_signature(sig47)
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname1))
+    assert actual_split_sig == test_split_sig
+
+    actual_split_sig = sourmash.load_one_signature(c.output(outname2))
+    assert actual_split_sig == test_split_sig
+
+
+@utils.in_tempdir
+def test_sig_split_3_multisig(c):
+    # split 47 and 47+63-multisig.sig
+    sig47 = utils.get_test_data('47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'split', sig47, multisig)
+
+    outlist = ['57e2b22f.k=31.scaled=1000.DNA.dup=0.none.sig',
+               'bde81a41.k=31.scaled=1000.DNA.dup=0.none.sig',
+               'f033bbd8.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '87a9aec4.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '837bf2a7.k=31.scaled=1000.DNA.dup=0.none.sig',
+               '485c3377.k=31.scaled=1000.DNA.dup=0.none.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_4_sbt_prot(c):
+    # split sbt
+    sbt1 = utils.get_test_data('prot/protein.sbt.zip')
+    sbt2 = utils.get_test_data('prot/dayhoff.sbt.zip')
+    sbt3 = utils.get_test_data('prot/hp.sbt.zip')
+    c.run_sourmash('sig', 'split', sbt1, sbt2, sbt3)
+
+    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '120d311c.k=57.scaled=100.protein.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'ea2a1ad2.k=57.scaled=100.hp.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'bb0e6d90.k=57.scaled=100.hp.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_4_lca_prot(c):
+    # split lca
+    lca1 = utils.get_test_data('prot/protein.lca.json.gz')
+    lca2 = utils.get_test_data('prot/dayhoff.lca.json.gz')
+    lca3 = utils.get_test_data('prot/hp.lca.json.gz')
+    c.run_sourmash('sig', 'split', lca1, lca2, lca3)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.none.sig',
+               '120d311c.k=57.scaled=100.protein.dup=0.none.sig',
+               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.none.sig',
+               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.none.sig',
+               'ea2a1ad2.k=57.scaled=100.hp.dup=0.none.sig',
+               'bb0e6d90.k=57.scaled=100.hp.dup=0.none.sig']
+    for filename in outlist:
+        assert os.path.exists(c.output(filename))
+
+
+@utils.in_tempdir
+def test_sig_split_5_no_exist(c):
+    # no such file
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('sig', 'split', 'foo')
+
+
+@utils.in_tempdir
 def test_sig_extract_1(c):
     # extract 47 from 47... :)
     sig47 = utils.get_test_data('47.fa.sig')
@@ -931,6 +1151,68 @@ signature: NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequen
 
 
 @utils.in_tempdir
+def test_sig_describe_1_sbt(c):
+    # get basic info on multiple signatures in an SBT
+    sigs = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_lca(c):
+    # get basic info on multiple signatures in an LCA database
+    sigs = utils.get_test_data('prot/protein.lca.json.gz')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_tempdir
+def test_sig_describe_1_dir(c):
+    # get basic info on multiple signatures in a directory
+    sigs = utils.get_test_data('prot/protein/')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
+signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
+@utils.in_thisdir
+def test_sig_describe_stdin(c):
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    with open(sig, 'rt') as fp:
+        data = fp.read()
+
+    c.run_sourmash('sig', 'describe', '-', stdin_data=data)
+
+    assert 'signature: GCA_001593925.1_ASM159392v1_protein.faa.gz' in c.last_result.out
+
+
+@utils.in_tempdir
 def test_sig_describe_2(c):
     # get info in CSV spreadsheet
     sig47 = utils.get_test_data('47.fa.sig')
@@ -977,6 +1259,21 @@ def test_import_export_1(c):
     outp = c.output('export.json')
 
     c.run_sourmash('sig', 'export', inp, '-o', outp, '-k', '21', '--dna')
+    c.run_sourmash('sig', 'import', outp)
+
+    original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')
+    roundtrip = sourmash.load_one_signature(c.last_result.out)
+
+    assert original.minhash == roundtrip.minhash
+
+
+@utils.in_tempdir
+def test_import_export_1_by_md5(c):
+    # check to make sure we can import what we've exported!
+    inp = utils.get_test_data('genome-s11.fa.gz.sig')
+    outp = c.output('export.json')
+
+    c.run_sourmash('sig', 'export', inp, '-o', outp, '--md5', '1437d8eae6')
     c.run_sourmash('sig', 'import', outp)
 
     original = sourmash.load_one_signature(inp, ksize=21, select_moltype='DNA')

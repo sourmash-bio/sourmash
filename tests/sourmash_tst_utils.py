@@ -92,6 +92,10 @@ def runscript(scriptname, args, **kwargs):
         oldargs = sys.argv
         sys.argv = sysargs
 
+        oldin = None
+        if 'stdin_data' in kwargs:
+            oldin, sys.stdin = sys.stdin, StringIO(kwargs['stdin_data'])
+
         oldout, olderr = sys.stdout, sys.stderr
         sys.stdout = StringIO()
         sys.stdout.name = "StringIO"
@@ -113,6 +117,9 @@ def runscript(scriptname, args, **kwargs):
         sys.argv = oldargs
         out, err = sys.stdout.getvalue(), sys.stderr.getvalue()
         sys.stdout, sys.stderr = oldout, olderr
+
+        if oldin:
+            sys.stdin = oldin
 
         os.chdir(cwd)
 

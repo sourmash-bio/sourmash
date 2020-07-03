@@ -31,26 +31,22 @@ def compare(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    # check directories for all signatures
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures))
-    else:
-        inp_files = list(args.signatures)
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
 
     # load in the various signatures
     siglist = []
     ksizes = set()
     moltypes = set()
     for filename in inp_files:
-        if not os.path.exists(filename) and not \
-               (args.force or args.traverse_directory):
-            error("file '{}' does not exist! exiting.", filename)
-            sys.exit(-1)
-
         notify("loading '{}'", filename, end='\r')
-        loaded = sig.load_signatures(filename,
-                                     ksize=args.ksize,
-                                     select_moltype=moltype)
+        loaded = sourmash_args.load_file_as_signatures(filename,
+                                                       ksize=args.ksize,
+                                                       select_moltype=moltype,
+                                                       traverse=args.traverse_directory,
+                                                       yield_all_files=args.force)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
@@ -338,18 +334,21 @@ def index(args):
     else:
         tree = create_sbt_index(args.bf_size, n_children=args.n_children)
 
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
-                                                          args.force))
-    else:
-        inp_files = list(args.signatures)
-
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
 
     if args.scaled:
         args.scaled = int(args.scaled)
         notify('downsampling signatures to scaled={}', args.scaled)
+
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
+
+    if not inp_files:
+        error("ERROR: no files to index!? Supply on command line or use --from-file")
+        sys.exit(-1)
 
     notify('loading {} files into SBT', len(inp_files))
 
@@ -361,8 +360,12 @@ def index(args):
     for f in inp_files:
         if n % 100 == 0:
             notify('\r...reading from {} ({} signatures so far)', f, n, end='')
-        siglist = sig.load_signatures(f, ksize=args.ksize,
-                                      select_moltype=moltype)
+
+        siglist = sourmash_args.load_file_as_signatures(f,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        traverse=args.traverse_directory,
+                                                        yield_all_files=args.force)
 
         # load all matching signatures in this file
         ss = None
@@ -418,7 +421,8 @@ def search(args):
     # set up the query.
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
-                                               select_moltype=moltype)
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
@@ -495,10 +499,11 @@ def search(args):
 
 
 def categorize(args):
-    "Use an SBT to find the best match to many signatures."
+    "Use a database to find the best match to many signatures."
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    # eliminate names we've already categorized
     already_names = set()
     if args.load_csv:
         with open(args.load_csv, 'rt') as fp:
@@ -506,8 +511,10 @@ def categorize(args):
             for row in r:
                 already_names.add(row[0])
 
+    # load search database
     tree = load_sbt_index(args.sbt_name)
 
+    # load query filenames
     if args.traverse_directory:
         inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
     else:
@@ -574,7 +581,8 @@ def gather(args):
     # load the query signature & figure out all the things
     query = sourmash_args.load_query_signature(args.query,
                                                ksize=args.ksize,
-                                               select_moltype=moltype)
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
     notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
@@ -597,7 +605,7 @@ def gather(args):
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                 args.traverse_directory)
+                                                args.traverse_directory)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -607,6 +615,7 @@ def gather(args):
     weighted_missed = 1
     new_max_hash = query.minhash.max_hash
     next_query = query
+
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         if not len(found):                # first result? print header.
             if query.minhash.track_abundance and not args.ignore_abundance:
@@ -635,9 +644,15 @@ def gather(args):
                       name)
         found.append(result)
 
+        if args.num_results and len(found) >= args.num_results:
+            break
+
 
     # basic reporting
     print_results('\nfound {} matches total;', len(found))
+    if args.num_results and len(found) == args.num_results:
+        print_results('(truncated gather because --num-results={})',
+                      args.num_results)
 
     print_results('the recovered matches hit {:.1f}% of the query',
            (1 - weighted_missed) * 100)
@@ -692,15 +707,18 @@ def multigather(args):
         error('Error! must specify at least one database with --db')
         sys.exit(-1)
 
-    if not args.query:
+    if not args.query and not args.query_from_file:
         error('Error! must specify at least one query signature with --query')
         sys.exit(-1)
 
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
-    args.query = [item for sublist in args.query for item in sublist]
+    inp_files = [item for sublist in args.query for item in sublist]
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
 
-    query = sourmash_args.load_query_signature(args.query[0],
+    query = sourmash_args.load_query_signature(inp_files[0],
                                                ksize=args.ksize,
                                                select_moltype=moltype)
     # set up the search databases
@@ -712,7 +730,7 @@ def multigather(args):
         sys.exit(-1)
 
     # run gather on all the queries.
-    for queryfile in args.query:
+    for queryfile in inp_files:
         # load the query signature & figure out all the things
         query = sourmash_args.load_query_signature(queryfile,
                                                    ksize=args.ksize,

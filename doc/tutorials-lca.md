@@ -194,6 +194,6 @@ for an example format.
 [Return to index][3]
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
-[1]:databases.html
+[1]:databases.md
 [2]:https://www.ncbi.nlm.nih.gov/pubmed/233877
-[3]:index.html
+[3]:index.md

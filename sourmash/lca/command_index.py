@@ -8,6 +8,7 @@ import csv
 from collections import defaultdict
 
 from sourmash import sourmash_args, load_signatures
+from sourmash.sourmash_args import load_file_as_signatures
 from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
@@ -170,15 +171,10 @@ def index(args):
 
     db = LCA_Database(args.ksize, args.scaled, moltype)
 
-#    notify('finding signatures...')
-    if args.traverse_directory:
-        yield_all_files = False           # only pick up *.sig files?
-        if args.force:
-            yield_all_files = True
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
-                                                          yield_all_files=yield_all_files))
-    else:
-        inp_files = list(args.signatures)
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
 
     # track duplicates
     md5_to_name = {}
@@ -197,8 +193,11 @@ def index(args):
     n_skipped = 0
     for filename in inp_files:
         n += 1
-        for sig in load_signatures(filename, ksize=args.ksize,
-                                   select_moltype=moltype):
+        it = load_file_as_signatures(filename, ksize=args.ksize,
+                                     select_moltype=moltype,
+                                     traverse=args.traverse_directory,
+                                     yield_all_files=args.force)
+        for sig in it:
             notify(u'\r\033[K', end=u'')
             notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())

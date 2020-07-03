@@ -6,8 +6,12 @@ from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 def subparser(subparsers):
     subparser = subparsers.add_parser('multigather')
     subparser.add_argument(
-        '--query', nargs='+', action='append',
+        '--query', nargs='*', default=[], action='append',
         help='query signature'
+    )
+    subparser.add_argument(
+        '--query-from-file',
+        help='file containing list of signature files to query'
     )
     subparser.add_argument(
         '--db', nargs='+', action='append',
