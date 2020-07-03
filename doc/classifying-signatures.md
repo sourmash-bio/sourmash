@@ -249,7 +249,7 @@ First, we make some synthetic data sets:
 then we make signature s10-s11 with r1 and r3, i.e. 1:1 abundance, and
 make signature s10x10-s11 with r2 and r3, i.e. 10:1 abundance.
 
-### test_gather_abund_1_1 in test_sourmash.py
+### A first experiment: 1:! abundance.
 
 When we project r1+r3, 1:1 abundance, onto s10, s11, and s12 genomes
 with gather:
@@ -272,7 +272,7 @@ overlap     p_query p_match avg_abund
 * approximately 2.0 abundance (third column, `avg_abund`)
 * no match to genome s12.
 
-### test_gather_abund_10_1
+### A second experiment: 10:1 abundance.
 
 When we project r2+r3, 10:1 abundance, onto s10, s11, and s12 genomes
 with gather:
