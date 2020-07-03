@@ -555,6 +555,46 @@ def test_sig_cat_1(c):
 
 
 @utils.in_thisdir
+def test_sig_cat_1_no_unique(c):
+    # cat 47 to 47... twice... and get unique
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47)
+
+    # stdout should be same signature
+    out = c.last_result.out
+
+    test_cat_sig = sourmash.load_one_signature(sig47)
+    actual_cat_sigs = sourmash.load_signatures(out)
+
+    for n, sig in enumerate(actual_cat_sigs):
+        assert sig == test_cat_sig
+
+    assert n + 1 == 2
+    assert 'encountered 1 MinHashes multiple times' in c.last_result.err
+
+
+@utils.in_thisdir
+def test_sig_cat_1_unique(c):
+    # cat 47 to 47... twice... and get unique
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'cat', sig47, sig47, '--unique')
+
+    # stdout should be same signature
+    out = c.last_result.out
+    err = c.last_result.err
+
+    test_cat_sig = sourmash.load_one_signature(sig47)
+    actual_cat_sigs = sourmash.load_signatures(out)
+
+    for n, sig in enumerate(actual_cat_sigs):
+        assert sig == test_cat_sig
+
+    assert n + 1 == 1
+    assert 'encountered 1 MinHashes multiple times' in err
+    assert '...and removed them, because --unique was specified.' in err
+
+
+@utils.in_thisdir
 def test_sig_cat_2(c):
     # cat several
     sig47 = utils.get_test_data('47.fa.sig')

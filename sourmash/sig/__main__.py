@@ -6,6 +6,7 @@ import sys
 import csv
 import json
 import os
+from collections import defaultdict
 
 import sourmash
 import copy
@@ -67,6 +68,8 @@ def cat(args):
     """
     set_quiet(args.quiet)
 
+    encountered_md5sums = defaultdict(int)   # used by --unique
+
     siglist = []
     for sigfile in args.signatures:
         this_siglist = []
@@ -77,11 +80,18 @@ def cat(args):
             error(str(exc))
             error('(continuing)')
 
-        this_siglist = list(this_siglist)
+        n_loaded = 0
+        for sig in this_siglist:
+            n_loaded += 1
 
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
-               end='\r')
-        siglist.extend(this_siglist)
+            md5 = sig.md5sum()
+            encountered_md5sums[md5] += 1
+            if args.unique and encountered_md5sums[md5] > 1:
+                continue
+
+            siglist.append(sig)
+
+        notify('loaded {} signatures from {}...', n_loaded, sigfile, end='\r')
 
     notify('loaded {} signatures total.', len(siglist))
 
@@ -89,6 +99,12 @@ def cat(args):
         sourmash.save_signatures(siglist, fp=fp)
 
     notify('output {} signatures', len(siglist))
+
+    multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
+    if multiple_md5:
+        notify('encountered {} MinHashes multiple times', sum(multiple_md5))
+        if args.unique:
+            notify('...and removed them, because --unique was specified.')
 
 
 def split(args):
