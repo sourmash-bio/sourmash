@@ -6,7 +6,9 @@ import pytest
 from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
                                     taxlist, count_lca_for_assignments,
-                                    zip_lineage, display_lineage)
+                                    zip_lineage, display_lineage,
+                                    make_lineage, is_lineage_match,
+                                    pop_to_rank)
 
 
 class FakeLCA_Database(object):
@@ -364,3 +366,63 @@ def test_count_lca_for_assignments_abund_5():
     assert len(counts) == 2
     assert counts[lin] == 5               # makes sense
     assert counts[lin2] == 2              # lin+lin2 yield just lin2
+
+
+def test_is_lineage_match_1():
+    # basic behavior: match at order and above, but not at family or below.
+    lin1 = make_lineage('d__a;p__b;c__c;o__d;f__e')
+    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+    assert is_lineage_match(lin1, lin2, 'superkingdom')
+    assert is_lineage_match(lin1, lin2, 'phylum')
+    assert is_lineage_match(lin1, lin2, 'class')
+    assert is_lineage_match(lin1, lin2, 'order')
+    assert not is_lineage_match(lin1, lin2, 'family')
+    assert not is_lineage_match(lin1, lin2, 'genus')
+    assert not is_lineage_match(lin1, lin2, 'species')
+
+
+def test_is_lineage_match_2():
+    # match at family, and above, levels; no genus or species to match
+    lin1 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+    assert is_lineage_match(lin1, lin2, 'superkingdom')
+    assert is_lineage_match(lin1, lin2, 'phylum')
+    assert is_lineage_match(lin1, lin2, 'class')
+    assert is_lineage_match(lin1, lin2, 'order')
+    assert is_lineage_match(lin1, lin2, 'family')
+    assert not is_lineage_match(lin1, lin2, 'genus')
+    assert not is_lineage_match(lin1, lin2, 'species')
+
+
+def test_is_lineage_match_3():
+    # one lineage is empty
+    lin1 = make_lineage('')
+    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+    assert not is_lineage_match(lin1, lin2, 'superkingdom')
+    assert not is_lineage_match(lin1, lin2, 'family')
+    assert not is_lineage_match(lin1, lin2, 'order')
+    assert not is_lineage_match(lin1, lin2, 'class')
+    assert not is_lineage_match(lin1, lin2, 'phylum')
+    assert not is_lineage_match(lin1, lin2, 'genus')
+    assert not is_lineage_match(lin1, lin2, 'species')
+
+
+def test_pop_to_rank_1():
+    # basic behavior - pop to order?
+    lin1 = make_lineage('d__a;p__b;c__c;o__d')
+    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+    print(lin1)
+    print(pop_to_rank(lin2, 'order'))
+    assert pop_to_rank(lin2, 'order') == lin1
+
+
+def test_pop_to_rank_2():
+    # what if we're already above rank?
+    lin2 = make_lineage('d__a;p__b;c__c;o__d;f__f')
+
+    print(pop_to_rank(lin2, 'species'))
+    assert pop_to_rank(lin2, 'species') == lin2
