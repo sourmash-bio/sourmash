@@ -413,12 +413,12 @@ def _load_database(filename, traverse, traverse_yield_all):
 
     if not loaded:
         successful_screed_load = False
+        it = None
         try:
-            # CTB: could be kind of time consuming for big record.
-            # maybe use screed format detection instead?
-            # CTB: also, close this.
-            it = screed.open(filename)
-            record = next(iter(it))
+            # CTB: could be kind of time consuming for big record, but at the
+            # moment screed doesn't expose format detection cleanly.
+            with screed.open(filename) as it:
+                record = next(iter(it))
             successful_screed_load = True
         except:
             pass
