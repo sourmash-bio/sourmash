@@ -10,7 +10,8 @@ from .lca_db import LCA_Database, load_single_database, load_databases
 
 __all__ = ['taxlist', 'zip_lineage', 'build_tree', 'find_lca',
            'load_single_database', 'load_databases', 'gather_assignments',
-           'count_lca_for_assignments', 'LineagePair', 'display_lineage']
+           'count_lca_for_assignments', 'LineagePair', 'display_lineage',
+           'make_lineage', 'pop_to_rank', 'is_lineage_match']
 
 try:                                      # py2/py3 compat
     from itertools import zip_longest
@@ -203,3 +204,52 @@ def count_lca_for_assignments(assignments, hashval_counts=None):
             counts[lca] += 1
 
     return counts
+
+
+def is_lineage_match(lin_a, lin_b, rank):
+    """
+    check to see if two lineages are a match down to given rank.
+    """
+    for a, b in zip(lin_a, lin_b):
+        assert a.rank == b.rank
+        if a.rank == rank:
+            if a == b:
+                return 1
+        if a != b:
+            return 0
+
+    return 0
+
+
+def pop_to_rank(lin, rank):
+    "Remove lineage tuples from given lineage `lin` until `rank` is reached."
+    lin = list(lin)
+
+    txl = taxlist()
+    before_rank = []
+    for txl_rank in txl:
+        if txl_rank != rank:
+            before_rank.append(txl_rank)
+        else:
+            break
+
+    # are we already above rank?
+    if lin and lin[-1].rank in before_rank:
+        return tuple(lin)
+
+    while lin and lin[-1].rank != rank:
+        lin.pop()
+
+    return tuple(lin)
+
+
+
+def make_lineage(lineage):
+    "Turn a ; or ,-separated set of lineages into a tuple of LineagePair objs."
+    lin = lineage.split(';')
+    if len(lin) == 1:
+        lin = lineage.split(',')
+    lin = [ LineagePair(rank, n) for (rank, n) in zip(taxlist(), lin) ]
+    lin = tuple(lin)
+
+    return lin
