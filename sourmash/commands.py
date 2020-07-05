@@ -36,6 +36,8 @@ def compare(args):
         more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
         inp_files.extend(more_files)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     # load in the various signatures
     siglist = []
     ksizes = set()
@@ -46,7 +48,8 @@ def compare(args):
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
                                                        traverse=args.traverse_directory,
-                                                       yield_all_files=args.force)
+                                                       yield_all_files=args.force,
+                                                       progress=progress)
         loaded = list(loaded)
         if not loaded:
             notify('\nwarning: no signatures loaded at given ksize/molecule type from {}', filename)
@@ -352,20 +355,20 @@ def index(args):
 
     notify('loading {} files into SBT', len(inp_files))
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     n = 0
     ksizes = set()
     moltypes = set()
     nums = set()
     scaleds = set()
     for f in inp_files:
-        if n % 100 == 0:
-            notify('\r...reading from {} ({} signatures so far)', f, n, end='')
-
         siglist = sourmash_args.load_file_as_signatures(f,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=args.traverse_directory,
-                                                        yield_all_files=args.force)
+                                                        yield_all_files=args.force,
+                                                        progress=progress)
 
         # load all matching signatures in this file
         ss = None
