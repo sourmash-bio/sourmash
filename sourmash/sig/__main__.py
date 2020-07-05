@@ -169,13 +169,17 @@ def describe(args):
     """
     set_quiet(args.quiet)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     siglist = []
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
-            for k in this_siglist:
-                siglist.append((k, sigfile))
+            loader = sourmash_args.load_file_as_signatures(sigfile,
+                                                           traverse=True,
+                                                           progress=progress)
+            for sig in loader:
+                siglist.append((sig, sigfile))
         except Exception as exc:
             error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))

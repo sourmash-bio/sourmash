@@ -443,7 +443,8 @@ def load_file_as_index(filename, traverse=True, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            traverse=False, yield_all_files=False):
+                            traverse=False, yield_all_files=False,
+                            progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, will return
@@ -460,14 +461,19 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     """
     db, dbtype = _load_database(filename, traverse, yield_all_files)
 
+    loader = None
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         db = db.select(moltype=select_moltype, ksize=ksize)
-        return db.signatures()
+        loader = db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
-        return list(_select_sigs(db, moltype=select_moltype, ksize=ksize))
+        loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
     else:
         assert 0                          # unknown enum!?
 
+    if progress:
+        return progress.start_file(filename, loader)
+    else:
+        return loader
 
 def load_file_list_of_signatures(filename):
     "Load a list-of-files text file."
@@ -518,3 +524,40 @@ class FileOutput(object):
             self.fp.close()
 
         return False
+
+
+class SignatureLoadingProgress(object):
+    """A wrapper for signature loading progress reporting.
+
+    Instantiate this class once, and then pass it to load_file_as_signatures
+    with progress=<obj>.
+
+    Alternatively, call obj.start_file(filename, iter) each time you
+    start loading signatures from a new file via iter.
+    """
+    def __init__(self, reporting_interval=10):
+        self.n_sig = 0
+        self.interval = reporting_interval
+
+    def start_file(self, filename, loader):
+        n_this = 0
+        n_before = self.n_sig
+
+        try:
+            for result in loader:
+                # track n from this file, as well as total n
+                n_this += 1
+                n_total = n_before + n_this
+                if n_total % self.interval == 0:
+                    notify("...loading from '{}' / {} sigs total",
+                           filename, n_total, end='\r')
+
+                yield result
+        except KeyboardInterrupt:
+            # might as well nicely handle CTRL-C while we're at it!
+            notify('\n(CTRL-C received! quitting.)')
+            sys.exit(-1)
+        finally:
+            self.n_sig += n_this
+
+        notify("loaded {} sigs from '{}'", n_this, filename)
