@@ -185,10 +185,6 @@ def describe(args):
             error(str(exc))
             error('(continuing)')
 
-        this_siglist = list(this_siglist)
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
-               end='\r')
-
     notify('loaded {} signatures total.', len(siglist))
 
     # write CSV?

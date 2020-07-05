@@ -459,6 +459,8 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
 
     Applies selector function if select_moltype and/or ksize are given.
     """
+    if progress:
+        progress.notify(filename)
     db, dbtype = _load_database(filename, traverse, yield_all_files)
 
     loader = None
@@ -539,6 +541,9 @@ class SignatureLoadingProgress(object):
         self.n_sig = 0
         self.interval = reporting_interval
 
+    def notify(self, filename):
+        notify("...opening file '{}'", filename, end='\r')
+
     def start_file(self, filename, loader):
         n_this = 0
         n_before = self.n_sig
@@ -548,7 +553,7 @@ class SignatureLoadingProgress(object):
                 # track n from this file, as well as total n
                 n_this += 1
                 n_total = n_before + n_this
-                if n_total % self.interval == 0:
+                if n_this and n_total % self.interval == 0:
                     notify("...loading from '{}' / {} sigs total",
                            filename, n_total, end='\r')
 
