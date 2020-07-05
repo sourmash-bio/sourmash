@@ -461,6 +461,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     """
     if progress:
         progress.notify(filename)
+
     db, dbtype = _load_database(filename, traverse, yield_all_files)
 
     loader = None
@@ -536,13 +537,15 @@ class SignatureLoadingProgress(object):
 
     Alternatively, call obj.start_file(filename, iter) each time you
     start loading signatures from a new file via iter.
+
+    You can optionally notify of reading a file with `.notify(filename)`.
     """
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
         self.interval = reporting_interval
 
     def notify(self, filename):
-        notify("...opening file '{}'", filename, end='\r')
+        notify("...reading from file '{}'", filename, end='\r')
 
     def start_file(self, filename, loader):
         n_this = 0
