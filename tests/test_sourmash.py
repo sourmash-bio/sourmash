@@ -3702,7 +3702,7 @@ def test_do_sourmash_index_zipfile(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
@@ -3733,7 +3733,7 @@ def test_do_sourmash_index_zipfile_append(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with pytest.warns(None) as record:
         c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
@@ -3743,7 +3743,7 @@ def test_do_sourmash_index_zipfile_append(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
