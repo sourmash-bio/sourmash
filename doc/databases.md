@@ -47,12 +47,12 @@ sourmash compute -k 21,31,51 \
 See [github.com/dib-lab/sourmash_databases](https://github.com/dib-lab/sourmash_databases) for a Snakemake workflow
 to build the databases.
 
-[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k21.tar.gz
-[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k31.tar.gz
-[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/refseq-d2-k51.tar.gz
-[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k21.tar.gz
-[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k31.tar.gz
-[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/2018-03-29/genbank-d2-k51.tar.gz
+[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k21.sbt.zip
+[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k31.sbt.zip
+[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k51.sbt.zip
+[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k21.sbt.zip
+[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k31.sbt.zip
+[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k51.sbt.zip
 
 ## Genbank LCA Database
 
