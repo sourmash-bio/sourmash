@@ -216,9 +216,9 @@ impl Nodegraph {
         Ok(())
     }
 
-    pub fn from_reader<R>(rdr: &mut R) -> Result<Nodegraph, Error>
+    pub fn from_reader<R>(rdr: R) -> Result<Nodegraph, Error>
     where
-        R: io::Read,
+        R: io::Read + Send,
     {
         let (mut rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 

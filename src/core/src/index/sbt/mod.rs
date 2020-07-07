@@ -135,9 +135,9 @@ where
         Ok(SBTInfo::V5(sinfo))
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<SBT<Node<U>, T>, Error>
+    pub fn from_reader<R, P>(mut rdr: R, path: P) -> Result<SBT<Node<U>, T>, Error>
     where
-        R: Read,
+        R: Read + Send,
         P: AsRef<Path>,
     {
         // TODO: I would love to do this, but I get an untagged enum error with

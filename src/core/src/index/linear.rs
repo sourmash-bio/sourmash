@@ -151,9 +151,9 @@ where
         Ok(linear)
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<LinearIndex<L>, Error>
+    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
     where
-        R: Read,
+        R: Read + Send,
         P: AsRef<Path>,
     {
         // TODO: check https://serde.rs/enum-representations.html for a

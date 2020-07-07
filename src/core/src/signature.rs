@@ -227,9 +227,9 @@ impl Signature {
         Ok(Signature::from_reader(&mut reader)?)
     }
 
-    pub fn from_reader<R>(rdr: &mut R) -> Result<Vec<Signature>, Error>
+    pub fn from_reader<R>(rdr: R) -> Result<Vec<Signature>, Error>
     where
-        R: io::Read,
+        R: io::Read + Send,
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
@@ -238,13 +238,13 @@ impl Signature {
     }
 
     pub fn load_signatures<R>(
-        buf: &mut R,
+        buf: R,
         ksize: Option<usize>,
         moltype: Option<HashFunctions>,
         _scaled: Option<u64>,
     ) -> Result<Vec<Signature>, Error>
     where
-        R: io::Read,
+        R: io::Read + Send,
     {
         let orig_sigs = Signature::from_reader(buf)?;
 
