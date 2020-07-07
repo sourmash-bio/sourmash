@@ -5,24 +5,24 @@
 These database are formatted for use with `sourmash search` and
 `sourmash gather`. They are calculated with a scaled value of 2000.
 
-Approximately 60,000 microbial genomes (including viral and fungal)
+Approximately 91,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
 
-* [RefSeq k=21, 2018.03.29][0] - 7 GB
-* [RefSeq k=31, 2018.03.29][1] - 7 GB
-* [RefSeq k=51, 2018.03.29][2] - 7.1 GB
+* [RefSeq k=21, 2018.03.29][0] - 3.3 GB
+* [RefSeq k=31, 2018.03.29][1] - 3.3 GB
+* [RefSeq k=51, 2018.03.29][2] - 3.4 GB
 
 ## Genbank microbial genomes - SBT
 
 These database are formatted for use with `sourmash search` and
 `sourmash gather`.
 
-Approximately 100,000 microbial genomes (including viral and fungal)
+Approximately 98,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.
 
-* [Genbank k=21, 2018.03.29][3]- 8.4 GB
-* [Genbank k=31, 2018.03.29][4] - 8.4 GB
-* [Genbank k=51, 2018.03.29][5] - 8.4 GB
+* [Genbank k=21, 2018.03.29][3]- 3.9 GB
+* [Genbank k=31, 2018.03.29][4] - 3.9 GB
+* [Genbank k=51, 2018.03.29][5] - 3.9 GB
 
 ### Details
 
