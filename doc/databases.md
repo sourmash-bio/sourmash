@@ -47,12 +47,12 @@ sourmash compute -k 21,31,51 \
 See [github.com/dib-lab/sourmash_databases](https://github.com/dib-lab/sourmash_databases) for a Snakemake workflow
 to build the databases.
 
-[0]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k21.sbt.zip
-[1]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k31.sbt.zip
-[2]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/refseq-k51.sbt.zip
-[3]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k21.sbt.zip
-[4]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k31.sbt.zip
-[5]: https://s3-us-west-2.amazonaws.com/sourmash-databases/zip/genbank-k51.sbt.zip
+[0]: https://osf.io/k26ep/download
+[1]: https://osf.io/8snc9/download
+[2]: https://osf.io/gkqau/download
+[3]: https://osf.io/dm7n4/download
+[4]: https://osf.io/jgu93/download
+[5]: https://osf.io/2uvsc/download
 
 ## Genbank LCA Database
 
