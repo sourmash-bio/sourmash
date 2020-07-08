@@ -153,7 +153,7 @@ where
 
     pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
     where
-        R: Read + Send,
+        R: Read,
         P: AsRef<Path>,
     {
         // TODO: check https://serde.rs/enum-representations.html for a

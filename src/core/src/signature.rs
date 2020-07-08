@@ -229,7 +229,7 @@ impl Signature {
 
     pub fn from_reader<R>(rdr: R) -> Result<Vec<Signature>, Error>
     where
-        R: io::Read + Send,
+        R: io::Read,
     {
         let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
@@ -244,7 +244,7 @@ impl Signature {
         _scaled: Option<u64>,
     ) -> Result<Vec<Signature>, Error>
     where
-        R: io::Read + Send,
+        R: io::Read,
     {
         let orig_sigs = Signature::from_reader(buf)?;
 
@@ -426,7 +426,7 @@ mod test {
     use std::io::{BufReader, Read};
     use std::path::PathBuf;
 
-    use needletail::parse_sequence_reader;
+    use needletail::parse_fastx_reader;
 
     use crate::cmd::ComputeParameters;
     use crate::signature::SigsTrait;
@@ -559,14 +559,11 @@ mod test {
         let mut f = File::open("../../tests/test-data/ecoli.genes.fna").unwrap();
         let _ = f.read_to_end(&mut data);
 
-        parse_sequence_reader(
-            &data[..],
-            |_| {},
-            |rec| {
-                sig.add_sequence(&rec.seq, false).unwrap();
-            },
-        )
-        .unwrap();
+        let mut parser = parse_fastx_reader(&data[..]).unwrap();
+        while let Some(record) = parser.next() {
+            let record = record.unwrap();
+            sig.add_sequence(&record.seq(), false).unwrap();
+        }
 
         let sketches = sig.sketches();
         assert_eq!(sketches.len(), 12);

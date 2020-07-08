@@ -218,7 +218,7 @@ impl Nodegraph {
 
     pub fn from_reader<R>(rdr: R) -> Result<Nodegraph, Error>
     where
-        R: io::Read + Send,
+        R: io::Read,
     {
         let (mut rdr, _format) = niffler::get_reader(Box::new(rdr))?;
 
