@@ -187,6 +187,7 @@ def describe(args):
             error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
             error('(continuing)')
+            raise
 
     notify('loaded {} signatures total.', len(siglist))
 

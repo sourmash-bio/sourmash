@@ -543,9 +543,22 @@ class SignatureLoadingProgress(object):
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
         self.interval = reporting_interval
+        self.screen_width = 80
+
+    def short_notify(self, msg_template, *args, **kwargs):
+        msg = msg_template.format(*args, **kwargs)
+        end = kwargs.get('end', '\n')
+        w = self.screen_width
+
+        if len(msg) > w:
+            truncate_len = len(msg) - w + 3
+            msg = '<<<' + msg[truncate_len:]
+
+        notify(msg, end=end)
 
     def notify(self, filename):
-        notify("...reading from file '{}'", filename, end='\r')
+        self.short_notify("...reading from file '{}'",
+                          filename, end='\r')
 
     def start_file(self, filename, loader):
         n_this = 0
@@ -557,8 +570,8 @@ class SignatureLoadingProgress(object):
                 n_this += 1
                 n_total = n_before + n_this
                 if n_this and n_total % self.interval == 0:
-                    notify("...loading from '{}' / {} sigs total",
-                           filename, n_total, end='\r')
+                    self.short_notify("...loading from '{}' / {} sigs total",
+                                      filename, n_total, end='\r')
 
                 yield result
         except KeyboardInterrupt:
@@ -568,4 +581,4 @@ class SignatureLoadingProgress(object):
         finally:
             self.n_sig += n_this
 
-        notify("loaded {} sigs from '{}'", n_this, filename)
+        self.short_notify("loaded {} sigs from '{}'", n_this, filename)
