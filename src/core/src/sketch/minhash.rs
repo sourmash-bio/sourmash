@@ -387,7 +387,7 @@ impl KmerMinHash {
             }
         }
 
-        if found == false {
+        if !found {
             self.add_hash_with_abundance(hash, abundance);
         }
     }

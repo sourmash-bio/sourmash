@@ -564,7 +564,7 @@ class MinHash(RustObject):
                 hashes.append(h)
                 abunds.append(v)
 
-            self._methodcall(lib.kmerminhash_set_abundances_with_clear_option, hashes, abunds, len(hashes), clear)
+            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
         else:
             raise RuntimeError(
                 "Use track_abundance=True when constructing "
