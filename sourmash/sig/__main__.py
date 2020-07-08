@@ -173,24 +173,6 @@ def describe(args):
     """
     set_quiet(args.quiet)
 
-    progress = sourmash_args.SignatureLoadingProgress()
-
-    siglist = []
-    for sigfile in args.signatures:
-        try:
-            loader = sourmash_args.load_file_as_signatures(sigfile,
-                                                           traverse=True,
-                                                           progress=progress)
-            for sig in loader:
-                siglist.append((sig, sigfile))
-        except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
-            error(str(exc))
-            error('(continuing)')
-            raise
-
-    notify('loaded {} signatures total.', len(siglist))
-
     # write CSV?
     w = None
     csv_fp = None
@@ -203,27 +185,38 @@ def describe(args):
                            extrasaction='ignore')
         w.writeheader()
 
-    # extract info, write as appropriate.
-    for (sig, signature_file) in siglist:
-        mh = sig.minhash
-        ksize = mh.ksize
-        moltype = mh.moltype
-        scaled = mh.scaled
-        num = mh.num
-        seed = mh.seed
-        n_hashes = len(mh)
-        with_abundance = 0
-        if mh.track_abundance:
-            with_abundance = 1
-        md5 = sig.md5sum()
-        name = sig.name()
-        filename = sig.filename
-        license = sig.license
+    # load signatures and display info.
+    progress = sourmash_args.SignatureLoadingProgress()
 
-        if w:
-            w.writerow(locals())
+    n_loaded = 0
+    for signature_file in args.signatures:
+        try:
+            loader = sourmash_args.load_file_as_signatures(signature_file,
+                                                           traverse=True,
+                                                           progress=progress)
+            for sig in loader:
+                n_loaded += 1
 
-        print_results('''\
+                # extract info, write as appropriate.
+                mh = sig.minhash
+                ksize = mh.ksize
+                moltype = mh.moltype
+                scaled = mh.scaled
+                num = mh.num
+                seed = mh.seed
+                n_hashes = len(mh)
+                with_abundance = 0
+                if mh.track_abundance:
+                    with_abundance = 1
+                md5 = sig.md5sum()
+                name = sig.name()
+                filename = sig.filename
+                license = sig.license
+
+                if w:
+                    w.writerow(locals())
+
+                print_results('''\
 ---
 signature filename: {signature_file}
 signature: {name}
@@ -233,6 +226,14 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 signature license: {license}
 ''', **locals())
+
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(signature_file))
+            error(str(exc))
+            error('(continuing)')
+            raise
+
+    notify('loaded {} signatures total.', n_loaded)
 
     if csv_fp:
         csv_fp.close()
