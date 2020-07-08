@@ -543,9 +543,14 @@ class SignatureLoadingProgress(object):
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
         self.interval = reporting_interval
-        self.screen_width = 80
+        self.screen_width = 79
 
     def short_notify(self, msg_template, *args, **kwargs):
+        """Shorten the notification message so that it fits on one line.
+
+        Good for repeating notifications with end='\r' especially...
+        """
+
         msg = msg_template.format(*args, **kwargs)
         end = kwargs.get('end', '\n')
         w = self.screen_width
