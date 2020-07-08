@@ -270,6 +270,43 @@ unsafe fn kmerminhash_set_abundances(
 }
 }
 
+ffi_fn! {
+unsafe fn kmerminhash_set_abundances_with_clear_option(
+    ptr: *mut SourmashKmerMinHash,
+    hashes_ptr: *const u64,
+    abunds_ptr: *const u64,
+    insize: usize,
+    clear: bool,
+) -> Result<()> {
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    // FIXME: make a SourmashSlice_u64 type?
+    let hashes = {
+        assert!(!hashes_ptr.is_null());
+        slice::from_raw_parts(hashes_ptr as *const u64, insize)
+    };
+
+    // FIXME: make a SourmashSlice_u64 type?
+    let abunds = {
+        assert!(!abunds_ptr.is_null());
+        slice::from_raw_parts(abunds_ptr as *const u64, insize)
+    };
+
+    let pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
+
+    // Reset the minhash
+    if clear {
+        mh.clear();
+    }
+
+    for (h, a) in pairs {
+        mh.set_hash_with_abundance(h, a);
+    }
+
+    Ok(())
+}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_is_protein(ptr: *const SourmashKmerMinHash) -> bool {
     let mh = SourmashKmerMinHash::as_rust(ptr);

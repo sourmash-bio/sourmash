@@ -195,6 +195,12 @@ void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *abunds_ptr,
                                 uintptr_t insize);
 
+void kmerminhash_set_abundances_with_clear_option(SourmashKmerMinHash *ptr,
+                                                  const uint64_t *hashes_ptr,
+                                                  const uint64_t *abunds_ptr,
+                                                  uintptr_t insize,
+                                                  bool clear);
+
 double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
                               const SourmashKmerMinHash *other,
                               bool ignore_abundance,

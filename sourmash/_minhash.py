@@ -559,17 +559,12 @@ class MinHash(RustObject):
         if self.track_abundance:
             hashes = []
             abunds = []
-            if not clear:
-                current_values = self.get_mins(with_abundance=True)
-                for h, v in current_values.items():
-                    hashes.append(h)
-                    abunds.append(v)
 
             for h, v in values.items():
                 hashes.append(h)
                 abunds.append(v)
 
-            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes))
+            self._methodcall(lib.kmerminhash_set_abundances_with_clear_option, hashes, abunds, len(hashes), clear)
         else:
             raise RuntimeError(
                 "Use track_abundance=True when constructing "
@@ -600,4 +595,3 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
-            
