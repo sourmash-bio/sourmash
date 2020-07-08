@@ -600,3 +600,4 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
+            
