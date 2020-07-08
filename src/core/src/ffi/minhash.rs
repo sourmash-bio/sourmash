@@ -257,13 +257,14 @@ unsafe fn kmerminhash_set_abundances(
         slice::from_raw_parts(abunds_ptr as *const u64, insize)
     };
 
-    let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
-    pairs.sort();
+    let pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
 
     // Reset the minhash
     mh.clear();
 
-    mh.add_many_with_abund(&pairs)?;
+    for (h, a) in pairs {
+        mh.set_hash_with_abundance(h, a);
+    }
 
     Ok(())
 }

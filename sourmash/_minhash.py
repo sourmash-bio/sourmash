@@ -561,15 +561,13 @@ class MinHash(RustObject):
             abunds = []
             if not clear:
                 current_values = self.get_mins(with_abundance=True)
-                new_values = {**current_values, **values}
-                for h, v in new_values.items():
+                for h, v in current_values.items():
                     hashes.append(h)
                     abunds.append(v)
 
-            else: 
-                for h, v in values.items():
-                    hashes.append(h)
-                    abunds.append(v)
+            for h, v in values.items():
+                hashes.append(h)
+                abunds.append(v)
 
             self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes))
         else:

@@ -1090,12 +1090,17 @@ def test_set_abundance_no_clear_with_set_hash():
 
     a.add_hash(10)
     assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.set_abundances({10: 2}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 2}
     
+    # testing override abundance value increasing
+    a.set_abundances({10: 4}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 4}
+
+    # testing override abundance value decreasing
     a.set_abundances({10: 3}, clear=False)
     assert a.get_mins(with_abundance=True) == {10: 3}
-
-    a.set_abundances({20: 5, 10: 2}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 2, 20: 5}
 
 
 def test_clear():
