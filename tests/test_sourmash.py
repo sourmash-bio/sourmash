@@ -2833,6 +2833,37 @@ def test_multigather_metagenome_query_from_file(c):
 
 
 @utils.in_tempdir
+def test_multigather_metagenome_query_with_sbt(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = 'multigather --query gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 12 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
 def test_multigather_metagenome_query_from_file_with_addl_query(c):
     # test multigather --query-from-file and --query too
     testdata_glob = utils.get_test_data('gather/GCF*.sig')

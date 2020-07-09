@@ -754,9 +754,9 @@ def multigather(args):
                 queries = load_file_as_signatures(queryfile, ksize=args.ksize, select_moltype=moltype)
                 rename= True
             except (OSError, ValueError):
-                 error(f"Cannot open file {queryfile:q}")
+                 error("Cannot open file '{}'", queryfile)
                  sys.exit(-1)
-
+        n=0
         for query in queries:
             notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                                      query.minhash.ksize,
@@ -857,8 +857,10 @@ def multigather(args):
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
                     e.add_many(next_query.minhash.get_mins())
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+            n+=1
 
         # fini, next query!
+    notify('\nconducted gather searches on {} signatures', n)
 
 
 def watch(args):
