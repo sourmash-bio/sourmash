@@ -13,7 +13,6 @@ from .compare import compare_all_pairs, compare_serial_containment
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
-from sourmash.sourmash_args import load_file_as_signatures
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
@@ -716,17 +715,15 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        try:
+            more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        except (UnicodeDecodeError, ValueError) as e:
+            more_files = [args.query_from_file]
         inp_files.extend(more_files)
 
-    # need a "first query"
-    if ".sbt" in inp_files[0] or ".lca" in inp_files[0]:
-        sbt_sigs= load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)
-        query = list(sbt_sigs)[0]
-    else:
-        query=sourmash_args.load_query_signature(inp_files[0],
-                                                 ksize=args.ksize,
-                                                 select_moltype=moltype)
+    print(inp_files[0])
+    # need a query to get ksize, moltype for db loading
+    query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
                                                 args.traverse_directory)
@@ -736,35 +733,13 @@ def multigather(args):
         sys.exit(-1)
 
     # run gather on all the queries.
+    n=0
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
-        rename=False
-        try:
-            query = sourmash_args.load_query_signature(queryfile,
-                                                       ksize=args.ksize,
-                                                       select_moltype=moltype)
+        for query in sourmash_args.load_file_as_signatures(queryfile, ksize=args.ksize, select_moltype=moltype):
             notify('loaded query: {}... (k={}, {})', query.name()[:30],
                                                      query.minhash.ksize,
                                                      sourmash_args.get_moltype(query))
-            queries = [query]
-        # this returns error from here: https://github.com/dib-lab/sourmash/blob/63a07db19d3bacb2ba6360f171fdbb11311d3b84/sourmash/sourmash_args.py#L104-L108
-        # how do I catch/treat this?
-        except:
-            try:
-                queries = load_file_as_signatures(queryfile, ksize=args.ksize, select_moltype=moltype)
-                rename= True
-            except (OSError, ValueError):
-                 error("Cannot open file '{}'", queryfile)
-                 sys.exit(-1)
-        n=0
-        for query in queries:
-            notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                                     query.minhash.ksize,
-                                                     sourmash_args.get_moltype(query))
-            if rename:
-                ### if using an index, need to set queryfile to something specific to the signature
-                ### maybe use same naming convention from sig.split?
-                queryfile = query.name()
 
         # verify signature was computed right.
             if query.minhash.max_hash == 0:
@@ -824,7 +799,12 @@ def multigather(args):
                 notify('nothing found... skipping.')
                 continue
 
-            output_base = os.path.basename(queryfile)
+            # need to handle this better/differently when query.filename not properly set
+            query_filename = query.filename
+            if not query_filename:
+                query_filename = queryfile
+
+            output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
 
             fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
