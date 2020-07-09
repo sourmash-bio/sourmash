@@ -13,6 +13,7 @@ from .compare import compare_all_pairs, compare_serial_containment
 from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
+from sourmash.sourmash_args import load_file_as_signatures
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
@@ -718,10 +719,15 @@ def multigather(args):
         more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
         inp_files.extend(more_files)
 
-    query = sourmash_args.load_query_signature(inp_files[0],
-                                               ksize=args.ksize,
-                                               select_moltype=moltype)
-    # set up the search databases
+    # need a "first query"
+    if ".sbt" in inp_files[0] or ".lca" in inp_files[0]:
+        sbt_sigs= load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)
+        query = list(sbt_sigs)[0]
+    else:
+        query=sourmash_args.load_query_signature(inp_files[0],
+                                                 ksize=args.ksize,
+                                                 select_moltype=moltype)
+
     databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
                                                 args.traverse_directory)
 
@@ -731,105 +737,126 @@ def multigather(args):
 
     # run gather on all the queries.
     for queryfile in inp_files:
-        # load the query signature & figure out all the things
-        query = sourmash_args.load_query_signature(queryfile,
-                                                   ksize=args.ksize,
-                                                   select_moltype=moltype)
-        notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                                 query.minhash.ksize,
-                                                 sourmash_args.get_moltype(query))
+        # load the query signature(s) & figure out all the things
+        rename=False
+        try:
+            query = sourmash_args.load_query_signature(queryfile,
+                                                       ksize=args.ksize,
+                                                       select_moltype=moltype)
+            notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                     query.minhash.ksize,
+                                                     sourmash_args.get_moltype(query))
+            queries = [query]
+        # this returns error from here: https://github.com/dib-lab/sourmash/blob/63a07db19d3bacb2ba6360f171fdbb11311d3b84/sourmash/sourmash_args.py#L104-L108
+        # how do I catch/treat this?
+        except:
+            try:
+                queries = load_file_as_signatures(queryfile, ksize=args.ksize, select_moltype=moltype)
+                rename= True
+            except (OSError, ValueError):
+                 error(f"Cannot open file {queryfile:q}")
+                 sys.exit(-1)
+
+        for query in queries:
+            notify('loaded query: {}... (k={}, {})', query.name()[:30],
+                                                     query.minhash.ksize,
+                                                     sourmash_args.get_moltype(query))
+            if rename:
+                ### if using an index, need to set queryfile to something specific to the signature
+                ### maybe use same naming convention from sig.split?
+                queryfile = query.name()
 
         # verify signature was computed right.
-        if query.minhash.max_hash == 0:
-            error('query signature needs to be created with --scaled; skipping')
-            continue
+            if query.minhash.max_hash == 0:
+                error('query signature needs to be created with --scaled; skipping')
+                continue
 
-        # downsample if requested
-        if args.scaled:
-            notify('downsampling query from scaled={} to {}',
-                   query.minhash.scaled, int(args.scaled))
-            query.minhash = query.minhash.downsample_scaled(args.scaled)
+            # downsample if requested
+            if args.scaled:
+                notify('downsampling query from scaled={} to {}',
+                       query.minhash.scaled, int(args.scaled))
+                query.minhash = query.minhash.downsample_scaled(args.scaled)
 
-        # empty?
-        if not len(query.minhash):
-            error('no query hashes!? skipping to next..')
-            continue
+            # empty?
+            if not len(query.minhash):
+                error('no query hashes!? skipping to next..')
+                continue
 
-        found = []
-        weighted_missed = 1
-        for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
-            if not len(found):                # first result? print header.
+            found = []
+            weighted_missed = 1
+            for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+                if not len(found):                # first result? print header.
+                    if query.minhash.track_abundance and not args.ignore_abundance:
+                        print_results("")
+                        print_results("overlap     p_query p_match avg_abund")
+                        print_results("---------   ------- ------- ---------")
+                    else:
+                        print_results("")
+                        print_results("overlap     p_query p_match")
+                        print_results("---------   ------- -------")
+
+
+                # print interim result & save in a list for later use
+                pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
+                pct_genome = '{:.1f}%'.format(result.f_match*100)
+                average_abund ='{:.1f}'.format(result.average_abund)
+                name = result.match._display_name(40)
+
                 if query.minhash.track_abundance and not args.ignore_abundance:
-                    print_results("")
-                    print_results("overlap     p_query p_match avg_abund")
-                    print_results("---------   ------- ------- ---------")
+                    print_results('{:9}   {:>7} {:>7} {:>9}    {}',
+                              format_bp(result.intersect_bp), pct_query, pct_genome,
+                              average_abund, name)
                 else:
-                    print_results("")
-                    print_results("overlap     p_query p_match")
-                    print_results("---------   ------- -------")
+                    print_results('{:9}   {:>7} {:>7}    {}',
+                              format_bp(result.intersect_bp), pct_query, pct_genome,
+                              name)
+                found.append(result)
 
 
-            # print interim result & save in a list for later use
-            pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
-            pct_genome = '{:.1f}%'.format(result.f_match*100)
-            average_abund ='{:.1f}'.format(result.average_abund)
-            name = result.match._display_name(40)
+            # basic reporting
+            print_results('\nfound {} matches total;', len(found))
 
-            if query.minhash.track_abundance and not args.ignore_abundance:
-                print_results('{:9}   {:>7} {:>7} {:>9}    {}',
-                          format_bp(result.intersect_bp), pct_query, pct_genome,
-                          average_abund, name)
-            else:
-                print_results('{:9}   {:>7} {:>7}    {}',
-                          format_bp(result.intersect_bp), pct_query, pct_genome,
-                          name)
-            found.append(result)
+            print_results('the recovered matches hit {:.1f}% of the query',
+                   (1 - weighted_missed) * 100)
+            print_results('')
 
-
-        # basic reporting
-        print_results('\nfound {} matches total;', len(found))
-
-        print_results('the recovered matches hit {:.1f}% of the query',
-               (1 - weighted_missed) * 100)
-        print_results('')
-
-        if not found:
-            notify('nothing found... skipping.')
-            continue
-
-        output_base = os.path.basename(queryfile)
-        output_csv = output_base + '.csv'
-
-        fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
-                      'f_unique_to_query', 'f_unique_weighted',
-                      'average_abund', 'median_abund', 'std_abund', 'name',
-                      'filename', 'md5', 'f_match_orig']
-        with open(output_csv, 'wt') as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-            w.writeheader()
-            for result in found:
-                d = dict(result._asdict())
-                del d['match']                 # actual signature not in CSV.
-                w.writerow(d)
-
-        output_matches = output_base + '.matches.sig'
-        with open(output_matches, 'wt') as fp:
-            outname = output_matches
-            notify('saving all matches to "{}"', outname)
-            sig.save_signatures([ r.match for r in found ], fp)
-
-        output_unassigned = output_base + '.unassigned.sig'
-        with open(output_unassigned, 'wt') as fp:
             if not found:
-                notify('nothing found - entire query signature unassigned.')
-            elif not len(query.minhash):
-                notify('no unassigned hashes! not saving.')
-            else:
-                notify('saving unassigned hashes to "{}"', output_unassigned)
+                notify('nothing found... skipping.')
+                continue
 
-                e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
-                e.add_many(next_query.minhash.get_mins())
-                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+            output_base = os.path.basename(queryfile)
+            output_csv = output_base + '.csv'
+
+            fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
+                          'f_unique_to_query', 'f_unique_weighted',
+                          'average_abund', 'median_abund', 'std_abund', 'name',
+                          'filename', 'md5', 'f_match_orig']
+            with open(output_csv, 'wt') as fp:
+                w = csv.DictWriter(fp, fieldnames=fieldnames)
+                w.writeheader()
+                for result in found:
+                    d = dict(result._asdict())
+                    del d['match']                 # actual signature not in CSV.
+                    w.writerow(d)
+
+            output_matches = output_base + '.matches.sig'
+            with open(output_matches, 'wt') as fp:
+                outname = output_matches
+                notify('saving all matches to "{}"', outname)
+                sig.save_signatures([ r.match for r in found ], fp)
+
+            output_unassigned = output_base + '.unassigned.sig'
+            with open(output_unassigned, 'wt') as fp:
+                if not found:
+                    notify('nothing found - entire query signature unassigned.')
+                elif not len(query.minhash):
+                    notify('no unassigned hashes! not saving.')
+                else:
+                    notify('saving unassigned hashes to "{}"', output_unassigned)
+
+                    e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
+                    e.add_many(next_query.minhash.get_mins())
+                    sig.save_signatures([ sig.SourmashSignature(e) ], fp)
 
         # fini, next query!
 
