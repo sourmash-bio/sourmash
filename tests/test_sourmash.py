@@ -2947,6 +2947,7 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
     assert 'conducted gather searches on 13 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
                 'NC_011080.1 Salmonella enterica subsp...' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
@@ -2980,7 +2981,6 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     with open(query_list, 'wt') as fp:
         print('gcf_all.sbt.zip', file=fp)
 
-
     another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
 
     cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, query_list)
@@ -2994,6 +2994,7 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
 
     assert 'conducted gather searches on 13 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
     assert all(('4.7 Mbp      100.0%  100.0%'  in out,
                 'NC_011080.1 Salmonella enterica subsp...' in out))
     assert all(('4.5 Mbp      100.0%  100.0%' in out,
@@ -3006,6 +3007,29 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
     #check additional query sig
     assert all(('4.9 Mbp      100.0%  100.0%' in out,
                 'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # incorrectly query with sbt using `--query-from-file`
+    cmd = 'multigather --query-from-file gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+    try:
+        c.run_sourmash(*cmd)
+    except Exception as e:
+        assert "UnicodeDecodeError" in str(e)
 
 
 @utils.in_tempdir
