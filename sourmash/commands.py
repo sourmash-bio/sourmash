@@ -715,13 +715,9 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        try:
-            more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
-        except (UnicodeDecodeError, ValueError) as e:
-            more_files = [args.query_from_file]
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
         inp_files.extend(more_files)
 
-    print(inp_files[0])
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
