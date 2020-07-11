@@ -806,12 +806,13 @@ Briefly,
   signatures with `--query`, and multiple LCA databases, with
   `--db`. `sourmash multigather` also uses this style.  This allows these
   commands to specify multiple queries **and** multiple databases without
-  (too much) confusion.
+  (too much) confusion.  These commands will take files containing
+  signature files using `--query-from-file` (see below).
   
 * `index` and `lca index` take a few fixed parameters (database name,
   taxonomy spreadsheet) and then an arbitrary number of other files
   that contain signatures, including files, directories, and indexed
-  databases.
+  databases. These commands will also take `--from-file` (see below).
 
 #### Storing (and searching) signatures
   
