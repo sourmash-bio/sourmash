@@ -782,3 +782,112 @@ For example,
 sourmash signature overlap file1.sig file2.sig
 ```
 will display the detailed comparison of `file1.sig` and `file2.sig`.
+
+## Advanced command-line usage
+
+### Loading signatures and databases
+
+sourmash uses several different command-line styles.
+
+Briefly,
+
+* `search` and `gather` both take a single query signature and search
+  multiple signatures or databases. In this case, there has to be a
+  single identifiable query for sourmash to use, and if you're using a
+  database or list of signatures as the source of a query, you'll
+  need to provide a selector (ksize with `-k`, moltype with `--dna` etc,
+  or md5sum with `--query-md5`) that picks out a single signature.
+
+* `compare` takes multiple signatures and can load them from files,
+  directories, and indexed databases (SBT or LCA).  It can also take
+  a list of file paths in a text file, using `--from-file` (see below).
+  
+* the `lca classify` and `lca summarize` commands take multiple
+  signatures with `--query`, and multiple LCA databases, with
+  `--db`. `sourmash multigather` also uses this style.  This allows these
+  commands to specify multiple queries **and** multiple databases without
+  (too much) confusion.
+  
+* `index` and `lca index` take a few fixed parameters (database name,
+  taxonomy spreadsheet) and then an arbitrary number of other files
+  that contain signatures, including files, directories, and indexed
+  databases.
+
+#### Storing (and searching) signatures
+  
+Backing up a little, there are many ways to store and search
+signatures.
+
+The simplest is one signature in a single JSON file. You can also put
+many signatures in a single JSON file, either by building them that
+way with `sourmash compute` or by using `sourmash sig cat` or other
+commands. Searching or comparing these files involves loading them
+sequentially and iterating across all of the signatures - which can be
+slow, especially for many (100s or 1000s) of signatures.
+
+Indexed databases can make searching signatures a lot faster. SBT
+databases are low memory and disk-intensive databases that allow for
+fast searches using a tree structure, while LCA databases are higher
+memory and (after a potentially significant load time) are quite fast.
+
+(LCA databases also permit taxonomic searches using `sourmash lca` functions.)
+
+The main point is that since all of these databases contain signatures,
+as of sourmash 3.4, any command that takes more than one signature will
+also automatically load all of the signatures in the database.
+
+Note that, for now, both SBT and LCA database can only contain one
+"type" of signature (one ksize, one moltype, etc.) If the database
+signature type is incompatible with the other signatures, sourmash
+will complain.  will be raised.  In contrast, signature files can
+contain many different types of signatures, and compatible ones will
+be discovered automatically.
+
+#### Passing in lists of files
+
+Various sourmash commands will also take `--from-file` or
+`--query-from-file`, which will take a path to a text file containing
+a list of file paths. This can be useful for situations where you want
+to specify thousands of queries, or a subset of signatures produced by
+some other command.
+
+#### Loading all signatures under a directory
+
+Note that until 4.0, `--traverse-directory` may be needed for many
+commands in order for them to load signatures from a directory
+hierarchy -- `search`, `gather`, `index`, `lca index`, and `compare`,
+for example. All of the `sourmash sig` commands support loading from a
+directory if you provide it on the command line, and this will be the
+default behavior in sourmash 4.0.
+
+### Combining search databases on the command line
+
+All of the commands in sourmash operate in "online" mode, so you can
+combine multiple databases and signatures on the command line and get
+the same answer as if you built a single large database from all of
+them.  The only addendum to this rule is that if you have multiple
+identical matches, the first one to be found will differ depending on
+the order that the files are passed in on the command line.
+
+This can actually be pretty convenient for speeding up searches - for
+example, if you're using `sourmash gather` and you want to find any
+new results after a database update, you can provide a file containing
+the previously found matches on the command line before the updated
+database. Then `gather` will automatically "find" the previously found
+matches before anything else, but only if there are no better matches to
+be found in the updated database. (OK, it's a bit of a niche case, but it's
+been useful. :)
+
+### Using stdin
+
+Most commands will take stdin via the usual UNIX convention, `-`.
+Moreover, `sourmash compute` and the `sourmash sig` commands will
+output to stdout.  So, for example,
+
+`sourmash compute ... -o - | sourmash sig describe -` will describe the
+signatures that were just computed.
+
+(This is a relatively new feature as of 3.4 and our testing may need
+some work, so please
+[let us know](https://github.com/dib-lab/sourmash/issues) if there's
+something that doesn't work and we will fix it :).
