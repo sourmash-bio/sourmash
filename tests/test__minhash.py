@@ -1054,53 +1054,17 @@ def test_add_hash_with_abundance():
     assert a.get_mins(with_abundance=True) == {10: 3, 20: 2}
 
 
-def test_set_abundance_clear_on_empty_minhash():
-    a = MinHash(20, 5, False, track_abundance=True)
-    b = MinHash(20, 5, False, track_abundance=True)
+def test_add_hash_with_abundance_2():
+    a = MinHash(20, 5, False, track_abundance=False)
 
-    a.set_abundances({1: 3, 2: 4}, clear=True)
-    b.set_abundances({1: 3, 2: 4}, clear=False)
+    a.add_hash_with_abundance(10, 1)
+    assert a.get_mins(with_abundance=True) == [10]
 
-    assert a.get_mins() == b.get_mins()
+    a.add_hash_with_abundance(20, 2)
+    assert a.get_mins(with_abundance=True) == [10, 20]
 
-
-def test_set_abundance_clear_default():
-    a = MinHash(20, 5, False, track_abundance=True)
-
-    a.add_hash(10)
-    assert a.get_mins() == [10]
-    assert a.get_mins(with_abundance=True) == {10: 1}
-
-    a.set_abundances({20: 2})
-    assert a.get_mins(with_abundance=True) == {20: 2}
-
-
-def test_set_abundance_no_clear():
-    a = MinHash(20, 5, False, track_abundance=True)
-
-    a.add_hash(10)
-    assert a.get_mins(with_abundance=True) == {10: 1}
-    
-    a.set_abundances({20: 1, 30: 4}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 1, 20: 1, 30: 4}
-
-
-def test_set_abundance_no_clear_with_set_hash():
-    a = MinHash(20, 5, False, track_abundance=True)
-
-    a.add_hash(10)
-    assert a.get_mins(with_abundance=True) == {10: 1}
-
-    a.set_abundances({10: 2}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 2}
-    
-    # testing override abundance value increasing
-    a.set_abundances({10: 4}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 4}
-
-    # testing override abundance value decreasing
-    a.set_abundances({10: 3}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 3}
+    a.add_hash_with_abundance(10, 2)
+    assert a.get_mins(with_abundance=True) == [10, 20]
 
 
 def test_clear():
@@ -1111,6 +1075,16 @@ def test_clear():
 
     a.clear()
     assert a.get_mins(with_abundance=True) == {}
+
+
+def test_clear_2():
+    a = MinHash(20, 5, False, track_abundance=False)
+
+    a.add_hash(10)
+    assert a.get_mins() == [10]
+
+    a.clear()
+    assert a.get_mins() == []
 
 
 def test_abundance_simple_2():
@@ -1197,6 +1171,50 @@ def test_set_abundance_2():
     new_mh.set_abundances(mins)
 
     assert new_mh.get_mins(with_abundance=True) == mins
+
+
+def test_set_abundance_clear():
+    # on empty minhash, clear should have no effect
+    a = MinHash(20, 5, False, track_abundance=True)
+    b = MinHash(20, 5, False, track_abundance=True)
+
+    a.set_abundances({1: 3, 2: 4}, clear=True)
+    b.set_abundances({1: 3, 2: 4}, clear=False)
+
+    assert a.get_mins() == b.get_mins()
+
+
+def test_set_abundance_clear_2():
+    # default should be clear=True
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.set_abundances({20: 2})
+    assert a.get_mins(with_abundance=True) == {20: 2}
+
+
+def test_set_abundance_clear_3():
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+    
+    a.set_abundances({20: 1, 30: 4}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 1, 20: 1, 30: 4}
+
+
+def test_set_abundance_clear_4():
+    # setting the abundance of an already set hash should add
+    # the abundances together
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.set_abundances({20: 2, 10: 1}, clear=False)   # should also sort the hashes
+    assert a.get_mins(with_abundance=True) == {10: 1, 20: 2}
+
+    a.set_abundances({20: 1, 10: 2}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 3, 20: 3}
 
 
 def test_reset_abundance_initialized():
