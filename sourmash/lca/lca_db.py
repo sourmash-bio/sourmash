@@ -125,7 +125,10 @@ class LCA_Database(Index):
 
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!
-        minhash = minhash.downsample_scaled(self.scaled)
+        try:
+            minhash = minhash.downsample_scaled(self.scaled)
+        except ValueError:
+            raise ValueError("cannot downsample signature; is it a scaled signature?")
 
         if ident is None:
             ident = sig.name()

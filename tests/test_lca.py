@@ -787,6 +787,22 @@ def test_index_from_file(c):
     assert 'WARNING: 1 duplicate signatures.' in err
 
 
+@utils.in_tempdir
+def test_index_fail_on_num(c):
+    # lca index should yield a decent error message when attempted on 'num'
+    sigfile = utils.get_test_data('num/63.fa.sig')
+    taxcsv = utils.get_test_data('lca/podar-lineage.csv')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('lca', 'index', taxcsv, 'xxx.lca.json', sigfile, '-C', '3')
+
+    err = c.last_result.err
+    print(err)
+
+    assert 'ERROR: cannot insert signature ' in err
+    assert 'ERROR: cannot downsample signature; is it a scaled signature?' in err
+
+
 def test_index_traverse_real_spreadsheet_no_report():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/tara-delmont-SuppTable3.csv')
