@@ -592,7 +592,11 @@ impl KmerMinHash {
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
-            let iter = Intersection::new(self.mins.iter(), other.mins.iter());
+            let iter = if self.size() < other.size() {
+                Intersection::new(self.mins.iter(), other.mins.iter())
+            } else {
+                Intersection::new(other.mins.iter(), self.mins.iter())
+            };
 
             Ok(iter.count() as u64)
         }
@@ -668,6 +672,8 @@ impl KmerMinHash {
             // TODO: throw error, we need abundance for this
             unimplemented!() // @CTB fixme
         }
+
+        // TODO: check which one is smaller, swap around if needed
 
         let abunds = self.abunds.as_ref().unwrap();
         let other_abunds = other.abunds.as_ref().unwrap();
@@ -1698,7 +1704,11 @@ impl KmerMinHashBTree {
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
-            let iter = Intersection::new(self.mins.iter(), other.mins.iter());
+            let iter = if self.size() < other.size() {
+                Intersection::new(self.mins.iter(), other.mins.iter())
+            } else {
+                Intersection::new(other.mins.iter(), self.mins.iter())
+            };
 
             Ok(iter.count() as u64)
         }
