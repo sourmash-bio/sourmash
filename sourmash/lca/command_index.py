@@ -227,7 +227,13 @@ def index(args):
                 continue
 
             # add the signature into the database.
-            db.insert(sig, ident=ident, lineage=lineage)
+            try:
+                db.insert(sig, ident=ident, lineage=lineage)
+            except ValueError as e:
+                error("ERROR: cannot insert signature '{}' (md5 {}, loaded from '{}') into database.",
+                      sig.name(), sig.md5sum()[:8], filename)
+                error("ERROR: {}", str(e))
+                sys.exit(-1)
 
             if lineage:
                 # remove from our list of remaining ident -> lineage
