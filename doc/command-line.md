@@ -814,6 +814,11 @@ Briefly,
   that contain signatures, including files, directories, and indexed
   databases. These commands will also take `--from-file` (see below).
 
+None of these commands currently support searching, comparing, or indexing
+signatures with multiple ksizes or moltypes at the same time; you need
+to pick the ksize and moltype to use for your search. Where possible,
+scaled values will be made compatible.
+
 #### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
