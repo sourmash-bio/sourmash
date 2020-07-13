@@ -840,7 +840,7 @@ also automatically load all of the signatures in the database.
 Note that, for now, both SBT and LCA database can only contain one
 "type" of signature (one ksize, one moltype, etc.) If the database
 signature type is incompatible with the other signatures, sourmash
-will complain.  will be raised.  In contrast, signature files can
+will complain. In contrast, signature files can
 contain many different types of signatures, and compatible ones will
 be discovered automatically.
 
