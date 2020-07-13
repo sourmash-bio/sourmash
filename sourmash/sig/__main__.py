@@ -104,7 +104,7 @@ def cat(args):
     if multiple_md5:
         notify('encountered {} MinHashes multiple times', sum(multiple_md5))
         if args.unique:
-            notify('...and removed them, because --unique was specified.')
+            notify('...and removed the duplicates, because --unique was specified.')
 
 
 def split(args):
