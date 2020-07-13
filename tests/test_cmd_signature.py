@@ -556,7 +556,7 @@ def test_sig_cat_1(c):
 
 @utils.in_thisdir
 def test_sig_cat_1_no_unique(c):
-    # cat 47 to 47... twice... and get unique
+    # cat 47 to 47... twice
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'cat', sig47, sig47)
 
@@ -591,7 +591,7 @@ def test_sig_cat_1_unique(c):
 
     assert n + 1 == 1
     assert 'encountered 1 MinHashes multiple times' in err
-    assert '...and removed them, because --unique was specified.' in err
+    assert '...and removed the duplicates, because --unique was specified.' in err
 
 
 @utils.in_thisdir
