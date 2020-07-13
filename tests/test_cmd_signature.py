@@ -556,7 +556,7 @@ def test_sig_cat_1(c):
 
 @utils.in_thisdir
 def test_sig_cat_1_no_unique(c):
-    # cat 47 to 47... twice... and get unique
+    # cat 47 to 47... twice
     sig47 = utils.get_test_data('47.fa.sig')
     c.run_sourmash('sig', 'cat', sig47, sig47)
 
