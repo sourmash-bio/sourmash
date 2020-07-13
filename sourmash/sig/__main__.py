@@ -67,20 +67,20 @@ def cat(args):
     """
     set_quiet(args.quiet)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     siglist = []
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
+            loader = sourmash_args.load_file_as_signatures(sigfile,
+                                                           traverse=True,
+                                                           progress=progress)
+            for sig in loader:
+                siglist.append(sig)
         except Exception as exc:
             error(str(exc))
             error('(continuing)')
-
-        this_siglist = list(this_siglist)
-
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
-               end='\r')
-        siglist.extend(this_siglist)
 
     notify('loaded {} signatures total.', len(siglist))
 
@@ -105,10 +105,14 @@ def split(args):
             notify('Creating --outdir {}', args.outdir)
             os.mkdir(args.outdir)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     total = 0
     for sigfile in args.signatures:
         # load signatures from input file:
-        this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
+        this_siglist = sourmash_args.load_file_as_signatures(sigfile,
+                                                             traverse=True,
+                                                             progress=progress)
 
         # save each file individually --
         n_signatures = 0
@@ -168,23 +172,6 @@ def describe(args):
     """
     set_quiet(args.quiet)
 
-    siglist = []
-    for sigfile in args.signatures:
-        this_siglist = []
-        try:
-            this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
-            for k in this_siglist:
-                siglist.append((k, sigfile))
-        except Exception as exc:
-            error(str(exc))
-            error('(continuing)')
-
-        this_siglist = list(this_siglist)
-        notify('loaded {} signatures from {}...', len(this_siglist), sigfile,
-               end='\r')
-
-    notify('loaded {} signatures total.', len(siglist))
-
     # write CSV?
     w = None
     csv_fp = None
@@ -197,27 +184,38 @@ def describe(args):
                            extrasaction='ignore')
         w.writeheader()
 
-    # extract info, write as appropriate.
-    for (sig, signature_file) in siglist:
-        mh = sig.minhash
-        ksize = mh.ksize
-        moltype = mh.moltype
-        scaled = mh.scaled
-        num = mh.num
-        seed = mh.seed
-        n_hashes = len(mh)
-        with_abundance = 0
-        if mh.track_abundance:
-            with_abundance = 1
-        md5 = sig.md5sum()
-        name = sig.name()
-        filename = sig.filename
-        license = sig.license
+    # load signatures and display info.
+    progress = sourmash_args.SignatureLoadingProgress()
 
-        if w:
-            w.writerow(locals())
+    n_loaded = 0
+    for signature_file in args.signatures:
+        try:
+            loader = sourmash_args.load_file_as_signatures(signature_file,
+                                                           traverse=True,
+                                                           progress=progress)
+            for sig in loader:
+                n_loaded += 1
 
-        print_results('''\
+                # extract info, write as appropriate.
+                mh = sig.minhash
+                ksize = mh.ksize
+                moltype = mh.moltype
+                scaled = mh.scaled
+                num = mh.num
+                seed = mh.seed
+                n_hashes = len(mh)
+                with_abundance = 0
+                if mh.track_abundance:
+                    with_abundance = 1
+                md5 = sig.md5sum()
+                name = sig.name()
+                filename = sig.filename
+                license = sig.license
+
+                if w:
+                    w.writerow(locals())
+
+                print_results('''\
 ---
 signature filename: {signature_file}
 signature: {name}
@@ -227,6 +225,14 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 signature license: {license}
 ''', **locals())
+
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(signature_file))
+            error(str(exc))
+            error('(continuing)')
+            raise
+
+    notify('loaded {} signatures total.', n_loaded)
 
     if csv_fp:
         csv_fp.close()
@@ -321,12 +327,15 @@ def merge(args):
     total_loaded = 0
 
     # iterate over all the sigs from all the files.
+    progress = sourmash_args.SignatureLoadingProgress()
+
     for sigfile in args.signatures:
         notify('loading signatures from {}...', sigfile, end='\r')
         this_n = 0
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
-                                               select_moltype=moltype,
-                                                            traverse=True):
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress):
 
             # first signature? initialize a bunch of stuff
             if first_sig is None:
@@ -380,10 +389,13 @@ def intersect(args):
     mins = None
     total_loaded = 0
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     for sigfile in args.signatures:
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
                                                select_moltype=moltype,
-                                               traverse=True):
+                                               traverse=True,
+                                               progress=progress):
             if first_sig is None:
                 first_sig = sigobj
                 mins = set(sigobj.minhash.get_mins())
@@ -446,11 +458,14 @@ def subtract(args):
 
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
-                                                            select_moltype=moltype,
-                                                            traverse=True):
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress):
 
             if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
@@ -484,12 +499,15 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     for filename in args.sigfiles:
         debug('loading {}', filename)
         siglist = sourmash_args.load_file_as_signatures(filename,
                                                         select_moltype=moltype,
-                                                        traverse=True)
+                                                        traverse=True,
+                                                        progress=progress)
 
         for sigobj in siglist:
             sigobj._name = args.name
@@ -508,12 +526,15 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
-                                           select_moltype=moltype,
-                                                        traverse=True)
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -546,12 +567,15 @@ def filter(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
-                                           select_moltype=moltype,
-                                                        traverse=True)
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -600,12 +624,15 @@ def flatten(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
-                                           select_moltype=moltype,
-                                                        traverse=True)
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -649,10 +676,16 @@ def downsample(args):
         error('cannot specify both --num and --scaled')
         sys.exit(-1)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
-        siglist = sourmash_args.load_file_as_signatures(sigfile, ksize=args.ksize, select_moltype=moltype, traverse=True)
+        siglist = sourmash_args.load_file_as_signatures(sigfile,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        traverse=True,
+                                                        progress=progress)
 
         for sigobj in siglist:
             mh = sigobj.minhash
