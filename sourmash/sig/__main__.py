@@ -76,7 +76,6 @@ def cat(args):
         try:
             this_siglist = sourmash_args.load_file_as_signatures(sigfile, traverse=True)
         except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
             error('(continuing)')
 
@@ -193,7 +192,6 @@ def describe(args):
             for k in this_siglist:
                 siglist.append((k, sigfile))
         except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
             error('(continuing)')
 
