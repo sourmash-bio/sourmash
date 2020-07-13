@@ -365,7 +365,13 @@ class MinHash(RustObject):
 
     def add_hash_with_abundance(self, h, a):
         "Add a single hash value with an abundance."
-        return self._methodcall(lib.kmerminhash_add_hash_with_abundance, h, a)
+        if self.track_abundance:
+            return self._methodcall(lib.kmerminhash_add_hash_with_abundance, h, a)
+        else:
+            raise RuntimeError(
+                "Use track_abundance=True when constructing "
+                "the MinHash to use add_hash_with_abundance."
+            )
 
     def clear(self):
         "Clears all hashes and abundances."

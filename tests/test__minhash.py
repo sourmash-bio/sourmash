@@ -1057,14 +1057,10 @@ def test_add_hash_with_abundance():
 def test_add_hash_with_abundance_2():
     a = MinHash(20, 5, False, track_abundance=False)
 
-    a.add_hash_with_abundance(10, 1)
-    assert a.get_mins(with_abundance=True) == [10]
+    with pytest.raises(RuntimeError) as e:
+        a.add_hash_with_abundance(10, 1)
 
-    a.add_hash_with_abundance(20, 2)
-    assert a.get_mins(with_abundance=True) == [10, 20]
-
-    a.add_hash_with_abundance(10, 2)
-    assert a.get_mins(with_abundance=True) == [10, 20]
+    assert "track_abundance=True when constructing" in e.value.args[0]
 
 
 def test_clear():
