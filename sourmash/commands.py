@@ -795,10 +795,10 @@ def multigather(args):
                 notify('nothing found... skipping.')
                 continue
 
-            # need to handle this better/differently when query.filename not properly set
             query_filename = query.filename
             if not query_filename:
-                query_filename = queryfile
+                # use md5sum if query.filename not properly set
+                query_filename = query.md5sum()
 
             output_base = os.path.basename(query_filename)
             output_csv = output_base + '.csv'
