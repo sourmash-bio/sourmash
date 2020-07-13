@@ -569,7 +569,7 @@ def test_sig_cat_1_no_unique(c):
     for n, sig in enumerate(actual_cat_sigs):
         assert sig == test_cat_sig
 
-    assert n + 1 == 2
+    assert n == 1 # two signatures, but enumerate stops at 1.
     assert 'encountered 1 MinHashes multiple times' in c.last_result.err
 
 
@@ -589,9 +589,9 @@ def test_sig_cat_1_unique(c):
     for n, sig in enumerate(actual_cat_sigs):
         assert sig == test_cat_sig
 
-    assert n + 1 == 1
+    assert n == 0 # enumerate stops at 0, first sig.
     assert 'encountered 1 MinHashes multiple times' in err
-    assert '...and removed the duplicates, because --unique was specified.' in err
+    assert '...and removed them, because --unique was specified.' in err
 
 
 @utils.in_thisdir
