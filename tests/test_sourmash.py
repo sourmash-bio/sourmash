@@ -3173,9 +3173,9 @@ def test_gather_deduce_moltype():
 @utils.in_thisdir
 def test_gather_abund_1_1(c):
     #
-    # make r1.fa with 1x coverage of genome s10
+    # make r1.fa with 2x coverage of genome s10
     # make r2.fa with 10x coverage of genome s10.
-    # make r3.fa with 1x coverage of genome s11.
+    # make r3.fa with 2x coverage of genome s11.
     #
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
