@@ -735,12 +735,14 @@ def multigather(args):
     n=0
     for queryfile in inp_files:
         # load the query signature(s) & figure out all the things
-        for query in sourmash_args.load_file_as_signatures(queryfile, ksize=args.ksize, select_moltype=moltype):
+        for query in sourmash_args.load_file_as_signatures(queryfile,
+                                                       ksize=args.ksize,
+                                                       select_moltype=moltype):
             notify('loaded query: {}... (k={}, {})', query.name()[:30],
-                                                     query.minhash.ksize,
-                                                     sourmash_args.get_moltype(query))
+                                            query.minhash.ksize,
+                                            sourmash_args.get_moltype(query))
 
-        # verify signature was computed right.
+            # verify signature was computed right.
             if query.minhash.max_hash == 0:
                 error('query signature needs to be created with --scaled; skipping')
                 continue
@@ -815,7 +817,7 @@ def multigather(args):
                 w.writeheader()
                 for result in found:
                     d = dict(result._asdict())
-                    del d['match']                 # actual signature not in CSV.
+                    del d['match']      # actual signature not output to CSV!
                     w.writerow(d)
 
             output_matches = output_base + '.matches.sig'
@@ -836,7 +838,7 @@ def multigather(args):
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
                     e.add_many(next_query.minhash.get_mins())
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
-            n+=1
+            n += 1
 
         # fini, next query!
     notify('\nconducted gather searches on {} signatures', n)
