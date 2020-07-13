@@ -79,7 +79,6 @@ def cat(args):
             for sig in loader:
                 siglist.append(sig)
         except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
             error('(continuing)')
 
