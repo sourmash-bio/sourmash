@@ -504,7 +504,7 @@ def load_file_list_of_signatures(filename):
     "Load a list-of-files text file."
     try:
         with open(filename, 'rt') as fp:
-            file_list = [ x.rstrip('\r\n') for x in fp ]
+            file_list = [ x.rstrip('\r\n').decode('utf-8') for x in fp ]
     except OSError:
         raise ValueError("cannot open file '{}'".format(filename))
     except UnicodeDecodeError:

@@ -3026,10 +3026,12 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
     # incorrectly query with sbt using `--query-from-file`
     cmd = 'multigather --query-from-file gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
     cmd = cmd.split(' ')
-    try:
+
+    with pytest.raises(ValueError) as e:
         c.run_sourmash(*cmd)
-    except Exception as e:
-        assert "UnicodeDecodeError" in str(e)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
 
 
 @utils.in_tempdir
