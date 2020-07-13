@@ -591,7 +591,7 @@ def test_sig_cat_1_unique(c):
 
     assert n == 0 # enumerate stops at 0, first sig.
     assert 'encountered 1 MinHashes multiple times' in err
-    assert '...and removed them, because --unique was specified.' in err
+    assert '...and removed the duplicates, because --unique was specified.' in err
 
 
 @utils.in_thisdir
