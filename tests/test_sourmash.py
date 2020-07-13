@@ -1267,6 +1267,20 @@ def test_search_deduce_ksize_not_unique():
         assert '2 signatures matching ksize' in err
 
 
+@utils.in_tempdir
+def test_search_deduce_ksize_no_match(c):
+    # no matching sigs in search sig list
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('compute', '-k', '23', testdata1)
+    c.run_sourmash('compute', '-k', '25', testdata2)
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+    assert "no compatible signatures found in 'short2.fa.sig'" in str(exc.value)
+
+
 def test_search_deduce_ksize_vs_user_specified():
     # user specified ksize is not available
     with utils.TempDirectory() as location:
