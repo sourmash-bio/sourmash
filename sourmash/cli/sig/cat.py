@@ -17,6 +17,10 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE',
         help='output signature to this file (default stdout)'
     )
+    subparser.add_argument(
+        '-u', '--unique', action='store_true',
+        help='keep only distinct signatures, removing duplicates (based on md5sum)'
+    )
 
 
 def main(args):
