@@ -43,9 +43,10 @@ rc=rc1
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
 git tag -a v${new_version}${rc}
-git push --tags git@github.com:dib-lab/sourmash.git
+git push --tags origin
 ```
-[the releases page]: https://github.com/dib-lab/sourmash/releases
+
+??? [the releases page]: https://github.com/dib-lab/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
@@ -139,11 +140,11 @@ git tag -a v${new_version}
 2\. Delete the release candidate tag and push the tag updates to GitHub:
 ```
 git tag -d v${new_version}${rc}
-git push --tags git@github.com:dib-lab/sourmash.git
-git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
+git push --tags origin
+git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI.  You can manually download
+3\. Upload wheels from GitHub Releases to PyPI (once Travis is finished building them).  You can manually download
 all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
 
 Download the wheels with hub:
