@@ -23,7 +23,7 @@ pub unsafe extern "C" fn computeparams_free(ptr: *mut SourmashComputeParameters)
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_seed(ptr: *const SourmashComputeParameters) -> u64 {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.seed
+    cp.seed()
 }
 
 #[no_mangle]
@@ -32,13 +32,13 @@ pub unsafe extern "C" fn computeparams_set_seed(
     new_seed: u64,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.seed = new_seed;
+    cp.set_seed(new_seed);
 }
 
 ffi_fn! {
 unsafe fn computeparams_ksizes(ptr: *const SourmashComputeParameters, size: *mut usize) -> Result<*const u32> {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    let output = cp.ksizes.clone();
+    let output = cp.ksizes().clone();
     *size = output.len();
 
     // FIXME use a SourmashSlice_u32?
@@ -68,7 +68,7 @@ unsafe fn computeparams_set_ksizes(
         slice::from_raw_parts(ksizes_ptr as *const u32, insize)
     };
 
-    cp.ksizes = ksizes.into();
+    cp.set_ksizes(ksizes.into());
 
     Ok(())
 }
@@ -77,49 +77,49 @@ unsafe fn computeparams_set_ksizes(
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_protein(ptr: *const SourmashComputeParameters) -> bool {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.protein
+    cp.protein()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_protein(ptr: *mut SourmashComputeParameters, v: bool) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.protein = v;
+    cp.set_protein(v);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_dayhoff(ptr: *const SourmashComputeParameters) -> bool {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.dayhoff
+    cp.dayhoff()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_dayhoff(ptr: *mut SourmashComputeParameters, v: bool) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.dayhoff = v;
+    cp.set_dayhoff(v);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_hp(ptr: *const SourmashComputeParameters) -> bool {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.hp
+    cp.hp()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_hp(ptr: *mut SourmashComputeParameters, v: bool) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.hp = v;
+    cp.set_hp(v);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_dna(ptr: *const SourmashComputeParameters) -> bool {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.dna
+    cp.dna()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_set_dna(ptr: *mut SourmashComputeParameters, v: bool) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.dna = v;
+    cp.set_dna(v);
 }
 
 #[no_mangle]
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn computeparams_track_abundance(
     ptr: *const SourmashComputeParameters,
 ) -> bool {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.track_abundance
+    cp.track_abundance()
 }
 
 #[no_mangle]
@@ -136,13 +136,13 @@ pub unsafe extern "C" fn computeparams_set_track_abundance(
     v: bool,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.track_abundance = v;
+    cp.set_track_abundance(v);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_num_hashes(ptr: *const SourmashComputeParameters) -> u32 {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.num_hashes
+    cp.num_hashes()
 }
 
 #[no_mangle]
@@ -151,13 +151,13 @@ pub unsafe extern "C" fn computeparams_set_num_hashes(
     num: u32,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.num_hashes = num;
+    cp.set_num_hashes(num);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn computeparams_scaled(ptr: *const SourmashComputeParameters) -> u64 {
     let cp = SourmashComputeParameters::as_rust(ptr);
-    cp.scaled
+    cp.scaled()
 }
 
 #[no_mangle]
@@ -166,5 +166,5 @@ pub unsafe extern "C" fn computeparams_set_scaled(
     scaled: u64,
 ) {
     let cp = SourmashComputeParameters::as_rust_mut(ptr);
-    cp.scaled = scaled;
+    cp.set_scaled(scaled);
 }
