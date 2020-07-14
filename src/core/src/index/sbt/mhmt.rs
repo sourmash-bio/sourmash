@@ -1,8 +1,8 @@
 use std::io::{Read, Write};
 
-use failure::Error;
 use mqf::MQF;
 
+use crate::Error;
 use crate::index::sbt::{FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError, ToWriter};
 use crate::index::Comparable;

@@ -4,7 +4,6 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::errors::SourmashError;
 use crate::signature::Signature;
 use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
@@ -283,7 +282,7 @@ unsafe fn signatures_load_path(ptr: *const c_char,
       x => Some(x)
     };
 
-    let (mut input, _) = niffler::from_path(buf.to_str()?).map_err(|_| SourmashError::IOError)?;
+    let (mut input, _) = niffler::from_path(buf.to_str()?)?;
     let filtered_sigs = Signature::load_signatures(&mut input, k, moltype, None)?;
 
     // FIXME: use the ForeignObject trait, maybe define new method there...

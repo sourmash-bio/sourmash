@@ -694,10 +694,6 @@ fn load_save_minhash_dna(seq in "ACGTN{0,1000}") {
     a.add_sequence(seq.as_bytes(), true).unwrap();
     b.add_sequence(seq.as_bytes(), true).unwrap();
 
-    // Can't add_protein to a DNA sig
-    a.add_protein(seq.as_bytes()).is_err();
-    b.add_protein(seq.as_bytes()).is_err();
-
     let mut buffer_a = vec![];
     let mut buffer_b = vec![];
 

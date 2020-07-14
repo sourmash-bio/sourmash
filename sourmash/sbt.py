@@ -585,7 +585,7 @@ class SBT(Index):
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
-        notify("\nFinished saving nodes, now saving SBT json file.")
+        notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
 
@@ -599,7 +599,7 @@ class SBT(Index):
             with open(index_filename, 'w') as fp:
                 json.dump(info, fp)
 
-        notify("\nFinished saving SBT, available at {0}\n".format(index_filename))
+        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
 
         return path
 

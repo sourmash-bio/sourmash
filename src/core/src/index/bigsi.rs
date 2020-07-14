@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use failure::{Error, Fail};
 use fixedbitset::FixedBitSet;
+use thiserror::Error;
 use typed_builder::TypedBuilder;
 
 use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 use crate::HashIntoType;
 
 #[derive(Clone, TypedBuilder)]
@@ -20,9 +21,9 @@ pub struct BIGSI<L> {
     //storage: Rc<dyn Storage>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum BIGSIError {
-    #[fail(display = "BIGSI doesn't support this method")]
+    #[error("BIGSI doesn't support this method")]
     MethodDisabled,
 }
 
