@@ -18,6 +18,10 @@ conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
 
 Then activate it with `conda activate sourmash-rc`.
 
+You will also need a Rust installation (see
+[Development Environment](developer.md)); be sure to update it to the
+latest version with `rustup update`.
+
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for master.
