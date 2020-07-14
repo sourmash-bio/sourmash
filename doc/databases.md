@@ -8,9 +8,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 91,000 microbial genomes (including viral and fungal)
 from NCBI RefSeq.
 
-* [RefSeq k=21, 2018.03.29][0] - 3.3 GB
-* [RefSeq k=31, 2018.03.29][1] - 3.3 GB
-* [RefSeq k=51, 2018.03.29][2] - 3.4 GB
+* [RefSeq k=21, 2018.03.29][0] - 3.3 GB - [manifest](https://osf.io/wamfk/download)
+* [RefSeq k=31, 2018.03.29][1] - 3.3 GB - [manifest](https://osf.io/x3aut/download)
+* [RefSeq k=51, 2018.03.29][2] - 3.4 GB - [manifest](https://osf.io/zpkau/download)
 
 ## Genbank microbial genomes - SBT
 
@@ -20,9 +20,9 @@ These database are formatted for use with `sourmash search` and
 Approximately 98,000 microbial genomes (including viral and fungal)
 from NCBI Genbank.
 
-* [Genbank k=21, 2018.03.29][3]- 3.9 GB
-* [Genbank k=31, 2018.03.29][4] - 3.9 GB
-* [Genbank k=51, 2018.03.29][5] - 3.9 GB
+* [Genbank k=21, 2018.03.29][3] - 3.9 GB - [manifest](https://osf.io/vm5kb/download)
+* [Genbank k=31, 2018.03.29][4] - 3.9 GB - [manifest](https://osf.io/p87ec/download)
+* [Genbank k=51, 2018.03.29][5] - 3.9 GB - [manifest](https://osf.io/cbxg9/download)
 
 ### Details
 
