@@ -424,6 +424,22 @@ impl KmerMinHash {
         }
     }
 
+    pub fn set_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
+        let mut found = false;
+        if let Ok(pos) = self.mins.binary_search(&hash) {
+            if self.mins[pos] == hash {
+                found = true;
+                if let Some(ref mut abunds) = self.abunds {
+                    abunds[pos] = abundance;
+                }
+            }
+        }
+
+        if !found {
+            self.add_hash_with_abundance(hash, abundance);
+        }
+    }
+
     pub fn add_word(&mut self, word: &[u8]) {
         let hash = _hash_murmur(word, self.seed);
         self.add_hash(hash);
