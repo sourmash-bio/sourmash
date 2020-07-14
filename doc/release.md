@@ -38,8 +38,9 @@ git clone git@github.com:dib-lab/sourmash.git
 cd sourmash
 ```
 
-2\. Set your new version number and release candidate
-(you might want to check [the releases page](https://github.com/dib-lab/sourmash/releases) for next version number):
+2\. Set your new version number and release candidate.
+You might want to check [the releases page](https://github.com/dib-lab/sourmash/releases) for next version number,
+or you can run `make last-tag` and check the output.
 ```
 new_version=3.0.0
 rc=rc1
@@ -171,12 +172,33 @@ twine upload dist/sourmash-${new_version}.tar.gz
 5\. Add the release on GitHub, using the tag you just pushed.
 Name it 'version X.Y.Z', and copy and paste in the release notes.
 
+## Conda-forge
+
+The [sourmash-minimal feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock/)
+in [conda-forge](https://conda-forge.org/) picks up new versions from
+PyPI (need the sdist to be published) and opens a new PR.
+
+Check if there are any dependency changes,
+with special attention to the minimum supported Rust version.
+
+After tests pass,
+merge it and wait for the `sourmash-minimal` package to show up in conda-forge:
+```
+conda search sourmash-minimal={new_version}
+```
+
+An example PR for [`3.4.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/7).
+
 ## Bioconda
 
-The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI, and open a PR in Bioconda. Review any changes
+The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI,
+and open a PR in Bioconda. Review any changes
 (especially dependency versions, since these don't get picked up).
+Note that you need to wait for the `sourmash-minimal` package from `conda-forge`
+prepared in the previous section to be available for installation,
+tests are going to fail in Bioconda before that.
 
-An example PR for [`2.1.0`](https://github.com/bioconda/bioconda-recipes/pull/17113).
+An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
 
 ## Announce it!
 
@@ -184,6 +206,8 @@ If a bioinformatics software is released and no one tweets, is it really release
 
 Examples:
 
+- [3.4.0](https://twitter.com/luizirber/status/1283157954598858752)
+- [3.3.0](https://twitter.com/ctitusbrown/status/1257418140729868291)
 - [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
 - [3.1.0](https://twitter.com/luizirber/status/1217639572202409984)
 - [3.0.0](https://twitter.com/luizirber/status/1213588144458649600)
