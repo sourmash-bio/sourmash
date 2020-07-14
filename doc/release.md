@@ -146,7 +146,7 @@ git push --tags origin
 git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI (once Travis is finished building them).  You can manually download
+3\. Upload wheels from GitHub Releases to PyPI (once [Travis is finished building them](https://travis-ci.com/github/dib-lab/sourmash/)).  You can manually download
 all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
 
 Download the wheels with hub:
