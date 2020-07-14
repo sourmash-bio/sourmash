@@ -18,6 +18,10 @@ conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
 
 Then activate it with `conda activate sourmash-rc`.
 
+You will also need a Rust installation (see
+[Development Environment](developer.md)); be sure to update it to the
+latest version with `rustup update`.
+
 ## Testing a release
 
 0\. First things first: check if Read the Docs is building properly for master.
@@ -34,8 +38,9 @@ git clone git@github.com:dib-lab/sourmash.git
 cd sourmash
 ```
 
-2\. Set your new version number and release candidate
-(you might want to check [the releases page] for next version number):
+2\. Set your new version number and release candidate.
+You might want to check [the releases page] for next version number,
+or you can run `make last-tag` and check the output.
 ```
 new_version=3.0.0
 rc=rc1
@@ -43,8 +48,9 @@ rc=rc1
 and then tag the release candidate with the new version number prefixed by the letter 'v':
 ```
 git tag -a v${new_version}${rc}
-git push --tags git@github.com:dib-lab/sourmash.git
+git push --tags origin
 ```
+
 [the releases page]: https://github.com/dib-lab/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
@@ -139,11 +145,11 @@ git tag -a v${new_version}
 2\. Delete the release candidate tag and push the tag updates to GitHub:
 ```
 git tag -d v${new_version}${rc}
-git push --tags git@github.com:dib-lab/sourmash.git
-git push --delete git@github.com:dib-lab/sourmash.git v${new_version}${rc}
+git push --tags origin
+git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI.  You can manually download
+3\. Upload wheels from GitHub Releases to PyPI (once [Travis is finished building them](https://travis-ci.com/github/dib-lab/sourmash/)).  You can manually download
 all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
 
 Download the wheels with hub:
@@ -168,12 +174,34 @@ twine upload dist/sourmash-${new_version}.tar.gz
 5\. Add the release on GitHub, using the tag you just pushed.
 Name it 'version X.Y.Z', and copy and paste in the release notes.
 
+## Conda-forge
+
+The [sourmash-minimal feedstock](https://github.com/conda-forge/sourmash-minimal-feedstock/)
+in [conda-forge](https://conda-forge.org/) picks up new versions from
+PyPI (need the sdist to be published) and opens a new PR.
+
+Check if there are any dependency changes,
+with special attention to the minimum supported Rust version.
+
+After tests pass,
+merge it and wait for the `sourmash-minimal` package to show up in conda-forge:
+```
+conda search sourmash-minimal={new_version}
+```
+
+An example PR for [`3.4.0`](https://github.com/conda-forge/sourmash-minimal-feedstock/pull/7).
+
 ## Bioconda
 
-The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI, and open a PR in Bioconda. Review any changes
+The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI,
+and open a PR in Bioconda. Review any changes
 (especially dependency versions, since these don't get picked up).
 
-An example PR for [`2.1.0`](https://github.com/bioconda/bioconda-recipes/pull/17113).
+Note that you need to wait for the `sourmash-minimal` package
+prepared in the previous section to be available for installation,
+and tests are going to fail in Bioconda before that.
+
+An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
 
 ## Announce it!
 
@@ -181,6 +209,8 @@ If a bioinformatics software is released and no one tweets, is it really release
 
 Examples:
 
+- [3.4.0](https://twitter.com/luizirber/status/1283157954598858752)
+- [3.3.0](https://twitter.com/ctitusbrown/status/1257418140729868291)
 - [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
 - [3.1.0](https://twitter.com/luizirber/status/1217639572202409984)
 - [3.0.0](https://twitter.com/luizirber/status/1213588144458649600)
