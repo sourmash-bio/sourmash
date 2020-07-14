@@ -39,7 +39,7 @@ cd sourmash
 ```
 
 2\. Set your new version number and release candidate.
-You might want to check [the releases page](https://github.com/dib-lab/sourmash/releases) for next version number,
+You might want to check [the releases page] for next version number,
 or you can run `make last-tag` and check the output.
 ```
 new_version=3.0.0
@@ -50,6 +50,8 @@ and then tag the release candidate with the new version number prefixed by the l
 git tag -a v${new_version}${rc}
 git push --tags origin
 ```
+
+[the releases page]: https://github.com/dib-lab/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
@@ -194,9 +196,10 @@ An example PR for [`3.4.0`](https://github.com/conda-forge/sourmash-minimal-feed
 The BiocondaBot has an `autobump` feature that should pick up new releases from PyPI,
 and open a PR in Bioconda. Review any changes
 (especially dependency versions, since these don't get picked up).
-Note that you need to wait for the `sourmash-minimal` package from `conda-forge`
+
+Note that you need to wait for the `sourmash-minimal` package
 prepared in the previous section to be available for installation,
-tests are going to fail in Bioconda before that.
+and tests are going to fail in Bioconda before that.
 
 An example PR for [`3.4.0`](https://github.com/bioconda/bioconda-recipes/pull/23171).
 
