@@ -303,11 +303,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = list(siglist)
-            if not siglist:          # file not found, or parse error?
-                raise ValueError
-
             siglist = filter_compatible_signatures(query, siglist, False)
+            siglist = list(siglist)
+            if not siglist:
+                notify("no compatible signatures found in '{}'", filename)
+                sys.exit(-1)
+
             linear = LinearIndex(siglist, filename=filename)
             databases.append((linear, filename, 'signature'))
 
