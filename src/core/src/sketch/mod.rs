@@ -3,7 +3,7 @@ pub mod nodegraph;
 
 pub mod ukhs;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use crate::sketch::ukhs::FlatUKHS;

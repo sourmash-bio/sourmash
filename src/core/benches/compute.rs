@@ -4,7 +4,7 @@ extern crate criterion;
 use std::fs::File;
 use std::io::{Cursor, Read};
 
-use needletail::parse_sequence_reader;
+use needletail::parse_fastx_reader;
 use sourmash::cmd::ComputeParameters;
 use sourmash::signature::Signature;
 
@@ -35,14 +35,10 @@ fn add_sequence(c: &mut Criterion) {
         b.iter(|| {
             let fasta_data = Cursor::new(data_upper.clone());
             let mut sig = template_sig.clone();
-            parse_sequence_reader(
-                fasta_data,
-                |_| {},
-                |rec| {
-                    sig.add_sequence(&rec.seq, false).unwrap();
-                },
-            )
-            .unwrap();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_sequence(&rec.unwrap().seq(), false).unwrap();
+            }
         });
     });
 
@@ -50,14 +46,10 @@ fn add_sequence(c: &mut Criterion) {
         b.iter(|| {
             let fasta_data = Cursor::new(data_lower.clone());
             let mut sig = template_sig.clone();
-            parse_sequence_reader(
-                fasta_data,
-                |_| {},
-                |rec| {
-                    sig.add_sequence(&rec.seq, false).unwrap();
-                },
-            )
-            .unwrap();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_sequence(&rec.unwrap().seq(), false).unwrap();
+            }
         });
     });
 
@@ -65,14 +57,10 @@ fn add_sequence(c: &mut Criterion) {
         b.iter(|| {
             let fasta_data = Cursor::new(data_errors.clone());
             let mut sig = template_sig.clone();
-            parse_sequence_reader(
-                fasta_data,
-                |_| {},
-                |rec| {
-                    sig.add_sequence(&rec.seq, true).unwrap();
-                },
-            )
-            .unwrap();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_sequence(&rec.unwrap().seq(), true).unwrap();
+            }
         });
     });
 
@@ -80,14 +68,10 @@ fn add_sequence(c: &mut Criterion) {
         b.iter(|| {
             let fasta_data = Cursor::new(data_upper.clone());
             let mut sig = template_sig.clone();
-            parse_sequence_reader(
-                fasta_data,
-                |_| {},
-                |rec| {
-                    sig.add_sequence(&rec.seq, true).unwrap();
-                },
-            )
-            .unwrap();
+            let mut parser = parse_fastx_reader(fasta_data).unwrap();
+            while let Some(rec) = parser.next() {
+                sig.add_sequence(&rec.unwrap().seq(), true).unwrap();
+            }
         });
     });
 }

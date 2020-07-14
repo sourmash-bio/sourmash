@@ -4,12 +4,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use failure::Error;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
+use crate::Error;
 
 #[derive(TypedBuilder)]
 pub struct LinearIndex<L> {
@@ -151,7 +151,7 @@ where
         Ok(linear)
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<LinearIndex<L>, Error>
+    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
     where
         R: Read,
         P: AsRef<Path>,

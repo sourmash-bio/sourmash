@@ -33,10 +33,13 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
   SOURMASH_ERROR_CODE_INVALID_HASH_FUNCTION = 1104,
+  SOURMASH_ERROR_CODE_READ_DATA = 1201,
+  SOURMASH_ERROR_CODE_STORAGE = 1202,
   SOURMASH_ERROR_CODE_IO = 100001,
   SOURMASH_ERROR_CODE_UTF8_ERROR = 100002,
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
   SOURMASH_ERROR_CODE_SERDE_ERROR = 100004,
+  SOURMASH_ERROR_CODE_NIFFLER_ERROR = 100005,
 };
 typedef uint32_t SourmashErrorCode;
 
@@ -116,6 +119,8 @@ void kmerminhash_add_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *o
 
 void kmerminhash_add_hash(SourmashKmerMinHash *ptr, uint64_t h);
 
+void kmerminhash_add_hash_with_abundance(SourmashKmerMinHash *ptr, uint64_t h, uint64_t abundance);
+
 void kmerminhash_add_many(SourmashKmerMinHash *ptr, const uint64_t *hashes_ptr, uintptr_t insize);
 
 void kmerminhash_add_protein(SourmashKmerMinHash *ptr, const char *sequence);
@@ -126,6 +131,8 @@ void kmerminhash_add_word(SourmashKmerMinHash *ptr, const char *word);
 
 double kmerminhash_angular_similarity(const SourmashKmerMinHash *ptr,
                                       const SourmashKmerMinHash *other);
+
+void kmerminhash_clear(SourmashKmerMinHash *ptr);
 
 uint64_t kmerminhash_count_common(const SourmashKmerMinHash *ptr,
                                   const SourmashKmerMinHash *other,
@@ -189,7 +196,8 @@ uint64_t kmerminhash_seed(const SourmashKmerMinHash *ptr);
 void kmerminhash_set_abundances(SourmashKmerMinHash *ptr,
                                 const uint64_t *hashes_ptr,
                                 const uint64_t *abunds_ptr,
-                                uintptr_t insize);
+                                uintptr_t insize,
+                                bool clear);
 
 double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
                               const SourmashKmerMinHash *other,

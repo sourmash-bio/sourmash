@@ -7,6 +7,8 @@ import argparse
 import itertools
 from enum import Enum
 
+import screed
+
 from sourmash import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
@@ -65,6 +67,11 @@ def calculate_moltype(args, default=None):
 
 
 def load_query_signature(filename, ksize, select_moltype, select_md5=None):
+    """Load a single signature to use as a query.
+
+    Uses load_file_as_signatures underneath, so can load from collections
+    and indexed databases.
+    """
     try:
         sl = load_file_as_signatures(filename, ksize=ksize,
                                      select_moltype=select_moltype)
@@ -296,11 +303,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = list(siglist)
-            if not siglist:          # file not found, or parse error?
-                raise ValueError
-
             siglist = filter_compatible_signatures(query, siglist, False)
+            siglist = list(siglist)
+            if not siglist:
+                notify("no compatible signatures found in '{}'", filename)
+                sys.exit(-1)
+
             linear = LinearIndex(siglist, filename=filename)
             databases.append((linear, filename, 'signature'))
 
@@ -405,6 +413,21 @@ def _load_database(filename, traverse, traverse_yield_all):
             pass
 
     if not loaded:
+        successful_screed_load = False
+        it = None
+        try:
+            # CTB: could be kind of time consuming for big record, but at the
+            # moment screed doesn't expose format detection cleanly.
+            with screed.open(filename) as it:
+                record = next(iter(it))
+            successful_screed_load = True
+        except:
+            pass
+
+        if successful_screed_load:
+            raise OSError("Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(filename))
+
+    if not loaded:
         raise OSError("Error while reading signatures from '{}'.".format(filename))
 
     return db, dbtype
@@ -443,7 +466,8 @@ def load_file_as_index(filename, traverse=True, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            traverse=False, yield_all_files=False):
+                            traverse=False, yield_all_files=False,
+                            progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, will return
@@ -458,21 +482,34 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
 
     Applies selector function if select_moltype and/or ksize are given.
     """
+    if progress:
+        progress.notify(filename)
+
     db, dbtype = _load_database(filename, traverse, yield_all_files)
 
+    loader = None
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         db = db.select(moltype=select_moltype, ksize=ksize)
-        return db.signatures()
+        loader = db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
-        return list(_select_sigs(db, moltype=select_moltype, ksize=ksize))
+        loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
     else:
         assert 0                          # unknown enum!?
 
+    if progress:
+        return progress.start_file(filename, loader)
+    else:
+        return loader
 
 def load_file_list_of_signatures(filename):
     "Load a list-of-files text file."
-    with open(filename, 'rt') as fp:
-        file_list = [ x.rstrip('\r\n') for x in fp ]
+    try:
+        with open(filename, 'rt') as fp:
+            file_list = [ x.rstrip('\r\n') for x in fp ]
+    except OSError:
+        raise ValueError("cannot open file '{}'".format(filename))
+    except UnicodeDecodeError:
+        raise ValueError("cannot parse file '{}' as list of filenames".format(filename))
 
     return file_list
 
@@ -518,3 +555,63 @@ class FileOutput(object):
             self.fp.close()
 
         return False
+
+
+class SignatureLoadingProgress(object):
+    """A wrapper for signature loading progress reporting.
+
+    Instantiate this class once, and then pass it to load_file_as_signatures
+    with progress=<obj>.
+
+    Alternatively, call obj.start_file(filename, iter) each time you
+    start loading signatures from a new file via iter.
+
+    You can optionally notify of reading a file with `.notify(filename)`.
+    """
+    def __init__(self, reporting_interval=10):
+        self.n_sig = 0
+        self.interval = reporting_interval
+        self.screen_width = 79
+
+    def short_notify(self, msg_template, *args, **kwargs):
+        """Shorten the notification message so that it fits on one line.
+
+        Good for repeating notifications with end='\r' especially...
+        """
+
+        msg = msg_template.format(*args, **kwargs)
+        end = kwargs.get('end', '\n')
+        w = self.screen_width
+
+        if len(msg) > w:
+            truncate_len = len(msg) - w + 3
+            msg = '<<<' + msg[truncate_len:]
+
+        notify(msg, end=end)
+
+    def notify(self, filename):
+        self.short_notify("...reading from file '{}'",
+                          filename, end='\r')
+
+    def start_file(self, filename, loader):
+        n_this = 0
+        n_before = self.n_sig
+
+        try:
+            for result in loader:
+                # track n from this file, as well as total n
+                n_this += 1
+                n_total = n_before + n_this
+                if n_this and n_total % self.interval == 0:
+                    self.short_notify("...loading from '{}' / {} sigs total",
+                                      filename, n_total, end='\r')
+
+                yield result
+        except KeyboardInterrupt:
+            # might as well nicely handle CTRL-C while we're at it!
+            notify('\n(CTRL-C received! quitting.)')
+            sys.exit(-1)
+        finally:
+            self.n_sig += n_this
+
+        self.short_notify("loaded {} sigs from '{}'", n_this, filename)

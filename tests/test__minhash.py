@@ -1041,6 +1041,48 @@ def test_abundance_simple():
     assert a.get_mins(with_abundance=True) == {2110480117637990133: 2}
 
 
+def test_add_hash_with_abundance():
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash_with_abundance(10, 1)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.add_hash_with_abundance(20, 2)
+    assert a.get_mins(with_abundance=True) == {10: 1, 20: 2}
+
+    a.add_hash_with_abundance(10, 2)
+    assert a.get_mins(with_abundance=True) == {10: 3, 20: 2}
+
+
+def test_add_hash_with_abundance_2():
+    a = MinHash(20, 5, False, track_abundance=False)
+
+    with pytest.raises(RuntimeError) as e:
+        a.add_hash_with_abundance(10, 1)
+
+    assert "track_abundance=True when constructing" in e.value.args[0]
+
+
+def test_clear():
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.clear()
+    assert a.get_mins(with_abundance=True) == {}
+
+
+def test_clear_2():
+    a = MinHash(20, 5, False, track_abundance=False)
+
+    a.add_hash(10)
+    assert a.get_mins() == [10]
+
+    a.clear()
+    assert a.get_mins() == []
+
+
 def test_abundance_simple_2():
     a = MinHash(20, 5, False, track_abundance=True)
     b = MinHash(20, 5, False, track_abundance=True)
@@ -1125,6 +1167,50 @@ def test_set_abundance_2():
     new_mh.set_abundances(mins)
 
     assert new_mh.get_mins(with_abundance=True) == mins
+
+
+def test_set_abundance_clear():
+    # on empty minhash, clear should have no effect
+    a = MinHash(20, 5, False, track_abundance=True)
+    b = MinHash(20, 5, False, track_abundance=True)
+
+    a.set_abundances({1: 3, 2: 4}, clear=True)
+    b.set_abundances({1: 3, 2: 4}, clear=False)
+
+    assert a.get_mins() == b.get_mins()
+
+
+def test_set_abundance_clear_2():
+    # default should be clear=True
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+
+    a.set_abundances({20: 2})
+    assert a.get_mins(with_abundance=True) == {20: 2}
+
+
+def test_set_abundance_clear_3():
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.add_hash(10)
+    assert a.get_mins(with_abundance=True) == {10: 1}
+    
+    a.set_abundances({20: 1, 30: 4}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 1, 20: 1, 30: 4}
+
+
+def test_set_abundance_clear_4():
+    # setting the abundance of an already set hash should add
+    # the abundances together
+    a = MinHash(20, 5, False, track_abundance=True)
+
+    a.set_abundances({20: 2, 10: 1}, clear=False)   # should also sort the hashes
+    assert a.get_mins(with_abundance=True) == {10: 1, 20: 2}
+
+    a.set_abundances({20: 1, 10: 2}, clear=False)
+    assert a.get_mins(with_abundance=True) == {10: 3, 20: 3}
 
 
 def test_reset_abundance_initialized():

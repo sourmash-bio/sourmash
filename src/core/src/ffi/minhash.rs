@@ -91,10 +91,24 @@ unsafe fn kmerminhash_add_protein(ptr: *mut SourmashKmerMinHash, sequence: *cons
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn kmerminhash_clear(ptr: *mut SourmashKmerMinHash) {
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    mh.clear();
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: u64) {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
     mh.add_hash(h);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(ptr: *mut SourmashKmerMinHash, h: u64, abundance: u64) {
+    let mh = SourmashKmerMinHash::as_rust_mut(ptr);
+
+    mh.add_hash_with_abundance(h, abundance);
 }
 
 #[no_mangle]
@@ -228,6 +242,7 @@ unsafe fn kmerminhash_set_abundances(
     hashes_ptr: *const u64,
     abunds_ptr: *const u64,
     insize: usize,
+    clear: bool,
 ) -> Result<()> {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
@@ -247,7 +262,9 @@ unsafe fn kmerminhash_set_abundances(
     pairs.sort();
 
     // Reset the minhash
-    mh.clear();
+    if clear {
+        mh.clear();
+    }
 
     mh.add_many_with_abund(&pairs)?;
 

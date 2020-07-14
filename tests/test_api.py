@@ -46,3 +46,13 @@ def test_load_index_3():
 
     sigs = list(idx.signatures())
     assert len(sigs) == 2
+
+
+def test_load_fasta_as_signature():
+    # try loading a fasta file - should fail with informative exception
+    testfile = utils.get_test_data('short.fa')
+
+    with pytest.raises(OSError) as e:
+        idx = sourmash.load_file_as_index(testfile)
+
+    assert "Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(testfile) in str(e)
