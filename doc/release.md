@@ -39,7 +39,7 @@ cd sourmash
 ```
 
 2\. Set your new version number and release candidate
-(you might want to check [the releases page] for next version number):
+(you might want to check [the releases page](https://github.com/dib-lab/sourmash/releases) for next version number):
 ```
 new_version=3.0.0
 rc=rc1
@@ -49,8 +49,6 @@ and then tag the release candidate with the new version number prefixed by the l
 git tag -a v${new_version}${rc}
 git push --tags origin
 ```
-
-??? [the releases page]: https://github.com/dib-lab/sourmash/releases
 
 3\. Test the release candidate. Bonus: repeat on macOS:
 ```
