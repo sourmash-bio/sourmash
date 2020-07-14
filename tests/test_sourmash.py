@@ -2847,6 +2847,241 @@ def test_multigather_metagenome_query_from_file(c):
 
 
 @utils.in_tempdir
+def test_multigather_metagenome_query_with_sbt(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = 'multigather --query gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 12 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_with_lca(c):
+
+    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('47+63.sbt.zip'))
+
+    cmd = 'multigather --query {} --db 47+63.sbt.zip -k 31 --threshold-bp=0'.format(lca_db)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+    assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_on_lca_db(c):
+
+    testdata_sig1 = utils.get_test_data('47.fa.sig')
+    testdata_sig2 = utils.get_test_data('63.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = 'multigather --query {} {} --db {} -k 31 --threshold-bp=0'.format(testdata_sig1, testdata_sig2, lca_db)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('5.1 Mbp      100.0%  100.0%'  in out,
+                'NC_009665.1 Shewanella baltica OS185,...' in out))
+    assert all(('5.5 Mbp      100.0%  100.0%' in out,
+                'NC_011663.1 Shewanella baltica OS223,...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_with_sbt_addl_query(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 13 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+    #check additional query sig
+    assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # make list w/query sbt
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print('gcf_all.sbt.zip', file=fp)
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 13 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+    #check additional query sig
+    assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # incorrectly query with sbt using `--query-from-file`
+    cmd = 'multigather --query-from-file gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_lca_query_from_file(c):
+    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('47+63.sbt.zip'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(lca_db, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db 47+63.sbt.zip -k 31 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+    assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
+
+
+@utils.in_tempdir
 def test_multigather_metagenome_query_from_file_with_addl_query(c):
     # test multigather --query-from-file and --query too
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
