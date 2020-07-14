@@ -15,9 +15,8 @@ use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
 
-use failure::Error;
 use once_cell::sync::OnceCell;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::sbt::{Node, SBT};
@@ -26,6 +25,7 @@ use crate::index::storage::{ReadData, ReadDataError, Storage};
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
@@ -131,13 +131,18 @@ pub struct DatasetInfo {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct SigStore<T> {
+    #[builder(setter(into))]
     filename: String,
+
+    #[builder(setter(into))]
     name: String,
+
+    #[builder(setter(into))]
     metadata: String,
 
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default)]
+    #[builder(setter(into), default)]
     data: OnceCell<T>,
 }
 

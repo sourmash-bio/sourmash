@@ -2,23 +2,25 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::f64::consts::PI;
+use std::fmt::Write;
 use std::iter::{Iterator, Peekable};
 use std::str;
+use std::sync::Mutex;
 
-use failure::Error;
 use once_cell::sync::Lazy;
-use serde::de::{Deserialize, Deserializer};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
-use serde_derive::Deserialize;
+use serde::de::Deserializer;
+use serde::ser::{SerializeStruct, Serializer};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::_hash_murmur;
-use crate::errors::SourmashError;
 use crate::signature::SigsTrait;
+use crate::Error;
 
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
+#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u32)]
@@ -74,18 +76,18 @@ pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
 }
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[derive(Debug, Clone, PartialEq, TypedBuilder)]
+#[derive(Debug, TypedBuilder)]
 pub struct KmerMinHash {
     num: u32,
     ksize: u32,
 
-    #[builder(default_code = "HashFunctions::murmur64_DNA")]
+    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
     hash_function: HashFunctions,
 
-    #[builder(default_code = "42u64")]
+    #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default_code = "u64::max_value()")]
+    #[builder(default = u64::max_value())]
     max_hash: u64,
 
     #[builder(default)]
@@ -93,6 +95,31 @@ pub struct KmerMinHash {
 
     #[builder(default)]
     abunds: Option<Vec<u64>>,
+
+    #[builder(default)]
+    md5sum: Mutex<Option<String>>,
+}
+
+impl PartialEq for KmerMinHash {
+    fn eq(&self, other: &KmerMinHash) -> bool {
+        // TODO: check all other fields?
+        self.md5sum() == other.md5sum()
+    }
+}
+
+impl Clone for KmerMinHash {
+    fn clone(&self) -> Self {
+        KmerMinHash {
+            num: self.num,
+            ksize: self.ksize,
+            hash_function: self.hash_function,
+            seed: self.seed,
+            max_hash: self.max_hash,
+            mins: self.mins.clone(),
+            abunds: self.abunds.clone(),
+            md5sum: Mutex::new(Some(self.md5sum())),
+        }
+    }
 }
 
 impl Default for KmerMinHash {
@@ -105,6 +132,7 @@ impl Default for KmerMinHash {
             max_hash: 0,
             mins: Vec::with_capacity(1000),
             abunds: None,
+            md5sum: Mutex::new(None),
         }
     }
 }
@@ -148,7 +176,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: u32,
             seed: u64,
             max_hash: u64,
-            //md5sum: String,
+            md5sum: String,
             mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
@@ -184,6 +212,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
+            md5sum: Mutex::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -223,6 +252,7 @@ impl KmerMinHash {
             max_hash,
             mins,
             abunds,
+            md5sum: Mutex::new(None),
         }
     }
 
@@ -263,10 +293,9 @@ impl KmerMinHash {
         }
 
         if !self.is_empty() {
-            return Err(SourmashError::NonEmptyMinHash {
+            return Err(Error::NonEmptyMinHash {
                 message: "hash_function".into(),
-            }
-            .into());
+            });
         }
 
         self.hash_function = h;
@@ -279,10 +308,9 @@ impl KmerMinHash {
 
     pub fn enable_abundance(&mut self) -> Result<(), Error> {
         if !self.mins.is_empty() {
-            return Err(SourmashError::NonEmptyMinHash {
+            return Err(Error::NonEmptyMinHash {
                 message: "track_abundance=True".into(),
-            }
-            .into());
+            });
         }
 
         self.abunds = Some(vec![]);
@@ -294,13 +322,30 @@ impl KmerMinHash {
         self.abunds = None;
     }
 
+    fn reset_md5sum(&self) {
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_some() {
+            *data = None;
+        }
+    }
+
     pub fn md5sum(&self) -> String {
-        let mut md5_ctx = md5::Context::new();
-        md5_ctx.consume(self.ksize().to_string());
-        self.mins
-            .iter()
-            .for_each(|x| md5_ctx.consume(x.to_string()));
-        format!("{:x}", md5_ctx.compute())
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_none() {
+            let mut buffer = String::with_capacity(20);
+
+            let mut md5_ctx = md5::Context::new();
+            write!(&mut buffer, "{}", self.ksize()).unwrap();
+            md5_ctx.consume(&buffer);
+            buffer.clear();
+            for x in &self.mins {
+                write!(&mut buffer, "{}", x).unwrap();
+                md5_ctx.consume(&buffer);
+                buffer.clear();
+            }
+            *data = Some(format!("{:x}", md5_ctx.compute()));
+        }
+        data.clone().unwrap()
     }
 
     pub fn add_hash(&mut self, hash: u64) {
@@ -335,6 +380,7 @@ impl KmerMinHash {
             self.mins.push(hash);
             if let Some(ref mut abunds) = self.abunds {
                 abunds.push(abundance);
+                self.reset_md5sum();
             }
             return;
         }
@@ -351,6 +397,7 @@ impl KmerMinHash {
                 // at end - must still be growing, we know the list won't
                 // get too long
                 self.mins.push(hash);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.push(abundance);
                 }
@@ -369,6 +416,7 @@ impl KmerMinHash {
                         abunds.pop();
                     }
                 }
+                self.reset_md5sum();
             } else if let Some(ref mut abunds) = self.abunds {
                 // pos == hash: hash value already in mins, inc count by abundance
                 abunds[pos] += abundance;
@@ -385,6 +433,7 @@ impl KmerMinHash {
         if let Ok(pos) = self.mins.binary_search(&hash) {
             if self.mins[pos] == hash {
                 self.mins.remove(pos);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(pos);
                 }
@@ -506,6 +555,8 @@ impl KmerMinHash {
                 Some(merged_abunds.into_iter().take(self.num as usize).collect())
             }
         }
+
+        self.reset_md5sum();
         Ok(())
     }
 
@@ -541,7 +592,11 @@ impl KmerMinHash {
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
-            let iter = Intersection::new(self.mins.iter(), other.mins.iter());
+            let iter = if self.size() < other.size() {
+                Intersection::new(self.mins.iter(), other.mins.iter())
+            } else {
+                Intersection::new(other.mins.iter(), self.mins.iter())
+            };
 
             Ok(iter.count() as u64)
         }
@@ -618,6 +673,8 @@ impl KmerMinHash {
             unimplemented!() // @CTB fixme
         }
 
+        // TODO: check which one is smaller, swap around if needed
+
         let abunds = self.abunds.as_ref().unwrap();
         let other_abunds = other.abunds.as_ref().unwrap();
 
@@ -693,6 +750,10 @@ impl KmerMinHash {
         self.mins.clone()
     }
 
+    pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
+        self.mins.iter()
+    }
+
     pub fn abunds(&self) -> Option<Vec<u64>> {
         self.abunds.clone()
     }
@@ -748,7 +809,7 @@ impl SigsTrait for KmerMinHash {
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
         /*
         if self.num != other.num {
-            return Err(SourmashError::MismatchNum {
+            return Err(Error::MismatchNum {
                 n1: self.num,
                 n2: other.num,
             }
@@ -756,17 +817,17 @@ impl SigsTrait for KmerMinHash {
         }
         */
         if self.ksize != other.ksize {
-            return Err(SourmashError::MismatchKSizes.into());
+            return Err(Error::MismatchKSizes);
         }
         if self.hash_function != other.hash_function {
             // TODO: fix this error
-            return Err(SourmashError::MismatchDNAProt.into());
+            return Err(Error::MismatchDNAProt);
         }
         if self.max_hash != other.max_hash {
-            return Err(SourmashError::MismatchScaled.into());
+            return Err(Error::MismatchScaled);
         }
         if self.seed != other.seed {
-            return Err(SourmashError::MismatchSeed.into());
+            return Err(Error::MismatchSeed);
         }
         Ok(())
     }
@@ -817,10 +878,9 @@ impl SigsTrait for KmerMinHash {
                 if !is_valid_kmer(i) {
                     if !force {
                         // throw error if DNA is not valid
-                        return Err(SourmashError::InvalidDNA {
+                        return Err(Error::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        }
-                        .into());
+                        });
                     }
 
                     continue; // skip invalid k-mer
@@ -875,10 +935,9 @@ impl SigsTrait for KmerMinHash {
             HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
             HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
             invalid => {
-                return Err(SourmashError::InvalidHashFunction {
+                return Err(Error::InvalidHashFunction {
                     function: format!("{}", invalid),
-                }
-                .into())
+                })
             }
         };
 
@@ -1169,10 +1228,9 @@ pub(crate) fn translate_codon(codon: &[u8]) -> Result<u8, Error> {
         }
     }
 
-    Err(SourmashError::InvalidCodonLength {
+    Err(Error::InvalidCodonLength {
         message: format!("{}", codon.len()),
-    }
-    .into())
+    })
 }
 
 #[inline]
@@ -1225,18 +1283,18 @@ const VALID: [bool; 256] = {
 // A MinHash implementation for low scaled or large cardinalities
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[derive(Debug, Clone, PartialEq, TypedBuilder)]
+#[derive(Debug, TypedBuilder)]
 pub struct KmerMinHashBTree {
     num: u32,
     ksize: u32,
 
-    #[builder(default_code = "HashFunctions::murmur64_DNA")]
+    #[builder(setter(into), default = HashFunctions::murmur64_DNA)]
     hash_function: HashFunctions,
 
-    #[builder(default_code = "42u64")]
+    #[builder(default = 42u64)]
     seed: u64,
 
-    #[builder(default_code = "u64::max_value()")]
+    #[builder(default = u64::max_value())]
     max_hash: u64,
 
     #[builder(default)]
@@ -1245,8 +1303,34 @@ pub struct KmerMinHashBTree {
     #[builder(default)]
     abunds: Option<BTreeMap<u64, u64>>,
 
-    #[builder(default_code = "0u64")]
+    #[builder(default = 0u64)]
     current_max: u64,
+
+    #[builder(default)]
+    md5sum: Mutex<Option<String>>,
+}
+
+impl PartialEq for KmerMinHashBTree {
+    fn eq(&self, other: &KmerMinHashBTree) -> bool {
+        // TODO: check all other fields?
+        self.md5sum() == other.md5sum()
+    }
+}
+
+impl Clone for KmerMinHashBTree {
+    fn clone(&self) -> Self {
+        KmerMinHashBTree {
+            num: self.num,
+            ksize: self.ksize,
+            hash_function: self.hash_function,
+            seed: self.seed,
+            max_hash: self.max_hash,
+            mins: self.mins.clone(),
+            abunds: self.abunds.clone(),
+            current_max: self.current_max,
+            md5sum: Mutex::new(Some(self.md5sum())),
+        }
+    }
 }
 
 impl Default for KmerMinHashBTree {
@@ -1260,6 +1344,7 @@ impl Default for KmerMinHashBTree {
             mins: Default::default(),
             abunds: None,
             current_max: 0,
+            md5sum: Mutex::new(None),
         }
     }
 }
@@ -1304,7 +1389,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             ksize: u32,
             seed: u64,
             max_hash: u64,
-            //md5sum: String,
+            md5sum: String,
             mins: Vec<u64>,
             abundances: Option<Vec<u64>>,
             molecule: String,
@@ -1341,6 +1426,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
+            md5sum: Mutex::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -1375,6 +1461,7 @@ impl KmerMinHashBTree {
             mins,
             abunds,
             current_max: 0,
+            md5sum: Mutex::new(None),
         }
     }
 
@@ -1416,10 +1503,9 @@ impl KmerMinHashBTree {
         }
 
         if !self.is_empty() {
-            return Err(SourmashError::NonEmptyMinHash {
+            return Err(Error::NonEmptyMinHash {
                 message: "hash_function".into(),
-            }
-            .into());
+            });
         }
 
         self.hash_function = h;
@@ -1432,10 +1518,9 @@ impl KmerMinHashBTree {
 
     pub fn enable_abundance(&mut self) -> Result<(), Error> {
         if !self.mins.is_empty() {
-            return Err(SourmashError::NonEmptyMinHash {
+            return Err(Error::NonEmptyMinHash {
                 message: "track_abundance=True".into(),
-            }
-            .into());
+            });
         }
 
         self.abunds = Some(Default::default());
@@ -1447,13 +1532,30 @@ impl KmerMinHashBTree {
         self.abunds = None;
     }
 
+    fn reset_md5sum(&self) {
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_some() {
+            *data = None;
+        }
+    }
+
     pub fn md5sum(&self) -> String {
-        let mut md5_ctx = md5::Context::new();
-        md5_ctx.consume(self.ksize().to_string());
-        self.mins
-            .iter()
-            .for_each(|x| md5_ctx.consume(x.to_string()));
-        format!("{:x}", md5_ctx.compute())
+        let mut data = self.md5sum.lock().unwrap();
+        if data.is_none() {
+            let mut buffer = String::with_capacity(20);
+
+            let mut md5_ctx = md5::Context::new();
+            write!(&mut buffer, "{}", self.ksize()).unwrap();
+            md5_ctx.consume(&buffer);
+            buffer.clear();
+            for x in &self.mins {
+                write!(&mut buffer, "{}", x).unwrap();
+                md5_ctx.consume(&buffer);
+                buffer.clear();
+            }
+            *data = Some(format!("{:x}", md5_ctx.compute()));
+        }
+        data.clone().unwrap()
     }
 
     pub fn add_hash(&mut self, hash: u64) {
@@ -1481,6 +1583,7 @@ impl KmerMinHashBTree {
         // empty mins? add it.
         if self.mins.is_empty() {
             self.mins.insert(hash);
+            self.reset_md5sum();
             if let Some(ref mut abunds) = self.abunds {
                 abunds.insert(hash, abundance);
             }
@@ -1492,8 +1595,11 @@ impl KmerMinHashBTree {
         {
             // "good" hash - within range, smaller than current entry, or
             // still have space available
-            if self.mins.insert(hash) && hash > self.current_max {
-                self.current_max = hash;
+            if self.mins.insert(hash) {
+                self.reset_md5sum();
+                if hash > self.current_max {
+                    self.current_max = hash;
+                }
             }
             if let Some(ref mut abunds) = self.abunds {
                 *abunds.entry(hash).or_insert(0) += abundance;
@@ -1503,6 +1609,7 @@ impl KmerMinHashBTree {
             if self.num != 0 && self.mins.len() > (self.num as usize) {
                 let last = *self.mins.iter().rev().next().unwrap();
                 self.mins.remove(&last);
+                self.reset_md5sum();
                 if let Some(ref mut abunds) = self.abunds {
                     abunds.remove(&last);
                 }
@@ -1518,6 +1625,7 @@ impl KmerMinHashBTree {
 
     pub fn remove_hash(&mut self, hash: u64) {
         if self.mins.remove(&hash) {
+            self.reset_md5sum();
             if let Some(ref mut abunds) = self.abunds {
                 abunds.remove(&hash);
             }
@@ -1557,6 +1665,9 @@ impl KmerMinHashBTree {
                 self.abunds = Some(new_abunds)
             }
         }
+        // Better safe than sorry, but could check in other places to avoid
+        // always resetting
+        self.reset_md5sum();
 
         Ok(())
     }
@@ -1593,7 +1704,11 @@ impl KmerMinHashBTree {
             first.count_common(&downsampled_mh, false)
         } else {
             self.check_compatible(other)?;
-            let iter = Intersection::new(self.mins.iter(), other.mins.iter());
+            let iter = if self.size() < other.size() {
+                Intersection::new(self.mins.iter(), other.mins.iter())
+            } else {
+                Intersection::new(other.mins.iter(), self.mins.iter())
+            };
 
             Ok(iter.count() as u64)
         }
@@ -1733,6 +1848,10 @@ impl KmerMinHashBTree {
         self.mins.iter().cloned().collect()
     }
 
+    pub fn iter_mins(&self) -> impl Iterator<Item = &u64> {
+        self.mins.iter()
+    }
+
     pub fn abunds(&self) -> Option<Vec<u64>> {
         if let Some(abunds) = &self.abunds {
             Some(abunds.values().cloned().collect())
@@ -1788,7 +1907,7 @@ impl SigsTrait for KmerMinHashBTree {
     fn check_compatible(&self, other: &KmerMinHashBTree) -> Result<(), Error> {
         /*
         if self.num != other.num {
-            return Err(SourmashError::MismatchNum {
+            return Err(Error::MismatchNum {
                 n1: self.num,
                 n2: other.num,
             }
@@ -1796,17 +1915,17 @@ impl SigsTrait for KmerMinHashBTree {
         }
         */
         if self.ksize != other.ksize {
-            return Err(SourmashError::MismatchKSizes.into());
+            return Err(Error::MismatchKSizes);
         }
         if self.hash_function != other.hash_function {
             // TODO: fix this error
-            return Err(SourmashError::MismatchDNAProt.into());
+            return Err(Error::MismatchDNAProt);
         }
         if self.max_hash != other.max_hash {
-            return Err(SourmashError::MismatchScaled.into());
+            return Err(Error::MismatchScaled);
         }
         if self.seed != other.seed {
-            return Err(SourmashError::MismatchSeed.into());
+            return Err(Error::MismatchSeed);
         }
         Ok(())
     }
@@ -1857,10 +1976,9 @@ impl SigsTrait for KmerMinHashBTree {
                 if !is_valid_kmer(i) {
                     if !force {
                         // throw error if DNA is not valid
-                        return Err(SourmashError::InvalidDNA {
+                        return Err(Error::InvalidDNA {
                             message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        }
-                        .into());
+                        });
                     }
 
                     continue; // skip invalid k-mer
@@ -1915,10 +2033,9 @@ impl SigsTrait for KmerMinHashBTree {
             HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
             HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
             invalid => {
-                return Err(SourmashError::InvalidHashFunction {
+                return Err(Error::InvalidHashFunction {
                     function: format!("{}", invalid),
-                }
-                .into())
+                })
             }
         };
 
