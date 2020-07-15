@@ -160,6 +160,24 @@ src/core
 └── tests/               | Integration tests (using the public API of the crate)
 ```
 
+### Exposing new functions on the FFI
+
+If you change anything in `src/core/src/ffi` (where the boundary between Rust
+and C is defined) you need to regenerate the `include/sourmash.h` header,
+and potentially fix any differences in the Python CFFI layer (which reads the C
+header file and expose functionality to Python).
+
+To regenerate the C header, run
+```
+$ make include/sourmash.h
+```
+This requires a nightly Rust compiler and `cbindgen`.
+They can be installed by running
+```
+$ rustup toolchain add nightly
+$ cargo install --force cbindgen
+```
+
 ### Changing code touching all layers: an example PR
 
 Luiz wrote a [blog post] describing a PR that changes code at the Python API down to the Rust code library,
@@ -187,3 +205,14 @@ For the Rust core library we use `rMAJOR.MINOR.PATH`
 (note it starts with `r`, and not `v`).
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.
+
+## Contents
+
+```{toctree}
+:maxdepth: 2
+
+release
+requirements
+storage
+release-notes/releases
+```

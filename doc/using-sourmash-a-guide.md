@@ -24,7 +24,7 @@ k=51.  The general rule is that longer k-mer sizes are less prone to
 false positives. But you can pick your own parameters.
 
 One additional wrinkle is that we provide a number of
-[precomputed databases](databases.html) at k=21, k=31, and k=51.
+[precomputed databases](databases.md) at k=21, k=31, and k=51.
 It is often convenient to calculate signatures at these sizes so that
 you can use these databases.
 

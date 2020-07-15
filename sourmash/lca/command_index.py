@@ -8,6 +8,7 @@ import csv
 from collections import defaultdict
 
 from sourmash import sourmash_args, load_signatures
+from sourmash.sourmash_args import load_file_as_signatures
 from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import LineagePair
@@ -99,7 +100,12 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     # any more, when building a large GTDB-based database :) --CTB
     if len(assignments) * 0.2 > n_species and len(assignments) > 50:
         if not force:
-            raise Exception("error: fewer than 20% of lineages have species-level resolution!? ({} total found)".format(n_species))
+            error('')
+            error("ERROR: fewer than 20% of lineages have species-level resolution!?")
+            error("({} species assignments found, of {} assignments total)",
+                  n_species, len(assignments))
+            error("** If this is intentional, re-run the command with -f.")
+            sys.exit(-1)
 
     return assignments, num_rows
 
@@ -143,6 +149,11 @@ def index(args):
     if args.ksize is None:
         args.ksize = DEFAULT_LOAD_K
 
+    moltype = sourmash_args.calculate_moltype(args, default='DNA')
+
+    notify('Building LCA database with ksize={} scaled={} moltype={}.',
+           args.ksize, args.scaled, moltype)
+
     # first, load taxonomy spreadsheet
     delimiter = ','
     if args.tabs:
@@ -158,17 +169,12 @@ def index(args):
     notify('{} distinct lineages in spreadsheet out of {} rows.',
            len(set(assignments.values())), num_rows)
 
-    db = LCA_Database(args.ksize, args.scaled)
+    db = LCA_Database(args.ksize, args.scaled, moltype)
 
-#    notify('finding signatures...')
-    if args.traverse_directory:
-        yield_all_files = False           # only pick up *.sig files?
-        if args.force:
-            yield_all_files = True
-        inp_files = list(sourmash_args.traverse_find_sigs(args.signatures,
-                                                          yield_all_files=yield_all_files))
-    else:
-        inp_files = list(args.signatures)
+    inp_files = list(args.signatures)
+    if args.from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        inp_files.extend(more_files)
 
     # track duplicates
     md5_to_name = {}
@@ -187,9 +193,13 @@ def index(args):
     n_skipped = 0
     for filename in inp_files:
         n += 1
-        for sig in load_signatures(filename, ksize=args.ksize):
+        it = load_file_as_signatures(filename, ksize=args.ksize,
+                                     select_moltype=moltype,
+                                     traverse=args.traverse_directory,
+                                     yield_all_files=args.force)
+        for sig in it:
             notify(u'\r\033[K', end=u'')
-            notify('\r... loading signature {} (file {} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
+            notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
             debug(filename, sig.name())
 
             # block off duplicates.
@@ -203,7 +213,10 @@ def index(args):
             # parse identifier, potentially with splitting
             ident = sig.name()
             if args.split_identifiers: # hack for NCBI-style names, etc.
-                ident = ident.split(' ')[0].split('.')[0]
+                # split on space...
+                ident = ident.split(' ')[0]
+                # ...and on period.
+                ident = ident.split('.')[0]
 
             lineage = assignments.get(ident)
 
@@ -214,28 +227,33 @@ def index(args):
                 continue
 
             # add the signature into the database.
-            db.insert(sig, ident=ident, lineage=lineage)
-
-            # remove from our list of remaining lineages
             try:
-                record_remnants.remove(ident)
-            except KeyError:
-                # @CTB
-                pass
+                db.insert(sig, ident=ident, lineage=lineage)
+            except ValueError as e:
+                error("ERROR: cannot insert signature '{}' (md5 {}, loaded from '{}') into database.",
+                      sig.name(), sig.md5sum()[:8], filename)
+                error("ERROR: {}", str(e))
+                sys.exit(-1)
 
-            # track ident as used
-            record_used_idents.add(ident)
+            if lineage:
+                # remove from our list of remaining ident -> lineage
+                record_remnants.remove(ident)
+
+                # track ident as used
+                record_used_idents.add(ident)
+                record_used_lineages.add(lineage)
 
             # track lineage info - either no lineage, or this lineage used.
-            if lineage is None:
+            else:
                 debug('WARNING: no lineage assignment for {}.', ident)
                 record_no_lineage.add(ident)
-            else:
-                record_used_lineages.add(lineage)
 
     # end main add signatures loop
 
-    notify(u'\r\033[K', end=u'')
+    if n_skipped:
+        notify('... loaded {} signatures; skipped {} because of --require-taxonomy.', total_n, n_skipped)
+    else:
+        notify('... loaded {} signatures.', total_n)
 
     # check -- did we find any signatures?
     if n == 0:
@@ -248,6 +266,8 @@ def index(args):
     if not db.hashval_to_idx:
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
+    notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
+           args.ksize, args.scaled)
 
     # summarize:
     notify('{} assigned lineages out of {} distinct lineages in spreadsheet.',
@@ -256,6 +276,8 @@ def index(args):
 
     notify('{} identifiers used out of {} distinct identifiers in spreadsheet.',
            len(record_used_idents), len(set(assignments)))
+
+    assert record_used_idents.issubset(set(assignments))
     unused_identifiers = set(assignments) - record_used_idents
 
     # now, save!
@@ -277,7 +299,7 @@ def index(args):
             notify('WARNING: no lineage provided for {} signatures.',
                    len(record_no_lineage))
         if record_remnants:
-            notify('WARNING: no signatures for {} lineage assignments.',
+            notify('WARNING: no signatures for {} spreadsheet rows.',
                    len(record_remnants))
         if unused_lineages:
             notify('WARNING: {} unused lineages.', len(unused_lineages))

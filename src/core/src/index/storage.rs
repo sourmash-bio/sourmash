@@ -2,19 +2,21 @@ use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 
-use failure::{Error, Fail};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use typed_builder::TypedBuilder;
 
-#[derive(Debug, Fail)]
+use crate::Error;
+
+#[derive(Debug, Error)]
 pub enum StorageError {
-    #[fail(display = "Path can't be empty")]
+    #[error("Path can't be empty")]
     EmptyPathError,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ReadDataError {
-    #[fail(display = "Could not load data")]
+    #[error("Could not load data")]
     LoadError,
 }
 
@@ -25,8 +27,8 @@ pub trait ReadData<D> {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct StorageInfo {
-    pub(crate) backend: String,
-    pub(crate) args: StorageArgs,
+    pub backend: String,
+    pub args: StorageArgs,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,8 +70,8 @@ pub trait Storage {
 #[derive(TypedBuilder, Debug, Clone, Default)]
 pub struct FSStorage {
     /// absolute path for the directory where data is saved.
-    pub(crate) fullpath: PathBuf,
-    pub(crate) subdir: String,
+    fullpath: PathBuf,
+    subdir: String,
 }
 
 impl FSStorage {

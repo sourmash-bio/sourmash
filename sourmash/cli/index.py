@@ -1,14 +1,45 @@
 """index signatures for rapid search"""
 
+usage="""
+
+   sourmash index -k 31 dbname *.sig
+
+Create an on-disk database of signatures that can be searched in low
+memory with 'search' and 'gather'. All signatures must be the same
+k-mer size, molecule type, and num/scaled; the standard signature
+selectors (-k/--ksize, --scaled, --dna/--protein) choose which
+signatures to be added.
+
+The key options for index are:
+
+ * `-k/--ksize <int>`: k-mer size to select
+ * `--dna` or --protein`: nucleotide or protein signatures (default `--dna`)
+ * `--traverse-directory`: load all signatures below this directory
+
+If `dbname` ends with `.sbt.json`, index will create the database as a
+collection of multiple files, with an index `dbname.sbt.json` and a
+subdirectory `.sbt.dbname`. If `dbname` ends with `.sbt.zip`, index
+will create a zip archive containing the multiple files. For sourmash
+v2 and v3, `sbt.json` will be added automatically; this behavior will
+change in sourmash v4 to default to `.sbt.zip`.
+
+---
+"""
+
 from sourmash.cli.utils import add_moltype_args, add_ksize_arg
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('index')
-    subparser.add_argument('sbt_name', help='name to save SBT into')
+    subparser = subparsers.add_parser('index', description=__doc__,
+                                      usage=usage)
+    subparser.add_argument('sbt_name', help='name to save index into; .sbt.zip or .sbt.json file')
     subparser.add_argument(
         'signatures', nargs='+',
         help='signatures to load into SBT'
+    )
+    subparser.add_argument(
+        '--from-file',
+        help='a file containing a list of signatures file to load'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',

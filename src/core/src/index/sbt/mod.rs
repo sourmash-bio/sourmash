@@ -13,22 +13,22 @@ use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::File;
-use std::hash::{BuildHasherDefault, Hasher};
+use std::hash::BuildHasherDefault;
 use std::io::{BufReader, Read};
 use std::iter::FromIterator;
-use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use failure::Error;
 use log::info;
+use nohash_hasher::NoHashHasher;
 use once_cell::sync::OnceCell;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
 use crate::signature::Signature;
+use crate::Error;
 
 pub trait Update<O> {
     fn update(&self, other: &mut O) -> Result<(), Error>;
@@ -43,16 +43,16 @@ pub struct SBT<N, L> {
     #[builder(default = 2)]
     d: u32,
 
-    #[builder(default)]
+    #[builder(default, setter(into))]
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default_code = r#"Factory::GraphFactory { args: (1, 100000.0, 4) }"#)]
+    #[builder(default = Factory::GraphFactory { args: (1, 100000.0, 4) })]
     factory: Factory,
 
-    #[builder(default_code = "HashMap::default()")]
+    #[builder(default = HashMap::default())]
     nodes: HashMap<u64, N>,
 
-    #[builder(default_code = "HashMap::default()")]
+    #[builder(default = HashMap::default())]
     leaves: HashMap<u64, SigStore<L>>,
 }
 
@@ -135,7 +135,7 @@ where
         Ok(SBTInfo::V5(sinfo))
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<SBT<Node<U>, T>, Error>
+    pub fn from_reader<R, P>(mut rdr: R, path: P) -> Result<SBT<Node<U>, T>, Error>
     where
         R: Read,
         P: AsRef<Path>,
@@ -154,6 +154,7 @@ where
         let mut st: FSStorage = match sinfo {
             SBTInfo::V4(ref sbt) => (&sbt.storage.args).into(),
             SBTInfo::V5(ref sbt) => (&sbt.storage.args).into(),
+            SBTInfo::V6(ref sbt) => (&sbt.storage.args).into(),
         };
         st.set_base(path.as_ref().to_str().unwrap());
         let storage: Rc<dyn Storage> = Rc::new(st);
@@ -161,14 +162,49 @@ where
         let d = match sinfo {
             SBTInfo::V4(ref sbt) => sbt.d,
             SBTInfo::V5(ref sbt) => sbt.d,
+            SBTInfo::V6(ref sbt) => sbt.d,
         };
 
         let factory = match sinfo {
             SBTInfo::V4(ref sbt) => sbt.factory.clone(),
             SBTInfo::V5(ref sbt) => sbt.factory.clone(),
+            SBTInfo::V6(ref sbt) => sbt.factory.clone(),
         };
 
         let (nodes, leaves) = match sinfo {
+            SBTInfo::V6(sbt) => {
+                let nodes = sbt
+                    .nodes
+                    .into_iter()
+                    .map(|(n, l)| {
+                        (
+                            n,
+                            Node::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
+                    })
+                    .collect();
+                let leaves = sbt
+                    .signatures
+                    .into_iter()
+                    .map(|(n, l)| {
+                        (
+                            n,
+                            SigStore::builder()
+                                .filename(l.filename)
+                                .name(l.name)
+                                .metadata(l.metadata)
+                                .storage(Some(Rc::clone(&storage)))
+                                .build(),
+                        )
+                    })
+                    .collect();
+                (nodes, leaves)
+            }
             SBTInfo::V5(sbt) => {
                 let nodes = sbt
                     .nodes
@@ -304,7 +340,7 @@ where
                     let _: &U = (*l).data().expect("Couldn't load data");
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     let filename = (*l).save(&l.filename).unwrap();
                     let new_node = NodeInfo {
@@ -323,7 +359,7 @@ where
                     let _: &T = (*l).data().unwrap();
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     // TODO: this should be l.md5sum(), not l.filename
                     let filename = (*l).save(&l.filename).unwrap();
@@ -522,15 +558,19 @@ pub enum Factory {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct Node<T> {
+    #[builder(setter(into))]
     filename: String,
+
+    #[builder(setter(into))]
     name: String,
+
     metadata: HashMap<String, u64>,
 
     #[builder(default)]
     storage: Option<Rc<dyn Storage>>,
 
-    #[builder(default)]
-    pub(crate) data: OnceCell<T>,
+    #[builder(setter(into), default)]
+    data: OnceCell<T>,
 }
 
 impl<T> Node<T>
@@ -633,43 +673,27 @@ struct SBTInfoV5<N, L> {
     leaves: HashMap<u64, L>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct SBTInfoV6<N, L> {
+    d: u32,
+    version: u32,
+    storage: StorageInfo,
+    factory: Factory,
+    nodes: HashMap<u64, N>,
+    signatures: HashMap<u64, L>,
+}
+
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum SBTInfo {
+    V6(SBTInfoV6<NodeInfo, DatasetInfo>),
     V5(SBTInfoV5<NodeInfo, DatasetInfo>),
     V4(SBTInfoV4<NodeInfoV4>),
 }
 
-// This comes from finch
-pub struct NoHashHasher(u64);
-
-impl Default for NoHashHasher {
-    #[inline]
-    fn default() -> NoHashHasher {
-        NoHashHasher(0x0)
-    }
-}
-
-impl Hasher for NoHashHasher {
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        *self = NoHashHasher(
-            (u64::from(bytes[0]) << 24)
-                + (u64::from(bytes[1]) << 16)
-                + (u64::from(bytes[2]) << 8)
-                + u64::from(bytes[3]),
-        );
-    }
-    fn finish(&self) -> u64 {
-        self.0
-    }
-}
-
-type HashIntersection = HashSet<u64, BuildHasherDefault<NoHashHasher>>;
-
 enum BinaryTree {
     Empty,
-    Internal(Box<TreeNode<HashIntersection>>),
+    Internal(Box<TreeNode<HashSet<u64, BuildHasherDefault<NoHashHasher<u64>>>>>),
     Leaf(Box<TreeNode<SigStore<Signature>>>),
 }
 
@@ -700,7 +724,9 @@ where
         let (simleaf_tree, in_common) = if datasets.is_empty() {
             (
                 BinaryTree::Empty,
-                HashIntersection::from_iter(next_leaf.mins().into_iter()),
+                HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
+                    next_leaf.mins().into_iter(),
+                ),
             )
         } else {
             let mut similar_leaf_pos = 0;
@@ -715,12 +741,16 @@ where
 
             let similar_leaf = datasets.remove(similar_leaf_pos);
 
-            let in_common = HashIntersection::from_iter(next_leaf.mins().into_iter())
-                .union(&HashIntersection::from_iter(
+            let in_common = HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
+                next_leaf.mins().into_iter(),
+            )
+            .union(
+                &HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::from_iter(
                     similar_leaf.mins().into_iter(),
-                ))
-                .cloned()
-                .collect();
+                ),
+            )
+            .cloned()
+            .collect();
 
             let simleaf_tree = BinaryTree::Leaf(Box::new(TreeNode {
                 element: similar_leaf,
@@ -817,21 +847,30 @@ impl BinaryTree {
         next_round
     }
 
+    // Remove this when MSRV is >= 1.40
+    #[allow(clippy::mem_replace_with_default)]
     fn new_tree(mut left: BinaryTree, mut right: BinaryTree) -> BinaryTree {
         let in_common = if let BinaryTree::Internal(ref mut el1) = left {
             match right {
                 BinaryTree::Internal(ref mut el2) => {
-                    let c1 = std::mem::replace(&mut el1.element, HashIntersection::default());
-                    let c2 = std::mem::replace(&mut el2.element, HashIntersection::default());
+                    let c1 = std::mem::replace(
+                        &mut el1.element,
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
+                    );
+                    let c2 = std::mem::replace(
+                        &mut el2.element,
+                        HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
+                    );
                     c1.union(&c2).cloned().collect()
                 }
-                BinaryTree::Empty => {
-                    std::mem::replace(&mut el1.element, HashIntersection::default())
-                }
+                BinaryTree::Empty => std::mem::replace(
+                    &mut el1.element,
+                    HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default(),
+                ),
                 _ => panic!("Should not see a Leaf at this level"),
             }
         } else {
-            HashIntersection::default()
+            HashSet::<u64, BuildHasherDefault<NoHashHasher<u64>>>::default()
         };
 
         BinaryTree::Internal(Box::new(TreeNode {

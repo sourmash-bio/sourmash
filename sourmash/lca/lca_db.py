@@ -29,17 +29,38 @@ def cached_property(fun):
 
 class LCA_Database(Index):
     """
-    Wrapper class for taxonomic database.
+    An in-memory database that indexes signatures by hash, and provides
+    optional taxonomic lineage classification.
 
-    obj.ident_to_idx: key 'identifier' to 'idx'
-    obj.idx_to_lid: key 'idx' to 'lid'
-    obj.lid_to_lineage: key 'lid' to tuple of LineagePair objects
-    obj.hashval_to_idx: key 'hashval' => set('idx')
+    Follows the `Index` API for `insert`, `search`, `gather`, and `signatures`.
+
+    Identifiers `ident` must be unique, and are taken by default as the
+    entire signature name upon insertion. This can be overridden with
+    the `ident` keyword argument in `insert`.
+
+    Integer `idx` indices can be used as keys in dictionary attributes:
+    * `idx_to_lid`, to get an (optional) lineage index.
+    * `idx_to_ident`, to retrieve the unique string identifier for that `idx`.
+
+    Integer `lid` indices can be used as keys in dictionary attributes:
+    * `lid_to_idx`, to get a set of `idx` with that lineage.
+    * `lid_to_lineage`, to get a lineage for that `lid`.
+
+    `lineage_to_lid` is a dictionary with tuples of LineagePair as keys,
+    `lid` as values.
+
+    `ident_to_name` is a dictionary from unique str identifer to a name.
+
+    `ident_to_idx` is a dictionary from unique str identifer to integer `idx`.
+
+    `hashval_to_idx` is a dictionary from individual hash values to sets of
+    `idx`.
     """
-    def __init__(self, ksize, scaled):
+    def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = None
+        self.moltype = moltype
 
         self._next_index = 0
         self._next_lid = 0
@@ -94,6 +115,21 @@ class LCA_Database(Index):
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
+        minhash = sig.minhash
+
+        if minhash.ksize != self.ksize:
+            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+
+        if minhash.moltype != self.moltype:
+            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
+
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        try:
+            minhash = minhash.downsample_scaled(self.scaled)
+        except ValueError:
+            raise ValueError("cannot downsample signature; is it a scaled signature?")
+
         if ident is None:
             ident = sig.name()
 
@@ -109,20 +145,21 @@ class LCA_Database(Index):
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
-            # (LineagePairs*) -> integer lineage ids (lids)
-            lid = self._get_lineage_id(lineage)
+            try:
+                lineage = tuple(lineage)
 
-            # map idx to lid as well.
-            self.idx_to_lid[idx] = lid
+                # (LineagePairs*) -> integer lineage ids (lids)
+                lid = self._get_lineage_id(lineage)
 
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        minhash = sig.minhash.downsample_scaled(self.scaled)
+                # map idx to lid as well.
+                self.idx_to_lid[idx] = lid
+            except TypeError:
+                raise ValueError('lineage cannot be used as a key?!')
 
         for hashval in minhash.get_mins():
             self.hashval_to_idx[hashval].add(idx)
 
-        return lineage
+        return len(minhash)
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -138,7 +175,7 @@ class LCA_Database(Index):
         ok = True
         if ksize is not None and self.ksize != ksize:
             ok = False
-        if moltype is not None and moltype != 'DNA':
+        if moltype is not None and moltype != self.moltype:
             ok = False
 
         if ok:
@@ -176,17 +213,20 @@ class LCA_Database(Index):
             if db_type != 'sourmash_lca':
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
-            if version != '2.0' or 'lid_to_lineage' not in load_d:
+            version = float(version)
+            if version < 2.0 or 'lid_to_lineage' not in load_d:
                 raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
 
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
+            moltype = load_d.get('moltype', 'DNA')
 
-            db = cls(ksize, scaled)
+            db = cls(ksize, scaled, moltype)
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
             lid_to_lineage_2 = load_d['lid_to_lineage']
             lid_to_lineage = {}
+            lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
                 v = dict(v)
                 vv = []
@@ -194,8 +234,11 @@ class LCA_Database(Index):
                     name = v.get(rank, '')
                     vv.append(LineagePair(rank, name))
 
-                lid_to_lineage[int(k)] = tuple(vv)
+                vv = tuple(vv)
+                lid_to_lineage[int(k)] = vv
+                lineage_to_lid[vv] = int(k)
             db.lid_to_lineage = lid_to_lineage
+            db.lineage_to_lid = lineage_to_lid
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
@@ -226,11 +269,12 @@ class LCA_Database(Index):
         with xopen(db_name, 'wt') as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '2.0'
+            save_d['version'] = '2.1'
             save_d['type'] = 'sourmash_lca'
             save_d['license'] = 'CC0'
             save_d['ksize'] = self.ksize
             save_d['scaled'] = self.scaled
+            save_d['moltype'] = self.moltype
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
@@ -355,8 +399,17 @@ class LCA_Database(Index):
         "Create a _signatures member dictionary that contains {idx: sigobj}."
         from sourmash import MinHash, SourmashSignature
 
-        # CTB: if we wanted to support protein/other minhashes, do it here.
-        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled)
+        is_protein = False
+        is_hp = False
+        is_dayhoff = False
+        if self.moltype == 'protein':
+            is_protein = True
+        elif self.moltype == 'hp':
+            is_hp = True
+        elif self.moltype == 'dayhoff':
+            is_dayhoff = True
+        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
+                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
 
         debug('creating signatures for LCA DB...')
         mhd = defaultdict(minhash.copy_and_clear)
@@ -396,7 +449,7 @@ class LCA_Database(Index):
     def _find_signatures(self, minhash, threshold, containment=False,
                        ignore_scaled=False):
         """
-        Do a Jaccard similarity or containment search.
+        Do a Jaccard similarity or containment search, yield results.
 
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
@@ -421,7 +474,7 @@ class LCA_Database(Index):
         debug('number of matching signatures for hashes: {}', len(c))
 
         # for each match, in order of largest overlap,
-        for idx, count in c.items():
+        for idx, count in c.most_common():
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
@@ -430,28 +483,18 @@ class LCA_Database(Index):
             match_mh = match_sig.minhash
             match_size = len(match_mh)
 
-            debug('count: {}; query_mins: {}; match size: {}',
-                  count, len(query_mins), match_size)
-
             # calculate the containment or similarity
             if containment:
                 score = count / len(query_mins)
             else:
+                # query_mins is size of query signature
+                # match_size is size of match signature
+                # count is overlap
                 score = count / (len(query_mins) + match_size - count)
-
-            debug('score: {} (containment? {}), threshold: {}',
-                  score, containment, threshold)
 
             # ...and return.
             if score >= threshold:
                 yield score, match_sig, self.filename
-
-    @cached_property
-    def lineage_to_lids(self):
-        d = defaultdict(set)
-        for lid, lineage in self.lid_to_lineage.items():
-            d[lineage].add(lid)
-        return d
 
     @cached_property
     def lid_to_idx(self):
@@ -479,6 +522,7 @@ def load_databases(filenames, scaled=None, verbose=True):
     "Load multiple LCA databases; return (dblist, ksize, scaled)"
     ksize_vals = set()
     scaled_vals = set()
+    moltype_vals = set()
     dblist = []
 
     # load all the databases
@@ -497,14 +541,19 @@ def load_databases(filenames, scaled=None, verbose=True):
             lca_db.downsample_scaled(scaled)
         scaled_vals.add(lca_db.scaled)
 
+        moltype_vals.add(lca_db.moltype)
+        if len(moltype_vals) > 1:
+            raise Exception('multiple moltypes, quitting')
+
         dblist.append(lca_db)
 
     ksize = ksize_vals.pop()
     scaled = scaled_vals.pop()
+    moltype = moltype_vals.pop()
 
     if verbose:
         notify(u'\r\033[K', end=u'')
-        notify('loaded {} LCA databases. ksize={}, scaled={}', len(dblist),
-               ksize, scaled)
+        notify('loaded {} LCA databases. ksize={}, scaled={} moltype={}',
+               len(dblist), ksize, scaled, moltype)
 
     return dblist, ksize, scaled

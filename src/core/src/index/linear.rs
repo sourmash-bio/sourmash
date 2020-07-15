@@ -1,16 +1,15 @@
 use std::fs::File;
 use std::io::{BufReader, Read};
-use std::mem;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use failure::Error;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, SigStore};
+use crate::Error;
 
 #[derive(TypedBuilder)]
 pub struct LinearIndex<L> {
@@ -18,7 +17,7 @@ pub struct LinearIndex<L> {
     storage: Option<Rc<dyn Storage>>,
 
     #[builder(default)]
-    pub(crate) datasets: Vec<SigStore<L>>,
+    datasets: Vec<SigStore<L>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -119,7 +118,7 @@ where
                     let _: &L = (*l).data().unwrap();
 
                     // set storage to new one
-                    mem::replace(&mut l.storage, Some(Rc::clone(&storage)));
+                    l.storage = Some(Rc::clone(&storage));
 
                     let filename = (*l).save(&l.filename).unwrap();
 
@@ -152,7 +151,7 @@ where
         Ok(linear)
     }
 
-    pub fn from_reader<R, P>(rdr: &mut R, path: P) -> Result<LinearIndex<L>, Error>
+    pub fn from_reader<R, P>(rdr: R, path: P) -> Result<LinearIndex<L>, Error>
     where
         R: Read,
         P: AsRef<Path>,

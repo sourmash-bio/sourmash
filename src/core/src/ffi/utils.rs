@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::mem;
@@ -8,26 +9,64 @@ use std::slice;
 use std::str;
 use std::thread;
 
+use failure::Fail; // can remove after .backtrace() is available in error...
+use thiserror::Error;
+
 use crate::errors::SourmashErrorCode;
-use failure::{Error, Fail};
+use crate::Error;
 
 thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
 }
 
-macro_rules! ffi_fn (
+pub trait ForeignObject: Sized {
+    type RustObject;
+
+    #[inline]
+    unsafe fn from_rust(object: Self::RustObject) -> *mut Self {
+        Box::into_raw(Box::new(object)) as *mut Self
+    }
+
+    #[inline]
+    unsafe fn from_ref(object: &Self::RustObject) -> *const Self {
+        object as *const Self::RustObject as *const Self
+    }
+
+    #[inline]
+    unsafe fn as_rust<'a>(pointer: *const Self) -> &'a Self::RustObject {
+        &*(pointer as *const Self::RustObject)
+    }
+
+    #[inline]
+    unsafe fn as_rust_mut<'a>(pointer: *mut Self) -> &'a mut Self::RustObject {
+        &mut *(pointer as *mut Self::RustObject)
+    }
+
+    #[inline]
+    unsafe fn into_rust(pointer: *mut Self) -> Box<Self::RustObject> {
+        Box::from_raw(pointer as *mut Self::RustObject)
+    }
+
+    #[inline]
+    unsafe fn drop(pointer: *mut Self) {
+        if !pointer.is_null() {
+            drop(Self::into_rust(pointer));
+        }
+    }
+}
+
+macro_rules! ffi_fn {
     // a function that catches panics and returns a result (err goes to tls)
     (
         $(#[$attr:meta])*
         unsafe fn $name:ident($($aname:ident: $aty:ty),* $(,)*) -> Result<$rv:ty> $body:block
-    ) => (
+    ) => {
         #[no_mangle]
         $(#[$attr])*
-        pub unsafe extern "C" fn $name($($aname: $aty,)*) -> $rv
-        {
+        pub unsafe extern "C" fn $name($($aname: $aty,)*) -> $rv {
             $crate::ffi::utils::landingpad(|| $body)
         }
-    );
+    };
 
     // a function that catches panics and returns nothing (err goes to tls)
     (
@@ -36,17 +75,16 @@ macro_rules! ffi_fn (
     ) => {
         #[no_mangle]
         $(#[$attr])*
-        pub unsafe extern "C" fn $name($($aname: $aty,)*)
-        {
+        pub unsafe extern "C" fn $name($($aname: $aty,)*) {
             // this silences panics and stuff
-            $crate::ffi::utils::landingpad(|| { $body; Ok(0 as ::std::os::raw::c_int) });
+            $crate::ffi::utils::landingpad(|| { $body; Ok(0 as std::os::raw::c_int) });
         }
-    }
-);
+    };
+}
 
 /// An error thrown by `landingpad` in place of panics.
-#[derive(Fail, Debug)]
-#[fail(display = "sourmash panicked: {}", _0)]
+#[derive(Error, Debug)]
+#[error("sourmash panicked: {0}")]
 pub struct Panic(String);
 
 /// Returns the last error message.
@@ -55,13 +93,14 @@ pub struct Panic(String);
 /// that needs to be freed with `sourmash_str_free`.
 #[no_mangle]
 pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
-    use std::fmt::Write;
     LAST_ERROR.with(|e| {
         if let Some(ref err) = *e.borrow() {
-            let mut msg = err.to_string();
+            let msg = err.to_string();
+            /* TODO: iter_causes is a failure method
             for cause in err.iter_causes() {
                 write!(&mut msg, "\n  caused by: {}", cause).ok();
             }
+            */
             SourmashStr::from_string(msg)
         } else {
             Default::default()
@@ -74,11 +113,10 @@ pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
 pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
     LAST_ERROR.with(|e| {
         if let Some(ref error) = *e.borrow() {
-            let backtrace = error.backtrace().to_string();
-            if !backtrace.is_empty() {
+            if let Some(backtrace) = error.backtrace() {
                 use std::fmt::Write;
                 let mut out = String::new();
-                write!(&mut out, "stacktrace: {}", backtrace).ok();
+                write!(&mut out, "stacktrace: {}", backtrace.to_string()).ok();
                 SourmashStr::from_string(out)
             } else {
                 Default::default()
@@ -168,8 +206,11 @@ where
 /// Represents a string.
 #[repr(C)]
 pub struct SourmashStr {
+    /// Pointer to the UTF-8 encoded string data.
     pub data: *mut c_char,
+    /// The length of the string pointed to by `data`.
     pub len: usize,
+    /// Indicates that the string is owned and must be freed.
     pub owned: bool,
 }
 
@@ -199,7 +240,7 @@ impl SourmashStr {
             len: s.len(),
             owned: true,
         };
-        Box::into_raw(s.into_boxed_str());
+        mem::forget(s);
         rv
     }
 
@@ -214,6 +255,33 @@ impl SourmashStr {
 
     pub fn as_str(&self) -> &str {
         unsafe { str::from_utf8_unchecked(slice::from_raw_parts(self.data as *const _, self.len)) }
+    }
+}
+
+impl Drop for SourmashStr {
+    fn drop(&mut self) {
+        unsafe { self.free() }
+    }
+}
+
+impl From<String> for SourmashStr {
+    fn from(string: String) -> SourmashStr {
+        SourmashStr::from_string(string)
+    }
+}
+
+impl<'a> From<&'a str> for SourmashStr {
+    fn from(string: &str) -> SourmashStr {
+        SourmashStr::new(string)
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for SourmashStr {
+    fn from(cow: Cow<'a, str>) -> SourmashStr {
+        match cow {
+            Cow::Borrowed(string) => SourmashStr::new(string),
+            Cow::Owned(string) => SourmashStr::from_string(string),
+        }
     }
 }
 

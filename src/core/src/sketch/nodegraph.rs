@@ -1,29 +1,60 @@
 use std::fs::File;
 use std::io;
 use std::path::Path;
+use std::slice;
 
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::Error;
+use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use fixedbitset::FixedBitSet;
-use primal_check;
 
+use crate::index::sbt::Update;
 use crate::sketch::minhash::KmerMinHash;
+use crate::Error;
 use crate::HashIntoType;
 
 #[derive(Debug, Default, Clone)]
 pub struct Nodegraph {
-    pub(crate) bs: Vec<FixedBitSet>,
+    bs: Vec<FixedBitSet>,
     ksize: usize,
     occupied_bins: usize,
     unique_kmers: usize,
 }
 
-// TODO: only checking for the bitset for now,
-// since unique_kmers is not saved in a khmer nodegraph
-// and occupied_bins also has issues...
+// TODO: not checking for unique_kmers,
+// since it is not saved in a khmer nodegraph
 impl PartialEq for Nodegraph {
     fn eq(&self, other: &Nodegraph) -> bool {
         self.bs == other.bs
+            && self.occupied_bins == other.occupied_bins
+            && self.ksize == other.ksize
+    }
+}
+
+impl Update<Nodegraph> for Nodegraph {
+    fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
+        other.occupied_bins = other
+            .bs
+            .iter_mut()
+            .zip(&self.bs)
+            .enumerate()
+            .map(|(i, (bs, bs_me))| {
+                bs.union_with(bs_me);
+                if i == 0 {
+                    bs.count_ones(..)
+                } else {
+                    0
+                }
+            })
+            .sum();
+        Ok(())
+    }
+}
+
+impl Update<Nodegraph> for KmerMinHash {
+    fn update(&self, other: &mut Nodegraph) -> Result<(), Error> {
+        for h in self.mins() {
+            other.count(h);
+        }
+        Ok(())
     }
 }
 
@@ -47,7 +78,7 @@ impl Nodegraph {
 
         let mut i = (tablesize - 1) as u64;
         if i % 2 == 0 {
-            i += 1
+            i -= 1
         }
 
         while tablesizes.len() != n_tables {
@@ -63,13 +94,20 @@ impl Nodegraph {
         Nodegraph::new(tablesizes.as_slice(), ksize)
     }
 
+    pub(crate) fn count_kmer(&mut self, kmer: &[u8]) -> bool {
+        let h = _hash(kmer);
+        self.count(h)
+    }
+
     pub fn count(&mut self, hash: HashIntoType) -> bool {
         let mut is_new_kmer = false;
 
-        for bitset in &mut self.bs {
+        for (i, bitset) in self.bs.iter_mut().enumerate() {
             let bin = hash % bitset.len() as u64;
             if !bitset.put(bin as usize) {
-                self.occupied_bins += 1;
+                if i == 0 {
+                    self.occupied_bins += 1;
+                }
                 is_new_kmer = true;
             }
         }
@@ -90,31 +128,9 @@ impl Nodegraph {
         1
     }
 
-    // update
-    pub fn update(&mut self, other: &Nodegraph) {
-        /*
-        let mut bitsets = Vec::with_capacity(self.bs.len());
-        for (bs, bs_other) in self.bs.iter().zip(&other.bs) {
-            let mut new_bs = FixedBitSet::with_capacity(bs.len());
-            for bit in bs.union(&bs_other) {
-                new_bs.insert(bit);
-            }
-            bitsets.push(new_bs);
-        }
-        self.bs = bitsets;
-        */
-
-        let mut new_bins = 0;
-        for (bs, bs_other) in self.bs.iter_mut().zip(&other.bs) {
-            bs_other.ones().for_each(|x| {
-                if !bs.put(x) {
-                    new_bins += 1;
-                }
-            });
-        }
-        // TODO: occupied bins seems to be broken in khmer? I don't get the same
-        // values...
-        self.occupied_bins += new_bins;
+    pub(crate) fn get_kmer(&self, kmer: &[u8]) -> usize {
+        let h = _hash(kmer);
+        self.get(h)
     }
 
     pub fn expected_collisions(&self) -> f64 {
@@ -122,7 +138,7 @@ impl Nodegraph {
         let n_ht = self.bs.len();
         let occupancy = self.occupied_bins;
 
-        let fp_one = occupancy / min_size;
+        let fp_one = occupancy as f64 / min_size as f64;
         f64::powf(fp_one as f64, n_ht as f64)
     }
 
@@ -135,7 +151,7 @@ impl Nodegraph {
     }
 
     pub fn matches(&self, mh: &KmerMinHash) -> usize {
-        mh.mins.iter().filter(|x| self.get(**x) == 1).count()
+        mh.iter_mins().filter(|x| self.get(**x) == 1).count()
     }
 
     pub fn ntables(&self) -> usize {
@@ -144,6 +160,10 @@ impl Nodegraph {
 
     pub fn ksize(&self) -> usize {
         self.ksize
+    }
+
+    pub fn into_bitsets(self) -> Vec<FixedBitSet> {
+        self.bs
     }
 
     // save
@@ -165,36 +185,43 @@ impl Nodegraph {
         wtr.write_u8(self.bs.len() as u8)?; // n_tables
         wtr.write_u64::<LittleEndian>(self.occupied_bins as u64)?; // n_occupied
         for count in &self.bs {
-            wtr.write_u64::<LittleEndian>(count.len() as u64)?;
-            for (i, chunk) in count.as_slice().iter().enumerate() {
-                let next = (i + 1) * 32;
-                if next <= count.len() {
-                    wtr.write_u32::<LittleEndian>(*chunk).unwrap()
-                } else {
-                    let rem = count.len() - (i * 32);
-                    let remainder = if rem % 8 != 0 { rem / 8 + 1 } else { rem / 8 };
+            let tablesize = count.len();
+            wtr.write_u64::<LittleEndian>(tablesize as u64)?;
 
-                    if remainder == 0 {
-                        wtr.write_u8(0).unwrap()
-                    } else {
-                        for pos in 0..remainder {
-                            let byte: u8 = (chunk.wrapping_shr(pos as u32 * 8) & 0xff) as u8;
-                            wtr.write_u8(byte).unwrap()
-                        }
-                    }
+            let byte_size = tablesize / 8 + 1;
+            let (div, rem) = (byte_size / 4, byte_size % 4);
+
+            // Once this issue and PR are solved, this is a one liner:
+            // https://github.com/BurntSushi/byteorder/issues/155
+            // https://github.com/BurntSushi/byteorder/pull/166
+            //wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
+            let slice = &count.as_slice()[..div];
+            let buf = unsafe {
+                use std::mem::size_of;
+
+                let len = size_of::<u32>() * slice.len();
+                slice::from_raw_parts(slice.as_ptr() as *const u8, len)
+            };
+            wtr.write_all(&buf)?;
+            // Replace when byteorder PR is released
+
+            if rem != 0 {
+                let mut cursor = [0u8; 4];
+                LittleEndian::write_u32(&mut cursor, count.as_slice()[div]);
+                for item in cursor.iter().take(rem) {
+                    wtr.write_u8(*item)?;
                 }
             }
         }
         Ok(())
     }
 
-    pub fn from_reader<R>(rdr: &mut R) -> Result<Nodegraph, Error>
+    pub fn from_reader<R>(rdr: R) -> Result<Nodegraph, Error>
     where
         R: io::Read,
     {
-        // TODO: see https://github.com/brainstorm/bio-index-formats for an
-        // example of using nom to parse binary data.
-        // Use it here instead of byteorder
+        let (mut rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
         let signature = rdr.read_u32::<BigEndian>()?;
         assert_eq!(signature, 0x4f58_4c49);
 
@@ -208,31 +235,35 @@ impl Nodegraph {
         let n_tables = rdr.read_u8()?;
         let occupied_bins = rdr.read_u64::<LittleEndian>()? as usize;
 
-        let mut _n_occupied = 0;
         let mut bs = Vec::with_capacity(n_tables as usize);
         for _i in 0..n_tables {
             let tablesize: usize = rdr.read_u64::<LittleEndian>()? as usize;
             let byte_size = tablesize / 8 + 1;
 
-            let mut counts = FixedBitSet::with_capacity(tablesize);
-            for pos in 0..byte_size {
-                let byte = rdr.read_u8()?;
-                if byte == 0 {
-                    continue;
-                }
+            let rem = byte_size % 4;
+            let blocks: Vec<u32> = if rem == 0 {
+                let mut blocks = vec![0; byte_size / 4];
+                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
+                blocks
+            } else {
+                let mut blocks = vec![0; byte_size / 4];
+                rdr.read_u32_into::<LittleEndian>(&mut blocks)?;
 
-                _n_occupied += 1;
-                for i in 0..8u32 {
-                    if byte & (1 << i) != 0 {
-                        counts.insert(pos * 8 + i as usize);
-                    }
+                let mut values = [0u8; 4];
+                for item in values.iter_mut().take(rem) {
+                    let byte = rdr.read_u8().expect("error reading bins");
+                    *item = byte;
                 }
-            }
+                let mut block = vec![0u32; 1];
+                LittleEndian::read_u32_into(&values, &mut block);
+                blocks.push(block[0]);
+                blocks
+            };
 
+            let counts = FixedBitSet::with_capacity_and_blocks(tablesize, blocks);
             bs.push(counts);
         }
 
-        //assert_eq!(occupied_bins, _n_occupied);
         Ok(Nodegraph {
             bs,
             ksize: ksize as usize,
@@ -246,12 +277,11 @@ impl Nodegraph {
         Ok(Nodegraph::from_reader(&mut reader)?)
     }
 
-    pub fn tablesizes(&self) -> Vec<usize> {
-        self.bs.iter().map(|x| x.len()).collect()
+    pub fn tablesizes(&self) -> Vec<u64> {
+        self.bs.iter().map(|x| x.len() as u64).collect()
     }
 
     pub fn n_occupied_bins(&self) -> usize {
-        //self.bs.iter().map(|x| x.count_ones(..)).sum::<usize>() / 8
         self.occupied_bins
     }
 
@@ -287,27 +317,115 @@ impl Nodegraph {
     }
 }
 
+fn twobit_repr(a: u8) -> HashIntoType {
+    match a as char {
+        'A' => 0,
+        'C' => 2,
+        'G' => 3,
+        'T' => 1,
+        _ => unimplemented!(),
+    }
+}
+
+fn twobit_comp(a: u8) -> HashIntoType {
+    match a as char {
+        'A' => 1,
+        'C' => 3,
+        'G' => 2,
+        'T' => 0,
+        _ => unimplemented!(),
+    }
+}
+
+fn uniqify_rc(f: HashIntoType, r: HashIntoType) -> HashIntoType {
+    if f < r {
+        f
+    } else {
+        r
+    }
+}
+
+fn _hash(kmer: &[u8]) -> HashIntoType {
+    let ksize = kmer.len();
+    let mut hash = 0;
+    let mut rev = 0;
+
+    hash |= twobit_repr(kmer[0]);
+    rev |= twobit_comp(kmer[ksize - 1]);
+
+    let mut i = 1;
+    let mut j: isize = (ksize - 2) as isize;
+
+    while i < ksize {
+        hash <<= 2;
+        rev <<= 2;
+
+        hash |= twobit_repr(kmer[i]);
+        rev |= twobit_comp(kmer[j as usize]);
+
+        i += 1;
+        j -= 1;
+    }
+
+    uniqify_rc(hash, rev)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use cfg_if::cfg_if;
     use std::io::{BufReader, BufWriter};
     use std::path::PathBuf;
 
-    cfg_if! {
-    if #[cfg(not(target_arch = "wasm32"))] {
+    use proptest::collection::vec;
     use proptest::num::u64;
-    use proptest::{proptest};
+    use proptest::proptest;
+
+    // Generate with khmer:
+    // >>> a = khmer.Nodegraph(3, 23, 6)
+    // >>> a.count("ACG")
+    // >>> a.count("TTA")
+    // >>> a.count("CGA")
+    // >>> a.save("test.ng")
+    // and dumping test.ng with xxd:
+    // $ xxd -i test.ng
+    static RAW_DATA: &[u8] = &[
+        0x4f, 0x58, 0x4c, 0x49, 0x04, 0x02, 0x03, 0x00, 0x00, 0x00, 0x06, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x01,
+        0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x01, 0x0d, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x0a, 0x08, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21,
+        0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x54, 0x05, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x06,
+    ];
+
+    static COMPRESSED_RAW_DATA: &[u8] = &[
+        0x1f, 0x8b, 0x08, 0x08, 0x73, 0x88, 0x9f, 0x5e, 0x00, 0x03, 0x74, 0x65, 0x73, 0x74, 0x2e,
+        0x6e, 0x67, 0x00, 0xf3, 0x8f, 0xf0, 0xf1, 0x64, 0x61, 0x62, 0x66, 0x60, 0x60, 0x60, 0x03,
+        0x11, 0x20, 0x20, 0x0c, 0xa5, 0x19, 0x38, 0x19, 0x05, 0x61, 0x4c, 0x1e, 0x46, 0x5e, 0x28,
+        0x8b, 0x8b, 0x83, 0x1b, 0xca, 0x52, 0x64, 0x60, 0x87, 0xb2, 0x42, 0x58, 0xa1, 0x0c, 0x36,
+        0x00, 0x8d, 0xf0, 0xa9, 0x8b, 0x4f, 0x00, 0x00, 0x00,
+    ];
 
     proptest! {
       #[test]
-      fn count_and_get(hash in u64::ANY) {
-          let mut ng: Nodegraph = Nodegraph::new(&[10], 3);
-          ng.count(hash);
-          assert_eq!(ng.get(hash), 1);
+      fn count_and_get(hashes in vec(u64::ANY, 1..500)) {
+          let mut ng: Nodegraph = Nodegraph::new(&[1000], 3);
+          for hash in hashes {
+              ng.count(hash);
+              assert_eq!(ng.get(hash), 1);
+          }
       }
     }
-    }
+
+    #[test]
+    fn load_compressed() {
+        let mut reader = BufReader::new(&COMPRESSED_RAW_DATA[..]);
+
+        let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(ng.ksize(), 3);
+        assert_eq!(ng.get_kmer(b"ACG"), 1);
+        assert_eq!(ng.get_kmer(b"TTA"), 1);
+        assert_eq!(ng.get_kmer(b"CGA"), 1);
     }
 
     #[test]
@@ -322,24 +440,78 @@ mod test {
 
     #[test]
     fn load_save_nodegraph() {
-        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/.sbt.v3/internal.0");
-        let data = std::fs::read(filename).unwrap();
+        let mut datadir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        datadir.push("../../tests/test-data/.sbt.v3/");
 
-        let mut reader = BufReader::new(&data[..]);
+        for i in 0..=5 {
+            let mut filename = datadir.clone();
+            filename.push(format!("internal.{}", i));
+            let data = std::fs::read(filename).unwrap();
 
-        let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+            let mut reader = BufReader::new(&data[..]);
+
+            let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+
+            let mut buf = Vec::new();
+            {
+                let mut writer = BufWriter::new(&mut buf);
+                ng.save_to_writer(&mut writer).unwrap();
+            }
+
+            let chunk_size = 8;
+            for (c1, c2) in data.to_vec().chunks(chunk_size).zip(buf.chunks(chunk_size)) {
+                assert_eq!(c1, c2);
+            }
+            assert_eq!(data.len(), buf.len());
+        }
+    }
+
+    #[test]
+    fn binary_repr_load() {
+        let mut reader = BufReader::new(&RAW_DATA[..]);
+        let khmer_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(khmer_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(khmer_ng.ksize(), 3);
+        assert_eq!(khmer_ng.get_kmer(b"ACG"), 1);
+        assert_eq!(khmer_ng.get_kmer(b"TTA"), 1);
+        assert_eq!(khmer_ng.get_kmer(b"CGA"), 1);
+
+        let mut ng = Nodegraph::with_tables(23, 6, 3);
+        ng.count_kmer(b"ACG");
+        ng.count_kmer(b"TTA");
+        ng.count_kmer(b"CGA");
 
         let mut buf = Vec::new();
         {
             let mut writer = BufWriter::new(&mut buf);
             ng.save_to_writer(&mut writer).unwrap();
         }
+        assert_eq!(buf.len(), 79);
+        assert_eq!(&RAW_DATA, &buf.as_slice());
+    }
 
-        let chunk_size = 8;
-        for (c1, c2) in data.to_vec().chunks(chunk_size).zip(buf.chunks(chunk_size)) {
-            assert_eq!(c1, c2);
+    #[test]
+    fn binary_repr_save() {
+        let mut ng = Nodegraph::with_tables(23, 6, 3);
+        ng.count_kmer(b"ACG");
+        ng.count_kmer(b"TTA");
+        ng.count_kmer(b"CGA");
+
+        let mut buf = Vec::new();
+        {
+            let mut writer = BufWriter::new(&mut buf);
+            ng.save_to_writer(&mut writer).unwrap();
         }
+        let mut reader = BufReader::new(&buf[..]);
+        let new_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
+        assert_eq!(new_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
+        assert_eq!(new_ng.ksize(), 3);
+        assert_eq!(new_ng.get_kmer(b"ACG"), 1);
+        assert_eq!(new_ng.get_kmer(b"TTA"), 1);
+        assert_eq!(new_ng.get_kmer(b"CGA"), 1);
+
+        assert_eq!(buf.len(), 79);
+        assert_eq!(&RAW_DATA, &buf.as_slice());
     }
 
     #[test]
@@ -360,10 +532,47 @@ mod test {
         let ng_2: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         let mut ng_0: Nodegraph = Nodegraph::new(&[99991, 99989, 99971, 99961], 1);
-        ng_0.update(&ng_1);
-        ng_0.update(&ng_2);
+        ng_1.update(&mut ng_0).expect("Error in update");
+        ng_2.update(&mut ng_0).expect("Error in update");
         assert_eq!(ng_0.bs, ng_parent.bs);
         //assert_eq!(ng_0.occupied_bins, ng_parent.occupied_bins);
+    }
+
+    #[test]
+    fn update_nodegraph_many() -> Result<(), Box<dyn std::error::Error>> {
+        let mut leaf1 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "AAAAC"] {
+            leaf1.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf2 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "AAAAG"] {
+            leaf2.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf3 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "CAAAA"] {
+            leaf3.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf4 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "CAAAA", "GAAAA"] {
+            leaf4.count(_hash(kmer.as_bytes()));
+        }
+
+        let mut leaf5 = Nodegraph::with_tables(100, 3, 5);
+        for kmer in &["AAAAA", "AAAAT", "GAAAA"] {
+            leaf5.count(_hash(kmer.as_bytes()));
+        }
+
+        let h = _hash(b"AAAAT");
+        for leaf in &[leaf1, leaf2, leaf3, leaf5] {
+            assert_eq!(leaf.get(h), 1);
+        }
+
+        assert_eq!(leaf4.get(h), 0);
+
+        Ok(())
     }
 
     #[test]
@@ -376,7 +585,7 @@ mod test {
         let ng: Nodegraph = Nodegraph::from_path(filename).expect("Loading error");
 
         assert_eq!(ng.tablesizes(), [99991, 99989, 99971, 99961]);
-        //assert_eq!(ng.n_occupied_bins(), 2416);
+        assert_eq!(ng.n_occupied_bins(), 2416);
         assert_eq!(ng.get(1877811740), 0);
         for h in [
             1877811749,

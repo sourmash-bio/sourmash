@@ -112,18 +112,20 @@ add some metadata to MinHashes.
 
 ```
 >>> from sourmash import SourmashSignature, save_signatures
+>>> from tempfile import mkdtemp
 >>> sig1 = SourmashSignature(minhashes[0], name=genomes[0][:20])
->>> with open('/tmp/genome1.sig', 'wt') as fp:
+>>> tempdir = mkdtemp(suffix = "temp")
+>>> with open(tempdir + '/genome1.sig', 'wt') as fp:
 ...   save_signatures([sig1], fp)
 
 ```
 
-Here, `/tmp/genome1.sig` is a JSON file that can now be loaded and
+Here, `genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
 >>> from sourmash import load_one_signature
->>> loaded_sig = load_one_signature('/tmp/genome1.sig')
+>>> loaded_sig = load_one_signature(tempdir + '/genome1.sig')
 
 ```
 
@@ -420,24 +422,24 @@ checks.)
 Now, save the tree:
 
 ```
->>> filename = tree.save('/tmp/test.sbt.json')
+>>> filename = tree.save(tempdir + '/test.sbt.zip')
 
 ```
 
-### Loading and search SBTs
+### Loading and searching SBTs
 
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
 
-The SBT filename is `/tmp/test.sbt.json`, as above:
+The SBT filename is `test.sbt.zip`, as above:
 ```
->>> SBT_filename = '/tmp/test.sbt.json'
+>>> SBT_filename = tempdir + '/test.sbt.zip'
 
 ```
 
 and with it we can load the SBT:
 ```
->>> tree = sourmash.load_sbt_index(SBT_filename)
+>>> tree = sourmash.load_file_as_index(SBT_filename)
 
 ```
 
@@ -463,9 +465,7 @@ and create a scaled signature:
 Now do a search --
 
 ```
->>> threshold = 0.1
-                                           
->>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
+>>> for similarity, found_sig, filename in tree.search(query_sig, threshold=0.1):
 ...    print(query_sig.name())
 ...    print(found_sig.name())
 ...    print(similarity)

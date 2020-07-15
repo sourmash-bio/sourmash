@@ -7,7 +7,7 @@ import sys
 import csv
 from collections import defaultdict
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -16,7 +16,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5
 
 
-def summarize(hashvals, dblist, threshold):
+def summarize(hashvals, dblist, threshold, with_abundance):
     """
     Classify 'hashvals' using the given list of databases.
 
@@ -30,7 +30,10 @@ def summarize(hashvals, dblist, threshold):
     assignments = lca_utils.gather_assignments(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    counts = lca_utils.count_lca_for_assignments(assignments)
+    if with_abundance:
+        counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
+    else: # flatten
+        counts = lca_utils.count_lca_for_assignments(assignments, None)
     debug(counts.most_common())
 
     # ok, we now have the LCAs for each hashval, and their number
@@ -54,7 +57,7 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled):
+def load_and_combine(filenames, ksize, scaled, with_abundance, traverse):
     "Load individual signatures and combine them all for classification."
     total_count = 0
     n = 0
@@ -62,11 +65,18 @@ def load_and_combine(filenames, ksize, scaled):
     hashvals = defaultdict(int)
     for query_filename in filenames:
         n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=traverse):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
             total_count += 1
+
+            if with_abundance and not query_sig.minhash.track_abundance:
+                notify("** error: minhash has no abundances, yet --with-abundance specified")
+                sys.exit(-1)
+
+            if not with_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --with-abundance not given")
 
             count_signature(query_sig, scaled, hashvals)
 
@@ -76,18 +86,35 @@ def load_and_combine(filenames, ksize, scaled):
     return hashvals
 
 
-def load_singletons_and_count(filenames, ksize, scaled):
+def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
+
+    # in order to get the right reporting out of this function, we need
+    # to do our own traversal to expand the list of filenames, as opposed
+    # to using load_file_as_signatures(..., traverse=True)
+    if traverse:
+        filenames = sourmash_args.traverse_find_sigs(filenames)
+        filenames = list(filenames)
+
     total_n = len(filenames)
+
     for query_filename in filenames:
         n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename,
+                                                               ksize=ksize):
             notify(u'\r\033[K', end=u'')
             notify('... loading {} (file {} of {})', query_sig.name(), n,
                    total_n, end='\r')
             total_count += 1
+
+            if with_abundance and not query_sig.minhash.track_abundance:
+                notify("** error: minhash has no abundances, yet --with-abundance specified")
+                sys.exit(-1)
+
+            if not with_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --with-abundance not given")
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
@@ -101,8 +128,14 @@ def load_singletons_and_count(filenames, ksize, scaled):
 def count_signature(sig, scaled, hashvals):
     "Downsample sig to given scaled, count hashvalues."
     mh = sig.minhash.downsample_scaled(scaled)
-    for hashval in mh.get_mins():
-        hashvals[hashval] += 1
+
+    if mh.track_abundance:
+        abunds = mh.get_mins(with_abundance=True)
+        for hashval, count in abunds.items():
+            hashvals[hashval] += count
+    else:
+        for hashval in mh.get_mins():
+            hashvals[hashval] += 1
 
 
 def output_results(lineage_counts, total_counts, filename=None, sig=None):
@@ -159,35 +192,39 @@ def summarize_main(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    # flatten --db and --query
+    with_abundance = args.with_abundance
+
+    # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
 
     if not check_files_exist(*args.db):
         sys.exit(-1)
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
+    if with_abundance:
+        notify("Weighting output by k-mer abundances in query, since --with-abundance given.")
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = args.query
+
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
+
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query')
+        sys.exit(-1)
+
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
 
     if args.singleton:
         # summarize each signature individually
@@ -198,11 +235,16 @@ def summarize_main(args):
 
         try:
             for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled):
+              load_singletons_and_count(inp_files, ksize, scaled, with_abundance, args.traverse_directory):
 
                 # get the full counted list of lineage counts in this signature
-                lineage_counts = summarize(hashvals, dblist, args.threshold)
-                total = float(len(hashvals))
+                lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                           with_abundance)
+                if with_abundance:
+                    total = float(sum(hashvals.values()))
+                else:
+                    total = float(len(hashvals))
+
                 output_results(lineage_counts, total,
                                filename=filename, sig=sig)
 
@@ -217,13 +259,19 @@ def summarize_main(args):
     else:
         # load and merge all the signatures in all the files
         # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled)
+        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance,
+                                    args.traverse_directory)
 
         # get the full counted list of lineage counts across signatures
-        lineage_counts = summarize(hashvals, dblist, args.threshold)
+        lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                   with_abundance)
 
         # output!
-        total = float(len(hashvals))
+        if with_abundance:
+            total = float(sum(hashvals.values()))
+        else:
+            total = float(len(hashvals))
+
         output_results(lineage_counts, total)
 
         # CSV:

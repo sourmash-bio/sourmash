@@ -1,6 +1,6 @@
 """create LCA database"""
 
-from sourmash.cli.utils import add_ksize_arg
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
 def subparser(subparsers):
@@ -12,9 +12,14 @@ def subparser(subparsers):
         help='one or more sourmash signatures'
     )
     subparser.add_argument(
+        '--from-file',
+        help='a file containing a list of signatures file to load'
+    )
+    subparser.add_argument(
         '--scaled', metavar='S', default=10000, type=float
     )
     add_ksize_arg(subparser, 31)
+    add_moltype_args(subparser)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'

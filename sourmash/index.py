@@ -1,11 +1,10 @@
 "An Abstract Base Class for collections of signatures."
 
 from __future__ import division
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from collections import namedtuple
 
-# compatible with Python 2 *and* 3:
-ABC = ABCMeta("ABC", (object,), {"__slots__": ()})
+from ._compat import ABC
 
 
 class Index(ABC):

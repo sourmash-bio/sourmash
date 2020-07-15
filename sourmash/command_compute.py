@@ -338,8 +338,9 @@ class ComputeParameters(RustObject):
     def ksizes(self):
         size = ffi.new("uintptr_t *")
         ksizes_ptr = self._methodcall(lib.computeparams_ksizes, size)
-        size = ffi.unpack(size, 1)[0]
+        size = size[0]
         ksizes = ffi.unpack(ksizes_ptr, size)
+        lib.computeparams_ksizes_free(ksizes_ptr, size)
         return ksizes
 
     @ksizes.setter

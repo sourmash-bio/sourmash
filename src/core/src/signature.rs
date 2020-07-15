@@ -9,16 +9,18 @@ use std::path::Path;
 use std::str;
 
 use cfg_if::cfg_if;
-use failure::Error;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::errors::SourmashError;
+#[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
+use wasm_bindgen::prelude::*;
+
 use crate::index::storage::ToWriter;
 use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub trait SigsTrait {
     fn size(&self) -> usize;
@@ -34,6 +36,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.size(),
             Sketch::MinHash(ref mh) => mh.size(),
+            Sketch::LargeMinHash(ref mh) => mh.size(),
         }
     }
 
@@ -41,6 +44,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.to_vec(),
             Sketch::MinHash(ref mh) => mh.to_vec(),
+            Sketch::LargeMinHash(ref mh) => mh.to_vec(),
         }
     }
 
@@ -48,6 +52,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => ukhs.ksize(),
             Sketch::MinHash(ref mh) => mh.ksize(),
+            Sketch::LargeMinHash(ref mh) => mh.ksize(),
         }
     }
 
@@ -55,11 +60,15 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::UKHS(ref ukhs) => match other {
                 Sketch::UKHS(ref ot) => ukhs.check_compatible(ot),
-                _ => Err(SourmashError::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType),
             },
             Sketch::MinHash(ref mh) => match other {
                 Sketch::MinHash(ref ot) => mh.check_compatible(ot),
-                _ => Err(SourmashError::MismatchSignatureType.into()),
+                _ => Err(Error::MismatchSignatureType),
+            },
+            Sketch::LargeMinHash(ref mh) => match other {
+                Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
+                _ => Err(Error::MismatchSignatureType),
             },
         }
     }
@@ -67,6 +76,7 @@ impl SigsTrait for Sketch {
     fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
+            Sketch::LargeMinHash(ref mut mh) => mh.add_sequence(seq, force),
             Sketch::UKHS(_) => unimplemented!(),
         }
     }
@@ -74,38 +84,41 @@ impl SigsTrait for Sketch {
     fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
+            Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::UKHS(_) => unimplemented!(),
         }
     }
 }
 
+#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Serialize, Deserialize, Debug, Clone, TypedBuilder)]
 pub struct Signature {
     #[serde(default = "default_class")]
-    #[builder(default_code = "default_class()")]
-    pub class: String,
+    #[builder(default = default_class())]
+    class: String,
 
     #[serde(default)]
     #[builder(default)]
-    pub email: String,
+    email: String,
 
-    pub hash_function: String,
+    #[builder(setter(into))]
+    hash_function: String,
 
     #[builder(default)]
-    pub filename: Option<String>,
+    filename: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub(crate) name: Option<String>,
 
     #[serde(default = "default_license")]
-    #[builder(default_code = "default_license()")]
-    pub license: String,
+    #[builder(default = default_license())]
+    license: String,
 
-    pub signatures: Vec<Sketch>,
+    pub(crate) signatures: Vec<Sketch>,
 
     #[serde(default = "default_version")]
-    #[builder(default_code = "default_version()")]
-    pub version: f64,
+    #[builder(default = default_version())]
+    version: f64,
 }
 
 fn default_license() -> String {
@@ -127,23 +140,63 @@ impl Signature {
         } else if let Some(filename) = &self.filename {
             filename.clone()
         } else {
-            // TODO md5sum case
-            unimplemented!()
+            self.md5sum()
         }
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = Some(name.into())
     }
 
     pub fn filename(&self) -> String {
         if let Some(filename) = &self.filename {
             filename.clone()
         } else {
-            unimplemented!()
+            "".into()
         }
+    }
+
+    pub fn set_filename(&mut self, name: &str) {
+        self.filename = Some(name.into())
+    }
+
+    pub fn size(&self) -> usize {
+        self.signatures.len()
+    }
+
+    pub fn sketches(&self) -> Vec<Sketch> {
+        self.signatures.clone()
+    }
+
+    pub fn reset_sketches(&mut self) {
+        self.signatures = vec![];
+    }
+
+    pub fn push(&mut self, sketch: Sketch) {
+        self.signatures.push(sketch);
+    }
+
+    pub fn license(&self) -> String {
+        self.license.clone()
+    }
+
+    pub fn class(&self) -> String {
+        self.class.clone()
+    }
+
+    pub fn hash_function(&self) -> String {
+        self.hash_function.clone()
+    }
+
+    pub fn email(&self) -> String {
+        self.email.clone()
     }
 
     pub fn md5sum(&self) -> String {
         if self.signatures.len() == 1 {
             match &self.signatures[0] {
                 Sketch::MinHash(mh) => mh.md5sum(),
+                Sketch::LargeMinHash(mh) => mh.md5sum(),
                 Sketch::UKHS(hs) => hs.md5sum(),
             }
         } else {
@@ -152,21 +205,40 @@ impl Signature {
         }
     }
 
+    pub fn select_sketch(&self, sketch: &Sketch) -> Option<&Sketch> {
+        if let Sketch::MinHash(template) = sketch {
+            for sk in &self.signatures {
+                if let Sketch::MinHash(mh) = sk {
+                    if mh.check_compatible(template).is_ok() {
+                        return Some(sk);
+                    }
+                } else {
+                    unimplemented!()
+                }
+            }
+        } else {
+            unimplemented!()
+        }
+        None
+    }
+
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
         Ok(Signature::from_reader(&mut reader)?)
     }
 
-    pub fn from_reader<R>(rdr: &mut R) -> Result<Vec<Signature>, Error>
+    pub fn from_reader<R>(rdr: R) -> Result<Vec<Signature>, Error>
     where
         R: io::Read,
     {
+        let (rdr, _format) = niffler::get_reader(Box::new(rdr))?;
+
         let sigs: Vec<Signature> = serde_json::from_reader(rdr)?;
         Ok(sigs)
     }
 
     pub fn load_signatures<R>(
-        buf: &mut R,
+        buf: R,
         ksize: Option<usize>,
         moltype: Option<HashFunctions>,
         _scaled: Option<u64>,
@@ -194,6 +266,22 @@ impl Signature {
                 .filter(|sig| {
                     match sig {
                         Sketch::MinHash(mh) => {
+                            if let Some(k) = ksize {
+                                if k != mh.ksize() as usize {
+                                    return false;
+                                }
+                            };
+
+                            match moltype {
+                                Some(x) => {
+                                    if mh.hash_function() == x {
+                                        return true;
+                                    }
+                                }
+                                None => return true, // TODO: match previous behavior
+                            };
+                        }
+                        Sketch::LargeMinHash(mh) => {
                             if let Some(k) = ksize {
                                 if k != mh.ksize() as usize {
                                     return false;
@@ -290,10 +378,8 @@ impl ToWriter for Signature {
     where
         W: io::Write,
     {
-        match serde_json::to_writer(writer, &vec![&self]) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(SourmashError::SerdeError.into()),
-        }
+        serde_json::to_writer(writer, &vec![&self])?;
+        Ok(())
     }
 }
 
@@ -337,8 +423,13 @@ impl PartialEq for Signature {
 mod test {
     use std::convert::TryInto;
     use std::fs::File;
-    use std::io::BufReader;
+    use std::io::{BufReader, Read};
     use std::path::PathBuf;
+
+    use needletail::parse_fastx_reader;
+
+    use crate::cmd::ComputeParameters;
+    use crate::signature::SigsTrait;
 
     use super::Signature;
 
@@ -357,5 +448,127 @@ mod test {
         .unwrap();
         let _sig_data = sigs[0].clone();
         // TODO: check sig_data
+    }
+
+    #[test]
+    fn load_signature() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/genome-s10+s11.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        assert_eq!(sigs.len(), 1);
+
+        let sig = sigs.get(0).unwrap();
+        assert_eq!(sig.class, "sourmash_signature");
+        assert_eq!(sig.email, "");
+        if let Some(ref filename) = sig.filename {
+            assert_eq!(filename, "-");
+        }
+        assert_eq!(sig.hash_function, "0.murmur64");
+        if let Some(ref name) = sig.name {
+            assert_eq!(name, "s10+s11");
+        }
+        assert_eq!(sig.signatures.len(), 4);
+    }
+
+    #[test]
+    fn signature_from_computeparams() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2, 3, 4])
+            .num_hashes(3u32)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGC", false).unwrap();
+
+        assert_eq!(sig.signatures.len(), 3);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 2);
+        assert_eq!(sig.signatures[2].size(), 1);
+    }
+
+    #[test]
+    fn signature_slow_path() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![2, 3, 4, 5])
+            .num_hashes(3u32)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCTN", true).unwrap();
+
+        assert_eq!(sig.signatures.len(), 4);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 3);
+        assert_eq!(sig.signatures[2].size(), 2);
+        assert_eq!(sig.signatures[3].size(), 1);
+    }
+
+    #[test]
+    fn signature_add_sequence_protein() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 6])
+            .num_hashes(3u32)
+            .protein(true)
+            .dna(false)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_sequence(b"ATGCAT", false).unwrap();
+
+        assert_eq!(sig.signatures.len(), 2);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 1);
+    }
+
+    #[test]
+    fn signature_add_protein() {
+        let params = ComputeParameters::builder()
+            .ksizes(vec![3, 6])
+            .num_hashes(3u32)
+            .protein(true)
+            .dna(false)
+            .build();
+
+        let mut sig = Signature::from_params(&params);
+        sig.add_protein(b"AGY").unwrap();
+
+        assert_eq!(sig.signatures.len(), 2);
+        dbg!(&sig.signatures);
+        assert_eq!(sig.signatures[0].size(), 3);
+        assert_eq!(sig.signatures[1].size(), 2);
+    }
+
+    #[test]
+    fn signature_add_sequence_cp() {
+        let mut cp = ComputeParameters::default();
+        cp.set_dayhoff(true);
+        cp.set_protein(true);
+        cp.set_hp(true);
+        cp.set_dna(true);
+
+        let mut sig = Signature::from_params(&cp);
+
+        let mut data: Vec<u8> = vec![];
+        let mut f = File::open("../../tests/test-data/ecoli.genes.fna").unwrap();
+        let _ = f.read_to_end(&mut data);
+
+        let mut parser = parse_fastx_reader(&data[..]).unwrap();
+        while let Some(record) = parser.next() {
+            let record = record.unwrap();
+            sig.add_sequence(&record.seq(), false).unwrap();
+        }
+
+        let sketches = sig.sketches();
+        assert_eq!(sketches.len(), 12);
+        for sk in sketches {
+            assert_eq!(sk.size(), 500);
+        }
     }
 }

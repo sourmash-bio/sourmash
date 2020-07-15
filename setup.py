@@ -62,8 +62,9 @@ SETUP_METADATA = {
         'sourmash = sourmash.__main__:main'
         ]
     },
-    "install_requires": ["screed>=0.9", "khmer>=2.1", "cffi>=1.14.0", 'numpy',
-                         'matplotlib', 'scipy', "deprecation>=2.0.6"],
+    "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
+                         'enum34; python_version < "3.4"',
+                         'matplotlib', 'scipy', 'deprecation>=2.0.6'],
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",
@@ -79,10 +80,10 @@ SETUP_METADATA = {
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx', 'recommonmark', 'alabaster',
+        'doc' : ['sphinx', 'myst-parser[sphinx]', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
-        '10x': ['bam2fasta==1.0.1'],
+        '10x': ['bam2fasta==1.0.4'],
         'storage': ["ipfshttpclient>=0.4.13", "redis"]
     },
     "include_package_data": True,
