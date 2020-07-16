@@ -351,6 +351,7 @@ def merge(args):
         notify('loading signatures from {}...', sigfile, end='\r')
         this_n = 0
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress):
@@ -411,6 +412,7 @@ def intersect(args):
 
     for sigfile in args.signatures:
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                               ksize=args.ksize,
                                                select_moltype=moltype,
                                                traverse=True,
                                                progress=progress):
@@ -481,6 +483,7 @@ def subtract(args):
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                                            ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress):
@@ -523,6 +526,7 @@ def rename(args):
     for filename in args.sigfiles:
         debug('loading {}', filename)
         siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress)
@@ -550,6 +554,7 @@ def extract(args):
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress)
@@ -591,6 +596,7 @@ def filter(args):
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress)
@@ -648,6 +654,7 @@ def flatten(args):
     total_loaded = 0
     for filename in args.signatures:
         siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress)
