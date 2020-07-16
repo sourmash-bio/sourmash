@@ -583,6 +583,33 @@ def test_plot_override_labeltext_fail():
         assert '3 labels != matrix size, exiting' in err
 
 
+@utils.in_tempdir
+def test_plot_reordered_labels_csv(c):
+    files = utils.get_test_data('demo/*.sig')
+    files = glob.glob(files)
+    files.sort()
+    assert len(files) == 7
+
+    c.run_sourmash('compare', '-o', 'cmp', *files)
+    c.run_sourmash('plot', 'cmp', '--csv', 'neworder.csv')
+
+    with open(c.output('neworder.csv'), 'rt') as fp:
+        out_mat = fp.readlines()
+
+    # turns out to be hard to guarantee output order, so... just make sure
+    # matrix labels are in different order than inputs!
+
+    header = out_mat[0].strip().split(',')
+
+    files = [ os.path.basename(x)[:-4] + '.fastq.gz' for x in files ]
+
+    print(files)
+    print(header)
+
+    assert set(files) == set(header) # same file names...
+    assert files != header           # ...different order.
+
+
 def test_plot_subsample_1():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
