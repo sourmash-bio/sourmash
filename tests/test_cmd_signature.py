@@ -570,6 +570,24 @@ def test_sig_rename_1_multisig(c):
 
 
 @utils.in_tempdir
+def test_sig_rename_1_multisig_ksize(c):
+    # set new name for multiple signatures/files; select k=31
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    other_sig = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'rename', multisig, other_sig, 'fiz bar', '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    n = 0
+    for sig in sourmash.load_signatures(out):
+        assert sig.name() == 'fiz bar'
+        n += 1
+
+    assert n == 7, n
+
+
+@utils.in_tempdir
 def test_sig_rename_2_output_to_same(c):
     # change name of signature "in place", same output file
     sig47 = utils.get_test_data('47.fa.sig')
