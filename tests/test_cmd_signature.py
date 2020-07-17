@@ -948,6 +948,36 @@ def test_sig_extract_6(c):
 
 
 @utils.in_tempdir
+def test_sig_extract_7(c):
+    # extract matches based on ksize
+    sig2 = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'extract', sig2, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+
+@utils.in_tempdir
+def test_sig_extract_7_no_ksize(c):
+    # extract all three matches when -k not specified
+    sig2 = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'extract', sig2)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 3
+
+
+@utils.in_tempdir
 def test_sig_flatten_1(c):
     # extract matches to several names from among several signatures & flatten
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
