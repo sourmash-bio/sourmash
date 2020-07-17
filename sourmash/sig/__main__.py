@@ -420,6 +420,7 @@ def intersect(args):
                 first_sig = sigobj
                 mins = set(sigobj.minhash.get_mins())
             else:
+                # check signature compatibility --
                 try:
                     sigobj.minhash.count_common(first_sig.minhash)
                 except ValueError:
@@ -489,10 +490,15 @@ def subtract(args):
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
         for sigobj in sourmash_args.load_file_as_signatures(sigfile,
-                                                            ksize=args.ksize,
+                                                        ksize=args.ksize,
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress):
+            try:
+                sigobj.minhash.count_common(from_mh)
+            except ValueError:
+                error('incompatible minhashes; specify -k and/or molecule type.')
+                sys.exit(-1)
 
             if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')

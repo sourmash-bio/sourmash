@@ -479,6 +479,26 @@ def test_sig_subtract_3(c):
 
 
 @utils.in_tempdir
+def test_sig_subtract_4_ksize_fail(c):
+    # subtract of 2 from 47 should fail without -k specified
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'subtract', sig47, sig2)
+
+
+@utils.in_tempdir
+def test_sig_subtract_4_ksize_succeed(c):
+    # subtract of 2 from 47 should fail without -k specified
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
+
+    c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
+    assert 'loaded and subtracted 1 signatures' in c.last_result.err
+
+
+@utils.in_tempdir
 def test_sig_intersect_2(c):
     # intersect of 47 and nothing should be self
     sig47 = utils.get_test_data('47.fa.sig')
