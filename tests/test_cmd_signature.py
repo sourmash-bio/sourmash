@@ -1016,6 +1016,21 @@ def test_sig_flatten_1(c):
 
 
 @utils.in_tempdir
+def test_sig_flatten_2_ksize(c):
+    # flatten only one signature selected using ksize
+    psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    c.run_sourmash('sig', 'flatten', psw_mag, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+
+@utils.in_tempdir
 def test_sig_downsample_1_scaled(c):
     # downsample a scaled signature
     sig47 = utils.get_test_data('47.fa.sig')
