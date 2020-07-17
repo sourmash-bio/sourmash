@@ -419,6 +419,12 @@ def intersect(args):
             if first_sig is None:
                 first_sig = sigobj
                 mins = set(sigobj.minhash.get_mins())
+            else:
+                try:
+                    sigobj.minhash.count_common(first_sig.minhash)
+                except ValueError:
+                    error('incompatible minhashes; specify -k and/or molecule type.')
+                    sys.exit(-1)
 
             mins.intersection_update(sigobj.minhash.get_mins())
             total_loaded += 1
