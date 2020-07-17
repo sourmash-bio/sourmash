@@ -424,6 +424,39 @@ def test_sig_intersect_6_ksize_succeed(c):
 
 
 @utils.in_tempdir
+def test_sig_intersect_7(c):
+    # intersect of 47 and nothing should be self
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'intersect', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_intersect_sig = sourmash.load_one_signature(sig47)
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    print(test_intersect_sig.minhash)
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_8_multisig(c):
+    # intersect of all the multisig stuff should be nothing
+    sig47 = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'intersect', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    assert not len(actual_intersect_sig.minhash)
+
+
+@utils.in_tempdir
 def test_sig_subtract_1(c):
     # subtract of 63 from 47
     sig47 = utils.get_test_data('47.fa.sig')
@@ -496,39 +529,6 @@ def test_sig_subtract_4_ksize_succeed(c):
 
     c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
     assert 'loaded and subtracted 1 signatures' in c.last_result.err
-
-
-@utils.in_tempdir
-def test_sig_intersect_2(c):
-    # intersect of 47 and nothing should be self
-    sig47 = utils.get_test_data('47.fa.sig')
-    c.run_sourmash('sig', 'intersect', sig47)
-
-    # stdout should be new signature
-    out = c.last_result.out
-
-    test_intersect_sig = sourmash.load_one_signature(sig47)
-    actual_intersect_sig = sourmash.load_one_signature(out)
-
-    print(test_intersect_sig.minhash)
-    print(actual_intersect_sig.minhash)
-    print(out)
-
-    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
-
-
-@utils.in_tempdir
-def test_sig_intersect_2_multisig(c):
-    # intersect of all the multisig stuff should be nothing
-    sig47 = utils.get_test_data('47+63-multisig.sig')
-    c.run_sourmash('sig', 'intersect', sig47)
-
-    # stdout should be new signature
-    out = c.last_result.out
-
-    actual_intersect_sig = sourmash.load_one_signature(out)
-
-    assert not len(actual_intersect_sig.minhash)
 
 
 @utils.in_tempdir
