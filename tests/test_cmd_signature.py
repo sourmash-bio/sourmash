@@ -239,6 +239,25 @@ def test_sig_filter_3(c):
 
 
 @utils.in_tempdir
+def test_sig_filter_3_ksize_select(c):
+    # test filtering with ksize selectiong
+    psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', psw_mag, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(psw_mag, ksize=31)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
 def test_sig_merge_flatten(c):
     # merge of 47 without abund, with 63 with, will succeed with --flatten
     sig47 = utils.get_test_data('47.fa.sig')
