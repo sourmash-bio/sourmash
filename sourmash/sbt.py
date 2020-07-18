@@ -58,8 +58,6 @@ from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
 
-from deprecation import deprecated
-
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
@@ -165,7 +163,7 @@ class SBT(Index):
         ok = True
         if ksize is not None and first_sig.minhash.ksize != ksize:
             ok = False
-        if moltype is not None and first_sig.moltype != moltype:
+        if moltype is not None and first_sig.minhash.moltype != moltype:
             ok = False
 
         if ok:
@@ -331,14 +329,26 @@ class SBT(Index):
         return find_kws
 
     def search(self, query, *args, **kwargs):
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments:
+          * do_containment: default False. If True, use Jaccard containment.
+          * best_only: default False. If True, allow optimizations that
+            may. May discard matches better than threshold, but first match
+            is guaranteed to be best.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
+        """
         from .sbtmh import search_minhashes, search_minhashes_containment
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
         threshold = kwargs['threshold']
-        ignore_abundance = kwargs['ignore_abundance']
-        do_containment = kwargs['do_containment']
-        best_only = kwargs['best_only']
+        ignore_abundance = kwargs.get('ignore_abundance', False)
+        do_containment = kwargs.get('do_containment', False)
+        best_only = kwargs.get('best_only', False)
         unload_data = kwargs.get('unload_data', False)
 
         # If True, returns the leaf node (rather than the signature data) and the
@@ -637,7 +647,7 @@ class SBT(Index):
             if n % 100 == 0:
                 notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
-        notify("\nFinished saving nodes, now saving SBT json file.")
+        notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
         info['signatures'] = leaves
 
@@ -651,7 +661,7 @@ class SBT(Index):
             with open(index_filename, 'w') as fp:
                 json.dump(info, fp)
 
-        notify("\nFinished saving SBT, available at {0}\n".format(index_filename))
+        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
 
         return path
 

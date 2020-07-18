@@ -363,6 +363,20 @@ class MinHash(RustObject):
         "Add a single hash value."
         return self._methodcall(lib.kmerminhash_add_hash, h)
 
+    def add_hash_with_abundance(self, h, a):
+        "Add a single hash value with an abundance."
+        if self.track_abundance:
+            return self._methodcall(lib.kmerminhash_add_hash_with_abundance, h, a)
+        else:
+            raise RuntimeError(
+                "Use track_abundance=True when constructing "
+                "the MinHash to use add_hash_with_abundance."
+            )
+
+    def clear(self):
+        "Clears all hashes and abundances."
+        return self._methodcall(lib.kmerminhash_clear)
+
     def translate_codon(self, codon):
         "Translate a codon into an amino acid."
         try:
@@ -544,18 +558,19 @@ class MinHash(RustObject):
 
     merge = __iadd__
 
-    def set_abundances(self, values):
+    def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``
         """
         if self.track_abundance:
             hashes = []
             abunds = []
+
             for h, v in values.items():
                 hashes.append(h)
                 abunds.append(v)
 
-            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes))
+            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
         else:
             raise RuntimeError(
                 "Use track_abundance=True when constructing "

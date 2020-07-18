@@ -38,6 +38,10 @@ def subparser(subparsers):
         help='signatures to load into SBT'
     )
     subparser.add_argument(
+        '--from-file',
+        help='a file containing a list of signatures file to load'
+    )
+    subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )

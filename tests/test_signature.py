@@ -318,3 +318,17 @@ def test_binary_fp(tmpdir, track_abundance):
     with open(str(path), 'wb') as fp:
         sig = SourmashSignature(e)
         s = save_signatures([sig], fp)
+
+
+def test_load_signatures_no_file_do_raise(tmpdir):
+    path = tmpdir.join("dne.sig")
+    siglist = load_signatures(path, do_raise=True)
+    with pytest.raises(Exception):
+        list(siglist)
+
+
+def test_load_signatures_no_file_do_not_raise(tmpdir):
+    path = tmpdir.join("dne.sig")
+    siglist = load_signatures(path)
+    siglist = list(siglist)
+    assert not siglist

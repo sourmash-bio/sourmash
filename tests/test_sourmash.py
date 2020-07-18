@@ -88,7 +88,7 @@ def test_do_serial_compare(c):
     sigs = []
     for fn in testsigs:
         sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                    select_moltype='dna'))
+                                                select_moltype='dna'))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -98,7 +98,7 @@ def test_do_serial_compare(c):
         sigs = []
         for fn in testsigs:
             sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                        select_moltype='dna'))
+                                                    select_moltype='dna'))
     assert (cmp_out == cmp_calc).all()
 
 
@@ -119,7 +119,7 @@ def test_do_compare_parallel(c):
     sigs = []
     for fn in testsigs:
         sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                    select_moltype='dna'))
+                                                select_moltype='dna'))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -129,7 +129,42 @@ def test_do_compare_parallel(c):
         sigs = []
         for fn in testsigs:
             sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                        select_moltype='dna'))
+                                                    select_moltype='dna'))
+    assert (cmp_out == cmp_calc).all()
+
+
+@utils.in_tempdir
+def test_do_serial_compare_with_from_file(c):
+    # try doing a compare serial
+    import numpy
+    testsigs = utils.get_test_data('genome-s1*.sig')
+    testsigs = glob.glob(testsigs)
+
+    file_list = c.output('file.list')
+    with open(file_list, 'wt') as fp:
+        print("\n".join(testsigs), file=fp)
+
+    c.run_sourmash('compare', '-o', 'cmp', '-k', '21', '--dna',
+                   '--from-file', file_list)
+
+    cmp_outfile = c.output('cmp')
+    assert os.path.exists(cmp_outfile)
+    cmp_out = numpy.load(cmp_outfile)
+
+    sigs = []
+    for fn in testsigs:
+        sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                select_moltype='dna'))
+
+    cmp_calc = numpy.zeros([len(sigs), len(sigs)])
+    for i, si in enumerate(sigs):
+        for j, sj in enumerate(sigs):
+            cmp_calc[i][j] = si.similarity(sj)
+
+        sigs = []
+        for fn in testsigs:
+            sigs.append(sourmash.load_one_signature(fn, ksize=21,
+                                                    select_moltype='dna'))
     assert (cmp_out == cmp_calc).all()
 
 
@@ -149,7 +184,7 @@ def test_do_basic_compare_using_rna_arg(c):
     sigs = []
     for fn in testsigs:
         sigs.append(sourmash.load_one_signature(fn, ksize=21,
-                                                    select_moltype='dna'))
+                                                select_moltype='dna'))
 
     cmp_calc = numpy.zeros([len(sigs), len(sigs)])
     for i, si in enumerate(sigs):
@@ -159,199 +194,173 @@ def test_do_basic_compare_using_rna_arg(c):
     assert (cmp_out == cmp_calc).all()
 
 
-def test_do_compare_quiet():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_compare_quiet(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+
+    c.run_sourmash('compare', 'short.fa.sig',
+                   'short2.fa.sig', '--csv', 'xxx', '-q')
+    assert not c.last_result.out
+    assert not c.last_result.err
+
+@utils.in_tempdir
+def test_compare_containment_abund_flatten(c):
+   s47 = utils.get_test_data('track_abund/47.fa.sig')
+   s63 = utils.get_test_data('track_abund/63.fa.sig')
+
+   c.run_sourmash('compare', '--containment', '-k', '31', s47, s63)
+   print(c.last_result.out)
+   print(c.last_result.err)
+
+   assert 'NOTE: --containment means signature abundances are flattened' in \
+       c.last_result.err
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx',
-                                            '-q'],
-                                           in_directory=location)
-        assert not out
-        assert not err
+@utils.in_tempdir
+def test_do_traverse_directory_compare(c):
+    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+                   '--dna', utils.get_test_data('compare'))
+    print(c.last_result.out)
+    assert 'genome-s10.fa.gz' in c.last_result.out
+    assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-def test_do_traverse_directory_compare():
-    with utils.TempDirectory() as location:
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', '--traverse-directory',
-                                            '-k 21', '--dna', utils.get_test_data('compare')],
-                                           in_directory=location)
-        print(out)
-        assert 'genome-s10.fa.gz' in out
-        assert 'genome-s11.fa.gz' in out
+@utils.in_tempdir
+def test_do_traverse_directory_compare_force(c):
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    sig2 = utils.get_test_data('compare/genome-s11.fa.gz.sig')
+    newdir = c.output('newdir')
+    os.mkdir(newdir)
 
-def test_do_compare_output_csv():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+    shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
+    shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
+
+    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+                   '--dna', newdir, '-f')
+    print(c.last_result.out)
+    assert 'genome-s10.fa.gz' in c.last_result.out
+    assert 'genome-s11.fa.gz' in c.last_result.out
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_compare_output_csv(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
-        with open(os.path.join(location, 'xxx')) as fp:
-            r = iter(csv.reader(fp))
-            row = next(r)
-            print(row)
-            row = next(r)
-            print(row)
-            assert float(row[0]) == 1.0
-            assert float(row[1]) == 0.93
-            row = next(r)
-            assert float(row[0]) == 0.93
-            assert float(row[1]) == 1.0
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
-            # exactly three lines
-            with pytest.raises(StopIteration) as e:
-                next(r)
+    with open(c.output('xxx')) as fp:
+        r = iter(csv.reader(fp))
+        row = next(r)
+        print(row)
+        row = next(r)
+        print(row)
+        assert float(row[0]) == 1.0
+        assert float(row[1]) == 0.93
+        row = next(r)
+        assert float(row[0]) == 0.93
+        assert float(row[1]) == 1.0
 
-
-def test_do_compare_downsample():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '200',
-                                            '-k', '31', testdata1],
-                                           in_directory=location)
+        # exactly three lines
+        with pytest.raises(StopIteration) as e:
+            next(r)
 
 
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '100',
-                                            '-k', '31', testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_compare_downsample(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '--scaled', '200', '-k', '31', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location)
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '--scaled', '100', '-k', '31', testdata2)
 
-        print(status, out, err)
-        assert 'downsampling to scaled value of 200' in err
-        with open(os.path.join(location, 'xxx')) as fp:
-            lines = fp.readlines()
-            assert len(lines) == 3
-            assert lines[1].startswith('1.0,0.6666')
-            assert lines[2].startswith('0.6666')
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
-
-def test_do_compare_output_multiple_k():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata2],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location,
-                                           fail_ok=True)
-
-        print(status, out, err)
-
-        assert status == -1
-        assert 'multiple k-mer sizes loaded; please specify one' in err
-        assert '(saw k-mer sizes 21, 31)' in err
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert 'downsampling to scaled value of 200' in c.last_result.err
+    with open(c.output('xxx')) as fp:
+        lines = fp.readlines()
+        assert len(lines) == 3
+        assert lines[1].startswith('1.0,0.6666')
+        assert lines[2].startswith('0.6666')
 
 
-def test_do_compare_output_multiple_moltype():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dna', testdata1],
-                                           in_directory=location)
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--protein', testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_compare_output_multiple_k(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', testdata1)
+    c.run_sourmash('compute', '-k', '31', testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--csv', 'xxx'],
-                                           in_directory=location,
-                                           fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
+                       fail_ok=True)
 
-        assert status == -1
-        assert 'multiple molecule types loaded;' in err
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+
+    assert c.last_result.status == -1
+    assert 'multiple k-mer sizes loaded; please specify one' in c.last_result.err
+    assert '(saw k-mer sizes 21, 31)' in c.last_result.err
 
 
+@utils.in_tempdir
+def test_do_compare_output_multiple_moltype(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
+    c.run_sourmash('compute', '-k', '21', '--protein', testdata2)
 
-def test_do_compare_dayhoff():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dayhoff',
-                                            '--no-dna', testdata1],
-                                           in_directory=location)
-        assert status == 0
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
+                       fail_ok=True)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--dayhoff',
-                                            '--no-dna', testdata2],
-                                           in_directory=location)
-        assert status == 0
+    assert c.last_result.status == -1
+    assert 'multiple molecule types loaded;' in c.last_result.err
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--dayhoff',
-                                            '--csv', 'xxx'],
-                                           in_directory=location)
-        true_out = '''[1.   0.94]
+
+@utils.in_tempdir
+def test_do_compare_dayhoff(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata1)
+    assert c.last_result.status == 0
+
+    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata2)
+    assert c.last_result.status == 0
+
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
+                   '--dayhoff', '--csv', 'xxx')
+    true_out = '''[1.   0.94]
 [0.94 1.  ]
 min similarity in matrix: 0.940'''.splitlines()
-        for line in out:
-            cleaned_line = line.split('...')[-1].strip()
-            cleaned_line in true_out
-        assert status == 0
+    for line in c.last_result.out:
+        cleaned_line = line.split('...')[-1].strip()
+        cleaned_line in true_out
+    assert c.last_result.status == 0
 
 
-def test_do_compare_hp():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--hp',
-                                            '--no-dna', testdata1],
-                                           in_directory=location)
-        assert status == 0
+@utils.in_tempdir
+def test_do_compare_hp(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata1)
+    assert c.last_result.status == 0
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21', '--hp',
-                                            '--no-dna', testdata2],
-                                           in_directory=location)
-        assert status == 0
+    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata2)
+    assert c.last_result.status == 0
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '--hp',
-                                            '--csv', 'xxx'],
-                                           in_directory=location)
-        true_out = '''[1.   0.94]
+    c.run_sourmash('compare', 'short.fa.sig',
+                   'short2.fa.sig', '--hp',  '--csv', 'xxx')
+    true_out = '''[1.   0.94]
 [0.94 1.  ]
 min similarity in matrix: 0.940'''.splitlines()
-        for line in out:
-            cleaned_line = line.split('...')[-1].strip()
-            cleaned_line in true_out
-        assert status == 0
+    for line in c.last_result.out:
+        cleaned_line = line.split('...')[-1].strip()
+        cleaned_line in true_out
+    assert c.last_result.status == 0
 
 
 @utils.in_tempdir
@@ -421,129 +430,95 @@ def test_compare_containment_require_scaled(c):
     assert c.last_result.status != 0
 
 
-def test_do_plot_comparison():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
+
+    c.run_sourmash('plot', 'cmp')
+
+    assert os.path.exists(c.output("cmp.dendro.png"))
+    assert os.path.exists(c.output("cmp.matrix.png"))
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison_2(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash', ['plot', 'cmp'],
-                                           in_directory=location)
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
-        assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
-
-
-def test_do_plot_comparison_2():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+    c.run_sourmash('plot', 'cmp', '--pdf')
+    assert os.path.exists(c.output("cmp.dendro.pdf"))
+    assert os.path.exists(c.output("cmp.matrix.pdf"))
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison_3(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--pdf'],
-                                           in_directory=location)
-        assert os.path.exists(os.path.join(location, "cmp.dendro.pdf"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.pdf"))
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
+    c.run_sourmash('plot', 'cmp', '--labels')
 
-def test_do_plot_comparison_3():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+    assert os.path.exists(c.output("cmp.dendro.png"))
+    assert os.path.exists(c.output("cmp.matrix.png"))
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_do_plot_comparison_4_output_dir(c):
+    output_dir = c.output('xyz_test')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels'],
-                                           in_directory=location)
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
-        assert os.path.exists(os.path.join(location, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(location, "cmp.matrix.png"))
+    c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '-o', 'cmp')
 
+    c.run_sourmash('plot', 'cmp', '--labels', '--output-dir', output_dir)
 
-def test_do_plot_comparison_4_output_dir():
-    with utils.TempDirectory() as location:
-        output_dir = os.path.join(location, 'xyz_test')
-
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+    assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
+    assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
 
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['compare', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'cmp'],
-                                           in_directory=location)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels',
-                                            '--output-dir', output_dir],
-                                           in_directory=location)
-
-        assert os.path.exists(os.path.join(output_dir, "cmp.dendro.png"))
-        assert os.path.exists(os.path.join(output_dir, "cmp.matrix.png"))
-
-
-def test_do_plot_comparison_5_force():
+@utils.in_tempdir
+def test_do_plot_comparison_5_force(c):
     import numpy
-    with utils.TempDirectory() as location:
-        D = numpy.zeros([2,2])
-        D[0, 0] = 5
-        with open(os.path.join(location, 'cmp'), 'wb') as fp:
-            numpy.save(fp, D)
+    D = numpy.zeros([2, 2])
+    D[0, 0] = 5
+    with open(c.output('cmp'), 'wb') as fp:
+        numpy.save(fp, D)
 
-        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
-            fp.write("a\nb\n")
+    with open(c.output('cmp.labels.txt'), 'wt') as fp:
+        fp.write("a\nb\n")
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels', '-f'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert status == 0
+    c.run_sourmash('plot', 'cmp', '--labels', '-f')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == 0
 
 
-def test_do_plot_comparison_4_fail_not_distance():
+@utils.in_tempdir
+def test_do_plot_comparison_4_fail_not_distance(c):
     import numpy
-    with utils.TempDirectory() as location:
-        D = numpy.zeros([2,2])
-        D[0, 0] = 5
-        with open(os.path.join(location, 'cmp'), 'wb') as fp:
-            numpy.save(fp, D)
+    D = numpy.zeros([2, 2])
+    D[0, 0] = 5
+    with open(c.output('cmp'), 'wb') as fp:
+        numpy.save(fp, D)
 
-        with open(os.path.join(location, 'cmp.labels.txt'), 'wt') as fp:
-            fp.write("a\nb\n")
+    with open(c.output('cmp.labels.txt'), 'wt') as fp:
+        fp.write("a\nb\n")
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['plot', 'cmp', '--labels'],
-                                           in_directory=location, fail_ok=True)
-        print(status, out, err)
-        assert status != 0
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('plot', 'cmp', '--labels', fail_ok=True)
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status != 0
 
 
 def test_plot_override_labeltext():
@@ -555,7 +530,7 @@ def test_plot_override_labeltext():
         inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs + \
+                                           ['compare'] + inp_sigs +
                                            ['-o', 'cmp', '-k', '21', '--dna'],
                                            in_directory=location)
 
@@ -588,7 +563,7 @@ def test_plot_override_labeltext_fail():
         inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs + \
+                                           ['compare'] + inp_sigs +
                                            ['-o', 'cmp', '-k', '21', '--dna'],
                                            in_directory=location)
 
@@ -617,7 +592,7 @@ def test_plot_subsample_1():
         inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs + \
+                                           ['compare'] + inp_sigs +
                                            ['-o', 'cmp', '-k', '21', '--dna'],
                                            in_directory=location)
 
@@ -644,7 +619,7 @@ def test_plot_subsample_2():
         inp_sigs = [testdata1, testdata2, testdata3, testdata4]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compare'] + inp_sigs + \
+                                           ['compare'] + inp_sigs +
                                            ['-o', 'cmp', '-k', '21', '--dna'],
                                            in_directory=location)
 
@@ -662,81 +637,56 @@ def test_plot_subsample_2():
         assert expected in out
 
 
-def test_search_query_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_query_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short2.fa.sig', 'short.fa.sig', fail_ok=True)
+
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert "Cannot open file 'short2.fa.sig'" in c.last_result.err
+    assert len(c.last_result.err.split('\n\r')) < 5
 
 
+@utils.in_tempdir
+def test_search_subject_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short2.fa.sig',
-                                            'short.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', fail_ok=True)
 
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
-        assert len(err.split('\n\r')) < 5
-
-
-def test_search_subject_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert "Error while reading signatures from 'short2.fa.sig'" in c.last_result.err
 
 
+@utils.in_tempdir
+def test_search_second_subject_sig_does_not_exist(c):
+    testdata1 = utils.get_test_data('short.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1)
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short.fa.sig',
+                       'short2.fa.sig', fail_ok=True)
 
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert c.last_result.status == -1
+    assert "Error while reading signatures from 'short2.fa.sig'." in c.last_result.err
 
+@utils.in_tempdir
+def test_search(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
-def test_search_second_subject_sig_does_not_exist():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
-                                           in_directory=location)
-
-
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short.fa.sig', 'short2.fa.sig'],
-                                           in_directory=location, fail_ok=True)
-
-        print(status, out, err)
-        assert status == -1
-        assert 'Cannot open file' in err
-
-
-def test_search():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
-
-
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
-        print(status, out, err)
-        assert '1 matches' in out
-        assert '93.0%' in out
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
+    assert '1 matches' in c.last_result.out
+    assert '93.0%' in c.last_result.out
 
 
 def test_search_ignore_abundance():
@@ -749,25 +699,23 @@ def test_search_ignore_abundance():
                                             testdata1, testdata2],
                                            in_directory=location)
 
-
-
         # Make sure there's different percent matches when using or
         # not using abundance
         status1, out1, err1 = utils.runscript('sourmash',
-                                           ['search',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+                                              ['search',
+                                               'short.fa.sig',
+                                               'short2.fa.sig'],
+                                              in_directory=location)
         print(status1, out1, err1)
         assert '1 matches' in out1
         assert '81.5%' in out1
 
         status2, out2, err2 = utils.runscript('sourmash',
-                                           ['search',
-                                            '--ignore-abundance',
-                                            'short.fa.sig',
-                                            'short2.fa.sig'],
-                                           in_directory=location)
+                                              ['search',
+                                               '--ignore-abundance',
+                                               'short.fa.sig',
+                                               'short2.fa.sig'],
+                                              in_directory=location)
         print(status2, out2, err2)
         assert '1 matches' in out2
         assert '93.0%' in out2
@@ -776,31 +724,24 @@ def test_search_ignore_abundance():
         assert out1 != out2
 
 
-def test_search_csv():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        testdata2 = utils.get_test_data('short2.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
-                                           in_directory=location)
+@utils.in_tempdir
+def test_search_csv(c):
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
+    c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig', '-o', 'xxx.csv')
+    print(c.last_result.status, c.last_result.out, c.last_result.err)
 
+    csv_file = c.output('xxx.csv')
 
-        status, out, err = utils.runscript('sourmash',
-                                           ['search', 'short.fa.sig',
-                                            'short2.fa.sig', '-o', 'xxx.csv'],
-                                           in_directory=location)
-        print(status, out, err)
-
-        csv_file = os.path.join(location, 'xxx.csv')
-
-        with open(csv_file) as fp:
-            reader = csv.DictReader(fp)
-            row = next(reader)
-            assert float(row['similarity']) == 0.93
-            assert row['name'].endswith('short2.fa')
-            assert row['filename'].endswith('short2.fa.sig')
-            assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
+    with open(csv_file) as fp:
+        reader = csv.DictReader(fp)
+        row = next(reader)
+        assert float(row['similarity']) == 0.93
+        assert row['name'].endswith('short2.fa')
+        assert row['filename'].endswith('short2.fa.sig')
+        assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
 
 @utils.in_tempdir
@@ -812,6 +753,36 @@ def test_search_lca_db(c):
     c.run_sourmash('search', query, lca_db)
     print(c)
     assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
+
+
+@utils.in_thisdir
+def test_search_query_db_md5(c):
+    # pull a search query out of a database with an md5sum
+    db = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
+
+    assert '100.0%       GCA_001593925.1_ASM159392v1_protein.faa.gz' in str(c)
+
+
+@utils.in_thisdir
+def test_gather_query_db_md5(c):
+    # pull a search query out of a database with an md5sum
+    db = utils.get_test_data('prot/protein.sbt.zip')
+    c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
+
+    assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
+
+
+@utils.in_thisdir
+def test_gather_query_db_md5_ambiguous(c):
+    # what if we give an ambiguous md5 prefix?
+    db = utils.get_test_data('prot/protein.sbt.zip')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('gather', db, db, '--md5', '1')
+
+    err = c.last_result.err
+    assert "Error! Multiple signatures start with md5 '1'" in err
 
 
 @utils.in_tempdir
@@ -844,7 +815,7 @@ def test_compare_no_such_file(c):
     with pytest.raises(ValueError) as e:
         c.run_sourmash('compare', 'nosuchfile.sig')
 
-    assert "file 'nosuchfile.sig' does not exist! exiting." in c.last_result.err
+    assert "Error while reading signatures from 'nosuchfile.sig'." in c.last_result.err
 
 
 @utils.in_tempdir
@@ -853,19 +824,22 @@ def test_compare_no_such_file_force(c):
         c.run_sourmash('compare', 'nosuchfile.sig', '-f')
 
     print(c.last_result.err)
-    assert "no signatures found! exiting." in c.last_result.err
+    assert "Error while reading signatures from 'nosuchfile.sig'."
 
 
-def test_compare_no_matching_sigs():
+@utils.in_tempdir
+def test_compare_no_matching_sigs(c):
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    status, out, err = utils.runscript('sourmash', ['compare', '-k', '100',
-                                        query], fail_ok=True)
 
-    print(out)
-    print(err)
-    assert status
-    assert 'warning: no signatures loaded at given ksize/molecule type' in err
-    assert 'no signatures found! exiting.' in err
+    with pytest.raises(ValueError) as exc:
+        c.last_result.status, c.last_result.out, c.last_result.err = c.run_sourmash('compare', '-k', '100', query,
+                                                                                    fail_ok=True)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert c.last_result.status
+    assert 'warning: no signatures loaded at given ksize/molecule type' in c.last_result.err
+    assert 'no signatures found! exiting.' in c.last_result.err
 
 
 def test_compare_deduce_molecule():
@@ -1051,10 +1025,12 @@ def test_do_sourmash_index_multinum_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '-n', '500', testdata1],
+                                           ['compute', '-k', '31',
+                                               '-n', '500', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '-n', '1000', testdata2],
+                                           ['compute', '-k', '31',
+                                               '-n', '1000', testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1073,7 +1049,8 @@ def test_do_sourmash_index_multiscaled_fail():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '--scaled', '10', testdata1],
+                                           ['compute', '--scaled',
+                                               '10', testdata1],
                                            in_directory=location)
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '--scaled', '1', testdata2],
@@ -1290,6 +1267,20 @@ def test_search_deduce_ksize_not_unique():
         assert '2 signatures matching ksize' in err
 
 
+@utils.in_tempdir
+def test_search_deduce_ksize_no_match(c):
+    # no matching sigs in search sig list
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    c.run_sourmash('compute', '-k', '23', testdata1)
+    c.run_sourmash('compute', '-k', '25', testdata2)
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', 'short.fa.sig', 'short2.fa.sig')
+    assert "no compatible signatures found in 'short2.fa.sig'" in str(exc.value)
+
+
 def test_search_deduce_ksize_vs_user_specified():
     # user specified ksize is not available
     with utils.TempDirectory() as location:
@@ -1319,8 +1310,6 @@ def test_search_containment():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig', '--containment'],
@@ -1339,13 +1328,10 @@ def test_search_containment_sbt():
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
                                            ['index', '-k', '31', 'zzz',
                                             'short2.fa.sig'],
                                            in_directory=location)
-
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
         status, out, err = utils.runscript('sourmash',
@@ -1392,8 +1378,6 @@ def test_search_2():
                                             testdata3],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'short2.fa.sig', 'short3.fa.sig'],
@@ -1414,8 +1398,6 @@ def test_search_3():
                                             testdata3],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
                                            ['search', '-n', '1',
                                             'short.fa.sig',
@@ -1435,8 +1417,6 @@ def test_search_4():
                                             testdata3],
                                            in_directory=location)
 
-
-
         status, out, err = utils.runscript('sourmash',
                                            ['search', '-n', '0',
                                             'short.fa.sig',
@@ -1446,6 +1426,36 @@ def test_search_4():
         assert '2 matches:' in out
         assert 'short2.fa' in out
         assert 'short3.fa' in out
+
+
+@utils.in_tempdir
+def test_index_metagenome_fromfile(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', '-k', '21', testdata_sigs[0],
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'search {} gcf_all -k 21'.format(query_sig)
+    cmd = cmd.split()
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    print(c.last_result.err)
+
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+    assert '12 matches; showing first 3:' in out
 
 
 def test_search_metagenome():
@@ -1515,7 +1525,6 @@ def test_search_metagenome_downsample():
                                            in_directory=location, fail_ok=True)
         assert status == -1
 
-
         assert "for tree 'gcf_all', scaled value is smaller than query." in err
         assert 'tree scaled: 10000; query scaled: 100000. Cannot do similarity search.' in err
 
@@ -1567,11 +1576,13 @@ def test_search_metagenome_downsample_index(c):
     assert os.path.exists(c.output('gcf_all.sbt.json'))
 
     c.run_sourmash('search', query_sig, 'gcf_all', '-k', '21',
-                       '--containment')
+                   '--containment')
     print(c)
 
-    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in str(c)
-    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(c)
+    assert ' 32.9%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in str(
+        c)
+    assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(
+        c)
     assert '12 matches; showing first 3:' in str(c)
 
 
@@ -1784,7 +1795,7 @@ def test_do_sourmash_sbt_search_downsample_2():
         assert 'Cannot do similarity search.' in err
 
 
-def test_do_sourmash_index_single(not_localized):
+def test_do_sourmash_index_single():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -1792,11 +1803,9 @@ def test_do_sourmash_index_single(not_localized):
                                            ['compute', testdata1, testdata2],
                                            in_directory=location)
 
-        index_flags = ['index', '-k', '31']
-        if not_localized:
-            index_flags.append('--not-localized')
         status, out, err = utils.runscript('sourmash',
-                                           index_flags + ['zzz', 'short.fa.sig'],
+                                           ['index', '-k', '31', 'zzz',
+                                            'short.fa.sig'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1883,6 +1892,35 @@ def test_do_sourmash_index_traverse():
         assert 'short2.fa' in out
 
 
+@utils.in_tempdir
+def test_do_sourmash_index_traverse_force(c):
+    # test loading of files that don't end with .sig with --traverse-dir -f
+    testdata1 = utils.get_test_data('short.fa')
+    testdata2 = utils.get_test_data('short2.fa')
+
+    outdir = c.output('sigs')
+    os.mkdir(outdir)
+    out1 = os.path.join(outdir, 'short1')
+    out2 = os.path.join(outdir, 'short2')
+
+    c.run_sourmash('compute', testdata1, '-o', out1)
+    c.run_sourmash('compute', testdata2, '-o', out2)
+
+    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+
+    err = c.last_result.err
+    assert os.path.exists(c.output('zzz.sbt.json'))
+    assert 'loaded 2 sigs; saving SBT under' in err
+
+    c.run_sourmash('search', out1, 'zzz')
+
+    out = c.last_result.out
+    print(out)
+
+    assert 'short.fa' in out
+    assert 'short2.fa' in out
+
+
 def test_do_sourmash_index_sparseness():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -1954,7 +1992,8 @@ def test_do_sourmash_index_append():
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2, testdata3],
+                                           ['compute', testdata1,
+                                               testdata2, testdata3],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -2171,14 +2210,14 @@ def test_do_sourmash_check_sbt_filenames():
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 14
+        assert len(sbt_files) == 13
 
         for f in sbt_files:
             if 'internal' in f:
                 continue
             f = os.path.basename(f)
-            assert f in sig_names
-            assert f not in sig_md5s
+            assert f not in sig_names
+            assert f in sig_md5s
 
 
 def test_do_sourmash_sbt_search_bestonly():
@@ -2293,9 +2332,9 @@ def test_compare_with_abundance_1():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
         E2 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
 
         E1.add_sequence('ATGGA')
         E2.add_sequence('ATGGA')
@@ -2310,7 +2349,7 @@ def test_compare_with_abundance_1():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'e1.sig', 'e2.sig',
-                                            '-k' ,'5'],
+                                            '-k', '5'],
                                            in_directory=location)
         assert '100.0%' in out
 
@@ -2319,9 +2358,9 @@ def test_compare_with_abundance_2():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
         E2 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
 
         E1.add_sequence('ATGGA')
 
@@ -2338,7 +2377,7 @@ def test_compare_with_abundance_2():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'e1.sig', 'e2.sig',
-                                            '-k' ,'5'],
+                                            '-k', '5'],
                                            in_directory=location)
         assert '100.0%' in out
 
@@ -2347,9 +2386,9 @@ def test_compare_with_abundance_3():
     with utils.TempDirectory() as location:
         # create two signatures
         E1 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
         E2 = MinHash(ksize=5, n=5, is_protein=False,
-                        track_abundance=True)
+                     track_abundance=True)
 
         E1.add_sequence('ATGGA')
         E1.add_sequence('GGACA')
@@ -2367,7 +2406,7 @@ def test_compare_with_abundance_3():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'e1.sig', 'e2.sig',
-                                            '-k' ,'5'],
+                                            '-k', '5'],
                                            in_directory=location)
         assert '70.5%' in out
 
@@ -2633,7 +2672,8 @@ def test_gather_f_match_orig(c):
 
 def test_gather_nomatch():
     with utils.TempDirectory() as location:
-        testdata_query = utils.get_test_data('gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
+        testdata_query = utils.get_test_data(
+            'gather/GCF_000006945.2_ASM694v2_genomic.fna.gz.sig')
         testdata_match = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
         cmd = 'gather {} {}'.format(testdata_query, testdata_match)
@@ -2669,12 +2709,44 @@ def test_gather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in out
-        assert 'the recovered matches hit 99.9% of the query' in out
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                    'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_gather_metagenome_num_results(c):
+    # set a threshold on the number of results to be reported by gather
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'gather {} gcf_all -k 21 --num-results 10'.format(query_sig)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    out = c.last_result.out
+
+    assert 'found 10 matches total' in out
+    assert '(truncated gather because --num-results=10)' in out
+    assert 'the recovered matches hit 99.4% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert '4.3 Mbp        2.1%    7.3%    NC_006511.1 Salmonella enterica subsp' in out
 
 
 def test_gather_metagenome_threshold_bp():
@@ -2704,7 +2776,7 @@ def test_gather_metagenome_threshold_bp():
         assert 'found less than 2.0 Mbp in common. => exiting' in err
         assert 'the recovered matches hit 33.2% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
 
 
 def test_multigather_metagenome():
@@ -2722,19 +2794,335 @@ def test_multigather_metagenome():
 
         assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
 
-        cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_sig)
+        cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(
+            query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in out
-        assert 'the recovered matches hit 99.9% of the query' in out
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                    'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file(c):
+    # test multigather --query-from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
                 'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_with_sbt(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    cmd = 'multigather --query gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 12 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_with_lca(c):
+
+    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('47+63.sbt.zip'))
+
+    cmd = 'multigather --query {} --db 47+63.sbt.zip -k 31 --threshold-bp=0'.format(lca_db)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+    assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_on_lca_db(c):
+
+    testdata_sig1 = utils.get_test_data('47.fa.sig')
+    testdata_sig2 = utils.get_test_data('63.fa.sig')
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = 'multigather --query {} {} --db {} -k 31 --threshold-bp=0'.format(testdata_sig1, testdata_sig2, lca_db)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('5.1 Mbp      100.0%  100.0%'  in out,
+                'NC_009665.1 Shewanella baltica OS185,...' in out))
+    assert all(('5.5 Mbp      100.0%  100.0%' in out,
+                'NC_011663.1 Shewanella baltica OS223,...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_with_sbt_addl_query(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query {} gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 13 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+    #check additional query sig
+    assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # make list w/query sbt
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print('gcf_all.sbt.zip', file=fp)
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query {} --query-from-file {} --db gcf_all.sbt.zip -k 21 --threshold-bp=0'.format(another_query, query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 13 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    #check for matches to some of the sbt signatures
+    assert all(('4.7 Mbp      100.0%  100.0%'  in out,
+                'NC_011080.1 Salmonella enterica subsp...' in out))
+    assert all(('4.5 Mbp      100.0%  100.0%' in out,
+                'NC_004631.1 Salmonella enterica subsp...' in out))
+    assert all (('1.6 Mbp      100.0%  100.0%' in out,
+                 'NC_002163.1 Campylobacter jejuni subs...' in out))
+    assert all(('1.9 Mbp      100.0%  100.0%' in out,
+                'NC_000853.1 Thermotoga maritima MSB8 ...' in out))
+
+    #check additional query sig
+    assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    # incorrectly query with sbt using `--query-from-file`
+    cmd = 'multigather --query-from-file gcf_all.sbt.zip --db gcf_all.sbt.zip -k 21 --threshold-bp=0'
+    cmd = cmd.split(' ')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash(*cmd)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_lca_query_from_file(c):
+    testdata_glob = utils.get_test_data('47*.fa.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    lca_db = utils.get_test_data('lca/47+63.lca.json')
+
+    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('47+63.sbt.zip'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(lca_db, file=fp)
+
+    cmd = 'multigather --query-from-file {} --db 47+63.sbt.zip -k 31 --threshold-bp=0'.format(query_list)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert 'conducted gather searches on 2 signatures' in err
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+    assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
+
+
+@utils.in_tempdir
+def test_multigather_metagenome_query_from_file_with_addl_query(c):
+    # test multigather --query-from-file and --query too
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd.extend(testdata_sigs)
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    # make list w/query sig
+    query_list = c.output('query.list')
+    with open(query_list, 'wt') as fp:
+        print(query_sig, file=fp)
+
+    another_query = utils.get_test_data('gather/GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig')
+
+    cmd = 'multigather --query-from-file {} --query {} --db gcf_all -k 21 --threshold-bp=0'.format(query_list, another_query)
+    cmd = cmd.split(' ')
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    # first gather query
+    assert 'found 12 matches total' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
+    assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                'NC_003198.1 Salmonella enterica subsp...' in out))
+    assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                'NC_011294.1 Salmonella enterica subsp...' in out))
+
+    # second gather query
+    assert '4.9 Mbp      100.0%  100.0%    NC_003198.1 Salmonella enterica subsp...' in out
+    assert 'found 1 matches total;' in out
+    assert 'the recovered matches hit 100.0% of the query' in out
 
 
 def test_gather_metagenome_traverse():
@@ -2762,9 +3150,9 @@ def test_gather_metagenome_traverse():
         assert 'found 12 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
-                'NC_011294.1 Salmonella enterica subsp...' in out))
+                    'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
 def test_gather_metagenome_output_unassigned():
@@ -2785,20 +3173,21 @@ def test_gather_metagenome_output_unassigned():
         assert 'found 1 matches total' in out
         assert 'the recovered matches hit 33.2% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
-                'NC_003198.1 Salmonella enterica subsp...' in out))
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
 
         # now examine unassigned
         testdata2_glob = utils.get_test_data('gather/GCF_000009505.1*.sig')
         testdata2_sigs = glob.glob(testdata2_glob)[0]
 
-        cmd = 'gather {} {} {} -k 21'.format('unassigned.sig', testdata_sigs, testdata2_sigs)
+        cmd = 'gather {} {} {} -k 21'.format('unassigned.sig',
+                                             testdata_sigs, testdata2_sigs)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
         print(out)
         print(err)
         assert all(('1.3 Mbp       13.6%   28.2%' in out,
-                'NC_011294.1' in out))
+                    'NC_011294.1' in out))
 
 
 @utils.in_tempdir
@@ -2847,8 +3236,8 @@ def test_gather_metagenome_downsample():
         assert 'found 11 matches total' in out
         assert 'the recovered matches hit 100.0% of the query' in out
         assert all(('5.2 Mbp       32.9%  100.0%' in out,
-                'NC_003198.1' in out))
-        assert all(('4.4 Mbp        1.9%    6.8%' in out,
+                    'NC_003198.1' in out))
+        assert all(('4.1 Mbp        0.6%    2.4%' in out,
                     '4.1 Mbp        4.4%   17.1%' in out))
 
 
@@ -2861,7 +3250,7 @@ def test_gather_query_downsample():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', '-k', '31',
-                                             query_sig] + testdata_sigs,
+                                            query_sig] + testdata_sigs,
                                            in_directory=location)
 
         print(out)
@@ -2869,7 +3258,7 @@ def test_gather_query_downsample():
 
         assert 'loaded 12 signatures' in err
         assert all(('4.9 Mbp      100.0%  100.0%' in out,
-                'NC_003197.2' in out))
+                    'NC_003197.2' in out))
 
 
 def test_gather_save_matches():
@@ -2897,9 +3286,36 @@ def test_gather_save_matches():
         print(out)
         print(err)
 
-        assert 'found 11 matches total' in out
-        assert 'the recovered matches hit 99.9% of the query' in out
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
         assert os.path.exists(os.path.join(location, 'save.sigs'))
+
+
+@utils.in_thisdir
+def test_gather_error_loading_dir(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db = utils.get_test_data('prot/protein/')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, db)
+    assert 'Error while reading signatures from' in str(c.last_result.err)
+
+
+@utils.in_tempdir
+def test_gather_error_no_sigs_traverse(c):
+    # test gather applied to a directory
+    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    emptydir = c.output('')
+
+    with pytest.raises(ValueError) as e:
+        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+
+    err = c.last_result.err
+    print(err)
+    assert '** ERROR: no signatures or databases loaded?' in err
+    assert not 'found 0 matches total;' in err
 
 
 def test_gather_error_no_cardinality_query():
@@ -2907,7 +3323,8 @@ def test_gather_error_no_cardinality_query():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1, testdata2],
+                                           ['compute', '-k', '31',
+                                               testdata1, testdata2],
                                            in_directory=location)
 
         testdata3 = utils.get_test_data('short3.fa')
@@ -3005,9 +3422,9 @@ def test_gather_deduce_moltype():
 @utils.in_thisdir
 def test_gather_abund_1_1(c):
     #
-    # make r1.fa with 1x coverage of genome s10
+    # make r1.fa with 2x coverage of genome s10
     # make r2.fa with 10x coverage of genome s10.
-    # make r3.fa with 1x coverage of genome s11.
+    # make r3.fa with 2x coverage of genome s11.
     #
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
@@ -3022,9 +3439,9 @@ def test_gather_abund_1_1(c):
 
     query = utils.get_test_data('gather-abund/reads-s10-s11.sig')
     against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                     for i in against_list ]
-    against_list = [ utils.get_test_data(i) for i in against_list ]
+    against_list = ['gather-abund/' + i + '.fa.gz.sig'
+                    for i in against_list]
+    against_list = [utils.get_test_data(i) for i in against_list]
 
     status, out, err = c.run_sourmash('gather', query, *against_list)
 
@@ -3054,9 +3471,9 @@ def test_gather_abund_10_1(c):
 
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                     for i in against_list ]
-    against_list = [ utils.get_test_data(i) for i in against_list ]
+    against_list = ['gather-abund/' + i + '.fa.gz.sig'
+                    for i in against_list]
+    against_list = [utils.get_test_data(i) for i in against_list]
 
     status, out, err = c.run_sourmash('gather', query, '-o', 'xxx.csv',
                                       *against_list)
@@ -3116,9 +3533,9 @@ def test_gather_abund_10_1_ignore_abundance(c):
 
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against_list = ['genome-s10', 'genome-s11', 'genome-s12']
-    against_list = [ 'gather-abund/' + i + '.fa.gz.sig' \
-                     for i in against_list ]
-    against_list = [ utils.get_test_data(i) for i in against_list ]
+    against_list = ['gather-abund/' + i + '.fa.gz.sig'
+                    for i in against_list]
+    against_list = [utils.get_test_data(i) for i in against_list]
 
     status, out, err = c.run_sourmash('gather', query,
                                       '--ignore-abundance',
@@ -3191,20 +3608,20 @@ def test_sbt_categorize_ignore_abundance():
 
         query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
         against_list = ['reads-s10-s11']
-        against_list = [ 'gather-abund/' + i + '.sig' \
-                         for i in against_list ]
-        against_list = [ utils.get_test_data(i) for i in against_list ]
+        against_list = ['gather-abund/' + i + '.sig'
+                        for i in against_list]
+        against_list = [utils.get_test_data(i) for i in against_list]
 
         # omit 3
         args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
         status2, out2, err2 = utils.runscript('sourmash', args,
-                                           in_directory=location)
+                                              in_directory=location)
 
         # --- Categorize without ignoring abundance ---
         args = ['categorize', 'thebestdatabase',
                 '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
         status3, out3, err3 = utils.runscript('sourmash', args,
-                                           in_directory=location)
+                                              in_directory=location)
 
         print(out3)
         print(err3)
@@ -3219,7 +3636,7 @@ def test_sbt_categorize_ignore_abundance():
                 '--ksize', '21', '--dna', '--csv', 'out4.csv',
                 'thebestdatabase', query]
         status4, out4, err4 = utils.runscript('sourmash', args,
-                                           in_directory=location)
+                                              in_directory=location)
 
         print(out4)
         print(err4)
@@ -3319,50 +3736,34 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
         assert 'multiple k-mer sizes/molecule types present' in err
 
 
-def test_watch():
-    with utils.TempDirectory() as location:
-        testdata0 = utils.get_test_data('genome-s10.fa.gz')
-        testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
-        shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
+@utils.in_tempdir
+def test_watch(c):
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
+    shutil.copyfile(testdata1, c.output('1.sig'))
 
-        args = ['index', '--dna', '-k', '21', 'zzz', '1.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    c.run_sourmash('index', '--dna', '-k', '21', 'zzz', '1.sig')
 
-        cmd = """
+    c.run_sourmash('watch', '--ksize', '21', '--dna', 'zzz', testdata0)
 
-             gunzip -c {} | sourmash watch --ksize 21 --dna zzz
-
-        """.format(testdata0)
-        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
-
-        print(out)
-        print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'FOUND: genome-s10.fa.gz, at 1.000' in c.last_result.out
 
 
-def test_watch_deduce_ksize():
-    with utils.TempDirectory() as location:
-        testdata0 = utils.get_test_data('genome-s10.fa.gz')
-        utils.runscript('sourmash',
-                        ['compute', testdata0, '-k', '29', '-o', '1.sig'],
-                        in_directory=location)
+@utils.in_tempdir
+def test_watch_deduce_ksize(c):
+    testdata0 = utils.get_test_data('genome-s10.fa.gz')
+    c.run_sourmash('compute', testdata0, '-k', '29', '-o', '1.sig')
 
-        args = ['index', '--dna', '-k', '29', 'zzz', '1.sig']
-        status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location)
+    c.run_sourmash('index', '--dna', '-k', '29', 'zzz', '1.sig')
 
-        cmd = """
+    c.run_sourmash('watch', '--dna', 'zzz', testdata0)
 
-             gunzip -c {} | sourmash watch --dna zzz
-
-        """.format(testdata0)
-        status, out, err = utils.run_shell_cmd(cmd, in_directory=location)
-
-        print(out)
-        print(err)
-        assert 'Computing signature for k=29' in err
-        assert 'genome-s10.fa.gz, at 1.000' in out
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'Computing signature for k=29' in c.last_result.err
+    assert 'genome-s10.fa.gz, at 1.000' in c.last_result.out
 
 
 def test_watch_coverage():
@@ -3493,8 +3894,8 @@ def test_migrate():
 
         assert "this is an old index version" not in err
         assert all('min_n_below' in node.metadata
-                       for node in identity
-                       if isinstance(node, Node))
+                   for node in identity
+                   if isinstance(node, Node))
 
 
 def test_license_cc0():
@@ -3550,16 +3951,16 @@ def test_do_sourmash_index_zipfile(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 29
-        assert len([c for c in content if 'internal' in c]) == 15
+        assert len(content) == 25
+        assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
         assert len(sbts) == 1
-        assert sbts[0] == 'zzz.sbt.json'
+        assert sbts[0] == "zzz.sbt.json"
 
 
 @utils.in_tempdir
@@ -3581,7 +3982,7 @@ def test_do_sourmash_index_zipfile_append(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with pytest.warns(None) as record:
         c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
@@ -3591,7 +3992,7 @@ def test_do_sourmash_index_zipfile_append(c):
 
     print(c)
     assert c.last_result.status == 0
-    assert 'Finished saving SBT, available at' in c.last_result.err
+    assert 'Finished saving SBT index, available at' in c.last_result.err
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
@@ -3600,4 +4001,4 @@ def test_do_sourmash_index_zipfile_append(c):
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
         assert len(sbts) == 1
-        assert sbts[0] == 'zzz.sbt.json'
+        assert sbts[0] == "zzz.sbt.json"

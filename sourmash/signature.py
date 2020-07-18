@@ -204,7 +204,7 @@ def _detect_input_type(data):
      - Compressed memory buffers
      - filename
     """
-    if hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
+    if hasattr(data, 'read') or hasattr(data, "fileno") or hasattr(data, "mode"):  # file-like object
         return SigInput.FILE_LIKE
     elif hasattr(data, "find"):  # check if it is uncompressed sig
         try:
@@ -261,6 +261,8 @@ def load_signatures(
     if input_type == SigInput.UNKNOWN:
         if not quiet:
             error("Error in parsing signature; quitting. Cannot open file or invalid signature")
+        if do_raise:
+            raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
 
     size = ffi.new("uintptr_t *")

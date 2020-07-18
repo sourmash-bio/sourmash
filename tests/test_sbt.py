@@ -663,6 +663,30 @@ def test_save_sparseness(n_children):
                 assert all(c.node is None for c in tree_loaded.children(pos))
 
 
+def test_sbt_as_index_select():
+    # test 'select' method from Index base class.
+    factory = GraphFactory(31, 1e5, 4)
+    tree = SBT(factory, d=2)
+
+    sig47 = load_one_signature(utils.get_test_data('47.fa.sig'))
+    sig63 = load_one_signature(utils.get_test_data('63.fa.sig'))
+
+    tree.insert(sig47)
+    tree.insert(sig63)
+
+    xx = tree.select(ksize=31)
+    assert xx == tree
+
+    xx = tree.select(moltype='DNA')
+    assert xx == tree
+
+    with pytest.raises(ValueError):
+        tree.select(ksize=21)
+
+    with pytest.raises(ValueError):
+        tree.select(moltype='protein')
+
+
 def test_sbt_as_index_signatures():
     # test 'signatures' method from Index base class.
     factory = GraphFactory(31, 1e5, 4)
@@ -816,7 +840,6 @@ def test_sbt_protein_command_index(c):
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('protein.sbt.zip')
-    db_out = '/tmp/protein.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
                    '--scaled', '100', '-k', '57', '--protein')
@@ -863,7 +886,6 @@ def test_sbt_hp_command_index(c):
     sigfile2 = utils.get_test_data('prot/hp/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('hp.sbt.zip')
-    db_out = '/tmp/hp.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
                    '--scaled', '100', '-k', '57', '--hp')
@@ -910,7 +932,6 @@ def test_sbt_dayhoff_command_index(c):
     sigfile2 = utils.get_test_data('prot/dayhoff/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     db_out = c.output('dayhoff.sbt.zip')
-    db_out = '/tmp/dayhoff.sbt.zip'
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
                    '--scaled', '100', '-k', '57', '--dayhoff')

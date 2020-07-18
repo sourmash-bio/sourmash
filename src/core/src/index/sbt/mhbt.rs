@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use failure::Error;
-
 use crate::index::sbt::{Factory, FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError, ToWriter};
 use crate::index::Comparable;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 
 impl ToWriter for Nodegraph {
     fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
@@ -152,7 +151,6 @@ mod test {
     use std::path::PathBuf;
 
     use assert_matches::assert_matches;
-    use tempfile;
 
     use super::Factory;
 
@@ -206,9 +204,7 @@ mod test {
             None,
         )
         .unwrap();
-        let sig_data = sigs[0].clone();
-
-        let leaf = sig_data.into();
+        let leaf = sigs[0].clone();
 
         let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);

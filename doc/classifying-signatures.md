@@ -28,8 +28,7 @@ a plasmid as a query, you would use `--containment` to find genomes
 that contained that plasmid.  `gather` (discussed below) uses containment
 analysis only.
 
-See [the main sourmash
-tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#make-and-search-a-database-quickly)
+See [the main sourmash tutorial](tutorial-basic.md#make-and-search-a-database-quickly)
 for information on using `search` with and without `--containment`.
 
 ## Breaking down metagenomic samples with `gather` and `lca`
@@ -49,7 +48,7 @@ k-mers. (This is the approach pioneered by
 [Kraken](https://ccb.jhu.edu/software/kraken/) and used by many other tools.)
 `sourmash lca` can be used to classify individual genome bins with
 `classify`, or summarize metagenome taxonomy with `summarize`.  The
-[sourmash lca tutorial](http://sourmash.readthedocs.io/en/latest/tutorials-lca.html)
+[sourmash lca tutorial](tutorials-lca.md)
 shows how to use the `lca classify` and `lca summarize` commands, and also
 provides guidance on building your own database.
 
@@ -58,9 +57,8 @@ genomes based on greedy partitioning. Essentially, it takes a query
 metagenome and searches the database for the most highly contained
 genome; it then subtracts that match from the metagenome, and repeats.
 At the end it reports how much of the metagenome remains unknown.  The
-[basic sourmash
-tutorial](http://sourmash.readthedocs.io/en/latest/tutorials.html#what-s-in-my-metagenome)
-has some sample output from using gather with GenBank.  See the appendix at
+[basic sourmash tutorial](tutorial-basic.md#what-s-in-my-metagenome)
+has some sample output from using gather with GenBank.  See Appendix A at
 the bottom of this page for more technical details.
 
 Some benchmarking on CAMI suggests that `gather` is a very accurate
@@ -89,8 +87,9 @@ LCA database; it reports taxonomy.
 It's important to note that taxonomy based on k-mers is very, very
 specific and if you get a match, it's pretty reliable. On the
 converse, however, k-mer identification is very brittle with respect
-to evolutionary divergence, so if you don't get a match it may only mean
-that the particular species isn't known.
+to evolutionary divergence, so if you don't get a match it may only
+mean that the specific species or genus you're searching for isn't in
+the database.
 
 ## Abundance weighting
 
@@ -139,6 +138,8 @@ You can also get count-like information from the CSV output of `sourmash
 gather`; the column `median_abund` contains the median abundance of the k-mers
 in the match to the given genome.
 
+Please see Appendix B, below, for some actual numbers and output.
+
 **Buyer beware:** There are substantial challenges in doing this kind
 of analysis on real metagenomic samples, relating to genome representation
 and strain overlap; see [this issue](https://github.com/dib-lab/sourmash/issues/461) for a discussion.
@@ -183,7 +184,7 @@ This helps us figure out what people are actually interested in doing, and
 any help we provide via the issue tracker will eventually be added into the
 documentation.
 
-## Appendix: how `sourmash gather` works.
+## Appendix A: how `sourmash gather` works.
 
 The sourmash gather algorithm works as follows:
 
@@ -230,3 +231,70 @@ A few quick notes for the algorithmic folk out there --
   and in fact should only become more sensitive and specific as we
   increase database size. (Although of course it may get a lot
   slower...)
+
+## Appendix B: sourmash gather and `--track-abundance`
+
+Below is a discussion of a synthetic set of test cases using three
+randomly generated (fake) genomes of the same size, with two even read
+data set abundances of 2x each, and a third read data set with 20x.
+
+### Data set prep
+
+First, we make some synthetic data sets:
+
+* r1.fa with 2x coverage of genome s10
+* r2.fa with 10x coverage of genome s10.
+* r3.fa with 2x coverage of genome s11.
+
+then we make signature s10-s11 with r1 and r3, i.e. 1:1 abundance, and
+make signature s10x10-s11 with r2 and r3, i.e. 10:1 abundance.
+
+### A first experiment: 1:1 abundance.
+
+When we project r1+r3, 1:1 abundance, onto s10, s11, and s12 genomes
+with gather:
+
+```
+sourmash gather r1+r3 genome-s10.sig genome-s11.sig genome-s12.sig
+```
+
+we get:
+
+```
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+394.0 kbp     49.6%   78.5%       1.8    genome-s10.fa.gz
+376.0 kbp     50.4%   80.0%       1.9    genome-s11.fa.gz
+```
+
+* approximately 50% of each query matching (first column, `p_query`)
+* approximately 80% of subject genome's contents being matched (this is due to the low coverage of 2 used to build queries; `p_match`)
+* approximately 2.0 abundance (third column, `avg_abund`)
+* no match to genome s12.
+
+### A second experiment: 10:1 abundance.
+
+When we project r2+r3, 10:1 abundance, onto s10, s11, and s12 genomes
+with gather:
+
+```
+sourmash gather r2+r3 genome-s10.sig genome-s11.sig genome-s12.sig
+```
+
+we get:
+
+```
+overlap     p_query p_match avg_abund
+---------   ------- ------- ---------
+0.5 Mbp       91.0%  100.0%      14.5    tests/test-data/genome-s10.fa.gz
+376.0 kbp      9.0%   80.0%       1.9    tests/test-data/genome-s11.fa.gz
+```
+
+* approximately 91% of s10 matching
+* approximately 9% of s11 matching
+* approximately 100% of the high coverage genome being matched, with only 80% of the low coverage genome
+* approximately 2.0 abundance (third column, avg_abund) for s11, and (very) approximately 20x abundance for genome s10.
+
+The cause of the poor approximation for genome s10 is unclear; it
+could be due to low coverage, or small genome size, or something
+else. More investigation needed.
