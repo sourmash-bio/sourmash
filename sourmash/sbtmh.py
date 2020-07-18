@@ -576,7 +576,15 @@ class SearchMinHashesFindBest(object):
         return 0
 
 
-def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
+def search_minhashes_containment(node, sig, threshold, results=None, downsample=True,
+                                 ignore_empty=None):
+    """Find minhashes contained within
+
+    Parameters
+    -----------
+    ignore_empty: bool
+        Needed for compatibility with _max_jaccard_underneath_internal_node
+    """
     mh = sig.minhash
 
     if isinstance(node, SigLeaf):
