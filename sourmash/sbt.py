@@ -606,8 +606,12 @@ class SBT(Index):
                     continue
 
             if isinstance(node, Leaf):
-                # Doesn't this also assume the leaf is a SigLeaf?
-                name = node.data.md5sum()
+                try:
+                    # If this ia SigLeaf
+                    name = node.data.md5sum()
+                except AttributeError:
+                    # If this is a Leaf, not a SigLeaf, then no md5sum
+                    name = node.name
             else:
                 name = node.name
 
