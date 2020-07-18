@@ -11,6 +11,7 @@ from sourmash.sbt import GraphFactory
 from sourmash.sbtmh import LocalizedSBT
 from sourmash import signature as sig
 
+
 @pytest.fixture(params=range(10))
 def random_seed(request):
     return request.param
@@ -25,33 +26,33 @@ def test_localized_add_node(track_abundance):
     a.add("AAAAA")
     a.add("AAAAA")  # add k-mer twice for track abundance
     a.add("AAAAA")  # add k-mer thrice for track abundance
-    a.add('AAAAT')
-    a.add('AAAAC')
-    sig_a = SourmashSignature(a, name='a')
+    a.add("AAAAT")
+    a.add("AAAAC")
+    sig_a = SourmashSignature(a, name="a")
 
     b = MinHash(n=n_hashes, ksize=5, track_abundance=track_abundance)
     b.add("AAAAA")
     b.add("AAAAC")
-    b.add('AAAAT')
-    b.add('TTTTT')
-    b.add('AAAAC')  # Same k-mer from above
-    sig_b = SourmashSignature(b, name='b')
+    b.add("AAAAT")
+    b.add("TTTTT")
+    b.add("AAAAC")  # Same k-mer from above
+    sig_b = SourmashSignature(b, name="b")
 
     c = MinHash(n=n_hashes, ksize=5, track_abundance=track_abundance)
     c.add("AAAAA")
     c.add("AAAAA")  # add k-mer twice for track abundance
     c.add("AAAAG")  # add k-mer thrice for track abundance
-    c.add('AAAAT')
-    c.add('AAAAC')
-    sig_c = SourmashSignature(c, name='c')
+    c.add("AAAAT")
+    c.add("AAAAC")
+    sig_c = SourmashSignature(c, name="c")
 
     d = MinHash(n=n_hashes, ksize=5, track_abundance=track_abundance)
     d.add("CAAAA")
     d.add("CAAAA")
-    d.add('TAAAA')
-    d.add('GAAAA')
-    d.add('CCCCC')
-    sig_d = SourmashSignature(d, name='d')
+    d.add("TAAAA")
+    d.add("GAAAA")
+    d.add("CCCCC")
+    sig_d = SourmashSignature(d, name="d")
 
     # Similarity matrices for reference
     # --- track_abundance: True (ignore_abundance: False)  similarity matrix ---
@@ -110,11 +111,7 @@ def test_localized_add_node(track_abundance):
     assert all(node < leaf for leaf, node in product(sbt._leaves, sbt._nodes))
 
     # create mapping from leaf name to node pos
-    leaf_pos = {
-        sig.data.name(): n
-        for n, sig in
-        sbt._leaves.items()
-    }
+    leaf_pos = {sig.data.name(): n for n, sig in sbt._leaves.items()}
 
     # Verify most similar leaves are sharing same parent node
     if track_abundance:
@@ -232,10 +229,12 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
             sbt_randomized.insert(signature)
 
         # Ensure all leaves are present in both
-        signatures_in_sbt = sorted([
-            leaf.data for leaf in sbt.leaves()], key=lambda x: x.name())
+        signatures_in_sbt = sorted(
+            [leaf.data for leaf in sbt.leaves()], key=lambda x: x.name()
+        )
         signatures_in_sbt_randomized = sorted(
-            [leaf.data for leaf in sbt_randomized.leaves()],  key=lambda x: x.name())
+            [leaf.data for leaf in sbt_randomized.leaves()], key=lambda x: x.name()
+        )
         assert all([s in signatures_in_sbt for s in signatures])
         assert signatures_in_sbt == signatures_in_sbt_randomized
 
@@ -243,22 +242,18 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
         # regardless of construction order
         for tree in (sbt, sbt_randomized):
             # create mapping from leaf name to node pos
-            leaf_pos = {
-                sig.data.name(): n
-                for n, sig in
-                tree._leaves.items()
-            }
+            leaf_pos = {sig.data.name(): n for n, sig in tree._leaves.items()}
             assert tree.parent(leaf_pos["A"]) == tree.parent(leaf_pos["B"])
             assert tree.parent(leaf_pos["F"]) == tree.parent(leaf_pos["G"])
 
 
 @pytest.mark.filterwarnings("ignore")
 def test_localized_sbt_on_gather_data():
-    factory = GraphFactory(5, 1000, 3)
+    factory = GraphFactory(ksize=31, starting_size=1000, n_tables=3)
     sbt = LocalizedSBT(factory, track_abundance=False)
 
     with utils.TempDirectory() as location:
-        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_glob = utils.get_test_data("gather/GCF*.sig")
         # Sort to ensure consistent ordering across operating systems
         files = sorted(glob.glob(testdata_glob))
 
@@ -274,10 +269,10 @@ def test_localized_sbt_on_gather_data():
             signature._name = ascii_uppercase[-(n_signatures - i)]
 
         # --- Create all-by-all similarity matrix for reference ---
-        from sourmash.compare import compare_all_pairs
-        compare = compare_all_pairs(signatures, ignore_abundance=True)
-        print([x.name() for x in signatures])
-        print('[' + ',\n '.join(['[' + ', '.join([f"{x:.2f}"  for x in row]) + "]" for row in compare]) + "]")
+        # from sourmash.compare import compare_all_pairs
+        # compare = compare_all_pairs(signatures, ignore_abundance=True)
+        # print([x.name() for x in signatures])
+        # print('[' + ',\n '.join(['[' + ', '.join([f"{x:.2f}"  for x in row]) + "]" for row in compare]) + "]")
 
         # --- Similarity matrix ---
         #    ['O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z']
@@ -319,6 +314,8 @@ def test_localized_sbt_on_gather_data():
         # O: 3  Q: 4   P: 5  None
 
         # --- Insert: R ---
+        # - R is not similar to any leaves currently in the tree,
+        # --> insert naively to next position
         # Tree:
         #             0
         #        /        \
@@ -439,16 +436,24 @@ def test_localized_sbt_on_gather_data():
         leaf_names_in_order = [
             v.name for k, v in sorted(sbt._leaves.items(), key=lambda x: x[0])
         ]
-        assert leaf_names_in_order == ['U', 'T', 'O', 'Q', 'X', 'R', 'P', 'Z', 'W',
-                                       'V', 'Y', 'S']
+        assert leaf_names_in_order == [
+            "U",
+            "T",
+            "O",
+            "Q",
+            "X",
+            "R",
+            "P",
+            "Z",
+            "W",
+            "V",
+            "Y",
+            "S",
+        ]
 
         # --- Double check to make sure parents are shared --- #
         # create mapping from leaf name to node pos
-        leaf_pos = {
-            sig.data.name(): n
-            for n, sig in
-            sbt._leaves.items()
-        }
+        leaf_pos = {sig.data.name(): n for n, sig in sbt._leaves.items()}
         assert sbt.parent(leaf_pos["P"]) == sbt.parent(leaf_pos["Z"])
         assert sbt.parent(leaf_pos["U"]) == sbt.parent(leaf_pos["T"])
         assert sbt.parent(leaf_pos["O"]) == sbt.parent(leaf_pos["Q"])
@@ -483,38 +488,38 @@ def test_localized_sbt_adversarial_dissimilar_signatures():
     n_hashes = 3
     a = MinHash(n=n_hashes, ksize=5)
     a.add("AAAAA")
-    a.add('AAAAC')
+    a.add("AAAAC")
     a.add("AAAAG")
-    a.add('AAAAT')
-    sig_a = SourmashSignature(a, name='a')
+    a.add("AAAAT")
+    sig_a = SourmashSignature(a, name="a")
 
     b = MinHash(n=n_hashes, ksize=5)
     b.add("TTTTA")
-    b.add('TTTTC')
-    b.add('TTTTG')
-    b.add('TTTTT')  # Same k-mer from above
-    sig_b = SourmashSignature(b, name='b')
+    b.add("TTTTC")
+    b.add("TTTTG")
+    b.add("TTTTT")  # Same k-mer from above
+    sig_b = SourmashSignature(b, name="b")
 
     c = MinHash(n=n_hashes, ksize=5)
     c.add("CCCCA")
-    c.add('CCCCC')
-    c.add('CCCCG')
-    c.add('CCCCGT')
-    sig_c = SourmashSignature(c, name='c')
+    c.add("CCCCC")
+    c.add("CCCCG")
+    c.add("CCCCGT")
+    sig_c = SourmashSignature(c, name="c")
 
     d = MinHash(n=n_hashes, ksize=5)
     d.add("GGGGA")
     d.add("GGGGC")
     d.add("GGGGG")
     d.add("GGGGT")
-    sig_d = SourmashSignature(d, name='d')
+    sig_d = SourmashSignature(d, name="d")
 
     e = MinHash(n=n_hashes, ksize=5)
     e.add("TAAAA")
     e.add("TAAAC")
     e.add("TAAAG")
     e.add("TAAAT")
-    sig_e = SourmashSignature(e, name='e')
+    sig_e = SourmashSignature(e, name="e")
 
     sigs = (sig_a, sig_b, sig_c, sig_d, sig_e)
     for sig in sigs:
@@ -524,10 +529,6 @@ def test_localized_sbt_adversarial_dissimilar_signatures():
     assert all(node < leaf for leaf, node in product(sbt._leaves, sbt._nodes))
 
     # create mapping from leaf name to node pos
-    leaf_pos = {
-        sig.data.name(): n
-        for n, sig in
-        sbt._leaves.items()
-    }
+    leaf_pos = {sig.data.name(): n for n, sig in sbt._leaves.items()}
     # Ensure signatures were added as leaves
-    assert all(x in leaf_pos.keys() for x in list('abcde'))
+    assert all(x in leaf_pos.keys() for x in list("abcde"))
