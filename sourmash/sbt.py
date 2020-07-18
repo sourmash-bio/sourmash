@@ -605,20 +605,10 @@ class SBT(Index):
                 if random() - sparseness <= 0:
                     continue
 
-            if isinstance(node, Leaf):
-                try:
-                    # If this ia SigLeaf
-                    name = node.data.md5sum()
-                except AttributeError:
-                    # If this is a Leaf, not a SigLeaf, then no md5sum
-                    name = node.name
-            else:
-                name = node.name
-
             data = {
                 # TODO: start using md5sum instead?
-                'filename': os.path.basename(name),
-                'name': name
+                'filename': os.path.basename(node.name),
+                'name': node.name
             }
 
             try:
