@@ -2171,14 +2171,14 @@ def test_do_sourmash_check_sbt_filenames():
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
-        assert len(sbt_files) == 13
+        assert len(sbt_files) == 14
 
         for f in sbt_files:
             if 'internal' in f:
                 continue
             f = os.path.basename(f)
-            assert f not in sig_names
-            assert f in sig_md5s
+            assert f in sig_names
+            assert f not in sig_md5s
 
 
 def test_do_sourmash_sbt_search_bestonly():
@@ -2669,8 +2669,8 @@ def test_gather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
+        assert 'found 11 matches total' in out
+        assert 'the recovered matches hit 99.9% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
                 'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
@@ -2729,8 +2729,8 @@ def test_multigather_metagenome():
         print(out)
         print(err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
+        assert 'found 11 matches total' in out
+        assert 'the recovered matches hit 99.9% of the query' in out
         assert all(('4.9 Mbp       33.2%  100.0%' in out,
                 'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
@@ -2844,8 +2844,8 @@ def test_gather_metagenome_downsample():
         print(out)
         print(err)
 
-        assert 'found 10 matches total' in out
-        assert 'the recovered matches hit 99.4% of the query' in out
+        assert 'found 11 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
         assert all(('5.2 Mbp       32.9%  100.0%' in out,
                 'NC_003198.1' in out))
         assert all(('4.4 Mbp        1.9%    6.8%' in out,
@@ -2897,8 +2897,8 @@ def test_gather_save_matches():
         print(out)
         print(err)
 
-        assert 'found 12 matches total' in out
-        assert 'the recovered matches hit 100.0% of the query' in out
+        assert 'found 11 matches total' in out
+        assert 'the recovered matches hit 99.9% of the query' in out
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
@@ -3554,12 +3554,12 @@ def test_do_sourmash_index_zipfile(c):
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 34
-        assert len([c for c in content if 'internal' in c]) == 20
+        assert len(content) == 29
+        assert len([c for c in content if 'internal' in c]) == 15
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
         assert len(sbts) == 1
-        assert sbts[0] == '4289d4241be8573145282352215ca3c4.sbt.json'
+        assert sbts[0] == 'zzz.sbt.json'
 
 
 @utils.in_tempdir
@@ -3595,9 +3595,9 @@ def test_do_sourmash_index_zipfile_append(c):
 
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
-        assert len(content) == 26
+        assert len(content) == 25
         assert len([c for c in content if 'internal' in c]) == 11
         assert ".sbt.zzz/" in content
         sbts = [c for c in content if c.endswith(".sbt.json")]
-        assert len(sbts) == 2
-        assert sbts[0] == '4289d4241be8573145282352215ca3c4.sbt.json'
+        assert len(sbts) == 1
+        assert sbts[0] == 'zzz.sbt.json'
