@@ -11,7 +11,7 @@ def subparser(subparsers):
                            help='file containing list of signature files to query')
     subparser.add_argument('--threshold', metavar='T', type=int, default=5)
     subparser.add_argument(
-        '--majority_vote', action='store_true',
+        '--majority', action='store_true',
         help='use majority vote classification instead of lca'
     )
     subparser.add_argument(

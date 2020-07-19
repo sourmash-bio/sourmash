@@ -15,7 +15,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
 
-def classify_signature(query_sig, dblist, threshold, majority_vote):
+def classify_signature(query_sig, dblist, threshold, majority):
     """
     Classify 'query_sig' using the given list of databases.
 
@@ -48,17 +48,18 @@ def classify_signature(query_sig, dblist, threshold, majority_vote):
     # threshold.
 
     tree = {}
-    lca = []
 
-    if majority_vote:
-        majority = counts.most_common()[0][0]
-        lca_utils.build_tree([majority], tree)
-    else:
-        for lca, count in counts.most_common():
-            if count < threshold:
-                break
-        # update tree with this set of assignments
-        lca_utils.build_tree([lca], tree)
+    if counts:
+        if majority:
+            majority_vote, count = counts.most_common()[0]
+            if count > threshold:
+                lca_utils.build_tree([majority_vote], tree)
+        else:
+            for lca, count in counts.most_common():
+                if count < threshold:
+                    break
+                # update tree with this set of assignments
+                lca_utils.build_tree([lca], tree)
 
     status = 'nomatch'
     if not tree:
@@ -140,7 +141,7 @@ def classify(args):
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,
-                                                     args.threshold, args.majority_vote)
+                                                     args.threshold, args.majority)
                 debug(lineage)
 
                 # output each classification to the spreadsheet
