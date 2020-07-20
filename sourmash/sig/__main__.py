@@ -423,6 +423,7 @@ def intersect(args):
                 # check signature compatibility --
                 try:
                     sigobj.minhash.count_common(first_sig.minhash)
+                    sigobj.minhash.is_compatible(first_sig.minhash)
                 except ValueError:
                     error('incompatible minhashes; specify -k and/or molecule type.')
                     sys.exit(-1)
