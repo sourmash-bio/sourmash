@@ -421,12 +421,8 @@ def intersect(args):
                 mins = set(sigobj.minhash.get_mins())
             else:
                 # check signature compatibility --
-                try:
-                    sigobj.minhash.count_common(first_sig.minhash)
-                    sigobj.minhash.is_compatible(first_sig.minhash)
-                except ValueError:
-                    error('incompatible minhashes; specify -k and/or molecule type.')
-                    sys.exit(-1)
+                if not sigobj.minhash.is_compatible(first_sig.minhash):
+                    raise ValueError("incompatible minhashes; specify -k and/or molecule type.")
 
             mins.intersection_update(sigobj.minhash.get_mins())
             total_loaded += 1
@@ -495,11 +491,8 @@ def subtract(args):
                                                         select_moltype=moltype,
                                                         traverse=True,
                                                         progress=progress):
-            try:
-                sigobj.minhash.count_common(from_mh)
-            except ValueError:
-                error('incompatible minhashes; specify -k and/or molecule type.')
-                sys.exit(-1)
+            if not sigobj.minhash.is_compatible(from_mh):
+                raise ValueError("incompatible minhashes; specify -k and/or molecule type.")
 
             if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
