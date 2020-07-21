@@ -1153,6 +1153,124 @@ def test_index_and_classify_internal_unassigned_multi():
         assert 'loaded 1 LCA databases' in err
 
 
+@utils.in_tempdir
+def test_classify_majority_vote_1(c):
+    # classify merged signature using lca should yield no results
+
+    # build database
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2)
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in c.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in c.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in c.last_result.err
+
+    # merge input_sig1 and input_sig2
+    c.run_sourmash('signature', 'merge', input_sig1, input_sig2, '-k', '31', '--flatten', '-o', 'sig1and2.sig')
+    sig1and2 = c.output('sig1and2.sig')
+
+    # lca classify should yield no results
+    c.run_sourmash('lca', 'classify', '--db', lca_db, '--query', sig1and2)
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in c.last_result.out
+    assert 'disagree,,,,,,,,' in c.last_result.out
+    assert 'classified 1 signatures total' in c.last_result.err
+    assert 'loaded 1 LCA databases' in c.last_result.err
+
+
+
+@utils.in_tempdir
+def test_classify_majority_vote_2(c):
+    # classify same signature with same database using --majority
+    # should yield results
+
+    # build database
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2)
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in c.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in c.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in c.last_result.err
+
+    # merge input_sig1 and input_sig2
+    c.run_sourmash('signature', 'merge', input_sig1, input_sig2, '-k', '31', '--flatten', '-o', 'sig1and2.sig')
+    sig1and2 = c.output('sig1and2.sig')
+
+    # majority vote classify
+    c.run_sourmash('lca', 'classify', '--db', lca_db, '--query', sig1and2, '--majority')
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in c.last_result.out
+    assert 'found,Eukaryota,Chlorophyta,Prasinophyceae,unassigned,unassigned,Ostreococcus' in c.last_result.out
+    assert 'classified 1 signatures total' in c.last_result.err
+    assert 'loaded 1 LCA databases' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_classify_majority_vote_3(c):
+    # classify signature with nothing in counts
+
+    # build database
+    taxcsv = utils.get_test_data('lca/delmont-6.csv')
+    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2)
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in c.last_result.err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in c.last_result.err
+    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in c.last_result.err
+
+    # obtain testdata '47.fa.sig'
+    testdata1 = utils.get_test_data('47.fa.sig')
+
+    # majority vote classify
+    c.run_sourmash('lca', 'classify', '--db', lca_db, '--query', testdata1, '--majority')
+
+    print(c.last_command)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in c.last_result.out
+    assert 'nomatch,,,,,,,,' in c.last_result.out
+    assert 'classified 1 signatures total' in c.last_result.err
+    assert 'loaded 1 LCA databases' in c.last_result.err
+
+
 def test_multi_db_classify():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
