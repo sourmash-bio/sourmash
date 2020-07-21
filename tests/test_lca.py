@@ -1235,8 +1235,7 @@ def test_classify_majority_vote_2(c):
 
 @utils.in_tempdir
 def test_classify_majority_vote_3(c):
-    # classify signature with no match to the 
-    # same database using --majority. Should yield nomatch
+    # classify signature with nothing in counts
 
     # build database
     taxcsv = utils.get_test_data('lca/delmont-6.csv')
