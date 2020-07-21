@@ -49,17 +49,16 @@ def classify_signature(query_sig, dblist, threshold, majority):
 
     tree = {}
 
-    if counts:
-        if majority:
-            majority_vote, count = counts.most_common()[0]
-            if count > threshold:
-                lca_utils.build_tree([majority_vote], tree)
-        else:
-            for lca, count in counts.most_common():
-                if count < threshold:
-                    break
-                # update tree with this set of assignments
-                lca_utils.build_tree([lca], tree)
+    if counts and majority:
+        majority_vote, count = counts.most_common()[0]
+        if count > threshold:
+            lca_utils.build_tree([majority_vote], tree)
+    else:
+        for lca, count in counts.most_common():
+            if count < threshold:
+                break
+            # update tree with this set of assignments
+            lca_utils.build_tree([lca], tree)
 
     status = 'nomatch'
     if not tree:
