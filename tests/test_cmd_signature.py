@@ -95,15 +95,15 @@ def test_sig_merge_1_multisig(c):
 @utils.in_tempdir
 def test_sig_merge_1_ksize_moltype(c):
     # check ksize, moltype args
-    sig47 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
-    sig47and63 = utils.get_test_data('47+63.fa.sig')
-    c.run_sourmash('sig', 'merge', sig47, sig63, '--dna', '-k', '31')
+    sig2and63 = utils.get_test_data('2+63.fa.sig')
+    c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31')
 
     # stdout should be new signature
     out = c.last_result.out
 
-    test_merge_sig = sourmash.load_one_signature(sig47and63)
+    test_merge_sig = sourmash.load_one_signature(sig2and63)
     actual_merge_sig = sourmash.load_one_signature(out)
 
     print(test_merge_sig.minhash)
@@ -111,6 +111,17 @@ def test_sig_merge_1_ksize_moltype(c):
     print(out)
 
     assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_merge_1_ksize_moltype_fail(c):
+    # check ksize, moltype args
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig2and63 = utils.get_test_data('2+63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'merge', sig2, sig63)
 
 
 @utils.in_tempdir
@@ -219,6 +230,25 @@ def test_sig_filter_3(c):
 
     filtered_sig = sourmash.load_one_signature(out)
     test_sig = sourmash.load_one_signature(sig47)
+
+    abunds = test_sig.minhash.get_mins(True)
+    abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
+    assert abunds
+
+    assert filtered_sig.minhash.get_mins(True) == abunds
+
+
+@utils.in_tempdir
+def test_sig_filter_3_ksize_select(c):
+    # test filtering with ksize selectiong
+    psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    c.run_sourmash('sig', 'filter', '-m', '2', psw_mag, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    filtered_sig = sourmash.load_one_signature(out)
+    test_sig = sourmash.load_one_signature(psw_mag, ksize=31)
 
     abunds = test_sig.minhash.get_mins(True)
     abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
@@ -390,6 +420,62 @@ def test_sig_intersect_5(c):
 
 
 @utils.in_tempdir
+def test_sig_intersect_6_ksize_fail(c):
+    # specify ksize to intersect 2.fa.sig with 47.fa.sig - 2.fa.sig contains
+    # multiple ksizes.
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'intersect', sig2, sig47)
+
+
+@utils.in_tempdir
+def test_sig_intersect_6_ksize_succeed(c):
+    # specify ksize to intersect 2.fa.sig with 47.fa.sig - 2.fa.sig contains
+    # multiple ksizes.
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+
+    c.run_sourmash('sig', 'intersect', '-k', '31', sig2, sig47)
+
+    assert 'loaded and intersected 2 signatures' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_sig_intersect_7(c):
+    # intersect of 47 and nothing should be self
+    sig47 = utils.get_test_data('47.fa.sig')
+    c.run_sourmash('sig', 'intersect', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_intersect_sig = sourmash.load_one_signature(sig47)
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    print(test_intersect_sig.minhash)
+    print(actual_intersect_sig.minhash)
+    print(out)
+
+    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_intersect_8_multisig(c):
+    # intersect of all the multisig stuff should be nothing
+    sig47 = utils.get_test_data('47+63-multisig.sig')
+    c.run_sourmash('sig', 'intersect', sig47)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    actual_intersect_sig = sourmash.load_one_signature(out)
+
+    assert not len(actual_intersect_sig.minhash)
+
+
+@utils.in_tempdir
 def test_sig_subtract_1(c):
     # subtract of 63 from 47
     sig47 = utils.get_test_data('47.fa.sig')
@@ -445,36 +531,23 @@ def test_sig_subtract_3(c):
 
 
 @utils.in_tempdir
-def test_sig_intersect_2(c):
-    # intersect of 47 and nothing should be self
+def test_sig_subtract_4_ksize_fail(c):
+    # subtract of 2 from 47 should fail without -k specified
     sig47 = utils.get_test_data('47.fa.sig')
-    c.run_sourmash('sig', 'intersect', sig47)
+    sig2 = utils.get_test_data('2.fa.sig')
 
-    # stdout should be new signature
-    out = c.last_result.out
-
-    test_intersect_sig = sourmash.load_one_signature(sig47)
-    actual_intersect_sig = sourmash.load_one_signature(out)
-
-    print(test_intersect_sig.minhash)
-    print(actual_intersect_sig.minhash)
-    print(out)
-
-    assert actual_intersect_sig.minhash == test_intersect_sig.minhash
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'subtract', sig47, sig2)
 
 
 @utils.in_tempdir
-def test_sig_intersect_2_multisig(c):
-    # intersect of all the multisig stuff should be nothing
-    sig47 = utils.get_test_data('47+63-multisig.sig')
-    c.run_sourmash('sig', 'intersect', sig47)
+def test_sig_subtract_4_ksize_succeed(c):
+    # subtract of 2 from 47 should fail without -k specified
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig2 = utils.get_test_data('2.fa.sig')
 
-    # stdout should be new signature
-    out = c.last_result.out
-
-    actual_intersect_sig = sourmash.load_one_signature(out)
-
-    assert not len(actual_intersect_sig.minhash)
+    c.run_sourmash('sig', 'subtract', sig47, sig2, '-k', '31')
+    assert 'loaded and subtracted 1 signatures' in c.last_result.err
 
 
 @utils.in_tempdir
@@ -513,6 +586,24 @@ def test_sig_rename_1_multisig(c):
         n += 1
 
     assert n == 9, n
+
+
+@utils.in_tempdir
+def test_sig_rename_1_multisig_ksize(c):
+    # set new name for multiple signatures/files; select k=31
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    other_sig = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'rename', multisig, other_sig, 'fiz bar', '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    n = 0
+    for sig in sourmash.load_signatures(out):
+        assert sig.name() == 'fiz bar'
+        n += 1
+
+    assert n == 7, n
 
 
 @utils.in_tempdir
@@ -876,6 +967,36 @@ def test_sig_extract_6(c):
 
 
 @utils.in_tempdir
+def test_sig_extract_7(c):
+    # extract matches based on ksize
+    sig2 = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'extract', sig2, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
+
+
+@utils.in_tempdir
+def test_sig_extract_7_no_ksize(c):
+    # extract all three matches when -k not specified
+    sig2 = utils.get_test_data('2.fa.sig')
+    c.run_sourmash('sig', 'extract', sig2)
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 3
+
+
+@utils.in_tempdir
 def test_sig_flatten_1(c):
     # extract matches to several names from among several signatures & flatten
     sig47abund = utils.get_test_data('track_abund/47.fa.sig')
@@ -892,6 +1013,21 @@ def test_sig_flatten_1(c):
 
     test_flattened = sourmash.load_one_signature(sig47)
     assert test_flattened.minhash == siglist[0].minhash
+
+
+@utils.in_tempdir
+def test_sig_flatten_2_ksize(c):
+    # flatten only one signature selected using ksize
+    psw_mag = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
+    c.run_sourmash('sig', 'flatten', psw_mag, '-k', '31')
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    siglist = sourmash.load_signatures(out)
+    siglist = list(siglist)
+
+    assert len(siglist) == 1
 
 
 @utils.in_tempdir
