@@ -27,6 +27,12 @@ If you are a Python programmer, you might also be interested in our [API example
 
 If you prefer R, we have [a short guide to using sourmash output with R](other-languages.md).
 
+## Customizing matrix and dendrogram plots in Python
+
+If you're interested in customizing the output of `sourmash plot`,
+which produces comparison matrices and dendrograms, please see
+[Building plots from `sourmash compare` output](plotting-compare.md).
+
 ## Contents:
 
 ```{toctree}
