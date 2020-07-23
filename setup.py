@@ -83,7 +83,7 @@ SETUP_METADATA = {
         'doc' : ['sphinx', 'myst-parser[sphinx]', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
-        '10x': ['bam2fasta==1.0.4'],
+        '10x': ['bam2fasta==1.0.5'],
         'storage': ["ipfshttpclient>=0.4.13", "redis"]
     },
     "include_package_data": True,
