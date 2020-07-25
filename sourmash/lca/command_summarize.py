@@ -130,11 +130,11 @@ def count_signature(sig, scaled, hashvals):
     mh = sig.minhash.downsample_scaled(scaled)
 
     if mh.track_abundance:
-        abunds = mh.get_mins(with_abundance=True)
+        abunds = mh.hashes
         for hashval, count in abunds.items():
             hashvals[hashval] += count
     else:
-        for hashval in mh.get_mins():
+        for hashval in mh.hashes:
             hashvals[hashval] += 1
 
 

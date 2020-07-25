@@ -703,10 +703,10 @@ def gather(args):
             e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
                         track_abundance=with_abundance)
             if with_abundance:
-                abunds = next_query.minhash.get_mins(with_abundance=True)
+                abunds = next_query.minhash.hashes
                 e.set_abundances(abunds)
             else:
-                e.add_many(next_query.minhash.get_mins())
+                e.add_many(next_query.minhash.hashes)
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ sig.SourmashSignature(e) ], fp)
@@ -849,7 +849,7 @@ def multigather(args):
                     notify('saving unassigned hashes to "{}"', output_unassigned)
 
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
-                    e.add_many(next_query.minhash.get_mins())
+                    e.add_many(next_query.minhash.hashes)
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
             n += 1
 

@@ -298,8 +298,8 @@ def overlap(args):
 
     scaled = sig1.minhash.scaled
 
-    hashes_1 = set(sig1.minhash.get_mins())
-    hashes_2 = set(sig2.minhash.get_mins())
+    hashes_1 = set(sig1.minhash.hashes)
+    hashes_2 = set(sig2.minhash.hashes)
 
     num_common = len(hashes_1.intersection(hashes_2))
     disjoint_1 = len(hashes_1 - hashes_2)
@@ -418,14 +418,14 @@ def intersect(args):
                                                progress=progress):
             if first_sig is None:
                 first_sig = sigobj
-                mins = set(sigobj.minhash.get_mins())
+                mins = set(sigobj.minhash.hashes)
             else:
                 # check signature compatibility --
                 if not sigobj.minhash.is_compatible(first_sig.minhash):
                     error("incompatible minhashes; specify -k and/or molecule type.")
                     sys.exit(-1)
 
-            mins.intersection_update(sigobj.minhash.get_mins())
+            mins.intersection_update(sigobj.minhash.hashes)
             total_loaded += 1
         notify('loaded and intersected signatures from {}...', sigfile, end='\r')
 
@@ -449,7 +449,7 @@ def intersect(args):
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
         intersect_mh = abund_sig.minhash.copy_and_clear()
-        abund_mins = abund_sig.minhash.get_mins(with_abundance=True)
+        abund_mins = abund_sig.minhash.hashes
 
         # do one last intersection
         mins.intersection_update(abund_mins)
@@ -479,7 +479,7 @@ def subtract(args):
         error('Cannot use subtract on signatures with abundance tracking, sorry!')
         sys.exit(1)
 
-    subtract_mins = set(from_mh.get_mins())
+    subtract_mins = set(from_mh.hashes)
 
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
@@ -500,7 +500,7 @@ def subtract(args):
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
                 sys.exit(1)
 
-            subtract_mins -= set(sigobj.minhash.get_mins())
+            subtract_mins -= set(sigobj.minhash.hashes)
 
             notify('loaded and subtracted signatures from {}...', sigfile, end='\r')
             total_loaded += 1
@@ -625,7 +625,7 @@ def filter(args):
                        ss)
                 continue
 
-            abunds = mh.get_mins(with_abundance=True)
+            abunds = mh.hashes
             abunds2 = {}
             for k, v in abunds.items():
                 if v >= args.min_abundance:
@@ -679,7 +679,7 @@ def flatten(args):
         for ss in siglist:
             flattened_mh = ss.minhash.copy_and_clear()
             flattened_mh.track_abundance = False
-            flattened_mh.add_many(ss.minhash.get_mins())
+            flattened_mh.add_many(ss.minhash.hashes)
 
             ss.minhash = flattened_mh
 
@@ -731,7 +731,7 @@ def downsample(args):
                 else:                         # try to turn a num into a scaled
                     # first check: can we?
                     max_hash = _get_max_hash_for_scaled(args.scaled)
-                    mins = mh.get_mins()
+                    mins = mh.hashes
                     if max(mins) < max_hash:
                         raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
 
@@ -810,7 +810,7 @@ def export(args):
     x['hashBits'] = 64
     x['hashSeed'] = mh.seed
 
-    ll = list(mh.get_mins())
+    ll = list(mh.hashes)
     x['sketches'] = [{ 'hashes': ll }]
 
     with FileOutput(args.output, 'wt') as fp:

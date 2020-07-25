@@ -156,7 +156,7 @@ class LCA_Database(Index):
             except TypeError:
                 raise ValueError('lineage cannot be used as a key?!')
 
-        for hashval in minhash.get_mins():
+        for hashval in minhash.hashes:
             self.hashval_to_idx[hashval].add(idx)
 
         return len(minhash)
@@ -462,7 +462,7 @@ class LCA_Database(Index):
             # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
-        query_mins = set(minhash.get_mins())
+        query_mins = set(minhash.hashes)
 
         # collect matching hashes for the query:
         c = Counter()

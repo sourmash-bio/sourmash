@@ -65,11 +65,11 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                                          query_sig.minhash.ksize)
 
     # extract the basic set of mins
-    query_mins = set(query_sig.minhash.get_mins())
+    query_mins = set(query_sig.minhash.hashes)
     n_mins = len(query_mins)
 
     if query_sig.minhash.track_abundance and not ignore_abundance:
-        orig_abunds = query_sig.minhash.get_mins(with_abundance=True)
+        orig_abunds = query_sig.minhash.hashes
     else:
         if query_sig.minhash.track_abundance and ignore_abundance:
             notify('** ignoring abundance')
@@ -236,7 +236,7 @@ def gather_main(args):
             print_results('')
     # nothing found.
     else:
-        est_bp = len(query_sig.minhash.get_mins()) * query_sig.minhash.scaled
+        est_bp = len(query_sig.minhash) * query_sig.minhash.scaled
         print_results('')
         print_results('No assignment for est {} of sequence.',
                       format_bp(est_bp))

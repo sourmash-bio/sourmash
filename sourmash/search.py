@@ -125,7 +125,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query_abunds = { k: 1 for k in orig_query_mins }
     if track_abundance:
         import numpy as np
-        orig_query_abunds = orig_query_mh.get_mins(with_abundance=True)
+        orig_query_abunds = orig_query_mh.hashes
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
