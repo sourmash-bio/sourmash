@@ -127,6 +127,7 @@ html_theme = 'alabaster'
 html_theme_options = {
     'logo': 'logo.png',
     'logo_name': True,
+    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

@@ -11,6 +11,10 @@
 
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
+---
+
+<p align="center"><img src="https://raw.githubusercontent.com/dib-lab/sourmash/master/doc/_static/logo.png" height="256" /></p>
+
 Usage:
 
     sourmash compute *.fq.gz
