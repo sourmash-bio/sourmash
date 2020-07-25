@@ -262,7 +262,7 @@ class MinHash(RustObject):
         "Remove many hashes at once; ``hashes`` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
-    def update(self, other):
+    def update_xxx(self, other):
         "Update this sketch from all the hashes in the other."
         self.add_many(other)
 
@@ -570,16 +570,6 @@ class MinHash(RustObject):
         "Add a protein sequence."
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
 
-    def is_molecule_type(self, molecule):
-        """Check if this MinHash is a particular human-readable molecule type.
-
-        Supports 'protein', 'dayhoff', 'hp', 'DNA'.
-        @CTB deprecate for 4.0?
-        """
-        if molecule.lower() not in ('protein', 'dayhoff', 'hp', 'dna'):
-            raise ValueError("unknown moltype in query, '{}'".format(molecule))
-        return molecule == self.moltype
-
     @property
     def moltype(self):                    # TODO: test in minhash tests
         if self.is_protein:
@@ -590,3 +580,4 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
+
