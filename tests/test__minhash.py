@@ -72,15 +72,15 @@ def test_basic_dna(track_abundance):
     assert mh.moltype == 'DNA'
 
     mh.add_sequence('ATGC')
-    a = mh.get_mins()
+    a = mh.hashes
 
     mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
-    b = mh.get_mins()
+    b = mh.hashes
 
     print(a, b)
-    assert a == b
+    assert list(a) == list(b)
     assert len(b) == 1
-    assert a[0] == b[0] == 12415348535738636339
+    assert list(a)[0] == list(b)[0] == 12415348535738636339
 
 
 def test_div_zero(track_abundance):
@@ -108,15 +108,15 @@ def test_bytes_dna(track_abundance):
     mh.add_sequence('ATGC')
     mh.add_sequence(b'ATGC')
     mh.add_sequence('ATGC')
-    a = mh.get_mins()
+    a = mh.hashes
 
     mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
     mh.add_sequence(b'GCAT')             # this will not get added; hash > ATGC
     mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
-    b = mh.get_mins()
+    b = mh.hashes
 
     print(a, b)
-    assert a == b
+    assert list(a) == list(b)
     assert len(b) == 1
 
 
@@ -134,7 +134,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     mh.add_protein('AGYYG')
     mh.add_protein(b'AGYYG')
 
-    assert len(mh.get_mins()) == 4
+    assert len(mh.hashes) == 4
 
 
 def test_protein_dayhoff(track_abundance, dayhoff):
@@ -142,7 +142,7 @@ def test_protein_dayhoff(track_abundance, dayhoff):
     mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
-    assert len(mh.get_mins()) == 4
+    assert len(mh.hashes) == 4
 
 
 def test_bytes_protein_hp(track_abundance, hp):
@@ -158,9 +158,9 @@ def test_bytes_protein_hp(track_abundance, hp):
     mh.add_protein(b'AGYYG')
 
     if hp:
-        assert len(mh.get_mins()) == 1
+        assert len(mh.hashes) == 1
     else:
-        assert len(mh.get_mins()) == 4
+        assert len(mh.hashes) == 4
 
 
 def test_protein_hp(track_abundance, hp):
@@ -169,9 +169,9 @@ def test_protein_hp(track_abundance, hp):
     mh.add_protein('AGYYG')
 
     if hp:
-        assert len(mh.get_mins()) == 1
+        assert len(mh.hashes) == 1
     else:
-        assert len(mh.get_mins()) == 4
+        assert len(mh.hashes) == 4
 
 
 def test_translate_codon(track_abundance):
@@ -194,13 +194,13 @@ def test_dayhoff(track_abundance):
                          dayhoff=True, hp=False, track_abundance=track_abundance)
     mh_dayhoff.add_sequence('ACTGAC')
 
-    assert len(mh_dayhoff.get_mins()) == 2
+    assert len(mh_dayhoff.hashes) == 2
     # verify that dayhoff-encoded hashes are different from protein/aa hashes
     mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
-    assert len(mh_protein.get_mins()) == 2
-    assert mh_protein.get_mins() != mh_dayhoff.get_mins()
+    assert len(mh_protein.hashes) == 2
+    assert mh_protein.hashes != mh_dayhoff.hashes
 
 
 def test_hp(track_abundance):
@@ -211,13 +211,13 @@ def test_hp(track_abundance):
 
     mh_hp.add_sequence('ACTGAC')
 
-    assert len(mh_hp.get_mins()) == 2
+    assert len(mh_hp.hashes) == 2
     # verify that hp-encoded hashes are different from protein/aa hashes
     mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
-    assert len(mh_protein.get_mins()) == 2
-    assert mh_protein.get_mins() != mh_hp.get_mins()
+    assert len(mh_protein.hashes) == 2
+    assert mh_protein.hashes != mh_hp.hashes
 
 
 def test_protein_short(track_abundance):
@@ -225,7 +225,7 @@ def test_protein_short(track_abundance):
     mh = MinHash(10, 9, True, track_abundance=track_abundance)
     mh.add_protein('AG')
 
-    assert len(mh.get_mins()) == 0, mh.get_mins()
+    assert len(mh.hashes) == 0, mh.hashes
 
 
 def test_size_limit(track_abundance):
@@ -234,9 +234,9 @@ def test_size_limit(track_abundance):
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
-    assert mh.get_mins() == [10, 20, 30]
+    assert list(mh.hashes) == [10, 20, 30]
     mh.add_hash(5) # -> should push 30 off end
-    assert mh.get_mins() == [5, 10, 20]
+    assert list(mh.hashes) == [5, 10, 20]
 
 
 def test_scaled(track_abundance):
@@ -249,11 +249,11 @@ def test_scaled(track_abundance):
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
-    assert mh.get_mins() == [10, 20, 30]
+    assert mh.hashes == [10, 20, 30]
     mh.add_hash(40)
-    assert mh.get_mins() == [10, 20, 30]
+    assert mh.hashes == [10, 20, 30]
     mh.add_hash(36)
-    assert mh.get_mins() == [10, 20, 30]
+    assert mh.hashes == [10, 20, 30]
 
 
 def test_no_scaled(track_abundance):
@@ -458,26 +458,26 @@ def test_basic_dna_bad_2(track_abundance):
 def test_basic_dna_bad_force(track_abundance):
     # test behavior on bad DNA; use 100 so multiple hashes get added.
     mh = MinHash(100, 4, track_abundance=track_abundance)
-    assert len(mh.get_mins()) == 0
+    assert len(mh.hashes) == 0
     mh.add_sequence('ATGN', True)     # ambiguous kmer skipped.
-    assert len(mh.get_mins()) == 0
+    assert len(mh.hashes) == 0
     mh.add_sequence('AATGN', True)    # but good k-mers still used.
-    assert len(mh.get_mins()) == 1
+    assert len(mh.hashes) == 1
     mh.add_sequence('AATG', True)     # checking that right kmer was added
-    assert len(mh.get_mins()) == 1    # (only 1 hash <- this is a dup)
+    assert len(mh.hashes) == 1    # (only 1 hash <- this is a dup)
 
 
 def test_basic_dna_bad_force_2(track_abundance):
     # test behavior on bad DNA
     mh = MinHash(100, 4, track_abundance=track_abundance)
-    assert len(mh.get_mins()) == 0
+    assert len(mh.hashes) == 0
     mh.add_sequence('AAGNCGG', True)     # ambiguous kmers skipped.
-    assert len(mh.get_mins()) == 0
+    assert len(mh.hashes) == 0
     mh.add_sequence('AATGNGCGG', True)  # ambiguous kmers skipped.
-    assert len(mh.get_mins()) == 2
+    assert len(mh.hashes) == 2
     mh.add_sequence('AATG', True)        # checking that right kmers were added
     mh.add_sequence('GCGG', True)
-    assert len(mh.get_mins()) == 2       # (only 2 hashes should be there)
+    assert len(mh.hashes) == 2       # (only 2 hashes should be there)
 
 
 def test_consume_lowercase(track_abundance):
@@ -531,7 +531,7 @@ def test_intersection_errors(track_abundance):
     a.add_sequence("TGCCGCCCAGCA")
     b.add_sequence("TGCCGCCCAGCA")
 
-    common = set(a.get_mins())
+    common = set(a.hashes)
     combined_size = 3
 
     intersection, size = a.intersection(b, in_common=False)
@@ -554,7 +554,7 @@ def test_intersection_1(track_abundance):
     a.add_sequence('TGCCGCCCAGCA')
     b.add_sequence('TGCCGCCCAGCA')
 
-    common = set(a.get_mins())
+    common = set(a.hashes)
     combined_size = 3
 
     intersection, size = a.intersection(b, in_common=True)
@@ -595,7 +595,7 @@ def test_intersection_1(track_abundance):
     a.add_sequence('GTCCGCCCAGTGA')
     b.add_sequence('GTCCGCCCAGTGG')
 
-    new_in_common = set(a.get_mins()).intersection(set(b.get_mins()))
+    new_in_common = set(a.hashes).intersection(set(b.hashes))
     new_combined_size = 8
 
     intersection, size = a.intersection(b, in_common=True)
@@ -607,10 +607,10 @@ def test_intersection_1(track_abundance):
     assert size == new_combined_size
 
     intersection, size = a.intersection(a, in_common=True)
-    assert intersection == set(a.get_mins())
+    assert intersection == set(a.hashes)
 
     intersection, size = b.intersection(b, in_common=True)
-    assert intersection == set(b.get_mins())
+    assert intersection == set(b.hashes)
 
 
 def test_mh_copy(track_abundance):
@@ -634,13 +634,13 @@ def test_mh_len(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    assert a.get_mins() == list(range(0, 40, 2))
+    assert list(a.hashes) == list(range(0, 40, 2))
 
 
 def test_mh_unsigned_long_long(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     a.add_hash(9227159859419181011)        # too big for a C long int.
-    assert 9227159859419181011 in a.get_mins()
+    assert 9227159859419181011 in a.hashes
 
 
 def test_mh_count_common(track_abundance):
@@ -745,7 +745,7 @@ def test_mh_merge(track_abundance):
     d = b.merge(a)
 
     assert len(c) == len(d)
-    assert c.get_mins() == d.get_mins()
+    assert list(c.hashes) == list(d.hashes)
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
 
@@ -763,7 +763,7 @@ def test_mh_merge_empty_num(track_abundance):
 
     assert len(c)
     assert len(c) == len(d)
-    assert c.get_mins() == d.get_mins()
+    assert list(c.hashes) == list(d.hashes)
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
 
@@ -781,7 +781,7 @@ def test_mh_merge_empty_scaled(track_abundance):
 
     assert len(c)
     assert len(c) == len(d)
-    assert c.get_mins() == d.get_mins()
+    assert list(c.hashes) == list(d.hashes)
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
 
@@ -796,7 +796,7 @@ def test_mh_merge_check_length(track_abundance):
         b.add_hash(i)
 
     c = a.merge(b)
-    assert len(c.get_mins()) == 20
+    assert len(c.hashes) == 20
 
 
 def test_mh_merge_check_length2(track_abundance):
@@ -812,7 +812,7 @@ def test_mh_merge_check_length2(track_abundance):
     b.add_hash(4)
 
     c = a.merge(b)
-    assert len(c.get_mins()) == 3
+    assert len(c.hashes) == 3
 
 def test_mh_asymmetric_merge(track_abundance):
     # test merging two asymmetric (different size) MHs
@@ -838,8 +838,8 @@ def test_mh_asymmetric_merge(track_abundance):
         d.compare(a)
 
     a = a.downsample_num(d.num)
-    print(a.get_mins())
-    print(d.get_mins())
+    print(a.hashes)
+    print(d.hashes)
     assert d.compare(a) == 1.0
 
     c = c.downsample_num(b.num)
@@ -896,7 +896,7 @@ def test_mh_inplace_concat(track_abundance):
     d += a
 
     assert len(c) == len(d)
-    assert c.get_mins() == d.get_mins()
+    assert c.hashes == d.hashes
     assert c.compare(d) == 1.0
     assert d.compare(c) == 1.0
 
@@ -990,7 +990,7 @@ def test_short_sequence(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     a.add_sequence('GGGG')
     # adding a short sequence should fail silently
-    assert len(a.get_mins()) == 0
+    assert len(a.hashes) == 0
 
 
 def test_bytes_murmur():
@@ -1025,25 +1025,25 @@ def test_abundance_simple():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.add_sequence('AAAAA')
-    assert a.get_mins() == [2110480117637990133]
-    assert a.get_mins(with_abundance=True) == {2110480117637990133: 1}
+    assert list(a.hashes) == [2110480117637990133]
+    assert a.hashes == {2110480117637990133: 1}
 
     a.add_sequence('AAAAA')
-    assert a.get_mins() == [2110480117637990133]
-    assert a.get_mins(with_abundance=True) == {2110480117637990133: 2}
+    assert list(a.hashes) == [2110480117637990133]
+    assert a.hashes == {2110480117637990133: 2}
 
 
 def test_add_hash_with_abundance():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.add_hash_with_abundance(10, 1)
-    assert a.get_mins(with_abundance=True) == {10: 1}
+    assert a.hashes == {10: 1}
 
     a.add_hash_with_abundance(20, 2)
-    assert a.get_mins(with_abundance=True) == {10: 1, 20: 2}
+    assert a.hashes == {10: 1, 20: 2}
 
     a.add_hash_with_abundance(10, 2)
-    assert a.get_mins(with_abundance=True) == {10: 3, 20: 2}
+    assert a.hashes == {10: 3, 20: 2}
 
 
 def test_add_hash_with_abundance_2():
@@ -1059,20 +1059,20 @@ def test_clear():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.add_hash(10)
-    assert a.get_mins(with_abundance=True) == {10: 1}
+    assert a.hashes == {10: 1}
 
     a.clear()
-    assert a.get_mins(with_abundance=True) == {}
+    assert a.hashes == {}
 
 
 def test_clear_2():
     a = MinHash(20, 5, False, track_abundance=False)
 
     a.add_hash(10)
-    assert a.get_mins() == [10]
+    assert list(a.hashes) == [10]
 
     a.clear()
-    assert a.get_mins() == []
+    assert list(a.hashes) == []
 
 
 def test_abundance_simple_2():
@@ -1080,12 +1080,12 @@ def test_abundance_simple_2():
     b = MinHash(20, 5, False, track_abundance=True)
 
     a.add_sequence('AAAAA')
-    assert a.get_mins() == [2110480117637990133]
-    assert a.get_mins(with_abundance=True) == {2110480117637990133: 1}
+    assert list(a.hashes) == [2110480117637990133]
+    assert a.hashes == {2110480117637990133: 1}
 
     a.add_sequence('AAAAA')
-    assert a.get_mins() == [2110480117637990133]
-    assert a.get_mins(with_abundance=True) == {2110480117637990133: 2}
+    assert list(a.hashes) == [2110480117637990133]
+    assert a.hashes == {2110480117637990133: 2}
 
     b.add_sequence('AAAAA')
     assert a.count_common(b) == 1
@@ -1097,15 +1097,15 @@ def test_abundance_count_common():
 
     a.add_sequence('AAAAA')
     a.add_sequence('AAAAA')
-    assert a.get_mins() == [2110480117637990133]
-    assert a.get_mins(with_abundance=True) == {2110480117637990133: 2}
+    assert list(a.hashes) == [2110480117637990133]
+    assert a.hashes == {2110480117637990133: 2}
 
     b.add_sequence('AAAAA')
     b.add_sequence('GGGGG')
     assert a.count_common(b) == 1
     assert a.count_common(b) == b.count_common(a)
 
-    assert b.get_mins(with_abundance=True) == [2110480117637990133,
+    assert b.hashes == [2110480117637990133,
                                                10798773792509008305]
 
 
@@ -1153,12 +1153,12 @@ def test_set_abundance_2():
                                       ksize=30,
                                       select_moltype='dna')
     new_mh = sig.minhash.copy_and_clear()
-    mins = sig.minhash.get_mins()
+    mins = sig.minhash.hashes
     mins = {k: 1 for k in mins}
     new_mh.track_abundance = True
     new_mh.set_abundances(mins)
 
-    assert new_mh.get_mins(with_abundance=True) == mins
+    assert new_mh.hashes == mins
 
 
 def test_set_abundance_clear():
@@ -1169,7 +1169,7 @@ def test_set_abundance_clear():
     a.set_abundances({1: 3, 2: 4}, clear=True)
     b.set_abundances({1: 3, 2: 4}, clear=False)
 
-    assert a.get_mins() == b.get_mins()
+    assert list(a.hashes) == list(b.hashes)
 
 
 def test_set_abundance_clear_2():
@@ -1177,20 +1177,20 @@ def test_set_abundance_clear_2():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.add_hash(10)
-    assert a.get_mins(with_abundance=True) == {10: 1}
+    assert a.hashes == {10: 1}
 
     a.set_abundances({20: 2})
-    assert a.get_mins(with_abundance=True) == {20: 2}
+    assert a.hashes == {20: 2}
 
 
 def test_set_abundance_clear_3():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.add_hash(10)
-    assert a.get_mins(with_abundance=True) == {10: 1}
+    assert a.hashes == {10: 1}
     
     a.set_abundances({20: 1, 30: 4}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 1, 20: 1, 30: 4}
+    assert a.hashes == {10: 1, 20: 1, 30: 4}
 
 
 def test_set_abundance_clear_4():
@@ -1199,10 +1199,10 @@ def test_set_abundance_clear_4():
     a = MinHash(20, 5, False, track_abundance=True)
 
     a.set_abundances({20: 2, 10: 1}, clear=False)   # should also sort the hashes
-    assert a.get_mins(with_abundance=True) == {10: 1, 20: 2}
+    assert a.hashes == {10: 1, 20: 2}
 
     a.set_abundances({20: 1, 10: 2}, clear=False)
-    assert a.get_mins(with_abundance=True) == {10: 3, 20: 3}
+    assert a.hashes == {10: 3, 20: 3}
 
 
 def test_reset_abundance_initialized():
@@ -1213,7 +1213,7 @@ def test_reset_abundance_initialized():
     # Convert from Abundance to Regular MinHash
     a.track_abundance = False
 
-    assert a.get_mins(with_abundance=True) == [12415348535738636339]
+    assert a.hashes == [12415348535738636339]
 
 
 def test_set_abundance_initialized():
@@ -1243,7 +1243,7 @@ def test_set_abundance_num():
 
     a.set_abundances({1: 3, 2: 4})
 
-    assert a.get_mins(with_abundance=True) == {1: 3, 2: 4}
+    assert a.hashes == {1: 3, 2: 4}
 
 
 def test_mh_copy_and_clear(track_abundance):
@@ -1259,7 +1259,7 @@ def test_mh_copy_and_clear(track_abundance):
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
-    assert len(b.get_mins()) == 0
+    assert len(b.hashes) == 0
     assert a.scaled == b.scaled
     assert b.scaled == 0
 
@@ -1278,7 +1278,7 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
-    assert len(b.get_mins()) == 0
+    assert len(b.hashes) == 0
     assert a.scaled == b.scaled
     assert b.scaled != 0
 
@@ -1303,8 +1303,8 @@ def test_pickle_max_hash(track_abundance):
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
-    assert len(b.get_mins()) == len(a.get_mins())
-    assert len(b.get_mins()) == 11
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
     assert a.scaled == b.scaled
     assert b.scaled != 0
 
@@ -1322,8 +1322,8 @@ def test_pickle_scaled(track_abundance):
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
-    assert len(b.get_mins()) == len(a.get_mins())
-    assert len(b.get_mins()) == 11
+    assert len(b.hashes) == len(a.hashes)
+    assert len(b.hashes) == 11
     assert a.scaled == b.scaled
     assert b.scaled != 0
 
@@ -1339,8 +1339,8 @@ def test_minhash_abund_add():
     for i in range(10, 0, -1):
         a.add_hash(i)
         n += 1
-        assert len(a.get_mins()) == n
-        print(len(a.get_mins()))
+        assert len(a.hashes) == n
+        print(len(a.hashes))
 
 
 def test_minhash_abund_capacity_increase():
@@ -1432,7 +1432,7 @@ def test_remove_many(track_abundance):
     assert orig_md5 != new_md5
 
     assert len(a) == 33
-    assert all(c % 6 != 0 for c in a.get_mins())
+    assert all(c % 6 != 0 for c in a.hashes)
 
 
 def test_add_many(track_abundance):
@@ -1443,7 +1443,7 @@ def test_add_many(track_abundance):
     a.add_many(list(range(0, 100, 2)))
 
     assert len(a) == 50
-    assert all(c % 2 == 0 for c in a.get_mins())
+    assert all(c % 2 == 0 for c in a.hashes)
 
     for h in range(0, 100, 2):
         b.add_hash(h)

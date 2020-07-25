@@ -298,6 +298,10 @@ class MinHash(RustObject):
         return self.get_mins()
 
     @property
+    def hashes(self):
+        return self.get_mins(with_abundance=True)
+
+    @property
     def seed(self):
         return self._methodcall(lib.kmerminhash_seed)
 
