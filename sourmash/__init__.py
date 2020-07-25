@@ -25,7 +25,7 @@ except DistributionNotFound:  # pragma: no cover
             "use the PyPI ones."
         )
 
-from ._minhash import MinHash, get_minhash_default_seed, get_minhash_max_hash
+from .minhash import MinHash, get_minhash_default_seed, get_minhash_max_hash
 
 DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()

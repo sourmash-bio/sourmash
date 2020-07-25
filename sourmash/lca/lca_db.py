@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict, Counter
 import functools
 
 import sourmash
-from sourmash._minhash import get_max_hash_for_scaled
+from sourmash.minhash import get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 

@@ -43,7 +43,7 @@ import math
 import pytest
 
 import sourmash
-from sourmash._minhash import (
+from sourmash.minhash import (
     MinHash,
     hash_murmur,
     get_scaled_for_max_hash,

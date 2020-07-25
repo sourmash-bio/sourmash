@@ -34,7 +34,7 @@ run the Rust tests.
 
 ### If you're having trouble installing or using the development environment
 
-If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash._minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash.minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
 
 ```
 make clean

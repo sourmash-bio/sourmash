@@ -4,7 +4,7 @@ from hypothesis import given, example
 import hypothesis.strategies as st
 
 from sourmash import MinHash
-from sourmash._minhash import get_max_hash_for_scaled
+from sourmash.minhash import get_max_hash_for_scaled
 
 
 @given(st.lists(st.integers(min_value=0, max_value=2**64 - 1), min_size=10, max_size=1000),
