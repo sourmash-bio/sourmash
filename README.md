@@ -1,5 +1,3 @@
-<meta charset="utf-8"/>
-
 # sourmash
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
@@ -54,20 +52,19 @@ A quickstart tutorial [is available](https://sourmash.readthedocs.io/en/latest/t
 ### Requirements
 
 sourmash runs under both Python 2.7.x and Python 3.5+.  The base
-requirements are screed and ijson, together with a Rust environment (for the
-extension code). We suggest using `rustup` to install the Rust environment:
-
-    curl https://sh.rustup.rs -sSf | sh
-
-The comparison code (`sourmash compare`) uses numpy, and the plotting
-code uses matplotlib and scipy, but most of the code is usable without
-these.
-
-For `search` and `gather` you also need `khmer` version 2.1+.
+requirements are screed, cffi, numpy, matplotlib, and scipy.  Conda
+(see below) will install everything necessary, and is our recommended
+installation method.
 
 ### Installation with conda
 
-Bioconda is a channel for the [conda](http://conda.pydata.org/docs/intro.html) package manager with a focus on bioinformatics software. After installing conda you will need to add the bioconda channel as well as the [other channels](https://bioconda.github.io/index.html#set-up-channels) bioconda depends on. Once you have setup bioconda, you can install sourmash by running:
+Bioconda is a channel for the
+[conda](http://conda.pydata.org/docs/intro.html) package manager with
+a focus on bioinformatics software. After installing conda you will
+need to add the bioconda channel as well as the
+[other channels](https://bioconda.github.io/index.html#set-up-channels)
+bioconda depends on. Once you have setup bioconda, you can install
+sourmash by running:
 
 ```bash
 $ conda create -n sourmash_env -c conda-forge -c bioconda sourmash python=3.7
@@ -87,6 +84,9 @@ Please ask questions and files issues
 Development happens on github at
 [dib-lab/sourmash](https://github.com/dib-lab/sourmash).
 
+sourmash is developed in Python and Rust, and you will need a Rust
+environment to build it.
+
 After installation, `sourmash` is the main command-line entry point;
 run it with `python -m sourmash`, or do `pip install -e /path/to/repo` to
 do a developer install in a virtual environment.
@@ -98,9 +98,10 @@ functionality.
 
 Tests require py.test and can be run with `make test`.
 
-Please see [the developer notes](doc/developer.md) for more information.
+Please see [the developer notes](doc/developer.md) for more information
+on getting set up with a development environment.
 
 ----
 
 CTB
-Jan 2020
+July 2020
