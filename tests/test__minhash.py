@@ -1289,19 +1289,6 @@ def test_scaled_property(track_abundance):
     assert a.scaled == scaled
 
 
-def test_mh_subtract(track_abundance):
-    # test subtracting two identically configured minhashes
-    a = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 40, 2):
-        a.add_hash(i)
-
-    b = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 80, 4):
-        b.add_hash(i)
-
-    assert a.subtract_mins(b) == set(range(2, 40, 4))
-
-
 def test_pickle_max_hash(track_abundance):
     a = MinHash(0, 10, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(20))

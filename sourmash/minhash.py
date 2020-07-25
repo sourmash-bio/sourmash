@@ -297,14 +297,6 @@ class MinHash(RustObject):
         "Return the list of hashes."
         return self.get_mins()
 
-    def subtract_mins(self, other):
-        """Get the list of mins in this MinHash, after removing the ones in
-        ``other``.
-        """
-        a = set(self.get_mins())
-        b = set(other.get_mins())
-        return a - b
-
     @property
     def seed(self):
         return self._methodcall(lib.kmerminhash_seed)
