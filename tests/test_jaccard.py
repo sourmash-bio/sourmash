@@ -76,7 +76,7 @@ def test_dna_mh(track_abundance):
     seq = 'ATGGCAGTGACGATGCCAG'
     e1.add_sequence(seq)
     for i in range(len(seq) - 3):
-        e2.add(seq[i:i + 4])
+        e2.add_kmer(seq[i:i + 4])
 
     assert e1.get_mins() == e2.get_mins()
     print(e1.get_mins())
@@ -95,7 +95,7 @@ def test_protein_mh(track_abundance):
 
     for i in range(len(seq) - 5):
         kmer = seq[i:i + 6]
-        e2.add(kmer)
+        e2.add_kmer(kmer)
 
     assert e1.get_mins() == e2.get_mins()
     assert 901193879228338100 in e1.get_mins()

@@ -243,7 +243,7 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
-    def add(self, kmer):
+    def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         self.add_sequence(kmer)
 
