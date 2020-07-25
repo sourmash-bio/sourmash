@@ -4,7 +4,7 @@ from hypothesis import given, example
 import hypothesis.strategies as st
 
 from sourmash import MinHash
-from sourmash.minhash import get_max_hash_for_scaled
+from sourmash.minhash import _get_max_hash_for_scaled
 
 
 @given(st.lists(st.integers(min_value=0, max_value=2**64 - 1), min_size=10, max_size=1000),
@@ -35,7 +35,7 @@ def test_set_abundance_scaled_hypothesis(hashes, abundances, scaled):
 
     a.set_abundances(oracle)
 
-    max_hash = get_max_hash_for_scaled(scaled)
+    max_hash = _get_max_hash_for_scaled(scaled)
     below_max_hash = sum(1 for (k, v) in oracle.items() if k <= max_hash and v > 0)
 
     mins = a.get_mins(with_abundance=True)

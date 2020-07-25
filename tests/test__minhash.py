@@ -46,8 +46,8 @@ import sourmash
 from sourmash.minhash import (
     MinHash,
     hash_murmur,
-    get_scaled_for_max_hash,
-    get_max_hash_for_scaled,
+    _get_scaled_for_max_hash,
+    _get_max_hash_for_scaled,
 )
 from sourmash import signature
 
@@ -60,6 +60,10 @@ from . import sourmash_tst_utils as utils
 # * fail on untagged/unloaded countgraph
 # * nan on empty minhash
 # * define equals
+
+scaled50 = _get_scaled_for_max_hash(50)
+scaled100 = _get_scaled_for_max_hash(100)
+scaled5000 = _get_scaled_for_max_hash(5000)
 
 
 def test_basic_dna(track_abundance):
@@ -235,23 +239,10 @@ def test_size_limit(track_abundance):
     assert mh.get_mins() == [5, 10, 20]
 
 
-def test_max_hash(track_abundance):
-    # test behavior with max_hash
-    mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35)
-    mh.add_hash(10)
-    mh.add_hash(20)
-    mh.add_hash(30)
-    assert mh.get_mins() == [10, 20, 30]
-    mh.add_hash(40)
-    assert mh.get_mins() == [10, 20, 30]
-    mh.add_hash(36)
-    assert mh.get_mins() == [10, 20, 30]
-
-
 def test_scaled(track_abundance):
-    # test behavior with scaled (alt to max_hash)
-    scaled = get_scaled_for_max_hash(35)
-    print('XX', scaled, get_max_hash_for_scaled(scaled))
+    # test behavior with scaled
+    scaled = _get_scaled_for_max_hash(35)
+    print('XX', scaled, _get_max_hash_for_scaled(scaled))
     mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
     assert mh.max_hash == 35
 
@@ -273,29 +264,23 @@ def test_no_scaled(track_abundance):
 
 def test_max_hash_conversion():
     SCALED=100000
-    max_hash = get_max_hash_for_scaled(SCALED)
-    new_scaled = get_scaled_for_max_hash(max_hash)
+    max_hash = _get_max_hash_for_scaled(SCALED)
+    new_scaled = _get_scaled_for_max_hash(max_hash)
     assert new_scaled == SCALED
 
 
 def test_max_hash_and_scaled_zero():
-    max_hash = get_max_hash_for_scaled(0)
-    new_scaled = get_scaled_for_max_hash(0)
+    max_hash = _get_max_hash_for_scaled(0)
+    new_scaled = _get_scaled_for_max_hash(0)
     assert max_hash == new_scaled
     assert max_hash == 0
 
 
-def test_max_hash_and_scaled_error(track_abundance):
-    # test behavior when supplying both max_hash and scaled
-    with pytest.raises(ValueError):
-        mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35,
-                     scaled=5)
-
-
 def test_max_hash_cannot_limit(track_abundance):
-    # make sure you can't set both max_n and max_hash.
+    # make sure you can't set both n and scaled.
     with pytest.raises(ValueError):
-        mh = MinHash(2, 4, track_abundance=track_abundance, max_hash=35)
+        mh = MinHash(2, 4, track_abundance=track_abundance,
+                     scaled=_get_scaled_for_max_hash(1))
 
 
 def test_no_downsample_scaled_if_n(track_abundance):
@@ -315,8 +300,8 @@ def test_scaled(track_abundance):
 
 def test_mh_jaccard_similarity():
     # check actual Jaccard value for a non-trivial case
-    a = MinHash(0, 20, max_hash=50, track_abundance=False)
-    b = MinHash(0, 20, max_hash=50, track_abundance=False)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=False)
     a.add_many([1, 3, 5, 8])
     b.add_many([1, 3, 5, 6, 8, 10])
 
@@ -327,9 +312,9 @@ def test_mh_similarity_downsample_jaccard_value():
     # check jaccard value after downsampling
 
     # max_hash = 50
-    a = MinHash(0, 20, max_hash=50, track_abundance=False)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=False)
     # max_hash = 100
-    b = MinHash(0, 20, max_hash=100, track_abundance=False)
+    b = MinHash(0, 20, scaled=scaled100, track_abundance=False)
 
     a.add_many([1, 3, 5, 8, 70])
     b.add_many([1, 3, 5, 6, 8, 10, 70 ])
@@ -343,8 +328,8 @@ def test_mh_angular_similarity():
     # https://www.sciencedirect.com/topics/computer-science/cosine-similarity
     # note: angular similarity is 1 - 2*(acos(sim) / pi), when elements
     # are always positive (https://en.wikipedia.org/wiki/Cosine_similarity)
-    a = MinHash(0, 20, max_hash=50, track_abundance=True)
-    b = MinHash(0, 20, max_hash=50, track_abundance=True)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled50, track_abundance=True)
     a.set_abundances({ 1:5, 3:3, 5:2, 8:2})
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 })
 
@@ -357,8 +342,8 @@ def test_mh_angular_similarity():
 
 def test_mh_angular_similarity_2():
     # check actual angular similarity for a second non-trivial case
-    a = MinHash(0, 20, max_hash=100, track_abundance=True)
-    b = MinHash(0, 20, max_hash=100, track_abundance=True)
+    a = MinHash(0, 20, scaled=scaled100, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled100, track_abundance=True)
     a.set_abundances({ 1:5, 3:3, 5:2, 8:2, 70:70 })
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
 
@@ -372,9 +357,9 @@ def test_mh_similarity_downsample_angular_value():
     # test downsample=True argument to MinHash.similarity
 
     # max_hash = 50
-    a = MinHash(0, 20, max_hash=50, track_abundance=True)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=True)
     # max_hash = 100
-    b = MinHash(0, 20, max_hash=100, track_abundance=True)
+    b = MinHash(0, 20, scaled=scaled100, track_abundance=True)
 
     a.set_abundances({ 1:5, 3:3, 5:2, 8:2, 70:70 })
     b.set_abundances({ 1:3, 3:2, 5:1, 6:1, 8:1, 10:1, 70:70 })
@@ -392,9 +377,9 @@ def test_mh_similarity_downsample_true(track_abundance):
     # verify sim(a, b) == sim(b, a), with and without ignore_abundance
 
     # max_hash = 50
-    a = MinHash(0, 20, max_hash=50, track_abundance=track_abundance)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=track_abundance)
     # max_hash = 100
-    b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
+    b = MinHash(0, 20, scaled=scaled100, track_abundance=track_abundance)
 
     a_values = { 1:5, 3:3, 5:2, 8:2}
     b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
@@ -420,9 +405,9 @@ def test_mh_similarity_downsample_errors(track_abundance):
     # test downsample=False (default) argument to MinHash.similarity
 
     # max_hash = 50
-    a = MinHash(0, 20, max_hash=50, track_abundance=track_abundance)
+    a = MinHash(0, 20, scaled=scaled50, track_abundance=track_abundance)
     # max_hash = 100
-    b = MinHash(0, 20, max_hash=100, track_abundance=track_abundance)
+    b = MinHash(0, 20, scaled=scaled100, track_abundance=track_abundance)
 
     a_values = { 1:5, 3:3, 5:2, 8:2}
     b_values = { 1:3, 3:2, 5:1, 6:1, 8:1, 10:1 }
@@ -680,8 +665,10 @@ def test_mh_count_common_diff_protein(track_abundance):
 
 
 def test_mh_count_common_diff_maxhash(track_abundance):
-    a = MinHash(0, 5, False, track_abundance=track_abundance, max_hash=1)
-    b = MinHash(0, 5, True, track_abundance=track_abundance, max_hash=2)
+    a = MinHash(0, 5, False, track_abundance=track_abundance,
+                scaled=_get_scaled_for_max_hash(1))
+    b = MinHash(0, 5, True, track_abundance=track_abundance,
+                scaled=_get_scaled_for_max_hash(2))
 
     with pytest.raises(ValueError):
         a.count_common(b)
@@ -955,8 +942,11 @@ def test_mh_compare_diff_seed(track_abundance):
 
 
 def test_mh_compare_diff_max_hash(track_abundance):
-    a = MinHash(0, 5, track_abundance=track_abundance, max_hash=5)
-    b = MinHash(0, 5, track_abundance=track_abundance, max_hash=10)
+    a = MinHash(0, 5, track_abundance=track_abundance,
+                scaled=_get_max_hash_for_scaled(5))
+
+    b = MinHash(0, 5, track_abundance=track_abundance,
+                scaled=_get_max_hash_for_scaled(10))
 
     with pytest.raises(ValueError):
         a.compare(b)
@@ -979,8 +969,10 @@ def test_mh_concat_diff_ksize(track_abundance):
 
 
 def test_mh_concat_diff_max_hash(track_abundance):
-    a = MinHash(0, 5, track_abundance=track_abundance, max_hash=5)
-    b = MinHash(0, 5, track_abundance=track_abundance, max_hash=10)
+    a = MinHash(0, 5, track_abundance=track_abundance,
+                scaled=_get_max_hash_for_scaled(5))
+    b = MinHash(0, 5, track_abundance=track_abundance,
+                scaled=_get_max_hash_for_scaled(10))
 
     with pytest.raises(ValueError):
         a += b
@@ -1236,8 +1228,8 @@ def test_set_abundance_initialized():
 
 def test_reviving_minhash():
     # simulate reading a MinHash from disk
-    mh = MinHash(0, 21, max_hash=184467440737095520, seed=42,
-                 track_abundance=False)
+    scaled = _get_max_hash_for_scaled(184467440737095520)
+    mh = MinHash(0, 21, scaled=scaled, seed=42, track_abundance=False)
     mins = (28945103950853965, 74690756200987412, 82962372765557409,
             93503551367950366, 106923350319729608, 135116761470196737,
             160165359281648267, 162390811417732001, 177939655451276972)
@@ -1274,7 +1266,8 @@ def test_mh_copy_and_clear(track_abundance):
 
 def test_mh_copy_and_clear_with_max_hash(track_abundance):
     # test basic creation of new, empty MinHash w/max_hash param set
-    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=20)
+    a = MinHash(0, 10, track_abundance=track_abundance,
+                scaled=_get_scaled_for_max_hash(20))
     for i in range(0, 40, 2):
         a.add_hash(i)
 
@@ -1292,8 +1285,7 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
 
 def test_scaled_property(track_abundance):
     scaled = 10000
-    a = MinHash(0, 10, track_abundance=track_abundance,
-                max_hash=round(2**64 / scaled))
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled)
     assert a.scaled == scaled
 
 
@@ -1311,7 +1303,8 @@ def test_mh_subtract(track_abundance):
 
 
 def test_pickle_max_hash(track_abundance):
-    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=20)
+    a = MinHash(0, 10, track_abundance=track_abundance,
+                scaled=_get_scaled_for_max_hash(20))
     for i in range(0, 40, 2):
         a.add_hash(i)
 
@@ -1353,7 +1346,7 @@ def test_minhash_abund_add():
     # std::vector iterators upon vector resizing - in this case, there
     # was also a bug in inserting into the middle of mins when scaled was set.
 
-    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=True, scaled=scaled5000)
 
     n = 0
     for i in range(10, 0, -1):
@@ -1369,7 +1362,7 @@ def test_minhash_abund_capacity_increase():
 
     # this should set capacity to 1000 - see KmerMinHash constructor call
     # to 'reserve' when n > 0 for specific parameter.
-    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=True, scaled=scaled5000)
 
     # 1001 is dependent on the value passed to reserve (currently 1000).
     for i in range(1001, 0, -1):
@@ -1381,8 +1374,8 @@ def test_minhash_abund_merge_flat():
     # of a signature with abundance and a signature without abundance.
     # the correct behavior for now is to calculate simple Jaccard,
     # i.e. 'flatten' both of them.
-    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
-    b = MinHash(0, 10, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=True, scaled=scaled5000)
+    b = MinHash(0, 10, scaled=scaled5000)
 
     for i in range(0, 10, 2):
         a.add_hash(i)
@@ -1399,8 +1392,8 @@ def test_minhash_abund_merge_flat_2():
     # this targets a segfault caused by trying to merge
     # a signature with abundance and a signature without abundance.
 
-    a = MinHash(0, 10, track_abundance=True, max_hash=5000)
-    b = MinHash(0, 10, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=True, scaled=scaled5000)
+    b = MinHash(0, 10, scaled=scaled5000)
 
     for i in range(0, 10, 2):
         a.add_hash(i)
@@ -1436,7 +1429,7 @@ def test_distance_matrix(track_abundance):
 
 
 def test_remove_many(track_abundance):
-    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
 
     a.add_many(list(range(0, 100, 2)))
 
@@ -1456,8 +1449,8 @@ def test_remove_many(track_abundance):
 
 
 def test_add_many(track_abundance):
-    a = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
-    b = MinHash(0, 10, track_abundance=track_abundance, max_hash=5000)
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    b = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
 
     a.add_many(list(range(0, 100, 2)))
     a.add_many(list(range(0, 100, 2)))
@@ -1475,7 +1468,8 @@ def test_add_many(track_abundance):
 
 def test_set_abundances_huge():
     max_hash = 4000000
-    a = MinHash(0, 10, track_abundance=True, max_hash=max_hash)
+    a = MinHash(0, 10, track_abundance=True,
+                scaled=_get_scaled_for_max_hash(max_hash))
 
     hashes = list(range(max_hash))
     abundances = itertools.repeat(2)

@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict, Counter
 import functools
 
 import sourmash
-from sourmash.minhash import get_max_hash_for_scaled
+from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 
@@ -369,7 +369,7 @@ class LCA_Database(Index):
 
         self._invalidate_cache()
 
-        max_hash = get_max_hash_for_scaled(scaled)
+        max_hash = _get_max_hash_for_scaled(scaled)
 
         # filter out all hashes over max_hash in value.
         new_hashvals = {}

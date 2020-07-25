@@ -4,7 +4,7 @@ import sys
 
 from .logging import notify, error
 from .signature import SourmashSignature
-from .minhash import get_max_hash_for_scaled
+from .minhash import _get_max_hash_for_scaled
 
 
 # generic SearchResult.
@@ -154,7 +154,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # eliminate mins under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        new_max_hash = get_max_hash_for_scaled(cmp_scaled)
+        new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
         query_mins = set(_filter_max_hash(query_mins, new_max_hash))
         found_mins = set(_filter_max_hash(found_mins, new_max_hash))
         orig_query_mins = set(_filter_max_hash(orig_query_mins, new_max_hash))

@@ -30,7 +30,7 @@ def get_minhash_max_hash():
     return MINHASH_MAX_HASH
 
 
-def get_max_hash_for_scaled(scaled):
+def _get_max_hash_for_scaled(scaled):
     "Convert a 'scaled' value into a 'max_hash' value."
     if scaled == 0:
         return 0
@@ -40,7 +40,7 @@ def get_max_hash_for_scaled(scaled):
     return int(round(get_minhash_max_hash() / scaled, 0))
 
 
-def get_scaled_for_max_hash(max_hash):
+def _get_scaled_for_max_hash(max_hash):
     "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
@@ -130,24 +130,24 @@ class MinHash(RustObject):
            * track_abundance (default False) - track hash multiplicity
            * mins (default None) - list of hashvals, or (hashval, abund) pairs
            * seed (default 42) - murmurhash seed
-
-        Deprecated: @CTB
-           * ``max_hash=<int>``; use ``scaled`` instead.
         """
-        if max_hash and scaled:
-            raise ValueError("cannot set both max_hash and scaled")
-        elif scaled:
-            max_hash = get_max_hash_for_scaled(scaled)
+        # support max_hash in constructor, for now.
+        if max_hash:
+            if scaled:
+                raise ValueError("cannot set both max_hash and scaled")
+            scaled = _get_scaled_for_max_hash(max_hash)
 
-        if max_hash and n:
+        if scaled and n:
             raise ValueError("cannot set both n and max_hash")
 
-        if not n and not (max_hash or scaled):
+        if not n and not scaled:
             raise ValueError("cannot omit both n and scaled")
 
         if dayhoff or hp:
             is_protein = False
 
+        # ok, for Rust API, go from scaled back to max_hash
+        max_hash = _get_max_hash_for_scaled(scaled)
         self._objptr = lib.kmerminhash_new(
             n, ksize, is_protein, dayhoff, hp, seed, int(max_hash), track_abundance
         )
@@ -314,9 +314,13 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_num)
 
     @property
+    def max_hash(self):
+        return self._methodcall(lib.kmerminhash_max_hash)
+
+    @property
     def scaled(self):
         if self.max_hash:
-            return get_scaled_for_max_hash(self.max_hash)
+            return _get_scaled_for_max_hash(self.max_hash)
         return 0
 
     @property
@@ -338,10 +342,6 @@ class MinHash(RustObject):
     @property
     def ksize(self):
         return self._methodcall(lib.kmerminhash_ksize)
-
-    @property
-    def max_hash(self):
-        return self._methodcall(lib.kmerminhash_max_hash)
 
     @property
     def track_abundance(self):
@@ -410,17 +410,6 @@ class MinHash(RustObject):
 
         return a
 
-    def downsample_max_hash(self, *others):
-        """Copy this object and downsample new object to min of ``*others``.
-
-        Here, ``*others`` is one or more MinHash objects.
-        """
-        max_hashes = [x.max_hash for x in others]
-        new_max_hash = min(self.max_hash, *max_hashes)
-        new_scaled = get_scaled_for_max_hash(new_max_hash)
-
-        return self.downsample_scaled(new_scaled)
-
     def downsample_scaled(self, new_scaled):
         """Copy this object and downsample new object to scaled=``new_scaled``.
         """
@@ -431,7 +420,7 @@ class MinHash(RustObject):
         if max_hash is None:
             raise ValueError("no max_hash available - cannot downsample")
 
-        old_scaled = get_scaled_for_max_hash(self.max_hash)
+        old_scaled = _get_scaled_for_max_hash(self.max_hash)
         if old_scaled > new_scaled:
             raise ValueError(
                 "new scaled {} is lower than current sample scaled {}".format(
@@ -439,7 +428,7 @@ class MinHash(RustObject):
                 )
             )
 
-        new_max_hash = get_max_hash_for_scaled(new_scaled)
+        new_max_hash = _get_max_hash_for_scaled(new_scaled)
 
         a = MinHash(
             0,
