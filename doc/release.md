@@ -3,10 +3,6 @@
 These are adapted from the khmer release docs, originally written by
 Michael Crusoe.
 
-Remember to update release numbers/RC in:
-
-* this document
-
 ## Required build environment
 
 The basic build environment needed below can be created as follows:
@@ -127,7 +123,6 @@ sourmash info  # should print "sourmash version ${new_version}${rc}"
 5\. Do any final testing:
 
  * check that the binder demo notebook is up to date
- * check wheels from GitHub releases
 
 ## How to make a final release
 
@@ -149,8 +144,16 @@ git push --tags origin
 git push --delete origin v${new_version}${rc}
 ```
 
-3\. Upload wheels from GitHub Releases to PyPI (once [Travis is finished building them](https://travis-ci.com/github/dib-lab/sourmash/)).  You can manually download
-all the files from [the releases page], or, if you have [`hub`](https://hub.github.com/), you can use that to download the packages.
+3\. Upload wheels from GitHub Releases to PyPI
+
+[Travis will automatically build wheels and upload them to PyPI](https://travis-ci.com/github/dib-lab/sourmash/).
+This will take about 45 minutes, or more. After they're built, they must be
+copied over to PyPI manually.
+
+You can do this in two ways: you can manually download all the files
+from [the releases page], or, if you have
+[`hub`](https://hub.github.com/), you can use that to download the
+packages.
 
 Download the wheels with hub:
 ```
@@ -159,20 +162,28 @@ hub release download v${new_version}
 ```
 or download them manually.
 
-Then, upload them to PyPI like so:
+Once you have them downloaded, upload them to PyPI like so:
 ```
 twine upload *.whl
 ```
 twine will correctly determine the version from the filenames.
 
-4\. Publish the new release on PyPI (requires an authorized account).
+4\. Once the wheels are uploaded, publish the new release on PyPI (requires an authorized account).
 ```
 make dist
 twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
-5\. Add the release on GitHub, using the tag you just pushed.
-Name it 'version X.Y.Z', and copy and paste in the release notes.
+(This should be done *after* the wheels are available, because some of
+the conda package build steps require the wheels and are automatically
+triggered when a new version shows up on PyPI.)
+
+5\. Edit the release on GitHub; there will already be one associated
+with the tag you pushed. Copy and paste in the release notes.
+
+Note that there will also be releases associated with the Rust `core`
+package, which is versioned differently than `sourmash`.  These will
+be of the form `rXX.YY.ZZ`, e.g. `r0.9.0`. Please just ignore them :)
 
 ## Conda-forge
 
@@ -209,6 +220,7 @@ If a bioinformatics software is released and no one tweets, is it really release
 
 Examples:
 
+- [3.4.1](https://twitter.com/ctitusbrown/status/1286652952828993537)
 - [3.4.0](https://twitter.com/luizirber/status/1283157954598858752)
 - [3.3.0](https://twitter.com/ctitusbrown/status/1257418140729868291)
 - [3.2.0](https://twitter.com/luizirber/status/1221923762523623425)
@@ -219,10 +231,3 @@ Examples:
 - [2.1.0](https://twitter.com/luizirber/status/1166910335120314369)
 - [2.0.1](https://twitter.com/luizirber/status/1136786447518711808)
 - [2.0.0](https://twitter.com/luizirber/status/1108846466502520832)
-
-## To test on a blank Ubuntu system
-
-```
-apt-cache update && apt-get -y install python-dev libfreetype6-dev && \
-python -m pip install sourmash[test]
-```
