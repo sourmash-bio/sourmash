@@ -9,7 +9,7 @@
 
 ---
 
-Compute MinHash signatures for nucleotide (DNA/RNA) and protein sequences.
+Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 Usage:
 
@@ -28,9 +28,11 @@ making whiskey.)
 
 Primary authors: [C. Titus Brown](mailto:titus@idyll.org) ([@ctb](http://github.com/ctb)) and [Luiz C. Irber, Jr](mailto:sourmash@luizirber.org) ([@luizirber](http://github.com/luizirber)).
 
-sourmash is a product of the
+sourmash was initially developed by the
 [Lab for Data-Intensive Biology](http://ivory.idyll.org/lab/) at the
-[UC Davis School of Veterinary Medicine](http://www.vetmed.ucdavis.edu).
+[UC Davis School of Veterinary Medicine](http://www.vetmed.ucdavis.edu),
+and now includes contributions from the global research and developer
+community.
 
 ## Installation
 
@@ -60,11 +62,9 @@ installation method.
 
 Bioconda is a channel for the
 [conda](http://conda.pydata.org/docs/intro.html) package manager with
-a focus on bioinformatics software. After installing conda you will
-need to add the bioconda channel as well as the
-[other channels](https://bioconda.github.io/index.html#set-up-channels)
-bioconda depends on. Once you have setup bioconda, you can install
-sourmash by running:
+a focus on bioinformatics software. After
+[installing conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/),
+you can install sourmash by running:
 
 ```bash
 $ conda create -n sourmash_env -c conda-forge -c bioconda sourmash python=3.7
@@ -72,7 +72,8 @@ $ source activate sourmash_env
 $ sourmash compute -h
 ```
 
-which will install the latest alpha release.
+which will install
+[the latest released version](https://github.com/dib-lab/sourmash/releases).
 
 ## Support
 
@@ -85,7 +86,8 @@ Development happens on github at
 [dib-lab/sourmash](https://github.com/dib-lab/sourmash).
 
 sourmash is developed in Python and Rust, and you will need a Rust
-environment to build it.
+environment to build it; see [the developer notes](doc/developer.md)
+for our suggested development setup.
 
 After installation, `sourmash` is the main command-line entry point;
 run it with `python -m sourmash`, or do `pip install -e /path/to/repo` to
