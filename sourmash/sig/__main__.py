@@ -739,7 +739,7 @@ def downsample(args):
                     _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
                 if mh.num:
-                    mh_new = mh.downsample_n(args.num)
+                    mh_new = mh.downsample_num(args.num)
                 else:                         # try to turn a scaled into a num
                     # first check: can we?
                     if len(mh) < args.num:

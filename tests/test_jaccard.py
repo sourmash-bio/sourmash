@@ -189,18 +189,18 @@ def test_jaccard_on_real_data():
     assert mh1.compare(mh2) == 0.0183
     assert mh2.compare(mh1) == 0.0183
 
-    mh1 = mh1.downsample_n(1000)
-    mh2 = mh2.downsample_n(1000)
+    mh1 = mh1.downsample_num(1000)
+    mh2 = mh2.downsample_num(1000)
     assert mh1.compare(mh2) == 0.011
     assert mh2.compare(mh1) == 0.011
 
-    mh1 = mh1.downsample_n(100)
-    mh2 = mh2.downsample_n(100)
+    mh1 = mh1.downsample_num(100)
+    mh2 = mh2.downsample_num(100)
     assert mh1.compare(mh2) == 0.01
     assert mh2.compare(mh1) == 0.01
 
-    mh1 = mh1.downsample_n(10)
-    mh2 = mh2.downsample_n(10)
+    mh1 = mh1.downsample_num(10)
+    mh2 = mh2.downsample_num(10)
     assert mh1.compare(mh2) == 0.0
     assert mh2.compare(mh1) == 0.0
 
@@ -221,24 +221,24 @@ def test_scaled_on_real_data():
     assert round(mh1.compare(mh2), 5) == 0.01644
     assert round(mh2.compare(mh1), 5) == 0.01644
 
-    mh1 = mh1.downsample_n(10000)
-    mh2 = mh2.downsample_n(10000)
+    mh1 = mh1.downsample_num(10000)
+    mh2 = mh2.downsample_num(10000)
 
     assert mh1.compare(mh2) == 0.0183
     assert mh2.compare(mh1) == 0.0183
 
-    mh1 = mh1.downsample_n(1000)
-    mh2 = mh2.downsample_n(1000)
+    mh1 = mh1.downsample_num(1000)
+    mh2 = mh2.downsample_num(1000)
     assert mh1.compare(mh2) == 0.011
     assert mh2.compare(mh1) == 0.011
 
-    mh1 = mh1.downsample_n(100)
-    mh2 = mh2.downsample_n(100)
+    mh1 = mh1.downsample_num(100)
+    mh2 = mh2.downsample_num(100)
     assert mh1.compare(mh2) == 0.01
     assert mh2.compare(mh1) == 0.01
 
-    mh1 = mh1.downsample_n(10)
-    mh2 = mh2.downsample_n(10)
+    mh1 = mh1.downsample_num(10)
+    mh2 = mh2.downsample_num(10)
     assert mh1.compare(mh2) == 0.0
     assert mh2.compare(mh1) == 0.0
 

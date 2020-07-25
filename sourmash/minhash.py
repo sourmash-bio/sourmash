@@ -387,7 +387,7 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    def downsample_n(self, new_num):
+    def downsample_num(self, new_num):
         "Copy this object and downsample new object to num=``new_num``."
         if self.num and self.num < new_num:
             raise ValueError("new sample n is higher than current sample n")
