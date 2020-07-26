@@ -737,7 +737,7 @@ def test_mh_jaccard_asymmetric_num(track_abundance):
         a.jaccard(b)
 
     a = a.downsample_n(10)
-    # CTB note: this used to be 'compare', is now 'jaccard'; @CTB check compat
+    # CTB note: this used to be 'compare', is now 'jaccard'
     assert a.jaccard(b) == 0.5
     assert b.jaccard(a) == 0.5
 
