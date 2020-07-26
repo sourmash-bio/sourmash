@@ -763,9 +763,13 @@ def test_mh_merge(track_abundance):
 
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
-    # @CTB
-    #assert round(c.similarity(d), 3) == 1.0
-    #assert round(d.similarity(c), 3) == 1.0
+
+    if track_abundance:
+        assert round(c.similarity(d), 3) == 0.91
+        assert round(d.similarity(c), 3) == 0.91
+    else:
+        assert round(c.similarity(d), 3) == 1.0
+        assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_empty_num(track_abundance):
@@ -858,12 +862,17 @@ def test_mh_asymmetric_merge(track_abundance):
     a = a.downsample_n(d.num)
     print(a.get_mins())
     print(d.get_mins())
-    # @CTB
-    #assert round(d.similarity(a), 3) == 1.0
+
+    if track_abundance:
+        assert round(d.similarity(a), 3) == 0.91
+    else:
+        assert round(d.similarity(a), 3) == 1.0
 
     c = c.downsample_n(b.num)
-    # @CTB
-    #assert c.similarity(b) == 1.0
+    if track_abundance:
+        assert round(c.similarity(b), 3) == 0.91
+    else:
+        assert c.similarity(b) == 1.0
 
 
 def test_mh_inplace_concat_asymmetric(track_abundance):
@@ -894,12 +903,16 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
         assert 'must have same num' in str(exc)
 
     a = a.downsample_n(d.num)
-    # @CTB
-    #assert d.similarity(a) == 1.0 # see: d += a, above.
+    if track_abundance:
+        assert round(d.similarity(a), 3) == 0.795 # see: d += a, above.
+    else:
+        assert d.similarity(a) == 1.0 # see: d += a, above.
 
     c = c.downsample_n(b.num)
-    # @CTB
-    # assert c.similarity(b) == 0.5
+    if track_abundance:
+        assert round(c.similarity(b), 3) == 0.436
+    else:
+        assert c.similarity(b) == 0.5
 
 
 def test_mh_inplace_concat(track_abundance):
