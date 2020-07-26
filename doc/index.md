@@ -125,6 +125,18 @@ to search the contents of metagenomes and large genomes with no loss
 of sensitivity, but there is a tradeoff: there is no guaranteed limit
 to signature size when using 'scaled' signatures.
 
+## Logo
+
+The sourmash logo was designed by Stéfanie Fares Sabbag,
+with feedback from Clara Barcelos,
+Taylor Reiter and Luiz Irber.
+<a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img
+alt="Creative Commons License" style="border-width:0"
+src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />The logo
+is licensed under a <a rel="license"
+href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons
+Attribution-ShareAlike 4.0 International License</a>.
+
 ## Contents:
 
 ```{toctree}
