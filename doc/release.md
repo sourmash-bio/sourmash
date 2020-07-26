@@ -146,7 +146,7 @@ git push --delete origin v${new_version}${rc}
 
 3\. Upload wheels from GitHub Releases to PyPI
 
-[Travis will automatically build wheels and upload them to PyPI](https://travis-ci.com/github/dib-lab/sourmash/).
+[Travis will automatically build wheels and upload them to GitHub Releases](https://travis-ci.com/github/dib-lab/sourmash/).
 This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 
