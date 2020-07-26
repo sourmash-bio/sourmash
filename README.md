@@ -10,7 +10,7 @@ Quickly search, compare, and analyze genomic and metagenomic data sets.
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00027/status.svg)](http://joss.theoj.org/papers/10.21105/joss.00027)
 <a href="https://github.com/dib-lab/sourmash/blob/master/LICENSE"><img alt="License: 3-Clause BSD" src="https://img.shields.io/badge/License-BSD%203--Clause-blue.svg"></a>
 
-<p align="center"><img src="https://raw.githubusercontent.com/dib-lab/sourmash/logo/doc/_static/logo.png" height="256" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/dib-lab/sourmash/master/doc/_static/logo.png" height="256" /></p>
 
 Usage:
 
