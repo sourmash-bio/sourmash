@@ -175,7 +175,7 @@ twine upload dist/sourmash-${new_version}.tar.gz
 ```
 
 (This should be done *after* the wheels are available, because some of
-the conda package build steps require the wheels and are automatically
+the conda package build steps require the source dist and are automatically
 triggered when a new version shows up on PyPI.)
 
 5\. Edit the release on GitHub; there will already be one associated
