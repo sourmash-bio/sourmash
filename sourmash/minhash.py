@@ -262,7 +262,7 @@ class MinHash(RustObject):
         "Remove many hashes at once; ``hashes`` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
-    def update_xxx(self, other):
+    def update(self, other):
         "Update this sketch from all the hashes in the other."
         self.add_many(other)
 
@@ -609,4 +609,3 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
-
