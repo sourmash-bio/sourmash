@@ -301,6 +301,14 @@ class MinHash(RustObject):
     def hashes(self):
         return self.get_mins(with_abundance=True)
 
+    def subtract_mins(self, other):
+        """Get the list of mins in this MinHash, after removing the ones in
+        ``other``.
+        """
+        a = set(self.get_mins())
+        b = set(other.get_mins())
+        return a - b
+
     @property
     def seed(self):
         return self._methodcall(lib.kmerminhash_seed)
@@ -310,27 +318,27 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_num)
 
     @property
-    def max_hash(self):
-        return self._methodcall(lib.kmerminhash_max_hash)
-
-    @property
     def scaled(self):
         if self.max_hash:
             return _get_scaled_for_max_hash(self.max_hash)
         return 0
 
+    # @CTB
     @property
     def is_dna(self):
         return not (self.is_protein or self.dayhoff or self.hp)
 
+    # @CTB
     @property
     def is_protein(self):
         return self._methodcall(lib.kmerminhash_is_protein)
 
+    # @CTB
     @property
     def dayhoff(self):
         return self._methodcall(lib.kmerminhash_dayhoff)
 
+    # @CTB
     @property
     def hp(self):
         return self._methodcall(lib.kmerminhash_hp)
@@ -338,6 +346,10 @@ class MinHash(RustObject):
     @property
     def ksize(self):
         return self._methodcall(lib.kmerminhash_ksize)
+
+    @property
+    def max_hash(self):
+        return self._methodcall(lib.kmerminhash_max_hash)
 
     @property
     def track_abundance(self):
@@ -391,7 +403,7 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    def downsample_num(self, new_num):
+    def downsample_n(self, new_num):
         "Copy this object and downsample new object to num=``new_num``."
         if self.num and self.num < new_num:
             raise ValueError("new sample n is higher than current sample n")
@@ -405,6 +417,17 @@ class MinHash(RustObject):
             a.add_many(self)
 
         return a
+
+    def downsample_max_hash(self, *others):
+        """Copy this object and downsample new object to min of ``*others``.
+
+        Here, ``*others`` is one or more MinHash objects.
+        """
+        max_hashes = [x.max_hash for x in others]
+        new_max_hash = min(self.max_hash, *max_hashes)
+        new_scaled = get_scaled_for_max_hash(new_max_hash)
+
+        return self.downsample_scaled(new_scaled)
 
     def downsample_scaled(self, new_scaled):
         """Copy this object and downsample new object to scaled=``new_scaled``.
@@ -565,6 +588,16 @@ class MinHash(RustObject):
     def add_protein(self, sequence):
         "Add a protein sequence."
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
+
+    def is_molecule_type(self, molecule):
+        """Check if this MinHash is a particular human-readable molecule type.
+
+        Supports 'protein', 'dayhoff', 'hp', 'DNA'.
+        @CTB deprecate for 4.0?
+        """
+        if molecule.lower() not in ('protein', 'dayhoff', 'hp', 'dna'):
+            raise ValueError("unknown moltype in query, '{}'".format(molecule))
+        return molecule == self.moltype
 
     @property
     def moltype(self):                    # TODO: test in minhash tests

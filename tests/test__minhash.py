@@ -701,7 +701,7 @@ def test_mh_count_common_notmh(track_abundance):
 def test_mh_downsample_num_error(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     with pytest.raises(ValueError):
-        a.downsample_num(30)
+        a.downsample_n(30)
 
 
 def test_mh_jaccard_asymmetric_num(track_abundance):
@@ -720,7 +720,7 @@ def test_mh_jaccard_asymmetric_num(track_abundance):
     with pytest.raises(TypeError):
         a.compare(b)
 
-    a = a.downsample_num(10)
+    a = a.downsample_n(10)
     assert a.compare(b) == 0.5
     assert b.compare(a) == 0.5
 
@@ -837,12 +837,12 @@ def test_mh_asymmetric_merge(track_abundance):
     with pytest.raises(TypeError):
         d.compare(a)
 
-    a = a.downsample_num(d.num)
+    a = a.downsample_n(d.num)
     print(a.hashes)
     print(d.hashes)
     assert d.compare(a) == 1.0
 
-    c = c.downsample_num(b.num)
+    c = c.downsample_n(b.num)
     assert c.compare(b) == 1.0
 
 
@@ -873,10 +873,10 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     except TypeError as exc:
         assert 'must have same num' in str(exc)
 
-    a = a.downsample_num(d.num)
+    a = a.downsample_n(d.num)
     assert d.compare(a) == 1.0 # see: d += a, above.
 
-    c = c.downsample_num(b.num)
+    c = c.downsample_n(b.num)
     assert c.compare(b) == 0.5
 
 
