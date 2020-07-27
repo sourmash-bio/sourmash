@@ -16,6 +16,11 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 
 
+def test_eriks_function():
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    assert lca_db.ksize == 31
+
+
 def test_api_create_search():
     # create a database and then search for result.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),

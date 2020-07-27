@@ -7,10 +7,12 @@ from collections import OrderedDict, defaultdict, Counter
 import functools
 
 import sourmash
-from sourmash._minhash import get_max_hash_for_scaled
+from sourmash._minhash import get_max_hash_for_scaled, to_bytes
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 
+from sourmash._lowlevel import ffi, lib
+from sourmash.utils import RustObject, rustcall, decode_str
 
 def cached_property(fun):
     """A memoize decorator for class properties."""
@@ -27,7 +29,7 @@ def cached_property(fun):
     return property(get)
 
 
-class LCA_Database(Index):
+class LCA_Database(RustObject):
     """
     An in-memory database that indexes signatures by hash, and provides
     optional taxonomic lineage classification.
@@ -56,10 +58,10 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
-    def __init__(self, ksize, scaled, moltype='DNA'):
+    def __init__(self, ksize, scaled, moltype="DNA"):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
-        self.filename = None
+        self.filename = ""
         self.moltype = moltype
 
         self._next_index = 0
@@ -70,6 +72,13 @@ class LCA_Database(Index):
         self.lineage_to_lid = {}
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
+
+        self._objptr = lib.LcaDB_new(
+            self.ksize, self.scaled, to_bytes(self.filename), to_bytes(self.moltype)
+        )
+
+        if not self.filename:
+            self.filename = None
 
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):

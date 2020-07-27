@@ -47,6 +47,8 @@ typedef struct SourmashComputeParameters SourmashComputeParameters;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
+typedef struct SourmashLcaDatabase SourmashLcaDatabase;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashSignature SourmashSignature;
@@ -68,6 +70,13 @@ typedef struct {
    */
   bool owned;
 } SourmashStr;
+
+SourmashLcaDatabase *LcaDB_new(uint32_t ksize,
+                               uint64_t scaled,
+                               const char *filename,
+                               const char *moltype);
+
+SourmashKmerMinHash *LcaDB_signatures(SourmashLcaDatabase *ptr);
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 

@@ -2,6 +2,7 @@ pub mod minhash;
 pub mod nodegraph;
 
 pub mod ukhs;
+pub mod lca_db;
 
 use serde::{Deserialize, Serialize};
 
