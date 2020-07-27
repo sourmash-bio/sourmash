@@ -76,7 +76,7 @@ SourmashLcaDatabase *LcaDB_new(uint32_t ksize,
                                const char *filename,
                                const char *moltype);
 
-SourmashKmerMinHash *LcaDB_signatures(SourmashLcaDatabase *ptr);
+void *LcaDB_signatures(SourmashLcaDatabase *ptr);
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
