@@ -797,7 +797,6 @@ def test_mh_merge_empty_scaled(track_abundance):
     assert round(d.similarity(c), 3) == 1.0
 
 
-
 def test_mh_merge_check_length(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
