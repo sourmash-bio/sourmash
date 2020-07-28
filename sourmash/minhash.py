@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division
 
 import math
 import copy
+import collections
 
 from . import VERSION
 from ._compat import string_types, range_type
@@ -71,6 +72,30 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
     "The current default seed is returned by hash_seed()."
 
     return lib.hash_murmur(to_bytes(kmer), seed)
+
+
+class _HashesWrapper(collections.Mapping):
+    def __init__(self, h):
+        self._data = h
+
+    def __getitem__(self, key):
+        print(key, self._data)
+        return self._data[key]
+
+    def __repr__(self):
+        return repr(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __eq__(self, other):
+        return list(self.items()) == list(other.items())
+
+    def __setitem__(self, k, v):
+        raise RuntimeError("cannot modify hashes directly; use 'add' methods")
 
 
 class MinHash(RustObject):
@@ -316,7 +341,11 @@ class MinHash(RustObject):
 
     @property
     def hashes(self):
-        return self.get_mins(with_abundance=True)
+        if self.track_abundance:
+            return _HashesWrapper(self.get_mins(with_abundance=True))
+        else:
+            d = self.get_mins()
+            return _HashesWrapper({ k : 1 for k in d })
 
     @deprecated(deprecated_in="3.5", removed_in="4.0",
                 current_version=VERSION)

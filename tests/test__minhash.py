@@ -200,6 +200,8 @@ def test_dayhoff(track_abundance):
     mh_protein.add_sequence('ACTGAC')
 
     assert len(mh_protein.hashes) == 2
+    print(mh_protein.hashes)
+    print(mh_dayhoff.hashes)
     assert mh_protein.hashes != mh_dayhoff.hashes
 
 
@@ -1127,8 +1129,7 @@ def test_abundance_count_common():
     assert a.count_common(b) == 1
     assert a.count_common(b) == b.count_common(a)
 
-    assert b.hashes == [2110480117637990133,
-                                               10798773792509008305]
+    assert list(b.hashes) == [2110480117637990133, 10798773792509008305]
 
 
 def test_abundance_similarity():
@@ -1235,7 +1236,7 @@ def test_reset_abundance_initialized():
     # Convert from Abundance to Regular MinHash
     a.track_abundance = False
 
-    assert a.hashes == [12415348535738636339]
+    assert list(a.hashes) == [12415348535738636339]
 
 
 def test_set_abundance_initialized():
@@ -1462,7 +1463,7 @@ def test_add_many(track_abundance):
     b = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
 
     a.add_many(list(range(0, 100, 2)))
-    a.add_many(list(range(0, 100, 2)))
+    a.add_many(list(range(0, 100, 2)))    # => abundance = 2
 
     assert len(a) == 50
     assert all(c % 2 == 0 for c in a.hashes)
@@ -1484,3 +1485,14 @@ def test_set_abundances_huge():
     abundances = itertools.repeat(2)
 
     a.set_abundances(dict(zip(hashes, abundances)))
+
+
+def test_try_change_hashes(track_abundance):
+    a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+    b = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled5000)
+
+    a.add_many(list(range(0, 100, 2)))
+
+    h = a.hashes
+    with pytest.raises(RuntimeError):
+        h[5] = 10
