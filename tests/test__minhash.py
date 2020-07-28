@@ -502,43 +502,44 @@ def test_consume_lowercase(track_abundance):
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA'.lower())
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
 
-    assert a.compare(b) == 1.0
-    assert b.compare(b) == 1.0
-    assert b.compare(a) == 1.0
-    assert a.compare(a) == 1.0
+    assert round(a.similarity(b), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
 
 
-def test_compare_1(track_abundance):
+def test_similarity_1(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
 
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
 
-    assert a.compare(b) == 1.0
-    assert b.compare(b) == 1.0
-    assert b.compare(a) == 1.0
-    assert a.compare(a) == 1.0
+    assert round(a.similarity(b), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
 
     # add same sequence again
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
-    assert a.compare(b) == 1.0
-    assert b.compare(b) == 1.0
-    assert b.compare(a) == 1.0
-    assert a.compare(a) == 1.0
+    assert round(a.similarity(b), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
 
 
     b.add_sequence('GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT')
-    x = a.compare(b)
+    x = a.similarity(b)
     assert x >= 0.3, x
 
-    x = b.compare(a)
+    x = b.similarity(a)
     assert x >= 0.3, x
-    assert a.compare(a) == 1.0
-    assert b.compare(b) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
 
 
 def test_intersection_errors(track_abundance):
+    # CTB: remove this test in 4.0
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
     c = MinHash(30, 10, track_abundance=track_abundance)
@@ -563,6 +564,7 @@ def test_intersection_errors(track_abundance):
 # this filter doesn't work, but leaving it in pour encourages les autres.
 @pytest.mark.filterwarnings("ignore")
 def test_intersection_1(track_abundance):
+    # CTB: remove this test in 4.0
     a = MinHash(20, 10, track_abundance=track_abundance)
     b = MinHash(20, 10, track_abundance=track_abundance)
 
@@ -633,7 +635,7 @@ def test_mh_copy(track_abundance):
 
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     b = a.__copy__()
-    assert b.compare(a) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
 
 
 def test_mh_len(track_abundance):
@@ -730,12 +732,14 @@ def test_mh_jaccard_asymmetric_num(track_abundance):
     assert a.count_common(b) == 10
     assert b.count_common(a) == 10
 
+    # with 'jaccard', this will raise an error b/c different num
     with pytest.raises(TypeError):
-        a.compare(b)
+        a.jaccard(b)
 
     a = a.downsample_n(10)
-    assert a.compare(b) == 0.5
-    assert b.compare(a) == 0.5
+    # CTB note: this used to be 'compare', is now 'jaccard'
+    assert a.jaccard(b) == 0.5
+    assert b.jaccard(a) == 0.5
 
 
 def test_mh_merge_typeerror(track_abundance):
@@ -759,8 +763,13 @@ def test_mh_merge(track_abundance):
 
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
-    assert c.compare(d) == 1.0
-    assert d.compare(c) == 1.0
+
+    if track_abundance:
+        assert round(c.similarity(d), 3) == 0.91
+        assert round(d.similarity(c), 3) == 0.91
+    else:
+        assert round(c.similarity(d), 3) == 1.0
+        assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_empty_num(track_abundance):
@@ -777,8 +786,8 @@ def test_mh_merge_empty_num(track_abundance):
     assert len(c)
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
-    assert c.compare(d) == 1.0
-    assert d.compare(c) == 1.0
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_empty_scaled(track_abundance):
@@ -795,8 +804,8 @@ def test_mh_merge_empty_scaled(track_abundance):
     assert len(c)
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
-    assert c.compare(d) == 1.0
-    assert d.compare(c) == 1.0
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_check_length(track_abundance):
@@ -846,17 +855,24 @@ def test_mh_asymmetric_merge(track_abundance):
     assert len(c) == len(a)
     assert len(d) == len(b)
 
-    # can't compare different sizes without downsampling
+    # can't use jaccard on different nums without downsampling
     with pytest.raises(TypeError):
-        d.compare(a)
+        d.jaccard(a)
 
     a = a.downsample_n(d.num)
     print(a.get_mins())
     print(d.get_mins())
-    assert d.compare(a) == 1.0
+
+    if track_abundance:
+        assert round(d.similarity(a), 3) == 0.91
+    else:
+        assert round(d.similarity(a), 3) == 1.0
 
     c = c.downsample_n(b.num)
-    assert c.compare(b) == 1.0
+    if track_abundance:
+        assert round(c.similarity(b), 3) == 0.91
+    else:
+        assert c.similarity(b) == 1.0
 
 
 def test_mh_inplace_concat_asymmetric(track_abundance):
@@ -882,15 +898,21 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     assert len(d) == len(b)
 
     try:
-        d.compare(a)
+        d.similarity(a)
     except TypeError as exc:
         assert 'must have same num' in str(exc)
 
     a = a.downsample_n(d.num)
-    assert d.compare(a) == 1.0 # see: d += a, above.
+    if track_abundance:
+        assert round(d.similarity(a), 3) == 0.795 # see: d += a, above.
+    else:
+        assert d.similarity(a) == 1.0 # see: d += a, above.
 
     c = c.downsample_n(b.num)
-    assert c.compare(b) == 0.5
+    if track_abundance:
+        assert round(c.similarity(b), 3) == 0.436
+    else:
+        assert c.similarity(b) == 0.5
 
 
 def test_mh_inplace_concat(track_abundance):
@@ -910,8 +932,8 @@ def test_mh_inplace_concat(track_abundance):
 
     assert len(c) == len(d)
     assert c.get_mins() == d.get_mins()
-    assert c.compare(d) == 1.0
-    assert d.compare(c) == 1.0
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_diff_protein(track_abundance):
@@ -930,36 +952,36 @@ def test_mh_merge_diff_ksize(track_abundance):
         a.merge(b)
 
 
-def test_mh_compare_diff_protein(track_abundance):
+def test_mh_similarity_diff_protein(track_abundance):
     a = MinHash(20, 5, False, track_abundance=track_abundance)
     b = MinHash(20, 5, True, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
-        a.compare(b)
+        a.similarity(b)
 
 
-def test_mh_compare_diff_ksize(track_abundance):
+def test_mh_similarity_diff_ksize(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance)
     b = MinHash(20, 6, track_abundance=track_abundance)
 
     with pytest.raises(ValueError):
-        a.compare(b)
+        a.similarity(b)
 
 
-def test_mh_compare_diff_seed(track_abundance):
+def test_mh_similarity_diff_seed(track_abundance):
     a = MinHash(20, 5, track_abundance=track_abundance, seed=1)
     b = MinHash(20, 5, track_abundance=track_abundance, seed=2)
 
     with pytest.raises(ValueError):
-        a.compare(b)
+        a.similarity(b)
 
 
-def test_mh_compare_diff_max_hash(track_abundance):
+def test_mh_similarity_diff_max_hash(track_abundance):
     a = MinHash(0, 5, track_abundance=track_abundance, max_hash=5)
     b = MinHash(0, 5, track_abundance=track_abundance, max_hash=10)
 
     with pytest.raises(ValueError):
-        a.compare(b)
+        a.similarity(b)
 
 
 def test_mh_concat_diff_protein(track_abundance):
@@ -1117,33 +1139,33 @@ def test_abundance_count_common():
                                                10798773792509008305]
 
 
-def test_abundance_compare():
+def test_abundance_similarity():
     a = MinHash(20, 10, track_abundance=True)
     b = MinHash(20, 10, track_abundance=False)
 
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
 
-    assert a.compare(b) == 1.0
-    assert b.compare(b) == 1.0
-    assert b.compare(a) == 1.0
-    assert a.compare(a) == 1.0
+    assert round(a.similarity(b), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
 
     # add same sequence again
     b.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
-    assert a.compare(b) == 1.0
-    assert b.compare(b) == 1.0
-    assert b.compare(a) == 1.0
-    assert a.compare(a) == 1.0
+    assert round(a.similarity(b), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
+    assert round(b.similarity(a), 3) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
 
     b.add_sequence('GATTGGTGCACACTTAACTGGGTGCCGCGCTGGTGCTGATCCATGAAGTT')
-    x = a.compare(b)
+    x = a.similarity(b)
     assert x >= 0.3, x
 
-    x = b.compare(a)
+    x = b.similarity(a)
     assert x >= 0.3, x
-    assert a.compare(a) == 1.0
-    assert b.compare(b) == 1.0
+    assert round(a.similarity(a), 3) == 1.0
+    assert round(b.similarity(b), 3) == 1.0
 
 
 def test_set_abundance():
