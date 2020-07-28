@@ -243,6 +243,14 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use add_kmer instead.')
+    def add(self, kmer):
+        "Add a kmer into the sketch."
+        self.add_sequence(kmer)
+
+
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         self.add_sequence(kmer)
@@ -262,6 +270,9 @@ class MinHash(RustObject):
         "Remove many hashes at once; ``hashes`` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use add_many instead.')
     def update(self, other):
         "Update this sketch from all the hashes in the other."
         self.add_many(other)
@@ -270,6 +281,9 @@ class MinHash(RustObject):
         "Number of hashes."
         return self._methodcall(lib.kmerminhash_get_mins_size)
 
+    @deprecated(deprecated_in="3.5", removed_in="5.0",
+                current_version=VERSION,
+                details='Use .hashes property instead.')
     def get_mins(self, with_abundance=False):
         """Return list of hashes or if ``with_abundance`` a list
         of (hash, abund).
@@ -293,6 +307,9 @@ class MinHash(RustObject):
 
         return result
 
+    @deprecated(deprecated_in="3.5", removed_in="5.0",
+                current_version=VERSION,
+                details='Use .hashes property instead.')
     def get_hashes(self):
         "Return the list of hashes."
         return self.get_mins()
@@ -301,6 +318,8 @@ class MinHash(RustObject):
     def hashes(self):
         return self.get_mins(with_abundance=True)
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION)
     def subtract_mins(self, other):
         """Get the list of mins in this MinHash, after removing the ones in
         ``other``.
@@ -323,22 +342,18 @@ class MinHash(RustObject):
             return _get_scaled_for_max_hash(self.max_hash)
         return 0
 
-    # @CTB
     @property
     def is_dna(self):
         return not (self.is_protein or self.dayhoff or self.hp)
 
-    # @CTB
     @property
     def is_protein(self):
         return self._methodcall(lib.kmerminhash_is_protein)
 
-    # @CTB
     @property
     def dayhoff(self):
         return self._methodcall(lib.kmerminhash_dayhoff)
 
-    # @CTB
     @property
     def hp(self):
         return self._methodcall(lib.kmerminhash_hp)
@@ -348,6 +363,9 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_ksize)
 
     @property
+    @deprecated(deprecated_in="3.5", removed_in="5.0",
+                current_version=VERSION,
+                details='Use scaled instead.')
     def max_hash(self):
         return self._methodcall(lib.kmerminhash_max_hash)
 
@@ -403,6 +421,9 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use downsample(num=...) instead.')
     def downsample_n(self, new_num):
         "Copy this object and downsample new object to num=``new_num``."
         if self.num and self.num < new_num:
@@ -418,6 +439,9 @@ class MinHash(RustObject):
 
         return a
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use scaled instead.')
     def downsample_max_hash(self, *others):
         """Copy this object and downsample new object to min of ``*others``.
 
@@ -429,6 +453,9 @@ class MinHash(RustObject):
 
         return self.downsample_scaled(new_scaled)
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use downsample(scaled=...) instead.')
     def downsample_scaled(self, new_scaled):
         """Copy this object and downsample new object to scaled=``new_scaled``.
         """
@@ -589,6 +616,9 @@ class MinHash(RustObject):
         "Add a protein sequence."
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use the moltype property instead.')
     def is_molecule_type(self, molecule):
         """Check if this MinHash is a particular human-readable molecule type.
 
