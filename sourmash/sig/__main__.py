@@ -727,7 +727,7 @@ def downsample(args):
             total_loaded += 1
             if args.scaled:
                 if mh.scaled:
-                    mh_new = mh.downsample_scaled(args.scaled)
+                    mh_new = mh.downsample(scaled=args.scaled)
                 else:                         # try to turn a num into a scaled
                     # first check: can we?
                     max_hash = _get_max_hash_for_scaled(args.scaled)
@@ -739,7 +739,7 @@ def downsample(args):
                     _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
                 if mh.num:
-                    mh_new = mh.downsample_num(args.num)
+                    mh_new = mh.downsample(num=args.num)
                 else:                         # try to turn a scaled into a num
                     # first check: can we?
                     if len(mh) < args.num:

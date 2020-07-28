@@ -1042,7 +1042,7 @@ def test_sig_downsample_1_scaled(c):
     test_downsample_sig = sourmash.load_one_signature(sig47)
     actual_downsample_sig = sourmash.load_one_signature(out)
 
-    test_mh = test_downsample_sig.minhash.downsample_scaled(10000)
+    test_mh = test_downsample_sig.minhash.downsample(scaled=10000)
 
     assert actual_downsample_sig.minhash == test_mh
 
@@ -1114,7 +1114,7 @@ def test_sig_downsample_2_num(c):
     test_downsample_sig = sourmash.load_one_signature(sigs11, ksize=21,
                                                       select_moltype='DNA')
     actual_downsample_sig = sourmash.load_one_signature(out)
-    test_mh = test_downsample_sig.minhash.downsample_num(500)
+    test_mh = test_downsample_sig.minhash.downsample(num=500)
 
     assert actual_downsample_sig.minhash == test_mh
 

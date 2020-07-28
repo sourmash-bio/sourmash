@@ -79,7 +79,6 @@ class _HashesWrapper(collections.Mapping):
         self._data = h
 
     def __getitem__(self, key):
-        print(key, self._data)
         return self._data[key]
 
     def __repr__(self):
@@ -450,23 +449,54 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use downsample(num=...) instead.')
-    def downsample_n(self, new_num):
-        "Copy this object and downsample new object to num=``new_num``."
-        if self.num and self.num < new_num:
-            raise ValueError("new sample n is higher than current sample n")
+    def downsample(self, num=None, scaled=None):
+        """Copy this object and downsample new object to either `num` or
+        `scaled`.
+        """
+        if num is None and scaled is None:
+            raise ValueError('must specify either num or scaled to downsample')
+        elif num is not None:
+            if self.num and self.num < num:
+                raise ValueError("new sample num is higher than current sample num")
+            max_hash=0
+        elif scaled is not None:
+            if self.num:
+                raise ValueError("num != 0 - cannot downsample a standard MinHash")
+            max_hash = self.max_hash
+            if max_hash is None:
+                raise ValueError("no max_hash available - cannot downsample")
 
+            old_scaled = _get_scaled_for_max_hash(self.max_hash)
+            if old_scaled > scaled:
+                raise ValueError(
+                    "new scaled {} is lower than current sample scaled {}".format(
+                        scaled, old_scaled
+                    )
+                )
+
+            max_hash = _get_max_hash_for_scaled(scaled)
+            num = 0
+        ###
+
+        # create new object:
         a = MinHash(
-            new_num, self.ksize, self.is_protein, self.dayhoff, self.hp, self.track_abundance, self.seed, 0
+            num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+            self.track_abundance, self.seed, max_hash
         )
+        # copy over hashes:
         if self.track_abundance:
             a.set_abundances(self.get_mins(with_abundance=True))
         else:
             a.add_many(self)
 
         return a
+
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use downsample(num=...) instead.')
+    def downsample_n(self, new_num):
+        "Copy this object and downsample new object to num=``new_num``."
+        return self.downsample(num=new_num)
 
     @deprecated(deprecated_in="3.5", removed_in="4.0",
                 current_version=VERSION,
@@ -488,39 +518,7 @@ class MinHash(RustObject):
     def downsample_scaled(self, new_scaled):
         """Copy this object and downsample new object to scaled=``new_scaled``.
         """
-        if self.num:
-            raise ValueError("num != 0 - cannot downsample a standard MinHash")
-
-        max_hash = self.max_hash
-        if max_hash is None:
-            raise ValueError("no max_hash available - cannot downsample")
-
-        old_scaled = _get_scaled_for_max_hash(self.max_hash)
-        if old_scaled > new_scaled:
-            raise ValueError(
-                "new scaled {} is lower than current sample scaled {}".format(
-                    new_scaled, old_scaled
-                )
-            )
-
-        new_max_hash = _get_max_hash_for_scaled(new_scaled)
-
-        a = MinHash(
-            0,
-            self.ksize,
-            self.is_protein,
-            self.dayhoff,
-            self.hp,
-            self.track_abundance,
-            self.seed,
-            new_max_hash,
-        )
-        if self.track_abundance:
-            a.set_abundances(self.get_mins(with_abundance=True))
-        else:
-            a.add_many(self)
-
-        return a
+        return self.downsample(scaled=new_scaled)
 
     @deprecated(deprecated_in="3.3", removed_in="4.0",
                 current_version=VERSION,
