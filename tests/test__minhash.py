@@ -278,6 +278,13 @@ def test_max_hash_and_scaled_zero():
     assert max_hash == 0
 
 
+def test_max_hash_and_scaled_error(track_abundance):
+    # test behavior when supplying both max_hash and scaled
+    with pytest.raises(ValueError):
+        mh = MinHash(0, 4, track_abundance=track_abundance, max_hash=35,
+                     scaled=5)
+
+
 def test_max_hash_cannot_limit(track_abundance):
     # make sure you can't set both n and scaled.
     with pytest.raises(ValueError):
@@ -1310,6 +1317,19 @@ def test_scaled_property(track_abundance):
     scaled = 10000
     a = MinHash(0, 10, track_abundance=track_abundance, scaled=scaled)
     assert a.scaled == scaled
+
+
+def test_mh_subtract(track_abundance):
+    # test subtracting two identically configured minhashes
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    assert a.subtract_mins(b) == set(range(2, 40, 4))
 
 
 def test_pickle_max_hash(track_abundance):
