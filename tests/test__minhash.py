@@ -251,11 +251,12 @@ def test_scaled(track_abundance):
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
-    assert mh.hashes == [10, 20, 30]
+
+    assert list(mh.hashes) == [10, 20, 30]
     mh.add_hash(40)
-    assert mh.hashes == [10, 20, 30]
+    assert list(mh.hashes) == [10, 20, 30]
     mh.add_hash(36)
-    assert mh.hashes == [10, 20, 30]
+    assert list(mh.hashes) == [10, 20, 30]
 
 
 def test_no_scaled(track_abundance):
@@ -301,7 +302,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     assert 'cannot downsample a standard MinHash' in str(excinfo.value)
 
 
-def test_scaled(track_abundance):
+def test_scaled_num_both(track_abundance):
     # make sure you can't set both max_n and scaled.
     with pytest.raises(ValueError):
         mh = MinHash(2, 4, track_abundance=track_abundance, scaled=2)

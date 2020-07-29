@@ -75,6 +75,7 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
 
 
 class _HashesWrapper(collections.Mapping):
+    "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
         self._data = h
 
