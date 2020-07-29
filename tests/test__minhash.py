@@ -759,7 +759,7 @@ def test_mh_merge(track_abundance):
     d = b.merge(a)
 
     assert len(c) == len(d)
-    assert list(sorted(c.hashes)) == list(d.hashes)
+    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
 
     if track_abundance:
         assert round(c.similarity(d), 3) == 0.91
@@ -1189,7 +1189,7 @@ def test_set_abundance_2():
     new_mh.track_abundance = True
     new_mh.set_abundances(mins)
 
-    assert new_mh.hashes == mins
+    assert set(new_mh.hashes) == set(mins)
 
 
 def test_set_abundance_clear():
