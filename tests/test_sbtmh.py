@@ -1,5 +1,6 @@
 import glob
 from itertools import product
+import os
 from string import ascii_uppercase
 import random
 
@@ -250,7 +251,7 @@ def test_localized_sbt_sorted_vs_randomized(random_seed):
 @pytest.mark.filterwarnings("ignore")
 def test_localized_sbt_on_gather_data():
     factory = GraphFactory(ksize=31, starting_size=1000, n_tables=3)
-    sbt = LocalizedSBT(factory, track_abundance=False)
+    sbt = LocalizedSBT(factory, track_abundance=True)
 
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data("gather/GCF*.sig")
@@ -269,10 +270,17 @@ def test_localized_sbt_on_gather_data():
             signature._name = ascii_uppercase[-(n_signatures - i)]
 
         # --- Create all-by-all similarity matrix for reference ---
-        # from sourmash.compare import compare_all_pairs
-        # compare = compare_all_pairs(signatures, ignore_abundance=True)
-        # print([x.name() for x in signatures])
-        # print('[' + ',\n '.join(['[' + ', '.join([f"{x:.2f}"  for x in row]) + "]" for row in compare]) + "]")
+        from sourmash.compare import compare_all_pairs
+
+        compare = compare_all_pairs(signatures, ignore_abundance=False)
+        print([x.name() for x in signatures])
+        print(
+            "["
+            + ",\n ".join(
+                ["[" + ", ".join([f"{x:.2f}" for x in row]) + "]" for row in compare]
+            )
+            + "]"
+        )
 
         # --- Similarity matrix ---
         #    ['O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',  'Z']
@@ -428,7 +436,6 @@ def test_localized_sbt_on_gather_data():
         # U:15 T:16 O:17 Q:18  X:19 R:20  P:21 Z:22  W:23 V:24 Y:25 S:26
 
         for signature in signatures:
-            print(signature._name)
             sbt.insert(signature)
 
         # Ensure that the most similar pairs, (P, Z) and (F, G) share parents
@@ -457,6 +464,159 @@ def test_localized_sbt_on_gather_data():
         assert sbt.parent(leaf_pos["P"]) == sbt.parent(leaf_pos["Z"])
         assert sbt.parent(leaf_pos["U"]) == sbt.parent(leaf_pos["T"])
         assert sbt.parent(leaf_pos["O"]) == sbt.parent(leaf_pos["Q"])
+
+
+def test_localized_sbt_on_gather_data_realistic():
+    """Use realistic NodeGraph/bloom filter settings"""
+    order1 = [
+        "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+        "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+        "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+        "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+        "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+        "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+        "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+        "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+        "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+        "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+        "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+        "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+    ]
+    order2 = [
+        "GCF_000006945.2_ASM694v2_genomic.fna.gz.sig",
+        "GCF_000007545.1_ASM754v1_genomic.fna.gz.sig",
+        "GCF_000008105.1_ASM810v1_genomic.fna.gz.sig",
+        "GCF_000008545.1_ASM854v1_genomic.fna.gz.sig",
+        "GCF_000009085.1_ASM908v1_genomic.fna.gz.sig",
+        "GCF_000009505.1_ASM950v1_genomic.fna.gz.sig",
+        "GCF_000009525.1_ASM952v1_genomic.fna.gz.sig",
+        "GCF_000011885.1_ASM1188v1_genomic.fna.gz.sig",
+        "GCF_000016045.1_ASM1604v1_genomic.fna.gz.sig",
+        "GCF_000016785.1_ASM1678v1_genomic.fna.gz.sig",
+        "GCF_000018945.1_ASM1894v1_genomic.fna.gz.sig",
+        "GCF_000195995.1_ASM19599v1_genomic.fna.gz.sig",
+    ]
+    KSIZE = 21
+
+    # Use real data settings to match
+    factory = GraphFactory(ksize=KSIZE, starting_size=1e5, n_tables=4)
+    sbt1: LocalizedSBT = LocalizedSBT(factory, track_abundance=True)
+    sbt2 = LocalizedSBT(factory, track_abundance=True)
+
+    sorted_sig_names = [
+        "NC_000853.1 Thermotoga maritima MSB8 chromosome, complete genome",
+        "NC_002163.1 Campylobacter jejuni subsp. jejuni NCTC 11168 = ATCC 700819 chromosome, complete genome",
+        "NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome",
+        "NC_003198.1 Salmonella enterica subsp. enterica serovar Typhi str. CT18, complete genome",
+        "NC_004631.1 Salmonella enterica subsp. enterica serovar Typhi Ty2, complete genome",
+        "NC_006511.1 Salmonella enterica subsp. enterica serovar Paratyphi A str. ATCC 9150, complete genome",
+        "NC_006905.1 Salmonella enterica subsp. enterica serovar Choleraesuis str. SC-B67, complete genome",
+        "NC_009486.1 Thermotoga petrophila RKU-1, complete genome",
+        "NC_011080.1 Salmonella enterica subsp. enterica serovar Newport str. SL254, complete genome",
+        "NC_011274.1 Salmonella enterica subsp. enterica serovar Gallinarum str. 287/91 complete genome",
+        "NC_011294.1 Salmonella enterica subsp. enterica serovar Enteritidis str. P125109 complete genome",
+        "NC_011978.1 Thermotoga neapolitana DSM 4359, complete genome",
+    ]
+
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data("gather/GCF*.sig")
+        query_filename = utils.get_test_data("gather/combined.sig")
+
+        # Sort to ensure consistent ordering across operating systems
+        files = sorted(glob.glob(testdata_glob))
+        n = len(files)
+        name_to_letter = {}
+        letter_to_name = {}
+
+        signatures = {}
+        for i, filename in enumerate(files):
+            loaded = sig.load_signatures(filename, ksize=KSIZE)
+            basename = os.path.basename(filename)
+            letter = ascii_uppercase[-(n - i)]
+            for signature in loaded:
+                signatures[basename] = signature
+                # only one signature per filename so can assume that i is only
+                # incrementally increasing
+                name_to_letter[signature._name] = letter
+                letter_to_name[letter] = signature._name
+
+        query_sig = list(sig.load_signatures(query_filename, ksize=KSIZE))[0]
+
+    # Tree 1
+    for basename in order1:
+        signature = signatures[basename]
+        sbt1.insert(signature)
+        sbt1_str = sbt2._str_query(query=query_sig)
+
+    # Tree 2
+    for basename in order2:
+        signature = signatures[basename]
+        sbt2.insert(signature)
+
+    # from sourmash.compare import compare_all_pairs
+    #
+    # compare = compare_all_pairs(list(signatures.values()), ignore_abundance=False)
+    # print()
+    # print([x.name().split()[0] for x in signatures.values()])
+    # print(
+    #     "["
+    #     + ",\n ".join(
+    #         ["[" + ", ".join([f"{x:.2f}" for x in row]) + "]" for row in compare]
+    #     )
+    #     + "]"
+    # )
+    # [
+    #     "NC_003197.2",
+    #     "NC_004631.1",
+    #     "NC_006905.1",
+    #     "NC_000853.1",
+    #     "NC_002163.1",
+    #     "NC_011294.1",
+    #     "NC_011274.1",
+    #     "NC_006511.1",
+    #     "NC_011080.1",
+    #     "NC_009486.1",
+    #     "NC_011978.1",
+    #     "NC_003198.1",
+    # ]
+    # [[1.00, 0.56, 0.59, 0.00, 0.00, 0.65, 0.63, 0.57, 0.65, 0.00, 0.00, 0.52],
+    #  [0.56, 1.00, 0.55, 0.00, 0.00, 0.58, 0.57, 0.66, 0.56, 0.00, 0.00, 0.91],
+    #  [0.59, 0.55, 1.00, 0.00, 0.00, 0.60, 0.57, 0.53, 0.60, 0.00, 0.00, 0.52],
+    #  [0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.33, 0.05, 0.00],
+    #  [0.00, 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+    #  [0.65, 0.58, 0.60, 0.00, 0.00, 1.00, 0.91, 0.59, 0.63, 0.00, 0.00, 0.55],
+    #  [0.63, 0.57, 0.57, 0.00, 0.00, 0.91, 1.00, 0.58, 0.60, 0.00, 0.00, 0.53],
+    #  [0.57, 0.66, 0.53, 0.00, 0.00, 0.59, 0.58, 1.00, 0.57, 0.00, 0.00, 0.61],
+    #  [0.65, 0.56, 0.60, 0.00, 0.00, 0.63, 0.60, 0.57, 1.00, 0.00, 0.00, 0.53],
+    #  [0.00, 0.00, 0.00, 0.33, 0.00, 0.00, 0.00, 0.00, 0.00, 1.00, 0.04, 0.00],
+    #  [0.00, 0.00, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.00, 0.04, 1.00, 0.00],
+    #  [0.52, 0.91, 0.52, 0.00, 0.00, 0.55, 0.53, 0.61, 0.53, 0.00, 0.00, 1.00]]
+
+
+
+    # These samples are most similar to one another and should always share parents
+    pairs = (
+        (
+            "NC_009486.1 Thermotoga petrophila RKU-1, complete genome",
+            "NC_000853.1 Thermotoga maritima MSB8 chromosome, complete genome",
+        ),
+        (
+            "NC_011080.1 Salmonella enterica subsp. enterica serovar Newport str. SL254, complete genome",
+            "NC_003197.2 Salmonella enterica subsp. enterica serovar Typhimurium str. LT2, complete genome",
+        ),
+        (
+            "NC_011274.1 Salmonella enterica subsp. enterica serovar Gallinarum str. 287/91 complete genome",
+            "NC_011294.1 Salmonella enterica subsp. enterica serovar Enteritidis str. P125109 complete genome",
+        ),
+        (
+            "NC_003198.1 Salmonella enterica subsp. enterica serovar Typhi str. CT18, complete genome",
+            "NC_004631.1 Salmonella enterica subsp. enterica serovar Typhi Ty2, complete genome",
+        ),
+    )
+    for sbt in (sbt1, sbt2):
+        leaf_pos = {sig.data.name(): n for n, sig in sbt._leaves.items()}
+        for leaf1, leaf2 in pairs:
+            assert sbt.parent(leaf_pos[leaf1]) == sbt.parent(leaf_pos[leaf2])
 
 
 @pytest.mark.skip(reason="Not currently working but not a show-stopping bug")
@@ -497,7 +657,7 @@ def test_localized_sbt_adversarial_dissimilar_signatures():
     b.add("TTTTA")
     b.add("TTTTC")
     b.add("TTTTG")
-    b.add("TTTTT")  # Same k-mer from above
+    b.add("TTTTT")
     sig_b = SourmashSignature(b, name="b")
 
     c = MinHash(n=n_hashes, ksize=5)

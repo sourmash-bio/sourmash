@@ -11,8 +11,9 @@ from . import signature
 
 def load_sbt_index(filename, print_version_warning=True):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load,
-                    print_version_warning=print_version_warning)
+    return SBT.load(
+        filename, leaf_loader=SigLeaf.load, print_version_warning=print_version_warning
+    )
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
@@ -42,8 +43,9 @@ def search_sbt_index(tree, query, threshold):
 
 class SigLeaf(Leaf):
     def __str__(self):
-        return '**Leaf:{name} -> {metadata}'.format(
-                name=self.name, metadata=self.metadata)
+        return "**Leaf:{name} -> {metadata}".format(
+            name=self.name, metadata=self.metadata
+        )
 
     def save(self, path):
         # this is here only for triggering the property load
@@ -57,13 +59,13 @@ class SigLeaf(Leaf):
     def update(self, parent):
         mh = self.data.minhash
         parent.data.update(mh)
-        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
+        min_n_below = parent.metadata.get("min_n_below", sys.maxsize)
         min_n_below = min(len(mh), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
 
-        parent.metadata['min_n_below'] = min_n_below
+        parent.metadata["min_n_below"] = min_n_below
 
     @property
     def data(self):
@@ -102,11 +104,14 @@ class LocalizedSBT(SBT):
     and another for the leaves (datasets).
     """
 
-    def __init__(self, factory, d=2, storage=None, track_abundance=False,
-                 do_containment=False):
+    def __init__(
+        self, factory, d=2, storage=None, track_abundance=False, do_containment=False
+    ):
         if d != 2:
-            raise NotImplementedError("LocalizedSBT is only implemented for when the "
-                                      "number of children is 2, d=2")
+            raise NotImplementedError(
+                "LocalizedSBT is only implemented for when the "
+                "number of children is 2, d=2"
+            )
         super().__init__(factory=factory, d=d, storage=storage)
         self.track_abundance = track_abundance
         self.ignore_abundance = not self.track_abundance
@@ -138,13 +143,13 @@ class LocalizedSBT(SBT):
 
         return best_result
 
-    def get_sibling_of_similar_leaf(self, children, most_similar_leaf):
+    def get_sibling(self, children, query_child):
         # if most similar node has two children already, return node
         # of least similar child (displaced)
         # Get the leaf information of the other child
-        if most_similar_leaf == children[0].node:
+        if query_child == children[0].node:
             other_child = children[1]
-        elif most_similar_leaf == children[1].node:
+        elif query_child == children[1].node:
             other_child = children[0]
         else:
             raise ValueError(
@@ -158,16 +163,10 @@ class LocalizedSBT(SBT):
         return [c.node for c in children]
 
     def check_if_all_sigleafs(self, child_nodes):
-        return all(
-            isinstance(x, SigLeaf)
-            for x in child_nodes
-        )
+        return all(isinstance(x, SigLeaf) for x in child_nodes)
 
     def get_siblings(self, grandparent, most_similar_parent):
-        return [
-            x for x in self.children(grandparent.pos)
-            if x != most_similar_parent
-        ]
+        return [x for x in self.children(grandparent.pos) if x != most_similar_parent]
 
     def new_node_pos(self, node):
         if not self._nodes:
@@ -186,8 +185,27 @@ class LocalizedSBT(SBT):
 
         return self.next_node
 
-    def get_best_leaf_position(self, node_to_add):
-        best_result = self.find_most_similar_leaf(node_to_add)
+    def _recurse_up_tree_for_dissimilar_node(self, internal_node, leaf_to_add):
+        """Traverse up the tree to find the first """
+        match = GatherMinHashes().search(internal_node.node, leaf_to_add.data, 0.0)
+
+        # If this node has a match, check that its sibiling does not
+        if match:
+            parent = self.parent(internal_node.pos)
+            sibling = self.get_sibling(parent, internal_node.node)
+            sibling_match = GatherMinHashes().search(
+                sibling.node, leaf_to_add.data, 0.0
+            )
+            # Sibling matched, keep going up the tree
+            if sibling_match:
+                return self._recurse_up_tree_for_dissimilar_node(parent, leaf_to_add)
+            else:
+                return parent
+        else:
+            return internal_node
+
+    def get_best_leaf_position(self, leaf_to_add):
+        best_result = self.find_most_similar_leaf(leaf_to_add)
         if best_result is None:
             potential_next_node = self._insert_next_position(self.next_node)
             parent_potential_next_node = self.parent(potential_next_node)
@@ -212,15 +230,14 @@ class LocalizedSBT(SBT):
             next_node = self._insert_next_position(self.next_node)
         else:
             next_node = self.maybe_displace_child(
-                new_leaf_similarity,
-                children_of_most_similar_parent,
-                most_similar_leaf)
+                new_leaf_similarity, children_of_most_similar_parent, most_similar_leaf
+            )
         return next_node
 
     def maybe_displace_child(self, new_leaf_similarity, children, most_similar_leaf):
         # If parent has two children, check if the other child is more similar
         # to the most_similar_leaf --> then no displacement is necessary
-        sibling_of_best_match = self.get_sibling_of_similar_leaf(children, most_similar_leaf)
+        sibling_of_best_match = self.get_sibling(children, most_similar_leaf)
         child_nodes = self.get_child_nodes(children)
         all_leaves = self.check_if_all_sigleafs(child_nodes)
         # Check if any currently created parental nodes have an empty
@@ -229,13 +246,13 @@ class LocalizedSBT(SBT):
 
         if all_leaves:
             child_similarity = most_similar_leaf.data.similarity(
-                sibling_of_best_match.node.data, ignore_abundance=self.ignore_abundance)
+                sibling_of_best_match.node.data, ignore_abundance=self.ignore_abundance
+            )
 
             if new_leaf_similarity > child_similarity:
                 next_node = self.displace_child_with_new_leaf(
-                    exists_free_leaf,
-                    sibling_of_best_match,
-                    most_similar_leaf)
+                    exists_free_leaf, sibling_of_best_match, most_similar_leaf
+                )
             else:
                 next_node = self.insert_dissimilar_leaf(exists_free_leaf)
         else:
@@ -255,8 +272,9 @@ class LocalizedSBT(SBT):
             next_node = self._push_existing_tree_down()
         return next_node
 
-    def displace_child_with_new_leaf(self, exists_free_leaf, node_to_displace,
-                                     most_similar_leaf):
+    def displace_child_with_new_leaf(
+        self, exists_free_leaf, node_to_displace, most_similar_leaf
+    ):
         # New leaf is *more* similar than the existing child
         # --> displace existing child
         # Get this child's displaced position
@@ -266,7 +284,8 @@ class LocalizedSBT(SBT):
             node_to_displace.node._ignore_in_search = True
             most_similar_leaf._ignore_in_search = True
             node_to_displace_new_pos = self.get_best_leaf_position(
-                node_to_displace.node)
+                node_to_displace.node
+            )
             # self._leaves[node_to_displace_new_pos] = node_to_displace.node
 
             # Unset ignoring after recursion is done
@@ -291,8 +310,9 @@ class LocalizedSBT(SBT):
                     displaced_position = pos
                     break
             displaced_node_new_parent = self.parent(displaced_node_new_position)
-        self.insert_new_internal_node_with_children(node_to_displace.node,
-                                                    displaced_node_new_parent.pos)
+        self.insert_new_internal_node_with_children(
+            node_to_displace.node, displaced_node_new_parent.pos
+        )
         del self._leaves[displaced_position]
         return displaced_position
 
@@ -379,9 +399,13 @@ class LocalizedSBT(SBT):
         next_internal_node = None
         if next_node <= min_leaf:
             for i in range(min_leaf):
-                if all((i not in self._nodes,
+                if all(
+                    (
+                        i not in self._nodes,
                         i not in self._leaves,
-                        i not in self._missing_nodes)):
+                        i not in self._missing_nodes,
+                    )
+                ):
                     next_internal_node = i
                     break
         if next_internal_node is None:
@@ -420,11 +444,13 @@ class LocalizedSBT(SBT):
             else:
                 parent_sibling = grandparent_children[0]
             if isinstance(parent_sibling.node, Node):
-                self.insert_new_internal_node_with_children(node, parent.pos,
-                                                            parent.node)
+                self.insert_new_internal_node_with_children(
+                    node, parent.pos, parent.node
+                )
             else:
-                self.relocate_children_to_new_internal_node(grandparent, node, parent,
-                                                            parent_sibling)
+                self.relocate_children_to_new_internal_node(
+                    grandparent, node, parent, parent_sibling
+                )
         elif isinstance(parent.node, Node):
             self._leaves[pos] = node
             node.update(parent.node)
@@ -445,8 +471,9 @@ class LocalizedSBT(SBT):
             node.update(self._nodes[parent.pos])
             parent = self.parent(parent.pos)
 
-    def relocate_children_to_new_internal_node(self, grandparent, node, parent,
-                                               parent_sibling):
+    def relocate_children_to_new_internal_node(
+        self, grandparent, node, parent, parent_sibling
+    ):
         new_internal_node = Node(self.factory, name="internal." + str(parent.pos))
         self._nodes[parent.pos] = new_internal_node
         c1, c2 = self.children(parent.pos)
@@ -462,8 +489,9 @@ class LocalizedSBT(SBT):
         for child in (parent.node, parent_sibling.node):
             child.update(new_internal_node)
 
-    def insert_new_internal_node_with_children(self, node, parent_pos,
-                                               parent_node=None):
+    def insert_new_internal_node_with_children(
+        self, node, parent_pos, parent_node=None
+    ):
         """Create a new internal node at parent.pos with child, 'node'"""
         # Create a new internal node
         # node and parent are children of new internal node
@@ -490,7 +518,9 @@ class LocalizedSBT(SBT):
             for child in (parent_node, node):
                 child.update(n)
 
+
 ### Search functionality.
+
 
 def _max_jaccard_underneath_internal_node(node, mh, ignore_empty=False):
     """\
@@ -514,10 +544,10 @@ def _max_jaccard_underneath_internal_node(node, mh, ignore_empty=False):
 
     # get the size of the smallest collection of hashes below this point
     default = 0 if ignore_empty else -1
-    min_n_below = node.metadata.get('min_n_below', default)
+    min_n_below = node.metadata.get("min_n_below", default)
 
     if min_n_below == -1:
-        raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+        raise Exception("cannot do similarity search on this SBT; need to rebuild.")
     if min_n_below == 0:
         return min_n_below
 
@@ -537,8 +567,9 @@ def search_minhashes(node, sig, threshold, results=None, ignore_empty=False):
     if isinstance(node, SigLeaf):
         score = node.data.minhash.similarity(sig_mh)
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, sig_mh,
-                                                      ignore_empty=ignore_empty)
+        score = _max_jaccard_underneath_internal_node(
+            node, sig_mh, ignore_empty=ignore_empty
+        )
 
     if results is not None:
         results[node.name] = score
@@ -551,7 +582,7 @@ def search_minhashes(node, sig, threshold, results=None, ignore_empty=False):
 
 class SearchMinHashesFindBest(object):
     def __init__(self):
-        self.best_match = 0.
+        self.best_match = 0.0
 
     def search(self, node, sig, threshold, results=None, ignore_empty=False):
         """May return a list of matches under a node --> doesn't return a single sig"""
@@ -561,8 +592,9 @@ class SearchMinHashesFindBest(object):
         if isinstance(node, SigLeaf):
             score = node.data.minhash.similarity(sig_mh)
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, sig_mh,
-                                                          ignore_empty=ignore_empty)
+            score = _max_jaccard_underneath_internal_node(
+                node, sig_mh, ignore_empty=ignore_empty
+            )
 
         if results is not None:
             results[node.name] = score
@@ -578,8 +610,9 @@ class SearchMinHashesFindBest(object):
         return 0
 
 
-def search_minhashes_containment(node, sig, threshold, results=None, downsample=True,
-                                 ignore_empty=None):
+def search_minhashes_containment(
+    node, sig, threshold, results=None, downsample=True, ignore_empty=None
+):
     """Find minhashes contained within
 
     Parameters
