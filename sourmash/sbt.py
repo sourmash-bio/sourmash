@@ -1069,9 +1069,10 @@ class SBT(Index):
                         print('"{}" -> "{}"'.format(node.name, child.name))
         print("}")
 
-    def print(self, query=None):
+    def _str_query(self, query=None):
         from .sbtmh import GatherMinHashes
         match_str = ''
+        return_str = ''
         visited, stack = set(), [0]
         while stack:
             node_p = stack.pop()
@@ -1082,7 +1083,7 @@ class SBT(Index):
                 if query:
                     match = GatherMinHashes().search(node_g, query, 0.0)
                     match_str = f'match={match}'
-                print(" " * 2 * depth, node_g, match_str)
+                return_str += " " * 2 * depth + ' '.join((node_g, match_str)) + '\n'
                 if isinstance(node_g, Node):
                     stack.extend(c.pos for c in self.children(node_p)
                                        if c.pos not in visited)
@@ -1091,7 +1092,11 @@ class SBT(Index):
                             if query:
                                 match = GatherMinHashes().search(node_g, query, 0.0)
                                 match_str = f'match={match}'
-                            print(" " * 2 * (depth+1), str(child.node)[:40], match_str)
+                            return_str = " " * 2 * (depth+1) + ' '.join((str(child.node)[:40], match_str)) + '\n'
+        return return_str
+
+    def print(self, query=None):
+        print(self._str_query(query=query))
 
     def __iter__(self):
         for i, node in self._nodes.items():
