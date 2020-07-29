@@ -236,9 +236,9 @@ def test_size_limit(track_abundance):
     mh.add_hash(10)
     mh.add_hash(20)
     mh.add_hash(30)
-    assert list(mh.hashes) == [10, 20, 30]
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
     mh.add_hash(5) # -> should push 30 off end
-    assert list(mh.hashes) == [5, 10, 20]
+    assert list(sorted(mh.hashes)) == [5, 10, 20]
 
 
 def test_scaled(track_abundance):
@@ -252,11 +252,11 @@ def test_scaled(track_abundance):
     mh.add_hash(20)
     mh.add_hash(30)
 
-    assert list(mh.hashes) == [10, 20, 30]
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
     mh.add_hash(40)
-    assert list(mh.hashes) == [10, 20, 30]
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
     mh.add_hash(36)
-    assert list(mh.hashes) == [10, 20, 30]
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
 
 
 def test_no_scaled(track_abundance):
@@ -646,7 +646,7 @@ def test_mh_len(track_abundance):
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    assert list(a.hashes) == list(range(0, 40, 2))
+    assert list(sorted(a.hashes)) == list(range(0, 40, 2))
 
 
 def test_mh_unsigned_long_long(track_abundance):
@@ -759,7 +759,7 @@ def test_mh_merge(track_abundance):
     d = b.merge(a)
 
     assert len(c) == len(d)
-    assert list(c.hashes) == list(d.hashes)
+    assert list(sorted(c.hashes)) == list(d.hashes)
 
     if track_abundance:
         assert round(c.similarity(d), 3) == 0.91
@@ -783,7 +783,7 @@ def test_mh_merge_empty_num(track_abundance):
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(c.hashes) == list(d.hashes)
+    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -802,7 +802,7 @@ def test_mh_merge_empty_scaled(track_abundance):
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(c.hashes) == list(d.hashes)
+    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -1137,7 +1137,7 @@ def test_abundance_count_common():
     assert a.count_common(b) == 1
     assert a.count_common(b) == b.count_common(a)
 
-    assert list(b.hashes) == [2110480117637990133, 10798773792509008305]
+    assert list(sorted(b.hashes)) == [2110480117637990133, 10798773792509008305]
 
 
 def test_abundance_similarity():
@@ -1200,7 +1200,7 @@ def test_set_abundance_clear():
     a.set_abundances({1: 3, 2: 4}, clear=True)
     b.set_abundances({1: 3, 2: 4}, clear=False)
 
-    assert list(a.hashes) == list(b.hashes)
+    assert list(sorted(a.hashes)) == list(sorted(b.hashes))
 
 
 def test_set_abundance_clear_2():
