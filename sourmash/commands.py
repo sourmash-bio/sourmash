@@ -249,7 +249,7 @@ def plot(args):
     notify('wrote dendrogram to: {}', dendrogram_out)
 
     ### make the dendrogram+matrix:
-    fig = sourmash_fig.plot_composite_matrix(D, labeltext,
+    (fig, rlabels, rmat) = sourmash_fig.plot_composite_matrix(D, labeltext,
                                              show_labels=args.labels,
                                              show_indices=args.indices,
                                              vmin=args.vmin,
@@ -262,6 +262,19 @@ def plot(args):
         # for small matrices, print out sample numbering for FYI.
         for i, name in enumerate(labeltext):
             print_results('{}\t{}', i, name)
+
+    # write out re-ordered matrix and labels
+    if args.csv:
+        with FileOutput(args.csv, 'wt') as csv_fp:
+            w = csv.writer(csv_fp)
+            w.writerow(rlabels)
+
+            for i in range(len(rlabels)):
+                y = []
+                for j in range(len(rlabels)):
+                    y.append('{}'.format(rmat[i][j]))
+                w.writerow(y)
+        notify('Wrote clustered matrix and labels out to {}', args.csv)
 
 
 def import_csv(args):

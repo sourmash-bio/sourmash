@@ -48,7 +48,7 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
         dendrolabels = [str(i) for i in range(len(labeltext))]
 
     Z1 = sch.dendrogram(Y, orientation='left', labels=dendrolabels,
-                        no_labels=not show_indices)
+                        no_labels=not show_indices, get_leaves=True)
     ax1.set_xticks([])
 
     xstart = 0.45
@@ -57,15 +57,17 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
         xstart = 0.315
     scale_xstart = xstart + width + 0.01
 
-    # plot matrix
-    axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
-
-    # (this reorders D by the clustering in Z1)
+    # re-order labels along rows, top to bottom
     idx1 = Z1['leaves']
+    reordered_labels = [ labeltext[i] for i in reversed(idx1) ]
+
+    # reorder D by the clustering in the dendrogram
     D = D[idx1, :]
     D = D[:, idx1]
 
     # show matrix
+    axmatrix = fig.add_axes([xstart, 0.1, width, 0.6])
+
     im = axmatrix.matshow(D, aspect='auto', origin='lower',
                           cmap=pylab.cm.YlGnBu, vmin=vmin, vmax=vmax)
     axmatrix.set_xticks([])
@@ -75,4 +77,4 @@ def plot_composite_matrix(D, labeltext, show_labels=True, show_indices=True,
     axcolor = fig.add_axes([scale_xstart, 0.1, 0.02, 0.6])
     pylab.colorbar(im, cax=axcolor)
 
-    return fig
+    return fig, reordered_labels, D

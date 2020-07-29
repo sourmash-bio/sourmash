@@ -105,6 +105,12 @@ data/GCF_000783305.1 0.0 0.0 1.0
 Note that the comparisons are quite quick; most of the time is spent in
 making the minhashes, which can be saved and loaded easily.
 
+## Plotting dendrograms and matrices
+
+If you're interested in building comparison matrices and dendrograms,
+please see the notebook
+[Building plots from `sourmash compare` output](plotting-compare.md).
+
 ## Saving and loading signature files
 
 Signature files encapsulate MinHashes in JSON, and provide a way to
