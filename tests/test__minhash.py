@@ -289,7 +289,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     # make sure you can't set max_n and then downsample scaled
     mh = MinHash(2, 4, track_abundance=track_abundance)
     with pytest.raises(ValueError) as excinfo:
-        mh.downsample_scaled(100000000)
+        mh.downsample(scaled=100000000)
 
     assert 'cannot downsample a standard MinHash' in str(excinfo.value)
 
@@ -705,7 +705,7 @@ def test_mh_count_common_notmh(track_abundance):
 def test_mh_downsample_num_error(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     with pytest.raises(ValueError):
-        a.downsample_n(30)
+        a.downsample(num=30)
 
 
 def test_mh_jaccard_asymmetric_num(track_abundance):
@@ -725,7 +725,7 @@ def test_mh_jaccard_asymmetric_num(track_abundance):
     with pytest.raises(TypeError):
         a.jaccard(b)
 
-    a = a.downsample_n(10)
+    a = a.downsample(num=10)
     # CTB note: this used to be 'compare', is now 'jaccard'
     assert a.jaccard(b) == 0.5
     assert b.jaccard(a) == 0.5
@@ -850,14 +850,14 @@ def test_mh_asymmetric_merge(track_abundance):
     with pytest.raises(TypeError):
         d.jaccard(a)
 
-    a = a.downsample_n(d.num)
+    a = a.downsample(num=d.num)
 
     if track_abundance:
         assert round(d.similarity(a), 3) == 0.91
     else:
         assert round(d.similarity(a), 3) == 1.0
 
-    c = c.downsample_n(b.num)
+    c = c.downsample(num=b.num)
     if track_abundance:
         assert round(c.similarity(b), 3) == 0.91
     else:
@@ -891,13 +891,13 @@ def test_mh_inplace_concat_asymmetric(track_abundance):
     except TypeError as exc:
         assert 'must have same num' in str(exc)
 
-    a = a.downsample_n(d.num)
+    a = a.downsample(num=d.num)
     if track_abundance:
         assert round(d.similarity(a), 3) == 0.795 # see: d += a, above.
     else:
         assert d.similarity(a) == 1.0 # see: d += a, above.
 
-    c = c.downsample_n(b.num)
+    c = c.downsample(num=b.num)
     if track_abundance:
         assert round(c.similarity(b), 3) == 0.436
     else:
