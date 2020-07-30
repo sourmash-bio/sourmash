@@ -1681,21 +1681,42 @@ def test_downsample_scaled_deprecated(track_abundance):
     assert list(mh2.hashes) == list(mins[:3])
 
 
-def test_is_molecule_type_1_deprecated(track_abundance):
+def test_is_molecule_type_1(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance)
     assert mh.is_molecule_type('DNA')
+    assert mh.moltype == 'DNA'
+    assert mh.is_dna
+    assert not mh.is_protein
+    assert not mh.hp
+    assert not mh.dayhoff
 
 
-def test_is_molecule_type_2_deprecated(track_abundance):
+def test_is_molecule_type_2(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, is_protein=True)
     assert mh.is_molecule_type('protein')
+    assert mh.moltype == 'protein'
+    assert not mh.is_dna
+    assert mh.is_protein
+    assert not mh.hp
+    assert not mh.dayhoff
 
 
-def test_is_molecule_type_3_deprecated(track_abundance):
+def test_is_molecule_type_3(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, hp=True)
     assert mh.is_molecule_type('hp')
+    assert mh.moltype == 'hp'
+    assert not mh.is_dna
+    assert not mh.is_protein
+    assert mh.hp
+    assert not mh.dayhoff
 
 
-def test_is_molecule_type_4_deprecated(track_abundance):
+
+def test_is_molecule_type_4(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, dayhoff=True)
     assert mh.is_molecule_type('dayhoff')
+    assert mh.moltype == 'dayhoff'
+    assert not mh.is_dna
+    assert not mh.is_protein
+    assert not mh.hp
+    assert mh.dayhoff
