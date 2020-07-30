@@ -677,11 +677,7 @@ def flatten(args):
             siglist = [ ss for ss in siglist if args.name in ss.name() ]
 
         for ss in siglist:
-            flattened_mh = ss.minhash.copy_and_clear()
-            flattened_mh.track_abundance = False
-            flattened_mh.add_many(ss.minhash.hashes)
-
-            ss.minhash = flattened_mh
+            ss.minhash = ss.minhash.flatten()
 
         outlist.extend(siglist)
 
