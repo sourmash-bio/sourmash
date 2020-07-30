@@ -1605,3 +1605,97 @@ def test_get_hashes_deprecated(track_abundance):
     mh.add_many(mins)
 
     assert set(mh.get_hashes()) == set(mins)
+
+
+def test_downsample_num(track_abundance):
+    # test downsample(num=...) function
+    mh = MinHash(10, 21, track_abundance=track_abundance)
+    for i in range(20):
+        mh.add_hash(i)
+
+    assert mh.num == 10
+    assert len(mh) == 10
+
+    assert list(sorted(mh.hashes)) == list(range(10))
+
+    mh2 = mh.downsample(num=5)
+    assert mh2.num == 5
+    assert len(mh2) == 5
+
+    assert list(sorted(mh2.hashes)) == list(range(5))
+
+
+def test_downsample_n_deprecated(track_abundance):
+    # test downsample_n(...) function, now deprecated
+    mh = MinHash(10, 21, track_abundance=track_abundance)
+    for i in range(20):
+        mh.add_hash(i)
+
+    assert mh.num == 10
+    assert len(mh) == 10
+
+    assert list(sorted(mh.hashes)) == list(range(10))
+
+    mh2 = mh.downsample_n(5)
+    assert mh2.num == 5
+    assert len(mh2) == 5
+
+    assert list(sorted(mh2.hashes)) == list(range(5))
+
+
+def test_downsample_scaled(track_abundance):
+    # test downsample(scaled...) method
+    mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mins = (1, 2, 3,
+            9223372036854775808 + 1, 9223372036854775808 + 2,
+            9223372036854775808 + 3)
+    mh.add_many(mins)
+
+    assert len(mh) == 6
+    assert list(mh.hashes) == list(mins)
+
+    mh2 = mh.downsample(scaled=2)
+    print(mh.max_hash, mh2.max_hash)
+
+    assert len(mh2) == 3
+    assert list(mh2.hashes) == list(mins[:3])
+
+
+def test_downsample_scaled_deprecated(track_abundance):
+    # test downsample_scaled(...) method, now deprecated
+    mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+
+    mins = (1, 2, 3,
+            9223372036854775808 + 1, 9223372036854775808 + 2,
+            9223372036854775808 + 3)
+    mh.add_many(mins)
+
+    assert len(mh) == 6
+    assert list(mh.hashes) == list(mins)
+
+    mh2 = mh.downsample_scaled(2)
+    print(mh.max_hash, mh2.max_hash)
+
+    assert len(mh2) == 3
+    assert list(mh2.hashes) == list(mins[:3])
+
+
+def test_is_molecule_type_1_deprecated(track_abundance):
+    mh = MinHash(1, 21, track_abundance=track_abundance)
+    assert mh.is_molecule_type('DNA')
+
+
+def test_is_molecule_type_2_deprecated(track_abundance):
+    mh = MinHash(1, 21, track_abundance=track_abundance, is_protein=True)
+    assert mh.is_molecule_type('protein')
+
+
+def test_is_molecule_type_3_deprecated(track_abundance):
+    mh = MinHash(1, 21, track_abundance=track_abundance, hp=True)
+    assert mh.is_molecule_type('hp')
+
+
+def test_is_molecule_type_4_deprecated(track_abundance):
+    mh = MinHash(1, 21, track_abundance=track_abundance, dayhoff=True)
+    assert mh.is_molecule_type('dayhoff')
