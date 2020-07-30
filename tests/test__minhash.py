@@ -1593,3 +1593,15 @@ def test_get_mins_deprecated(track_abundance):
         for k in mins:
             assert d[k] == 4
         assert len(d) == len(mins)
+
+
+def test_get_hashes_deprecated(track_abundance):
+    mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
+    mins = (28945103950853965, 74690756200987412, 82962372765557409)
+
+    mh.add_many(mins)
+    mh.add_many(mins)
+    mh.add_many(mins)
+    mh.add_many(mins)
+
+    assert set(mh.get_hashes()) == set(mins)
