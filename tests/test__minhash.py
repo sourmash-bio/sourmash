@@ -1257,18 +1257,6 @@ def test_set_abundance_initialized():
     assert "Can only set track_abundance=True if the MinHash is empty" in e.value.args[0]
 
 
-def test_reviving_minhash():
-    # simulate reading a MinHash from disk
-    scaled = _get_max_hash_for_scaled(184467440737095520)
-    mh = MinHash(0, 21, scaled=scaled, seed=42, track_abundance=False)
-    mins = (28945103950853965, 74690756200987412, 82962372765557409,
-            93503551367950366, 106923350319729608, 135116761470196737,
-            160165359281648267, 162390811417732001, 177939655451276972)
-
-    for m in mins:
-        mh.add_hash(m)
-
-
 def test_set_abundance_num():
     a = MinHash(2, 10, track_abundance=True)
 
