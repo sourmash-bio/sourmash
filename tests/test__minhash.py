@@ -1517,3 +1517,30 @@ def test_try_change_hashes(track_abundance):
     h = a.hashes
     with pytest.raises(RuntimeError):
         h[5] = 10
+
+
+def test_flatten():
+    # test behavior with scaled
+    scaled = _get_scaled_for_max_hash(35)
+    mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
+    assert mh.max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(10)
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(20)
+    mh.add_hash(30)
+    mh.add_hash(30)
+    mh.add_hash(30)
+
+    assert mh.hashes[10] == 3
+    assert mh.hashes[20] == 2
+    assert mh.hashes[30] == 3
+
+    mh2 = mh.flatten()
+
+    assert mh2.hashes[10] == 1
+    assert mh2.hashes[20] == 1
+    assert mh2.hashes[30] == 1
+    assert len(mh2) == 3
