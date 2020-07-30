@@ -1653,13 +1653,13 @@ def test_downsample_scaled(track_abundance):
     mh.add_many(mins)
 
     assert len(mh) == 6
-    assert list(mh.hashes) == list(mins)
+    assert list(sorted(mh.hashes)) == list(mins)
 
     mh2 = mh.downsample(scaled=2)
     print(mh.max_hash, mh2.max_hash)
 
     assert len(mh2) == 3
-    assert list(mh2.hashes) == list(mins[:3])
+    assert list(sorted(mh2.hashes)) == list(mins[:3])
 
 
 def test_downsample_scaled_deprecated(track_abundance):
@@ -1672,13 +1672,13 @@ def test_downsample_scaled_deprecated(track_abundance):
     mh.add_many(mins)
 
     assert len(mh) == 6
-    assert list(mh.hashes) == list(mins)
+    assert list(sorted(mh.hashes)) == list(mins)
 
     mh2 = mh.downsample_scaled(2)
     print(mh.max_hash, mh2.max_hash)
 
     assert len(mh2) == 3
-    assert list(mh2.hashes) == list(mins[:3])
+    assert list(sorted(mh2.hashes)) == list(mins[:3])
 
 
 def test_is_molecule_type_1(track_abundance):
