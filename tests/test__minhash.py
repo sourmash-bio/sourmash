@@ -1544,3 +1544,47 @@ def test_flatten():
     assert mh2.hashes[20] == 1
     assert mh2.hashes[30] == 1
     assert len(mh2) == 3
+
+
+def test_add_kmer(track_abundance):
+    # test add_kmer method
+    mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGCGTGC')
+    a = mh1.hashes
+
+    mh2.add_kmer('ATGC')
+    mh2.add_kmer('TGCG')
+    mh2.add_kmer('GCGT')
+    mh2.add_kmer('CGTG')
+    mh2.add_kmer('GTGC')
+    b = mh2.hashes
+
+    assert set(a.items()) == set(b.items())
+
+
+def test_add_kmer_too_long(track_abundance):
+    # test add_kmer method - should only take length k
+    mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    with pytest.raises(ValueError):
+        mh1.add_kmer('ATGCGTGC')
+
+
+def test_add_deprecated(track_abundance):
+    # test 'add' method, now deprecated
+    mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGCGTGC')
+    a = mh1.hashes
+
+    mh2.add('ATGC')
+    mh2.add('TGCG')
+    mh2.add('GCGT')
+    mh2.add('CGTG')
+    mh2.add('GTGC')
+    b = mh2.hashes
+
+    assert set(a.items()) == set(b.items())
