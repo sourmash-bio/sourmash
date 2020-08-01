@@ -51,13 +51,6 @@ class SigLeaf(Leaf):
     def update(self, parent):
         mh = self.data.minhash
         parent.data.update(mh)
-        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
-        min_n_below = min(len(mh), min_n_below)
-
-        if min_n_below == 0:
-            min_n_below = 1
-
-        parent.metadata['min_n_below'] = min_n_below
 
     @property
     def data(self):
@@ -73,7 +66,7 @@ class SigLeaf(Leaf):
 
 ### Search functionality.
 
-def _max_jaccard_underneath_internal_node(node, mh):
+def _max_jaccard_underneath_internal_node(node, query):
     """\
     calculate the maximum possibility similarity score below
     this node, based on the number of matches in 'hashes' at this node,
@@ -82,20 +75,19 @@ def _max_jaccard_underneath_internal_node(node, mh):
     This should yield be an upper bound on the Jaccard similarity
     for any signature below this point.
     """
+    query_bf = _get_bf(node, query)
+    mh = query.minhash
+
     if len(mh) == 0:
         return 0.0
 
     # count the maximum number of hash matches beneath this node
     matches = node.data.matches(mh)
 
-    # get the size of the smallest collection of hashes below this point
-    min_n_below = node.metadata.get('min_n_below', -1)
-
-    if min_n_below == -1:
-        raise Exception('cannot do similarity search on this SBT; need to rebuild.')
-
-    # max of numerator divided by min of denominator => max Jaccard
-    max_score = float(matches) / min_n_below
+    # J(A, B) = |A intersection B| / |A union B|
+    # If we use only |A| as denominator, it is the containment
+    # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
+    max_score = float(matches) / len(mh)
 
     return max_score
 
@@ -112,7 +104,19 @@ def search_minhashes(node, sig, threshold, results=None):
     if isinstance(node, SigLeaf):
         score = node.data.minhash.similarity(sig_mh)
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, sig_mh)
+        #query_bf = _get_bf(node, sig)
+        #mh = query.minhash
+
+        if len(sig_mh) == 0:
+            return 0.0
+
+        # count the maximum number of hash matches beneath this node
+        matches = node.data.matches(sig_mh)
+
+        # J(A, B) = |A intersection B| / |A union B|
+        # If we use only |A| as denominator, it is the containment
+        # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
+        score = float(matches) / len(sig_mh)
 
     if score >= threshold:
         return 1
@@ -132,7 +136,19 @@ class SearchMinHashesFindBest(object):
         if isinstance(node, SigLeaf):
             score = node.data.minhash.similarity(sig_mh)
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, sig_mh)
+            #query_bf = _get_bf(node, sig)
+            #mh = query.minhash
+
+            if len(sig_mh) == 0:
+                return 0.0
+
+            # count the maximum number of hash matches beneath this node
+            matches = node.data.matches(sig_mh)
+
+            # J(A, B) = |A intersection B| / |A union B|
+            # If we use only |A| as denominator, it is the containment
+            # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
+            score = float(matches) / len(sig_mh)
 
         if score >= threshold:
             # have we done better than this elsewhere? if yes, truncate.
