@@ -48,6 +48,7 @@ from sourmash.minhash import (
     hash_murmur,
     _get_scaled_for_max_hash,
     _get_max_hash_for_scaled,
+    translate_codon
 )
 from sourmash import signature
 
@@ -174,8 +175,8 @@ def test_protein_hp(track_abundance, hp):
         assert len(mh.hashes) == 4
 
 
-def test_translate_codon(track_abundance):
-    # Ensure that translation occurs properly
+def test_translate_codon_method_deprecated(track_abundance):
+    # Ensure that translation occurs properly - deprecated => module function
     mh = MinHash(10, 6, is_protein=True)
     assert mh.moltype == 'protein'
 
@@ -186,6 +187,17 @@ def test_translate_codon(track_abundance):
     with pytest.raises(ValueError):
         mh.translate_codon("")
         mh.translate_codon("TCTA")
+
+
+def test_module_translate_codon(track_abundance):
+    # Ensure that translation occurs properly - module level function tests
+    assert "S" == translate_codon('TCT')
+    assert "S" == translate_codon('TC')
+    assert "X" == translate_codon("T")
+
+    with pytest.raises(ValueError):
+        translate_codon("")
+        translate_codon("TCTA")
 
 
 def test_dayhoff(track_abundance):

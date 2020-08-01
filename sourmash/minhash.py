@@ -74,6 +74,15 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
     return lib.hash_murmur(to_bytes(kmer), seed)
 
 
+def translate_codon(codon):
+    "Translate a codon into an amino acid."
+    try:
+        return rustcall(lib.sourmash_translate_codon,
+                        to_bytes(codon)).decode('utf-8')
+    except SourmashError as e:
+        raise ValueError(e.message)
+
+
 class _HashesWrapper(collections.Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
@@ -433,6 +442,9 @@ class MinHash(RustObject):
         "Clears all hashes and abundances."
         return self._methodcall(lib.kmerminhash_clear)
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use translate_codon function at module level instead.')
     def translate_codon(self, codon):
         "Translate a codon into an amino acid."
         try:
