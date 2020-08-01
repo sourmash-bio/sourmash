@@ -75,6 +75,7 @@ def _max_jaccard_underneath_internal_node(node, query):
     This should yield be an upper bound on the Jaccard similarity
     for any signature below this point.
     """
+    query_bf = _get_bf(node, query)
     mh = query.minhash
 
     if len(mh) == 0:
@@ -108,7 +109,22 @@ def search_minhashes(node, sig, threshold, results=None):
     if isinstance(node, SigLeaf):
         score = node.data.minhash.similarity(sig.minhash)
     else:  # Node minhash comparison
-        score = _max_jaccard_underneath_internal_node(node, sig)
+        #query_bf = _get_bf(node, sig)
+        sig_mh = query.minhash
+
+        if len(sig_mh) == 0:
+            return 0.0
+
+        # count the maximum number of hash matches beneath this node
+        matches = node.data.matches(sig_mh)
+
+        # J(A, B) = |A intersection B| / |A union B|
+        # If we use only |A| as denominator, it is the containment
+        # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
+        score = float(matches) / len(sig_mh)
+
+    if results is not None:
+        results[node.name] = score
 
     if score >= threshold:
         return 1
@@ -127,7 +143,22 @@ class SearchMinHashesFindBest(object):
         if isinstance(node, SigLeaf):
             score = node.data.minhash.similarity(sig.minhash)
         else:  # internal object, not leaf.
-            score = _max_jaccard_underneath_internal_node(node, sig)
+            #query_bf = _get_bf(node, sig)
+            sig_mh = query.minhash
+
+            if len(sig_mh) == 0:
+                return 0.0
+
+            # count the maximum number of hash matches beneath this node
+            matches = node.data.matches(sig_mh)
+
+            # J(A, B) = |A intersection B| / |A union B|
+            # If we use only |A| as denominator, it is the containment
+            # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
+            score = float(matches) / len(sig_mh)
+
+        if results is not None:
+            results[node.name] = score
 
         if score >= threshold:
             # have we done better than this elsewhere? if yes, truncate.
