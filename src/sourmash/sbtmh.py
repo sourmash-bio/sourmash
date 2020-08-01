@@ -75,6 +75,7 @@ def _max_jaccard_underneath_internal_node(node, query):
     This should yield be an upper bound on the Jaccard similarity
     for any signature below this point.
     """
+    query_bf = _get_bf(node, query)
     mh = query.minhash
 
     if len(mh) == 0:
@@ -90,9 +91,10 @@ def _max_jaccard_underneath_internal_node(node, query):
         # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
 
         # count the maximum number of hash matches beneath this node
-        matches = node.data.matches(mh)
+        #matches = node.data.matches(mh)
+        #max_score = float(matches) / len(mh)
 
-        max_score = float(matches) / len(mh)
+        max_score = query_bf.containment(node.data)
 
     return max_score
 
@@ -109,7 +111,7 @@ def search_minhashes(node, sig, threshold, results=None):
         score = node.data.minhash.similarity(sig.minhash)
     else:  # Node minhash comparison
         #query_bf = _get_bf(node, sig)
-        sig_mh = query.minhash
+        sig_mh = sig.minhash
 
         if len(sig_mh) == 0:
             return 0.0
@@ -143,7 +145,7 @@ class SearchMinHashesFindBest(object):
             score = node.data.minhash.similarity(sig.minhash)
         else:  # internal object, not leaf.
             #query_bf = _get_bf(node, sig)
-            sig_mh = query.minhash
+            sig_mh = sig.minhash
 
             if len(sig_mh) == 0:
                 return 0.0
@@ -177,6 +179,8 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     if isinstance(node, SigLeaf):
         matches = node.data.minhash.count_common(mh, downsample)
     else:  # Node or Leaf, Nodegraph by minhash comparison
+        #bf = _get_bf(node, sig)
+        #matches = bf.containment(node.data) * len(mh)
         matches = node.data.matches(mh)
 
     if len(mh) and float(matches) / len(mh) >= threshold:
@@ -226,11 +230,12 @@ class GatherMinHashes(object):
         if isinstance(node, SigLeaf):
             matches = mh.count_common(node.data.minhash, True)
         else:  # Nodegraph by minhash comparison
+            #bf = _get_bf(node, query)
+            #score = bf.containment(node.data)
             matches = node.data.matches(mh)
 
         if not matches:
             return 0
-
         score = float(matches) / len(mh)
 
         if score < threshold:
@@ -244,3 +249,14 @@ class GatherMinHashes(object):
             return 1
 
         return 0
+
+
+def _get_bf(node, query):
+    try:
+        query_bf = query.bf
+    except AttributeError:
+        query_bf = node._factory()
+        query_bf.update(query.minhash)
+        query.bf = query_bf
+
+    return query_bf
