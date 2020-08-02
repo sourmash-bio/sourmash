@@ -180,7 +180,7 @@ SourmashKmerMinHash *kmerminhash_new(uint32_t n,
                                      bool dayhoff,
                                      bool hp,
                                      uint64_t seed,
-                                     uint64_t mx,
+                                     uint64_t scaled,
                                      bool track_abundance);
 
 uint32_t kmerminhash_num(const SourmashKmerMinHash *ptr);

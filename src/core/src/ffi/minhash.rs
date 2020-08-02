@@ -5,7 +5,7 @@ use std::slice;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::{
-    aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions, KmerMinHash,
+    aa_to_dayhoff, aa_to_hp, max_hash_for_scaled, translate_codon, HashFunctions, KmerMinHash,
 };
 
 pub struct SourmashKmerMinHash;
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn kmerminhash_new(
     dayhoff: bool,
     hp: bool,
     seed: u64,
-    mx: u64,
+    scaled: u64,
     track_abundance: bool,
 ) -> *mut SourmashKmerMinHash {
     // TODO: at most one of (prot, dayhoff, hp) should be true
@@ -37,6 +37,10 @@ pub unsafe extern "C" fn kmerminhash_new(
         HashFunctions::murmur64_DNA
     };
 
+    let mx: u64 = match max_hash_for_scaled(scaled) {
+        None => 0,
+        Some(max_hash) => max_hash,
+    };
     let mh = KmerMinHash::new(n, k, hash_function, seed, mx, track_abundance);
 
     SourmashKmerMinHash::from_rust(mh)
@@ -105,7 +109,11 @@ pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(ptr: *mut SourmashKmerMinHash, h: u64, abundance: u64) {
+pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(
+    ptr: *mut SourmashKmerMinHash,
+    h: u64,
+    abundance: u64,
+) {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
     mh.add_hash_with_abundance(h, abundance);

@@ -179,10 +179,8 @@ class MinHash(RustObject):
         if dayhoff or hp:
             is_protein = False
 
-        # ok, for Rust API, go from scaled back to max_hash
-        max_hash = _get_max_hash_for_scaled(scaled)
         self._objptr = lib.kmerminhash_new(
-            n, ksize, is_protein, dayhoff, hp, seed, int(max_hash), track_abundance
+            n, ksize, is_protein, dayhoff, hp, seed, int(scaled), track_abundance
         )
 
         if mins:
