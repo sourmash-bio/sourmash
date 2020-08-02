@@ -1738,7 +1738,5 @@ def test__minhash_import():
     from sourmash._minhash import (
         MinHash,
         hash_murmur,
-        _get_scaled_for_max_hash,
-        _get_max_hash_for_scaled,
         translate_codon
     )
