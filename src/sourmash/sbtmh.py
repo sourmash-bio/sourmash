@@ -75,7 +75,6 @@ def _max_jaccard_underneath_internal_node(node, query):
     This should yield be an upper bound on the Jaccard similarity
     for any signature below this point.
     """
-    query_bf = _get_bf(node, query)
     mh = query.minhash
 
     if len(mh) == 0:
