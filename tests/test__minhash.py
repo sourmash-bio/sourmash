@@ -1732,3 +1732,13 @@ def test_is_molecule_type_4(track_abundance):
     assert not mh.is_protein
     assert not mh.hp
     assert mh.dayhoff
+
+
+def test__minhash_import():
+    from sourmash._minhash import (
+        MinHash,
+        hash_murmur,
+        _get_scaled_for_max_hash,
+        _get_max_hash_for_scaled,
+        translate_codon
+    )
