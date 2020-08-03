@@ -113,7 +113,7 @@ deactivate
 source bin/activate
 python -m pip install -U setuptools pip wheel
 # install as much as possible from non-test server!
-python -m pip install screed pytest numpy matplotlib scipy khmer ijson bam2fasta deprecation cffi
+python -m pip install screed pytest numpy matplotlib scipy bam2fasta deprecation cffi
 python -m pip install -i https://test.pypi.org/simple --pre sourmash
 sourmash info  # should print "sourmash version ${new_version}${rc}"
 ```
