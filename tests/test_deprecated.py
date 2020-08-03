@@ -11,3 +11,7 @@ def test_load_textmode(track_abundance):
         siglist = list(signature.load_signatures(sigfp))
     loaded_sig = siglist[0]
     assert loaded_sig.name() == 's10+s11'
+
+
+def test_import_sourmash_lib():
+    import sourmash_lib

@@ -7,7 +7,7 @@ import zipfile
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex
-from sourmash_lib.sbt import SBT, GraphFactory, Leaf
+from sourmash.sbt import SBT, GraphFactory, Leaf
 from . import sourmash_tst_utils as utils
 
 
