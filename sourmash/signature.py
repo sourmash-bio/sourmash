@@ -268,8 +268,7 @@ def load_signatures(
     try:
         if input_type == SigInput.FILE_LIKE:
             if hasattr(data, "mode") and "t" in data.mode:  # need to reopen handler as binary
-                if sys.version_info >= (3,):
-                    data = data.buffer
+                data = data.buffer
 
             buf = data.read()
             data.close()

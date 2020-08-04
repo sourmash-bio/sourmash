@@ -24,8 +24,6 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     lineage tuples.
     """
     mode = 'rt'
-    if sys.version_info < (3, ):
-        mode = 'rtU'
 
     # parse spreadsheet!
     fp = open(filename, mode)
