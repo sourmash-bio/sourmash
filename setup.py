@@ -62,7 +62,6 @@ SETUP_METADATA = {
         ]
     },
     "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
-                         'enum34; python_version < "3.4"',
                          'matplotlib', 'scipy', 'deprecation>=2.0.6'],
     "setup_requires": [
         "setuptools>=38.6.0",
