@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash signature' command line.
 """
-from __future__ import print_function, unicode_literals
 import csv
 import shutil
 import os

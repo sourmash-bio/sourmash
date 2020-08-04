@@ -1,6 +1,5 @@
 "An Abstract Base Class for collections of signatures."
 
-from __future__ import division
 from abc import abstractmethod
 from collections import namedtuple
 

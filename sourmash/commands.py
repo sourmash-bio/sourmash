@@ -1,8 +1,6 @@
 """
 Functions implementing the main command-line subcommands.
 """
-from __future__ import print_function, division, absolute_import
-
 import csv
 import os
 import os.path
