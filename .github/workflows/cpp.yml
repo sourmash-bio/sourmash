@@ -1,0 +1,65 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'include/**'
+  pull_request:
+    paths:
+      - 'include/**'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, windows, macos]
+        include:
+          - build: macos
+            os: macos-latest
+            executable: sourmash_cpp
+          - build: windows
+            os: windows-latest
+            executable: Debug/sourmash_cpp.exe
+          - build: linux
+            os: ubuntu-latest
+            executable: sourmash_cpp
+    steps:
+    - name: Checkout sourmash source
+      uses: actions/checkout@v2
+      with:
+        path: sourmash
+
+    - name: Initialize sourmash_cpp example
+      uses: actions/checkout@v2
+      with:
+        repository: luizirber/sourmash_cpp
+        ref: master
+        path: sourmash_cpp
+
+    - name: Clone submodules for sourmash_cpp, and set current sourmash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+        rm -rf sourmash/
+        ln -s ../sourmash sourmash
+      shell: bash
+      working-directory: sourmash_cpp
+
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+      working-directory: sourmash_cpp
+
+    - name: build
+      run: cmake --build build --config Debug
+      working-directory: sourmash_cpp
+
+    - name: test
+      run: build/${{matrix.executable}}
+      working-directory: sourmash_cpp
+      shell: bash
