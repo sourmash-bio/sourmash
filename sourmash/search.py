@@ -1,10 +1,9 @@
-from __future__ import division
 from collections import namedtuple
 import sys
 
 from .logging import notify, error
 from .signature import SourmashSignature
-from ._minhash import get_max_hash_for_scaled
+from .minhash import _get_max_hash_for_scaled
 
 
 # generic SearchResult.
@@ -125,7 +124,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     orig_query_abunds = { k: 1 for k in orig_query_mins }
     if track_abundance:
         import numpy as np
-        orig_query_abunds = orig_query_mh.get_mins(with_abundance=True)
+        orig_query_abunds = orig_query_mh.hashes
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
@@ -154,7 +153,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # eliminate mins under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        new_max_hash = get_max_hash_for_scaled(cmp_scaled)
+        new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
         query_mins = set(_filter_max_hash(query_mins, new_max_hash))
         found_mins = set(_filter_max_hash(found_mins, new_max_hash))
         orig_query_mins = set(_filter_max_hash(orig_query_mins, new_max_hash))

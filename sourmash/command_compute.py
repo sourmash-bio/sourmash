@@ -1,8 +1,6 @@
 """
 Functions implementing the 'compute' command and related functions.
 """
-from __future__ import print_function, division, absolute_import
-
 import os
 import os.path
 import sys

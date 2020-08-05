@@ -1,11 +1,7 @@
-from __future__ import unicode_literals
 import random
 
 
-try:
-    from sourmash._minhash import MinHash
-except:
-    from sourmash.minhash import MinHash
+from sourmash.minhash import MinHash
 
 
 def load_sequences():
