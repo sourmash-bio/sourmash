@@ -35,7 +35,7 @@ def classify_signature(query_sig, dblist, threshold, majority):
 
       """
     # gather assignments from across all the databases
-    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(),
+    assignments = lca_utils.gather_assignments(query_sig.minhash.hashes,
                                                dblist)
 
     # now convert to trees -> do LCA & counts

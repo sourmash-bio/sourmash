@@ -4001,7 +4001,7 @@ def test_do_sourmash_index_zipfile_append(c):
         c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
                        *first_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
-    assert not record
+    assert not record, record
 
     outfile = c.output('zzz.sbt.zip')
     assert os.path.exists(outfile)

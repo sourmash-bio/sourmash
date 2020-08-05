@@ -74,7 +74,7 @@ def test_dna_mh(track_abundance):
     seq = 'ATGGCAGTGACGATGCCAG'
     e1.add_sequence(seq)
     for i in range(len(seq) - 3):
-        e2.add(seq[i:i + 4])
+        e2.add_kmer(seq[i:i + 4])
 
     assert e1.get_mins() == e2.get_mins()
     print(e1.get_mins())
@@ -93,7 +93,7 @@ def test_protein_mh(track_abundance):
 
     for i in range(len(seq) - 5):
         kmer = seq[i:i + 6]
-        e2.add(kmer)
+        e2.add_kmer(kmer)
 
     assert e1.get_mins() == e2.get_mins()
     assert 901193879228338100 in e1.get_mins()
@@ -257,18 +257,18 @@ def test_scaled_on_real_data_2():
     assert round(mh1.similarity(mh2), 5) == 0.01644
     assert round(mh2.similarity(mh1), 5) == 0.01644
 
-    mh1 = mh1.downsample_scaled(1000)
-    mh2 = mh2.downsample_scaled(1000)
+    mh1 = mh1.downsample(scaled=1000)
+    mh2 = mh2.downsample(scaled=1000)
 
     assert round(mh1.similarity(mh2), 4) == 0.0187
     assert round(mh2.similarity(mh1), 4) == 0.0187
 
-    mh1 = mh1.downsample_scaled(10000)
-    mh2 = mh2.downsample_scaled(10000)
+    mh1 = mh1.downsample(scaled=10000)
+    mh2 = mh2.downsample(scaled=10000)
     assert round(mh1.similarity(mh2), 3) == 0.01
     assert round(mh2.similarity(mh1), 3) == 0.01
 
-    mh1 = mh1.downsample_scaled(100000)
-    mh2 = mh2.downsample_scaled(100000)
+    mh1 = mh1.downsample(scaled=100000)
+    mh2 = mh2.downsample(scaled=100000)
     assert round(mh1.similarity(mh2), 2) == 0.01
     assert round(mh2.similarity(mh1), 2) == 0.01

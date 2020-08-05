@@ -11,11 +11,11 @@ from . import sourmash_tst_utils as utils
 def test_compare(track_abundance):
     # same content, same name -> equal
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
     f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    f.add("AT" * 10)
+    f.add_kmer("AT" * 10)
     sig2 = SourmashSignature(f, name='foo')
 
     assert e == f
@@ -24,11 +24,11 @@ def test_compare(track_abundance):
 def test_compare_ne(track_abundance):
     # same content, different names -> different
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
     f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    f.add("AT" * 10)
+    f.add_kmer("AT" * 10)
     sig2 = SourmashSignature(f, name='bar')
 
     assert sig1 != sig2
@@ -37,11 +37,11 @@ def test_compare_ne(track_abundance):
 def test_compare_ne2(track_abundance):
     # same content, different filename -> different
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig1 = SourmashSignature(e, name='foo', filename='a')
 
     f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    f.add("AT" * 10)
+    f.add_kmer("AT" * 10)
     sig2 = SourmashSignature(f, name='foo', filename='b')
 
     assert sig1 != sig2
@@ -51,11 +51,11 @@ def test_compare_ne2(track_abundance):
 def test_compare_ne2_reverse(track_abundance):
     # same content, one has filename, other does not -> different
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig1 = SourmashSignature(e, name='foo')
 
     f = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    f.add("AT" * 10)
+    f.add_kmer("AT" * 10)
     sig2 = SourmashSignature(f, filename='b')
 
     assert sig2 != sig1
@@ -65,7 +65,7 @@ def test_compare_ne2_reverse(track_abundance):
 def test_hashable(track_abundance):
     # check: can we use signatures as keys in dictionaries and sets?
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
 
     sig = SourmashSignature(e)
 
@@ -76,7 +76,7 @@ def test_hashable(track_abundance):
 def test_str(track_abundance):
     # signatures should be printable
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
 
     sig = SourmashSignature(e)
 
@@ -91,7 +91,7 @@ def test_str(track_abundance):
 
 def test_roundtrip(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
     siglist = list(load_signatures(s))
@@ -104,7 +104,7 @@ def test_roundtrip(track_abundance):
 
 def test_load_signature_ksize_nonint(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
     siglist = list(load_signatures(s, ksize='20'))
@@ -310,7 +310,7 @@ def test_load_compressed(track_abundance):
 
 def test_binary_fp(tmpdir, track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
-    e.add("AT" * 10)
+    e.add_kmer("AT" * 10)
 
     path = tmpdir.join("1.sig")
     with open(str(path), 'wb') as fp:

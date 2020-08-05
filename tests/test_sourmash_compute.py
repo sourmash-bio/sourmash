@@ -435,8 +435,8 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
-            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
-            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
 
 
 def test_do_sourmash_compute_multik_with_hp():
@@ -492,9 +492,9 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
-            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
-            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
-            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
 
 
 def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
@@ -515,11 +515,11 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
-            assert sum(x.minhash.is_molecule_type('DNA') for x in siglist) == 2
-            assert sum(x.minhash.is_molecule_type('dayhoff') for x in siglist) == 2
-            assert sum(x.minhash.is_molecule_type('hp') for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'hp' for x in siglist) == 2
             # 2 = dayhoff, 2 = hp = 4 protein
-            assert sum(x.minhash.is_molecule_type('protein') for x in siglist) == 2
+            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -640,7 +640,7 @@ def test_do_sourmash_compute_multik_input_is_protein():
             assert 21 in ksizes
             assert 30 in ksizes
 
-            moltype = set([ x.minhash.is_molecule_type('protein')
+            moltype = set([ x.minhash.moltype == 'protein'
                             for x in siglist ])
             assert len(moltype) == 1
             assert True in moltype

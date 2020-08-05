@@ -9,7 +9,7 @@ from enum import Enum
 
 from .logging import error
 from . import MinHash
-from ._minhash import to_bytes
+from .minhash import to_bytes
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 
