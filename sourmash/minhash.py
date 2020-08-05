@@ -504,7 +504,7 @@ class MinHash(RustObject):
         """
         max_hashes = [x.max_hash for x in others]
         new_max_hash = min(self.max_hash, *max_hashes)
-        new_scaled = get_scaled_for_max_hash(new_max_hash)
+        new_scaled = _get_scaled_for_max_hash(new_max_hash)
 
         return self.downsample_scaled(new_scaled)
 
