@@ -310,6 +310,8 @@ def import_csv(args):
 
 def dump(args):
     "Dump hashes for each input signature into a {name}.dump.txt file."
+    notify("** WARNING: this command is deprecated as of sourmash 3.5, and will ")
+    notify("**    be removed in sourmash 4.0. Use sourmash sig export instead!")
     for filename in args.filenames:
         notify('loading {}', filename)
         siglist = sig.load_signatures(filename, ksize=args.ksize)
