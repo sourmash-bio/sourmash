@@ -16,16 +16,14 @@ import sourmash
 def test_run_sourmash_signature_cmd():
     status, out, err = utils.runscript('sourmash', ['signature'], fail_ok=True)
     assert not 'sourmash: error: argument cmd: invalid choice:' in err
-    # doesn't work in py2.7
-    # assert 'Manipulate signature files:' in out
+    assert 'Manipulate signature files:' in out
     assert status != 0                    # no args provided, ok ;)
 
 
 def test_run_sourmash_sig_cmd():
     status, out, err = utils.runscript('sourmash', ['sig'], fail_ok=True)
     assert not 'sourmash: error: argument cmd: invalid choice:' in err
-    # doesn't work in py2.7
-    # assert 'Manipulate signature files:' in out
+    assert 'Manipulate signature files:' in out
     assert status != 0                    # no args provided, ok ;)
 
 
