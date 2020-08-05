@@ -1,13 +1,11 @@
 # -*- coding: UTF-8 -*-
-from __future__ import unicode_literals, division, print_function
 
 from struct import pack, unpack
 import sys
 from tempfile import NamedTemporaryFile
 
-from ._compat import string_types, range_type
 from ._lowlevel import ffi, lib
-from ._minhash import to_bytes, MinHash
+from .minhash import to_bytes, MinHash
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
 
@@ -52,12 +50,12 @@ class Nodegraph(RustObject):
             raise TypeError("Must be a Nodegraph or MinHash")
 
     def count(self, h):
-        if isinstance(h, string_types):
+        if isinstance(h, str):
             return self._methodcall(lib.nodegraph_count_kmer, to_bytes(h))
         return self._methodcall(lib.nodegraph_count, h)
 
     def get(self, h):
-        if isinstance(h, string_types):
+        if isinstance(h, str):
             return self._methodcall(lib.nodegraph_get_kmer, to_bytes(h))
         return self._methodcall(lib.nodegraph_get, h)
 

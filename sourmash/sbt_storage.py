@@ -1,5 +1,3 @@
-from __future__ import print_function, unicode_literals, division
-
 import abc
 from io import BytesIO
 import os
@@ -8,8 +6,7 @@ import sys
 import tarfile
 from tempfile import NamedTemporaryFile
 import zipfile
-
-from ._compat import ABC
+from abc import ABC
 
 
 class Storage(ABC):

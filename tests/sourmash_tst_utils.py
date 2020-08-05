@@ -1,6 +1,5 @@
 "Various utilities used by sourmash tests."
 
-from __future__ import print_function
 import sys
 import os
 import tempfile

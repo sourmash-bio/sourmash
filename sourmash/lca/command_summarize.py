@@ -2,7 +2,6 @@
 """
 Summarize the taxonomic content of the given signatures, combined.
 """
-from __future__ import print_function
 import sys
 import csv
 from collections import defaultdict
@@ -130,11 +129,11 @@ def count_signature(sig, scaled, hashvals):
     mh = sig.minhash.downsample_scaled(scaled)
 
     if mh.track_abundance:
-        abunds = mh.get_mins(with_abundance=True)
+        abunds = mh.hashes
         for hashval, count in abunds.items():
             hashvals[hashval] += count
     else:
-        for hashval in mh.get_mins():
+        for hashval in mh.hashes:
             hashvals[hashval] += 1
 
 
