@@ -359,8 +359,9 @@ class MinHash(RustObject):
 
     @property
     def scaled(self):
-        if self.max_hash:
-            return _get_scaled_for_max_hash(self.max_hash)
+        mx = self._methodcall(lib.kmerminhash_max_hash)
+        if mx:
+            return _get_scaled_for_max_hash(mx)
         return 0
 
     @property
