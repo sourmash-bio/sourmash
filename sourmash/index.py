@@ -1,9 +1,7 @@
 "An Abstract Base Class for collections of signatures."
 
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from collections import namedtuple
-
-from ._compat import ABC
 
 
 class Index(ABC):
