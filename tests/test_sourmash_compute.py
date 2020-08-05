@@ -1,7 +1,6 @@
 """
 Tests for sourmash compute command-line functionality.
 """
-from __future__ import print_function, unicode_literals
 import os
 import gzip
 import shutil

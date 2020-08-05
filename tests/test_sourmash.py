@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash' command line.
 """
-from __future__ import print_function, unicode_literals
 import os
 import gzip
 import shutil

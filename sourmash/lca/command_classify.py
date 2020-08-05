@@ -2,7 +2,6 @@
 """
 Classify individual signature files down to deepest possible node.
 """
-from __future__ import print_function
 import sys
 import csv
 

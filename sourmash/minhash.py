@@ -6,7 +6,6 @@ import copy
 import collections
 
 from . import VERSION
-from ._compat import string_types, range_type
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
@@ -55,10 +54,10 @@ def to_bytes(s):
     if isinstance(s, bytes):
         return s
 
-    if not isinstance(s, string_types + (bytes, int)):
+    if not isinstance(s, (str, bytes, int)):
         raise TypeError("Requires a string-like sequence")
 
-    if isinstance(s, string_types):
+    if isinstance(s, str):
         s = s.encode("utf-8")
     elif isinstance(s, int):
         s = bytes([s])

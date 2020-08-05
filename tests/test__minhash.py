@@ -33,9 +33,6 @@
 # Contact: titus@idyll.org
 # pylint: disable=missing-docstring,protected-access
 
-from __future__ import print_function
-from __future__ import absolute_import, unicode_literals
-
 import itertools
 import pickle
 import math

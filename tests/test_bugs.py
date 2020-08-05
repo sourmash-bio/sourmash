@@ -1,4 +1,3 @@
-from __future__ import print_function, unicode_literals
 from . import sourmash_tst_utils as utils
 
 def test_bug_781():

@@ -4,7 +4,6 @@ Execute a greedy search on lineages attached to hashvals in the query.
 
 Mimics `sourmash gather` but provides taxonomic information.
 """
-from __future__ import print_function, division
 import sys
 import csv
 from collections import Counter, defaultdict, namedtuple

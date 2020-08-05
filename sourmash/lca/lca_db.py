@@ -1,6 +1,5 @@
 "LCA database class and utilities."
 
-from __future__ import print_function, division
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
