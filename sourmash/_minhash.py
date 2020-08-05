@@ -199,24 +199,6 @@ class MinHash(RustObject):
         else:
             self.add_many(mins)
 
-    def __reduce__(self):
-        "alternative pickling protocol."
-        return (
-            MinHash,
-            (
-                self.num,
-                self.ksize,
-                self.is_protein,
-                self.dayhoff,
-                self.hp,
-                self.track_abundance,
-                self.seed,
-                self.max_hash,
-                self.get_mins(with_abundance=self.track_abundance),
-                0,
-            ),
-        )
-
     def __eq__(self, other):
         "equality testing via =="
         return self.__getstate__() == other.__getstate__()
