@@ -18,7 +18,7 @@ from sourmash.lca.lca_utils import LineagePair
 
 def test_eriks_function():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    assert lca_db.ksize == 31
+    lca_db._signatures
 
 
 def test_api_create_search():
@@ -1666,6 +1666,7 @@ def test_summarize_to_root():
 
         assert '78.6%    99   Archaea' in out
         assert '21.4%    27   (root)' in out
+        assert False
 
 
 def test_summarize_unknown_hashes():

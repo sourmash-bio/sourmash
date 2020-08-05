@@ -29,7 +29,7 @@ def cached_property(fun):
     return property(get)
 
 
-class LCA_Database(RustObject):
+class LCA_Database(RustObject, Index):
     """
     An in-memory database that indexes signatures by hash, and provides
     optional taxonomic lineage classification.
@@ -64,6 +64,10 @@ class LCA_Database(RustObject):
         self.filename = ""
         self.moltype = moltype
 
+        self._objptr = lib.LcaDB_new(
+            ksize, scaled, to_bytes(self.filename), to_bytes(moltype)
+        )
+
         self._next_index = 0
         self._next_lid = 0
         self.ident_to_name = {}
@@ -73,9 +77,6 @@ class LCA_Database(RustObject):
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
 
-        self._objptr = lib.LcaDB_new(
-            self.ksize, self.scaled, to_bytes(self.filename), to_bytes(self.moltype)
-        )
 
         if not self.filename:
             self.filename = None
@@ -124,51 +125,52 @@ class LCA_Database(RustObject):
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
-        minhash = sig.minhash
+        # minhash = sig.minhash
 
-        if minhash.ksize != self.ksize:
-            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+        if sig.minhash.ksize != self.ksize:
+            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(sig.minhash.ksize, self.ksize))
 
-        if minhash.moltype != self.moltype:
-            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
+        if sig.minhash.moltype != self.moltype:
+            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(sig.minhash.moltype, self.moltype))
 
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        try:
-            minhash = minhash.downsample_scaled(self.scaled)
-        except ValueError:
-            raise ValueError("cannot downsample signature; is it a scaled signature?")
+        # # downsample to specified scaled; this has the side effect of
+        # # making sure they're all at the same scaled value!
+        # try:
+        #     minhash = minhash.downsample_scaled(self.scaled)
+        # except ValueError:
+        #     raise ValueError("cannot downsample signature; is it a scaled signature?")
 
         if ident is None:
             ident = sig.name()
 
-        if ident in self.ident_to_name:
-            raise ValueError("signature {} is already in this LCA db.".format(ident))
+        # if ident in self.ident_to_name:
+        #     raise ValueError("signature {} is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
         self._invalidate_cache()
 
         # store full name
-        self.ident_to_name[ident] = sig.name()
+        # self.ident_to_name[ident] = sig.name()
 
-        # identifier -> integer index (idx)
-        idx = self._get_ident_index(ident, fail_on_duplicate=True)
-        if lineage:
-            try:
-                lineage = tuple(lineage)
+        # # identifier -> integer index (idx)
+        # idx = self._get_ident_index(ident, fail_on_duplicate=True)
+        # if lineage:
+        #     try:
+        #         lineage = tuple(lineage)
 
-                # (LineagePairs*) -> integer lineage ids (lids)
-                lid = self._get_lineage_id(lineage)
+        #         # (LineagePairs*) -> integer lineage ids (lids)
+        #         lid = self._get_lineage_id(lineage)
 
-                # map idx to lid as well.
-                self.idx_to_lid[idx] = lid
-            except TypeError:
-                raise ValueError('lineage cannot be used as a key?!')
+        #         # map idx to lid as well.
+        #         self.idx_to_lid[idx] = lid
+        #     except TypeError:
+        #         raise ValueError('lineage cannot be used as a key?!')
 
-        for hashval in minhash.get_mins():
-            self.hashval_to_idx[hashval].add(idx)
+        # for hashval in minhash.get_mins():
+        #     self.hashval_to_idx[hashval].add(idx)
 
-        return len(minhash)
+        return self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), list(lineage), len(list(lineage)))
+        # return len(minhash)
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -181,13 +183,19 @@ class LCA_Database(RustObject):
 
     def select(self, ksize=None, moltype=None):
         "Selector interface - make sure this database matches requirements."
-        ok = True
-        if ksize is not None and self.ksize != ksize:
-            ok = False
-        if moltype is not None and moltype != self.moltype:
-            ok = False
+        # ok = True
+        # if ksize is not None and self.ksize != ksize:
+        #     ok = False
+        # if moltype is not None and moltype != self.moltype:
+        #     ok = False
 
-        if ok:
+        # if ok:
+        #     return self
+        if ksize == None:
+            ksize = 0
+        if moltype == None:
+            moltype = ""
+        if self._methodcall(lib.LcaDB_select, ksize, to_bytes(moltype)):
             return self
 
         raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
@@ -271,6 +279,7 @@ class LCA_Database(RustObject):
 
     def save(self, db_name):
         "Save LCA_Database to a JSON file."
+        self._methodcall(lib.LcaDB_save, to_bytes(db_name))
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -300,6 +309,7 @@ class LCA_Database(RustObject):
             save_d['idx_to_lid'] = self.idx_to_lid
             save_d['lid_to_lineage'] = self.lid_to_lineage
             
+            print("\n\nPYTHON:\n", save_d, "\n\n")
             json.dump(save_d, fp)
 
     def search(self, query, *args, **kwargs):

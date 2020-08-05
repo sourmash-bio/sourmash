@@ -34,6 +34,7 @@ impl<L> BIGSI<L> {
             // TODO: figure initial capacity for each row
             matrix.push(FixedBitSet::with_capacity(100));
         }
+        assert!(false);
 
         BIGSI {
             matrix,

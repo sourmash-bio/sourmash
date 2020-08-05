@@ -792,6 +792,37 @@ impl KmerMinHash {
         Ok(new_mh)
     }
 
+    pub fn downsample_scaled(&self, new_scaled: u64) -> Result<KmerMinHash, Error> {
+        let max_hash = max_hash_for_scaled(new_scaled).unwrap();
+
+        let mut new_mh = KmerMinHash::new(
+            self.num,
+            self.ksize,
+            self.hash_function,
+            self.seed,
+            max_hash, // old max_hash => max_hash arg
+            self.abunds.is_some(),
+        );
+        if self.abunds.is_some() {
+            new_mh.add_many_with_abund(&self.to_vec_abunds())?;
+        } else {
+            new_mh.add_many(&self.mins)?;
+        }
+        Ok(new_mh)
+    }
+
+    pub fn copy_and_clear(&self) -> Result<KmerMinHash, Error> {
+        let new_mh = KmerMinHash::new(
+            self.num,
+            self.ksize,
+            self.hash_function,
+            self.seed,
+            self.max_hash,
+            self.abunds.is_some(),
+        );
+        Ok(new_mh)
+    }
+
     pub fn to_vec_abunds(&self) -> Vec<(u64, u64)> {
         if let Some(abunds) = &self.abunds {
             self.mins
