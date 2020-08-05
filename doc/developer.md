@@ -7,7 +7,7 @@ You can get the latest development master branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
 ```
-sourmash runs under both Python 2.7.x and Python 3.5+.  The base
+sourmash runs under Python 3.7 and later.  The base
 requirements are screed and cffi, together with a Rust environment (for the
 extension code). We suggest using `rustup` to install the Rust environment:
 
