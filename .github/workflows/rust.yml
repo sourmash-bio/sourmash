@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'src/core/**'
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   check:
