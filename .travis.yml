@@ -26,15 +26,13 @@ before_script: pip install tox-travis
 
 jobs:
   include:
-    - &check
-      stage: check # do a pre-screen to make sure this is even worth testing
-      python: 3.8
-      env:
-        - PYTHONDEVMODE=1
-
     - &test
       stage: test
       python: 3.7
+    - <<: *test
+      python: 3.8
+      env:
+        - PYTHONDEVMODE=1
     - <<: *test
       os: osx
       osx_image: xcode10.1
