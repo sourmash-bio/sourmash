@@ -135,7 +135,7 @@ def classify(args):
                 total_count += 1
 
                 # make sure we're looking at the same scaled value as database
-                query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+                query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,

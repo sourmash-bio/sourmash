@@ -290,7 +290,7 @@ We can downsample this to 500 by extracting the hashes and using
 Also note that there's a convenience function that does the same thing,
 faster!
 ```
->>> smaller2 = larger.downsample_n(500)
+>>> smaller2 = larger.downsample(num=500)
 >>> smaller2 == smaller
 True
 
@@ -312,7 +312,7 @@ The same can be done with scaled MinHashes:
 
 And, again, there's a convenience function that you can use:
 ```
->>> small_scaled2 = large_scaled.downsample_scaled(500)
+>>> small_scaled2 = large_scaled.downsample(scaled=500)
 >>> small_scaled == small_scaled2
 True
 

@@ -308,7 +308,7 @@ class SBT(Index):
         if tree_mh.scaled and query.minhash.scaled and \
           tree_mh.scaled > query.minhash.scaled:
             resampled_query_mh = tree_query.minhash
-            resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+            resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
 
         # define both search function and post-search calculation function

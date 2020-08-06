@@ -172,20 +172,6 @@ def test_protein_hp(track_abundance, hp):
         assert len(mh.hashes) == 4
 
 
-def test_translate_codon_method_deprecated(track_abundance):
-    # Ensure that translation occurs properly - deprecated => module function
-    mh = MinHash(10, 6, is_protein=True)
-    assert mh.moltype == 'protein'
-
-    assert "S" == mh.translate_codon('TCT')
-    assert "S" == mh.translate_codon('TC')
-    assert "X" == mh.translate_codon("T")
-
-    with pytest.raises(ValueError):
-        mh.translate_codon("")
-        mh.translate_codon("TCTA")
-
-
 def test_module_translate_codon(track_abundance):
     # Ensure that translation occurs properly - module level function tests
     assert "S" == translate_codon('TCT')
@@ -540,98 +526,6 @@ def test_similarity_1(track_abundance):
     assert x >= 0.3, x
     assert round(a.similarity(a), 3) == 1.0
     assert round(b.similarity(b), 3) == 1.0
-
-
-def test_intersection_errors(track_abundance):
-    # CTB: remove this test in 4.0
-    a = MinHash(20, 10, track_abundance=track_abundance)
-    b = MinHash(20, 10, track_abundance=track_abundance)
-    c = MinHash(30, 10, track_abundance=track_abundance)
-
-    a.add_sequence("TGCCGCCCAGCA")
-    b.add_sequence("TGCCGCCCAGCA")
-
-    common = set(a.hashes)
-    combined_size = 3
-
-    intersection, size = a.intersection(b, in_common=False)
-    assert intersection == set()
-    assert combined_size == size
-
-    with pytest.raises(TypeError):
-        a.intersection(set())
-
-    with pytest.raises(TypeError):
-        a.intersection(c)
-
-
-# this filter doesn't work, but leaving it in pour encourages les autres.
-@pytest.mark.filterwarnings("ignore")
-def test_intersection_1(track_abundance):
-    # CTB: remove this test in 4.0
-    a = MinHash(20, 10, track_abundance=track_abundance)
-    b = MinHash(20, 10, track_abundance=track_abundance)
-
-    a.add_sequence('TGCCGCCCAGCA')
-    b.add_sequence('TGCCGCCCAGCA')
-
-    common = set(a.hashes)
-    combined_size = 3
-
-    intersection, size = a.intersection(b, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = b.intersection(b, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = b.intersection(a, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = a.intersection(a, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    # add same sequence again
-    b.add_sequence('TGCCGCCCAGCA')
-
-    intersection, size = a.intersection(b, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = b.intersection(b, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = b.intersection(a, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    intersection, size = a.intersection(a, in_common=True)
-    assert intersection == common
-    assert combined_size == size
-
-    a.add_sequence('GTCCGCCCAGTGA')
-    b.add_sequence('GTCCGCCCAGTGG')
-
-    new_in_common = set(a.hashes).intersection(set(b.hashes))
-    new_combined_size = 8
-
-    intersection, size = a.intersection(b, in_common=True)
-    assert intersection == new_in_common
-    assert size == new_combined_size
-
-    intersection, size = b.intersection(a, in_common=True)
-    assert intersection == new_in_common
-    assert size == new_combined_size
-
-    intersection, size = a.intersection(a, in_common=True)
-    assert intersection == set(a.hashes)
-
-    intersection, size = b.intersection(b, in_common=True)
-    assert intersection == set(b.hashes)
 
 
 def test_mh_copy(track_abundance):
@@ -1317,19 +1211,6 @@ def test_scaled_property(track_abundance):
     assert a.scaled == scaled
 
 
-def test_mh_subtract(track_abundance):
-    # test subtracting two identically configured minhashes
-    a = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 40, 2):
-        a.add_hash(i)
-
-    b = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 80, 4):
-        b.add_hash(i)
-
-    assert a.subtract_mins(b) == set(range(2, 40, 4))
-
-
 def test_pickle_max_hash(track_abundance):
     a = MinHash(0, 10, track_abundance=track_abundance,
                 scaled=_get_scaled_for_max_hash(20))
@@ -1569,24 +1450,6 @@ def test_add_kmer_too_long(track_abundance):
         mh1.add_kmer('ATGCGTGC')
 
 
-def test_add_deprecated(track_abundance):
-    # test 'add' method, now deprecated
-    mh1 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
-    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
-
-    mh1.add_sequence('ATGCGTGC')
-    a = mh1.hashes
-
-    mh2.add('ATGC')
-    mh2.add('TGCG')
-    mh2.add('GCGT')
-    mh2.add('CGTG')
-    mh2.add('GTGC')
-    b = mh2.hashes
-
-    assert set(a.items()) == set(b.items())
-
-
 def test_get_mins_deprecated(track_abundance):
     mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
     mins = (28945103950853965, 74690756200987412, 82962372765557409)
@@ -1634,24 +1497,6 @@ def test_downsample_num(track_abundance):
     assert list(sorted(mh2.hashes)) == list(range(5))
 
 
-def test_downsample_n_deprecated(track_abundance):
-    # test downsample_n(...) function, now deprecated
-    mh = MinHash(10, 21, track_abundance=track_abundance)
-    for i in range(20):
-        mh.add_hash(i)
-
-    assert mh.num == 10
-    assert len(mh) == 10
-
-    assert list(sorted(mh.hashes)) == list(range(10))
-
-    mh2 = mh.downsample_n(5)
-    assert mh2.num == 5
-    assert len(mh2) == 5
-
-    assert list(sorted(mh2.hashes)) == list(range(5))
-
-
 def test_downsample_scaled(track_abundance):
     # test downsample(scaled...) method
     mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
@@ -1671,28 +1516,8 @@ def test_downsample_scaled(track_abundance):
     assert list(sorted(mh2.hashes)) == list(mins[:3])
 
 
-def test_downsample_scaled_deprecated(track_abundance):
-    # test downsample_scaled(...) method, now deprecated
-    mh = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-
-    mins = (1, 2, 3,
-            9223372036854775808 + 1, 9223372036854775808 + 2,
-            9223372036854775808 + 3)
-    mh.add_many(mins)
-
-    assert len(mh) == 6
-    assert list(sorted(mh.hashes)) == list(mins)
-
-    mh2 = mh.downsample_scaled(2)
-    print(mh.max_hash, mh2.max_hash)
-
-    assert len(mh2) == 3
-    assert list(sorted(mh2.hashes)) == list(mins[:3])
-
-
 def test_is_molecule_type_1(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance)
-    assert mh.is_molecule_type('DNA')
     assert mh.moltype == 'DNA'
     assert mh.is_dna
     assert not mh.is_protein
@@ -1702,7 +1527,6 @@ def test_is_molecule_type_1(track_abundance):
 
 def test_is_molecule_type_2(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, is_protein=True)
-    assert mh.is_molecule_type('protein')
     assert mh.moltype == 'protein'
     assert not mh.is_dna
     assert mh.is_protein
@@ -1712,7 +1536,6 @@ def test_is_molecule_type_2(track_abundance):
 
 def test_is_molecule_type_3(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, hp=True)
-    assert mh.is_molecule_type('hp')
     assert mh.moltype == 'hp'
     assert not mh.is_dna
     assert not mh.is_protein
@@ -1723,17 +1546,8 @@ def test_is_molecule_type_3(track_abundance):
 
 def test_is_molecule_type_4(track_abundance):
     mh = MinHash(1, 21, track_abundance=track_abundance, dayhoff=True)
-    assert mh.is_molecule_type('dayhoff')
     assert mh.moltype == 'dayhoff'
     assert not mh.is_dna
     assert not mh.is_protein
     assert not mh.hp
     assert mh.dayhoff
-
-
-def test__minhash_import():
-    from sourmash._minhash import (
-        MinHash,
-        hash_murmur,
-        translate_codon
-    )
