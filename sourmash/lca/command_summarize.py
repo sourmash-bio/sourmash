@@ -126,7 +126,7 @@ def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse
 
 def count_signature(sig, scaled, hashvals):
     "Downsample sig to given scaled, count hashvalues."
-    mh = sig.minhash.downsample_scaled(scaled)
+    mh = sig.minhash.downsample(scaled=scaled)
 
     if mh.track_abundance:
         abunds = mh.hashes

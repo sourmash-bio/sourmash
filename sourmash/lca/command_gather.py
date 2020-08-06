@@ -199,7 +199,7 @@ def gather_main(args):
     debug('classifying', query_sig.name())
 
     # make sure we're looking at the same scaled value as database
-    query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+    query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
 
     # do the classification, output results
     found = []

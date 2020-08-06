@@ -111,7 +111,7 @@ def compare(args):
                 if not printed_scaled_msg:
                     notify('downsampling to scaled value of {}'.format(max_scaled))
                     printed_scaled_msg = True
-                s.minhash = s.minhash.downsample_scaled(max_scaled)
+                s.minhash = s.minhash.downsample(scaled=max_scaled)
 
     if len(siglist) == 0:
         error('no signatures!')
@@ -389,7 +389,7 @@ def index(args):
             nums.add(ss.minhash.num)
 
             if args.scaled:
-                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
+                ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -450,7 +450,7 @@ def search(args):
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
                    query.minhash.scaled, int(args.scaled))
-        query.minhash = query.minhash.downsample_scaled(args.scaled)
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
@@ -610,7 +610,7 @@ def gather(args):
     if args.scaled:
         notify('downsampling query from scaled={} to {}',
                query.minhash.scaled, int(args.scaled))
-        query.minhash = query.minhash.downsample_scaled(args.scaled)
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
     if not len(query.minhash):
@@ -762,7 +762,7 @@ def multigather(args):
             if args.scaled:
                 notify('downsampling query from scaled={} to {}',
                        query.minhash.scaled, int(args.scaled))
-                query.minhash = query.minhash.downsample_scaled(args.scaled)
+                query.minhash = query.minhash.downsample(scaled=args.scaled)
 
             # empty?
             if not len(query.minhash):

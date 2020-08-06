@@ -125,7 +125,7 @@ class LCA_Database(Index):
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!
         try:
-            minhash = minhash.downsample_scaled(self.scaled)
+            minhash = minhash.downsample(scaled=self.scaled)
         except ValueError:
             raise ValueError("cannot downsample signature; is it a scaled signature?")
 
@@ -456,7 +456,7 @@ class LCA_Database(Index):
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:
-            minhash = minhash.downsample_scaled(self.scaled)
+            minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
             # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))

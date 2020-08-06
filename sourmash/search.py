@@ -64,7 +64,7 @@ GatherResult = namedtuple('GatherResult',
 # build a new query object, subtracting found mins and downsampling
 def _subtract_and_downsample(to_remove, old_query, scaled=None):
     mh = old_query.minhash
-    mh = mh.downsample_scaled(scaled)
+    mh = mh.downsample(scaled=scaled)
     mh.remove_many(to_remove)
 
     return SourmashSignature(mh)
@@ -171,7 +171,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             float(len(orig_query_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        orig_query_mh = orig_query_mh.downsample_scaled(cmp_scaled)
+        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
         query_n_mins = len(orig_query_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 
