@@ -2,7 +2,7 @@ name: Rust checks
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
     paths:
       - 'src/core/**'
@@ -162,7 +162,7 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -190,7 +190,7 @@ jobs:
     name: Run tests under wasm32-wasi
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - name: Install wasm32-wasi target
         uses: actions-rs/toolchain@v1
         with:

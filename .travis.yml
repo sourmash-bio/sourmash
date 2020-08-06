@@ -12,7 +12,7 @@ cache:
     - "target"
 
 if: |
-  (type = push AND (branch = master)) OR \
+  (type = push AND (branch = latest)) OR \
   (tag =~ ^v) OR \
   (type = pull_request) OR \
   (type = cron)
@@ -102,10 +102,6 @@ jobs:
       services:
         - redis
         - docker
-    - <<: *test
-      python: 3.6
-    - <<: *test
-      python: 3.5
     - <<: *test
       python: 3.7
       env:
