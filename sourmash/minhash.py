@@ -258,13 +258,6 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
                          force)
 
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use add_kmer instead.')
-    def add(self, kmer):
-        "Add a kmer into the sketch."
-        self.add_sequence(kmer)
-
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
         if len(kmer) != self.ksize:
@@ -285,13 +278,6 @@ class MinHash(RustObject):
     def remove_many(self, hashes):
         "Remove many hashes at once; ``hashes`` must be an iterable."
         self._methodcall(lib.kmerminhash_remove_many, list(hashes), len(hashes))
-
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use add_many instead.')
-    def update(self, other):
-        "Update this sketch from all the hashes in the other."
-        self.add_many(other)
 
     def __len__(self):
         "Number of hashes."
@@ -337,16 +323,6 @@ class MinHash(RustObject):
         else:
             d = self.get_mins()
             return _HashesWrapper({ k : 1 for k in d })
-
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION)
-    def subtract_mins(self, other):
-        """Get the list of mins in this MinHash, after removing the ones in
-        ``other``.
-        """
-        a = set(self.get_mins())
-        b = set(other.get_mins())
-        return a - b
 
     @property
     def seed(self):
@@ -424,17 +400,6 @@ class MinHash(RustObject):
         "Clears all hashes and abundances."
         return self._methodcall(lib.kmerminhash_clear)
 
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use translate_codon function at module level instead.')
-    def translate_codon(self, codon):
-        "Translate a codon into an amino acid."
-        try:
-            return rustcall(lib.sourmash_translate_codon,
-                            to_bytes(codon)).decode('utf-8')
-        except SourmashError as e:
-            raise ValueError(e.message)
-
     def count_common(self, other, downsample=False):
         """\
         Return the number of hashes in common between ``self`` and ``other``.
@@ -487,69 +452,6 @@ class MinHash(RustObject):
 
         return a
 
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use downsample(num=...) instead.')
-    def downsample_n(self, new_num):
-        "Copy this object and downsample new object to num=``new_num``."
-        return self.downsample(num=new_num)
-
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use scaled instead.')
-    def downsample_max_hash(self, *others):
-        """Copy this object and downsample new object to min of ``*others``.
-
-        Here, ``*others`` is one or more MinHash objects.
-        """
-        max_hashes = [x.max_hash for x in others]
-        new_max_hash = min(self.max_hash, *max_hashes)
-        new_scaled = _get_scaled_for_max_hash(new_max_hash)
-
-        return self.downsample_scaled(new_scaled)
-
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use downsample(scaled=...) instead.')
-    def downsample_scaled(self, new_scaled):
-        """Copy this object and downsample new object to scaled=``new_scaled``.
-        """
-        return self.downsample(scaled=new_scaled)
-
-    @deprecated(deprecated_in="3.3", removed_in="4.0",
-                current_version=VERSION,
-                details='Use count_common or set methods instead.')
-    def intersection(self, other, in_common=False):
-        """Calculate the intersection between ``self`` and ``other``, and
-        return ``(mins, size)`` where ``mins`` are the hashes in common, and
-        ``size`` is the number of hashes.
-
-        if ``in_common``, return the actual hashes. Otherwise, mins will be
-        empty.
-        """
-        if not isinstance(other, MinHash):
-            raise TypeError("Must be a MinHash!")
-
-        if self.num != other.num:
-            err = "must have same num: {} != {}".format(self.num, other.num)
-            raise TypeError(err)
-
-        if in_common:
-            # TODO: copy from buffer to Python land instead,
-            # this way involves more moving data around.
-            combined_mh = self.copy_and_clear()
-            combined_mh.merge(self)
-            combined_mh.merge(other)
-
-            size = len(combined_mh)
-            common = set(self.get_mins())
-            common.intersection_update(other.get_mins())
-        else:
-            size = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
-            common = set()
-
-        return common, max(size, 1)
-
     def flatten(self):
         """Return a new MinHash with track_abundance=False."""
         # create new object:
@@ -567,14 +469,6 @@ class MinHash(RustObject):
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
         return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
-
-    @deprecated(deprecated_in="3.3", removed_in="4.0",
-                current_version=VERSION,
-                details="Use 'similarity' instead of compare.")
-    def compare(self, other, downsample=False):
-        "Calculate Jaccard similarity of two sketches."
-        return self.jaccard(other, downsample=downsample)
-
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
@@ -611,14 +505,6 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
-    @deprecated(deprecated_in="3.3", removed_in="4.0",
-                current_version=VERSION,
-                details="Use 'contained_by' with downsample=True instead.")
-    def containment_ignore_maxhash(self, other):
-        """Calculate contained_by, with downsampling.
-        """
-        return self.contained_by(other, downsample=True)
-
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
@@ -649,19 +535,6 @@ class MinHash(RustObject):
     def add_protein(self, sequence):
         "Add a protein sequence."
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
-
-    @deprecated(deprecated_in="3.5", removed_in="4.0",
-                current_version=VERSION,
-                details='Use the moltype property instead.')
-    def is_molecule_type(self, molecule):
-        """Check if this MinHash is a particular human-readable molecule type.
-
-        Supports 'protein', 'dayhoff', 'hp', 'DNA'.
-        @CTB deprecate for 4.0?
-        """
-        if molecule.lower() not in ('protein', 'dayhoff', 'hp', 'dna'):
-            raise ValueError("unknown moltype in query, '{}'".format(molecule))
-        return molecule == self.moltype
 
     @property
     def moltype(self):                    # TODO: test in minhash tests
