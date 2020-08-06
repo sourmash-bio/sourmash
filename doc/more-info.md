@@ -118,7 +118,7 @@ Newer versions of matplotlib do not seem to have this problem.
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md
 [3]:https://github.com/onecodex/finch-rs
-[4]:https://github.com/dib-lab/sourmash/blob/master/utils/compute-dna-mh-another-way.py
+[4]:https://github.com/dib-lab/sourmash/blob/latest/utils/compute-dna-mh-another-way.py
 [5]:http://ivory.idyll.org/blog/2016-sourmash.html
 [6]:http://ivory.idyll.org/blog/2016-sourmash-signatures.html
 [7]:http://ivory.idyll.org/blog/2016-sourmash-sbt.html

@@ -3,7 +3,7 @@
 ## Development environment
 
 
-You can get the latest development master branch with:
+You can get the latest development branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
 ```

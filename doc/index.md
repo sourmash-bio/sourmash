@@ -68,13 +68,13 @@ be stored, searched, explored, and taxonomically annotated.
 
 * `sourmash` is developed [on GitHub](https://github.com/dib-lab/sourmash)
   and is **freely and openly available** under the BSD 3-clause license.
-  Please see [the README](https://github.com/dib-lab/sourmash/blob/master/README.md)
+  Please see [the README](https://github.com/dib-lab/sourmash/blob/latest/README.md)
   for more information on development, support, and contributing.
 
 You can take a look at sourmash analyses on real data
-[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/master/doc/sourmash-examples.ipynb),
+[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/latest/doc/sourmash-examples.ipynb),
 and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/master?filepath=doc%2Fsourmash-examples.ipynb)
+[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
 at [mybinder.org](http://mybinder.org).
 
 ## Installing sourmash
@@ -89,7 +89,7 @@ or conda:
 $ conda install -c conda-forge -c bioconda sourmash
 ```
 
-Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/master/README.md)
+Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/latest/README.md)
 for more information.
 
 ## Memory and speed
