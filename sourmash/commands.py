@@ -696,10 +696,17 @@ def gather(args):
             notify('no unassigned hashes! not saving.')
         else:
             notify('saving unassigned hashes to "{}"', args.output_unassigned)
-
+            moltype_kwds = {}
+            if args.protein or args.hp or args.dayhoff:
+                moltype_kwds['is_protein'] = True
+                if args.hp:
+                    moltype_kwds['hp'] = True
+                elif args.dayhoff:
+                    moltype_kwds['dayhoff'] = True
+                  
             with_abundance = next_query.minhash.track_abundance
             e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
-                        track_abundance=with_abundance)
+                        track_abundance=with_abundance, **moltype_kwds)
             if with_abundance:
                 abunds = next_query.minhash.hashes
                 e.set_abundances(abunds)
