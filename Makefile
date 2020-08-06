@@ -39,7 +39,7 @@ coverage: all
 	$(PYTHON) -m pytest --cov=. --cov-report term-missing
 
 benchmark:
-	asv continuous master `git rev-parse HEAD`
+	asv continuous latest `git rev-parse HEAD`
 	cargo bench
 
 check:

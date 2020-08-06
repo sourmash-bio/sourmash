@@ -20,7 +20,7 @@ latest version with `rustup update`.
 
 ## Testing a release
 
-0\. First things first: check if Read the Docs is building properly for master.
+0\. First things first: check if Read the Docs is building properly for `latest`.
 The build on [Read the Docs] should be passing,
 and also check if the [rendered docs] are updated.
 

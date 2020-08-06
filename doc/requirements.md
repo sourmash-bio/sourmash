@@ -14,4 +14,5 @@ sourmash should run with no modification on Linux and Mac OS X,
 under Python 3.7 and later.  Please see [the development repository README][0]
 for
 information on source code, tests, and continuous integration.
-[0]:https://github.com/dib-lab/sourmash/blob/master/README.md
+
+[0]:https://github.com/dib-lab/sourmash/blob/latest/README.md
