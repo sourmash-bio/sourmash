@@ -108,7 +108,7 @@ microbial genomes with about 200 MB of disk space and about 10 GB of
 RAM. Typically a metagenome classification takes about 1 minute on a
 laptop.
 
-## Sourmash versioning
+## sourmash versioning
 
 We support the use of sourmash in pipelines and applications
 by communicating clearly about bug fixes, feature additions, and feature
