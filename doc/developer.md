@@ -201,7 +201,7 @@ From their definition:
 [`setuptools_scm`]: https://github.com/pypa/setuptools_scm
 [Semantic Versioning]: https://semver.org/
 
-For the Rust core library we use `rMAJOR.MINOR.PATH`
+For the Rust core library we use `rMAJOR.MINOR.PATCH`
 (note it starts with `r`, and not `v`).
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.

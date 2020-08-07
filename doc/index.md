@@ -108,6 +108,27 @@ microbial genomes with about 200 MB of disk space and about 10 GB of
 RAM. Typically a metagenome classification takes about 1 minute on a
 laptop.
 
+## sourmash versioning
+
+We support the use of sourmash in pipelines and applications
+by communicating clearly about bug fixes, feature additions, and feature
+changes. We use version numbers as follows:
+
+* Major releases, like v4.0.0, may break backwards compatibility at
+  the command line as well as top-level Python/Rust APIs.
+* Minor releases, like v4.1.0, will remain backwards compatible but
+  may introduce significant new features.
+* Patch releases, like v4.1.1, are for minor bug fixes; full backwards
+  compatibility is retained.
+
+If you are relying on sourmash in a pipeline or application, we
+suggest specifying your version requirements at the major release,
+e.g. in conda you would specify `sourmash>=3,<4`.
+
+See [the Versioning docs](support.md) for more information on what our
+versioning policy means in detail, and how to migrate between major
+versions!
+
 ## Limitations
 
 **sourmash cannot find matches across large evolutionary distances.**
