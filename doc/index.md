@@ -110,9 +110,9 @@ laptop.
 
 ## Sourmash versioning
 
-Our goal is to support the use of sourmash in pipelines and applications
+We support the use of sourmash in pipelines and applications
 by communicating clearly about bug fixes, feature additions, and feature
-changes. We use version numbers to do this:
+changes. We use version numbers as follows:
 
 * Major releases, like v4.0.0, may break backwards compatibility at
   the command line as well as top-level Python/Rust APIs.
@@ -125,7 +125,9 @@ If you are relying on sourmash in a pipeline or application, we
 suggest specifying your version requirements at the major release,
 e.g. in conda you would specify `sourmash>=3,<4`.
 
-See [support.md] for more information.
+See [the Versioning docs](support.md) for more information on what our
+versioning policy means in detail, and how to migrate between major
+versions!
 
 ## Limitations
 
