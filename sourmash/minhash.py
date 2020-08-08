@@ -180,7 +180,7 @@ class MinHash(RustObject):
             is_protein = False
 
         self._objptr = lib.kmerminhash_new(
-            n, ksize, is_protein, dayhoff, hp, seed, int(scaled), track_abundance
+            scaled, n, ksize, is_protein, dayhoff, hp, seed, track_abundance
         )
 
         if mins:

@@ -16,13 +16,13 @@ impl ForeignObject for SourmashKmerMinHash {
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
+    scaled: u64,
     n: u32,
     k: u32,
     prot: bool,
     dayhoff: bool,
     hp: bool,
     seed: u64,
-    scaled: u64,
     track_abundance: bool,
 ) -> *mut SourmashKmerMinHash {
     // TODO: at most one of (prot, dayhoff, hp) should be true

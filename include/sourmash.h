@@ -174,13 +174,13 @@ SourmashStr kmerminhash_md5sum(const SourmashKmerMinHash *ptr);
 
 void kmerminhash_merge(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
-SourmashKmerMinHash *kmerminhash_new(uint32_t n,
+SourmashKmerMinHash *kmerminhash_new(uint64_t scaled,
+                                     uint32_t n,
                                      uint32_t k,
                                      bool prot,
                                      bool dayhoff,
                                      bool hp,
                                      uint64_t seed,
-                                     uint64_t scaled,
                                      bool track_abundance);
 
 uint32_t kmerminhash_num(const SourmashKmerMinHash *ptr);
