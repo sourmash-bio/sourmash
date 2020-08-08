@@ -19,7 +19,6 @@ from . import utils
 from . import categorize
 from . import compare
 from . import compute
-from . import dump
 from . import gather
 from . import import_csv
 from . import info
@@ -98,7 +97,7 @@ def get_parser():
     alias = {
         "sig": "signature"
     }
-    expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
+    expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)

@@ -306,21 +306,6 @@ def import_csv(args):
             sig.save_signatures(siglist, outfp)
 
 
-def dump(args):
-    "Dump hashes for each input signature into a {name}.dump.txt file."
-    for filename in args.filenames:
-        notify('loading {}', filename)
-        siglist = sig.load_signatures(filename, ksize=args.ksize)
-        siglist = list(siglist)
-        assert len(siglist) == 1
-
-        s = siglist[0]
-
-        fp = open(filename + '.dump.txt', 'w')
-        fp.write(" ".join((map(str, s.minhash.get_hashes()))))
-        fp.close()
-
-
 def sbt_combine(args):
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
