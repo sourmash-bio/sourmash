@@ -41,7 +41,6 @@ then define a search function, ::
         return 0
 """
 
-from __future__ import print_function, unicode_literals, division
 
 from collections import namedtuple
 try:

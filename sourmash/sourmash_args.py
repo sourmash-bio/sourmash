@@ -28,14 +28,9 @@ DEFAULT_N = 500
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('DNA'):
-        moltype = 'DNA'
-    elif sig.minhash.is_molecule_type('dayhoff'):
-        moltype = 'dayhoff'
-    elif sig.minhash.is_molecule_type('hp'):
-        moltype = 'hp'
-    elif sig.minhash.is_molecule_type('protein'):
-        moltype = 'protein'
+    mh = sig.minhash
+    if mh.moltype in ('DNA', 'dayhoff', 'hp', 'protein'):
+        moltype = mh.moltype
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 

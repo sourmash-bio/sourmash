@@ -1,13 +1,12 @@
 "LCA database class and utilities."
 
-from __future__ import print_function, division
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
 import functools
 
 import sourmash
-from sourmash._minhash import get_max_hash_for_scaled
+from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 
@@ -156,7 +155,7 @@ class LCA_Database(Index):
             except TypeError:
                 raise ValueError('lineage cannot be used as a key?!')
 
-        for hashval in minhash.get_mins():
+        for hashval in minhash.hashes:
             self.hashval_to_idx[hashval].add(idx)
 
         return len(minhash)
@@ -369,7 +368,7 @@ class LCA_Database(Index):
 
         self._invalidate_cache()
 
-        max_hash = get_max_hash_for_scaled(scaled)
+        max_hash = _get_max_hash_for_scaled(scaled)
 
         # filter out all hashes over max_hash in value.
         new_hashvals = {}
@@ -462,7 +461,7 @@ class LCA_Database(Index):
             # note that containment can be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
-        query_mins = set(minhash.get_mins())
+        query_mins = set(minhash.hashes)
 
         # collect matching hashes for the query:
         c = Counter()

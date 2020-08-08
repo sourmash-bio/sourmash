@@ -110,8 +110,6 @@ jobs:
       python: 3.7
       env:
         - TOXENV=docs
-    - <<: *test
-      python: 2.7
 
     - &wheel
       stage: build wheel and send to github releases

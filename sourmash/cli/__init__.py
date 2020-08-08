@@ -34,7 +34,7 @@ from . import watch
 # Subcommand groups
 from . import lca
 from . import sig
-from . import signature
+from . import sig as signature
 from . import storage
 
 

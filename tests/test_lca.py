@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash lca' command line and high level API.
 """
-from __future__ import print_function, unicode_literals
 import os
 import shutil
 import csv
@@ -322,8 +321,8 @@ def test_api_create_insert_two_then_scale():
     # downsample everything to 5000
     lca_db.downsample_scaled(5000)
 
-    ss.minhash = ss.minhash.downsample_scaled(5000)
-    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+    ss.minhash = ss.minhash.downsample(scaled=5000)
+    ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
     combined_mins = set(ss.minhash.get_mins())
@@ -342,12 +341,12 @@ def test_api_create_insert_scale_two():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
     count = lca_db.insert(ss)
     assert count == 1037
-    assert count == len(ss.minhash.downsample_scaled(5000))
+    assert count == len(ss.minhash.downsample(scaled=5000))
     lca_db.insert(ss2)
 
     # downsample sigs to 5000
-    ss.minhash = ss.minhash.downsample_scaled(5000)
-    ss2.minhash = ss2.minhash.downsample_scaled(5000)
+    ss.minhash = ss.minhash.downsample(scaled=5000)
+    ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
     combined_mins = set(ss.minhash.get_mins())
@@ -431,7 +430,7 @@ def test_search_db_scaled_gt_sig_scaled():
     results = db.search(sig, threshold=.01, ignore_abundance=True)
     match_sig = results[0][1]
 
-    sig.minhash = sig.minhash.downsample_scaled(10000)
+    sig.minhash = sig.minhash.downsample(scaled=10000)
     assert sig.minhash == match_sig.minhash
 
 
@@ -439,7 +438,7 @@ def test_search_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
-    sig.minhash = sig.minhash.downsample_scaled(100000)
+    sig.minhash = sig.minhash.downsample(scaled=100000)
 
     with pytest.raises(ValueError) as e:
         results = db.search(sig, threshold=.01, ignore_abundance=True)
@@ -453,7 +452,7 @@ def test_gather_db_scaled_gt_sig_scaled():
     results = db.gather(sig, threshold=.01, ignore_abundance=True)
     match_sig = results[0][1]
 
-    sig.minhash = sig.minhash.downsample_scaled(10000)
+    sig.minhash = sig.minhash.downsample(scaled=10000)
     assert sig.minhash == match_sig.minhash
 
 
@@ -461,12 +460,12 @@ def test_gather_db_scaled_lt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
-    sig.minhash = sig.minhash.downsample_scaled(100000)
+    sig.minhash = sig.minhash.downsample(scaled=100000)
 
     results = db.gather(sig, threshold=.01, ignore_abundance=True)
     match_sig = results[0][1]
 
-    match_sig.minhash = match_sig.minhash.downsample_scaled(100000)
+    match_sig.minhash = match_sig.minhash.downsample(scaled=100000)
     assert sig.minhash == match_sig.minhash
 
 

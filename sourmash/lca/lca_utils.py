@@ -1,7 +1,6 @@
 """
 Utility functions for lowest-common-ancestor analysis tools.
 """
-from __future__ import print_function, division
 from os.path import exists
 from collections import namedtuple, defaultdict, Counter
 

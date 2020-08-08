@@ -2,8 +2,6 @@
 """
 Save and load MinHash sketches in a JSON format, along with some metadata.
 """
-from __future__ import print_function
-
 import sys
 import os
 import weakref
@@ -11,10 +9,9 @@ from enum import Enum
 
 from .logging import error
 from . import MinHash
-from ._minhash import to_bytes
+from .minhash import to_bytes
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
-from ._compat import PY2
 
 
 SIGNATURE_VERSION = 0.4
@@ -210,12 +207,6 @@ def _detect_input_type(data):
         try:
             if data.find("sourmash_signature") > 0:
                 return SigInput.BUFFER
-            elif PY2:
-                try:
-                    if data.startswith(b'\x1F\x8B'):  # gzip compressed
-                        return SigInput.BUFFER
-                except UnicodeDecodeError:
-                    pass
         except TypeError:
             if data.find(b"sourmash_signature") > 0:
                 return SigInput.BUFFER
@@ -270,8 +261,7 @@ def load_signatures(
     try:
         if input_type == SigInput.FILE_LIKE:
             if hasattr(data, "mode") and "t" in data.mode:  # need to reopen handler as binary
-                if sys.version_info >= (3,):
-                    data = data.buffer
+                data = data.buffer
 
             buf = data.read()
             data.close()
@@ -289,7 +279,7 @@ def load_signatures(
             )
 
         if input_type == SigInput.BUFFER:
-            if hasattr(data, "encode") and not PY2:
+            if hasattr(data, "encode"):
                 data = data.encode("utf-8")
 
             sigs_ptr = rustcall(
