@@ -214,7 +214,7 @@ class MinHash(RustObject):
             self.is_protein,
             self.dayhoff,
             self.hp,
-            self.get_mins(with_abundance=self.track_abundance),
+            self.hashes,
             None,
             self.track_abundance,
             self.max_hash,
@@ -448,7 +448,7 @@ class MinHash(RustObject):
         )
         # copy over hashes:
         if self.track_abundance:
-            a.set_abundances(self.get_mins(with_abundance=True))
+            a.set_abundances(self.hashes)
         else:
             a.add_many(self)
 
