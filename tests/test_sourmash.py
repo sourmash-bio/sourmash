@@ -3263,6 +3263,27 @@ def test_gather_metagenome_output_unassigned_nomatches(c):
     assert x.minhash == y.minhash
 
 
+@utils.in_tempdir
+def test_gather_metagenome_output_unassigned_nomatches_protein(c):
+    # test --output-unassigned with protein signatures
+    query_sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    against_sig = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    c.run_sourmash('gather', query_sig, against_sig,
+                   '--output-unassigned', 'foo.sig')
+
+    print(c.last_result.out)
+    assert 'found 0 matches total;' in c.last_result.out
+
+    c.run_sourmash('sig', 'describe', c.output('foo.sig'))
+    print(c.last_result.out)
+
+    x = sourmash.load_one_signature(query_sig, ksize=57)
+    y = sourmash.load_one_signature(c.output('foo.sig'))
+
+    assert x.minhash == y.minhash
+
+
 def test_gather_metagenome_downsample():
     # downsample w/scaled of 100,000
     with utils.TempDirectory() as location:
