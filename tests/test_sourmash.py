@@ -3216,6 +3216,35 @@ def test_gather_metagenome_output_unassigned():
                     'NC_011294.1' in out))
 
 
+def test_gather_metagenome_output_unassigned_none():
+    # test what happens when there's nothing unassigned to output
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF_*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} -k 21'.format(query_sig, " ".join(testdata_sigs))
+        cmd += ' --output-unassigned=unassigned.sig'
+        cmd += ' --threshold=0'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.5 Mbp        0.1%    0.4%' in out,
+                    'NC_004631.1 Salmonella enterica subsp...' in out))
+
+        # now examine unassigned
+        assert not os.path.exists(os.path.join(location, 'unassigned.sig'))
+        assert 'no unassigned hashes to save with --output-unassigned!' in err
+
+
 @utils.in_tempdir
 def test_gather_metagenome_output_unassigned_nomatches(c):
     # test --output-unassigned when there are no matches
