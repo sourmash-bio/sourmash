@@ -53,11 +53,6 @@ typedef struct SourmashNodegraph SourmashNodegraph;
 
 typedef struct SourmashSignature SourmashSignature;
 
-typedef struct {
-  const char *name;
-  const char *rank;
-} AcceptedLineagePair;
-
 /**
  * Represents a string.
  */
@@ -79,17 +74,9 @@ typedef struct {
 uint32_t LcaDB_insert(SourmashLcaDatabase *ptr,
                       const SourmashSignature *sig_ptr,
                       const char *ident_char,
-                      const AcceptedLineagePair *lineage_ptr,
-                      uintptr_t insize);
+                      const char *lineage_char);
 
-SourmashLcaDatabase *LcaDB_new(uint32_t ksize,
-                               uint64_t scaled,
-                               const char *filename,
-                               const char *moltype);
-
-void LcaDB_save(SourmashLcaDatabase *ptr, const char *db_name_char);
-
-bool LcaDB_select(SourmashLcaDatabase *ptr, uint32_t ksize, const char *moltype_char);
+SourmashLcaDatabase *LcaDB_new(void);
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 

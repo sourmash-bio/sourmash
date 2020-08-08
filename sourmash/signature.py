@@ -114,7 +114,10 @@ class SourmashSignature(RustObject):
 
     @filename.setter
     def filename(self, value):
+        print(self.filename)
         self._methodcall(lib.signature_set_filename, to_bytes(value))
+        print(self.filename)
+        assert False
 
     @property
     def license(self):
@@ -352,10 +355,17 @@ def save_signatures(siglist, fp=None, compression=0):
 
     size = ffi.new("uintptr_t *")
 
+    print("\n\nsiglist_c =", siglist_c, "\nsize =", size)
+
     # save signature into a string (potentially compressed)
     rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
                       compression, size)
+
+    print("\n\nsiglist_c =", siglist_c, "\nsize =", size)
+
     size = size[0]
+    print("\n\nsiglist_c =", siglist_c[0], "\nsize =", size)
+
 
     # associate a finalizer with rawbuf so that it gets freed
     buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)

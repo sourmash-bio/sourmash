@@ -1,9 +1,7 @@
 use std::str;
-use std::ffi::{CStr, CString};
-use std::collections::HashMap;
+use std::ffi::CStr;
+use std::collections::{HashMap, BTreeMap};
 use std::os::raw::c_char;
-use std::convert::From;
-use std::path::Path;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -15,11 +13,10 @@ use typed_builder::TypedBuilder;
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
-use crate::index::{Index, Comparable};
-use crate::sketch::minhash::{KmerMinHash, HashFunctions, max_hash_for_scaled};
-use crate::signature::{Signature, SigsTrait};
+use crate::sketch::Sketch;
+use crate::index::Index;
+use crate::signature::Signature;
 use crate::Error;
-use crate::ffi::lca_db::AcceptedLineagePair;
 
 impl Serialize for LcaDB {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -62,8 +59,8 @@ impl<'de> Deserialize<'de> for LcaDB {
             ident_to_name: HashMap<String, String>,
             ident_to_idx: HashMap<String, u32>,
             idx_to_lid: HashMap<u32, u32>,
-            lineage_to_lid: HashMap<Vec<LineagePair>, u32>,
-            lid_to_lineage: HashMap<u32, Vec<LineagePair>>,
+            lineage_to_lid: HashMap<LineagePairs, u32>,
+            lid_to_lineage: HashMap<u32, LineagePairs>,
             hashval_to_idx: HashMap<u64, Vec<u32>>,
         }
 
@@ -86,40 +83,34 @@ impl<'de> Deserialize<'de> for LcaDB {
     }
 }
 
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[derive(PartialEq, Eq, Hash, Debug, TypedBuilder, Clone, Serialize, Deserialize)]
-#[repr(C)]
-pub struct LineagePair{
-    name: String, 
-    rank: String,
-}
+pub type LineagePairs = BTreeMap<String, String>; 
 
-impl From<&AcceptedLineagePair> for LineagePair {
-    fn from(tup: &AcceptedLineagePair) -> LineagePair {
-        let name = LcaDB::c_char_to_string(tup.name());
-        let rank = LcaDB::c_char_to_string(tup.rank());
-        LineagePair { 
-            name: name, 
-            rank: rank,
-        }
-    }
-}
+// impl<'de> Deserialize<'de> for LineagePairs {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         #[derive(Deserialize)]
+//         type TempLineagePairs = BTreeMap<String, String>
 
-impl LineagePair {
-    pub fn new(name: String, rank: String) -> LineagePair {
-        LineagePair {
-            name: name,
-            rank: rank,
-        }
-    }
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
+//         let templineagepairs = TempLineagePairs::deserialize(deserializer)?;
 
-    pub fn rank(&self) -> String {
-        self.rank.clone()
-    }
-}
+//         Ok(LcaDB {
+//             ksize: templcadb.ksize,
+//             scaled: templcadb.scaled,
+//             filename: templcadb.filename,
+//             moltype: templcadb.moltype,
+//             _next_index: templcadb._next_index,
+//             _next_lid: templcadb._next_lid,
+//             ident_to_name: templcadb.ident_to_name,
+//             ident_to_idx: templcadb.ident_to_idx,
+//             idx_to_lid: templcadb.idx_to_lid,
+//             lineage_to_lid: templcadb.lineage_to_lid,
+//             lid_to_lineage: templcadb.lid_to_lineage,
+//             hashval_to_idx: templcadb.hashval_to_idx,
+//         })
+//     }
+// }
 
 #[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
 #[derive(Debug, TypedBuilder)]
@@ -147,10 +138,10 @@ pub struct LcaDB {
     idx_to_lid: HashMap<u32, u32>,
 
     #[builder(default = HashMap::new())]
-    lineage_to_lid: HashMap<Vec<LineagePair>, u32>,
+    lineage_to_lid: HashMap<LineagePairs, u32>,
 
     #[builder(default = HashMap::new())]
-    lid_to_lineage: HashMap<u32, Vec<LineagePair>>,
+    lid_to_lineage: HashMap<u32, LineagePairs>,
 
     #[builder(default = HashMap::new())]
     hashval_to_idx: HashMap<u64, Vec<u32>>, //HashSet as keys
@@ -159,8 +150,8 @@ pub struct LcaDB {
 impl Default for LcaDB {
     fn default() -> LcaDB {
         LcaDB {
-            ksize: 21,
-            scaled: 0,
+            ksize: 32,
+            scaled: 1,
             filename: "filename".to_string(),
             moltype: "DNA".to_string(),
 
@@ -177,15 +168,12 @@ impl Default for LcaDB {
 }
 
 impl LcaDB {
-    pub fn new(
-        ksize: u32,
-        scaled: u64,
-        filename: &[u8],
-        moltype: &[u8],
-    ) -> LcaDB {
+    pub fn new() -> LcaDB {
 
-        let filename = str::from_utf8(filename).unwrap().to_string();
-        let moltype = str::from_utf8(moltype).unwrap().to_string();
+        let ksize = 32;
+        let scaled = 1;
+        let filename = "filename".to_string();
+        let moltype = "DNA".to_string();
         
         let _next_index = 0;
         let _next_lid = 0;
@@ -210,16 +198,6 @@ impl LcaDB {
             lid_to_lineage,
             hashval_to_idx,
         }
-    }
-
-    pub fn c_char_to_string(char_ptr: *const c_char) -> String {
-        let c_str = {
-            assert!(!char_ptr.is_null());
-
-            unsafe { CStr::from_ptr(char_ptr) }
-        };
-        let c_str = c_str.to_str().unwrap();
-        c_str.to_string()
     }
 
     pub fn ksize(&self) -> u32 {
@@ -258,11 +236,11 @@ impl LcaDB {
         self.idx_to_lid.clone()
     }
 
-    pub fn lineage_to_lid(&self) -> HashMap<Vec<LineagePair>, u32> {
+    pub fn lineage_to_lid(&self) -> HashMap<LineagePairs, u32> {
         self.lineage_to_lid.clone()
     }
 
-    pub fn lid_to_lineage(&self) -> HashMap<u32, Vec<LineagePair>> {
+    pub fn lid_to_lineage(&self) -> HashMap<u32, LineagePairs> {
         self.lid_to_lineage.clone()
     }
 
@@ -284,11 +262,11 @@ impl LcaDB {
         self.idx_to_lid.insert(idx, lid);
     }
 
-    pub fn insert_lineage_to_lid(&mut self, lineage: Vec<LineagePair>, lid: u32) {
+    pub fn insert_lineage_to_lid(&mut self, lineage: LineagePairs, lid: u32) {
         self.lineage_to_lid.insert(lineage, lid);
     }
 
-    pub fn insert_lid_to_lineage(&mut self, lid: u32, lineage: Vec<LineagePair>) {
+    pub fn insert_lid_to_lineage(&mut self, lid: u32, lineage: LineagePairs) {
         self.lid_to_lineage.insert(lid, lineage);
     }
 
@@ -302,25 +280,25 @@ impl LcaDB {
         }
     }
 
-    pub fn _get_ident_index(&mut self, ident: String, fail_on_duplicate: bool) -> u32 {
+    pub fn _get_ident_index(&mut self, ident: &String, fail_on_duplicate: bool) -> u32 {
         // Get (create if nec) a unique int id, idx, for each identifier.
         if fail_on_duplicate {
-            assert!(self.ident_to_idx.contains_key(&ident));    // should be no duplicate identities
+            assert!(!self.ident_to_idx.contains_key(ident));    // should be no duplicate identities
         }
 
-        if !self.ident_to_idx.contains_key(&ident) {
-            let idx = self._next_index;
-            self._next_index += 1;
-
-            self.ident_to_idx.insert(ident, idx);
-            idx
-        } else {
-            let idx = self.ident_to_idx.get(&ident);
-            *idx.unwrap()
-        }
+        let idx = match self.ident_to_idx.get(ident) {
+            Some(i) => *i,
+            None => {
+                let i = self._next_index;
+                self._next_index += 1;
+                self.ident_to_idx.insert(ident.to_string(), i);
+                i
+            },
+        };
+        idx
     }
 
-    pub fn _get_lineage_id(&mut self, lineage: Vec<LineagePair>) -> u32 {
+    pub fn _get_lineage_id(&mut self, lineage: &LineagePairs) -> u32 {
         // "Get (create if nec) a unique lineage ID for each LineagePair tuples."
         
         // does one exist already?
@@ -339,49 +317,229 @@ impl LcaDB {
         }
     }
 
-    pub fn _signatures(&self) {
-        let protein = String::from("protein");
-        let hp = String::from("hp");
-        let dayhoff = String::from("dayhoff");
-        let moltype = self.moltype();
-
-        let hash_function = match moltype {
-            protein => HashFunctions::murmur64_protein,
-            hp => HashFunctions::murmur64_hp,
-            dayhoff => HashFunctions::murmur64_dayhoff,
+    pub fn insert(&mut self, sig: &Signature, ident_opt: &[u8], lineage: &LineagePairs) -> Result<u32, Error> {
+        // set ident
+        let ident = if ident_opt != b"" {
+            String::from_utf8(ident_opt.to_vec()).unwrap()
+        } else {
+            sig.name()
         };
-        // defaults for the rest of the parameters
-        let seed = 42;
-        let track_abundance = false;
-        let max_hash = max_hash_for_scaled(self.scaled()).unwrap();
 
-        let mh = KmerMinHash::new(0, self.ksize, hash_function, 42, max_hash, track_abundance);
+        if let Sketch::MinHash(minhash) = &sig.signatures[0] {
+    
+            // check for errors
+                
+            assert!(!self.ident_to_name().contains_key(&ident));
+                //error: raise ValueError("signature {} is already in this LCA db.".format(ident))
+            
+            // implement self.cache property and _invalidate_cache() method
+            // self._invalidate_cache()
+                
+            // downsample to specified scaled; this has the side effect of
+            // making sure they're all at the same scaled value!
+            let minhash = minhash.downsample_scaled(self.scaled()).unwrap();
+                // error if it is a scaled signature
+    
+            // store name
+            self.ident_to_name.insert(ident.clone(), sig.name());
+    
+            // identifier -> integer index (idx)
+            let idx = self._get_ident_index(&ident, true);
+    
+            if lineage.len() > 0 {
+                // (LineagePairs*) -> integer lineage ids (lids)
+                let lid = self._get_lineage_id(lineage);
+    
+                // map idx to lid as well.
+                if !self.idx_to_lid().contains_key(&idx) {
+                    self.idx_to_lid.insert(idx, lid);
+                }
+            }
+    
+            // append idx to each hashval's idx vector
+            for hashval in minhash.mins() {
+                if self.hashval_to_idx().contains_key(&hashval) {
+                    self.hashval_to_idx.get_mut(&hashval).unwrap().push(idx);
+                } else {
+                    let mut idx_vec: Vec<u32> = Vec::with_capacity(1);
+                    idx_vec.push(idx);
+                    self.hashval_to_idx.insert(hashval, idx_vec);
+                }
+            }
+        
+            Ok(minhash.num())
+        }
+        else {
+            unimplemented!()
+        }
     }
+
+    pub fn save(&self, filename: &[u8]) {
+        unimplemented!()
+    }
+
+    pub fn load(filename: &[u8]) {
+        unimplemented!()
+    }
+
+    // pub fn _signatures(&self) {
+    //     let protein = String::from("protein");
+    //     let hp = String::from("hp");
+    //     let dayhoff = String::from("dayhoff");
+    //     let moltype = self.moltype();
+
+    //     let hash_function = match moltype {
+    //         protein => HashFunctions::murmur64_protein,
+    //         hp => HashFunctions::murmur64_hp,
+    //         dayhoff => HashFunctions::murmur64_dayhoff,
+    //     };
+    //     // defaults for the rest of the parameters
+    //     let seed = 42;
+    //     let track_abundance = false;
+    //     let max_hash = max_hash_for_scaled(self.scaled()).unwrap();
+
+    //     let mh = KmerMinHash::new(0, self.ksize, hash_function, 42, max_hash, track_abundance);
+    // }
 }
 
-impl<'a> Index<'a> for LcaDB {
-    type Item = Signature;
+// impl<'a> Index<'a> for LcaDB {
+//     type Item = Signature;
 
-    fn insert(
-        &mut self, 
-        node: Self::Item, 
-    ) -> Result<(), Error> {
-        unimplemented!()
+//     fn insert(
+//         &mut self, 
+//         node: Self::Item, 
+//     ) -> Result<(), Error> {
+//         unimplemented!()
+//     }
+
+//     fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+//         unimplemented!()
+//     }
+
+//     fn load<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+//         unimplemented!()
+//     }
+
+//     fn signatures(&self) -> Vec<Self::Item> {
+//         unimplemented!()
+//     }
+
+//     fn signature_refs(&self) -> Vec<&Self::Item> {
+//         unimplemented!()
+//     }
+// }
+
+
+
+// TESTING FUNCTIONS
+#[cfg(test)]                                                                                   
+mod test { 
+    use crate::cmd::ComputeParameters;
+    use std::fs::File;
+    use std::io::{BufReader, Read, Seek, SeekFrom};
+    use std::path::PathBuf;
+    use std::collections::{HashMap, BTreeMap};
+
+    use crate::signature::Signature;
+    use crate::index::lca_db::{LineagePairs, LcaDB};
+
+    
+        #[test]
+        fn lca_roundtrip() {
+            let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            filename.push("../../tests/test-data/lca/delmont-1.lca.json");
+    
+            // let lcadb = LcaDB::load(filename).unwrap();
+    
+            // let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+            // lcadb.save(tmpfile.path()).unwrap();
+    
+            // tmpfile.seek(SeekFrom::Start(0)).unwrap();
+    
+            // let lcadb_2 = LcaDB::load(tmpfile.path()).unwrap();
+    
+            // assert_eq!(lcadb.ksize, lcadb_2.ksize);
+            // assert_eq!(lcadb.scaled, lcadb_2.scaled);
+            // assert_eq!(lcadb.moltype, lcadb_2.moltype);
+            // assert_eq!(lcadb.idx_to_lid, lcadb_2.idx_to_lid);
+            // assert_eq!(lcadb.hashval_to_idx, lcadb_2.hashval_to_idx);
+        }
+    #[test]
+    fn build_default_struct() {
+        let lca_db = LcaDB::new();
+
+        assert!(lca_db.ksize() == 32);
+        assert!(lca_db.scaled() == 1);
+        assert!(lca_db.filename() == "filename".to_string());
+        assert!(lca_db.moltype() == "DNA".to_string());
+        assert!(lca_db._next_index() as u32 == 0);
+        assert!(lca_db._next_lid() as u32 == 0);
+        assert!(lca_db.ident_to_name() == HashMap::new());
+        assert!(lca_db.ident_to_idx() == HashMap::new());
+        assert!(lca_db.idx_to_lid() == HashMap::new());
+        assert!(lca_db.lineage_to_lid() == HashMap::new());
+        assert!(lca_db.lid_to_lineage() == HashMap::new());
+        assert!(lca_db.hashval_to_idx() == HashMap::new());
     }
 
-    fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        unimplemented!()
+    #[test]
+    fn test_insert() {
+        let mut lca_db = LcaDB::new();
+
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/genome-s10+s11.sig");
+
+        let file = File::open(filename).unwrap();
+        let reader = BufReader::new(file);
+        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+
+        let mut lineage: LineagePairs = BTreeMap::new();
+        lineage.insert("name1".to_string(), "rank1".to_string()); 
+        lineage.insert("name2".to_string(), "rank2".to_string());
+        
+        lca_db.insert(&sigs[0], b"erik", &lineage);
+
+        println!("{:?}", lca_db);
+                                            
+        assert!(lca_db.ksize() == 32);
+        assert!(lca_db.scaled() == 1);
+        assert!(lca_db.filename() == "filename".to_string());
+        assert!(lca_db.moltype() == "DNA".to_string());
+        assert!(lca_db._next_index() as u32 == 1);
+        assert!(lca_db._next_lid() as u32 == 1);
+
+        let mut ident_to_name2 = HashMap::with_capacity(1);
+        ident_to_name2.insert("erik".to_string(), "s10+s11".to_string());
+        assert!(lca_db.ident_to_name() == ident_to_name2);
+
+        let mut lid_to_lineage2 = HashMap::with_capacity(1);
+        lid_to_lineage2.insert(0, lineage);
+        assert!(lca_db.lid_to_lineage() == lid_to_lineage2);
     }
 
-    fn load<P: AsRef<Path>>(path: P) -> Result<(), Error> {
-        unimplemented!()
-    }
+    // #[test]
+    // fn test_save() {
+    //     let mut lca_db2 = LcaDB::new(32, 1, b"", b"DNA");
+    //     let mh = KmerMinHash::new(0, 32, HashFunctions::murmur64_protein, 42, 10000, false);
+    //     let sig = Signature::default();
+    //     let lineage: Vec<LineagePair> = vec![LineagePair::new("name1".to_string(), "rank1".to_string()), 
+    //                                         LineagePair::new("name2".to_string(), "rank2".to_string())];
+                                            
+    //     let lca_db = lca_db2.save(&mh, b"eriksjson");
 
-    fn signatures(&self) -> Vec<Self::Item> {
-        unimplemented!()
-    }
-
-    fn signature_refs(&self) -> Vec<&Self::Item> {
-        unimplemented!()
-    }
+                                            
+    //     assert!(false);
+    //     assert!(lca_db.ksize() == 32);
+    //     assert!(lca_db.scaled() == 1);
+    //     assert!(lca_db.filename() == "");
+    //     assert!(lca_db.moltype() == "DNA");
+    //     assert!(lca_db._next_index() as u32 == 0);
+    //     assert!(lca_db._next_lid() as u32 == 0);
+    //     assert!(lca_db.ident_to_name() == HashMap::new());
+    //     assert!(lca_db.ident_to_idx() == HashMap::new());
+    //     assert!(lca_db.idx_to_lid() == HashMap::new());
+    //     assert!(lca_db.lineage_to_lid() == HashMap::new());
+    //     assert!(lca_db.lid_to_lineage() == HashMap::new());
+    //     assert!(lca_db.hashval_to_idx() == HashMap::new());
+    // }
 }

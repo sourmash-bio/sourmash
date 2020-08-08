@@ -5,6 +5,7 @@ import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
 import functools
+import weakref
 
 import sourmash
 from sourmash._minhash import get_max_hash_for_scaled, to_bytes
@@ -59,14 +60,12 @@ class LCA_Database(RustObject, Index):
     `idx`.
     """
     def __init__(self, ksize, scaled, moltype="DNA"):
+        self._objptr = lib.LcaDB_new()
+
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = ""
         self.moltype = moltype
-
-        self._objptr = lib.LcaDB_new(
-            ksize, scaled, to_bytes(self.filename), to_bytes(moltype)
-        )
 
         self._next_index = 0
         self._next_lid = 0
@@ -127,11 +126,11 @@ class LCA_Database(RustObject, Index):
         """
         # minhash = sig.minhash
 
-        if sig.minhash.ksize != self.ksize:
-            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(sig.minhash.ksize, self.ksize))
+        # if minhash.ksize != self.ksize:
+        #     raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
 
-        if sig.minhash.moltype != self.moltype:
-            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(sig.minhash.moltype, self.moltype))
+        # if minhash.moltype != self.moltype:
+        #     raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
 
         # # downsample to specified scaled; this has the side effect of
         # # making sure they're all at the same scaled value!
@@ -140,16 +139,16 @@ class LCA_Database(RustObject, Index):
         # except ValueError:
         #     raise ValueError("cannot downsample signature; is it a scaled signature?")
 
-        if ident is None:
-            ident = sig.name()
+        # if ident is None:
+        #     ident = sig.name()
 
         # if ident in self.ident_to_name:
         #     raise ValueError("signature {} is already in this LCA db.".format(ident))
 
-        # before adding, invalide any caching from @cached_property
-        self._invalidate_cache()
+        # # before adding, invalide any caching from @cached_property
+        # self._invalidate_cache()
 
-        # store full name
+        # # store full name
         # self.ident_to_name[ident] = sig.name()
 
         # # identifier -> integer index (idx)
@@ -169,8 +168,21 @@ class LCA_Database(RustObject, Index):
         # for hashval in minhash.get_mins():
         #     self.hashval_to_idx[hashval].add(idx)
 
-        return self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), list(lineage), len(list(lineage)))
-        # return len(minhash)
+        # trying to put lineage into a json
+        lineage_dict = OrderedDict()
+        if lineage:
+            for pair in lineage:
+                lineage_dict[pair[0]] = pair[1]
+        else:
+            lineage = ""
+
+        lineage_json = json.dumps(lineage_dict)
+        print("\n\n\nPYTHON:\nself.lid_to_lineage =", self.lid_to_lineage, "\n\n\n")
+
+        self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+        print("\n\n\nPYTHON:\nself.lid_to_lineage =", self.lid_to_lineage, "\n\n\n")
+
+        return len(sig.minhash)
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -279,7 +291,7 @@ class LCA_Database(RustObject, Index):
 
     def save(self, db_name):
         "Save LCA_Database to a JSON file."
-        self._methodcall(lib.LcaDB_save, to_bytes(db_name))
+        # self._methodcall(lib.LcaDB_save, to_bytes(db_name))
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
@@ -309,7 +321,7 @@ class LCA_Database(RustObject, Index):
             save_d['idx_to_lid'] = self.idx_to_lid
             save_d['lid_to_lineage'] = self.lid_to_lineage
             
-            print("\n\nPYTHON:\n", save_d, "\n\n")
+            # print("\n\nPYTHON:\n", save_d, "\n\n")
             json.dump(save_d, fp)
 
     def search(self, query, *args, **kwargs):

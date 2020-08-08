@@ -284,6 +284,7 @@ def test_save_minified(track_abundance):
     assert len(y) == 2
     assert any(sig.name() == 'foo' for sig in y)
     assert any(sig.name() == 'bar baz' for sig in y)
+    assert False
 
 
 def test_load_minified(track_abundance):
