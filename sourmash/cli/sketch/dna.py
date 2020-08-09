@@ -12,6 +12,10 @@ def subparser(subparsers):
         '--license', default='CC0', type=str,
         help='signature license. Currently only CC0 is supported.'
     )
+    subparser.add_argument(
+        '-p', '--param-string', default=[],
+        help='signature parameters to use.', action='append',
+    )
     
     subparser.add_argument(
         'filenames', nargs='+', help='file(s) of sequences'

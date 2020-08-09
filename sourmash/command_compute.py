@@ -117,12 +117,28 @@ def compute(args):
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
-    if args.merge:               # single name specified - combine all
-        _compute_merged(args)
-    else:                        # compute individual signatures
-        _compute_individual(args)
+    minhashes_factory = _minhashes_for_compute_factory(args)
 
-def _compute_individual(args):
+    if args.merge:               # single name specified - combine all
+        _compute_merged(args, minhashes_factory)
+    else:                        # compute individual signatures
+        _compute_individual(args, minhashes_factory)
+
+
+class _minhashes_for_compute_factory(object):
+    "Build list of minhashes on demand, based on args input to 'compute'."
+    def __init__(self, args):
+        self.args = args
+
+    def __call__(self):
+        args = self.args
+        return make_minhashes(args.ksizes, args.seed, args.protein,
+                              args.dayhoff, args.hp, args.dna,
+                              args.num_hashes,
+                              args.track_abundance, args.scaled)
+
+
+def _compute_individual(args, minhashes_factory):
     siglist = []
 
     for filename in args.filenames:
@@ -139,10 +155,7 @@ def _compute_individual(args):
             siglist = []
             for n, record in enumerate(screed.open(filename)):
                 # make minhashes for each sequence
-                minhashes = make_minhashes(args.ksizes, args.seed, args.protein,
-                                       args.dayhoff, args.hp, args.dna,
-                                       args.num_hashes,
-                                       args.track_abundance, args.scaled)
+                minhashes = minhashes_factory()
                 add_seq(minhashes, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
@@ -181,10 +194,7 @@ def _compute_individual(args):
             for fasta in fastas:
                 for n, record in enumerate(screed.open(fasta)):
                     # make minhashes for each sequence
-                    minhashes = make_minhashes(args.ksizes, args.seed, args.protein,
-                                           args.dayhoff, args.hp, args.dna,
-                                           args.num_hashes,
-                                           args.track_abundance, args.scaled)
+                    minhashes = minhashes_factory()
                     add_seq(minhashes, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
@@ -197,10 +207,7 @@ def _compute_individual(args):
                    time.time() - startt)
         else:
             # make minhashes for the whole file
-            minhashes = make_minhashes(args.ksizes, args.seed, args.protein,
-                                   args.dayhoff, args.hp, args.dna,
-                                   args.num_hashes,
-                                   args.track_abundance, args.scaled)
+            minhashes = minhashes_factory()
 
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
@@ -236,12 +243,9 @@ def _compute_individual(args):
     assert not siglist                    # juuuust checking.
     
 
-def _compute_merged(args):
+def _compute_merged(args, minhashes_factory):
     # make minhashes for the whole file
-    minhashes = make_minhashes(args.ksizes, args.seed, args.protein,
-                           args.dayhoff, args.hp, args.dna,
-                           args.num_hashes,
-                           args.track_abundance, args.scaled)
+    minhashes = minhashes_factory()
 
     n = 0
     total_seq = 0

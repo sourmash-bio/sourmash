@@ -21,6 +21,19 @@ DEFAULT_COMPUTE_K = '21,31,51'
 DEFAULT_LINE_COUNT = 1500
 
 
+class _minhashes_for_sketch_factory(object):
+    "Build list of minhashes on demand, based on args input to 'sketch'."
+    def __init__(self, args):
+        self.args = args
+
+    def __call__(self):
+        args = self.args
+        return make_minhashes(args.ksizes, args.seed, args.protein,
+                              args.dayhoff, args.hp, args.dna,
+                              args.num_hashes,
+                              args.track_abundance, args.scaled)
+
+
 def dna(args):
     """Compute the signature for one or more files.
 
@@ -58,20 +71,35 @@ def dna(args):
 #    if args.track_abundance:
 #        notify('Tracking abundance of input k-mers.')
 
-    args.input_is_10x = False # CTB
+    # regular override
     args.track_abundance = False # CTB
     args.ksizes = [ 31 ]
+    args.num_hashes = 0
+    args.scaled = 1000
+
+    # TBD
+    args.input_is_10x = False # CTB
+    args.check_sequence = False
+
+    # rare override
     args.seed = 42
+
+    # fixed parameters:
+    args.dna = True
+
+    # irrelevant-to-DNA parameters:
+    args.input_is_protein = False
     args.protein = False
     args.hp = False
     args.dayhoff = False
-    args.dna = True
-    args.num_hashes = 0
-    args.scaled = 1000
-    args.input_is_protein = False
-    args.check_sequence = False
+
+    if not args.param_string:
+        args.param_string = ['k=31,scaled=1000,noabund']
+    print('XXX', args.param_string)
+
+    minhashes_factory = _minhashes_for_sketch_factory(args)
 
     if args.merge:               # single name specified - combine all
-        _compute_merged(args)
+        _compute_merged(args, minhashes_factory)
     else:                        # compute individual signatures
-        _compute_individual(args)
+        _compute_individual(args, minhashes_factory)
