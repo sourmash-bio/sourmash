@@ -9,29 +9,25 @@ import screed
 import time
 
 from . import sourmash_args
-from .signature import SourmashSignature, save_signatures
+from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
-from .utils import RustObject
-from ._lowlevel import ffi, lib
 from .command_compute import (_compute_individual, _compute_merged,
-                              make_minhashes, add_seq, build_siglist,
-                              save_siglist)
-
-DEFAULT_COMPUTE_K = '21,31,51'
-DEFAULT_LINE_COUNT = 1500
+                              ComputeParameters)
 
 
-class _minhashes_for_sketch_factory(object):
-    "Build list of minhashes on demand, based on args input to 'sketch'."
+class _signature_for_sketch_factory(object):
+    "Build sig on demand, based on args input to 'sketch'."
     def __init__(self, args):
         self.args = args
 
     def __call__(self):
         args = self.args
-        return make_minhashes(args.ksizes, args.seed, args.protein,
-                              args.dayhoff, args.hp, args.dna,
-                              args.num_hashes,
-                              args.track_abundance, args.scaled)
+        params = ComputeParameters(args.ksizes, args.seed, args.protein,
+                                   args.dayhoff, args.hp, args.dna,
+                                   args.num_hashes,
+                                   args.track_abundance, args.scaled)
+        sig = SourmashSignature.from_params(params)
+        return sig
 
 
 def dna(args):
@@ -97,9 +93,9 @@ def dna(args):
         args.param_string = ['k=31,scaled=1000,noabund']
     print('XXX', args.param_string)
 
-    minhashes_factory = _minhashes_for_sketch_factory(args)
+    signature_factory = _signature_for_sketch_factory(args)
 
     if args.merge:               # single name specified - combine all
-        _compute_merged(args, minhashes_factory)
+        _compute_merged(args, signature_factory)
     else:                        # compute individual signatures
-        _compute_individual(args, minhashes_factory)
+        _compute_individual(args, signature_factory)
