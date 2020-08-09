@@ -209,11 +209,11 @@ def test_sig_filter_2(c):
     filtered_sig = sourmash.load_one_signature(out)
     test_sig = sourmash.load_one_signature(sig47)
 
-    abunds = test_sig.minhash.get_mins(True)
+    abunds = test_sig.minhash.hashes
     abunds = { k: v for (k, v) in abunds.items() if v >= 2 and v <= 5 }
     assert abunds
 
-    assert filtered_sig.minhash.get_mins(True) == abunds
+    assert filtered_sig.minhash.hashes == abunds
 
 
 @utils.in_tempdir
@@ -228,11 +228,11 @@ def test_sig_filter_3(c):
     filtered_sig = sourmash.load_one_signature(out)
     test_sig = sourmash.load_one_signature(sig47)
 
-    abunds = test_sig.minhash.get_mins(True)
+    abunds = test_sig.minhash.hashes
     abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
     assert abunds
 
-    assert filtered_sig.minhash.get_mins(True) == abunds
+    assert filtered_sig.minhash.hashes == abunds
 
 
 @utils.in_tempdir
@@ -247,11 +247,11 @@ def test_sig_filter_3_ksize_select(c):
     filtered_sig = sourmash.load_one_signature(out)
     test_sig = sourmash.load_one_signature(psw_mag, ksize=31)
 
-    abunds = test_sig.minhash.get_mins(True)
+    abunds = test_sig.minhash.hashes
     abunds = { k: v for (k, v) in abunds.items() if v >= 2 }
     assert abunds
 
-    assert filtered_sig.minhash.get_mins(True) == abunds
+    assert filtered_sig.minhash.hashes == abunds
 
 
 @utils.in_tempdir
@@ -356,8 +356,8 @@ def test_sig_intersect_3(c):
     # actually do an intersection ourselves for the test
     mh47 = sourmash.load_one_signature(sig47).minhash
     mh63 = sourmash.load_one_signature(sig63).minhash
-    mh47_abunds = mh47.get_mins(with_abundance=True)
-    mh63_mins = set(mh63.get_mins())
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
 
     # get the set of mins that are in common
     mh63_mins.intersection_update(mh47_abunds)
@@ -388,8 +388,8 @@ def test_sig_intersect_4(c):
     # actually do an intersection ourselves for the test
     mh47 = sourmash.load_one_signature(sig47).minhash
     mh63 = sourmash.load_one_signature(sig63).minhash
-    mh47_abunds = mh47.get_mins(with_abundance=True)
-    mh63_mins = set(mh63.get_mins())
+    mh47_abunds = mh47.hashes
+    mh63_mins = set(mh63.hashes.keys())
 
     # get the set of mins that are in common
     mh63_mins.intersection_update(mh47_abunds)
@@ -486,10 +486,10 @@ def test_sig_subtract_1(c):
     test2_sig = sourmash.load_one_signature(sig63)
     actual_subtract_sig = sourmash.load_one_signature(out)
 
-    mins = set(test1_sig.minhash.get_mins())
-    mins -= set(test2_sig.minhash.get_mins())
+    mins = set(test1_sig.minhash.hashes.keys())
+    mins -= set(test2_sig.minhash.hashes.keys())
 
-    assert set(actual_subtract_sig.minhash.get_mins()) == set(mins)
+    assert set(actual_subtract_sig.minhash.hashes.keys()) == set(mins)
 
 
 @utils.in_tempdir
@@ -504,7 +504,7 @@ def test_sig_subtract_1_multisig(c):
 
     actual_subtract_sig = sourmash.load_one_signature(out)
 
-    assert not set(actual_subtract_sig.minhash.get_mins())
+    assert not set(actual_subtract_sig.minhash.hashes.keys())
 
 
 @utils.in_tempdir
@@ -1067,12 +1067,12 @@ def test_sig_downsample_1_scaled_to_num(c):
     out = c.last_result.out
 
     actual_downsample_sig = sourmash.load_one_signature(out)
-    actual_mins = actual_downsample_sig.minhash.get_mins()
+    actual_mins = actual_downsample_sig.minhash.hashes.keys()
     actual_mins = list(actual_mins)
     actual_mins.sort()
 
     test_downsample_sig = sourmash.load_one_signature(sig47)
-    test_mins = test_downsample_sig.minhash.get_mins()
+    test_mins = test_downsample_sig.minhash.hashes.keys()
     test_mins = list(test_mins)
     test_mins.sort()
     test_mins = test_mins[:500]           # take 500 smallest
@@ -1130,8 +1130,8 @@ def test_sig_downsample_2_num_to_scaled(c):
                                                       select_moltype='DNA')
     actual_downsample_sig = sourmash.load_one_signature(out)
 
-    test_mins = test_downsample_sig.minhash.get_mins()
-    actual_mins = actual_downsample_sig.minhash.get_mins()
+    test_mins = test_downsample_sig.minhash.hashes.keys()
+    actual_mins = actual_downsample_sig.minhash.hashes.keys()
 
     # select those mins that are beneath the new max hash...
     max_hash = actual_downsample_sig.minhash.max_hash

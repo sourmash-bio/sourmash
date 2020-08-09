@@ -147,8 +147,8 @@ def test_api_create_insert_two():
     assert lca_db.ident_to_idx[ident] == 0
     assert lca_db.ident_to_idx[ident2] == 1
 
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
+    combined_mins = set(ss.minhash.hashes.keys())
+    combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
     assert len(lca_db.idx_to_ident) == 2
@@ -257,7 +257,7 @@ def test_api_add_genome_lineage():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss, lineage=lineage)
 
-    somehash = next(iter(ss.minhash.get_mins()))
+    somehash = next(iter(ss.minhash.hashes.keys()))
 
     lineages = lca_db.get_lineage_assignments(somehash)
     assert len(lineages) == 1
@@ -325,8 +325,8 @@ def test_api_create_insert_two_then_scale():
     ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
+    combined_mins = set(ss.minhash.hashes.keys())
+    combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
 
@@ -349,8 +349,8 @@ def test_api_create_insert_scale_two():
     ss2.minhash = ss2.minhash.downsample(scaled=5000)
 
     # & check...
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
+    combined_mins = set(ss.minhash.hashes.keys())
+    combined_mins.update(set(ss2.minhash.hashes.keys()))
     assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
 
@@ -2261,7 +2261,7 @@ def test_lca_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -2320,7 +2320,7 @@ def test_lca_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures both have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes
