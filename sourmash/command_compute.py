@@ -117,28 +117,30 @@ def compute(args):
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
-    minhashes_factory = _minhashes_for_compute_factory(args)
+    signature_factory = _signature_for_compute_factory(args)
 
     if args.merge:               # single name specified - combine all
-        _compute_merged(args, minhashes_factory)
+        _compute_merged(args, signature_factory)
     else:                        # compute individual signatures
-        _compute_individual(args, minhashes_factory)
+        _compute_individual(args, signature_factory)
 
 
-class _minhashes_for_compute_factory(object):
-    "Build list of minhashes on demand, based on args input to 'compute'."
+class _signature_for_compute_factory(object):
+    "Build signature on demand, based on args input to 'compute'."
     def __init__(self, args):
         self.args = args
 
     def __call__(self):
         args = self.args
-        return make_minhashes(args.ksizes, args.seed, args.protein,
-                              args.dayhoff, args.hp, args.dna,
-                              args.num_hashes,
-                              args.track_abundance, args.scaled)
+        params = ComputeParameters(args.ksizes, args.seed, args.protein,
+                                   args.dayhoff, args.hp, args.dna,
+                                   args.num_hashes,
+                                   args.track_abundance, args.scaled)
+        sig = SourmashSignature.from_params(params)
+        return sig
 
 
-def _compute_individual(args, minhashes_factory):
+def _compute_individual(args, signature_factory):
     siglist = []
 
     for filename in args.filenames:
@@ -154,12 +156,13 @@ def _compute_individual(args, minhashes_factory):
         if args.singleton:
             siglist = []
             for n, record in enumerate(screed.open(filename)):
-                # make minhashes for each sequence
-                minhashes = minhashes_factory()
-                add_seq(minhashes, record.sequence,
+                # make a new signature for each sequence
+                sig = signature_factory()
+                add_seq(sig, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
-                siglist += build_siglist(minhashes, filename, name=record.name)
+                set_sig_name(sig, filename, name=record.name)
+                siglist.append(sig)
 
             notify('calculated {} signatures for {} sequences in {}',
                    len(siglist), n + 1, filename)
@@ -193,12 +196,14 @@ def _compute_individual(args, minhashes_factory):
             siglist = []
             for fasta in fastas:
                 for n, record in enumerate(screed.open(fasta)):
-                    # make minhashes for each sequence
-                    minhashes = minhashes_factory()
-                    add_seq(minhashes, record.sequence,
+                    # make signatures for each sequence
+                    sig = signature_factory()
+                    add_seq(sig, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
-                siglist += build_siglist(minhashes, fasta, name=record.name)
+                # @CTB check bug here wrt indentation
+                set_sig_name(sig, fasta, name=record.name)
+                siglist.append(sig)
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, fasta)
@@ -206,8 +211,8 @@ def _compute_individual(args, minhashes_factory):
             notify("time taken to calculate signature records for 10x file is {:.5f} seconds",
                    time.time() - startt)
         else:
-            # make minhashes for the whole file
-            minhashes = minhashes_factory()
+            # make a single sig for the whole file
+            sig = signature_factory()
 
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
@@ -219,16 +224,16 @@ def _compute_individual(args, minhashes_factory):
                     elif args.name_from_first:
                         name = record.name
 
-                add_seq(minhashes, record.sequence,
+                add_seq(sig, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
             notify('...{} {} sequences', filename, n, end='')
 
-            sigs = build_siglist(minhashes, filename, name)
-            siglist += sigs
+            set_sig_name(sig, filename, name)
+            siglist.append(sig)
 
-            notify('calculated {} signatures for {} sequences in {}',
-                   len(sigs), n + 1, filename)
+            notify('calculated 1 signatures for {} sequences in {}',
+                   n + 1, filename)
 
         # if no --output specified, save to individual files w/in for loop
         if not args.output:
@@ -243,9 +248,9 @@ def _compute_individual(args, minhashes_factory):
     assert not siglist                    # juuuust checking.
     
 
-def _compute_merged(args, minhashes_factory):
-    # make minhashes for the whole file
-    minhashes = minhashes_factory()
+def _compute_merged(args, signature_factory):
+    # make a signature for the whole file
+    sig = signature_factory()
 
     n = 0
     total_seq = 0
@@ -257,24 +262,18 @@ def _compute_merged(args, minhashes_factory):
             if n % 10000 == 0 and n:
                 notify('\r... {} {}', filename, n, end='')
 
-            add_seq(minhashes, record.sequence,
+            add_seq(sig, record.sequence,
                     args.input_is_protein, args.check_sequence)
         notify('... {} {} sequences', filename, n + 1)
 
         total_seq += n + 1
 
-    siglist = build_siglist(minhashes, filename, name=args.merge)
-    notify('calculated {} signatures for {} sequences taken from {} files',
-           len(siglist), total_seq, len(args.filenames))
+    set_sig_name(sig, filename, name=args.merge)
+    notify('calculated 1 signature for {} sequences taken from {} files',
+           total_seq, len(args.filenames))
 
     # at end, save!
-    save_siglist(siglist, args.output)
-
-
-def make_minhashes(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
-    params = ComputeParameters(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled)
-    sig = SourmashSignature.from_params(params)
-    return sig
+    save_siglist([sig], args.output)
 
 
 def add_seq(sig, seq, input_is_protein, check_sequence):
@@ -284,11 +283,10 @@ def add_seq(sig, seq, input_is_protein, check_sequence):
         sig.add_sequence(seq, not check_sequence)
 
 
-def build_siglist(sig, filename, name=None):
+def set_sig_name(sig, filename, name=None):
     if name is not None:
         sig._name = name
     sig.filename = filename
-    return [sig]
 
 
 def save_siglist(siglist, sigfile_name):

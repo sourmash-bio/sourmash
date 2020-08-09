@@ -108,7 +108,7 @@ def test_do_sourmash_compute_output_and_name_valid_file(c):
     c.run_sourmash('compute', '-k', '31', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
 
     assert os.path.exists(sigfile)
-    assert 'calculated 1 signatures for 4 sequences taken from 3 files' in c.last_result.err
+    assert 'calculated 1 signature for 4 sequences taken from 3 files' in c.last_result.err
 
     # is it valid json?
     with open(sigfile, 'r') as f:
