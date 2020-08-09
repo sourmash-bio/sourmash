@@ -15,8 +15,8 @@ from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
 
 
-class _signature_for_sketch_factory(object):
-    "Build sig on demand, based on args input to 'sketch'."
+class _signatures_for_sketch_factory(object):
+    "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, args):
         self.args = args
 
@@ -27,7 +27,7 @@ class _signature_for_sketch_factory(object):
                                    args.num_hashes,
                                    args.track_abundance, args.scaled)
         sig = SourmashSignature.from_params(params)
-        return sig
+        return [sig]
 
 
 def dna(args):
@@ -93,9 +93,9 @@ def dna(args):
         args.param_string = ['k=31,scaled=1000,noabund']
     print('XXX', args.param_string)
 
-    signature_factory = _signature_for_sketch_factory(args)
+    signatures_factory = _signatures_for_sketch_factory(args)
 
     if args.merge:               # single name specified - combine all
-        _compute_merged(args, signature_factory)
+        _compute_merged(args, signatures_factory)
     else:                        # compute individual signatures
-        _compute_individual(args, signature_factory)
+        _compute_individual(args, signatures_factory)

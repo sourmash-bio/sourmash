@@ -117,16 +117,16 @@ def compute(args):
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
-    signature_factory = _signature_for_compute_factory(args)
+    signatures_factory = _signatures_for_compute_factory(args)
 
     if args.merge:               # single name specified - combine all
-        _compute_merged(args, signature_factory)
+        _compute_merged(args, signatures_factory)
     else:                        # compute individual signatures
-        _compute_individual(args, signature_factory)
+        _compute_individual(args, signatures_factory)
 
 
-class _signature_for_compute_factory(object):
-    "Build signature on demand, based on args input to 'compute'."
+class _signatures_for_compute_factory(object):
+    "Build signatures on demand, based on args input to 'compute'."
     def __init__(self, args):
         self.args = args
 
@@ -137,10 +137,10 @@ class _signature_for_compute_factory(object):
                                    args.num_hashes,
                                    args.track_abundance, args.scaled)
         sig = SourmashSignature.from_params(params)
-        return sig
+        return [sig]
 
 
-def _compute_individual(args, signature_factory):
+def _compute_individual(args, signatures_factory):
     siglist = []
 
     for filename in args.filenames:
@@ -157,12 +157,12 @@ def _compute_individual(args, signature_factory):
             siglist = []
             for n, record in enumerate(screed.open(filename)):
                 # make a new signature for each sequence
-                sig = signature_factory()
-                add_seq(sig, record.sequence,
+                sigs = signatures_factory()
+                add_seq(sigs, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
-                set_sig_name(sig, filename, name=record.name)
-                siglist.append(sig)
+                set_sig_name(sigs, filename, name=record.name)
+                siglist.extend(sigs)
 
             notify('calculated {} signatures for {} sequences in {}',
                    len(siglist), n + 1, filename)
@@ -197,13 +197,13 @@ def _compute_individual(args, signature_factory):
             for fasta in fastas:
                 for n, record in enumerate(screed.open(fasta)):
                     # make signatures for each sequence
-                    sig = signature_factory()
-                    add_seq(sig, record.sequence,
+                    sigs = signatures_factory()
+                    add_seq(sigs, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
                 # @CTB check bug here wrt indentation
-                set_sig_name(sig, fasta, name=record.name)
-                siglist.append(sig)
+                set_sig_name(sigs, fasta, name=record.name)
+                siglist.extend(sigs)
 
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, fasta)
@@ -212,7 +212,8 @@ def _compute_individual(args, signature_factory):
                    time.time() - startt)
         else:
             # make a single sig for the whole file
-            sig = signature_factory()
+            sigs = signatures_factory()
+            assert len(sigs) == 1
 
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
@@ -224,13 +225,13 @@ def _compute_individual(args, signature_factory):
                     elif args.name_from_first:
                         name = record.name
 
-                add_seq(sig, record.sequence,
+                add_seq(sigs, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
             notify('...{} {} sequences', filename, n, end='')
 
-            set_sig_name(sig, filename, name)
-            siglist.append(sig)
+            set_sig_name(sigs, filename, name)
+            siglist.extend(sigs)
 
             notify('calculated 1 signatures for {} sequences in {}',
                    n + 1, filename)
@@ -248,9 +249,9 @@ def _compute_individual(args, signature_factory):
     assert not siglist                    # juuuust checking.
     
 
-def _compute_merged(args, signature_factory):
+def _compute_merged(args, signatures_factory):
     # make a signature for the whole file
-    sig = signature_factory()
+    sigs = signatures_factory()
 
     n = 0
     total_seq = 0
@@ -262,31 +263,33 @@ def _compute_merged(args, signature_factory):
             if n % 10000 == 0 and n:
                 notify('\r... {} {}', filename, n, end='')
 
-            add_seq(sig, record.sequence,
+            add_seq(sigs, record.sequence,
                     args.input_is_protein, args.check_sequence)
         notify('... {} {} sequences', filename, n + 1)
 
         total_seq += n + 1
 
-    set_sig_name(sig, filename, name=args.merge)
+    set_sig_name(sigs, filename, name=args.merge)
     notify('calculated 1 signature for {} sequences taken from {} files',
            total_seq, len(args.filenames))
 
     # at end, save!
-    save_siglist([sig], args.output)
+    save_siglist(sigs, args.output)
 
 
-def add_seq(sig, seq, input_is_protein, check_sequence):
-    if input_is_protein:
-        sig.add_protein(seq)
-    else:
-        sig.add_sequence(seq, not check_sequence)
+def add_seq(sigs, seq, input_is_protein, check_sequence):
+    for sig in sigs:
+        if input_is_protein:
+            sig.add_protein(seq)
+        else:
+            sig.add_sequence(seq, not check_sequence)
 
 
-def set_sig_name(sig, filename, name=None):
-    if name is not None:
-        sig._name = name
-    sig.filename = filename
+def set_sig_name(sigs, filename, name=None):
+    for sig in sigs:
+        if name is not None:
+            sig._name = name
+        sig.filename = filename
 
 
 def save_siglist(siglist, sigfile_name):
