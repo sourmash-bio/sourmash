@@ -3,7 +3,7 @@ from __future__ import unicode_literals, division
 
 import math
 import copy
-import collections
+from collections.abc import Mapping
 
 from . import VERSION
 from ._lowlevel import ffi, lib
@@ -82,7 +82,7 @@ def translate_codon(codon):
         raise ValueError(e.message)
 
 
-class _HashesWrapper(collections.Mapping):
+class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
         self._data = h
