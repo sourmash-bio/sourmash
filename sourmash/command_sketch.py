@@ -47,16 +47,29 @@ def dna(args):
         error('...nothing to calculate!? Exiting!')
         sys.exit(-1)
 
-#    if args.merge and not args.output:
-#        error("ERROR: must specify -o with --merge")
-#        sys.exit(-1)
+    if args.merge and not args.output:
+        error("ERROR: must specify -o with --merge")
+        sys.exit(-1)
 
-#    if args.output and args.outdir:
-#        error("ERROR: --outdir doesn't make sense with -o/--output")
-#        sys.exit(-1)
+    if args.output and args.outdir:
+        error("ERROR: --outdir doesn't make sense with -o/--output")
+        sys.exit(-1)
 
 #    if args.track_abundance:
 #        notify('Tracking abundance of input k-mers.')
+
+    args.input_is_10x = False # CTB
+    args.track_abundance = False # CTB
+    args.ksizes = [ 31 ]
+    args.seed = 42
+    args.protein = False
+    args.hp = False
+    args.dayhoff = False
+    args.dna = True
+    args.num_hashes = 0
+    args.scaled = 1000
+    args.input_is_protein = False
+    args.check_sequence = False
 
     if args.merge:               # single name specified - combine all
         _compute_merged(args)
