@@ -213,7 +213,6 @@ def _compute_individual(args, signatures_factory):
         else:
             # make a single sig for the whole file
             sigs = signatures_factory()
-            assert len(sigs) == 1
 
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
@@ -233,8 +232,7 @@ def _compute_individual(args, signatures_factory):
             set_sig_name(sigs, filename, name)
             siglist.extend(sigs)
 
-            notify('calculated 1 signatures for {} sequences in {}',
-                   n + 1, filename)
+            notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
 
         # if no --output specified, save to individual files w/in for loop
         if not args.output:
