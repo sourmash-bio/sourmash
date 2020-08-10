@@ -20,44 +20,46 @@ DEFAULTS = dict(
 def _parse_params_str(params_str):
     "Parse a parameter string of the form 'k=ks,num=num,scaled=scaled,abund'."
     moltype = None
-    d = {}
-    pp = params_str.split(',')
-    for p in pp:
-        if p == 'abund':
-            d['track_abundance'] = True
-        elif p == 'noabund':
-            d['track_abundance'] = False
-        elif p.startswith('k='):
-            d['ksize'] = int(p[2:])
-        elif p.startswith('num='):
-            if d.get('scaled'):
+    params = {}
+    items = params_str.split(',')
+    for item in items:
+        if item == 'abund':
+            params['track_abundance'] = True
+        elif item == 'noabund':
+            params['track_abundance'] = False
+        elif item.startswith('k='):
+            params['ksize'] = int(item[2:])
+        elif item.startswith('num='):
+            if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
-            d['num'] = int(p[4:])
-            d['scaled'] = 0
-        elif p.startswith('scaled='):
-            if d.get('num'):
+            params['num'] = int(item[4:])
+            params['scaled'] = 0
+        elif item.startswith('scaled='):
+            if params.get('num'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
-            d['scaled'] = int(p[7:])
-            d['num'] = 0
-        elif p.startswith('seed='):
-            d['seed'] = int(p[5:])
-        elif p == 'protein':
+            params['scaled'] = int(item[7:])
+            params['num'] = 0
+        elif item.startswith('seed='):
+            params['seed'] = int(item[5:])
+        elif item == 'protein':
             moltype = 'protein'
-        elif p == 'dayhoff':
+        elif item == 'dayhoff':
             moltype = 'dayhoff'
-        elif p == 'hp':
+        elif item == 'hp':
             moltype = 'hp'
-        elif p == 'dna':
+        elif item == 'dna':
             moltype = 'dna'
         else:
-            raise ValueError(f"unknown component '{p}' in params string")
+            raise ValueError(f"unknown component '{item}' in params string")
 
-    return moltype, d
+    return moltype, params
 
 
 class _signatures_for_sketch_factory(object):
     "Build sigs on demand, based on args input to 'sketch'."
     def __init__(self, params_str_list, default_moltype, mult_ksize_by_3):
+
+        # first, set up defaults per-moltype
         defaults = {}
         for moltype, pstr in DEFAULTS.items():
             mt, d = _parse_params_str(pstr)
@@ -65,6 +67,7 @@ class _signatures_for_sketch_factory(object):
             defaults[moltype] = d
         self.defaults = defaults
 
+        # next, fill out params_list
         self.params_list = []
         self.mult_ksize_by_3 = mult_ksize_by_3
 
@@ -72,51 +75,56 @@ class _signatures_for_sketch_factory(object):
             # parse each params_str passed in, using default_moltype if none
             # provided.
             for params_str in params_str_list:
-                moltype, d = _parse_params_str(params_str)
+                moltype, params = _parse_params_str(params_str)
                 if moltype is None:
                     moltype = default_moltype
-                self.params_list.append((moltype, d))
+                self.params_list.append((moltype, params))
         else:
             # no params str? default to a single sig, using default_moltype.
             self.params_list.append((default_moltype, {}))
 
     def get_compute_params(self):
-        for moltype, d in self.params_list:
-            z = self.defaults[moltype]
-            def_ksize = z['ksize']
-            def_seed = z.get('seed', 42)
-            def_num = z.get('num', 0)
-            def_abund = z['track_abundance']
-            def_scaled = z.get('scaled', 0)
-            def_dna = z.get('is_dna', moltype == 'dna')
-            def_protein = z.get('is_protein',  moltype == 'protein')
-            def_dayhoff = z.get('is_dayhoff', moltype == 'dayhoff')
-            def_hp = z.get('is_hp', moltype == 'hp')
+        for moltype, params_d in self.params_list:
+            # get defaults for this moltype from self.defaults:
+            default_params = self.defaults[moltype]
+            def_seed = default_params.get('seed', 42)
+            def_num = default_params.get('num', 0)
+            def_abund = default_params['track_abundance']
+            def_scaled = default_params.get('scaled', 0)
+            def_dna = default_params.get('is_dna', moltype == 'dna')
+            def_protein = default_params.get('is_protein',
+                                             moltype == 'protein')
+            def_dayhoff = default_params.get('is_dayhoff',
+                                             moltype == 'dayhoff')
+            def_hp = default_params.get('is_hp', moltype == 'hp')
 
-            ksize = int(d.get('ksize', def_ksize))
+            # handle ksize specially, for now - multiply by three?
+            def_ksize = default_params['ksize']
+            ksize = int(params_d.get('ksize', def_ksize))
             if self.mult_ksize_by_3:
                 ksize = ksize*3
 
-            params = ComputeParameters([ksize],
-                                       d.get('seed', def_seed),
-                                       def_protein,
-                                       def_dayhoff,
-                                       def_hp,
-                                       def_dna,
-                                       d.get('num', def_num),
-                                       d.get('track_abundance', def_abund),
-                                       d.get('scaled', def_scaled))
+            params_obj = ComputeParameters([ksize],
+                                           params_d.get('seed', def_seed),
+                                           def_protein,
+                                           def_dayhoff,
+                                           def_hp,
+                                           def_dna,
+                                           params_d.get('num', def_num),
+                                           params_d.get('track_abundance',
+                                                        def_abund),
+                                           params_d.get('scaled', def_scaled))
 
-            yield params
+            yield params_obj
 
     def __call__(self):
         "Produce a new set of signatures built to match the param strings."
-        x = []
+        sigs = []
         for params in self.get_compute_params():
             sig = SourmashSignature.from_params(params)
-            x.append(sig)
+            sigs.append(sig)
 
-        return x
+        return sigs
 
 
 def _execute_sketch(args, signatures_factory):
