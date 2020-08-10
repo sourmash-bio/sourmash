@@ -765,11 +765,9 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
 
 @utils.in_tempdir
 def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
-    # @CTB
-    return 0
-    # check the --rna flag; otherwise identical to previous test.
+    # check the rna ; otherwise identical to previous test.
     testdata1 = utils.get_test_data('ecoli.genes.fna')
-    c.run_sourmash('compute', '-k', '21', '--singleton', '--rna',
+    c.run_sourmash('sketch', 'rna', '-p', 'k=21,num=500', '--singleton',
                    testdata1)
     sig1 = c.output('ecoli.genes.fna.sig')
     assert os.path.exists(sig1)

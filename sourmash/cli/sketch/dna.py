@@ -7,7 +7,7 @@ from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('dna')
+    subparser = subparsers.add_parser('dna', aliases=['rna'])
     subparser.add_argument(
         '--license', default='CC0', type=str,
         help='signature license. Currently only CC0 is supported.'
