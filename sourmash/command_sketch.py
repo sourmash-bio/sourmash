@@ -27,9 +27,15 @@ def parse_params_str(params_str):
         elif p.startswith('k='):
             d['ksize'] = int(p[2:])
         elif p.startswith('num='):
+            if d.get('scaled'):
+                raise ValueError("cannot set both num and scaled in a single minhash")
             d['num'] = int(p[4:])
+            d['scaled'] = 0
         elif p.startswith('scaled='):
+            if d.get('num'):
+                raise ValueError("cannot set both num and scaled in a single minhash")
             d['scaled'] = int(p[7:])
+            d['num'] = 0
         elif p.startswith('seed='):
             d['seed'] = int(p[5:])
         else:
@@ -49,7 +55,7 @@ class _signatures_for_sketch_factory(object):
     def __call__(self):
         x = []
         for d in self.params_list:
-            params = ComputeParameters([d.get('ksize', [31])],
+            params = ComputeParameters([d.get('ksize', 31)],
                                         d.get('seed', 42),
                                        0, 0, 0, 1,
                                        d.get('num', 0),
