@@ -64,6 +64,12 @@ def test_dna_override_1():
     assert not params.protein
 
 
+def test_dna_override_bad_1():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,scaledFOO=2000,abund'],
+                                                 'dna', False)
+
+
 def test_protein_defaults():
     factory = _signatures_for_sketch_factory([], 'protein', False)
     params_list = list(factory.get_compute_params())
