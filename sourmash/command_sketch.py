@@ -1,22 +1,16 @@
 """
 Functions implementing the 'sketch' subcommands and related functions.
 """
-import os
-import os.path
 import sys
-import random
-import screed
-import time
-import collections
 
-from . import sourmash_args
 from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
 
 
-def parse_params_str(params_str):
+def _parse_params_str(params_str):
+    "Parse a parameter string of the form 'k=ks,num=num,scaled=scaled,abund'."
     d = {}
     pp = params_str.split(',')
     for p in pp:
@@ -51,7 +45,7 @@ class _signatures_for_sketch_factory(object):
         self.params_list = []
         self.mult_ksize_by_3 = mult_ksize_by_3
         for params_str in params_str_list:
-            d = parse_params_str(params_str)
+            d = _parse_params_str(params_str)
             self.params_list.append(d)
 
     def __call__(self):
