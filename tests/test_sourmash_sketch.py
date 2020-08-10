@@ -706,8 +706,6 @@ def test_do_sourmash_sketchdna_with_scaled():
 
 
 def test_do_sourmash_sketchdna_with_bad_scaled():
-    # @CTB fixme
-    return 0
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
@@ -720,7 +718,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             fail_ok=True)
 
         assert status != 0
-        assert '--scaled value must be >= 1' in err
+        assert 'scaled is -1, must be >= 1' in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
@@ -731,17 +729,17 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
                                             fail_ok=True)
 
         assert status != 0
-        assert '--scaled value must be integer value' in err
+        assert "cannot parse scaled='1000.5' as an integer" in err
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=1e9',
-                                            '-p', 'k=31,scaled=1e9',
+                                            '-p', 'k=21,scaled=1000000000',
+                                            '-p', 'k=31,scaled=1000000000',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
 
         assert status == 0
-        assert 'WARNING: scaled value is nonsensical!?' in err
+        assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
 
 
 def test_do_sourmash_compute_with_seed():

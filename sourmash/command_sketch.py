@@ -32,12 +32,28 @@ def _parse_params_str(params_str):
         elif item.startswith('num='):
             if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
+            try:
+                num = item[4:]
+                num = int(num)
+            except ValueError:
+                raise ValueError(f"cannot parse num='{num}' as a number")
+            if num < 0:
+                raise ValueError(f"num is {num}, must be >= 0")
             params['num'] = int(item[4:])
             params['scaled'] = 0
         elif item.startswith('scaled='):
             if params.get('num'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
-            params['scaled'] = int(item[7:])
+            try:
+                scaled = item[7:]
+                scaled = int(scaled)
+            except ValueError:
+                raise ValueError(f"cannot parse scaled='{scaled}' as an integer")
+            if scaled < 0:
+                raise ValueError(f"scaled is {scaled}, must be >= 1")
+            if scaled > 1e8:
+                notify(f"WARNING: scaled value of {scaled} is nonsensical!?")
+            params['scaled'] = scaled
             params['num'] = 0
         elif item.startswith('seed='):
             params['seed'] = int(item[5:])
