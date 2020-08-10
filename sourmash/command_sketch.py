@@ -87,11 +87,8 @@ class _signatures_for_sketch_factory(object):
         return x
 
 
-def dna(args):
-    """Compute a DNA signature for one or more files.
-
-    CTB: make usable via Python?
-    """
+def _execute_sketch(args, signatures_factory):
+    "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
 
     if args.license != 'CC0':
@@ -108,33 +105,41 @@ def dna(args):
         error("ERROR: --outdir doesn't make sense with -o/--output")
         sys.exit(-1)
 
-    # TBD/FIXME
-    args.input_is_10x = False # CTB
-    args.check_sequence = False
-    args.input_is_protein = False
-
-    # provide good defaults for dna
-    if not args.param_string:
-        args.param_string = ['k=31,scaled=1000,noabund']
-
-    # get list of k-mer sizes for which to compute sketches
-    num_sigs = len(args.param_string)
-
+    # get number of output sigs:
+    num_sigs = len(signatures_factory.params_list)
     notify('Computing a total of {} signature(s).', num_sigs)
 
     if num_sigs == 0:
         error('...nothing to calculate!? Exiting!')
         sys.exit(-1)
 
+    if args.merge:               # single name specified - combine all
+        _compute_merged(args, signatures_factory)
+    else:                        # compute individual signatures
+        _compute_individual(args, signatures_factory)
+
+
+def dna(args):
+    """Compute a DNA signature for one or more files.
+
+    CTB: make usable via Python?
+    """
+    # TBD/FIXME
+    args.input_is_10x = False # CTB
+
+    # for dna:
+    args.input_is_protein = False
+
+    # provide good defaults for dna
+    if not args.param_string:
+        args.param_string = ['k=31,scaled=1000,noabund']
+
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_dna=1)
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         defaults,
                                                         mult_ksize_by_3=False)
 
-    if args.merge:               # single name specified - combine all
-        _compute_merged(args, signatures_factory)
-    else:                        # compute individual signatures
-        _compute_individual(args, signatures_factory)
+    _execute_sketch(args, signatures_factory)
 
 
 def protein(args):
@@ -142,39 +147,13 @@ def protein(args):
 
     CTB: make usable via Python?
     """
-    set_quiet(args.quiet)
-
-    if args.license != 'CC0':
-        error('error: sourmash only supports CC0-licensed signatures. sorry!')
-        sys.exit(-1)
-
-    notify('computing signatures for files: {}', ", ".join(args.filenames))
-
-    if args.merge and not args.output:
-        error("ERROR: must specify -o with --merge")
-        sys.exit(-1)
-
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
-        sys.exit(-1)
-
-    # TBD/FIXME
-    args.input_is_10x = False # CTB
-    args.check_sequence = False
+    # for protein:
+    args.input_is_10x = False
     args.input_is_protein = True
 
-    # provide good defaults for dna @CTB
+    # provide good defaults for protein @CTB
     if not args.param_string:
         args.param_string = ['k=31,scaled=1000,noabund']
-
-    # get list of k-mer sizes for which to compute sketches
-    num_sigs = len(args.param_string)
-
-    notify('Computing a total of {} signature(s).', num_sigs)
-
-    if num_sigs == 0:
-        error('...nothing to calculate!? Exiting!')
-        sys.exit(-1)
 
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
     assert not (args.dayhoff and args.hp)
@@ -188,10 +167,7 @@ def protein(args):
                                                         defaults,
                                                         mult_ksize_by_3=True)
 
-    if args.merge:               # single name specified - combine all
-        _compute_merged(args, signatures_factory)
-    else:                        # compute individual signatures
-        _compute_individual(args, signatures_factory)
+    _execute_sketch(args, signatures_factory)
 
 
 def translate(args):
@@ -199,39 +175,13 @@ def translate(args):
 
     CTB: make usable via Python?
     """
-    set_quiet(args.quiet)
-
-    if args.license != 'CC0':
-        error('error: sourmash only supports CC0-licensed signatures. sorry!')
-        sys.exit(-1)
-
-    notify('computing signatures for files: {}', ", ".join(args.filenames))
-
-    if args.merge and not args.output:
-        error("ERROR: must specify -o with --merge")
-        sys.exit(-1)
-
-    if args.output and args.outdir:
-        error("ERROR: --outdir doesn't make sense with -o/--output")
-        sys.exit(-1)
-
-    # TBD/FIXME
-    args.input_is_10x = False # CTB
-    args.check_sequence = False
+    # for translate:
+    args.input_is_10x = False
     args.input_is_protein = False
 
-    # provide good defaults for translate
+    # provide good defaults for translate @CTB
     if not args.param_string:
         args.param_string = ['k=31,scaled=1000,noabund']
-
-    # get list of k-mer sizes for which to compute sketches
-    num_sigs = len(args.param_string)
-
-    notify('Computing a total of {} signature(s).', num_sigs)
-
-    if num_sigs == 0:
-        error('...nothing to calculate!? Exiting!')
-        sys.exit(-1)
 
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
     assert not (args.dayhoff and args.hp)
@@ -246,7 +196,4 @@ def translate(args):
                                                         defaults,
                                                         mult_ksize_by_3=True)
 
-    if args.merge:               # single name specified - combine all
-        _compute_merged(args, signatures_factory)
-    else:                        # compute individual signatures
-        _compute_individual(args, signatures_factory)
+    _execute_sketch(args, signatures_factory)
