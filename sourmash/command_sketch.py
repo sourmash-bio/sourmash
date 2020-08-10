@@ -145,18 +145,22 @@ def protein(args):
     args.input_is_10x = False
     args.input_is_protein = True
 
-    # provide good defaults for protein @CTB
-    if not args.param_string:
-        args.param_string = ['k=31,scaled=1000,noabund']
-
-    defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
-    assert not (args.dayhoff and args.hp)
+    # provide good defaults for dayhoff/hp/protein!
+    if args.dayhoff and args.hp:
+        raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
-        defaults['is_protein'] = 0
-        defaults['is_dayhoff'] = 1
+        defaults = dict(ksize=19, scaled=200, track_abundance=0, is_dayhoff=1)
+        default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
-        defaults['is_protein'] = 0
-        defaults['is_hp'] = 1
+        defaults = dict(ksize=30, scaled=200, track_abundance=0, is_hp=1)
+        default_param_string = ['k=30,scaled=200,noabund']
+    else:
+        defaults = dict(ksize=21, scaled=200, track_abundance=0, is_protein=1)
+        default_param_string = ['k=21,scaled=200,noabund']
+
+    if not args.param_string:
+        args.param_string = default_param_string
+
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         defaults,
                                                         mult_ksize_by_3=True)
@@ -173,18 +177,21 @@ def translate(args):
     args.input_is_10x = False
     args.input_is_protein = False
 
-    # provide good defaults for translate @CTB
-    if not args.param_string:
-        args.param_string = ['k=31,scaled=1000,noabund']
-
-    defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
-    assert not (args.dayhoff and args.hp)
+    # provide good defaults for dayhoff/hp/protein!
+    if args.dayhoff and args.hp:
+        raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
-        defaults['is_protein'] = 0
-        defaults['is_dayhoff'] = 1
+        defaults = dict(ksize=19, scaled=200, track_abundance=0, is_dayhoff=1)
+        default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
-        defaults['is_protein'] = 0
-        defaults['is_hp'] = 1
+        defaults = dict(ksize=30, scaled=200, track_abundance=0, is_hp=1)
+        default_param_string = ['k=30,scaled=200,noabund']
+    else:
+        defaults = dict(ksize=21, scaled=200, track_abundance=0, is_protein=1)
+        default_param_string = ['k=21,scaled=200,noabund']
+
+    if not args.param_string:
+        args.param_string = default_param_string
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         defaults,
