@@ -9,8 +9,17 @@ from .command_compute import (_compute_individual, _compute_merged,
                               ComputeParameters)
 
 
+DEFAULTS = dict(
+    dna='k=31,scaled=1000,noabund',
+    protein='k=21,scaled=200,noabund',
+    dayhoff='k=19,scaled=200,noabund',
+    hp='k=30,scaled=200,noabund'
+)
+
+
 def _parse_params_str(params_str):
     "Parse a parameter string of the form 'k=ks,num=num,scaled=scaled,abund'."
+    moltype = None
     d = {}
     pp = params_str.split(',')
     for p in pp:
@@ -32,41 +41,58 @@ def _parse_params_str(params_str):
             d['num'] = 0
         elif p.startswith('seed='):
             d['seed'] = int(p[5:])
+        elif p == 'protein':
+            moltype = 'protein'
+        elif p == 'dayhoff':
+            moltype = 'dayhoff'
+        elif p == 'hp':
+            moltype = 'hp'
+        elif p == 'dna':
+            moltype = 'dna'
         else:
             raise ValueError(f"unknown component '{p}' in params string")
 
-    return d
+    return moltype, d
 
 
 class _signatures_for_sketch_factory(object):
     "Build sigs on demand, based on args input to 'sketch'."
-    def __init__(self, params_str_list, defaults, mult_ksize_by_3):
+    def __init__(self, params_str_list, default_moltype, mult_ksize_by_3):
+        defaults = {}
+        for moltype, pstr in DEFAULTS.items():
+            mt, d = _parse_params_str(pstr)
+            assert mt is None
+            defaults[moltype] = d
         self.defaults = defaults
+
         self.params_list = []
         self.mult_ksize_by_3 = mult_ksize_by_3
         for params_str in params_str_list:
-            d = _parse_params_str(params_str)
-            self.params_list.append(d)
+            moltype, d = _parse_params_str(params_str)
+            if moltype is None:
+                moltype = default_moltype
+            self.params_list.append((moltype, d))
 
     def __call__(self):
         "Produce a new set of signatures built to match the param strings."
         x = []
 
-        z = self.defaults
-        def_ksize = z['ksize']
-        def_seed = z.get('seed', 42)
-        def_num = z.get('num', 0)
-        def_abund = z['track_abundance']
-        def_scaled = z.get('scaled', 0)
-        def_dna = z.get('is_dna', 0)
-        def_protein = z.get('is_protein', 0)
-        def_dayhoff = z.get('is_dayhoff', 0)
-        def_hp = z.get('is_hp', 0)
+        for moltype, d in self.params_list:
+            z = self.defaults[moltype]
+            def_ksize = z['ksize']
+            def_seed = z.get('seed', 42)
+            def_num = z.get('num', 0)
+            def_abund = z['track_abundance']
+            def_scaled = z.get('scaled', 0)
+            def_dna = z.get('is_dna', moltype == 'dna')
+            def_protein = z.get('is_protein',  moltype == 'protein')
+            def_dayhoff = z.get('is_dayhoff', moltype == 'dayhoff')
+            def_hp = z.get('is_hp', moltype == 'hp')
 
-        for d in self.params_list:
             ksize = int(d.get('ksize', def_ksize))
             if self.mult_ksize_by_3:
                 ksize = ksize*3
+
             params = ComputeParameters([ksize],
                                        d.get('seed', def_seed),
                                        def_protein,
@@ -78,6 +104,7 @@ class _signatures_for_sketch_factory(object):
                                        d.get('scaled', def_scaled))
             sig = SourmashSignature.from_params(params)
             x.append(sig)
+
         return x
 
 
@@ -128,9 +155,8 @@ def dna(args):
     if not args.param_string:
         args.param_string = ['k=31,scaled=1000,noabund']
 
-    defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_dna=1)
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults,
+                                                        'dna',
                                                         mult_ksize_by_3=False)
 
     _execute_sketch(args, signatures_factory)
@@ -149,20 +175,20 @@ def protein(args):
     if args.dayhoff and args.hp:
         raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
-        defaults = dict(ksize=19, scaled=200, track_abundance=0, is_dayhoff=1)
+        moltype = 'dayhoff'
         default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
-        defaults = dict(ksize=30, scaled=200, track_abundance=0, is_hp=1)
+        moltype = 'hp'
         default_param_string = ['k=30,scaled=200,noabund']
     else:
-        defaults = dict(ksize=21, scaled=200, track_abundance=0, is_protein=1)
+        moltype = 'protein'
         default_param_string = ['k=21,scaled=200,noabund']
 
     if not args.param_string:
         args.param_string = default_param_string
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults,
+                                                        moltype,
                                                         mult_ksize_by_3=True)
 
     _execute_sketch(args, signatures_factory)
@@ -181,20 +207,20 @@ def translate(args):
     if args.dayhoff and args.hp:
         raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
-        defaults = dict(ksize=19, scaled=200, track_abundance=0, is_dayhoff=1)
+        moltype = 'dayhoff'
         default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
-        defaults = dict(ksize=30, scaled=200, track_abundance=0, is_hp=1)
+        moltype = 'hp'
         default_param_string = ['k=30,scaled=200,noabund']
     else:
-        defaults = dict(ksize=21, scaled=200, track_abundance=0, is_protein=1)
+        moltype = 'protein'
         default_param_string = ['k=21,scaled=200,noabund']
 
     if not args.param_string:
         args.param_string = default_param_string
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults,
+                                                        moltype,
                                                         mult_ksize_by_3=True)
 
     _execute_sketch(args, signatures_factory)
