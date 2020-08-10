@@ -61,22 +61,26 @@ class _signatures_for_sketch_factory(object):
         defaults = {}
         for moltype, pstr in DEFAULTS.items():
             mt, d = _parse_params_str(pstr)
-            assert mt is None
+            assert mt is None             # defaults cannot have moltype set!
             defaults[moltype] = d
         self.defaults = defaults
 
         self.params_list = []
         self.mult_ksize_by_3 = mult_ksize_by_3
-        for params_str in params_str_list:
-            moltype, d = _parse_params_str(params_str)
-            if moltype is None:
-                moltype = default_moltype
-            self.params_list.append((moltype, d))
 
-    def __call__(self):
-        "Produce a new set of signatures built to match the param strings."
-        x = []
+        if params_str_list:
+            # parse each params_str passed in, using default_moltype if none
+            # provided.
+            for params_str in params_str_list:
+                moltype, d = _parse_params_str(params_str)
+                if moltype is None:
+                    moltype = default_moltype
+                self.params_list.append((moltype, d))
+        else:
+            # no params str? default to a single sig, using default_moltype.
+            self.params_list.append((default_moltype, {}))
 
+    def get_compute_params(self):
         for moltype, d in self.params_list:
             z = self.defaults[moltype]
             def_ksize = z['ksize']
@@ -102,6 +106,13 @@ class _signatures_for_sketch_factory(object):
                                        d.get('num', def_num),
                                        d.get('track_abundance', def_abund),
                                        d.get('scaled', def_scaled))
+
+            yield params
+
+    def __call__(self):
+        "Produce a new set of signatures built to match the param strings."
+        x = []
+        for params in self.get_compute_params():
             sig = SourmashSignature.from_params(params)
             x.append(sig)
 
@@ -152,9 +163,6 @@ def dna(args):
     args.input_is_protein = False
 
     # provide good defaults for dna
-    if not args.param_string:
-        args.param_string = ['k=31,scaled=1000,noabund']
-
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         'dna',
                                                         mult_ksize_by_3=False)
@@ -176,16 +184,10 @@ def protein(args):
         raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
         moltype = 'dayhoff'
-        default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
         moltype = 'hp'
-        default_param_string = ['k=30,scaled=200,noabund']
     else:
         moltype = 'protein'
-        default_param_string = ['k=21,scaled=200,noabund']
-
-    if not args.param_string:
-        args.param_string = default_param_string
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         moltype,
@@ -208,16 +210,10 @@ def translate(args):
         raise ValueError("cannot set both --dayhoff and --hp")
     if args.dayhoff:
         moltype = 'dayhoff'
-        default_param_string = ['k=19,scaled=200,noabund']
     elif args.hp:
         moltype = 'hp'
-        default_param_string = ['k=30,scaled=200,noabund']
     else:
         moltype = 'protein'
-        default_param_string = ['k=21,scaled=200,noabund']
-
-    if not args.param_string:
-        args.param_string = default_param_string
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         moltype,

@@ -22,6 +22,104 @@ from sourmash.cli import SourmashParser
 from sourmash import signature
 from sourmash import VERSION
 
+###
+
+from sourmash.command_sketch import _signatures_for_sketch_factory
+
+
+def test_dna_defaults():
+    factory = _signatures_for_sketch_factory([], 'dna', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [31]
+    assert params.num_hashes == 0
+    assert params.scaled == 1000
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_dna_override_1():
+    factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],
+                                             'dna', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [21]
+    assert params.num_hashes == 0
+    assert params.scaled == 2000
+    assert params.track_abundance
+    assert params.seed == 42
+    assert params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_protein_defaults():
+    factory = _signatures_for_sketch_factory([], 'protein', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [21]
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
+
+
+def test_dayhoff_defaults():
+    factory = _signatures_for_sketch_factory([], 'dayhoff', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [19]
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_hp_defaults():
+    factory = _signatures_for_sketch_factory([], 'hp', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [30]
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert params.hp
+    assert not params.protein
+
+
+### command line tests
+
 
 def test_do_sourmash_sketchdna():
     with utils.TempDirectory() as location:
