@@ -390,8 +390,8 @@ def test_do_sourmash_compute_multik_with_protein():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
-                                            '-p', 'k=30,num=500',
+                                            '-p', 'k=7,num=500',
+                                            '-p', 'k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -411,8 +411,8 @@ def test_do_sourmash_compute_multik_with_dayhoff():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
-                                            '-p', 'k=30,num=500',
+                                            '-p', 'k=7,num=500',
+                                            '-p', 'k=10,num=500',
                                             '--dayhoff',
                                             testdata1],
                                            in_directory=location)
@@ -436,8 +436,8 @@ def test_do_sourmash_compute_multik_with_hp():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
-                                            '-p', 'k=30,num=500',
+                                            '-p', 'k=7,num=500',
+                                            '-p', 'k=10,num=500',
                                             '--hp',
                                             testdata1],
                                            in_directory=location)
@@ -456,28 +456,12 @@ def test_do_sourmash_compute_multik_with_hp():
             assert all(x.minhash.hp for x in siglist)
 
 
-def test_do_sourmash_compute_multik_protein_bad_ksize():
-    # @CTB
-    return 0
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '20,32',
-                                            '--protein', '--no-dna',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert not os.path.exists(outfile)
-        assert 'protein ksizes must be divisible by 3' in err
-
-
 @utils.in_tempdir
 def test_do_sourmash_compute_multik_only_protein(c):
     # check sourmash compute with only protein, no nucl
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500',
-                   '-p', 'k=30,num=500',
+    c.run_sourmash('sketch', 'translate', '-p', 'k=7,num=500',
+                   '-p', 'k=10,num=500',
                    testdata1)
     outfile = os.path.join(c.location, 'short.fa.sig')
     assert os.path.exists(outfile)
@@ -491,29 +475,14 @@ def test_do_sourmash_compute_multik_only_protein(c):
         assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
-    # @CTB
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short-protein.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'protein',
-                                            '-p', 'k=20,num=500',
-                                            '-p', 'k=32,num=500',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert os.path.exists(outfile)
-
-
 def test_do_sourmash_compute_protein_bad_sequences():
     """Proper error handling when Ns in dna sequence"""
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.bad.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
-                                            '-p', 'k=30,num=500',
+                                            '-p', 'k=7,num=500',
+                                            '-p', 'k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.bad.fa.sig')
@@ -533,8 +502,8 @@ def test_do_sourmash_compute_multik_input_is_protein():
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'protein',
-                                            '-p', 'k=21,num=500',
-                                            '-p', 'k=30,num=500',
+                                            '-p', 'k=7,num=500',
+                                            '-p', 'k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'ecoli.faa.sig')
@@ -697,7 +666,7 @@ def test_do_sourmash_check_protein_comparisons():
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'protein',
-                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata1],
                                            in_directory=location)
@@ -707,7 +676,7 @@ def test_do_sourmash_check_protein_comparisons():
         testdata2 = utils.get_test_data('ecoli.genes.fna')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata2],
                                            in_directory=location)
@@ -788,7 +757,7 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'protein',
-                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata1],
                                            in_directory=location)
@@ -811,7 +780,7 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         testdata1 = utils.get_test_data('ecoli.genes.fna')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata1],
                                            in_directory=location)
@@ -825,39 +794,3 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
-
-
-def test_compute_parameters():
-    # @CTB
-    return 0
-    args_list = ["compute", "-k", "21,31", "--singleton", "--protein", "--no-dna", "input_file"]
-
-    parser = SourmashParser(prog='sourmash')
-    subp = parser.add_subparsers(title="instruction", dest="cmd", metavar="cmd")
-    subparser(subp)
-
-    args = parser.parse_args(args_list)
-
-    params = ComputeParameters.from_args(args)
-
-    assert params.ksizes == [21, 31]
-    assert params.protein == True
-    assert params.dna == False
-    assert params.seed == 42
-    assert params.dayhoff == False
-    assert params.hp == False
-    assert params.num_hashes == 500
-    assert params.scaled == 0
-    assert params.track_abundance == False
-
-
-@utils.in_tempdir
-def test_sketchdna_invalid_param(c):
-    testdata1 = utils.get_test_data('short.fa')
-    param_str = 'num=500,scaled=1'
-
-    with pytest.raises(ValueError) as exc:
-        status, out, err = c.run_sourmash('sketch', 'dna', '-p', param_str,
-                                          testdata1)
-
-    assert 'cannot set both num and scaled in a single minhash' in c.last_result.err

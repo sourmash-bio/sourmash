@@ -46,9 +46,10 @@ def parse_params_str(params_str):
 
 class _signatures_for_sketch_factory(object):
     "Build sigs on demand, based on args input to 'sketch'."
-    def __init__(self, params_str_list, defaults):
+    def __init__(self, params_str_list, defaults, mult_ksize_by_3):
         self.defaults = defaults
         self.params_list = []
+        self.mult_ksize_by_3 = mult_ksize_by_3
         for params_str in params_str_list:
             d = parse_params_str(params_str)
             self.params_list.append(d)
@@ -69,8 +70,11 @@ class _signatures_for_sketch_factory(object):
         def_hp = z.get('is_hp', 0)
 
         for d in self.params_list:
-            params = ComputeParameters([d.get('ksize', def_ksize)],
-                                        d.get('seed', def_seed),
+            ksize = int(d.get('ksize', def_ksize))
+            if self.mult_ksize_by_3:
+                ksize = ksize*3
+            params = ComputeParameters([ksize],
+                                       d.get('seed', def_seed),
                                        def_protein,
                                        def_dayhoff,
                                        def_hp,
@@ -124,7 +128,8 @@ def dna(args):
 
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_dna=1)
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults)
+                                                        defaults,
+                                                        mult_ksize_by_3=False)
 
     if args.merge:               # single name specified - combine all
         _compute_merged(args, signatures_factory)
@@ -158,7 +163,7 @@ def protein(args):
     args.check_sequence = False
     args.input_is_protein = True
 
-    # provide good defaults for dna
+    # provide good defaults for dna @CTB
     if not args.param_string:
         args.param_string = ['k=31,scaled=1000,noabund']
 
@@ -180,7 +185,8 @@ def protein(args):
         defaults['is_protein'] = 0
         defaults['is_hp'] = 1
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults)
+                                                        defaults,
+                                                        mult_ksize_by_3=True)
 
     if args.merge:               # single name specified - combine all
         _compute_merged(args, signatures_factory)
@@ -214,7 +220,7 @@ def translate(args):
     args.check_sequence = False
     args.input_is_protein = False
 
-    # provide good defaults for dna
+    # provide good defaults for translate
     if not args.param_string:
         args.param_string = ['k=31,scaled=1000,noabund']
 
@@ -237,7 +243,8 @@ def translate(args):
         defaults['is_hp'] = 1
 
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        defaults)
+                                                        defaults,
+                                                        mult_ksize_by_3=True)
 
     if args.merge:               # single name specified - combine all
         _compute_merged(args, signatures_factory)
