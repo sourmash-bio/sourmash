@@ -71,13 +71,13 @@ def test_dna_override_bad_1():
 
 
 def test_protein_defaults():
-    factory = _signatures_for_sketch_factory([], 'protein', False)
+    factory = _signatures_for_sketch_factory([], 'protein', True)
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [21]
+    assert params.ksizes == [63]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance
@@ -89,13 +89,13 @@ def test_protein_defaults():
 
 
 def test_dayhoff_defaults():
-    factory = _signatures_for_sketch_factory([], 'dayhoff', False)
+    factory = _signatures_for_sketch_factory([], 'dayhoff', True)
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [19]
+    assert params.ksizes == [57]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance
@@ -107,13 +107,13 @@ def test_dayhoff_defaults():
 
 
 def test_hp_defaults():
-    factory = _signatures_for_sketch_factory([], 'hp', False)
+    factory = _signatures_for_sketch_factory([], 'hp', True)
     params_list = list(factory.get_compute_params())
 
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [30]
+    assert params.ksizes == [90]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance
@@ -122,6 +122,61 @@ def test_hp_defaults():
     assert not params.dayhoff
     assert params.hp
     assert not params.protein
+
+
+def test_multiple_moltypes():
+    params_foo = ['k=20,num=500,protein',
+                  'k=19,num=400,dayhoff,abund',
+                  'k=30,scaled=200,hp',
+                  'k=30,scaled=200,seed=58']
+    factory = _signatures_for_sketch_factory(params_foo, 'protein', True)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 4
+
+    params = params_list[0]
+    assert params.ksizes == [60]          # x3, for now.
+    assert params.num_hashes == 500
+    assert params.scaled == 0
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
+
+    params = params_list[1]
+    assert params.ksizes == [57]          # x3, for now.
+    assert params.num_hashes == 400
+    assert params.scaled == 0
+    assert params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+    params = params_list[2]
+    assert params.ksizes == [90]          # x3, for now.
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert params.hp
+    assert not params.protein
+
+    params = params_list[3]
+    assert params.ksizes == [90]          # x3, for now.
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 58
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
 
 
 ### command line tests
