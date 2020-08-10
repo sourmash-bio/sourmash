@@ -50,6 +50,14 @@ def subparser(subparsers):
         '--randomize', action='store_true',
         help='shuffle the list of input filenames randomly'
     )
+    file_args.add_argument(
+        '--dayhoff', action='store_true',
+        help='compute sketches using the dayhoff alphabet instead'
+    )
+    file_args.add_argument(
+        '--hp', action='store_true',
+        help='compute sketches using the dayhoff alphabet instead'
+    )
 
 
 def main(args):

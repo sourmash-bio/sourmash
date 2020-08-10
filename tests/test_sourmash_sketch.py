@@ -407,17 +407,17 @@ def test_do_sourmash_compute_multik_with_protein():
 
 
 def test_do_sourmash_compute_multik_with_dayhoff():
-    # @CTB
-    return 0
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=30,num=500',
+                                            '--dayhoff',
                                             testdata1],
                                            in_directory=location)
-        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
-               'signatures.' in err
+#        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
+#               'signatures.' in err @CTB
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -431,42 +431,18 @@ def test_do_sourmash_compute_multik_with_dayhoff():
             assert all(x.minhash.dayhoff for x in siglist)
 
 
-def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
-    # @CTB
-    return 0
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 4
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-
-
 def test_do_sourmash_compute_multik_with_hp():
-    # @CTB
-    return 0
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--hp', '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=21,num=500',
+                                            '-p', 'k=30,num=500',
+                                            '--hp',
                                             testdata1],
                                            in_directory=location)
-        assert 'Computing only hp-encoded protein (and not nucleotide) ' \
-               'signatures.' in err
+#        assert 'Computing only hp-encoded protein (and not nucleotide) ' \
+#               'signatures.' in err @CTB
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -478,72 +454,6 @@ def test_do_sourmash_compute_multik_with_hp():
             assert 21 in ksizes
             assert 30 in ksizes
             assert all(x.minhash.hp for x in siglist)
-
-
-def test_do_sourmash_compute_multik_with_hp_and_dna():
-    # @CTB
-    return 0
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--hp',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-
-def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
-    # @CTB
-    return 0
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--protein',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 6
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
-
-
-def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
-    # @CTB
-    return 0
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--hp', '--protein',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 8
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'hp' for x in siglist) == 2
-            # 2 = dayhoff, 2 = hp = 4 protein
-            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
 
 
 def test_do_sourmash_compute_multik_protein_bad_ksize():

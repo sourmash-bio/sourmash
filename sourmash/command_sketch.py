@@ -172,6 +172,13 @@ def protein(args):
         sys.exit(-1)
 
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
+    assert not (args.dayhoff and args.hp)
+    if args.dayhoff:
+        defaults['is_protein'] = 0
+        defaults['is_dayhoff'] = 1
+    elif args.hp:
+        defaults['is_protein'] = 0
+        defaults['is_hp'] = 1
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         defaults)
 
@@ -221,6 +228,14 @@ def translate(args):
         sys.exit(-1)
 
     defaults = dict(ksize=31, scaled=1000, track_abundance=0, is_protein=1)
+    assert not (args.dayhoff and args.hp)
+    if args.dayhoff:
+        defaults['is_protein'] = 0
+        defaults['is_dayhoff'] = 1
+    elif args.hp:
+        defaults['is_protein'] = 0
+        defaults['is_hp'] = 1
+
     signatures_factory = _signatures_for_sketch_factory(args.param_string,
                                                         defaults)
 
