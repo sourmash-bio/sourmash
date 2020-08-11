@@ -1666,7 +1666,6 @@ def test_summarize_to_root():
 
         assert '78.6%    99   Archaea' in out
         assert '21.4%    27   (root)' in out
-        assert False
 
 
 def test_summarize_unknown_hashes():

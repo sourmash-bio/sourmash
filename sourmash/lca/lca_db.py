@@ -5,7 +5,6 @@ import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
 import functools
-import weakref
 
 import sourmash
 from sourmash._minhash import get_max_hash_for_scaled, to_bytes
@@ -124,65 +123,61 @@ class LCA_Database(RustObject, Index):
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
-        # minhash = sig.minhash
+        minhash = sig.minhash
 
-        # if minhash.ksize != self.ksize:
-        #     raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+        if minhash.ksize != self.ksize:
+            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
 
-        # if minhash.moltype != self.moltype:
-        #     raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
+        if minhash.moltype != self.moltype:
+            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
 
-        # # downsample to specified scaled; this has the side effect of
-        # # making sure they're all at the same scaled value!
-        # try:
-        #     minhash = minhash.downsample_scaled(self.scaled)
-        # except ValueError:
-        #     raise ValueError("cannot downsample signature; is it a scaled signature?")
+        # downsample to specified scaled; this has the side effect of
+        # making sure they're all at the same scaled value!
+        try:
+            minhash = minhash.downsample_scaled(self.scaled)
+        except ValueError:
+            raise ValueError("cannot downsample signature; is it a scaled signature?")
 
-        # if ident is None:
-        #     ident = sig.name()
+        if ident is None:
+            ident = sig.name()
 
-        # if ident in self.ident_to_name:
-        #     raise ValueError("signature {} is already in this LCA db.".format(ident))
+        if ident in self.ident_to_name:
+            raise ValueError("signature {} is already in this LCA db.".format(ident))
 
-        # # before adding, invalide any caching from @cached_property
-        # self._invalidate_cache()
+        # before adding, invalide any caching from @cached_property
+        self._invalidate_cache()
 
-        # # store full name
-        # self.ident_to_name[ident] = sig.name()
+        # store full name
+        self.ident_to_name[ident] = sig.name()
 
-        # # identifier -> integer index (idx)
-        # idx = self._get_ident_index(ident, fail_on_duplicate=True)
-        # if lineage:
-        #     try:
-        #         lineage = tuple(lineage)
-
-        #         # (LineagePairs*) -> integer lineage ids (lids)
-        #         lid = self._get_lineage_id(lineage)
-
-        #         # map idx to lid as well.
-        #         self.idx_to_lid[idx] = lid
-        #     except TypeError:
-        #         raise ValueError('lineage cannot be used as a key?!')
-
-        # for hashval in minhash.get_mins():
-        #     self.hashval_to_idx[hashval].add(idx)
-
-        # trying to put lineage into a json
-        lineage_dict = OrderedDict()
+        # identifier -> integer index (idx)
+        idx = self._get_ident_index(ident, fail_on_duplicate=True)
         if lineage:
-            for pair in lineage:
-                lineage_dict[pair[0]] = pair[1]
-        else:
-            lineage = ""
+            try:
+                lineage = tuple(lineage)
 
-        lineage_json = json.dumps(lineage_dict)
-        print("\n\n\nPYTHON:\nself.lid_to_lineage =", self.lid_to_lineage, "\n\n\n")
+                # (LineagePairs*) -> integer lineage ids (lids)
+                lid = self._get_lineage_id(lineage)
 
-        self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
-        print("\n\n\nPYTHON:\nself.lid_to_lineage =", self.lid_to_lineage, "\n\n\n")
+                # map idx to lid as well.
+                self.idx_to_lid[idx] = lid
+            except TypeError:
+                raise ValueError('lineage cannot be used as a key?!')
 
-        return len(sig.minhash)
+        for hashval in minhash.get_mins():
+            self.hashval_to_idx[hashval].add(idx)
+
+        # # trying to put lineage into a json
+        # if lineage:
+        #     lineage_dict = dict(lineage)
+        # else:
+        #     lineage_dict = ""
+
+        # lineage_json = json.dumps(lineage_dict)
+
+        # self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+
+        return len(minhash)
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -190,24 +185,20 @@ class LCA_Database(RustObject, Index):
     def signatures(self):
         "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
+        print("\n", self._signatures, "\n")
         for v in self._signatures.values():
+            print(v)
             yield v
 
     def select(self, ksize=None, moltype=None):
         "Selector interface - make sure this database matches requirements."
-        # ok = True
-        # if ksize is not None and self.ksize != ksize:
-        #     ok = False
-        # if moltype is not None and moltype != self.moltype:
-        #     ok = False
+        ok = True
+        if ksize is not None and self.ksize != ksize:
+            ok = False
+        if moltype is not None and moltype != self.moltype:
+            ok = False
 
-        # if ok:
-        #     return self
-        if ksize == None:
-            ksize = 0
-        if moltype == None:
-            moltype = ""
-        if self._methodcall(lib.LcaDB_select, ksize, to_bytes(moltype)):
+        if ok:
             return self
 
         raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
@@ -540,6 +531,7 @@ class LCA_Database(RustObject, Index):
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
             d[idx] = ident
+        print(d)
         return d
 
 
