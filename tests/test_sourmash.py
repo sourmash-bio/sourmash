@@ -3282,6 +3282,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(c):
     y = sourmash.load_one_signature(c.output('foo.sig'))
 
     assert x.minhash == y.minhash
+    assert y.minhash.moltype == "protein"
 
 
 def test_gather_metagenome_downsample():
