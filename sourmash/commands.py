@@ -692,22 +692,13 @@ def gather(args):
             sig.save_signatures([ r.match for r in found ], fp)
 
     if args.output_unassigned:
-        if not len(query.minhash):
-            notify('no unassigned hashes! not saving.')
+        if not len(next_query.minhash):
+            notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
-            with_abundance = next_query.minhash.track_abundance
-            e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
-                        track_abundance=with_abundance)
-            if with_abundance:
-                abunds = next_query.minhash.hashes
-                e.set_abundances(abunds)
-            else:
-                e.add_many(next_query.minhash.hashes)
-
             with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+                sig.save_signatures([ next_query ], fp)
 
 
 def multigather(args):
