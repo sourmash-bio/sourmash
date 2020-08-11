@@ -531,6 +531,7 @@ class SBT(Index):
         """
         return [self.child(pos, c) for c in range(self.d)]
 
+
     def child(self, parent, pos):
         """Return a child node at position ``pos`` under the ``parent`` node.
 
