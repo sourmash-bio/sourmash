@@ -43,10 +43,7 @@ then define a search function, ::
 
 
 from collections import namedtuple
-try:
-    from collections.abc import Mapping
-except ImportError:  # Python 2...
-    from collections import Mapping
+from collections.abc import Mapping
 
 from copy import copy
 import json
@@ -55,6 +52,7 @@ import os
 from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
+from cachetools import LFUCache as Cache
 
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
@@ -69,6 +67,9 @@ STORAGES = {
     'RedisStorage': RedisStorage,
     'ZipStorage': ZipStorage,
 }
+
+CACHE_SIZE = 2048
+
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
@@ -95,6 +96,14 @@ class GraphFactory(object):
 
     def init_args(self):
         return (self.ksize, self.starting_size, self.n_tables)
+
+
+class _NodesCache(Cache):
+    """A cache for SBT nodes that calls .unload() when the node is removed from cache""" 
+    def popitem(self):
+        key, value = super().popitem()
+        value.unload()
+        return key, value
 
 
 class SBT(Index):
@@ -127,6 +136,7 @@ class SBT(Index):
         self.d = d
         self.next_node = 0
         self.storage = storage
+        self._nodescache = _NodesCache(maxsize=CACHE_SIZE)
 
     def signatures(self):
         for k in self.leaves():
@@ -245,14 +255,17 @@ class SBT(Index):
             # repair while searching.
             node_g = self._leaves.get(node_p, None)
             if node_g is None:
-                node_g = self._nodes.get(node_p, None)
-
-            if node_g is None:
-                if node_p in self._missing_nodes:
-                    self._rebuild_node(node_p)
-                    node_g = self._nodes[node_p]
+                if node_p in self._nodescache:
+                    node_g = self._nodescache[node_p]
                 else:
-                    continue
+                    node_g = self._nodes.get(node_p, None)
+                    if node_g is None:
+                        if node_p in self._missing_nodes:
+                            self._rebuild_node(node_p)
+                            node_g = self._nodes[node_p]
+                        else:
+                            continue
+                    self._nodescache[node_p] = node_g
 
             # if we have not visited this node before,
             if node_p not in visited:
@@ -272,7 +285,11 @@ class SBT(Index):
                         else: # bfs
                             queue.extend(c.pos for c in self.children(node_p))
 
-                if unload_data:
+                if unload_data or isinstance(node_g, Leaf):
+                    # we can remove leaf nodes because:
+                    # 1) in search, they will only be accessed once
+                    # 2) in gather, they won't be accessed again after being
+                    #    matched
                     node_g.unload()
 
         return matches
@@ -1124,7 +1141,10 @@ class Node(object):
         self._data = new_data
 
     def unload(self):
-        self._data = None
+        if self.storage:
+            # Don't unload data if there is no Storage
+            # TODO: Check that data is actually in the storage?
+            self._data = None
 
     @staticmethod
     def load(info, storage=None):
@@ -1176,7 +1196,10 @@ class Leaf(object):
         self._data = new_data
 
     def unload(self):
-        self._data = None
+        if self.storage:
+            # Don't unload data if there is no Storage
+            # TODO: Check that data is actually in the storage?
+            self._data = None
 
     def save(self, path):
         buf = self.data.to_bytes(compression=1)
