@@ -240,7 +240,7 @@ def check_lca_db_is_compatible(filename, db, query):
     return 1
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False, *, cache_size=None):
     """
     Load one or more SBTs, LCAs, and/or signatures.
 
@@ -256,7 +256,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         notify('loading from {}...', filename, end='\r')
 
         try:
-            db, dbtype = _load_database(filename, traverse, False)
+            db, dbtype = _load_database(filename, traverse, False, cache_size=cache_size)
         except IOError as e:
             notify(str(e))
             sys.exit(-1)
@@ -342,7 +342,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def _load_database(filename, traverse, traverse_yield_all):
+def _load_database(filename, traverse, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -393,7 +393,7 @@ def _load_database(filename, traverse, traverse_yield_all):
 
     if not loaded:                    # try load as SBT
         try:
-            db = load_sbt_index(filename)
+            db = load_sbt_index(filename, cache_size=cache_size)
             loaded = True
             dbtype = DatabaseType.SBT
         except:

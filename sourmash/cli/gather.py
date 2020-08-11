@@ -55,6 +55,10 @@ def subparser(subparsers):
         '--md5', default=None,
         help='select the signature with this md5 as query'
     )
+    subparser.add_argument(
+        '--cache-size', default=0, type=int, metavar='N',
+        help='number of internal SBT nodes to cache in memory (default: 0, cache all nodes)'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

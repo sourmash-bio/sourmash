@@ -68,7 +68,6 @@ STORAGES = {
     'ZipStorage': ZipStorage,
 }
 
-CACHE_SIZE = 2048
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
@@ -121,6 +120,10 @@ class SBT(Index):
     storage: Storage, default: None
         A Storage is any place where we can save and load data for the nodes.
         If set to None, will use a FSStorage.
+    cache_size: int, default None
+        Number of internal nodes to cache in memory.
+        If set to None, will not remove any nodes from memory
+        (cache grows without bounds).
 
     Notes
     -----
@@ -128,7 +131,7 @@ class SBT(Index):
     and another for the leaves (datasets).
     """
 
-    def __init__(self, factory, d=2, storage=None):
+    def __init__(self, factory, *, d=2, storage=None, cache_size=None):
         self.factory = factory
         self._nodes = {}
         self._missing_nodes = set()
@@ -136,7 +139,9 @@ class SBT(Index):
         self.d = d
         self.next_node = 0
         self.storage = storage
-        self._nodescache = _NodesCache(maxsize=CACHE_SIZE)
+        if cache_size is None:
+            cache_size = sys.maxsize
+        self._nodescache = _NodesCache(maxsize=cache_size)
 
     def signatures(self):
         for k in self.leaves():
@@ -285,11 +290,7 @@ class SBT(Index):
                         else: # bfs
                             queue.extend(c.pos for c in self.children(node_p))
 
-                if unload_data or isinstance(node_g, Leaf):
-                    # we can remove leaf nodes because:
-                    # 1) in search, they will only be accessed once
-                    # 2) in gather, they won't be accessed again after being
-                    #    matched
+                if unload_data:
                     node_g.unload()
 
         return matches
@@ -621,7 +622,7 @@ class SBT(Index):
 
 
     @classmethod
-    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
+    def load(cls, location, *, leaf_loader=None, storage=None, print_version_warning=True, cache_size=None):
         """Load an SBT description from a file.
 
         Parameters
@@ -709,10 +710,10 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**jnodes['storage']['args'])
 
-        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning)
+        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -737,13 +738,13 @@ class SBT(Index):
 
             sbt_nodes[i] = sbt_node
 
-        tree = SBT(factory)
+        tree = SBT(factory, cache_size=cache_size)
         tree._nodes = sbt_nodes
 
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -770,14 +771,14 @@ class SBT(Index):
                 sbt_node = leaf_loader(node, storage)
                 sbt_leaves[k] = sbt_node
 
-        tree = cls(factory, d=info['d'])
+        tree = cls(factory, d=info['d'], cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
 
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -803,7 +804,7 @@ class SBT(Index):
 
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -818,7 +819,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v4(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v4(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -841,7 +842,7 @@ class SBT(Index):
 
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -852,7 +853,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v5(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['leaves'].items()}
 
@@ -884,7 +885,7 @@ class SBT(Index):
             sbt_leaves[k] = sbt_leaf
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -893,7 +894,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v6(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v6(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['signatures'].items()}
 
@@ -925,7 +926,7 @@ class SBT(Index):
             sbt_leaves[k] = sbt_leaf
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
