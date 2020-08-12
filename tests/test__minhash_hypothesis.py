@@ -17,7 +17,7 @@ def test_set_abundance_num_hypothesis(hashes, abundances, sketch_size):
 
     a.set_abundances(oracle)
 
-    mins = a.get_mins(with_abundance=True)
+    mins = a.hashes
     size = min(sum(1 for v in oracle.values() if v > 0), sketch_size)
     assert len(mins) == size
 
@@ -38,7 +38,7 @@ def test_set_abundance_scaled_hypothesis(hashes, abundances, scaled):
     max_hash = _get_max_hash_for_scaled(scaled)
     below_max_hash = sum(1 for (k, v) in oracle.items() if k <= max_hash and v > 0)
 
-    mins = a.get_mins(with_abundance=True)
+    mins = a.hashes
     assert len(mins) == below_max_hash
 
     for k, v in mins.items():

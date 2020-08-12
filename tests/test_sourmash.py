@@ -2686,14 +2686,14 @@ def test_gather_f_match_orig(c):
 
             # f_unique_to_query is how much of the match is unique wrt
             # the original query.
-            a = set(remaining_mh.get_mins())
-            b = set(match.minhash.get_mins())
+            a = set(remaining_mh.hashes.keys())
+            b = set(match.minhash.hashes.keys())
             n_intersect = len(a.intersection(b))
             f_intersect = n_intersect / float(len(combined_sig.minhash))
             assert approx_equal(f_unique_to_query, f_intersect)
 
             # now, subtract current match from remaining... and iterate!
-            remaining_mh.remove_many(match.minhash.get_mins())
+            remaining_mh.remove_many(match.minhash.hashes.keys())
 
 
 def test_gather_nomatch():

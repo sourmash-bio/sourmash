@@ -3,7 +3,7 @@ from __future__ import unicode_literals, division
 
 import math
 import copy
-import collections
+from collections.abc import Mapping
 
 from . import VERSION
 from ._lowlevel import ffi, lib
@@ -82,7 +82,7 @@ def translate_codon(codon):
         raise ValueError(e.message)
 
 
-class _HashesWrapper(collections.Mapping):
+class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
     def __init__(self, h):
         self._data = h
@@ -214,7 +214,7 @@ class MinHash(RustObject):
             self.is_protein,
             self.dayhoff,
             self.hp,
-            self.get_mins(with_abundance=self.track_abundance),
+            self.hashes,
             None,
             self.track_abundance,
             self.max_hash,
@@ -290,39 +290,41 @@ class MinHash(RustObject):
         """Return list of hashes or if ``with_abundance`` a list
         of (hash, abund).
         """
-        size = ffi.new("uintptr_t *")
-        mins_ptr = self._methodcall(lib.kmerminhash_get_mins, size)
-        size = size[0]
+        mins = self.hashes
+        if not with_abundance:
+            return mins.keys()
+        return mins
 
-        try:
-            if with_abundance and self.track_abundance:
-                size_abunds = ffi.new("uintptr_t *")
-                abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds, size_abunds)
-                size_abunds = size_abunds[0]
-                assert size == size_abunds
-                result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
-                lib.kmerminhash_slice_free(abunds_ptr, size)
-            else:
-                result = ffi.unpack(mins_ptr, size)
-        finally:
-            lib.kmerminhash_slice_free(mins_ptr, size)
-
-        return result
 
     @deprecated(deprecated_in="3.5", removed_in="5.0",
                 current_version=VERSION,
                 details='Use .hashes property instead.')
     def get_hashes(self):
         "Return the list of hashes."
-        return self.get_mins()
+        return self.hashes.keys()
 
     @property
     def hashes(self):
-        if self.track_abundance:
-            return _HashesWrapper(self.get_mins(with_abundance=True))
-        else:
-            d = self.get_mins()
-            return _HashesWrapper({ k : 1 for k in d })
+        size = ffi.new("uintptr_t *")
+        mins_ptr = self._methodcall(lib.kmerminhash_get_mins, size)
+        size = size[0]
+
+        try:
+            if self.track_abundance:
+                size_abunds = ffi.new("uintptr_t *")
+                abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds, size_abunds)
+                size_abunds = size_abunds[0]
+                assert size == size_abunds
+                result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
+                lib.kmerminhash_slice_free(abunds_ptr, size)
+                return _HashesWrapper(result)
+            else:
+                d = ffi.unpack(mins_ptr, size)
+                return _HashesWrapper({ k : 1 for k in d })
+
+        finally:
+            lib.kmerminhash_slice_free(mins_ptr, size)
+
 
     @property
     def seed(self):
@@ -446,7 +448,7 @@ class MinHash(RustObject):
         )
         # copy over hashes:
         if self.track_abundance:
-            a.set_abundances(self.get_mins(with_abundance=True))
+            a.set_abundances(self.hashes)
         else:
             a.add_many(self)
 
