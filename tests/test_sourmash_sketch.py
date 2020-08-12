@@ -77,7 +77,7 @@ def test_protein_defaults():
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [63]          # x3 for now
+    assert params.ksizes == [30]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance
@@ -95,7 +95,7 @@ def test_dayhoff_defaults():
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [57]          # x3 for now
+    assert params.ksizes == [48]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance
@@ -113,7 +113,7 @@ def test_hp_defaults():
     assert len(params_list) == 1
     params = params_list[0]
 
-    assert params.ksizes == [90]          # x3 for now
+    assert params.ksizes == [126]          # x3 for now
     assert params.num_hashes == 0
     assert params.scaled == 200
     assert not params.track_abundance

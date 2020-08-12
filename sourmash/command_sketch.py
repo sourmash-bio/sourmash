@@ -11,9 +11,9 @@ from .command_compute import (_compute_individual, _compute_merged,
 
 DEFAULTS = dict(
     dna='k=31,scaled=1000,noabund',
-    protein='k=21,scaled=200,noabund',
-    dayhoff='k=19,scaled=200,noabund',
-    hp='k=30,scaled=200,noabund'
+    protein='k=10,scaled=200,noabund',
+    dayhoff='k=16,scaled=200,noabund',
+    hp='k=42,scaled=200,noabund'
 )
 
 
