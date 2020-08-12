@@ -118,7 +118,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     # track original query information for later usage.
     track_abundance = query.minhash.track_abundance and not ignore_abundance
     orig_query_mh = query.minhash
-    orig_query_mins = orig_query_mh.get_hashes()
+    orig_query_mins = orig_query_mh.hashes.keys()
 
     # do we pay attention to abundances?
     orig_query_abunds = { k: 1 for k in orig_query_mins }
@@ -137,8 +137,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             break
 
         # subtract found hashes from search hashes, construct new search
-        query_mins = set(query.minhash.get_hashes())
-        found_mins = best_match.minhash.get_hashes()
+        query_mins = set(query.minhash.hashes.keys())
+        found_mins = best_match.minhash.hashes.keys()
 
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled

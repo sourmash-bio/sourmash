@@ -169,11 +169,11 @@ def test_similarity_downsample(track_abundance):
 
     e.add_hash(1)
     e.add_hash(5)
-    assert len(e.get_mins()) == 2
+    assert len(e.hashes) == 2
 
     f.add_hash(1)
     f.add_hash(5)                 # should be discarded due to max_hash
-    assert len(f.get_mins()) == 1
+    assert len(f.hashes) == 1
 
     ee = SourmashSignature(e)
     ff = SourmashSignature(f)

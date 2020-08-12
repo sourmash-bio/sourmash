@@ -76,10 +76,10 @@ def test_dna_mh(track_abundance):
     for i in range(len(seq) - 3):
         e2.add_kmer(seq[i:i + 4])
 
-    assert e1.get_mins() == e2.get_mins()
-    print(e1.get_mins())
-    assert 726311917625663847 in e1.get_mins()
-    assert 3697418565283905118 in e1.get_mins()
+    assert e1.hashes.keys() == e2.hashes.keys()
+    print(e1.hashes.keys())
+    assert 726311917625663847 in e1.hashes.keys()
+    assert 3697418565283905118 in e1.hashes.keys()
 
 
 def test_protein_mh(track_abundance):
@@ -95,8 +95,8 @@ def test_protein_mh(track_abundance):
         kmer = seq[i:i + 6]
         e2.add_kmer(kmer)
 
-    assert e1.get_mins() == e2.get_mins()
-    assert 901193879228338100 in e1.get_mins()
+    assert e1.hashes.keys() == e2.hashes.keys()
+    assert 901193879228338100 in e1.hashes.keys()
 
 
 def test_pickle(track_abundance):
@@ -116,8 +116,7 @@ def test_pickle(track_abundance):
     fp2 = BytesIO(fp.getvalue())
     e2 = pickle.load(fp2)
 
-    assert e1.get_mins(with_abundance=track_abundance) == \
-           e2.get_mins(with_abundance=track_abundance)
+    assert e1.hashes == e2.hashes
     assert e1.num == e2.num
     assert e1.ksize == e2.ksize
     assert e1.is_protein == e2.is_protein
