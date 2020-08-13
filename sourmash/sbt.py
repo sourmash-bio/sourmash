@@ -42,7 +42,7 @@ then define a search function, ::
 """
 
 
-from collections import namedtuple
+from collections import namedtuple, Counter
 from collections.abc import Mapping
 
 from copy import copy
@@ -52,7 +52,7 @@ import os
 from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
-from cachetools import LFUCache as Cache
+from cachetools import Cache
 
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
@@ -98,11 +98,43 @@ class GraphFactory(object):
 
 
 class _NodesCache(Cache):
-    """A cache for SBT nodes that calls .unload() when the node is removed from cache""" 
+    """A cache for SBT nodes that calls .unload() when the node is removed from cache.
+
+    This is adapted from the LFU cache in https://github.com/tkem/cachetools,
+    but removing the largest node ids first (those near the bottom/leaves of
+    the SBT).
+    """
+
+    def __init__(self, maxsize, getsizeof=None):
+        Cache.__init__(self, maxsize, getsizeof)
+        self.__counter = Counter()
+
+    def __getitem__(self, key, cache_getitem=Cache.__getitem__):
+        value = cache_getitem(self, key)
+        self.__counter[key] -= 1
+        return value
+
+    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):
+        cache_setitem(self, key, value)
+        self.__counter[key] -= 1
+
+    def __delitem__(self, key, cache_delitem=Cache.__delitem__):
+        cache_delitem(self, key)
+        del self.__counter[key]
+
     def popitem(self):
-        key, value = super().popitem()
-        value.unload()
-        return key, value
+        """Remove and return the `(key, value)` pair least recently used."""
+        try:
+            common = self.__counter.most_common()
+            count = common[0][1]
+            (key, _) = max(c for c in common if c[1] == count)
+        except IndexError:
+            msg = '%s is empty' % self.__class__.__name__
+            raise KeyError(msg) from None
+        else:
+            value = self.pop(key)
+            value.unload()
+            return (key, value)
 
 
 class SBT(Index):
