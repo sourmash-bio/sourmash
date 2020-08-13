@@ -125,8 +125,18 @@ class _NodesCache(Cache):
     def popitem(self):
         """Remove and return the `(key, value)` pair least recently used."""
         try:
-            common = self.__counter.most_common()
+            # Select least frequently used keys,
+            # limit to 50 items to avoid dealing with huge lists
+            common = self.__counter.most_common()[:50]
+
+            # common might include different values, so let's use
+            # only keys that have the same value as the first one
+            # (all those with the same count are least frequently used items)
             count = common[0][1]
+
+            # we want to remove the item closest to the leaves,
+            # and since node ids increase as they get farther from the root
+            # we just need to select the maximum key/node id
             (key, _) = max(c for c in common if c[1] == count)
         except IndexError:
             msg = '%s is empty' % self.__class__.__name__
