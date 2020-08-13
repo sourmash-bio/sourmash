@@ -428,6 +428,34 @@ def test_do_sourmash_sketchdna_multik():
         assert 31 in ksizes
 
 
+def test_do_sketch_dna_override_protein_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=7,num=500,protein',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status != 0
+        assert 'Error creating signatures: Incompatible sketch type' in err
+
+
+def test_do_sketch_protein_override_dna_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,num=500,dna',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status != 0
+        assert 'Error creating signatures: Incompatible sketch type' in err
+
+
 def test_do_sketch_translate_multik_with_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
