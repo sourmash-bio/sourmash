@@ -414,8 +414,7 @@ def test_do_sourmash_sketchdna_multik():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['sketch', 'dna', '-p', 'k=31',
-                                            '-p', 'k=21',
+                                           ['sketch', 'dna', '-p', 'k=31,k=21',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -461,8 +460,7 @@ def test_do_sketch_translate_multik_with_protein():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '-p', 'k=10,num=500',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -482,8 +480,7 @@ def test_do_sketch_translate_multik_with_dayhoff():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '-p', 'k=10,num=500',
+                                            '-p', 'k=7,k=10,num=500',
                                             '--dayhoff',
                                             testdata1],
                                            in_directory=location)
@@ -507,8 +504,7 @@ def test_do_sketch_translate_multik_with_hp():
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '-p', 'k=10,num=500',
+                                            '-p', 'k=7,k=10,num=500',
                                             '--hp',
                                             testdata1],
                                            in_directory=location)
@@ -531,8 +527,7 @@ def test_do_sketch_translate_multik_with_hp():
 def test_do_sourmash_sketch_translate_multik_only_protein(c):
     # check sourmash sketch_translate with only protein, no nucl
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('sketch', 'translate', '-p', 'k=7,num=500',
-                   '-p', 'k=10,num=500',
+    c.run_sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500',
                    testdata1)
     outfile = os.path.join(c.location, 'short.fa.sig')
     assert os.path.exists(outfile)
@@ -552,8 +547,7 @@ def test_do_sourmash_sketch_translate_bad_sequences():
         testdata1 = utils.get_test_data('short.bad.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'translate',
-                                            '-p', 'k=7,num=500',
-                                            '-p', 'k=10,num=500',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.bad.fa.sig')
@@ -573,8 +567,7 @@ def test_do_sketch_protein_multik_input():
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'protein',
-                                            '-p', 'k=7,num=500',
-                                            '-p', 'k=10,num=500',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'ecoli.faa.sig')
@@ -600,7 +593,7 @@ def test_do_sourmash_sketchdna_multik_outfile():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21', '-p', 'k=31',
+                                            '-p', 'k=21,k=31',
                                             testdata1, '-o', outfile],
                                            in_directory=location)
         assert os.path.exists(outfile)
@@ -618,8 +611,7 @@ def test_do_sourmash_sketchdna_with_scaled_1():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=1',
-                                            '-p', 'k=31,scaled=1',
+                                            '-p', 'k=21,k=31,scaled=1',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -638,8 +630,7 @@ def test_do_sourmash_sketchdna_with_scaled_2():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=2',
-                                            '-p', 'k=31,scaled=2',
+                                            '-p', 'k=21,k=31,scaled=2',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -658,8 +649,7 @@ def test_do_sourmash_sketchdna_with_scaled():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=100',
-                                            '-p', 'k=31,scaled=100',
+                                            '-p', 'k=21,k=31,scaled=100',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -678,8 +668,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=-1',
-                                            '-p', 'k=31,scaled=-1',
+                                            '-p', 'k=21,k=31,scaled=-1',
                                             testdata1, '-o', outfile],
                                             in_directory=location,
                                             fail_ok=True)
@@ -689,8 +678,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=1000.5',
-                                            '-p', 'k=31,scaled=1000.5',
+                                            '-p', 'k=21,k=31,scaled=1000.5',
                                             testdata1, '-o', outfile],
                                             in_directory=location,
                                             fail_ok=True)
@@ -700,8 +688,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
 
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,scaled=1000000000',
-                                            '-p', 'k=31,scaled=1000000000',
+                                            '-p', 'k=21,k=31,scaled=1000000000',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
 
@@ -715,8 +702,7 @@ def test_do_sketch_with_seed():
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna',
-                                            '-p', 'k=21,seed=43',
-                                            '-p', 'k=31,seed=43',
+                                            '-p', 'k=21,k=31,seed=43',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)

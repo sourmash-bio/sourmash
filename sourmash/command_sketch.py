@@ -21,6 +21,7 @@ def _parse_params_str(params_str):
     "Parse a parameter string of the form 'k=ks,num=num,scaled=scaled,abund'."
     moltype = None
     params = {}
+    params['ksize'] = []
     items = params_str.split(',')
     for item in items:
         if item == 'abund':
@@ -28,7 +29,7 @@ def _parse_params_str(params_str):
         elif item == 'noabund':
             params['track_abundance'] = False
         elif item.startswith('k='):
-            params['ksize'] = int(item[2:])
+            params['ksize'].append(int(item[2:]))
         elif item.startswith('num='):
             if params.get('scaled'):
                 raise ValueError("cannot set both num and scaled in a single minhash")
@@ -120,12 +121,15 @@ class _signatures_for_sketch_factory(object):
             def_hp = default_params.get('is_hp', moltype == 'hp')
 
             # handle ksize specially, for now - multiply by three?
-            def_ksize = default_params['ksize']
-            ksize = int(params_d.get('ksize', def_ksize))
-            if self.mult_ksize_by_3:
-                ksize = ksize*3
+            def_ksizes = default_params['ksize']
+            ksizes = params_d.get('ksize')
+            if not ksizes:
+                ksizes = def_ksizes
 
-            params_obj = ComputeParameters([ksize],
+            if self.mult_ksize_by_3:
+                ksizes = [ k*3 for k in ksizes ]
+
+            params_obj = ComputeParameters(ksizes,
                                            params_d.get('seed', def_seed),
                                            def_protein,
                                            def_dayhoff,
