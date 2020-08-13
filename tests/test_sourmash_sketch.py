@@ -339,143 +339,6 @@ def test_do_sourmash_sketchdna_singleton():
         assert sig.name().endswith('shortName')
 
 
-def test_do_sourmash_sketchdnae_10x_barcode():
-    return 0
-    # @CTB
-    pytest.importorskip('bam2fasta')
-
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--line-count', '50',
-                                            '--input-is-10x',
-                                            '--protein',
-                                            '--barcodes-file',
-                                            barcodes_file,
-                                            testdata1],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 16
-        barcode_signatures = list(set([sig.name().split("_")[0] for sig in siglist]))
-
-        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
-            true_barcodes = set(x.strip() for x in f.readlines())
-
-        # Ensure that every cell barcode in barcodes.tsv has a signature
-        assert all(bc in true_barcodes for bc in barcode_signatures)
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-
-def test_do_sourmash_compute_10x_no_barcode():
-    # @CTB
-    return 0
-    pytest.importorskip('bam2fasta')
-    # Filtered bam file with no barcodes file
-    # should run sourmash compute successfully
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 32
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-
-def test_do_sourmash_compute_10x_no_filter_umis():
-    # @CTB
-    return 0
-    pytest.importorskip('bam2fasta')
-    with utils.TempDirectory() as location:
-        # test to check if all the lines in unfiltered_umi_to_sig are callled and tested
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--save-fastas', location,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 32
-
-
-def test_do_sourmash_compute_10x_filter_umis():
-    # @CTB
-    return 0
-    pytest.importorskip('bam2fasta')
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
-        renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
-        fastas_dir = os.path.join(location, "fastas")
-        if not os.path.exists(fastas_dir):
-            os.makedirs(fastas_dir)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna', '--count-valid-reads', '10',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--barcodes', barcodes_path,
-                                            '--rename-10x-barcodes', renamer_path,
-                                            '--save-fastas', fastas_dir,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 1
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-        with open(csv_path, 'rb') as f:
-            data = [line.split() for line in f]
-        assert len(data) == 9
-        fasta_files = os.listdir(fastas_dir)
-        barcodes = [filename.replace(".fasta", "") for filename in fasta_files]
-        assert len(barcodes) == 1
-        assert len(fasta_files) == 1
-        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
-        count = 0
-        fasta_file_name = os.path.join(fastas_dir, fasta_files[0])
-        for record in screed.open(fasta_file_name):
-            name = record.name
-            sequence = record.sequence
-            count += 1
-            assert name.startswith('lung_epithelial_cell|AAATGCCCAAACTGCT-1')
-            assert sequence.count(">") == 0
-            assert sequence.count("X") == 0
-
-
 def test_do_sourmash_sketchdna_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -565,7 +428,7 @@ def test_do_sourmash_sketchdna_multik():
         assert 31 in ksizes
 
 
-def test_do_sourmash_compute_multik_with_protein():
+def test_do_sketch_translate_multik_with_protein():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
@@ -586,7 +449,7 @@ def test_do_sourmash_compute_multik_with_protein():
             assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_with_dayhoff():
+def test_do_sketch_translate_multik_with_dayhoff():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
@@ -611,7 +474,7 @@ def test_do_sourmash_compute_multik_with_dayhoff():
             assert all(x.minhash.dayhoff for x in siglist)
 
 
-def test_do_sourmash_compute_multik_with_hp():
+def test_do_sketch_translate_multik_with_hp():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
@@ -637,8 +500,8 @@ def test_do_sourmash_compute_multik_with_hp():
 
 
 @utils.in_tempdir
-def test_do_sourmash_compute_multik_only_protein(c):
-    # check sourmash compute with only protein, no nucl
+def test_do_sourmash_sketch_translate_multik_only_protein(c):
+    # check sourmash sketch_translate with only protein, no nucl
     testdata1 = utils.get_test_data('short.fa')
     c.run_sourmash('sketch', 'translate', '-p', 'k=7,num=500',
                    '-p', 'k=10,num=500',
@@ -655,7 +518,7 @@ def test_do_sourmash_compute_multik_only_protein(c):
         assert 30 in ksizes
 
 
-def test_do_sourmash_compute_protein_bad_sequences():
+def test_do_sourmash_sketch_translate_bad_sequences():
     """Proper error handling when Ns in dna sequence"""
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.bad.fa')
@@ -677,7 +540,7 @@ def test_do_sourmash_compute_protein_bad_sequences():
             assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_input_is_protein():
+def test_do_sketch_protein_multik_input():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
@@ -818,7 +681,7 @@ def test_do_sourmash_sketchdna_with_bad_scaled():
         assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
 
 
-def test_do_sourmash_compute_with_seed():
+def test_do_sketch_with_seed():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
