@@ -92,8 +92,13 @@ class _signatures_for_sketch_factory(object):
             # provided.
             for params_str in params_str_list:
                 moltype, params = _parse_params_str(params_str)
-                if moltype is None:
+                if moltype and moltype != 'dna' and default_moltype == 'dna':
+                    raise ValueError(f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'; maybe use 'sketch translate'?")
+                elif moltype == 'dna' and default_moltype != 'dna':
+                    raise ValueError(f"Incompatible sketch type ({default_moltype}) and parameter override ({moltype}) in '{params_str}'")
+                elif moltype is None:
                     moltype = default_moltype
+
                 self.params_list.append((moltype, params))
         else:
             # no params str? default to a single sig, using default_moltype.
@@ -186,10 +191,13 @@ def dna(args):
     # for dna:
     args.input_is_protein = False
 
-    # provide good defaults for dna
-    signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        'dna',
-                                                        mult_ksize_by_3=False)
+    try:
+        signatures_factory = _signatures_for_sketch_factory(args.param_string,
+                                                            'dna',
+                                                            mult_ksize_by_3=False)
+    except ValueError as e:
+        error(f"Error creating signatures: {str(e)}")
+        sys.exit(-1)
 
     _execute_sketch(args, signatures_factory)
 
@@ -213,9 +221,13 @@ def protein(args):
     else:
         moltype = 'protein'
 
-    signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        moltype,
-                                                        mult_ksize_by_3=True)
+    try:
+        signatures_factory = _signatures_for_sketch_factory(args.param_string,
+                                                            moltype,
+                                                            mult_ksize_by_3=True)
+    except ValueError as e:
+        error(f"Error creating signatures: {str(e)}")
+        sys.exit(-1)
 
     _execute_sketch(args, signatures_factory)
 
@@ -239,8 +251,12 @@ def translate(args):
     else:
         moltype = 'protein'
 
-    signatures_factory = _signatures_for_sketch_factory(args.param_string,
-                                                        moltype,
-                                                        mult_ksize_by_3=True)
+    try:
+        signatures_factory = _signatures_for_sketch_factory(args.param_string,
+                                                            moltype,
+                                                            mult_ksize_by_3=True)
+    except ValueError as e:
+        error(f"Error creating signatures: {str(e)}")
+        sys.exit(-1)
 
     _execute_sketch(args, signatures_factory)

@@ -70,6 +70,11 @@ def test_dna_override_bad_1():
                                                  'dna', False)
 
 
+def test_dna_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,protein'],
+                                                 'dna', False)
+
 def test_protein_defaults():
     factory = _signatures_for_sketch_factory([], 'protein', True)
     params_list = list(factory.get_compute_params())
@@ -87,6 +92,11 @@ def test_protein_defaults():
     assert not params.hp
     assert params.protein
 
+
+def test_protein_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'protein', False)
 
 def test_dayhoff_defaults():
     factory = _signatures_for_sketch_factory([], 'dayhoff', True)
@@ -106,6 +116,11 @@ def test_dayhoff_defaults():
     assert not params.protein
 
 
+def test_dayhoff_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'dayhoff', False)
+
 def test_hp_defaults():
     factory = _signatures_for_sketch_factory([], 'hp', True)
     params_list = list(factory.get_compute_params())
@@ -122,6 +137,12 @@ def test_hp_defaults():
     assert not params.dayhoff
     assert params.hp
     assert not params.protein
+
+
+def test_hp_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'hp', False)
 
 
 def test_multiple_moltypes():
