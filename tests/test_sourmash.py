@@ -3893,8 +3893,8 @@ def test_storage_convert():
                    for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
         args = ['storage', 'convert',
-                '-b', """'TarStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.tar.gz')),
+                '-b', """'ZipStorage("{}")'""".format(
+                    os.path.join(location, 'v2.sbt.zip')),
                 testsbt]
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
