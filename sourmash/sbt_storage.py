@@ -7,7 +7,7 @@ import tarfile
 from tempfile import NamedTemporaryFile
 import zipfile
 from abc import ABC
-
+from pathlib import Path
 
 class Storage(ABC):
 
@@ -78,11 +78,8 @@ class FSStorage(Storage):
         return newpath
 
     def load(self, path):
-        out = BytesIO()
-        with open(os.path.join(self.location, self.subdir, path), 'rb') as f:
-            out.write(f.read())
-
-        return out.getvalue()
+        path = Path(self.location) / self.subdir / path
+        return path.read_bytes()
 
 
 class TarStorage(Storage):

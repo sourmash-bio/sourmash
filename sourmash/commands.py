@@ -618,8 +618,12 @@ def gather(args):
         sys.exit(-1)
 
     # set up the search databases
+    cache_size = args.cache_size
+    if args.cache_size == 0:
+        cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                args.traverse_directory)
+                                                args.traverse_directory,
+                                                cache_size=cache_size)
 
     if not len(databases):
         error('Nothing found to search!')
