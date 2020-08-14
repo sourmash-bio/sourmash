@@ -5,10 +5,11 @@ from .sbt import Leaf, SBT, GraphFactory
 from . import signature
 
 
-def load_sbt_index(filename, print_version_warning=True):
+def load_sbt_index(filename, *, print_version_warning=True, cache_size=None):
     "Load and return an SBT index."
     return SBT.load(filename, leaf_loader=SigLeaf.load,
-                    print_version_warning=print_version_warning)
+                    print_version_warning=print_version_warning,
+                    cache_size=cache_size)
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
