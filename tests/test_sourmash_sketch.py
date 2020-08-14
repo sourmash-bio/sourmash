@@ -279,7 +279,7 @@ def test_do_sourmash_sketchdna_output_stdout_valid():
 
 @utils.in_tempdir
 def test_do_sourmash_sketchdna_output_and_name_valid_file(c):
-    # CTB what does this test actually test? :)
+    # test --merge of multiple input files
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
@@ -484,8 +484,6 @@ def test_do_sketch_translate_multik_with_dayhoff():
                                             '--dayhoff',
                                             testdata1],
                                            in_directory=location)
-#        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
-#               'signatures.' in err @CTB
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -508,8 +506,6 @@ def test_do_sketch_translate_multik_with_hp():
                                             '--hp',
                                             testdata1],
                                            in_directory=location)
-#        assert 'Computing only hp-encoded protein (and not nucleotide) ' \
-#               'signatures.' in err @CTB
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 

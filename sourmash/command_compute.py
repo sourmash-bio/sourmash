@@ -201,7 +201,7 @@ def _compute_individual(args, signatures_factory):
                     add_seq(sigs, record.sequence,
                             args.input_is_protein, args.check_sequence)
 
-                # @CTB check bug here wrt indentation
+                # @CTB check bug here wrt indentation - see #1158
                 set_sig_name(sigs, fasta, name=record.name)
                 siglist.extend(sigs)
 

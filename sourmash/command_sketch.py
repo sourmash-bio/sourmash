@@ -189,10 +189,8 @@ def dna(args):
 
     CTB: make usable via Python?
     """
-    # TBD/FIXME
-    args.input_is_10x = False # CTB
-
     # for dna:
+    args.input_is_10x = False
     args.input_is_protein = False
 
     try:
