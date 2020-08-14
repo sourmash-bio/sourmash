@@ -35,6 +35,7 @@ from . import watch
 from . import lca
 from . import sig
 from . import sig as signature
+from . import sketch
 from . import storage
 
 
@@ -92,6 +93,7 @@ class SourmashParser(ArgumentParser):
 def get_parser():
     module_descs = {
         'lca': 'Taxonomic operations',
+        'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
     }
