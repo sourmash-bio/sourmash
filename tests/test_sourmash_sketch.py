@@ -9,6 +9,7 @@ import glob
 import json
 import csv
 import pytest
+import screed
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -97,6 +98,25 @@ def test_protein_override_bad_2():
     with pytest.raises(ValueError):
         factory = _signatures_for_sketch_factory(['k=21,dna'],
                                                  'protein', False)
+
+def test_protein_override_bad_rust_foo():
+    # mimic 'sourmash sketch protein -p dna'
+    factory = _signatures_for_sketch_factory([], 'protein', False)
+
+    # reach in and avoid error checking to construct a bad params_list.
+    factory.params_list = [('dna', {})]
+
+    # now, get sigs...
+    siglist = factory()
+    assert len(siglist) == 1
+    sig = siglist[0]
+
+    # try adding something
+    testdata1 = utils.get_test_data('ecoli.faa')
+    record = next(iter(screed.open(testdata1)))
+
+    sig.add_protein(record.sequence)
+
 
 def test_dayhoff_defaults():
     factory = _signatures_for_sketch_factory([], 'dayhoff', True)
