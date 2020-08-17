@@ -162,8 +162,8 @@ First, load two signatures:
 Then, get the hashes, and (e.g.) compute the union:
 
 ```
->>> hashes1 = set(sig1.minhash.get_mins())
->>> hashes2 = set(sig2.minhash.get_mins())
+>>> hashes1 = set(sig1.minhash.hashes.keys())
+>>> hashes2 = set(sig2.minhash.hashes.keys())
 >>> hash_union = hashes1.union(hashes2)
 >>> print('{} hashes in union of {} and {}'.format(len(hash_union), len(hashes1), len(hashes2)))
 1000 hashes in union of 500 and 500
@@ -242,7 +242,7 @@ sections.
 MinHash objects have the following methods and attributes:
 
 * `ksize`, `num`, and `scaled` - the basic parameters used to create a MinHash object.
-* `get_mins()` - retrieve all of the hashes contained in this object.
+* `hashes` - retrieve all of the hashes contained in this object.
 * `add_sequence(seq)` - hash sequence and add hash values.
 * `add(hash)` and `add_many(hashvals)` - add hash values directly.
 * `similarity(other)` - calculate Jaccard similarity with the other MinHash object.
@@ -279,7 +279,7 @@ We can downsample this to 500 by extracting the hashes and using
 `add_many` to add them to a new MinHash like so:
 
 ```
->>> hashvals = larger.get_mins()
+>>> hashvals = larger.hashes.keys()
 >>> smaller = sourmash.MinHash(n=500, ksize=31)
 >>> smaller.add_many(hashvals)
 >>> len(smaller)
@@ -304,7 +304,7 @@ The same can be done with scaled MinHashes:
 >>> len(large_scaled)
 459
 >>> small_scaled = sourmash.MinHash(n=0, ksize=31, scaled=500)
->>> small_scaled.add_many(large_scaled.get_mins())
+>>> small_scaled.add_many(large_scaled.hashes.keys())
 >>> len(small_scaled)
 69
 
@@ -341,7 +341,7 @@ your MinHash, and then extract the hash values:
 ```
 >>> num_mh = sourmash.MinHash(n=1000, ksize=31)
 >>> num_mh.add_sequence(sequence)
->>> hashvals = num_mh.get_mins()
+>>> hashvals = num_mh.hashes.keys()
 
 ```
 
@@ -359,7 +359,7 @@ The same works in reverse, of course:
 ```
 >>> scaled_mh = sourmash.MinHash(n=0, ksize=31, scaled=50)
 >>> scaled_mh.add_sequence(sequence)
->>> hashvals = scaled_mh.get_mins()
+>>> hashvals = scaled_mh.hashes.keys()
 >>> num_mh = sourmash.MinHash(n=500, ksize=31)
 >>> num_mh.add_many(hashvals)
 

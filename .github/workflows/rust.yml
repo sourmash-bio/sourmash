@@ -127,9 +127,8 @@ jobs:
         run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
+        uses: codecov/codecov-action@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           flags: rusttests
           fail_ci_if_error: true
 

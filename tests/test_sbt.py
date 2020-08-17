@@ -687,7 +687,7 @@ def test_sbt_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -744,7 +744,7 @@ def test_sbt_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes
@@ -935,3 +935,18 @@ def test_sbt_dayhoff_command_search(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_sbt_node_cache():
+    tree = SBT.load(utils.get_test_data('v6.sbt.json'),
+                    leaf_loader=SigLeaf.load,
+                    cache_size=1)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
+
+    results = list(tree.find(search_minhashes_containment, to_search, 0.1))
+    assert len(results) == 4
+
+    assert tree._nodescache.currsize == 1
+    assert tree._nodescache.currsize == 1

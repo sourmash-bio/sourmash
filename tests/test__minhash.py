@@ -1459,12 +1459,13 @@ def test_get_mins_deprecated(track_abundance):
     mh.add_many(mins)
     mh.add_many(mins)
 
-    assert set(mh.get_mins()) == set(mins)
-    if track_abundance:
-        d = mh.get_mins(with_abundance=True)
-        for k in mins:
-            assert d[k] == 4
-        assert len(d) == len(mins)
+    with pytest.warns(DeprecationWarning):
+        assert set(mh.get_mins()) == set(mins)
+        if track_abundance:
+            d = mh.get_mins(with_abundance=True)
+            for k in mins:
+                assert d[k] == 4
+            assert len(d) == len(mins)
 
 
 def test_get_hashes_deprecated(track_abundance):
@@ -1476,7 +1477,8 @@ def test_get_hashes_deprecated(track_abundance):
     mh.add_many(mins)
     mh.add_many(mins)
 
-    assert set(mh.get_hashes()) == set(mins)
+    with pytest.warns(DeprecationWarning):
+        assert set(mh.get_hashes()) == set(mins)
 
 
 def test_downsample_num(track_abundance):
