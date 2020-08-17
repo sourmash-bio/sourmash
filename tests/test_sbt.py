@@ -318,9 +318,9 @@ def test_sbt_fsstorage():
         print(*old_result, sep='\n')
 
         with FSStorage(location, '.fstree') as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
+            tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
 
-        tree = SBT.load(os.path.join(location, 'tree'), leaf_loader=SigLeaf.load)
+        tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
         new_result = {str(s) for s in tree.find(search_minhashes,
@@ -352,10 +352,10 @@ def test_sbt_tarstorage():
         print(*old_result, sep='\n')
 
         with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
+            tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
 
         with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
-            tree = SBT.load(os.path.join(location, 'tree'),
+            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
@@ -387,10 +387,10 @@ def test_sbt_zipstorage(tmpdir):
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree.save(str(tmpdir.join("tree")), storage=storage)
+        tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree = SBT.load(str(tmpdir.join("tree")),
+        tree = SBT.load(str(tmpdir.join("tree.sbt.json")),
                         leaf_loader=SigLeaf.load,
                         storage=storage)
 

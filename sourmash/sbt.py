@@ -563,8 +563,10 @@ class SBT(Index):
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
-        if path.endswith(".sbt.zip"):
+        if not path.endswith(".sbt.json"):
             kind = "Zip"
+            if not path.endswith('.sbt.zip'):
+                path += '.sbt.zip'
             storage = ZipStorage(path)
             backend = "FSStorage"
             name = os.path.basename(path[:-8])
@@ -572,14 +574,12 @@ class SBT(Index):
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", b"")
             index_filename = os.path.abspath(path)
-        else:
+        else:                             # path.endswith('.sbt.json')
+            assert path.endswith('.sbt.json')
             kind = "FS"
             name = os.path.basename(path)
-            if path.endswith('.sbt.json'):
-                name = name[:-9]
-                index_filename = os.path.abspath(path)
-            else:
-                index_filename = os.path.abspath(path + '.sbt.json')
+            name = name[:-9]
+            index_filename = os.path.abspath(path)
 
             if storage is None:
                 # default storage
@@ -686,22 +686,29 @@ class SBT(Index):
         sbt_name = None
         tree_data = None
 
-        if storage is None and ZipStorage.can_open(location):
-            storage = ZipStorage(location)
-
-            sbts = storage.list_sbts()
-            if len(sbts) != 1:
-                print("no SBT, or too many SBTs!")
+        if storage is None:
+            if ZipStorage.can_open(location):
+                storage = ZipStorage(location)
             else:
-                tree_data = storage.load(sbts[0])
+                if not location.endswith('.sbt.zip'):
+                    location2 = location + '.sbt.zip'
+                    if ZipStorage.can_open(location2):
+                        storage = ZipStorage(location2)
 
-            tempfile = NamedTemporaryFile()
+            if storage:
+                sbts = storage.list_sbts()
+                if len(sbts) != 1:
+                    print("no SBT, or too many SBTs!")
+                else:
+                    tree_data = storage.load(sbts[0])
 
-            tempfile.write(tree_data)
-            tempfile.flush()
+                tempfile = NamedTemporaryFile()
 
-            dirname = os.path.dirname(tempfile.name)
-            sbt_name = os.path.basename(tempfile.name)
+                tempfile.write(tree_data)
+                tempfile.flush()
+
+                dirname = os.path.dirname(tempfile.name)
+                sbt_name = os.path.basename(tempfile.name)
 
         if sbt_name is None:
             dirname = os.path.dirname(os.path.abspath(location))
