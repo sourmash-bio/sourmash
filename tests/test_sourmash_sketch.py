@@ -115,7 +115,10 @@ def test_protein_override_bad_rust_foo():
     testdata1 = utils.get_test_data('ecoli.faa')
     record = next(iter(screed.open(testdata1)))
 
-    sig.add_protein(record.sequence)
+    with pytest.raises(ValueError) as exc:
+        sig.add_protein(record.sequence)
+
+    assert 'Invalid hash function: "dna"' in str(exc)
 
 
 def test_dayhoff_defaults():
