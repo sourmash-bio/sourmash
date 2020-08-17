@@ -357,15 +357,15 @@ impl Signature {
         if #[cfg(feature = "parallel")] {
             self.signatures
                 .par_iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_protein(&seq).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_protein(&seq) }
+                )?;
         } else {
             self.signatures
                 .iter_mut()
-                .for_each(|sketch| {
-                    sketch.add_protein(&seq).unwrap(); }
-                );
+                .try_for_each(|sketch| {
+                    sketch.add_protein(&seq) }
+                )?;
         }
         }
 
