@@ -15,7 +15,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5
 
 
-def summarize(hashvals, dblist, threshold, with_abundance):
+def summarize(hashvals, dblist, threshold, ignore_abundance):
     """
     Classify 'hashvals' using the given list of databases.
 
@@ -29,7 +29,7 @@ def summarize(hashvals, dblist, threshold, with_abundance):
     assignments = lca_utils.gather_assignments(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    if with_abundance:
+    if not ignore_abundance:
         counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
     else: # flatten
         counts = lca_utils.count_lca_for_assignments(assignments, None)
@@ -56,7 +56,7 @@ def summarize(hashvals, dblist, threshold, with_abundance):
     return aggregated_counts
 
 
-def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse):
+def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance, traverse):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
@@ -79,12 +79,8 @@ def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse
                    total_n, end='\r')
             total_count += 1
 
-            if with_abundance and not query_sig.minhash.track_abundance:
-                notify("** error: minhash has no abundances, yet --with-abundance specified")
-                sys.exit(-1)
-
-            if not with_abundance and query_sig.minhash.track_abundance:
-                notify("NOTE: discarding abundances in query, since --with-abundance not given")
+            if ignore_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --ignore-abundance")
 
             # rebuild hashvals individually
             hashvals = defaultdict(int)
@@ -167,7 +163,7 @@ def summarize_main(args):
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    with_abundance = args.with_abundance
+    ignore_abundance = args.ignore_abundance
 
     # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
@@ -178,8 +174,8 @@ def summarize_main(args):
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
-    if with_abundance:
-        notify("Weighting output by k-mer abundances in query, since --with-abundance given.")
+    if ignore_abundance:
+        notify("Ignoring any k-mer abundances in query, since --ignore-abundance given.")
 
     # find all the queries
     notify('finding query signatures...')
@@ -204,12 +200,12 @@ def summarize_main(args):
 
     try:
         for filename, sig, hashvals in \
-          load_singletons_and_count(inp_files, ksize, scaled, with_abundance, args.traverse_directory):
+          load_singletons_and_count(inp_files, ksize, scaled, ignore_abundance, args.traverse_directory):
 
             # get the full counted list of lineage counts in this signature
             lineage_counts = summarize(hashvals, dblist, args.threshold,
-                                       with_abundance)
-            if with_abundance:
+                                       ignore_abundance)
+            if not ignore_abundance:
                 total = float(sum(hashvals.values()))
             else:
                 total = float(len(hashvals))

@@ -1456,7 +1456,7 @@ def test_multi_summarize_with_unassigned_singleton():
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2]
+               input_sig2, '--ignore-abundance']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1509,7 +1509,8 @@ def test_summarize_to_root():
 
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
+               '--ignore-abundance']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1549,66 +1550,6 @@ def test_summarize_unknown_hashes():
         assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
 
 
-def test_multi_summarize_with_unassigned_with_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--with-abundance']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
-
-        assert status != 0
-        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
-
-
-def test_multi_summarize_with_unassigned_singleton_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--with-abundance']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert status != 0
-        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
-
-
 def test_summarize_to_root_abund():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca-root/tax.csv')
@@ -1627,8 +1568,7 @@ def test_summarize_to_root_abund():
 
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
-               '--with-abundance']
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1657,8 +1597,7 @@ def test_summarize_unknown_hashes_abund():
 
         assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               '--with-abundance']
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1675,8 +1614,7 @@ def test_lca_summarize_abund_hmp(c):
     queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
     dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
-                   '--with-abundance')
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
 
     assert '32.1%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
 
@@ -1687,24 +1625,22 @@ def test_lca_summarize_abund_fake_no_abund(c):
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--ignore-abundance')
 
-    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' not in c.last_result.err
-    assert 'NOTE: discarding abundances in query, since --with-abundance not given' in c.last_result.err
+    assert 'NOTE: discarding abundances in query, since --ignore-abundance' in c.last_result.err
     assert '79.6%   550   Bacteria' in c.last_result.out
     assert '20.4%   141   Archaea' in c.last_result.out
 
 
 @utils.in_thisdir
 def test_lca_summarize_abund_fake_yes_abund(c):
-    # test lca summarize --with-abundance on some known/fake data
+    # test lca summarize abundance weighting on some known/fake data
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
-                   '--with-abundance')
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
 
-    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' in c.last_result.err
     assert '43.2%   563   Bacteria' in c.last_result.out
     assert '56.8%   740   Archaea' in c.last_result.out
 

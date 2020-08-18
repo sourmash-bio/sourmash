@@ -22,8 +22,8 @@ def subparser(subparsers):
     subparser.add_argument('--scaled', metavar='FLOAT', type=float,
                            help='scaled value to downsample to')
 
-    subparser.add_argument('--with-abundance', action='store_true',
-                           help='use hash abundances from query signature to weight results')
+    subparser.add_argument('--ignore-abundance', action='store_true',
+                           help='ignore hash abundances in query signatures do not weight results')
 
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
