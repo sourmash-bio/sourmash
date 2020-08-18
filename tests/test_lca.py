@@ -1339,8 +1339,7 @@ def test_single_summarize_singleton():
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
-               '--singleton']
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1349,7 +1348,6 @@ def test_single_summarize_singleton():
 
         assert 'loaded 1 signatures from 1 files total.' in err
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
-        # --singleton adds info about signature filename, md5, and signature name
         assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
@@ -1382,7 +1380,7 @@ def test_single_summarize_singleton_traverse(c):
     shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
     cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
-           '--singleton', '--traverse-directory']
+           '--traverse-directory']
     c.run_sourmash(*cmd)
 
     out = c.last_result.out
@@ -1392,7 +1390,6 @@ def test_single_summarize_singleton_traverse(c):
 
     assert 'loaded 1 signatures from 1 files total.' in err
     assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
-    # --singleton adds info about signature filename, md5, and signature name
     assert 'q.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
@@ -1459,7 +1456,7 @@ def test_multi_summarize_with_unassigned_singleton():
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--singleton']
+               input_sig2]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1601,7 +1598,7 @@ def test_multi_summarize_with_unassigned_singleton_abund():
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--singleton', '--with-abundance']
+               input_sig2, '--with-abundance']
         status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
 
         print(cmd)
