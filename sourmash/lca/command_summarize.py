@@ -56,35 +56,6 @@ def summarize(hashvals, dblist, threshold, with_abundance):
     return aggregated_counts
 
 
-def load_and_combine(filenames, ksize, scaled, with_abundance, traverse):
-    "Load individual signatures and combine them all for classification."
-    total_count = 0
-    n = 0
-    total_n = len(filenames)
-    hashvals = defaultdict(int)
-    for query_filename in filenames:
-        n += 1
-        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize, traverse=traverse):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
-            total_count += 1
-
-            if with_abundance and not query_sig.minhash.track_abundance:
-                notify("** error: minhash has no abundances, yet --with-abundance specified")
-                sys.exit(-1)
-
-            if not with_abundance and query_sig.minhash.track_abundance:
-                notify("NOTE: discarding abundances in query, since --with-abundance not given")
-
-            count_signature(query_sig, scaled, hashvals)
-
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
-
-    return hashvals
-
-
 def load_singletons_and_count(filenames, ksize, scaled, with_abundance, traverse):
     "Load individual signatures and count them individually."
     total_count = 0
@@ -225,58 +196,34 @@ def summarize_main(args):
     if not check_files_exist(*inp_files):
         sys.exit(-1)
 
-    if args.singleton:
-        # summarize each signature individually
-        csv_fp = None
-        write_header = True
-        if args.output:
-            csv_fp = open(args.output, 'wt')
+    # summarize each signature individually
+    csv_fp = None
+    write_header = True
+    if args.output:
+        csv_fp = open(args.output, 'wt')
 
-        try:
-            for filename, sig, hashvals in \
-              load_singletons_and_count(inp_files, ksize, scaled, with_abundance, args.traverse_directory):
+    try:
+        for filename, sig, hashvals in \
+          load_singletons_and_count(inp_files, ksize, scaled, with_abundance, args.traverse_directory):
 
-                # get the full counted list of lineage counts in this signature
-                lineage_counts = summarize(hashvals, dblist, args.threshold,
-                                           with_abundance)
-                if with_abundance:
-                    total = float(sum(hashvals.values()))
-                else:
-                    total = float(len(hashvals))
+            # get the full counted list of lineage counts in this signature
+            lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                       with_abundance)
+            if with_abundance:
+                total = float(sum(hashvals.values()))
+            else:
+                total = float(len(hashvals))
 
-                output_results(lineage_counts, total,
-                               filename=filename, sig=sig)
+            output_results(lineage_counts, total,
+                           filename=filename, sig=sig)
 
-                if csv_fp:
-                    output_csv(lineage_counts, csv_fp, filename, sig,
-                               write_header=write_header)
-                    write_header = False
-        finally:
             if csv_fp:
-                csv_fp.close()
-
-    else:
-        # load and merge all the signatures in all the files
-        # DEPRECATE for 4.0.
-        hashvals = load_and_combine(inp_files, ksize, scaled, with_abundance,
-                                    args.traverse_directory)
-
-        # get the full counted list of lineage counts across signatures
-        lineage_counts = summarize(hashvals, dblist, args.threshold,
-                                   with_abundance)
-
-        # output!
-        if with_abundance:
-            total = float(sum(hashvals.values()))
-        else:
-            total = float(len(hashvals))
-
-        output_results(lineage_counts, total)
-
-        # CSV:
-        if args.output:
-            with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
-                output_csv(lineage_counts, csv_fp, None, None)
+                output_csv(lineage_counts, csv_fp, filename, sig,
+                           write_header=write_header)
+                write_header = False
+    finally:
+        if csv_fp:
+            csv_fp.close()
 
 
 if __name__ == '__main__':
