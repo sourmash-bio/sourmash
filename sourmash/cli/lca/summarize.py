@@ -22,9 +22,6 @@ def subparser(subparsers):
     subparser.add_argument('--scaled', metavar='FLOAT', type=float,
                            help='scaled value to downsample to')
 
-    subparser.add_argument('--singleton', action='store_true',
-                           help='classify each signature independently')
-
     subparser.add_argument('--with-abundance', action='store_true',
                            help='use hash abundances from query signature to weight results')
 
