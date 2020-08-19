@@ -437,8 +437,7 @@ def search(args):
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment,
-                                                args.traverse_directory)
+                                                not args.containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:
@@ -601,7 +600,6 @@ def gather(args):
     if args.cache_size == 0:
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                args.traverse_directory,
                                                 cache_size=cache_size)
 
     if not len(databases):
@@ -709,8 +707,7 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
-                                                args.traverse_directory)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
 
     if not len(databases):
         error('Nothing found to search!')

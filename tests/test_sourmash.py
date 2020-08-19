@@ -1516,7 +1516,7 @@ def test_search_metagenome_traverse():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'search {} {} -k 21 --traverse-directory'
+        cmd = 'search {} {} -k 21'
         cmd = cmd.format(query_sig, testdata_dir)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -3162,7 +3162,7 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --traverse-directory --threshold-bp=0'
+        cmd = 'gather {} {} -k 21 --threshold-bp=0'
         cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -3366,17 +3366,6 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
-@utils.in_thisdir
-def test_gather_error_loading_dir(c):
-    # test gather applied to a directory
-    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db = utils.get_test_data('prot/protein/')
-
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, db)
-    assert 'Error while reading signatures from' in str(c.last_result.err)
-
-
 @utils.in_tempdir
 def test_gather_error_no_sigs_traverse(c):
     # test gather applied to a directory
@@ -3385,7 +3374,7 @@ def test_gather_error_no_sigs_traverse(c):
     emptydir = c.output('')
 
     with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+        c.run_sourmash('gather', query, emptydir)
 
     err = c.last_result.err
     print(err)
