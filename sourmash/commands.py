@@ -420,7 +420,7 @@ def search(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', query.name[:30],
+    notify('loaded query: {}... (k={}, {})', str(query)[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
@@ -526,7 +526,7 @@ def categorize(args):
         csv_w = csv.writer(csv_fp)
 
     for queryfile, query, query_moltype, query_ksize in loader:
-        notify('loaded query: {}... (k={}, {})', query.name[:30],
+        notify('loaded query: {}... (k={}, {})', str(query)[:30],
                query_ksize, query_moltype)
 
         results = []
@@ -544,7 +544,7 @@ def categorize(args):
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
-            notify('for {}, found: {:.2f} {}', query.name,
+            notify('for {}, found: {:.2f} {}', query,
                                                best_hit_sim,
                                                best_hit_query)
             best_hit_query_name = str(best_hit_query)
@@ -575,7 +575,7 @@ def gather(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', query.name[:30],
+    notify('loaded query: {}... (k={}, {})', str(query)[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
@@ -720,9 +720,8 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            notify('loaded query: {}... (k={}, {})', query.name[:30],
-                                            query.minhash.ksize,
-                                            sourmash_args.get_moltype(query))
+            notify('loaded query: {}... (k={}, {})', str(query)[:30],
+                   query.minhash.ksize, sourmash_args.get_moltype(query))
 
             # verify signature was computed right.
             if query.minhash.max_hash == 0:

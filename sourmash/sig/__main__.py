@@ -222,7 +222,7 @@ def describe(args):
                 if mh.track_abundance:
                     with_abundance = 1
                 md5 = sig.md5sum()
-                name = str(sig)
+                name = sig.name or "** no name **"
                 filename = sig.filename
                 license = sig.license
 
@@ -370,7 +370,7 @@ def merge(args):
                 mh.merge(sigobj_mh)
             except:
                 error("ERROR when merging signature '{}' ({}) from file {}",
-                      sigobj.name, sigobj.md5sum()[:8], sigfile)
+                      sigobj, sigobj.md5sum()[:8], sigfile)
                 raise
 
             this_n += 1
@@ -565,7 +565,7 @@ def extract(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         outlist.extend(siglist)
 
@@ -606,7 +606,7 @@ def filter(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         for ss in siglist:
             mh = ss.minhash
@@ -799,7 +799,7 @@ def export(args):
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", query.name, query.md5sum()[:8])
+    notify("exported signature {} ({})", query, query.md5sum()[:8])
 
 
 def main(arglist=None):

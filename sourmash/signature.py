@@ -103,18 +103,6 @@ class SourmashSignature(RustObject):
     def __ne__(self, other):
         return not self == other
 
-    def name_RM(self):
-        "Return as nice a name as possible, defaulting to md5 prefix."
-        name = self._name
-        filename = self.filename
-
-        if name:
-            return name
-        elif filename:
-            return filename
-        else:
-            return self.md5sum()[:8]
-
     @property
     def filename(self):
         return decode_str(self._methodcall(lib.signature_get_filename))
