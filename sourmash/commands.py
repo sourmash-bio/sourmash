@@ -45,7 +45,6 @@ def compare(args):
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
-                                                       traverse=args.traverse_directory,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)
@@ -362,7 +361,6 @@ def index(args):
         siglist = sourmash_args.load_file_as_signatures(f,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
-                                                        traverse=args.traverse_directory,
                                                         yield_all_files=args.force,
                                                         progress=progress)
 
@@ -439,8 +437,7 @@ def search(args):
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment,
-                                                args.traverse_directory)
+                                                not args.containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:
@@ -514,12 +511,8 @@ def categorize(args):
     tree = load_sbt_index(args.sbt_name)
 
     # load query filenames
-    if args.traverse_directory:
-        inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    else:
-        inp_files = set(args.queries) - already_names
-
-    inp_files = set(inp_files) - already_names
+    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
+    inp_files = inp_files - already_names
 
     notify('found {} files to query', len(inp_files))
 
@@ -607,7 +600,6 @@ def gather(args):
     if args.cache_size == 0:
         cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                args.traverse_directory,
                                                 cache_size=cache_size)
 
     if not len(databases):
@@ -715,8 +707,7 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
-                                                args.traverse_directory)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
 
     if not len(databases):
         error('Nothing found to search!')

@@ -46,10 +46,6 @@ def subparser(subparsers):
     )
     subparser.add_argument('-f', '--force', action='store_true')
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath directories'
-    )
-    subparser.add_argument(
         '--report', help='output a report on anomalies, if any'
     )
     subparser.add_argument(

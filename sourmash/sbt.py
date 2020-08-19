@@ -55,13 +55,12 @@ from tempfile import NamedTemporaryFile
 from cachetools import Cache
 
 from .exceptions import IndexNotSupported
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage, ZipStorage
+from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
-    'TarStorage': TarStorage,
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
     'RedisStorage': RedisStorage,
@@ -1317,8 +1316,8 @@ def convert_cmd(name, backend):
         backend = IPFSStorage
     elif backend.lower() in ('redis', 'redisstorage'):
         backend = RedisStorage
-    elif backend.lower() in ('tar', 'tarstorage'):
-        backend = TarStorage
+    elif backend.lower() in ('zip', 'zipstorage'):
+        backend = ZipStorage
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
         if options:
