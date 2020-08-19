@@ -59,7 +59,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-f', '--force', action='store_true',
-        help='try loading all files in provided subdirectories"'
+        help='try loading *all* files in provided subdirectories, not just .sig files"'
     )
     subparser.add_argument(
         '-s', '--sparseness', metavar='FLOAT', type=float, default=.0,
