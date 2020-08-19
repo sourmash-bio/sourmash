@@ -154,11 +154,22 @@ class LoadSingleSignatures(object):
 
 
 def traverse_find_sigs(filenames, yield_all_files=False):
+    endings = ('.sig', '.sig.gz')
     for filename in filenames:
-        if os.path.isfile(filename) and \
-                  (filename.endswith('.sig') or yield_all_files):
-            yield filename
-            continue
+        if os.path.isfile(filename):
+            yield_me = False
+            if yield_all_files:
+                yield_me = True
+                continue
+            else:
+                for ending in endings:
+                    if filename.endswith(ending):
+                        yield_me = True
+                        break
+
+            if yield_me:
+                yield filename
+                continue
 
         # filename is a directory --
         dirname = filename
