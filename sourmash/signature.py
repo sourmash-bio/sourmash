@@ -60,11 +60,10 @@ class SourmashSignature(RustObject):
     def __repr__(self):
         name = self.name
         md5pref = self.md5sum()[:8]
-        if name != md5pref:
+        if name == md5pref:
+            return "SourmashSignature({})".format(md5pref)
+        else: # name != md5pref:
             return "SourmashSignature('{}', {})".format(name, md5pref)
-        return "SourmashSignature({})".format(md5pref)
-
-    __repr__ = __str__
 
     #def minhashes(self):
     #    size = ffi.new("uintptr_t *")
