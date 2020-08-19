@@ -131,6 +131,8 @@ class LCA_Database(Index):
 
         if ident is None:
             ident = sig.name
+            if not ident:
+                ident = sig.filename
 
         if ident in self.ident_to_name:
             raise ValueError("signature {} is already in this LCA db.".format(ident))

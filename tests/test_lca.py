@@ -303,7 +303,7 @@ def test_api_insert_retrieve_check_name():
     sigs = list(lca_db.signatures())
     assert len(sigs) == 1
     retrieved_sig = sigs[0]
-    assert retrieved_sig == ss.name
+    assert retrieved_sig.name == ss.name
     assert retrieved_sig.minhash == ss.minhash
 
 
