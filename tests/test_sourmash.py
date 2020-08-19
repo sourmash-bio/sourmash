@@ -3662,7 +3662,7 @@ def test_sbt_categorize():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3776,7 +3776,7 @@ def test_sbt_categorize_already_done_traverse():
         with open(os.path.join(location, 'in.csv'), 'wt') as fp:
             fp.write('./4.sig,genome-s10.fa.gz,0.50')
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--load-csv', 'in.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3803,7 +3803,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.']
+        args = ['categorize', 'zzz', '.']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
 

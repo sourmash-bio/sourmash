@@ -512,12 +512,8 @@ def categorize(args):
     tree = load_sbt_index(args.sbt_name)
 
     # load query filenames
-    if args.traverse_directory:
-        inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    else:
-        inp_files = set(args.queries) - already_names
-
-    inp_files = set(inp_files) - already_names
+    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
+    inp_files = inp_files - already_names
 
     notify('found {} files to query', len(inp_files))
 
