@@ -186,7 +186,7 @@ def test_sig_filter_1(c):
     out = c.last_result.out
 
     filtered_sigs = list(sourmash.load_signatures(out))
-    filtered_sigs.sort(key=lambda x: x.name())
+    filtered_sigs.sort(key=lambda x: x.name)
 
     assert len(filtered_sigs) == 2
 
@@ -563,8 +563,8 @@ def test_sig_rename_1(c):
     print(actual_rename_sig.minhash)
 
     assert actual_rename_sig.minhash == test_rename_sig.minhash
-    assert test_rename_sig.name() != actual_rename_sig.name()
-    assert actual_rename_sig.name() == 'fiz bar'
+    assert test_rename_sig.name != actual_rename_sig.name
+    assert actual_rename_sig.name == 'fiz bar'
 
 
 @utils.in_tempdir
@@ -579,7 +579,7 @@ def test_sig_rename_1_multisig(c):
 
     n = 0
     for sig in sourmash.load_signatures(out):
-        assert sig.name() == 'fiz bar'
+        assert sig.name == 'fiz bar'
         n += 1
 
     assert n == 9, n
@@ -597,7 +597,7 @@ def test_sig_rename_1_multisig_ksize(c):
 
     n = 0
     for sig in sourmash.load_signatures(out):
-        assert sig.name() == 'fiz bar'
+        assert sig.name == 'fiz bar'
         n += 1
 
     assert n == 7, n
@@ -615,7 +615,7 @@ def test_sig_rename_2_output_to_same(c):
     c.run_sourmash('sig', 'rename', '-d', inplace, 'fiz bar', '-o', inplace)
 
     actual_rename_sig = sourmash.load_one_signature(inplace)
-    assert actual_rename_sig.name() == 'fiz bar'
+    assert actual_rename_sig.name == 'fiz bar'
 
 
 @utils.in_tempdir
@@ -713,6 +713,8 @@ def test_sig_cat_2_out(c):
 
     siglist = list(sourmash.load_signatures(out))
     print(len(siglist))
+
+    print(repr(siglist))
 
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
 
