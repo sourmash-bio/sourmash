@@ -25,10 +25,6 @@ def subparser(subparsers):
         '-d', '--debug', action='store_true'
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='search all signatures underneath directories'
-    )
-    subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,
         help='threshold (in bp) for reporting results (default=50,000)'
     )

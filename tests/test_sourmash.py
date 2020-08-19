@@ -219,7 +219,7 @@ def test_compare_containment_abund_flatten(c):
 
 @utils.in_tempdir
 def test_do_traverse_directory_compare(c):
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', utils.get_test_data('compare'))
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
@@ -236,7 +236,7 @@ def test_do_traverse_directory_compare_force(c):
     shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
     shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
 
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', newdir, '-f')
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
@@ -1516,7 +1516,7 @@ def test_search_metagenome_traverse():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'search {} {} -k 21 --traverse-directory'
+        cmd = 'search {} {} -k 21'
         cmd = cmd.format(query_sig, testdata_dir)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -1901,8 +1901,7 @@ def test_do_sourmash_index_traverse():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.'],
+                                           ['index', '-k', '31', 'zzz', '.'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1920,7 +1919,7 @@ def test_do_sourmash_index_traverse():
 
 @utils.in_tempdir
 def test_do_sourmash_index_traverse_force(c):
-    # test loading of files that don't end with .sig with --traverse-dir -f
+    # test loading of files that don't end with .sig with -f
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -1932,7 +1931,7 @@ def test_do_sourmash_index_traverse_force(c):
     c.run_sourmash('compute', testdata1, '-o', out1)
     c.run_sourmash('compute', testdata2, '-o', out2)
 
-    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+    c.run_sourmash('index', '-k', '31', 'zzz', '.', '-f')
 
     err = c.last_result.err
     assert os.path.exists(c.output('zzz.sbt.json'))
@@ -1956,8 +1955,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.',
+                                           ['index', '-k', '31', 'zzz', '.',
                                             '--sparseness', '1.0'],
                                            in_directory=location)
 
@@ -3164,7 +3162,7 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --traverse-directory --threshold-bp=0'
+        cmd = 'gather {} {} -k 21 --threshold-bp=0'
         cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -3368,17 +3366,6 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
-@utils.in_thisdir
-def test_gather_error_loading_dir(c):
-    # test gather applied to a directory
-    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db = utils.get_test_data('prot/protein/')
-
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, db)
-    assert 'Error while reading signatures from' in str(c.last_result.err)
-
-
 @utils.in_tempdir
 def test_gather_error_no_sigs_traverse(c):
     # test gather applied to a directory
@@ -3387,7 +3374,7 @@ def test_gather_error_no_sigs_traverse(c):
     emptydir = c.output('')
 
     with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+        c.run_sourmash('gather', query, emptydir)
 
     err = c.last_result.err
     print(err)
@@ -3664,7 +3651,7 @@ def test_sbt_categorize():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3778,7 +3765,7 @@ def test_sbt_categorize_already_done_traverse():
         with open(os.path.join(location, 'in.csv'), 'wt') as fp:
             fp.write('./4.sig,genome-s10.fa.gz,0.50')
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--load-csv', 'in.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3805,7 +3792,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.']
+        args = ['categorize', 'zzz', '.']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
 

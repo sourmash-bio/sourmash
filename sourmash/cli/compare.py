@@ -28,10 +28,6 @@ def subparser(subparsers):
         help='calculate containment instead of similarity'
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='compare all signatures underneath directories'
-    )
-    subparser.add_argument(
         '--from-file',
         help='a file containing a list of signatures file to compare'
     )

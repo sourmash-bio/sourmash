@@ -13,10 +13,6 @@ def subparser(subparsers):
         help='signatures/SBTs to search',
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='search all signatures underneath directories'
-    )
-    subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )

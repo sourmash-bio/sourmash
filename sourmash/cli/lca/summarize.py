@@ -12,21 +12,14 @@ def subparser(subparsers):
     subparser.add_argument('--threshold', metavar='T', type=int, default=5,
                            help='minimum number of hashes to require for a match')
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath directories'
-    )
-    subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='file to which CSV output will be written'
     )
     subparser.add_argument('--scaled', metavar='FLOAT', type=float,
                            help='scaled value to downsample to')
 
-    subparser.add_argument('--singleton', action='store_true',
-                           help='classify each signature independently')
-
-    subparser.add_argument('--with-abundance', action='store_true',
-                           help='use hash abundances from query signature to weight results')
+    subparser.add_argument('--ignore-abundance', action='store_true',
+                           help='ignore hash abundances in query signatures do not weight results')
 
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
