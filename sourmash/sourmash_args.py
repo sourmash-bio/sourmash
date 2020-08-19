@@ -461,7 +461,7 @@ def load_file_as_index(filename, traverse=True, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            traverse=False, yield_all_files=False,
+                            traverse=True, yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 

@@ -362,7 +362,6 @@ def index(args):
         siglist = sourmash_args.load_file_as_signatures(f,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
-                                                        traverse=args.traverse_directory,
                                                         yield_all_files=args.force,
                                                         progress=progress)
 

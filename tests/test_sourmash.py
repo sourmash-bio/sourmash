@@ -1901,8 +1901,7 @@ def test_do_sourmash_index_traverse():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.'],
+                                           ['index', '-k', '31', 'zzz', '.'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1920,7 +1919,7 @@ def test_do_sourmash_index_traverse():
 
 @utils.in_tempdir
 def test_do_sourmash_index_traverse_force(c):
-    # test loading of files that don't end with .sig with --traverse-dir -f
+    # test loading of files that don't end with .sig with -f
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -1932,7 +1931,7 @@ def test_do_sourmash_index_traverse_force(c):
     c.run_sourmash('compute', testdata1, '-o', out1)
     c.run_sourmash('compute', testdata2, '-o', out2)
 
-    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+    c.run_sourmash('index', '-k', '31', 'zzz', '.', '-f')
 
     err = c.last_result.err
     assert os.path.exists(c.output('zzz.sbt.json'))
@@ -1956,8 +1955,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.',
+                                           ['index', '-k', '31', 'zzz', '.',
                                             '--sparseness', '1.0'],
                                            in_directory=location)
 
