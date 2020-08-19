@@ -124,7 +124,7 @@ def compare(args):
 
     # do all-by-all calculation
 
-    labeltext = [item.name() for item in siglist]
+    labeltext = [str(item) for item in siglist]
     if args.containment:
         similarity = compare_serial_containment(siglist)
     else:
@@ -134,7 +134,7 @@ def compare(args):
     if len(siglist) < 30:
         for i, E in enumerate(siglist):
             # for small matrices, pretty-print some output
-            name_num = '{}-{}'.format(i, E.name())
+            name_num = '{}-{}'.format(i, str(E))
             if len(name_num) > 20:
                 name_num = name_num[:17] + '...'
             print_results('{:20s}\t{}'.format(name_num, similarity[i, :, ],))
@@ -422,7 +422,7 @@ def search(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', query.name()[:30],
+    notify('loaded query: {}... (k={}, {})', query.name[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
@@ -533,7 +533,7 @@ def categorize(args):
         csv_w = csv.writer(csv_fp)
 
     for queryfile, query, query_moltype, query_ksize in loader:
-        notify('loaded query: {}... (k={}, {})', query.name()[:30],
+        notify('loaded query: {}... (k={}, {})', query.name[:30],
                query_ksize, query_moltype)
 
         results = []
@@ -551,15 +551,15 @@ def categorize(args):
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
-            notify('for {}, found: {:.2f} {}', query.name(),
+            notify('for {}, found: {:.2f} {}', query.name,
                                                best_hit_sim,
-                                               best_hit_query.name())
-            best_hit_query_name = best_hit_query.name()
+                                               best_hit_query.name)
+            best_hit_query_name = best_hit_query.name
         else:
-            notify('for {}, no match found', query.name())
+            notify('for {}, no match found', query.name)
 
         if csv_w:
-            csv_w.writerow([queryfile, query.name(), best_hit_query_name,
+            csv_w.writerow([queryfile, query.name, best_hit_query_name,
                            best_hit_sim])
 
     if loader.skipped_ignore:
@@ -582,7 +582,7 @@ def gather(args):
                                                ksize=args.ksize,
                                                select_moltype=moltype,
                                                select_md5=args.md5)
-    notify('loaded query: {}... (k={}, {})', query.name()[:30],
+    notify('loaded query: {}... (k={}, {})', query.name[:30],
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
@@ -729,7 +729,7 @@ def multigather(args):
         for query in sourmash_args.load_file_as_signatures(queryfile,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype):
-            notify('loaded query: {}... (k={}, {})', query.name()[:30],
+            notify('loaded query: {}... (k={}, {})', query.name[:30],
                                             query.minhash.ksize,
                                             sourmash_args.get_moltype(query))
 
@@ -919,7 +919,7 @@ def watch(args):
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
-        print_results('FOUND: {}, at {:.3f}', found_sig.name(),
+        print_results('FOUND: {}, at {:.3f}', found_sig.name,
                similarity)
 
     if args.output:

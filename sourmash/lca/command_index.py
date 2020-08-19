@@ -196,8 +196,8 @@ def index(args):
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
-            notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name()[:30], n, total_n, n_skipped, end='')
-            debug(filename, sig.name())
+            notify('\r... loading signature {} ({} of {}); skipped {} so far', sig.name[:30], n, total_n, n_skipped, end='')
+            debug(filename, sig.name)
 
             # block off duplicates.
             if sig.md5sum() in md5_to_name:
@@ -205,10 +205,10 @@ def index(args):
                 record_duplicates.add(filename)
                 continue
 
-            md5_to_name[sig.md5sum()] = sig.name()
+            md5_to_name[sig.md5sum()] = sig.name
 
             # parse identifier, potentially with splitting
-            ident = sig.name()
+            ident = str(sig)
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
@@ -228,7 +228,7 @@ def index(args):
                 db.insert(sig, ident=ident, lineage=lineage)
             except ValueError as e:
                 error("ERROR: cannot insert signature '{}' (md5 {}, loaded from '{}') into database.",
-                      sig.name(), sig.md5sum()[:8], filename)
+                      sig.name, sig.md5sum()[:8], filename)
                 error("ERROR: {}", str(e))
                 sys.exit(-1)
 

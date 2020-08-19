@@ -129,9 +129,9 @@ def classify(args):
                                                      ksize=ksize,
                                                      traverse=args.traverse_directory):
                 notify(u'\r\033[K', end=u'')
-                notify('... classifying {} (file {} of {})', query_sig.name(),
+                notify('... classifying {} (file {} of {})', query_sig.name,
                        n, total_n, end='\r')
-                debug('classifying', query_sig.name())
+                debug('classifying', query_sig.name)
                 total_count += 1
 
                 # make sure we're looking at the same scaled value as database
@@ -143,7 +143,7 @@ def classify(args):
                 debug(lineage)
 
                 # output each classification to the spreadsheet
-                row = [query_sig.name(), status]
+                row = [query_sig.name, status]
                 row += lca_utils.zip_lineage(lineage)
 
                 # when outputting to stdout, make output intelligible

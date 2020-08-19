@@ -50,7 +50,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name()))
+                              name=str(match)))
     return x
 
 ###
@@ -89,7 +89,7 @@ def _find_best(dblist, query, threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
-            if (cont == best_cont and match.name() < best_match.name()) or \
+            if (cont == best_cont and str(match) < str(best_match)) or \
                cont > best_cont:
                 # update best match.
                 best_cont = cont
@@ -205,7 +205,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               std_abund=std_abund,
                               filename=filename,
                               md5=best_match.md5sum(),
-                              name=best_match.name(),
+                              name=str(best_match),
                               match=best_match)
 
         # construct a new query, subtracting hashes found in previous one.

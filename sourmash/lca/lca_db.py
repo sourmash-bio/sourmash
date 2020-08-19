@@ -110,7 +110,7 @@ class LCA_Database(Index):
         Takes optional arguments 'ident' and 'lineage'.
 
         'ident' must be a unique string identifer across this database;
-        if not specified, the signature name (sig.name()) is used.
+        if not specified, the signature name (sig.name) is used.
 
         'lineage', if specified, must contain a tuple of LineagePair objects.
         """
@@ -130,7 +130,7 @@ class LCA_Database(Index):
             raise ValueError("cannot downsample signature; is it a scaled signature?")
 
         if ident is None:
-            ident = sig.name()
+            ident = sig.name
 
         if ident in self.ident_to_name:
             raise ValueError("signature {} is already in this LCA db.".format(ident))
@@ -139,7 +139,7 @@ class LCA_Database(Index):
         self._invalidate_cache()
 
         # store full name
-        self.ident_to_name[ident] = sig.name()
+        self.ident_to_name[ident] = sig.name
 
         # identifier -> integer index (idx)
         idx = self._get_ident_index(ident, fail_on_duplicate=True)
