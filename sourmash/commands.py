@@ -45,7 +45,6 @@ def compare(args):
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
-                                                       traverse=args.traverse_directory,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)

@@ -219,7 +219,7 @@ def test_compare_containment_abund_flatten(c):
 
 @utils.in_tempdir
 def test_do_traverse_directory_compare(c):
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', utils.get_test_data('compare'))
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
@@ -236,7 +236,7 @@ def test_do_traverse_directory_compare_force(c):
     shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
     shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
 
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', newdir, '-f')
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
