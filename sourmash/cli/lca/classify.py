@@ -27,10 +27,6 @@ def subparser(subparsers):
         help='output CSV to the specified file; by default output to stdout'
     )
     subparser.add_argument('--scaled', type=float)
-    subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath directories'
-    )
 
 
 def main(args):
