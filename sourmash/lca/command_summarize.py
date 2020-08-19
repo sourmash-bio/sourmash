@@ -56,36 +56,6 @@ def summarize(hashvals, dblist, threshold, ignore_abundance):
     return aggregated_counts
 
 
-<<<<<<< HEAD
-def load_and_combine(filenames, ksize, scaled, with_abundance):
-    "Load individual signatures and combine them all for classification."
-    total_count = 0
-    n = 0
-    total_n = len(filenames)
-    hashvals = defaultdict(int)
-    for query_filename in filenames:
-        n += 1
-        for query_sig in sourmash_args.load_file_as_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
-            total_count += 1
-
-            if with_abundance and not query_sig.minhash.track_abundance:
-                notify("** error: minhash has no abundances, yet --with-abundance specified")
-                sys.exit(-1)
-
-            if not with_abundance and query_sig.minhash.track_abundance:
-                notify("NOTE: discarding abundances in query, since --with-abundance not given")
-
-            count_signature(query_sig, scaled, hashvals)
-
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
-
-    return hashvals
-
-
 def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     "Load individual signatures and count them individually."
     total_count = 0
