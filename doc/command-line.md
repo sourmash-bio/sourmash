@@ -859,12 +859,8 @@ some other command.
 
 #### Loading all signatures under a directory
 
-Note that until 4.0, `--traverse-directory` may be needed for many
-commands in order for them to load signatures from a directory
-hierarchy -- `search`, `gather`, `index`, `lca index`, and `compare`,
-for example. All of the `sourmash sig` commands support loading from a
-directory if you provide it on the command line, and this will be the
-default behavior in sourmash 4.0.
+All of the `sourmash` commands support loading signatures from
+directories provided on the command line.
 
 ### Combining search databases on the command line
 
