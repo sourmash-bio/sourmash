@@ -339,16 +339,9 @@ input.
 combined contents of the given query signatures.  It is meant for
 exploring metagenomes and metagenome-assembled genome bins.
 
-Note, unlike `sourmash lca classify`, `lca summarize` merges all
-of the query signatures into one and reports on the combined contents.
-To report on individual signatures, use the `--singleton` flag; this will
-become default in sourmash 4.0 and beyond, and the merging behavior will
-be removed.
-
-As of sourmash 3.4, `sourmash lca summarize` also supports abundance
-weighted queries; this can be turned on with `--with-abundance`. This flag
-will weight output percentages by the number of times a k-mer is seen.
-This will become default behavior in sourmash 4.0 and beyond.
+`sourmash lca summarize` also weights output with hash abundances, so
+that output percentages are weighted by the number of times a k-mer is
+seen; this can be turned off with `--ignore-abundance`.
 
 Usage:
 

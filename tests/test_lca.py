@@ -1339,8 +1339,7 @@ def test_single_summarize_singleton():
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,
-               '--singleton']
+        cmd = ['lca', 'summarize', '--db', db1, '--query', input_sig,]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1349,7 +1348,6 @@ def test_single_summarize_singleton():
 
         assert 'loaded 1 signatures from 1 files total.' in err
         assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
-        # --singleton adds info about signature filename, md5, and signature name
         assert 'test-data/lca/TARA_ASE_MAG_00031.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
@@ -1382,7 +1380,7 @@ def test_single_summarize_singleton_traverse(c):
     shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
     cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
-           '--singleton', '--traverse-directory']
+           '--traverse-directory']
     c.run_sourmash(*cmd)
 
     out = c.last_result.out
@@ -1392,7 +1390,6 @@ def test_single_summarize_singleton_traverse(c):
 
     assert 'loaded 1 signatures from 1 files total.' in err
     assert '100.0%   200   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales' in out
-    # --singleton adds info about signature filename, md5, and signature name
     assert 'q.sig:5b438c6c TARA_ASE_MAG_00031' in out
 
 
@@ -1438,145 +1435,6 @@ def test_single_summarize_scaled():
         assert '100.0%    27   Bacteria;Proteobacteria;Gammaproteobacteria;Alteromonadales'
 
 
-def test_multi_summarize_with_unassigned():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert 'loaded 2 signatures from 2 files total.' in err
-
-        out_lines = out.splitlines()
-        out_lines.remove('14.0%   200   Bacteria')
-        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
-        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
-        out_lines.remove('86.0%  1231   Eukaryota')
-        out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
-        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
-        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
-        out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
-        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
-        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
-        out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
-        assert not out_lines
-
-
-@utils.in_tempdir
-def test_multi_summarize_with_unassigned_fromfile(c):
-    # test --query-from-file in lca summarize
-    taxcsv = utils.get_test_data('lca/delmont-6.csv')
-    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = c.output('delmont-1.lca.json')
-
-    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-    c.run_sourmash(*cmd)
-
-    assert os.path.exists(lca_db)
-
-    out = c.last_result.out
-    err = c.last_result.err
-
-    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-    queryfile = c.output('query.list')
-    with open(queryfile, 'wt') as fp:
-        print(input_sig1, file=fp)
-        print(input_sig2, file=fp)
-    cmd = ['lca', 'summarize', '--db', lca_db, '--query-from-file', queryfile]
-    c.run_sourmash(*cmd)
-
-    out = c.last_result.out
-    err = c.last_result.err
-
-    assert 'loaded 2 signatures from 2 files total.' in err
-
-    out_lines = out.splitlines()
-    out_lines.remove('14.0%   200   Bacteria')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
-    out_lines.remove('86.0%  1231   Eukaryota')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
-    assert not out_lines
-
-
-@utils.in_tempdir
-def test_multi_summarize_with_unassigned_fromfile_and_query(c):
-    # test --query-from-file in lca summarize, with add'l --query sig too
-    taxcsv = utils.get_test_data('lca/delmont-6.csv')
-    input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-    input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-    lca_db = c.output('delmont-1.lca.json')
-
-    cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-    c.run_sourmash(*cmd)
-
-    assert os.path.exists(lca_db)
-
-    out = c.last_result.out
-    err = c.last_result.err
-
-    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-    assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-    queryfile = c.output('query.list')
-    with open(queryfile, 'wt') as fp:
-        print(input_sig2, file=fp)
-    cmd = ['lca', 'summarize', '--db', lca_db, '--query-from-file', queryfile,
-           '--query', input_sig1]
-    c.run_sourmash(*cmd)
-
-    out = c.last_result.out
-    err = c.last_result.err
-
-    assert 'loaded 2 signatures from 2 files total.' in err
-
-    out_lines = out.splitlines()
-    out_lines.remove('14.0%   200   Bacteria')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
-    out_lines.remove('86.0%  1231   Eukaryota')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae')
-    out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned;Alteromonadaceae')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned')
-    out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta;Prasinophyceae;unassigned;unassigned;Ostreococcus')
-    assert not out_lines
-
-
 def test_multi_summarize_with_unassigned_singleton():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-6.csv')
@@ -1598,7 +1456,7 @@ def test_multi_summarize_with_unassigned_singleton():
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
         cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--singleton']
+               input_sig2, '--ignore-abundance']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1651,7 +1509,8 @@ def test_summarize_to_root():
 
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
+               '--ignore-abundance']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1691,66 +1550,6 @@ def test_summarize_unknown_hashes():
         assert '11.5%    27   Archaea;Euryarcheoata;unassigned;unassigned;novelFamily_I' in out
 
 
-def test_multi_summarize_with_unassigned_with_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--with-abundance']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
-
-        assert status != 0
-        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
-
-
-def test_multi_summarize_with_unassigned_singleton_abund():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca/delmont-6.csv')
-        input_sig1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        input_sig2 = utils.get_test_data('lca/TARA_PSW_MAG_00136.sig')
-        lca_db = os.path.join(location, 'delmont-1.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig1, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
-        assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
-        assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               input_sig2, '--singleton', '--with-abundance']
-        status, out, err = utils.runscript('sourmash', cmd, fail_ok=True)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert status != 0
-        assert '** error: minhash has no abundances, yet --with-abundance specified' in err
-
-
 def test_summarize_to_root_abund():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca-root/tax.csv')
@@ -1769,8 +1568,7 @@ def test_summarize_to_root_abund():
 
         assert '2 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2,
-               '--with-abundance']
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig2]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1799,8 +1597,7 @@ def test_summarize_unknown_hashes_abund():
 
         assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
 
-        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1,
-               '--with-abundance']
+        cmd = ['lca', 'summarize', '--db', lca_db, '--query', input_sig1]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1817,8 +1614,7 @@ def test_lca_summarize_abund_hmp(c):
     queryfile = utils.get_test_data('hmp-sigs/G36354.sig.gz')
     dbname = utils.get_test_data('hmp-sigs/G36354-matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
-                   '--with-abundance')
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
 
     assert '32.1%  1080   p__Firmicutes;c__Bacilli;o__Lactobacillales' in c.last_result.out
 
@@ -1829,24 +1625,22 @@ def test_lca_summarize_abund_fake_no_abund(c):
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
+                   '--ignore-abundance')
 
-    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' not in c.last_result.err
-    assert 'NOTE: discarding abundances in query, since --with-abundance not given' in c.last_result.err
+    assert 'NOTE: discarding abundances in query, since --ignore-abundance' in c.last_result.err
     assert '79.6%   550   Bacteria' in c.last_result.out
     assert '20.4%   141   Archaea' in c.last_result.out
 
 
 @utils.in_thisdir
 def test_lca_summarize_abund_fake_yes_abund(c):
-    # test lca summarize --with-abundance on some known/fake data
+    # test lca summarize abundance weighting on some known/fake data
     queryfile = utils.get_test_data('fake-abund/query.sig.gz')
     dbname = utils.get_test_data('fake-abund/matches.lca.json.gz')
 
-    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile,
-                   '--with-abundance')
+    c.run_sourmash('lca', 'summarize', '--db', dbname, '--query', queryfile)
 
-    assert 'Weighting output by k-mer abundances in query, since --with-abundance given.' in c.last_result.err
     assert '43.2%   563   Bacteria' in c.last_result.out
     assert '56.8%   740   Archaea' in c.last_result.out
 
