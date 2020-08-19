@@ -2230,7 +2230,7 @@ def test_do_sourmash_check_sbt_filenames():
         sig_md5s = set()
         for f in files:
             sig = signature.load_one_signature(f)
-            sig_names.add(sig.name())
+            sig_names.add(sig.name)
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
@@ -3973,7 +3973,7 @@ def test_license_cc0():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('short.fa')
+        assert str(sig).endswith('short.fa')
 
         assert sig.license == 'CC0'
 

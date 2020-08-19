@@ -32,7 +32,7 @@ def get_moltype(sig, require=False):
     if mh.moltype in ('DNA', 'dayhoff', 'hp', 'protein'):
         moltype = mh.moltype
     else:
-        raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
+        raise ValueError('unknown molecule type for sig {}'.format(sig))
 
     return moltype
 
@@ -195,13 +195,13 @@ def check_signatures_are_compatible(query, subject):
     if query.minhash.scaled and not subject.minhash.scaled or \
        not query.minhash.scaled and subject.minhash.scaled:
        error("signature {} and {} are incompatible - cannot compare.",
-             query.name(), subject.name())
+             query, subject)
        if query.minhash.scaled:
            error("{} was calculated with --scaled, {} was not.",
-                 query.name(), subject.name())
+                 query, subject)
        if subject.minhash.scaled:
            error("{} was calculated with --scaled, {} was not.",
-                 subject.name(), query.name())
+                 subject, query.name)
        return 0
 
     return 1

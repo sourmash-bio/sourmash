@@ -472,8 +472,8 @@ Now do a search --
 
 ```
 >>> for similarity, found_sig, filename in tree.search(query_sig, threshold=0.1):
-...    print(query_sig.name())
-...    print(found_sig.name())
+...    print(query_sig)
+...    print(found_sig)
 ...    print(similarity)
 my favorite query
 NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome

@@ -910,7 +910,7 @@ def watch(args):
     else:
         results.sort(key=lambda x: -x[0])   # take best
         similarity, found_sig = results[0]
-        print_results('FOUND: {}, at {:.3f}', found_sig.name,
+        print_results('FOUND: {}, at {:.3f}', found_sig,
                similarity)
 
     if args.output:
