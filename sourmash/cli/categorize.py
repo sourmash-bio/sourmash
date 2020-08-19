@@ -21,7 +21,6 @@ def subparser(subparsers):
         '--threshold', default=0.08, type=float,
         help='minimum threshold for reporting matches; default=0.08'
     )
-    subparser.add_argument('--traverse-directory', action="store_true")
     subparser.add_argument(
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present'

@@ -22,10 +22,6 @@ def subparser(subparsers):
         help='number of results to report (default: terminate at --threshold-bp)'
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='search all signatures underneath directories'
-    )
-    subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )

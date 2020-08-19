@@ -14,7 +14,6 @@ The key options for index are:
 
  * `-k/--ksize <int>`: k-mer size to select
  * `--dna` or --protein`: nucleotide or protein signatures (default `--dna`)
- * `--traverse-directory`: load all signatures below this directory
 
 If `dbname` ends with `.sbt.json`, index will create the database as a
 collection of multiple files, with an index `dbname.sbt.json` and a
@@ -51,10 +50,6 @@ def subparser(subparsers):
         help='number of children for internal nodes; default=2'
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath any directories'
-    )
-    subparser.add_argument(
         '--append', action='store_true', default=False,
         help='add signatures to an existing SBT'
     )
@@ -64,7 +59,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-f', '--force', action='store_true',
-        help='try loading all files with --traverse-directory'
+        help='try loading *all* files in provided subdirectories, not just .sig files"'
     )
     subparser.add_argument(
         '-s', '--sparseness', metavar='FLOAT', type=float, default=.0,

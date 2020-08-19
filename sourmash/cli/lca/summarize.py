@@ -12,10 +12,6 @@ def subparser(subparsers):
     subparser.add_argument('--threshold', metavar='T', type=int, default=5,
                            help='minimum number of hashes to require for a match')
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath directories'
-    )
-    subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='file to which CSV output will be written'
     )

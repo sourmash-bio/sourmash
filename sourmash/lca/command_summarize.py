@@ -56,17 +56,16 @@ def summarize(hashvals, dblist, threshold, ignore_abundance):
     return aggregated_counts
 
 
-def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance, traverse):
+def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     "Load individual signatures and count them individually."
     total_count = 0
     n = 0
 
     # in order to get the right reporting out of this function, we need
     # to do our own traversal to expand the list of filenames, as opposed
-    # to using load_file_as_signatures(..., traverse=True)
-    if traverse:
-        filenames = sourmash_args.traverse_find_sigs(filenames)
-        filenames = list(filenames)
+    # to using load_file_as_signatures(...)
+    filenames = sourmash_args.traverse_find_sigs(filenames)
+    filenames = list(filenames)
 
     total_n = len(filenames)
 
@@ -200,7 +199,7 @@ def summarize_main(args):
 
     try:
         for filename, sig, hashvals in \
-          load_singletons_and_count(inp_files, ksize, scaled, ignore_abundance, args.traverse_directory):
+          load_singletons_and_count(inp_files, ksize, scaled, ignore_abundance):
 
             # get the full counted list of lineage counts in this signature
             lineage_counts = summarize(hashvals, dblist, args.threshold,

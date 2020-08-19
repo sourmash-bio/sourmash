@@ -715,7 +715,7 @@ def test_index_traverse():
         os.mkdir(in_dir)
         shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-        cmd = ['lca', 'index', taxcsv, lca_db, in_dir, '--traverse-directory']
+        cmd = ['lca', 'index', taxcsv, lca_db, in_dir]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -743,8 +743,7 @@ def test_index_traverse_force(c):
     shutil.copyfile(input_sig, os.path.join(in_dir, 'q.txt'))
 
     # use --force
-    cmd = ['lca', 'index', taxcsv, lca_db, in_dir, '--traverse-directory',
-           '-f']
+    cmd = ['lca', 'index', taxcsv, lca_db, in_dir, '-f']
     c.run_sourmash(*cmd)
 
     out = c.last_result.out
@@ -912,8 +911,7 @@ def test_single_classify_traverse():
         os.mkdir(in_dir)
         shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig,
-               '--traverse-directory']
+        cmd = ['lca', 'classify', '--db', db1, '--query', input_sig]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -932,8 +930,7 @@ def test_multi_query_classify_traverse():
         dir1 = utils.get_test_data('lca/dir1')
         dir2 = utils.get_test_data('lca/dir2')
 
-        cmd = ['lca', 'classify', '--db', db1, '--query', dir1, dir2,
-               '--traverse-directory']
+        cmd = ['lca', 'classify', '--db', db1, '--query', dir1, dir2]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1021,8 +1018,7 @@ def test_multi_db_multi_query_classify_traverse():
         dir1 = utils.get_test_data('lca/dir1')
         dir2 = utils.get_test_data('lca/dir2')
 
-        cmd = ['lca', 'classify', '--db', db1, db2, '--query', dir1, dir2,
-               '--traverse-directory']
+        cmd = ['lca', 'classify', '--db', db1, db2, '--query', dir1, dir2]
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
@@ -1359,8 +1355,7 @@ def test_single_summarize_traverse(c):
     os.mkdir(in_dir)
     shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
-           '--traverse-directory']
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir]
     c.run_sourmash(*cmd)
 
     out = c.last_result.out
@@ -1379,8 +1374,7 @@ def test_single_summarize_singleton_traverse(c):
     os.mkdir(in_dir)
     shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
 
-    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir,
-           '--traverse-directory']
+    cmd = ['lca', 'summarize', '--db', db1, '--query', in_dir]
     c.run_sourmash(*cmd)
 
     out = c.last_result.out

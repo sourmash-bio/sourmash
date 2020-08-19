@@ -126,8 +126,7 @@ def classify(args):
         for query_filename in inp_files:
             n += 1
             for query_sig in load_file_as_signatures(query_filename,
-                                                     ksize=ksize,
-                                                     traverse=args.traverse_directory):
+                                                     ksize=ksize):
                 notify(u'\r\033[K', end=u'')
                 notify('... classifying {} (file {} of {})', query_sig.name(),
                        n, total_n, end='\r')
