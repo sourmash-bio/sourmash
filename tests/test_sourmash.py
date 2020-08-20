@@ -765,7 +765,6 @@ def test_search_csv(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         assert float(row['similarity']) == 0.93
-        assert row['name'].endswith('short2.fa')
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
@@ -1155,8 +1154,8 @@ def test_do_sourmash_sbt_search_output():
         outfile = open(os.path.join(location, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert 'e26a306d26512' in output
+        assert '914591cd1130aa915' in output
 
 
 # check against a bug in sbt search triggered by incorrect max Jaccard
@@ -1245,8 +1244,8 @@ def test_do_sourmash_sbt_move_and_search_output():
         outfile = open(os.path.join(newpath, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert '914591cd1130aa91' in output
+        assert 'e26a306d2651' in output
 
 
 def test_search_deduce_ksize_and_select_appropriate():
@@ -2512,7 +2511,6 @@ def test_gather_csv():
             assert float(row['f_orig_query']) == 1.0
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
-            assert row['name'].endswith('short2.fa')
             assert row['filename'] == 'zzz'
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
 

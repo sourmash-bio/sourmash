@@ -113,7 +113,7 @@ class Index(ABC):
             if cont and cont >= threshold:
                 results.append((cont, ss, self.filename))
 
-        results.sort(reverse=True, key=lambda x: (x[0], str(x[1])))
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
         return results
 

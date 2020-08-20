@@ -145,7 +145,7 @@ def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
         debug('lineage:', lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
         if filename:
-            row += [filename, sig, sig.md5sum()]
+            row += [filename, sig.name, sig.md5sum()]
         w.writerow(row)
 
 

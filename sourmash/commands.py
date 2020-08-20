@@ -547,7 +547,7 @@ def categorize(args):
             notify('for {}, found: {:.2f} {}', query,
                                                best_hit_sim,
                                                best_hit_query)
-            best_hit_query_name = str(best_hit_query)
+            best_hit_query_name = best_hit_query.name
         else:
             notify('for {}, no match found', query)
 

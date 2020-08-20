@@ -50,7 +50,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=str(match)))
+                              name=match.name))
     return x
 
 ###
@@ -205,7 +205,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               std_abund=std_abund,
                               filename=filename,
                               md5=best_match.md5sum(),
-                              name=str(best_match),
+                              name=best_match.name,
                               match=best_match)
 
         # construct a new query, subtracting hashes found in previous one.

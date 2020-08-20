@@ -201,7 +201,7 @@ def check_signatures_are_compatible(query, subject):
                  query, subject)
        if subject.minhash.scaled:
            error("{} was calculated with --scaled, {} was not.",
-                 subject, query.name)
+                 subject, query)
        return 0
 
     return 1

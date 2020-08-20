@@ -142,7 +142,7 @@ def classify(args):
                 debug(lineage)
 
                 # output each classification to the spreadsheet
-                row = [query_sig, status]
+                row = [query_sig.name, status]
                 row += lca_utils.zip_lineage(lineage)
 
                 # when outputting to stdout, make output intelligible
