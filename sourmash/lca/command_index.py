@@ -207,7 +207,7 @@ def index(args):
             md5_to_name[sig.md5sum()] = str(sig)
 
             # parse identifier, potentially with splitting
-            ident = str(sig) # @CTB .name
+            ident = sig.name
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]

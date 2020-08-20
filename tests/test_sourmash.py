@@ -787,7 +787,7 @@ def test_search_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
 
-    assert '100.0%       GCA_001593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '100.0%       GCA_001593925' in str(c)
 
 
 @utils.in_thisdir
@@ -796,7 +796,7 @@ def test_gather_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
 
-    assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(c)
 
 
 @utils.in_thisdir

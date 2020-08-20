@@ -1229,7 +1229,7 @@ def test_sig_describe_1_hp(c):
     expected_output = """\
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: e45a080101751e044d6df861d3d0f3fd
 k=21 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
@@ -1238,7 +1238,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: ef4fa1f3a90f3873187370f1eacc0d9a
 k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
@@ -1246,7 +1246,7 @@ size: 500
 signature license: CC0
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 20be00d9d577da9faeb77477bf07d3fb
 k=21 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
@@ -1254,7 +1254,7 @@ size: 500
 signature license: CC0
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 1136a8a68420bd93683e45cdaf109b80
 k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
@@ -1263,7 +1263,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 4244d1612598af044e799587132f007e
 k=30 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
@@ -1272,7 +1272,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 5647819f2eac913e04af51c8d548ad56
 k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
@@ -1281,7 +1281,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: ad1e329dd98b5e32422e9decf298aa5f
 k=30 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
@@ -1290,7 +1290,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 71f7c111c01785e5f38efad45b00a0e1
 k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
@@ -1333,8 +1333,8 @@ def test_sig_describe_1_sbt(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1350,8 +1350,8 @@ def test_sig_describe_1_lca(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1367,8 +1367,8 @@ def test_sig_describe_1_dir(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1382,7 +1382,7 @@ def test_sig_describe_stdin(c):
 
     c.run_sourmash('sig', 'describe', '-', stdin_data=data)
 
-    assert 'signature: GCA_001593925.1_ASM159392v1_protein.faa.gz' in c.last_result.out
+    assert 'signature: GCA_001593925' in c.last_result.out
 
 
 @utils.in_tempdir
