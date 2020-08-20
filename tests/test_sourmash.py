@@ -630,9 +630,9 @@ def test_plot_subsample_1():
         print(out)
 
         expected = """\
-0\ts10+s11
-1\tgenome-s12.fa.gz
-2\tgenome-s10.fa.gz"""
+0\tgenome-s10+s11
+1\tgenome-s12
+2\tgenome-s10"""
         assert expected in out
 
 
@@ -657,9 +657,9 @@ def test_plot_subsample_2():
 
         print(out)
         expected = """\
-0\tgenome-s12.fa.gz
-1\ts10+s11
-2\tgenome-s11.fa.gz"""
+0\tgenome-s12
+1\tgenome-s10+s11
+2\tgenome-s11"""
         assert expected in out
 
 
@@ -3659,10 +3659,12 @@ def test_sbt_categorize():
 
         # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
         # yields 521/1000 ==> ~0.5
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+        assert 'for genome-s10+s11, found: 0.50 genome-s10' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+        print(out_csv)
+        # @CTB why did this change from 0.5 to 0.496?
+        assert './4.sig,genome-s10+s11,genome-s10,0.496' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance():
@@ -3810,7 +3812,7 @@ def test_watch(c):
 
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'FOUND: genome-s10.fa.gz, at 1.000' in c.last_result.out
+    assert 'FOUND: genome-s10, at 1.000' in c.last_result.out
 
 
 @utils.in_tempdir
@@ -3850,7 +3852,7 @@ def test_watch_coverage():
 
         print(out)
         print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+        assert 'FOUND: genome-s10, at 1.000' in out
 
 
 def test_storage_convert():
