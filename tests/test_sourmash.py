@@ -3639,6 +3639,7 @@ def test_sbt_categorize():
         testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
         testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
+        # all four in the current directory for categorize .
         shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
         shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
         shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
