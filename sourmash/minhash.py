@@ -37,14 +37,20 @@ def _get_max_hash_for_scaled(scaled):
     elif scaled == 1:
         return get_minhash_max_hash()
 
-    return int(round(get_minhash_max_hash() / scaled, 0))
+    return min(
+        int(round(get_minhash_max_hash() / scaled, 0)),
+        MINHASH_MAX_HASH
+    )
 
 
 def _get_scaled_for_max_hash(max_hash):
     "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
-    return int(round(get_minhash_max_hash() / max_hash, 0))
+    return min(
+        int(round(get_minhash_max_hash() / max_hash, 0)),
+        MINHASH_MAX_HASH
+    )
 
 
 def to_bytes(s):
@@ -225,8 +231,10 @@ class MinHash(RustObject):
          max_hash, seed) = tup
 
         self.__del__()
+
+        scaled = _get_scaled_for_max_hash(max_hash)
         self._objptr = lib.kmerminhash_new(
-            n, ksize, is_protein, dayhoff, hp, seed, max_hash, track_abundance
+            scaled, n, ksize, is_protein, dayhoff, hp, seed, track_abundance
         )
         if track_abundance:
             self.set_abundances(mins)
