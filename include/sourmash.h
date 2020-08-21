@@ -29,6 +29,7 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_MISMATCH_SIGNATURE_TYPE = 105,
   SOURMASH_ERROR_CODE_NON_EMPTY_MIN_HASH = 106,
   SOURMASH_ERROR_CODE_MISMATCH_NUM = 107,
+  SOURMASH_ERROR_CODE_DUPLICATE_SIGNATURE = 108,
   SOURMASH_ERROR_CODE_INVALID_DNA = 1101,
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
@@ -71,12 +72,12 @@ typedef struct {
   bool owned;
 } SourmashStr;
 
-uint32_t LcaDB_insert(SourmashLcaDatabase *ptr,
-                      const SourmashSignature *sig_ptr,
-                      const char *ident_char,
-                      const char *lineage_char);
-
-SourmashLcaDatabase *LcaDB_new(void);
+typedef struct {
+  float score;
+  SourmashSignature *sig;
+  const uint8_t *filename;
+  uint32_t name_size;
+} FFISearchResults;
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -216,6 +217,66 @@ double kmerminhash_similarity(const SourmashKmerMinHash *ptr,
 void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
+
+void lcadb_downsample_scaled(SourmashLcaDatabase *ptr, uint64_t new_scaled);
+
+const uint8_t *lcadb_filename(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+FFISearchResults *lcadb_gather(SourmashLcaDatabase *ptr,
+                               const SourmashSignature *query,
+                               float threshold_bp,
+                               uintptr_t *osize);
+
+const uint8_t *lcadb_get_lineage_assignments(SourmashLcaDatabase *ptr,
+                                             uint64_t hashval,
+                                             uintptr_t *size);
+
+const uint8_t *lcadb_hashval_to_idx(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+uint32_t lcadb_hashval_to_idx_len(SourmashLcaDatabase *ptr);
+
+const uint8_t *lcadb_ident_to_idx(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+const uint8_t *lcadb_ident_to_name(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+const uint8_t *lcadb_idx_to_lid(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+uint32_t lcadb_insert(SourmashLcaDatabase *ptr,
+                      const SourmashSignature *sig_ptr,
+                      const char *ident_char,
+                      const char *lineage_char);
+
+uint32_t lcadb_ksize(const SourmashLcaDatabase *ptr);
+
+const uint8_t *lcadb_lid_to_lineage(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+const uint8_t *lcadb_lineage_to_lid(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+SourmashLcaDatabase *lcadb_load(const char *filepath_char);
+
+SourmashLcaDatabase *lcadb_load_db(const char *filepath_char);
+
+const uint8_t *lcadb_moltype(const SourmashLcaDatabase *ptr, uintptr_t *size);
+
+SourmashLcaDatabase *lcadb_new(void);
+
+SourmashLcaDatabase *lcadb_new_with_params(uint32_t ksize,
+                                           uint64_t scaled,
+                                           const char *filename_char,
+                                           const char *moltype_char);
+
+void lcadb_save(SourmashLcaDatabase *ptr, const char *filepath_char);
+
+uint64_t lcadb_scaled(const SourmashLcaDatabase *ptr);
+
+FFISearchResults *lcadb_search(SourmashLcaDatabase *ptr,
+                               const SourmashSignature *query,
+                               float threshold,
+                               bool do_containment,
+                               bool ignore_abundance,
+                               uintptr_t *osize);
+
+SourmashSignature **lcadb_signatures(SourmashLcaDatabase *ptr, uintptr_t *size);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 

@@ -58,30 +58,169 @@ class LCA_Database(RustObject, Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
-    def __init__(self, ksize, scaled, moltype="DNA"):
-        self._objptr = lib.LcaDB_new()
+    def __init__(self, ksize, scaled, moltype="DNA", filename=""):
 
-        self.ksize = int(ksize)
-        self.scaled = int(scaled)
-        self.filename = ""
-        self.moltype = moltype
+        # self.ksize = ksize
+        # self.scaled = scaled
+        # self.filename = ""
+        # self.moltype = moltype
 
-        self._next_index = 0
-        self._next_lid = 0
-        self.ident_to_name = {}
-        self.ident_to_idx = {}
-        self.idx_to_lid = {}
-        self.lineage_to_lid = {}
-        self.lid_to_lineage = {}
-        self.hashval_to_idx = defaultdict(set)
+        # self._next_index = 0
+        # self._next_lid = 0
+        # self.ident_to_name = {}
+        # self.ident_to_idx = {}
+        # self.idx_to_lid = {}
+        # self.lineage_to_lid = {}
+        # self.lid_to_lineage = {}
+        # self.hashval_to_idx = defaultdict(set)
 
+        self._objptr = lib.lcadb_new_with_params(int(ksize), int(scaled), to_bytes(filename), to_bytes(moltype))
 
-        if not self.filename:
-            self.filename = None
+    @property
+    def ksize(self):
+        return self._methodcall(lib.lcadb_ksize)
+
+    @property
+    def scaled(self):
+        return self._methodcall(lib.lcadb_scaled)
+
+    @property
+    def moltype(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_moltype, size)
+
+        size = size[0]
+        buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+        moltype = ffi.string(buf, size).decode('utf-8')
+
+        return moltype
+
+    @property
+    def filename(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_filename, size)
+
+        size = size[0]
+        filename = None
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            filename = ffi.string(buf, size).decode('utf-8')
+
+        return filename
+
+    @property
+    def ident_to_name(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_ident_to_name, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            ident_to_name = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        return ident_to_name
+
+    @property
+    def ident_to_idx(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_ident_to_idx, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            ident_to_idx = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        result = {}
+        for ident, idx in ident_to_idx.items():
+            result[ident] = int(idx)
+
+        return result
+
+    @property
+    def idx_to_lid(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_idx_to_lid, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            idx_to_lid = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        result = {}
+        for idx, lid in idx_to_lid.items():
+            result[int(idx)] = int(lid)
+        
+        return result
+
+    @property
+    def lineage_to_lid(self):
+        from .lca_utils import taxlist, LineagePair
+
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_lid_to_lineage, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            lid_to_lineage = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        # turn lineage into a list of tuples
+        result = {}
+        for (lid, lineage) in lid_to_lineage.items():
+            pairslist = []
+            for v in lineage:
+                pairslist.append(LineagePair(rank=v[0], name=v[1]))
+
+            result[tuple(pairslist)] = int(lid)
+
+        return result
+
+    @property
+    def lid_to_lineage(self):
+        from .lca_utils import taxlist, LineagePair
+
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_lid_to_lineage, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            lid_to_lineage = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        # turn lineage into a list of tuples
+        result = {}
+        for (lid, lineage) in lid_to_lineage.items():
+            pairslist = []
+            for v in lineage:
+                pairslist.append(LineagePair(rank=v[0], name=v[1]))
+
+            result[int(lid)] = tuple(pairslist)
+
+        return result
+
+    @property
+    def hashval_to_idx(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_hashval_to_idx, size)
+
+        size = size[0]
+        if size:
+            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
+            hashval_to_idx = json.loads(ffi.string(buf, size).decode('utf-8'))
+
+        # convert json's u64 string to int
+        result = {}
+        for hashval, idxlist in hashval_to_idx.items():
+            result[int(hashval)] = idxlist
+
+        return result
 
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):
             del self._cache
+
+    def _hashval_to_idx_len(self):
+        return self._methodcall(lib.lcadb_hashval_to_idx_len)
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
@@ -141,43 +280,41 @@ class LCA_Database(RustObject, Index):
         if ident is None:
             ident = sig.name()
 
-        if ident in self.ident_to_name:
-            raise ValueError("signature {} is already in this LCA db.".format(ident))
+        # if ident in self.ident_to_name:
+        #     raise ValueError("signature {} is already in this LCA db.".format(ident))
 
-        # before adding, invalide any caching from @cached_property
-        self._invalidate_cache()
+        # # before adding, invalide any caching from @cached_property
+        # self._invalidate_cache()
 
-        # store full name
-        self.ident_to_name[ident] = sig.name()
+        # # store full name
+        # self.ident_to_name[ident] = sig.name()
 
-        # identifier -> integer index (idx)
-        idx = self._get_ident_index(ident, fail_on_duplicate=True)
-        if lineage:
-            try:
-                lineage = tuple(lineage)
-
-                # (LineagePairs*) -> integer lineage ids (lids)
-                lid = self._get_lineage_id(lineage)
-
-                # map idx to lid as well.
-                self.idx_to_lid[idx] = lid
-            except TypeError:
-                raise ValueError('lineage cannot be used as a key?!')
-
-        for hashval in minhash.get_mins():
-            self.hashval_to_idx[hashval].add(idx)
-
-        # # trying to put lineage into a json
+        # # identifier -> integer index (idx)
+        # idx = self._get_ident_index(ident, fail_on_duplicate=True)
         # if lineage:
-        #     lineage_dict = dict(lineage)
-        # else:
-        #     lineage_dict = ""
+        #     try:
+        #         lineage = tuple(lineage)
 
-        # lineage_json = json.dumps(lineage_dict)
+        #         # (LineagePairs*) -> integer lineage ids (lids)
+        #         lid = self._get_lineage_id(lineage)
 
-        # self._methodcall(lib.LcaDB_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+        #         # map idx to lid as well.
+        #         self.idx_to_lid[idx] = lid
+        #     except TypeError:
+        #         raise ValueError('lineage cannot be used as a key?!')
 
-        return len(minhash)
+        # for hashval in minhash.get_mins():
+        #     self.hashval_to_idx[hashval].add(idx)
+
+        # trying to put lineage into a json
+        if lineage:
+            lineage_dict = dict(lineage)
+            lineage_json = json.dumps(lineage_dict)
+        else:
+            lineage_json = ""
+
+        return self._methodcall(lib.lcadb_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+
 
     def __repr__(self):
         return "LCA_Database('{}')".format(self.filename)
@@ -185,10 +322,22 @@ class LCA_Database(RustObject, Index):
     def signatures(self):
         "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
-        print("\n", self._signatures, "\n")
-        for v in self._signatures.values():
-            print(v)
-            yield v
+        # print("\n", self._signatures, "\n")
+        # for v in self._signatures.values():
+        #     print(v)
+        #     yield v
+        size = ffi.new("uintptr_t *")
+
+        sigs_ptr = self._methodcall(lib.lcadb_signatures, size)
+
+        size = size[0]
+        sigs = []
+        for i in range(size):
+            sig = SourmashSignature._from_objptr(sigs_ptr[i])
+            sigs.append(sig)
+
+        for sig in sigs:
+            yield sig
 
     def select(self, ksize=None, moltype=None):
         "Selector interface - make sure this database matches requirements."
@@ -208,114 +357,120 @@ class LCA_Database(RustObject, Index):
         "Load LCA_Database from a JSON file."
         from .lca_utils import taxlist, LineagePair
 
-        xopen = open
-        if db_name.endswith('.gz'):
-            xopen = gzip.open
+        # xopen = open
+        # if db_name.endswith('.gz'):
+        #     xopen = gzip.open
 
-        with xopen(db_name, 'rt') as fp:
-            load_d = {}
-            try:
-                load_d = json.load(fp)
-            except json.decoder.JSONDecodeError:
-                pass
+        # with xopen(db_name, 'rt') as fp:
+        #     load_d = {}
+        #     try:
+        #         load_d = json.load(fp)
+        #     except json.decoder.JSONDecodeError:
+        #         pass
 
-            if not load_d:
-                raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
+        #     if not load_d:
+        #         raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
 
-            version = None
-            db_type = None
-            try:
-                version = load_d.get('version')
-                db_type = load_d.get('type')
-            except AttributeError:
-                pass
+        #     version = None
+        #     db_type = None
+        #     try:
+        #         version = load_d.get('version')
+        #         db_type = load_d.get('type')
+        #     except AttributeError:
+        #         pass
 
-            if db_type != 'sourmash_lca':
-                raise ValueError("database file '{}' is not an LCA db.".format(db_name))
+        #     if db_type != 'sourmash_lca':
+        #         raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
-            version = float(version)
-            if version < 2.0 or 'lid_to_lineage' not in load_d:
-                raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
+        #     version = float(version)
+        #     if version < 2.0 or 'lid_to_lineage' not in load_d:
+        #         raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
 
-            ksize = int(load_d['ksize'])
-            scaled = int(load_d['scaled'])
-            moltype = load_d.get('moltype', 'DNA')
+        #     ksize = int(load_d['ksize'])
+        #     scaled = int(load_d['scaled'])
+        #     moltype = load_d.get('moltype', 'DNA')
 
-            db = cls(ksize, scaled, moltype)
+        #     db = cls(ksize, scaled, moltype)
 
-            # convert lineage_dict to proper lineages (tuples of LineagePairs)
-            lid_to_lineage_2 = load_d['lid_to_lineage']
-            lid_to_lineage = {}
-            lineage_to_lid = {}
-            for k, v in lid_to_lineage_2.items():
-                v = dict(v)
-                vv = []
-                for rank in taxlist():
-                    name = v.get(rank, '')
-                    vv.append(LineagePair(rank, name))
+        #     # convert lineage_dict to proper lineages (tuples of LineagePairs)
+        #     lid_to_lineage_2 = load_d['lid_to_lineage']
+        #     lid_to_lineage = {}
+        #     lineage_to_lid = {}
+        #     for k, v in lid_to_lineage_2.items():
+        #         v = dict(v)
+        #         vv = []
+        #         for rank in taxlist():
+        #             name = v.get(rank, '')
+        #             vv.append(LineagePair(rank, name))
 
-                vv = tuple(vv)
-                lid_to_lineage[int(k)] = vv
-                lineage_to_lid[vv] = int(k)
-            db.lid_to_lineage = lid_to_lineage
-            db.lineage_to_lid = lineage_to_lid
+        #         vv = tuple(vv)
+        #         lid_to_lineage[int(k)] = vv
+        #         lineage_to_lid[vv] = int(k)
+        #     db.lid_to_lineage = lid_to_lineage
+        #     db.lineage_to_lid = lineage_to_lid
 
-            # convert hashval -> lineage index keys to integers (looks like
-            # JSON doesn't have a 64 bit type so stores them as strings)
-            hashval_to_idx_2 = load_d['hashval_to_idx']
-            hashval_to_idx = {}
+        #     # convert hashval -> lineage index keys to integers (looks like
+        #     # JSON doesn't have a 64 bit type so stores them as strings)
+        #     hashval_to_idx_2 = load_d['hashval_to_idx']
+        #     hashval_to_idx = {}
 
-            for k, v in hashval_to_idx_2.items():
-                hashval_to_idx[int(k)] = v
-            db.hashval_to_idx = hashval_to_idx
+        #     for k, v in hashval_to_idx_2.items():
+        #         hashval_to_idx[int(k)] = v
+        #     db.hashval_to_idx = hashval_to_idx
 
-            db.ident_to_name = load_d['ident_to_name']
-            db.ident_to_idx = load_d['ident_to_idx']
+        #     db.ident_to_name = load_d['ident_to_name']
+        #     db.ident_to_idx = load_d['ident_to_idx']
 
-            db.idx_to_lid = {}
-            for k, v in load_d['idx_to_lid'].items():
-                db.idx_to_lid[int(k)] = v
+        #     db.idx_to_lid = {}
+        #     for k, v in load_d['idx_to_lid'].items():
+        #         db.idx_to_lid[int(k)] = v
 
-        db.filename = db_name
+        # print("\n\n\n", type(db_ptr), "\n\n\n")
+
+        dbs_ptr = rustcall(lib.lcadb_load_db, to_bytes(db_name))
+
+        db = LCA_Database._from_objptr(dbs_ptr)
 
         return db
 
     def save(self, db_name):
         "Save LCA_Database to a JSON file."
-        # self._methodcall(lib.LcaDB_save, to_bytes(db_name))
-        xopen = open
-        if db_name.endswith('.gz'):
-            xopen = gzip.open
+        
+        # xopen = open
+        # if db_name.endswith('.gz'):
+        #     xopen = gzip.open
 
-        with xopen(db_name, 'wt') as fp:
-            # use an OrderedDict to preserve output order
-            save_d = OrderedDict()
-            save_d['version'] = '2.1'
-            save_d['type'] = 'sourmash_lca'
-            save_d['license'] = 'CC0'
-            save_d['ksize'] = self.ksize
-            save_d['scaled'] = self.scaled
-            save_d['moltype'] = self.moltype
+        # with xopen(db_name, 'wt') as fp:
+        #     # use an OrderedDict to preserve output order
+        #     save_d = OrderedDict()
+        #     save_d['version'] = '2.1'
+        #     save_d['type'] = 'sourmash_lca'
+        #     save_d['license'] = 'CC0'
+        #     save_d['ksize'] = self.ksize
+        #     save_d['scaled'] = self.scaled
+        #     save_d['moltype'] = self.moltype
 
-            # convert lineage internals from tuples to dictionaries
-            d = OrderedDict()
-            for k, v in self.lid_to_lineage.items():
-                d[k] = dict([ (vv.rank, vv.name) for vv in v ])
-            save_d['lid_to_lineage'] = d
+        #     # convert lineage internals from tuples to dictionaries
+        #     d = OrderedDict()
+        #     for k, v in self.lid_to_lineage.items():
+        #         d[k] = dict([ (vv.rank, vv.name) for vv in v ])
+        #     save_d['lid_to_lineage'] = d
 
-            # convert values from sets to lists, so that JSON knows how to save
-            save_d['hashval_to_idx'] = \
-               dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
+        #     # convert values from sets to lists, so that JSON knows how to save
+        #     save_d['hashval_to_idx'] = \
+        #        dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
 
-            save_d['ident_to_name'] = self.ident_to_name
-            save_d['ident_to_idx'] = self.ident_to_idx
-            save_d['idx_to_lid'] = self.idx_to_lid
-            save_d['lid_to_lineage'] = self.lid_to_lineage
+        #     save_d['ident_to_name'] = self.ident_to_name
+        #     save_d['ident_to_idx'] = self.ident_to_idx
+        #     save_d['idx_to_lid'] = self.idx_to_lid
+        #     save_d['lid_to_lineage'] = self.lid_to_lineage
             
-            # print("\n\nPYTHON:\n", save_d, "\n\n")
-            json.dump(save_d, fp)
+        #     # print("\n\nPYTHON:\n", save_d, "\n\n")
+        #     json.dump(save_d, fp)
+        self._methodcall(lib.lcadb_save, to_bytes(db_name))
 
     def search(self, query, *args, **kwargs):
+        from sourmash import SourmashSignature
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -339,37 +494,83 @@ class LCA_Database(RustObject, Index):
         threshold = kwargs['threshold']
         do_containment = kwargs.get('do_containment', False)
         ignore_abundance = kwargs.get('ignore_abundance', False)
-        mh = query.minhash
-        if ignore_abundance:
-            mh.track_abundance = False
+        # mh = query.minhash
+        # if ignore_abundance:
+        #     mh.track_abundance = False
 
-        # find all the matches, then sort & return.
+        # # find all the matches, then sort & return.
+        # results = []
+        # for x in self._find_signatures(mh, threshold, do_containment):
+        #     (score, match, filename) = x
+        #     results.append((score, match, filename))
+
+        # results.sort(key=lambda x: -x[0])
+        # return results
+        size = ffi.new("uintptr_t *")
+
+        search_results = self._methodcall(lib.lcadb_search, query._objptr, threshold, do_containment, ignore_abundance, size)
+
+        size = size[0]
         results = []
-        for x in self._find_signatures(mh, threshold, do_containment):
-            (score, match, filename) = x
-            results.append((score, match, filename))
 
-        results.sort(key=lambda x: -x[0])
+        for i in range(size):
+            # set filename
+            name_size = search_results[i].name_size
+            filename = None
+            if name_size:
+                rawbuff = search_results[i].filename
+                buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, name_size), name_size)
+                filename = ffi.string(buf, name_size).decode('utf-8')
+
+            sig = SourmashSignature._from_objptr(search_results[i].sig)
+
+            tup = (search_results[i].score, sig, filename)
+            results.append(tup)
+
         return results
+        
 
     def gather(self, query, *args, **kwargs):
+        from sourmash import SourmashSignature
         "Return the match with the best Jaccard containment in the database."
         if not query.minhash:
             return []
 
         results = []
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * self.scaled)
+        # threshold = threshold_bp / (len(query.minhash) * self.scaled)
 
-        # grab first match, if any, and return that; since _find_signatures
-        # is a generator, this will truncate further searches.
-        for x in self._find_signatures(query.minhash, threshold,
-                                       containment=True, ignore_scaled=True):
-            (score, match, filename) = x
-            if score:
-                results.append((score, match, filename))
-            break
+        # # grab first match, if any, and return that; since _find_signatures
+        # # is a generator, this will truncate further searches.
+        # for x in self._find_signatures(query.minhash, threshold,
+        #                                containment=True, ignore_scaled=True):
+        #     (score, match, filename) = x
+        #     if score:
+        #         results.append((score, match, filename))
+        #     break
 
+        # return results
+        size = ffi.new("uintptr_t *")
+
+        gather_results = self._methodcall(lib.lcadb_gather, query._objptr, threshold_bp, size)
+
+        size = size[0]
+
+        for i in range(size):
+            # set filename
+            name_size = gather_results[i].name_size
+            filename = None
+            if name_size > 0:
+                rawbuff = gather_results[i].filename
+                buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, name_size), name_size)
+                filename = ffi.string(buf, name_size).decode('utf-8')
+
+            sig = SourmashSignature._from_objptr(gather_results[i].sig)
+
+            tup = (gather_results[i].score, sig, filename)
+            results.append(tup)
+
+        results.sort(key=lambda x: -x[0])
         return results
 
     def find(self, search_fn, *args, **kwargs):
@@ -391,30 +592,53 @@ class LCA_Database(RustObject, Index):
 
         self._invalidate_cache()
 
-        max_hash = get_max_hash_for_scaled(scaled)
+        self._methodcall(lib.lcadb_downsample_scaled, scaled)
 
-        # filter out all hashes over max_hash in value.
-        new_hashvals = {}
-        for k, v in self.hashval_to_idx.items():
-            if k < max_hash:
-                new_hashvals[k] = v
-        self.hashval_to_idx = new_hashvals
-        self.scaled = scaled
+        # max_hash = get_max_hash_for_scaled(scaled)
+
+        # # filter out all hashes over max_hash in value.
+        # new_hashvals = {}
+        # for k, v in self.hashval_to_idx.items():
+        #     if k < max_hash:
+        #         new_hashvals[k] = v
+        # self.hashval_to_idx = new_hashvals
+        # self.scaled = scaled
 
     def get_lineage_assignments(self, hashval):
+        from .lca_utils import LineagePair
         """
         Get a list of lineages for this hashval.
         """
-        x = []
+        # x = []
 
-        idx_list = self.hashval_to_idx.get(hashval, [])
-        for idx in idx_list:
-            lid = self.idx_to_lid.get(idx, None)
-            if lid is not None:
-                lineage = self.lid_to_lineage[lid]
-                x.append(lineage)
+        # idx_list = self.hashval_to_idx.get(hashval, [])
+        # for idx in idx_list:
+        #     lid = self.idx_to_lid.get(idx, None)
+        #     if lid is not None:
+        #         lineage = self.lid_to_lineage[lid]
+        #         x.append(lineage)
 
-        return x
+        # return x
+        size = ffi.new("uintptr_t *")
+
+        print(hashval)
+        rawbuf = self._methodcall(lib.lcadb_get_lineage_assignments, int(hashval), size)
+
+        size = size[0]
+
+        buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
+        result = ffi.string(buf, size)
+        result = json.loads(result)
+
+        lineagelist = []
+        for v in result:
+            lineage = []
+            for vv in v:
+                lineage.append(LineagePair(rank=vv[0], name=vv[1]))
+            
+            lineagelist.append(tuple(lineage))
+
+        return lineagelist
 
     @cached_property
     def _signatures(self):
@@ -531,7 +755,6 @@ class LCA_Database(RustObject, Index):
         for ident, idx in self.ident_to_idx.items():
             assert idx not in d
             d[idx] = ident
-        print(d)
         return d
 
 

@@ -39,6 +39,9 @@ pub enum SourmashError {
     #[error("Codon is invalid length: {message}")]
     InvalidCodonLength { message: String },
 
+    #[error("signature {ident} is already in this LCA db.")]
+    DuplicateSignature { ident: String },
+
     #[error(transparent)]
     ReadDataError(#[from] crate::index::storage::ReadDataError),
 
@@ -79,6 +82,7 @@ pub enum SourmashErrorCode {
     MismatchSignatureType = 1_05,
     NonEmptyMinHash = 1_06,
     MismatchNum = 1_07,
+    DuplicateSignature = 1_08,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -118,6 +122,7 @@ impl SourmashErrorCode {
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
+            SourmashError::DuplicateSignature { .. } => SourmashErrorCode::DuplicateSignature,
         }
     }
 }

@@ -16,10 +16,6 @@ from sourmash.lca import lca_utils
 from sourmash.lca.lca_utils import LineagePair
 
 
-def test_eriks_function():
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db._signatures
-
 
 def test_api_create_search():
     # create a database and then search for result.
@@ -1170,9 +1166,9 @@ def test_classify_majority_vote_1(c):
 
     c.run_sourmash('lca', 'index', taxcsv, lca_db, input_sig1, input_sig2)
 
-    print(c.last_command)
-    print(c.last_result.out)
-    print(c.last_result.err)
+    # print(c.last_command)
+    # print(c.last_result.out)
+    # print(c.last_result.err)
 
     assert os.path.exists(lca_db)
 
@@ -1187,9 +1183,9 @@ def test_classify_majority_vote_1(c):
     # lca classify should yield no results
     c.run_sourmash('lca', 'classify', '--db', lca_db, '--query', sig1and2)
 
-    print(c.last_command)
-    print(c.last_result.out)
-    print(c.last_result.err)
+    print(c.last_command, "\n")
+    print(c.last_result.out, "\n")
+    print(c.last_result.err, "\n")
 
     assert 'ID,status,superkingdom,phylum,class,order,family,genus,species' in c.last_result.out
     assert 'disagree,,,,,,,,' in c.last_result.out
@@ -1522,6 +1518,7 @@ def test_multi_summarize_with_unassigned_fromfile(c):
     assert 'loaded 2 signatures from 2 files total.' in err
 
     out_lines = out.splitlines()
+    print("\noutlines =", out_lines, "\n")
     out_lines.remove('14.0%   200   Bacteria')
     out_lines.remove('14.0%   200   Bacteria;Proteobacteria;unassigned;unassigned')
     out_lines.remove('86.0%  1231   Eukaryota;Chlorophyta')
@@ -2140,6 +2137,8 @@ def test_lca_gather_protein(c):
     db1 = utils.get_test_data('prot/protein.lca.json.gz')
 
     c.run_sourmash('lca', 'gather', testquery, db1)
+
+    print(c.last_result.out)
 
     assert c.last_result.status == 0
     assert 'loaded 1 LCA databases. ksize=57, scaled=100 moltype=protein' in c.last_result.err

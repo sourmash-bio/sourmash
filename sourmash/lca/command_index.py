@@ -263,10 +263,10 @@ def index(args):
         sys.exit(1)
 
     # check -- did the signatures we found have any hashes?
-    if not db.hashval_to_idx:
+    if not db._hashval_to_idx_len():
         error('ERROR: no hash values found - are there any signatures?')
         sys.exit(1)
-    notify('loaded {} hashes at ksize={} scaled={}', len(db.hashval_to_idx),
+    notify('loaded {} hashes at ksize={} scaled={}', db._hashval_to_idx_len(),
            args.ksize, args.scaled)
 
     # summarize:
