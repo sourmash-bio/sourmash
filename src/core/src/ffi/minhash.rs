@@ -5,7 +5,7 @@ use std::slice;
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SigsTrait;
 use crate::sketch::minhash::{
-    aa_to_dayhoff, aa_to_hp, max_hash_for_scaled, translate_codon, HashFunctions, KmerMinHash,
+    aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions, KmerMinHash,
 };
 
 pub struct SourmashKmerMinHash;
@@ -17,31 +17,13 @@ impl ForeignObject for SourmashKmerMinHash {
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
     scaled: u64,
-    n: u32,
     k: u32,
-    prot: bool,
-    dayhoff: bool,
-    hp: bool,
+    hash_function: HashFunctions,
     seed: u64,
     track_abundance: bool,
+    n: u32,
 ) -> *mut SourmashKmerMinHash {
-    // TODO: at most one of (prot, dayhoff, hp) should be true
-
-    let hash_function = if dayhoff {
-        HashFunctions::murmur64_dayhoff
-    } else if hp {
-        HashFunctions::murmur64_hp
-    } else if prot {
-        HashFunctions::murmur64_protein
-    } else {
-        HashFunctions::murmur64_DNA
-    };
-
-    let mx: u64 = match max_hash_for_scaled(scaled) {
-        None => 0,
-        Some(max_hash) => max_hash,
-    };
-    let mh = KmerMinHash::new(n, k, hash_function, seed, mx, track_abundance);
+    let mh = KmerMinHash::new(scaled, k, hash_function, seed, track_abundance, n);
 
     SourmashKmerMinHash::from_rust(mh)
 }
