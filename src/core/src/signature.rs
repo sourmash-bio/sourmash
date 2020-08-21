@@ -459,7 +459,7 @@ mod test {
         let reader = BufReader::new(file);
         let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
 
-        assert_eq!(sigs.len(), 1);
+        assert_eq!(sigs.len(), 4);
 
         let sig = sigs.get(0).unwrap();
         assert_eq!(sig.class, "sourmash_signature");
@@ -469,9 +469,9 @@ mod test {
         }
         assert_eq!(sig.hash_function, "0.murmur64");
         if let Some(ref name) = sig.name {
-            assert_eq!(name, "s10+s11");
+            assert_eq!(name, "genome-s10+s11");
         }
-        assert_eq!(sig.signatures.len(), 4);
+        assert_eq!(sig.signatures.len(), 1);
     }
 
     #[test]
