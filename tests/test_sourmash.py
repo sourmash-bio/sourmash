@@ -3664,8 +3664,7 @@ def test_sbt_categorize():
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
         print(out_csv)
-        # @CTB why did this change from 0.5 to 0.496?
-        assert './4.sig,genome-s10+s11,genome-s10,0.496' in out_csv
+        assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance():
