@@ -238,12 +238,13 @@ unsafe fn lcadb_insert(
     //set lineage
     let data = CStr::from_ptr(lineage_char).to_str().unwrap();
     let lineage: Option<&Lineage> = None;
-    if data != "" {
-            let lineage_temp: Lineage = serde_json::from_str(data)?;
-            let lineage = Some(&lineage_temp);
-    }
+    let lineage = if data != "" {
+        let lineage_temp: Lineage = serde_json::from_str(data)?;
+        Some(lineage_temp)
+    } else {
+        None
+    };
     
-    // dbg!(&lca_db);
     lca_db.insert(sig, Some(ident.to_str().unwrap()), lineage)
 }
 }
@@ -364,8 +365,8 @@ unsafe fn lcadb_search(
     let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
     let sig = SourmashSignature::as_rust(query);
 
-    let searchresults: Vec<(f32, Signature, String)> = lca_db.search(sig.clone(), threshold, do_containment, ignore_abundance);
-
+    let searchresults: Vec<(f32, Signature, String)> = lca_db.search(sig.clone(), threshold, do_containment, ignore_abundance)?;
+    
     let mut result_vec: Vec<FFISearchResults> = Vec::new();
     for tup in searchresults {
         result_vec.push(FFISearchResults::new(tup.0, tup.1, tup.2));
@@ -405,25 +406,3 @@ unsafe fn lcadb_gather(
     Ok(Box::into_raw(b) as *mut FFISearchResults)
 }
 }
-
-// #[no_mangle]
-// pub unsafe extern "C" fn lcadb_select(
-//     ptr: *mut SourmashLcaDatabase, 
-//     ksize_opt: u32,
-//     moltype_char: *const c_char,
-// ) -> bool {
-//     let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
-    
-//     let moltype = if moltype_char.is_null() { 
-//         None
-//     } else {
-//         Some(CStr::from_ptr(moltype_char).to_str().unwrap())
-//     };
-
-//     let ksize = match ksize_opt {
-//         -1 => None,
-//         >-1 => Some(ksize_opt)
-//     };
-
-//     lca_db.select(ksize, moltype).is_ok()
-// }

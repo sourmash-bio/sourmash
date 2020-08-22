@@ -185,7 +185,8 @@ class LCA_Database(RustObject, Index):
         size = size[0]
         if size:
             buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-            lid_to_lineage = json.loads(ffi.string(buf, size).decode('utf-8'))
+            temp = ffi.string(buf, size).decode('utf-8')
+            lid_to_lineage = json.loads(temp)
 
         # turn lineage into a list of tuples
         result = {}
@@ -253,6 +254,7 @@ class LCA_Database(RustObject, Index):
         return lid
 
     def insert(self, sig, ident=None, lineage=None):
+        from .lca_utils import taxlist, LineagePair
         """Add a new signature into the LCA database.
 
         Takes optional arguments 'ident' and 'lineage'.
@@ -283,8 +285,8 @@ class LCA_Database(RustObject, Index):
         # if ident in self.ident_to_name:
         #     raise ValueError("signature {} is already in this LCA db.".format(ident))
 
-        # # before adding, invalide any caching from @cached_property
-        # self._invalidate_cache()
+        # before adding, invalide any caching from @cached_property
+        self._invalidate_cache()
 
         # # store full name
         # self.ident_to_name[ident] = sig.name()
@@ -306,8 +308,15 @@ class LCA_Database(RustObject, Index):
         # for hashval in minhash.get_mins():
         #     self.hashval_to_idx[hashval].add(idx)
 
+
         # trying to put lineage into a json
         if lineage:
+            try:
+                if type(lineage[0]) is not LineagePair:
+                    raise ValueError('lineage cannot be used as a key?!')
+            except:
+                raise ValueError('lineage cannot be used as a key?!')
+
             lineage_dict = dict(lineage)
             lineage_json = json.dumps(lineage_dict)
         else:
@@ -621,7 +630,6 @@ class LCA_Database(RustObject, Index):
         # return x
         size = ffi.new("uintptr_t *")
 
-        print(hashval)
         rawbuf = self._methodcall(lib.lcadb_get_lineage_assignments, int(hashval), size)
 
         size = size[0]

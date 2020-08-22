@@ -20,7 +20,7 @@ use wasm_bindgen::prelude::*;
 use crate::Error;
 use crate::sketch::Sketch;
 use crate::signature::Signature;
-use crate::sketch::minhash::{KmerMinHash, HashFunctions, max_hash_for_scaled};
+use crate::sketch::minhash::{KmerMinHash, HashFunctions, max_hash_for_scaled, scaled_for_max_hash};
 use std::convert::TryFrom;
 use std::cmp::Ordering::Equal;
 
@@ -53,7 +53,15 @@ pub fn lineage_to_vec(lineage: Lineage) -> Vec<Vec<String>> {
         if lineage.contains_key(&"strain".to_string()) {
             lineage_vec.push(vec!["strain".to_string(), lineage.get("strain").unwrap().to_string()]);
         }
+
+        // for tests that dont have normal lineages
+        if lineage_vec.len() == 0 && lineage.len() != 0 {
+            for (rank, name) in lineage {
+                lineage_vec.push(vec![rank, name]);
+            }
+        }
         lineage_vec
+
 }
 
 impl Serialize for LcaDB {
@@ -164,10 +172,6 @@ impl<'de> Deserialize<'de> for LcaDB {
         if templcadb.moltype != "" {
             moltype = templcadb.moltype.to_string();
         }
-
-        dbg!(&templcadb.idx_to_lid);
-        dbg!(&templcadb.ident_to_name);
-        dbg!(&templcadb.ident_to_idx);
 
         let _next_index = templcadb.ident_to_idx.len() as u32;
         let _next_lid = templcadb.idx_to_lid.len() as u32;
@@ -429,7 +433,7 @@ impl LcaDB {
         }
     }
 
-    pub fn insert(&mut self, sig: &Signature, ident_opt: Option<&str>, lineage_opt: Option<&Lineage>) -> Result<u32, Error> {
+    pub fn insert(&mut self, sig: &Signature, ident_opt: Option<&str>, lineage_opt: Option<Lineage>) -> Result<u32, Error> {
         // set ident
         let ident = match ident_opt {
             Some(s) => s.to_string(),
@@ -440,7 +444,7 @@ impl LcaDB {
     
             // check for errors
                 
-            if self.ident_to_name().contains_key(&ident) {
+            if self.ident_to_name.contains_key(&ident) {
                 return Err(Error::DuplicateSignature { ident });
             }
             
@@ -457,15 +461,12 @@ impl LcaDB {
             // identifier -> integer index (idx)
             let idx = self._get_ident_index(&ident, true);
     
-            if lineage_opt != None {
-                let lineage = lineage_opt.unwrap();
+            if let Some(lineage) = lineage_opt {
                 // (Lineage*) -> integer lineage ids (lids)
-                let lid = self._get_lineage_id(lineage);
+                let lid = self._get_lineage_id(&lineage);
     
                 // map idx to lid as well.
-                if !self.idx_to_lid.contains_key(&idx) {
-                    self.idx_to_lid.insert(idx, lid);
-                }
+                self.idx_to_lid.insert(idx, lid);   
             }
     
             // append idx to each hashval's idx vector
@@ -646,15 +647,15 @@ impl LcaDB {
         return_one: bool,
     ) -> Result<Vec<(f32, Signature, String)>, Error> {
         // make sure we're looking at the same scaled value as database
-        let self_max_hash = max_hash_for_scaled(self.scaled).unwrap();
+        let mh_scaled = scaled_for_max_hash(mh.max_hash());
 
-        if self_max_hash > mh.max_hash() {
+        if self.scaled > mh_scaled {
             let mh = mh.downsample_scaled(self.scaled).unwrap();
 
-        } else if self_max_hash < mh.max_hash() && !ignore_scaled {
+        } else if self.scaled < mh_scaled && !ignore_scaled {
             // note that containment can be calculated w/o matching scaled.
             return Err(Error::MismatchScaled);
-            // raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+            // panic!("lca db scaled is {} vs query {}; must downsample", self.scaled, mh_scaled);
         }
 
         // collect matching hashes for the query
@@ -716,12 +717,12 @@ impl LcaDB {
     }
 
     pub fn downsample_scaled(&mut self, scaled: u64) -> Result<(), Error> {
-        // if scaled == self.scaled {
-        //     return Ok(());
-        // } else if scaled < self.scaled {
-        //     return Err(Error::MismatchScaled);
-        //     // ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
-        // }
+        if scaled == self.scaled {
+            return Ok(());
+        } else if scaled < self.scaled {
+            // return Err(Error::MismatchScaled);
+            panic!("cannot decrease scaled from {} to {}", self.scaled, scaled);
+        }
 
         // self._invalidate_cache()
 
@@ -777,12 +778,12 @@ impl LcaDB {
         threshold: f32, 
         do_containment: bool, 
         ignore_abundance: bool,
-    ) -> Vec<(f32, Signature, String)> {
+    ) -> Result<Vec<(f32, Signature, String)>, Error> {
 
         let mut results: Vec<(f32, Signature, String)> = Vec::new();
 
         if query.signatures.len() == 0 {
-            return results;
+            return Ok(results);
         }
 
         if let Sketch::MinHash(mh) = &query.signatures[0] {
@@ -791,13 +792,13 @@ impl LcaDB {
                 mh.disable_abundance();
             }
 
-            for (score, sig, filename) in self._find_signatures(&mh, threshold, do_containment, false, false).unwrap() {
+            for (score, sig, filename) in self._find_signatures(&mh, threshold, do_containment, false, false)? {
                 results.push((score, sig, filename));
             }
 
             // sort by score
             results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(Equal));
-            results
+            Ok(results)
         } else {
             unimplemented!()
         }
