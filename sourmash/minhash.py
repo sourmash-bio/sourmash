@@ -185,15 +185,17 @@ class MinHash(RustObject):
         if dayhoff or hp:
             is_protein = False
 
-        hash_function = (
-            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF if dayhoff else
-            lib.HASH_FUNCTIONS_MURMUR64_HP if hp else
-            lib.HASH_FUNCTIONS_MURMUR64_PROTEIN if is_protein else
-            lib.HASH_FUNCTIONS_MURMUR64_DNA
-        )
+        if dayhoff:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+        elif hp:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+        elif is_protein:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+        else:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
 
         self._objptr = lib.kmerminhash_new(
-            scaled, n, ksize, hash_function, seed, track_abundance
+            scaled, ksize, hash_function, seed, track_abundance, n
         )
 
         if mins:
@@ -248,7 +250,7 @@ class MinHash(RustObject):
 
         scaled = _get_scaled_for_max_hash(max_hash)
         self._objptr = lib.kmerminhash_new(
-            scaled, n, ksize, hash_function, seed, track_abundance
+            scaled, ksize, hash_function, seed, track_abundance, n
         )
         if track_abundance:
             self.set_abundances(mins)
