@@ -218,6 +218,8 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+const uint8_t *lcadb_best_name(SourmashLcaDatabase *ptr, uint32_t best_idx, uintptr_t *size);
+
 void lcadb_downsample_scaled(SourmashLcaDatabase *ptr, uint64_t new_scaled);
 
 const uint8_t *lcadb_filename(const SourmashLcaDatabase *ptr, uintptr_t *size);
@@ -227,9 +229,17 @@ FFISearchResults *lcadb_gather(SourmashLcaDatabase *ptr,
                                float threshold_bp,
                                uintptr_t *osize);
 
+const uint32_t *lcadb_get_idx_from_hashval(SourmashLcaDatabase *ptr,
+                                           uint64_t hashval,
+                                           uintptr_t *size);
+
 const uint8_t *lcadb_get_lineage_assignments(SourmashLcaDatabase *ptr,
                                              uint64_t hashval,
                                              uintptr_t *size);
+
+const uint8_t *lcadb_get_lineage_from_idx(SourmashLcaDatabase *ptr, uint32_t idx, uintptr_t *size);
+
+uint32_t lcadb_get_match_size(SourmashLcaDatabase *ptr, uint32_t best_idx);
 
 const uint8_t *lcadb_hashval_to_idx(const SourmashLcaDatabase *ptr, uintptr_t *size);
 
@@ -277,6 +287,8 @@ FFISearchResults *lcadb_search(SourmashLcaDatabase *ptr,
                                uintptr_t *osize);
 
 SourmashSignature **lcadb_signatures(SourmashLcaDatabase *ptr, uintptr_t *size);
+
+uint32_t make_assignments_helper(SourmashLcaDatabase *ptr, uintptr_t min_num);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 

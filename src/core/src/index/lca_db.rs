@@ -285,13 +285,15 @@ impl LcaDB {
         }
     }
 
-    pub fn new_with_params(ksize: u32, scaled: u64, filename: &str, moltype: &str) -> LcaDB {
+    pub fn new_with_params(ksize: Option<u32>, scaled: Option<u64>, filename: Option<&str>, moltype: Option<&str>) -> LcaDB {
         let version = "2.1".to_string();
         let class = "sourmash_lca".to_string();
         let license = "CC0".to_string();
 
-        let filename = filename.to_string();
-        let moltype = moltype.to_string();
+        let ksize = ksize.unwrap_or(32);
+        let scaled = scaled.unwrap_or(1);
+        let filename = filename.unwrap_or("").to_string();
+        let moltype = moltype.unwrap_or("DNA").to_string();
 
         let _next_index = 0;
         let _next_lid = 0;
@@ -357,6 +359,14 @@ impl LcaDB {
         self.idx_to_lid.clone()
     }
 
+    pub fn lid_to_idx(&self) -> HashMap<u32, u32> {
+        let mut result: HashMap<u32, u32> = HashMap::new();
+        for (idx, lid) in self.idx_to_lid.clone() {
+            result.insert(lid, idx);
+        }
+        result
+    }
+
     pub fn lineage_to_lid(&self) -> HashMap<Lineage, u32> {
         self.lineage_to_lid.clone()
     }
@@ -372,9 +382,7 @@ impl LcaDB {
     pub fn idx_to_ident(&self) -> HashMap<u32, String> {
         let mut idx_to_ident: HashMap<u32, String> = HashMap::new();
         for (ident, idx) in &self.ident_to_idx {
-            if !idx_to_ident.contains_key(&idx) {
-                idx_to_ident.insert(*idx, ident.to_string());
-            }
+            idx_to_ident.insert(*idx, ident.to_string());
         }
         return idx_to_ident;
     }
@@ -813,10 +821,13 @@ mod test {
     use std::fs::File;
     use std::io::{BufReader, Seek, SeekFrom};
     use std::path::PathBuf;
-    use std::collections::{HashMap, BTreeMap};
+    use std::collections::{HashMap, BTreeMap, HashSet};
+    use std::iter::FromIterator;
 
-    use crate::signature::Signature;
+    use crate::sketch::minhash::max_hash_for_scaled;
+    use crate::signature::{Signature, SigsTrait};
     use crate::index::lca_db::{Lineage, LcaDB};
+    use crate::sketch::Sketch;
 
 
     #[test]
@@ -843,7 +854,7 @@ mod test {
 
         lca_db.insert(&signatures[0], Some("erik2"), None).unwrap();
         
-        let tup = lca_db.search(signatures[0].clone(), 0.0, false, false);
+        let tup = lca_db.search(signatures[0].clone(), 0.0, false, false).unwrap();
 
         dbg!(&tup[1].2);
 
@@ -860,7 +871,7 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/lca/delmont-1.lca.json");
 
-        let mut lca_db = LcaDB::load(filename.as_path()).unwrap();
+        let mut lca_db = LcaDB::load(filename.as_path(), "delmont-1.lca.json").unwrap();
 
         // get signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -888,7 +899,7 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/lca/delmont-1.lca.json");
 
-        let mut lca_db = LcaDB::load(filename.as_path()).unwrap();
+        let mut lca_db = LcaDB::load(filename.as_path(), "../../tests/test-data/lca/delmont-1.lca.json").unwrap();
 
         // get signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -904,7 +915,7 @@ mod test {
         lineage.insert("name2".to_string(), "rank2".to_string());
         
         // add new sigs and lineage
-        lca_db.insert(&signatures[0], None, Some(&lineage)).unwrap();
+        lca_db.insert(&signatures[0], None, Some(lineage)).unwrap();
 
         let sigs = lca_db.signatures().unwrap();
         dbg!(&sigs.len());
@@ -918,7 +929,7 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/lca/both.lca.json");
 
-        let lca_db = LcaDB::load(filename.as_path()).unwrap();
+        let lca_db = LcaDB::load(filename.as_path(), "../../tests/test-data/lca/delmont-1.lca.json").unwrap();
 
         let hashval = 270342483362557;
 
@@ -933,7 +944,7 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/lca/delmont-1.lca.json");
 
-        let lca_db = LcaDB::load(filename.as_path()).unwrap();
+        let lca_db = LcaDB::load(filename.as_path(), "../../tests/test-data/lca/delmont-1.lca.json").unwrap();
 
         // actual values: ksize = 31 and moltype = "DNA"
 
@@ -950,14 +961,14 @@ mod test {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         filename.push("../../tests/test-data/lca/delmont-1.lca.json");
 
-        let lcadb = LcaDB::load(filename.as_path()).unwrap();
+        let lcadb = LcaDB::load(filename.as_path(), "delmont-1.lca.json").unwrap();
 
         let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
         lcadb.save(tmpfile.path()).unwrap();
 
         tmpfile.seek(SeekFrom::Start(0)).unwrap();
 
-        let lcadb_2 = LcaDB::load(tmpfile.path()).unwrap();
+        let lcadb_2 = LcaDB::load(tmpfile.path(), "delmont-1.lca.json").unwrap();
 
         assert_eq!(lcadb.class, lcadb_2.class);
         assert_eq!(lcadb.license, lcadb_2.license);
@@ -1012,7 +1023,7 @@ mod test {
         lineage.insert("name1".to_string(), "rank1".to_string()); 
         lineage.insert("name2".to_string(), "rank2".to_string());
         
-        lca_db.insert(&sigs[0], Some("erik"), Some(&lineage)).unwrap();
+        lca_db.insert(&sigs[0], Some("test"), Some(lineage.clone())).unwrap();
 
         // println!("{:?}", lca_db);
                                             
@@ -1024,11 +1035,324 @@ mod test {
         assert!(lca_db._next_lid() as u32 == 1);
 
         let mut ident_to_name2 = HashMap::with_capacity(1);
-        ident_to_name2.insert("erik".to_string(), "s10+s11".to_string());
+        ident_to_name2.insert("test".to_string(), "s10+s11".to_string());
         assert!(lca_db.ident_to_name() == ident_to_name2);
 
         let mut lid_to_lineage2 = HashMap::with_capacity(1);
         lid_to_lineage2.insert(0, lineage);
         assert!(lca_db.lid_to_lineage() == lid_to_lineage2);
+    }
+
+    // pub fn insert(&mut self, sig: &Signature, ident_opt: Option<&str>, lineage_opt: Option<Lineage>) -> Result<u32, Error> {
+    // tests moved from python
+    #[test]
+    fn test_api_create_insert() {
+        // test some internal implementation stuff: create & then insert a sig.
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        // input, Option<ksize>, Option<moltype>, Option<_scaled>
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
+        lca_db.insert(&ss, None, None);
+
+        let ident = ss.name();
+        assert_eq!(lca_db.ident_to_name.len(), 1);
+        assert!(lca_db.ident_to_name.contains_key(&ident));
+        assert_eq!(lca_db.ident_to_name[&ident], ident);
+
+        assert_eq!(lca_db.ident_to_idx.len(), 1);
+        assert_eq!(lca_db.ident_to_idx[&ident], 0);
+        
+        assert_eq!(lca_db.hashval_to_idx.len(), ss.signatures[0].size());
+
+        assert_eq!(lca_db.idx_to_ident().len(), 1);
+        assert_eq!(lca_db.idx_to_ident()[&0], ident);
+
+        // TODO: make this better lol
+        // also TODO: learn the .iter() and .collect() stuff better
+        let mut values_set = HashSet::new();
+        for v in lca_db.hashval_to_idx.values() {
+            let new_set: HashSet<u32> = HashSet::from_iter(v.into_iter().cloned());
+            values_set = values_set.union(&new_set).cloned().collect();
+        }
+        assert_eq!(values_set.len(), 1);
+        assert_eq!(values_set, [0].iter().cloned().collect());
+
+        assert_eq!(lca_db.idx_to_lid.len(), 0); // no lineage added
+        assert_eq!(lca_db.lid_to_lineage.len(), 0); // no lineage added
+    }
+
+    #[test]
+    fn test_api_create_insert_ident() {
+        // test some internal implementation stuff: signature inserted with
+        // different ident than name.
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        // input, Option<ksize>, Option<moltype>, Option<_scaled>
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
+        lca_db.insert(&ss, Some("foo"), None);
+
+        let ident = "foo".to_string();
+        assert_eq!(lca_db.ident_to_name.len(), 1);
+        assert!(lca_db.ident_to_name.contains_key(&ident));
+        assert_eq!(lca_db.ident_to_name[&ident], ss.name());
+
+        assert_eq!(lca_db.ident_to_idx.len(), 1);
+        assert_eq!(lca_db.ident_to_idx[&ident], 0);
+        
+        assert_eq!(lca_db.hashval_to_idx.len(), ss.signatures[0].size());
+
+        assert_eq!(lca_db.idx_to_ident().len(), 1);
+        assert_eq!(lca_db.idx_to_ident()[&0], ident);
+
+        // TODO: make this better lol
+        // also TODO: learn the .iter() and .collect() stuff better
+        let mut values_set = HashSet::new();
+        for v in lca_db.hashval_to_idx.values() {
+            let new_set: HashSet<u32> = HashSet::from_iter(v.into_iter().cloned());
+            values_set = values_set.union(&new_set).cloned().collect();
+        }
+
+        assert_eq!(values_set.len(), 1);
+        assert_eq!(values_set, [0].iter().cloned().collect());
+
+        assert_eq!(lca_db.idx_to_lid.len(), 0); // no lineage added
+        assert_eq!(lca_db.lid_to_lineage.len(), 0); // no lineage added
+        assert_eq!(lca_db.lineage_to_lid.len(), 0);
+    }
+
+    #[test]
+    fn test_api_create_insert_two() {
+        // check internal details if multiple signatures are inserted.
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/63.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss2 = &sigs[0];
+
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
+        lca_db.insert(&ss, Some("foo"), None);
+        lca_db.insert(&ss2, Some("bar"), None);
+
+        let ident = "foo".to_string();
+        let ident2 = "bar".to_string();
+        assert_eq!(lca_db.ident_to_name.len(), 2);
+        assert!(lca_db.ident_to_name.contains_key(&ident));
+        assert!(lca_db.ident_to_name.contains_key(&ident2));
+        assert_eq!(lca_db.ident_to_name[&ident], ss.name());
+        assert_eq!(lca_db.ident_to_name[&ident2], ss2.name());
+
+        assert_eq!(lca_db.ident_to_idx.len(), 2);
+        assert_eq!(lca_db.ident_to_idx[&ident], 0);
+        assert_eq!(lca_db.ident_to_idx[&ident2], 1);
+        
+        if let Sketch::MinHash(mh) = &ss.signatures[0] { 
+            if let Sketch::MinHash(mh2) = &ss2.signatures[0] {
+                let mins: HashSet<u64> = mh.mins().iter().cloned().collect();
+                let mins2: HashSet<u64> = mh2.mins().iter().cloned().collect();
+                let combined_mins: HashSet<u64> = mins.union(&mins2).cloned().collect();
+                assert_eq!(lca_db.hashval_to_idx.len(), combined_mins.len());
+            }
+        }
+        assert_eq!(lca_db.idx_to_ident().len(), 2);
+        assert_eq!(lca_db.idx_to_ident()[&0], ident);
+        assert_eq!(lca_db.idx_to_ident()[&1], ident2);
+
+        // TODO: make this better lol
+        // also TODO: learn the .iter() and .collect() stuff better
+        let mut values_set = HashSet::new();
+        for v in lca_db.hashval_to_idx.values() {
+            let new_set: HashSet<u32> = HashSet::from_iter(v.into_iter().cloned());
+            values_set = values_set.union(&new_set).cloned().collect();
+        }
+        assert_eq!(values_set.len(), 2);
+        assert_eq!(values_set, [0, 1].iter().cloned().collect());
+
+        assert_eq!(lca_db.idx_to_lid.len(), 0); // no lineage added
+        assert_eq!(lca_db.lid_to_lineage.len(), 0); // no lineage added
+        assert_eq!(lca_db.lineage_to_lid.len(), 0);
+    }
+
+    #[test]
+    fn test_api_create_insert_w_lineage() {
+        // test some internal implementation stuff - insert signature w/lineage
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        // input, Option<ksize>, Option<moltype>, Option<_scaled>
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
+        let mut lineage: Lineage = BTreeMap::new();
+        lineage.insert("rank1".to_string(), "name1".to_string());
+        lineage.insert("rank2".to_string(), "name2".to_string());
+
+        lca_db.insert(&ss, None, Some(lineage.clone()));
+
+        let ident = ss.name();
+        assert_eq!(lca_db.ident_to_name.len(), 1);
+        assert!(lca_db.ident_to_name.contains_key(&ident));
+        assert_eq!(lca_db.ident_to_name[&ident], ident);
+
+        assert_eq!(lca_db.ident_to_idx.len(), 1);
+        assert_eq!(lca_db.ident_to_idx[&ident], 0);
+        
+        assert_eq!(lca_db.hashval_to_idx.len(), ss.signatures[0].size());
+
+        assert_eq!(lca_db.idx_to_ident().len(), 1);
+        assert_eq!(lca_db.idx_to_ident()[&0], ident);
+
+        // TODO: make this better lol
+        // also TODO: learn the .iter() and .collect() stuff better
+        let mut values_set = HashSet::new();
+        for v in lca_db.hashval_to_idx.values() {
+            let new_set: HashSet<u32> = HashSet::from_iter(v.into_iter().cloned());
+            values_set = values_set.union(&new_set).cloned().collect();
+        }
+
+        assert_eq!(values_set.len(), 1);
+        assert_eq!(values_set, [0].iter().cloned().collect());
+
+        // check lineage stuff
+        assert_eq!(lca_db.idx_to_lid.len(), 1);
+        assert_eq!(lca_db.idx_to_lid[&0], 0);
+
+        assert_eq!(lca_db.lid_to_lineage.len(), 1);
+        assert_eq!(lca_db.lid_to_lineage[&0], lineage);
+
+        assert_eq!(lca_db.lineage_to_lid.len(), 1);
+        assert_eq!(lca_db.lineage_to_lid[&lineage], 0);
+    }
+
+    #[test]
+    fn test_api_create_insert_two_then_scale() {
+        // construct database, THEN downsample
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/63.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss2 = &sigs[0];
+
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
+        lca_db.insert(&ss, None, None);
+        lca_db.insert(&ss2, None, None);
+
+        // downsample everything to 5000
+        lca_db.downsample_scaled(5000);
+
+        if let Sketch::MinHash(mh) = &ss.signatures[0] {
+            if let Sketch::MinHash(mh2) = &ss2.signatures[0] {
+                let mh = mh.downsample_scaled(5000).unwrap();
+                let mh2 = mh2.downsample_scaled(5000).unwrap();
+                
+                // check
+                let mins: HashSet<u64> = mh.mins().iter().cloned().collect();
+                let mins2: HashSet<u64> = mh2.mins().iter().cloned().collect();
+                let combined_mins: HashSet<u64> = mins.union(&mins2).cloned().collect();
+                assert_eq!(lca_db.hashval_to_idx.len(), combined_mins.len());
+            }
+        }
+    }
+
+    #[test]
+    fn test_api_create_insert_scale_two() {
+        // construct database, THEN downsample
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/47.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss = &sigs[0];
+
+        let (mut input, _) = niffler::from_path("../../tests/test-data/63.fa.sig").unwrap();
+        let sigs = Signature::load_signatures(&mut input, Some(31), None, None).unwrap();
+        let ss2 = &sigs[0];
+
+        // downsample everything to 5000
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(5000), None, None);
+        let count = lca_db.insert(&ss, None, None).unwrap();
+        assert_eq!(count, 1037);
+
+        if let Sketch::MinHash(mh) = &ss.signatures[0] {
+            let mh = mh.downsample_scaled(5000).unwrap();
+            assert_eq!(count as usize, mh.mins().len());
+            
+            lca_db.insert(&ss2, None, None);
+            if let Sketch::MinHash(mh2) = &ss2.signatures[0] {
+                let mh2 = mh2.downsample_scaled(5000).unwrap();
+
+                // check
+                let mins: HashSet<u64> = mh.mins().iter().cloned().collect();
+                let mins2: HashSet<u64> = mh2.mins().iter().cloned().collect();
+                let combined_mins: HashSet<u64> = mins.union(&mins2).cloned().collect();
+                assert_eq!(lca_db.hashval_to_idx.len(), combined_mins.len());
+            }
+        }
+    }
+
+    #[test]
+    fn test_db_lineage_to_lid() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/lca/47+63.lca.json");
+
+        let lcadb = LcaDB::load(filename.as_path(), "47+63.lca.json").unwrap();
+
+        assert_eq!(lcadb.lineage_to_lid.len(), 2);
+
+        dbg!(&lcadb.lineage_to_lid);
+
+        let mut lineages = lcadb.lineage_to_lid.keys();
+        let lineage1: &Lineage = lineages.next().unwrap();
+        let lineage2: &Lineage = lineages.next().unwrap();
+        assert_eq!(lineage1[&"strain".to_string()], "Shewanella baltica OS185".to_string());
+        assert_eq!(lineage2[&"strain".to_string()], "Shewanella baltica OS223".to_string());
+    }
+
+    // method lid_to_idx isnt really needed i dont think, it was created just to move this test to rust...
+    #[test]
+    fn test_db_lid_to_idx() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/lca/47+63.lca.json");
+
+        let lcadb = LcaDB::load(filename.as_path(), "47+63.lca.json").unwrap();
+
+        let lid_to_idx = lcadb.lid_to_idx();
+        assert_eq!(lid_to_idx.len(), 2);
+
+        dbg!(&lid_to_idx);
+
+        let mut cmp = HashMap::with_capacity(2);
+        cmp.insert(32, 32);
+        cmp.insert(48, 48);
+
+        assert_eq!(lid_to_idx, cmp);
+    }
+
+    #[test]
+    fn test_db_idx_to_ident() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.push("../../tests/test-data/lca/47+63.lca.json");
+
+        let lcadb = LcaDB::load(filename.as_path(), "47+63.lca.json").unwrap();
+
+        let idx_to_ident = lcadb.idx_to_ident();
+        assert_eq!(idx_to_ident.len(), 2);
+
+        dbg!(&idx_to_ident);
+
+        let mut cmp = HashMap::with_capacity(2);
+        cmp.insert(32, "NC_009665".to_string());
+        cmp.insert(48, "NC_011663".to_string());
+
+        assert_eq!(idx_to_ident, cmp);
     }
 }

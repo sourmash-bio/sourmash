@@ -33,34 +33,6 @@ def test_api_create_search():
     assert match.minhash == ss.minhash
 
 
-def test_api_create_insert():
-    # test some internal implementation stuff: create & then insert a sig.
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss)
-
-    ident = ss.name()
-    assert len(lca_db.ident_to_name) == 1
-    assert ident in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ident
-    assert len(lca_db.ident_to_idx) == 1
-    assert lca_db.ident_to_idx[ident] == 0
-    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
-
-    set_of_values = set()
-    for vv in lca_db.hashval_to_idx.values():
-        set_of_values.update(vv)
-    assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
-    
-    assert not lca_db.idx_to_lid          # no lineage added
-    assert not lca_db.lid_to_lineage      # no lineage added
-
-
 def test_api_create_insert_bad_ksize():
     # can we insert a ksize=21 signature into a ksize=31 DB? hopefully not.
     ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
@@ -93,120 +65,6 @@ def test_api_create_insert_bad_moltype():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=500, moltype='protein')
     with pytest.raises(ValueError):
         lca_db.insert(ss)
-
-
-def test_api_create_insert_ident():
-    # test some internal implementation stuff: signature inserted with
-    # different ident than name.
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss, ident='foo')
-
-    ident = 'foo'
-    assert len(lca_db.ident_to_name) == 1
-    assert ident in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ss.name()
-    assert len(lca_db.ident_to_idx) == 1
-    assert lca_db.ident_to_idx[ident] == 0
-    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
-
-    set_of_values = set()
-    for vv in lca_db.hashval_to_idx.values():
-        set_of_values.update(vv)
-    assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
-    
-    assert not lca_db.idx_to_lid          # no lineage added
-    assert not lca_db.lid_to_lineage      # no lineage added
-    assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
-
-
-def test_api_create_insert_two():
-    # check internal details if multiple signatures are inserted.
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
-                                      ksize=31)
-
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss, ident='foo')
-    lca_db.insert(ss2, ident='bar')
-
-    ident = 'foo'
-    ident2 = 'bar'
-    assert len(lca_db.ident_to_name) == 2
-    assert ident in lca_db.ident_to_name
-    assert ident2 in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ss.name()
-    assert lca_db.ident_to_name[ident2] == ss2.name()
-
-    assert len(lca_db.ident_to_idx) == 2
-    assert lca_db.ident_to_idx[ident] == 0
-    assert lca_db.ident_to_idx[ident2] == 1
-
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
-    assert len(lca_db.hashval_to_idx) == len(combined_mins)
-
-    assert len(lca_db.idx_to_ident) == 2
-    assert lca_db.idx_to_ident[0] == ident
-    assert lca_db.idx_to_ident[1] == ident2
-
-    set_of_values = set()
-    for vv in lca_db.hashval_to_idx.values():
-        set_of_values.update(vv)
-    assert len(set_of_values) == 2
-    assert set_of_values == { 0, 1 }
-
-    assert not lca_db.idx_to_lid          # no lineage added
-    assert not lca_db.lid_to_lineage      # no lineage added
-    assert not lca_db.lineage_to_lid
-    assert not lca_db.lid_to_idx
-
-
-def test_api_create_insert_w_lineage():
-    # test some internal implementation stuff - insert signature w/lineage
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lineage = ((LineagePair('rank1', 'name1'),
-                LineagePair('rank2', 'name2')))
-    
-    lca_db.insert(ss, lineage=lineage)
-
-    # basic ident stuff
-    ident = ss.name()
-    assert len(lca_db.ident_to_name) == 1
-    assert ident in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ident
-    assert len(lca_db.ident_to_idx) == 1
-    assert lca_db.ident_to_idx[ident] == 0
-    assert len(lca_db.hashval_to_idx) == len(ss.minhash)
-    assert len(lca_db.idx_to_ident) == 1
-    assert lca_db.idx_to_ident[0] == ident
-
-    # all hash values added
-    set_of_values = set()
-    for vv in lca_db.hashval_to_idx.values():
-        set_of_values.update(vv)
-    assert len(set_of_values) == 1
-    assert set_of_values == { 0 }
-
-    # check lineage stuff
-    assert len(lca_db.idx_to_lid) == 1
-    assert lca_db.idx_to_lid[0] == 0
-    assert len(lca_db.lid_to_lineage) == 1
-    assert lca_db.lid_to_lineage[0] == lineage
-    assert lca_db.lid_to_idx[0] == { 0 }
-
-    assert len(lca_db.lineage_to_lid) == 1
-    assert lca_db.lineage_to_lid[lineage] == 0
 
 
 def test_api_create_insert_w_bad_lineage():
@@ -307,53 +165,6 @@ def test_api_insert_retrieve_check_name():
     retrieved_sig = sigs[0]
     assert retrieved_sig.name() == ss.name()
     assert retrieved_sig.minhash == ss.minhash
-
-
-def test_api_create_insert_two_then_scale():
-    # construct database, THEN downsample
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
-                                      ksize=31)
-
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
-    lca_db.insert(ss)
-    lca_db.insert(ss2)
-
-    # downsample everything to 5000
-    lca_db.downsample_scaled(5000)
-
-    ss.minhash = ss.minhash.downsample_scaled(5000)
-    ss2.minhash = ss2.minhash.downsample_scaled(5000)
-
-    # & check...
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
-    assert len(lca_db.hashval_to_idx) == len(combined_mins)
-
-
-def test_api_create_insert_scale_two():
-    # downsample while constructing database
-    ss = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
-                                     ksize=31)
-    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
-                                      ksize=31)
-
-    # downsample to 5000 while inserting:
-    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=5000)
-    count = lca_db.insert(ss)
-    assert count == 1037
-    assert count == len(ss.minhash.downsample_scaled(5000))
-    lca_db.insert(ss2)
-
-    # downsample sigs to 5000
-    ss.minhash = ss.minhash.downsample_scaled(5000)
-    ss2.minhash = ss2.minhash.downsample_scaled(5000)
-
-    # & check...
-    combined_mins = set(ss.minhash.get_mins())
-    combined_mins.update(set(ss2.minhash.get_mins()))
-    assert len(lca_db.hashval_to_idx) == len(combined_mins)
 
 
 def test_load_single_db():
@@ -469,51 +280,6 @@ def test_gather_db_scaled_lt_sig_scaled():
 
     match_sig.minhash = match_sig.minhash.downsample_scaled(100000)
     assert sig.minhash == match_sig.minhash
-
-
-def test_db_lineage_to_lid():
-    dbfile = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
-
-    d = db.lineage_to_lid
-    items = list(d.items())
-    items.sort()
-    assert len(items) == 2
-
-    print(items)
-
-    lin1 = items[0][0][-1]
-    assert lin1.rank == 'strain'
-    assert lin1.name == 'Shewanella baltica OS185'
-    lin1 = items[1][0][-1]
-    assert lin1.rank == 'strain'
-    assert lin1.name == 'Shewanella baltica OS223'
-
-
-def test_db_lid_to_idx():
-    dbfile = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
-
-    d = db.lid_to_idx
-    items = list(d.items())
-    items.sort()
-    assert len(items) == 2
-
-    print(items)
-    assert items == [(32, {32}), (48, {48})]
-
-
-def test_db_idx_to_ident():
-    dbfile = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(dbfile)
-
-    d = db.idx_to_ident
-    items = list(d.items())
-    items.sort()
-    assert len(items) == 2
-
-    print(items)
-    assert items == [(32, 'NC_009665'), (48, 'NC_011663')]
 
 
 ## command line tests

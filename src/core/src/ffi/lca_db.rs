@@ -6,7 +6,7 @@ use crate::ffi::utils::{ForeignObject};
 use crate::index::lca_db::{LcaDB, Lineage, lineage_to_vec};
 use crate::signature::Signature;
 use crate::ffi::signature::SourmashSignature;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 
 
 pub struct SourmashLcaDatabase;
@@ -37,7 +37,7 @@ pub unsafe extern "C" fn lcadb_new_with_params(
         CStr::from_ptr(moltype_char).to_str().unwrap()
     };
     
-    let lca_db = LcaDB::new_with_params(ksize, scaled, filename, moltype);
+    let lca_db = LcaDB::new_with_params(Some(ksize), Some(scaled), Some(filename), Some(moltype));
 
     SourmashLcaDatabase::from_rust(lca_db)
 }
@@ -176,6 +176,128 @@ pub unsafe extern "C" fn lcadb_hashval_to_idx(ptr: *const SourmashLcaDatabase, s
 pub unsafe extern "C" fn lcadb_hashval_to_idx_len(ptr: *mut SourmashLcaDatabase) -> u32 {
     let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
     lca_db.hashval_to_idx().len() as u32
+}
+
+ffi_fn! {
+unsafe fn lcadb_get_idx_from_hashval(
+    ptr: *mut SourmashLcaDatabase, 
+    hashval: u64, 
+    size: *mut usize,
+) -> Result<*const u32> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let buf: Vec<u32> = match lca_db.hashval_to_idx().get(&hashval) {
+        Some(s) => s.to_vec(),
+        None => vec![],
+    };
+
+    let mut x: Vec<u32> = Vec::new();
+    for v in buf {
+        x.push(v);
+    }
+    
+    let b = x.into_boxed_slice();
+    *size = b.len();
+    let result = Box::into_raw(b) as *const u32;
+
+
+    Ok(result)
+}
+}
+
+ffi_fn! {
+unsafe fn lcadb_get_lineage_from_idx(
+    ptr: *mut SourmashLcaDatabase, 
+    idx: u32, 
+    size: *mut usize,
+) -> Result<*const u8> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let lineage: Lineage = match lca_db.idx_to_lid().get(&idx) {
+        Some(lid) => lca_db.lid_to_lineage()[&lid].clone(),
+        None => BTreeMap::new(),
+    };
+  
+    let buff = serde_json::to_string(&lineage_to_vec(lineage)).unwrap();
+
+    let str_boxed = buff.into_boxed_str();
+    let b = str_boxed.into_boxed_bytes();
+    *size = b.len();
+    let result = Box::into_raw(b) as *const u8;
+
+
+    Ok(result)
+}
+}
+
+ffi_fn! {
+unsafe fn lcadb_get_match_size(
+    ptr: *mut SourmashLcaDatabase, 
+    best_idx: u32,
+) -> Result<u32> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let mut match_size = 0;
+    for (hashval, idx) in lca_db.hashval_to_idx() {
+        if idx.contains(&best_idx) {
+            match_size += 1;
+        }
+    }
+
+    Ok(match_size)
+}
+}
+
+ffi_fn! {
+unsafe fn lcadb_best_name(
+    ptr: *mut SourmashLcaDatabase, 
+    best_idx: u32,
+    size: *mut usize,
+) -> Result<*const u8> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let mut name = String::new();
+    for (ident, idx) in lca_db.ident_to_idx() {
+        if idx == best_idx {
+            name = lca_db.ident_to_name()[&ident.clone()].clone();
+        }
+    }
+    
+    let str_boxed = name.into_boxed_str();
+    let b = str_boxed.into_boxed_bytes();
+    *size = b.len();
+    let result = Box::into_raw(b) as *const u8;
+    Ok(result)
+}
+}
+
+ffi_fn! {
+unsafe fn make_assignments_helper(
+    ptr: *mut SourmashLcaDatabase, 
+    min_num: usize,
+) -> Result<u32> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let mut match_size = 0;
+    for (hashval, idxlist) in lca_db.hashval_to_idx() {
+        if min_num > 0 && idxlist.len() < min_num {
+            continue;
+        }
+
+        let idx_to_lid = lca_db.idx_to_lid();
+        let mut assignments: HashMap<u64, Vec<Lineage>> = HashMap::new();
+        for idx in idxlist {
+            let lid = idx_to_lid.get(&idx);
+            if lid != None {
+                let lineage = lca_db.lid_to_lineage().get(&lid.unwrap()).unwrap().clone();
+                let temp = assignments.get_mut(&hashval).unwrap();
+                temp.push(lineage.clone());
+            }
+        }
+    }
+
+    Ok(match_size)
+}
 }
 
 ffi_fn! {
