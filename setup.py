@@ -78,7 +78,7 @@ SETUP_METADATA = {
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx', 'myst-parser[sphinx]', 'alabaster',
+        'doc' : ['sphinx', 'myst-parser[sphinx]>=0.12.2', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
         '10x': ['bam2fasta==1.0.4'],
