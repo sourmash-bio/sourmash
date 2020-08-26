@@ -68,13 +68,13 @@ be stored, searched, explored, and taxonomically annotated.
 
 * `sourmash` is developed [on GitHub](https://github.com/dib-lab/sourmash)
   and is **freely and openly available** under the BSD 3-clause license.
-  Please see [the README](https://github.com/dib-lab/sourmash/blob/master/README.md)
+  Please see [the README](https://github.com/dib-lab/sourmash/blob/latest/README.md)
   for more information on development, support, and contributing.
 
 You can take a look at sourmash analyses on real data
-[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/master/doc/sourmash-examples.ipynb),
+[in a saved Jupyter notebook](https://github.com/dib-lab/sourmash/blob/latest/doc/sourmash-examples.ipynb),
 and experiment with it yourself
-[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/master?filepath=doc%2Fsourmash-examples.ipynb)
+[interactively in a Jupyter Notebook](https://mybinder.org/v2/gh/dib-lab/sourmash/latest?filepath=doc%2Fsourmash-examples.ipynb)
 at [mybinder.org](http://mybinder.org).
 
 ## Installing sourmash
@@ -89,7 +89,7 @@ or conda:
 $ conda install -c conda-forge -c bioconda sourmash
 ```
 
-Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/master/README.md)
+Please see [the README file in github.com/dib-lab/sourmash](https://github.com/dib-lab/sourmash/blob/latest/README.md)
 for more information.
 
 ## Memory and speed
@@ -107,6 +107,27 @@ Typically a search for a single genome takes about 30 seconds on a laptop.
 microbial genomes with about 200 MB of disk space and about 10 GB of
 RAM. Typically a metagenome classification takes about 1 minute on a
 laptop.
+
+## sourmash versioning
+
+We support the use of sourmash in pipelines and applications
+by communicating clearly about bug fixes, feature additions, and feature
+changes. We use version numbers as follows:
+
+* Major releases, like v4.0.0, may break backwards compatibility at
+  the command line as well as top-level Python/Rust APIs.
+* Minor releases, like v4.1.0, will remain backwards compatible but
+  may introduce significant new features.
+* Patch releases, like v4.1.1, are for minor bug fixes; full backwards
+  compatibility is retained.
+
+If you are relying on sourmash in a pipeline or application, we
+suggest specifying your version requirements at the major release,
+e.g. in conda you would specify `sourmash>=3,<4`.
+
+See [the Versioning docs](support.md) for more information on what our
+versioning policy means in detail, and how to migrate between major
+versions!
 
 ## Limitations
 

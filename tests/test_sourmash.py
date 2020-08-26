@@ -1,7 +1,6 @@
 """
 Tests for the 'sourmash' command line.
 """
-from __future__ import print_function, unicode_literals
 import os
 import gzip
 import shutil
@@ -220,7 +219,7 @@ def test_compare_containment_abund_flatten(c):
 
 @utils.in_tempdir
 def test_do_traverse_directory_compare(c):
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', utils.get_test_data('compare'))
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
@@ -237,7 +236,7 @@ def test_do_traverse_directory_compare_force(c):
     shutil.copyfile(sig1, os.path.join(newdir, 'sig1'))
     shutil.copyfile(sig2, os.path.join(newdir, 'sig2'))
 
-    c.run_sourmash('compare', '--traverse-directory', '-k 21',
+    c.run_sourmash('compare', '-k 21',
                    '--dna', newdir, '-f')
     print(c.last_result.out)
     assert 'genome-s10.fa.gz' in c.last_result.out
@@ -1517,7 +1516,7 @@ def test_search_metagenome_traverse():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = 'search {} {} -k 21 --traverse-directory'
+        cmd = 'search {} {} -k 21'
         cmd = cmd.format(query_sig, testdata_dir)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -1902,8 +1901,7 @@ def test_do_sourmash_index_traverse():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.'],
+                                           ['index', '-k', '31', 'zzz', '.'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1921,7 +1919,7 @@ def test_do_sourmash_index_traverse():
 
 @utils.in_tempdir
 def test_do_sourmash_index_traverse_force(c):
-    # test loading of files that don't end with .sig with --traverse-dir -f
+    # test loading of files that don't end with .sig with -f
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
 
@@ -1933,7 +1931,7 @@ def test_do_sourmash_index_traverse_force(c):
     c.run_sourmash('compute', testdata1, '-o', out1)
     c.run_sourmash('compute', testdata2, '-o', out2)
 
-    c.run_sourmash('index', '-k', '31', 'zzz', '--traverse-dir', '.', '-f')
+    c.run_sourmash('index', '-k', '31', 'zzz', '.', '-f')
 
     err = c.last_result.err
     assert os.path.exists(c.output('zzz.sbt.json'))
@@ -1957,8 +1955,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            '--traverse-dir', '.',
+                                           ['index', '-k', '31', 'zzz', '.',
                                             '--sparseness', '1.0'],
                                            in_directory=location)
 
@@ -2687,14 +2684,14 @@ def test_gather_f_match_orig(c):
 
             # f_unique_to_query is how much of the match is unique wrt
             # the original query.
-            a = set(remaining_mh.get_mins())
-            b = set(match.minhash.get_mins())
+            a = set(remaining_mh.hashes.keys())
+            b = set(match.minhash.hashes.keys())
             n_intersect = len(a.intersection(b))
             f_intersect = n_intersect / float(len(combined_sig.minhash))
             assert approx_equal(f_unique_to_query, f_intersect)
 
             # now, subtract current match from remaining... and iterate!
-            remaining_mh.remove_many(match.minhash.get_mins())
+            remaining_mh.remove_many(match.minhash.hashes.keys())
 
 
 def test_gather_nomatch():
@@ -3165,7 +3162,7 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --traverse-directory --threshold-bp=0'
+        cmd = 'gather {} {} -k 21 --threshold-bp=0'
         cmd = cmd.format(query_sig, copy_testdata)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
@@ -3217,6 +3214,35 @@ def test_gather_metagenome_output_unassigned():
                     'NC_011294.1' in out))
 
 
+def test_gather_metagenome_output_unassigned_none():
+    # test what happens when there's nothing unassigned to output
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF_*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = 'gather {} {} -k 21'.format(query_sig, " ".join(testdata_sigs))
+        cmd += ' --output-unassigned=unassigned.sig'
+        cmd += ' --threshold=0'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.5 Mbp        0.1%    0.4%' in out,
+                    'NC_004631.1 Salmonella enterica subsp...' in out))
+
+        # now examine unassigned
+        assert not os.path.exists(os.path.join(location, 'unassigned.sig'))
+        assert 'no unassigned hashes to save with --output-unassigned!' in err
+
+
 @utils.in_tempdir
 def test_gather_metagenome_output_unassigned_nomatches(c):
     # test --output-unassigned when there are no matches
@@ -3233,6 +3259,28 @@ def test_gather_metagenome_output_unassigned_nomatches(c):
     y = sourmash.load_one_signature(c.output('foo.sig'))
 
     assert x.minhash == y.minhash
+
+
+@utils.in_tempdir
+def test_gather_metagenome_output_unassigned_nomatches_protein(c):
+    # test --output-unassigned with protein signatures
+    query_sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    against_sig = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    c.run_sourmash('gather', query_sig, against_sig,
+                   '--output-unassigned', 'foo.sig')
+
+    print(c.last_result.out)
+    assert 'found 0 matches total;' in c.last_result.out
+
+    c.run_sourmash('sig', 'describe', c.output('foo.sig'))
+    print(c.last_result.out)
+
+    x = sourmash.load_one_signature(query_sig, ksize=57)
+    y = sourmash.load_one_signature(c.output('foo.sig'))
+
+    assert x.minhash == y.minhash
+    assert y.minhash.moltype == "protein"
 
 
 def test_gather_metagenome_downsample():
@@ -3318,17 +3366,6 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
-@utils.in_thisdir
-def test_gather_error_loading_dir(c):
-    # test gather applied to a directory
-    query = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db = utils.get_test_data('prot/protein/')
-
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, db)
-    assert 'Error while reading signatures from' in str(c.last_result.err)
-
-
 @utils.in_tempdir
 def test_gather_error_no_sigs_traverse(c):
     # test gather applied to a directory
@@ -3337,7 +3374,7 @@ def test_gather_error_no_sigs_traverse(c):
     emptydir = c.output('')
 
     with pytest.raises(ValueError) as e:
-        c.run_sourmash('gather', query, emptydir, '--traverse-dir')
+        c.run_sourmash('gather', query, emptydir)
 
     err = c.last_result.err
     print(err)
@@ -3614,7 +3651,7 @@ def test_sbt_categorize():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3728,7 +3765,7 @@ def test_sbt_categorize_already_done_traverse():
         with open(os.path.join(location, 'in.csv'), 'wt') as fp:
             fp.write('./4.sig,genome-s10.fa.gz,0.50')
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.',
+        args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--load-csv', 'in.csv']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -3755,7 +3792,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['categorize', 'zzz', '--traverse-directory', '.']
+        args = ['categorize', 'zzz', '.']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location, fail_ok=True)
 
@@ -3843,8 +3880,8 @@ def test_storage_convert():
                    for (n1, n2) in zip(sorted(original), sorted(ipfs)))
 
         args = ['storage', 'convert',
-                '-b', """'TarStorage("{}")'""".format(
-                    os.path.join(location, 'v2.sbt.tar.gz')),
+                '-b', """'ZipStorage("{}")'""".format(
+                    os.path.join(location, 'v2.sbt.zip')),
                 testsbt]
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
@@ -4002,7 +4039,7 @@ def test_do_sourmash_index_zipfile_append(c):
         c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
                        *first_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
-    assert not record
+    assert not record, record
 
     outfile = c.output('zzz.sbt.zip')
     assert os.path.exists(outfile)

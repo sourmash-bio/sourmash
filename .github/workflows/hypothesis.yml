@@ -2,9 +2,11 @@ name: Hypothesis tests
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
-    branches: [master]
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   test:
@@ -29,6 +31,5 @@ jobs:
       - name: Upload coverage to Codecov  
         uses: codecov/codecov-action@v1
         with:
-            token: ${{ secrets.CODECOV_TOKEN }}
             file: ./coverage.xml
             fail_ci_if_error: true

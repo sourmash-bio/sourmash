@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 from setuptools import setup, find_packages
 import sys
@@ -37,9 +36,8 @@ CLASSIFIERS = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Rust",
-    "Programming Language :: Python :: 2.7",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -63,8 +61,8 @@ SETUP_METADATA = {
         ]
     },
     "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
-                         'enum34; python_version < "3.4"',
-                         'matplotlib', 'scipy', 'deprecation>=2.0.6'],
+                         'matplotlib', 'scipy', 'deprecation>=2.0.6',
+                         'cachetools >=4,<5'],
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",

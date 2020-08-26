@@ -1,8 +1,6 @@
 """
 Functions implementing the main command-line subcommands.
 """
-from __future__ import print_function, division, absolute_import
-
 import csv
 import os
 import os.path
@@ -47,7 +45,6 @@ def compare(args):
         loaded = sourmash_args.load_file_as_signatures(filename,
                                                        ksize=args.ksize,
                                                        select_moltype=moltype,
-                                                       traverse=args.traverse_directory,
                                                        yield_all_files=args.force,
                                                        progress=progress)
         loaded = list(loaded)
@@ -113,7 +110,7 @@ def compare(args):
                 if not printed_scaled_msg:
                     notify('downsampling to scaled value of {}'.format(max_scaled))
                     printed_scaled_msg = True
-                s.minhash = s.minhash.downsample_scaled(max_scaled)
+                s.minhash = s.minhash.downsample(scaled=max_scaled)
 
     if len(siglist) == 0:
         error('no signatures!')
@@ -308,21 +305,6 @@ def import_csv(args):
             sig.save_signatures(siglist, outfp)
 
 
-def dump(args):
-    "Dump hashes for each input signature into a {name}.dump.txt file."
-    for filename in args.filenames:
-        notify('loading {}', filename)
-        siglist = sig.load_signatures(filename, ksize=args.ksize)
-        siglist = list(siglist)
-        assert len(siglist) == 1
-
-        s = siglist[0]
-
-        fp = open(filename + '.dump.txt', 'w')
-        fp.write(" ".join((map(str, s.minhash.get_hashes()))))
-        fp.close()
-
-
 def sbt_combine(args):
     inp_files = list(args.sbts)
     notify('combining {} SBTs', len(inp_files))
@@ -379,7 +361,6 @@ def index(args):
         siglist = sourmash_args.load_file_as_signatures(f,
                                                         ksize=args.ksize,
                                                         select_moltype=moltype,
-                                                        traverse=args.traverse_directory,
                                                         yield_all_files=args.force,
                                                         progress=progress)
 
@@ -391,7 +372,7 @@ def index(args):
             nums.add(ss.minhash.num)
 
             if args.scaled:
-                ss.minhash = ss.minhash.downsample_scaled(args.scaled)
+                ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -452,12 +433,11 @@ def search(args):
         if args.scaled != query.minhash.scaled:
             notify('downsampling query from scaled={} to {}',
                    query.minhash.scaled, int(args.scaled))
-        query.minhash = query.minhash.downsample_scaled(args.scaled)
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment,
-                                                args.traverse_directory)
+                                                not args.containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:
@@ -531,12 +511,8 @@ def categorize(args):
     tree = load_sbt_index(args.sbt_name)
 
     # load query filenames
-    if args.traverse_directory:
-        inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    else:
-        inp_files = set(args.queries) - already_names
-
-    inp_files = set(inp_files) - already_names
+    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
+    inp_files = inp_files - already_names
 
     notify('found {} files to query', len(inp_files))
 
@@ -612,7 +588,7 @@ def gather(args):
     if args.scaled:
         notify('downsampling query from scaled={} to {}',
                query.minhash.scaled, int(args.scaled))
-        query.minhash = query.minhash.downsample_scaled(args.scaled)
+        query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # empty?
     if not len(query.minhash):
@@ -620,8 +596,11 @@ def gather(args):
         sys.exit(-1)
 
     # set up the search databases
+    cache_size = args.cache_size
+    if args.cache_size == 0:
+        cache_size = None
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query, False,
-                                                args.traverse_directory)
+                                                cache_size=cache_size)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -694,22 +673,13 @@ def gather(args):
             sig.save_signatures([ r.match for r in found ], fp)
 
     if args.output_unassigned:
-        if not len(query.minhash):
-            notify('no unassigned hashes! not saving.')
+        if not len(next_query.minhash):
+            notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify('saving unassigned hashes to "{}"', args.output_unassigned)
 
-            with_abundance = next_query.minhash.track_abundance
-            e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash,
-                        track_abundance=with_abundance)
-            if with_abundance:
-                abunds = next_query.minhash.get_mins(with_abundance=True)
-                e.set_abundances(abunds)
-            else:
-                e.add_many(next_query.minhash.get_mins())
-
             with FileOutput(args.output_unassigned, 'wt') as fp:
-                sig.save_signatures([ sig.SourmashSignature(e) ], fp)
+                sig.save_signatures([ next_query ], fp)
 
 
 def multigather(args):
@@ -737,8 +707,7 @@ def multigather(args):
     # need a query to get ksize, moltype for db loading
     query = next(iter(sourmash_args.load_file_as_signatures(inp_files[0], ksize=args.ksize, select_moltype=moltype)))
 
-    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False,
-                                                args.traverse_directory)
+    databases = sourmash_args.load_dbs_and_sigs(args.db, query, False)
 
     if not len(databases):
         error('Nothing found to search!')
@@ -764,7 +733,7 @@ def multigather(args):
             if args.scaled:
                 notify('downsampling query from scaled={} to {}',
                        query.minhash.scaled, int(args.scaled))
-                query.minhash = query.minhash.downsample_scaled(args.scaled)
+                query.minhash = query.minhash.downsample(scaled=args.scaled)
 
             # empty?
             if not len(query.minhash):
@@ -849,7 +818,7 @@ def multigather(args):
                     notify('saving unassigned hashes to "{}"', output_unassigned)
 
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
-                    e.add_many(next_query.minhash.get_mins())
+                    e.add_many(next_query.minhash.hashes)
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
             n += 1
 

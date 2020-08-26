@@ -2,7 +2,6 @@
 """
 Summarize rank-specific information from LCAs in one or more databases.
 """
-from __future__ import print_function
 import sys
 from collections import defaultdict
 

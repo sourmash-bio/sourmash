@@ -1,5 +1,3 @@
-from __future__ import print_function, unicode_literals
-
 import glob
 import os
 import zipfile
@@ -236,7 +234,7 @@ def test_linear_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -291,7 +289,7 @@ def test_linear_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes

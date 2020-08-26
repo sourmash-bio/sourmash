@@ -1,5 +1,5 @@
 """
-Tests for sourmash compute command-line functionality.
+Tests for sourmash sketch command-line functionality.
 """
 import os
 import gzip
@@ -9,6 +9,7 @@ import glob
 import json
 import csv
 import pytest
+import screed
 
 from . import sourmash_tst_utils as utils
 import sourmash
@@ -22,12 +23,214 @@ from sourmash.cli import SourmashParser
 from sourmash import signature
 from sourmash import VERSION
 
+###
 
-def test_do_sourmash_compute():
+from sourmash.command_sketch import _signatures_for_sketch_factory
+
+
+def test_dna_defaults():
+    factory = _signatures_for_sketch_factory([], 'dna', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [31]
+    assert params.num_hashes == 0
+    assert params.scaled == 1000
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_dna_override_1():
+    factory = _signatures_for_sketch_factory(['k=21,scaled=2000,abund'],
+                                             'dna', False)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [21]
+    assert params.num_hashes == 0
+    assert params.scaled == 2000
+    assert params.track_abundance
+    assert params.seed == 42
+    assert params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_dna_override_bad_1():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,scaledFOO=2000,abund'],
+                                                 'dna', False)
+
+
+def test_dna_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,protein'],
+                                                 'dna', False)
+
+def test_protein_defaults():
+    factory = _signatures_for_sketch_factory([], 'protein', True)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [30]          # x3 for now
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
+
+
+def test_protein_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'protein', False)
+
+def test_protein_override_bad_rust_foo():
+    # mimic 'sourmash sketch protein -p dna'
+    factory = _signatures_for_sketch_factory([], 'protein', False)
+
+    # reach in and avoid error checking to construct a bad params_list.
+    factory.params_list = [('dna', {})]
+
+    # now, get sigs...
+    siglist = factory()
+    assert len(siglist) == 1
+    sig = siglist[0]
+
+    # try adding something
+    testdata1 = utils.get_test_data('ecoli.faa')
+    record = next(iter(screed.open(testdata1)))
+
+    with pytest.raises(ValueError) as exc:
+        sig.add_protein(record.sequence)
+
+    assert 'Invalid hash function: "dna"' in str(exc)
+
+
+def test_dayhoff_defaults():
+    factory = _signatures_for_sketch_factory([], 'dayhoff', True)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [48]          # x3 for now
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+
+def test_dayhoff_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'dayhoff', False)
+
+def test_hp_defaults():
+    factory = _signatures_for_sketch_factory([], 'hp', True)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 1
+    params = params_list[0]
+
+    assert params.ksizes == [126]          # x3 for now
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert params.hp
+    assert not params.protein
+
+
+def test_hp_override_bad_2():
+    with pytest.raises(ValueError):
+        factory = _signatures_for_sketch_factory(['k=21,dna'],
+                                                 'hp', False)
+
+
+def test_multiple_moltypes():
+    params_foo = ['k=20,num=500,protein',
+                  'k=19,num=400,dayhoff,abund',
+                  'k=30,scaled=200,hp',
+                  'k=30,scaled=200,seed=58']
+    factory = _signatures_for_sketch_factory(params_foo, 'protein', True)
+    params_list = list(factory.get_compute_params())
+
+    assert len(params_list) == 4
+
+    params = params_list[0]
+    assert params.ksizes == [60]          # x3, for now.
+    assert params.num_hashes == 500
+    assert params.scaled == 0
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
+
+    params = params_list[1]
+    assert params.ksizes == [57]          # x3, for now.
+    assert params.num_hashes == 400
+    assert params.scaled == 0
+    assert params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert params.dayhoff
+    assert not params.hp
+    assert not params.protein
+
+    params = params_list[2]
+    assert params.ksizes == [90]          # x3, for now.
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 42
+    assert not params.dna
+    assert not params.dayhoff
+    assert params.hp
+    assert not params.protein
+
+    params = params_list[3]
+    assert params.ksizes == [90]          # x3, for now.
+    assert params.num_hashes == 0
+    assert params.scaled == 200
+    assert not params.track_abundance
+    assert params.seed == 58
+    assert not params.dna
+    assert not params.dayhoff
+    assert not params.hp
+    assert params.protein
+
+
+### command line tests
+
+
+def test_do_sourmash_sketchdna():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', testdata1],
+                                           ['sketch', 'dna', testdata1],
                                            in_directory=location)
 
         sigfile = os.path.join(location, 'short.fa.sig')
@@ -38,12 +241,11 @@ def test_do_sourmash_compute():
 
 
 @utils.in_tempdir
-def test_do_sourmash_compute_outdir(c):
+def test_do_sourmash_sketchdna_outdir(c):
     testdata1 = utils.get_test_data('short.fa')
     status, out, err = utils.runscript('sourmash',
-                                       ['compute', '-k', '31', testdata1,
+                                       ['sketch', 'dna', testdata1,
                                         '--outdir', c.location])
-
 
     sigfile = os.path.join(c.location, 'short.fa.sig')
     assert os.path.exists(sigfile)
@@ -52,7 +254,7 @@ def test_do_sourmash_compute_outdir(c):
     assert sig.name().endswith('short.fa')
 
 
-def test_do_sourmash_compute_output_valid_file():
+def test_do_sourmash_sketchdna_output_valid_file():
     """ Trigger bug #123 """
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -61,7 +263,7 @@ def test_do_sourmash_compute_output_valid_file():
         sigfile = os.path.join(location, 'short.fa.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '-o', sigfile,
+                                           ['sketch', 'dna', '-o', sigfile,
                                             testdata1,
                                             testdata2, testdata3],
                                            in_directory=location)
@@ -78,14 +280,14 @@ def test_do_sourmash_compute_output_valid_file():
                    for testdata in (testdata1, testdata2, testdata3))
 
 
-def test_do_sourmash_compute_output_stdout_valid():
+def test_do_sourmash_sketchdna_output_stdout_valid():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         testdata3 = utils.get_test_data('short3.fa')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '-o', '-',
+                                           ['sketch', 'dna', '-o', '-',
                                             testdata1,
                                             testdata2, testdata3],
                                            in_directory=location)
@@ -99,13 +301,15 @@ def test_do_sourmash_compute_output_stdout_valid():
 
 
 @utils.in_tempdir
-def test_do_sourmash_compute_output_and_name_valid_file(c):
+def test_do_sourmash_sketchdna_output_and_name_valid_file(c):
+    # test --merge of multiple input files
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = c.output('short.fa.sig')
 
-    c.run_sourmash('compute', '-k', '31', '-o', sigfile, '--merge', '"name"', testdata1, testdata2, testdata3)
+    c.run_sourmash('sketch', 'dna', '-p', 'num=500', '-o', sigfile, '--merge',
+                   '"name"', testdata1, testdata2, testdata3)
 
     assert os.path.exists(sigfile)
     assert 'calculated 1 signature for 4 sequences taken from 3 files' in c.last_result.err
@@ -117,7 +321,8 @@ def test_do_sourmash_compute_output_and_name_valid_file(c):
     assert len(data) == 1
 
     sigfile_merged = c.output('short.all.fa.sig')
-    c.run_sourmash('compute', '-k', '31', '-o', sigfile_merged, '--merge', '"name"', testdata1, testdata2, testdata3)
+    c.run_sourmash('sketch', 'dna', '-p', 'num=500', '-o', sigfile_merged,
+                   '--merge', '"name"', testdata1, testdata2, testdata3)
 
     with open(sigfile_merged, 'r') as f:
         data_merged = json.load(f)
@@ -126,14 +331,14 @@ def test_do_sourmash_compute_output_and_name_valid_file(c):
 
 
 @utils.in_tempdir
-def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
+def test_do_sourmash_sketchdna_output_and_name_valid_file_outdir(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     testdata3 = utils.get_test_data('short3.fa')
     sigfile = os.path.join(c.location, 'short.fa.sig')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('compute', '-k', '31', '-o', sigfile,
+        c.run_sourmash('sketch', 'dna', '-o', sigfile,
                        '--merge', '"name"',
                        testdata1, testdata2, testdata3,
                        '--outdir', c.location)
@@ -142,11 +347,11 @@ def test_do_sourmash_compute_output_and_name_valid_file_outdir(c):
     assert "ERROR: --outdir doesn't make sense with -o/--output" in errmsg
 
 
-def test_do_sourmash_compute_singleton():
+def test_do_sourmash_sketchdna_singleton():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--singleton',
+                                           ['sketch', 'dna', '--singleton',
                                             testdata1],
                                            in_directory=location)
 
@@ -157,140 +362,11 @@ def test_do_sourmash_compute_singleton():
         assert sig.name().endswith('shortName')
 
 
-def test_do_sourmash_compute_10x_barcode():
-    pytest.importorskip('bam2fasta')
-
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        barcodes_file = utils.get_test_data('10x-example/barcodes.tsv')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--line-count', '50',
-                                            '--input-is-10x',
-                                            '--protein',
-                                            '--barcodes-file',
-                                            barcodes_file,
-                                            testdata1],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, 'possorted_genome_bam.bam.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 16
-        barcode_signatures = list(set([sig.name().split("_")[0] for sig in siglist]))
-
-        with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
-            true_barcodes = set(x.strip() for x in f.readlines())
-
-        # Ensure that every cell barcode in barcodes.tsv has a signature
-        assert all(bc in true_barcodes for bc in barcode_signatures)
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-
-def test_do_sourmash_compute_10x_no_barcode():
-    pytest.importorskip('bam2fasta')
-    # Filtered bam file with no barcodes file
-    # should run sourmash compute successfully
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 32
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-
-def test_do_sourmash_compute_10x_no_filter_umis():
-    pytest.importorskip('bam2fasta')
-    with utils.TempDirectory() as location:
-        # test to check if all the lines in unfiltered_umi_to_sig are callled and tested
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam_filtered.bam')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--save-fastas', location,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 32
-
-
-def test_do_sourmash_compute_10x_filter_umis():
-    pytest.importorskip('bam2fasta')
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('10x-example/possorted_genome_bam.bam')
-        csv_path = os.path.join(location, "all_barcodes_meta.csv")
-        barcodes_path = utils.get_test_data('10x-example/barcodes.tsv')
-        renamer_path = utils.get_test_data('10x-example/barcodes_renamer.tsv')
-        fastas_dir = os.path.join(location, "fastas")
-        if not os.path.exists(fastas_dir):
-            os.makedirs(fastas_dir)
-
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31',
-                                            '--dna', '--count-valid-reads', '10',
-                                            '--input-is-10x',
-                                            testdata1,
-                                            '--write-barcode-meta-csv', csv_path,
-                                            '--barcodes', barcodes_path,
-                                            '--rename-10x-barcodes', renamer_path,
-                                            '--save-fastas', fastas_dir,
-                                            '-o', '10x-example_dna.sig'],
-                                           in_directory=location)
-
-        sigfile = os.path.join(location, '10x-example_dna.sig')
-        assert os.path.exists(sigfile)
-        siglist = list(signature.load_signatures(sigfile))
-        assert len(siglist) == 1
-        # TODO PV This seems to randomly fail/pass - commenting out for now
-        # but the min hashes should never be empty
-        # min_hashes = [x.minhash.get_mins() for x in siglist]
-        # assert all(mins != [] for mins in min_hashes)
-
-        with open(csv_path, 'rb') as f:
-            data = [line.split() for line in f]
-        assert len(data) == 9
-        fasta_files = os.listdir(fastas_dir)
-        barcodes = [filename.replace(".fasta", "") for filename in fasta_files]
-        assert len(barcodes) == 1
-        assert len(fasta_files) == 1
-        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
-        count = 0
-        fasta_file_name = os.path.join(fastas_dir, fasta_files[0])
-        for record in screed.open(fasta_file_name):
-            name = record.name
-            sequence = record.sequence
-            count += 1
-            assert name.startswith('lung_epithelial_cell|AAATGCCCAAACTGCT-1')
-            assert sequence.count(">") == 0
-            assert sequence.count("X") == 0
-
-
-def test_do_sourmash_compute_name():
+def test_do_sourmash_sketchdna_name():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--merge', 'foo',
+                                           ['sketch', 'dna', '--merge', 'foo',
                                             testdata1, '-o', 'foo.sig'],
                                            in_directory=location)
 
@@ -301,7 +377,7 @@ def test_do_sourmash_compute_name():
         assert sig.name() == 'foo'
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--name', 'foo',
+                                           ['sketch', 'dna', '--name', 'foo',
                                             testdata1, '-o', 'foo2.sig'],
                                            in_directory=location)
 
@@ -313,40 +389,40 @@ def test_do_sourmash_compute_name():
         assert sig.name() == sig2.name()
 
 
-def test_do_sourmash_compute_name_fail_no_output():
+def test_do_sourmash_sketchdna_name_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--merge', 'foo',
+                                           ['sketch', 'dna', '--merge', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
 
 
-def test_do_sourmash_compute_merge_fail_no_output():
+def test_do_sourmash_sketchdna_fail_no_output():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--merge', 'foo',
+                                           ['sketch', 'dna', '--merge', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--name', 'foo',
+                                           ['sketch', 'dna', '--name', 'foo',
                                             testdata1],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
 
 
-def test_do_sourmash_compute_name_from_first():
+def test_do_sourmash_sketchdna_name_from_first():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '31', '--name-from-first',
+                                           ['sketch', 'dna', '--name-from-first',
                                             testdata1],
                                            in_directory=location)
 
@@ -357,11 +433,11 @@ def test_do_sourmash_compute_name_from_first():
         assert sig.name() == 'firstname'
 
 
-def test_do_sourmash_compute_multik():
+def test_do_sourmash_sketchdna_multik():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
+                                           ['sketch', 'dna', '-p', 'k=31,k=21',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -374,12 +450,40 @@ def test_do_sourmash_compute_multik():
         assert 31 in ksizes
 
 
-def test_do_sourmash_compute_multik_with_protein():
+def test_do_sketch_dna_override_protein_fail():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--protein',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=7,num=500,protein',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status != 0
+        assert 'Error creating signatures: Incompatible sketch type' in err
+
+
+def test_do_sketch_protein_override_dna_fail():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,num=500,dna',
+                                            testdata1],
+                                           in_directory=location,
+                                           fail_ok=True)
+
+        assert status != 0
+        assert 'Error creating signatures: Incompatible sketch type' in err
+
+
+def test_do_sketch_translate_multik_with_protein():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
@@ -388,22 +492,21 @@ def test_do_sourmash_compute_multik_with_protein():
         with open(outfile, 'rt') as fp:
             sigdata = fp.read()
             siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 4
+            assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_with_dayhoff():
+def test_do_sketch_translate_multik_with_dayhoff():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,k=10,num=500',
+                                            '--dayhoff',
                                             testdata1],
                                            in_directory=location)
-        assert 'Computing only Dayhoff-encoded protein (and not nucleotide) ' \
-               'signatures.' in err
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -417,38 +520,15 @@ def test_do_sourmash_compute_multik_with_dayhoff():
             assert all(x.minhash.dayhoff for x in siglist)
 
 
-def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
+def test_do_sketch_translate_multik_with_hp():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,k=10,num=500',
+                                            '--hp',
                                             testdata1],
                                            in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 4
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-
-
-def test_do_sourmash_compute_multik_with_hp():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--hp', '--no-dna',
-                                            testdata1],
-                                           in_directory=location)
-        assert 'Computing only hp-encoded protein (and not nucleotide) ' \
-               'signatures.' in err
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
 
@@ -462,99 +542,12 @@ def test_do_sourmash_compute_multik_with_hp():
             assert all(x.minhash.hp for x in siglist)
 
 
-def test_do_sourmash_compute_multik_with_hp_and_dna():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--hp',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-
-def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--protein',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 6
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
-
-
-def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--dayhoff', '--hp', '--protein',
-                                            testdata1],
-                                           in_directory=location)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert os.path.exists(outfile)
-
-        with open(outfile, 'rt') as fp:
-            sigdata = fp.read()
-            siglist = list(signature.load_signatures(sigdata))
-            assert len(siglist) == 8
-            ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
-            assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
-            assert sum(x.minhash.moltype == 'hp' for x in siglist) == 2
-            # 2 = dayhoff, 2 = hp = 4 protein
-            assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
-
-
-def test_do_sourmash_compute_multik_with_nothing():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--no-protein', '--no-dna',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert not os.path.exists(outfile)
-
-
-def test_do_sourmash_compute_multik_protein_bad_ksize():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '20,32',
-                                            '--protein', '--no-dna',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short.fa.sig')
-        assert not os.path.exists(outfile)
-        assert 'protein ksizes must be divisible by 3' in err
-
-
 @utils.in_tempdir
-def test_do_sourmash_compute_multik_only_protein(c):
-    # check sourmash compute with only protein, no nucl
+def test_do_sourmash_sketch_translate_multik_only_protein(c):
+    # check sourmash sketch_translate with only protein, no nucl
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '-k', '21,30',
-                   '--protein', '--no-dna', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=7,k=10,num=500',
+                   testdata1)
     outfile = os.path.join(c.location, 'short.fa.sig')
     assert os.path.exists(outfile)
 
@@ -567,46 +560,13 @@ def test_do_sourmash_compute_multik_only_protein(c):
         assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
-    with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short-protein.fa')
-        status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '20,32',
-                                            '--protein', '--no-dna',
-                                            '--input-is-protein',
-                                            testdata1],
-                                           in_directory=location,
-                                           fail_ok=True)
-        outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert os.path.exists(outfile)
-
-
-@utils.in_tempdir
-def test_do_sourmash_compute_multik_only_protein_no_rna(c):
-    # test --no-rna as well (otherwise identical to previous test)
-    testdata1 = utils.get_test_data('short.fa')
-
-    c.run_sourmash('compute', '-k', '21,30',
-                   '--protein', '--no-rna', testdata1)
-    outfile = os.path.join(c.location, 'short.fa.sig')
-    assert os.path.exists(outfile)
-
-    with open(outfile, 'rt') as fp:
-        sigdata = fp.read()
-        siglist = list(signature.load_signatures(sigdata))
-        assert len(siglist) == 2
-        ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
-
-
-def test_do_sourmash_compute_protein_bad_sequences():
+def test_do_sourmash_sketch_translate_bad_sequences():
     """Proper error handling when Ns in dna sequence"""
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.bad.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--protein', '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'short.bad.fa.sig')
@@ -621,12 +581,12 @@ def test_do_sourmash_compute_protein_bad_sequences():
             assert 30 in ksizes
 
 
-def test_do_sourmash_compute_multik_input_is_protein():
+def test_do_sketch_protein_multik_input():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,30',
-                                            '--input-is-protein',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,k=10,num=500',
                                             testdata1],
                                            in_directory=location)
         outfile = os.path.join(location, 'ecoli.faa.sig')
@@ -646,12 +606,13 @@ def test_do_sourmash_compute_multik_input_is_protein():
             assert True in moltype
 
 
-def test_do_sourmash_compute_multik_outfile():
+def test_do_sourmash_sketchdna_multik_outfile():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31',
                                             testdata1, '-o', outfile],
                                            in_directory=location)
         assert os.path.exists(outfile)
@@ -663,13 +624,13 @@ def test_do_sourmash_compute_multik_outfile():
         assert 31 in ksizes
 
 
-def test_do_sourmash_compute_with_scaled_1():
+def test_do_sourmash_sketchdna_with_scaled_1():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '1',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=1',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -682,13 +643,13 @@ def test_do_sourmash_compute_with_scaled_1():
         assert set(max_hashes) == { sourmash.MAX_HASH }
 
 
-def test_do_sourmash_compute_with_scaled_2():
+def test_do_sourmash_sketchdna_with_scaled_2():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '2',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=2',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -701,13 +662,13 @@ def test_do_sourmash_compute_with_scaled_2():
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
 
-def test_do_sourmash_compute_with_scaled():
+def test_do_sourmash_sketchdna_with_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '100',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=100',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -720,47 +681,47 @@ def test_do_sourmash_compute_with_scaled():
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 
 
-def test_do_sourmash_compute_with_bad_scaled():
+def test_do_sourmash_sketchdna_with_bad_scaled():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '-1',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=-1',
                                             testdata1, '-o', outfile],
                                             in_directory=location,
                                             fail_ok=True)
 
         assert status != 0
-        assert '--scaled value must be >= 1' in err
+        assert 'scaled is -1, must be >= 1' in err
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '1000.5',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=1000.5',
                                             testdata1, '-o', outfile],
                                             in_directory=location,
                                             fail_ok=True)
 
         assert status != 0
-        assert '--scaled value must be integer value' in err
+        assert "cannot parse scaled='1000.5' as an integer" in err
 
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--scaled', '1e9',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,scaled=1000000000',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
 
         assert status == 0
-        assert 'WARNING: scaled value is nonsensical!?' in err
+        assert 'WARNING: scaled value of 1000000000 is nonsensical!?' in err
 
 
-def test_do_sourmash_compute_with_seed():
+def test_do_sketch_with_seed():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         outfile = os.path.join(location, 'FOO.xxx')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21,31',
-                                            '--seed', '43',
+                                           ['sketch', 'dna',
+                                            '-p', 'k=21,k=31,seed=43',
                                             testdata1, '-o', outfile],
                                             in_directory=location)
         assert os.path.exists(outfile)
@@ -778,8 +739,8 @@ def test_do_sourmash_check_protein_comparisons():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--input-is-protein',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata1],
                                            in_directory=location)
@@ -788,8 +749,8 @@ def test_do_sourmash_check_protein_comparisons():
 
         testdata2 = utils.get_test_data('ecoli.genes.fna')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--protein', '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata2],
                                            in_directory=location)
@@ -828,14 +789,14 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
     # this test checks against a known good signature calculated
     # by utils/compute-dna-mh-another-way.py
     testdata1 = utils.get_test_data('ecoli.genes.fna')
-    c.run_sourmash('compute', '-k', '21',
-                   '--singleton', '--dna',
-                   testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500',
+                   '--singleton', testdata1)
     sig1 = c.output('ecoli.genes.fna.sig')
     assert os.path.exists(sig1)
 
     x = list(signature.load_signatures(sig1))
     sig1, sig2 = sorted(x, key=lambda x: x.name())
+
     print(sig1.name())
     print(sig2.name())
 
@@ -847,9 +808,9 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
 
 @utils.in_tempdir
 def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
-    # check the --rna flag; otherwise identical to previous test.
+    # check the rna ; otherwise identical to previous test.
     testdata1 = utils.get_test_data('ecoli.genes.fna')
-    c.run_sourmash('compute', '-k', '21', '--singleton', '--rna',
+    c.run_sourmash('sketch', 'rna', '-p', 'k=21,num=500', '--singleton',
                    testdata1)
     sig1 = c.output('ecoli.genes.fna.sig')
     assert os.path.exists(sig1)
@@ -869,8 +830,8 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.faa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--input-is-protein',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,num=500',
                                             '--singleton',
                                             testdata1],
                                            in_directory=location)
@@ -892,9 +853,9 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('ecoli.genes.fna')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', '-k', '21',
-                                            '--singleton', '--protein',
-                                            '--no-dna',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,num=500',
+                                            '--singleton',
                                             testdata1],
                                            in_directory=location)
         sig1 = os.path.join(location, 'ecoli.genes.fna.sig')
@@ -907,25 +868,3 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         good_trans = list(signature.load_signatures(knowngood))[0]
 
         assert sig2_trans.similarity(good_trans) == 1.0
-
-
-def test_compute_parameters():
-    args_list = ["compute", "-k", "21,31", "--singleton", "--protein", "--no-dna", "input_file"]
-
-    parser = SourmashParser(prog='sourmash')
-    subp = parser.add_subparsers(title="instruction", dest="cmd", metavar="cmd")
-    subparser(subp)
-
-    args = parser.parse_args(args_list)
-
-    params = ComputeParameters.from_args(args)
-
-    assert params.ksizes == [21, 31]
-    assert params.protein == True
-    assert params.dna == False
-    assert params.seed == 42
-    assert params.dayhoff == False
-    assert params.hp == False
-    assert params.num_hashes == 500
-    assert params.scaled == 0
-    assert params.track_abundance == False

@@ -22,10 +22,6 @@ def subparser(subparsers):
         help='number of results to report (default: terminate at --threshold-bp)'
     )
     subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='search all signatures underneath directories'
-    )
-    subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
@@ -54,6 +50,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--md5', default=None,
         help='select the signature with this md5 as query'
+    )
+    subparser.add_argument(
+        '--cache-size', default=0, type=int, metavar='N',
+        help='number of internal SBT nodes to cache in memory (default: 0, cache all nodes)'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

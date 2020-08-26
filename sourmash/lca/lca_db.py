@@ -1,13 +1,12 @@
 "LCA database class and utilities."
 
-from __future__ import print_function, division
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
 import functools
 
 import sourmash
-from sourmash._minhash import get_max_hash_for_scaled, to_bytes
+from sourmash.minhash import _get_max_hash_for_scaled, to_bytes
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
 from sourmash.exceptions import SourmashError

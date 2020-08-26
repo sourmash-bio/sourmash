@@ -12,7 +12,7 @@ cache:
     - "target"
 
 if: |
-  (type = push AND (branch = master)) OR \
+  (type = push AND (branch = latest)) OR \
   (tag =~ ^v) OR \
   (type = pull_request) OR \
   (type = cron)
@@ -26,15 +26,13 @@ before_script: pip install tox-travis
 
 jobs:
   include:
-    - &check
-      stage: check # do a pre-screen to make sure this is even worth testing
-      python: 3.8
-      env:
-        - PYTHONDEVMODE=1
-
     - &test
       stage: test
       python: 3.7
+    - <<: *test
+      python: 3.8
+      env:
+        - PYTHONDEVMODE=1
     - <<: *test
       os: osx
       osx_image: xcode10.1
@@ -103,15 +101,9 @@ jobs:
         - redis
         - docker
     - <<: *test
-      python: 3.6
-    - <<: *test
-      python: 3.5
-    - <<: *test
       python: 3.7
       env:
         - TOXENV=docs
-    - <<: *test
-      python: 2.7
 
     - &wheel
       stage: build wheel and send to github releases

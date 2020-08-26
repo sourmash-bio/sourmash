@@ -2,9 +2,11 @@ name: Metadata checks
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
-    branches: [master]
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   archive:

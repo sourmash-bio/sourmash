@@ -19,7 +19,6 @@ from . import utils
 from . import categorize
 from . import compare
 from . import compute
-from . import dump
 from . import gather
 from . import import_csv
 from . import info
@@ -34,7 +33,8 @@ from . import watch
 # Subcommand groups
 from . import lca
 from . import sig
-from . import signature
+from . import sig as signature
+from . import sketch
 from . import storage
 
 
@@ -92,13 +92,14 @@ class SourmashParser(ArgumentParser):
 def get_parser():
     module_descs = {
         'lca': 'Taxonomic operations',
+        'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
         'storage': 'Operations on storage',
     }
     alias = {
         "sig": "signature"
     }
-    expert = set(['categorize', 'dump', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
+    expert = set(['categorize', 'import_csv', 'migrate', 'multigather', 'sbt_combine', 'watch'])
 
     clidir = os.path.dirname(__file__)
     basic_ops = utils.command_list(clidir)

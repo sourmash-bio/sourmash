@@ -2,7 +2,6 @@
 """
 Build a lowest-common-ancestor database with given taxonomy and genome sigs.
 """
-from __future__ import print_function
 import sys
 import csv
 from collections import defaultdict
@@ -25,8 +24,6 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     lineage tuples.
     """
     mode = 'rt'
-    if sys.version_info < (3, ):
-        mode = 'rtU'
 
     # parse spreadsheet!
     fp = open(filename, mode)
@@ -195,7 +192,6 @@ def index(args):
         n += 1
         it = load_file_as_signatures(filename, ksize=args.ksize,
                                      select_moltype=moltype,
-                                     traverse=args.traverse_directory,
                                      yield_all_files=args.force)
         for sig in it:
             notify(u'\r\033[K', end=u'')
@@ -258,8 +254,6 @@ def index(args):
     # check -- did we find any signatures?
     if n == 0:
         error('ERROR: no signatures found. ??')
-        if args.traverse_directory and not args.force:
-            error('(note, with --traverse-directory, you may want to use -f)')
         sys.exit(1)
 
     # check -- did the signatures we found have any hashes?

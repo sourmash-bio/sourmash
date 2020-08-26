@@ -2,7 +2,6 @@
 """
 Classify individual signature files down to deepest possible node.
 """
-from __future__ import print_function
 import sys
 import csv
 
@@ -36,7 +35,7 @@ def classify_signature(query_sig, dblist, threshold, majority):
 
       """
     # gather assignments from across all the databases
-    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(),
+    assignments = lca_utils.gather_assignments(query_sig.minhash.hashes,
                                                dblist)
 
     # now convert to trees -> do LCA & counts
@@ -127,8 +126,7 @@ def classify(args):
         for query_filename in inp_files:
             n += 1
             for query_sig in load_file_as_signatures(query_filename,
-                                                     ksize=ksize,
-                                                     traverse=args.traverse_directory):
+                                                     ksize=ksize):
                 notify(u'\r\033[K', end=u'')
                 notify('... classifying {} (file {} of {})', query_sig.name(),
                        n, total_n, end='\r')
@@ -136,7 +134,7 @@ def classify(args):
                 total_count += 1
 
                 # make sure we're looking at the same scaled value as database
-                query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+                query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,

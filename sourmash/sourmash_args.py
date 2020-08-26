@@ -28,14 +28,9 @@ DEFAULT_N = 500
 
 
 def get_moltype(sig, require=False):
-    if sig.minhash.is_molecule_type('DNA'):
-        moltype = 'DNA'
-    elif sig.minhash.is_molecule_type('dayhoff'):
-        moltype = 'dayhoff'
-    elif sig.minhash.is_molecule_type('hp'):
-        moltype = 'hp'
-    elif sig.minhash.is_molecule_type('protein'):
-        moltype = 'protein'
+    mh = sig.minhash
+    if mh.moltype in ('DNA', 'dayhoff', 'hp', 'protein'):
+        moltype = mh.moltype
     else:
         raise ValueError('unknown molecule type for sig {}'.format(sig.name()))
 
@@ -159,11 +154,22 @@ class LoadSingleSignatures(object):
 
 
 def traverse_find_sigs(filenames, yield_all_files=False):
+    endings = ('.sig', '.sig.gz')
     for filename in filenames:
-        if os.path.isfile(filename) and \
-                  (filename.endswith('.sig') or yield_all_files):
-            yield filename
-            continue
+        if os.path.isfile(filename):
+            yield_me = False
+            if yield_all_files:
+                yield_me = True
+                continue
+            else:
+                for ending in endings:
+                    if filename.endswith(ending):
+                        yield_me = True
+                        break
+
+            if yield_me:
+                yield filename
+                continue
 
         # filename is a directory --
         dirname = filename
@@ -245,7 +251,7 @@ def check_lca_db_is_compatible(filename, db, query):
     return 1
 
 
-def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
+def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
     """
     Load one or more SBTs, LCAs, and/or signatures.
 
@@ -261,7 +267,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         notify('loading from {}...', filename, end='\r')
 
         try:
-            db, dbtype = _load_database(filename, traverse, False)
+            db, dbtype = _load_database(filename, False, cache_size=cache_size)
         except IOError as e:
             notify(str(e))
             sys.exit(-1)
@@ -269,7 +275,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, traverse=False):
         # are we collecting signatures from a directory/path?
         # NOTE: error messages about loading will now be attributed to
         # directory, not individual file.
-        if traverse and os.path.isdir(filename):
+        if os.path.isdir(filename):
             assert dbtype == DatabaseType.SIGLIST
 
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
@@ -347,7 +353,7 @@ class DatabaseType(Enum):
     LCA = 3
 
 
-def _load_database(filename, traverse, traverse_yield_all):
+def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
@@ -365,7 +371,7 @@ def _load_database(filename, traverse, traverse_yield_all):
         dbtype = DatabaseType.SIGLIST
 
     # load signatures from directory
-    if not loaded and os.path.isdir(filename) and traverse:
+    if not loaded and os.path.isdir(filename):
         all_sigs = []
         for thisfile in traverse_find_sigs([filename], traverse_yield_all):
             try:
@@ -398,7 +404,7 @@ def _load_database(filename, traverse, traverse_yield_all):
 
     if not loaded:                    # try load as SBT
         try:
-            db = load_sbt_index(filename)
+            db = load_sbt_index(filename, cache_size=cache_size)
             loaded = True
             dbtype = DatabaseType.SBT
         except:
@@ -441,7 +447,7 @@ def _select_sigs(siglist, ksize, moltype):
            yield ss
 
 
-def load_file_as_index(filename, traverse=True, yield_all_files=False):
+def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
     If 'filename' contains an SBT or LCA indexed database, will return
@@ -450,11 +456,11 @@ def load_file_as_index(filename, traverse=True, yield_all_files=False):
     If 'filename' is a JSON file containing one or more signatures, will
     return an Index object containing those signatures.
 
-    If 'filename' is a directory and traverse=True, will load *.sig underneath
+    If 'filename' is a directory, will load *.sig underneath
     this directory into an Index object. If yield_all_files=True, will
-    attempt to load all files. (traverse defaults to True here.)
+    attempt to load all files.
     """
-    db, dbtype = _load_database(filename, traverse, yield_all_files)
+    db, dbtype = _load_database(filename, yield_all_files)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
@@ -466,7 +472,7 @@ def load_file_as_index(filename, traverse=True, yield_all_files=False):
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            traverse=False, yield_all_files=False,
+                            yield_all_files=False,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
@@ -476,7 +482,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     If 'filename' is a JSON file containing one or more signatures, will
     return a list of those signatures.
 
-    If 'filename' is a directory and traverse=True, will load *.sig
+    If 'filename' is a directory, will load *.sig
     underneath this directory into a list of signatures. If
     yield_all_files=True, will attempt to load all files.
 
@@ -485,7 +491,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     if progress:
         progress.notify(filename)
 
-    db, dbtype = _load_database(filename, traverse, yield_all_files)
+    db, dbtype = _load_database(filename, yield_all_files)
 
     loader = None
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):

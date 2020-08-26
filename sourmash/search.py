@@ -1,10 +1,9 @@
-from __future__ import division
 from collections import namedtuple
 import sys
 
 from .logging import notify, error
 from .signature import SourmashSignature
-from ._minhash import get_max_hash_for_scaled
+from .minhash import _get_max_hash_for_scaled
 
 
 # generic SearchResult.
@@ -65,7 +64,7 @@ GatherResult = namedtuple('GatherResult',
 # build a new query object, subtracting found mins and downsampling
 def _subtract_and_downsample(to_remove, old_query, scaled=None):
     mh = old_query.minhash
-    mh = mh.downsample_scaled(scaled)
+    mh = mh.downsample(scaled=scaled)
     mh.remove_many(to_remove)
 
     return SourmashSignature(mh)
@@ -119,13 +118,13 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     # track original query information for later usage.
     track_abundance = query.minhash.track_abundance and not ignore_abundance
     orig_query_mh = query.minhash
-    orig_query_mins = orig_query_mh.get_hashes()
+    orig_query_mins = orig_query_mh.hashes.keys()
 
     # do we pay attention to abundances?
     orig_query_abunds = { k: 1 for k in orig_query_mins }
     if track_abundance:
         import numpy as np
-        orig_query_abunds = orig_query_mh.get_mins(with_abundance=True)
+        orig_query_abunds = orig_query_mh.hashes
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     while query.minhash:
@@ -138,8 +137,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             break
 
         # subtract found hashes from search hashes, construct new search
-        query_mins = set(query.minhash.get_hashes())
-        found_mins = best_match.minhash.get_hashes()
+        query_mins = set(query.minhash.hashes.keys())
+        found_mins = best_match.minhash.hashes.keys()
 
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled
@@ -154,7 +153,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # eliminate mins under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        new_max_hash = get_max_hash_for_scaled(cmp_scaled)
+        new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
         query_mins = set(_filter_max_hash(query_mins, new_max_hash))
         found_mins = set(_filter_max_hash(found_mins, new_max_hash))
         orig_query_mins = set(_filter_max_hash(orig_query_mins, new_max_hash))
@@ -172,7 +171,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             float(len(orig_query_mins))
 
         # calculate fractions wrt second denominator - metagenome size
-        orig_query_mh = orig_query_mh.downsample_scaled(cmp_scaled)
+        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
         query_n_mins = len(orig_query_mh)
         f_unique_to_query = len(intersect_mins) / float(query_n_mins)
 

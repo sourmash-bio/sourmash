@@ -1,5 +1,3 @@
-from __future__ import print_function, unicode_literals
-
 import json
 import shutil
 import os
@@ -12,7 +10,7 @@ from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
-from sourmash.sbt_storage import (FSStorage, TarStorage, RedisStorage,
+from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
 from . import sourmash_tst_utils as utils
@@ -335,41 +333,6 @@ def test_sbt_fsstorage():
         assert os.path.exists(os.path.join(location, '.fstree'))
 
 
-def test_sbt_tarstorage():
-    factory = GraphFactory(31, 1e5, 4)
-    with utils.TempDirectory() as location:
-        tree = SBT(factory)
-
-        for f in utils.SIG_FILES:
-            sig = load_one_signature(utils.get_test_data(f))
-
-            leaf = SigLeaf(os.path.basename(f), sig)
-            tree.add_node(leaf)
-            to_search = leaf
-
-        print('*' * 60)
-        print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
-        print(*old_result, sep='\n')
-
-        with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
-
-        with TarStorage(os.path.join(location, 'tree.tar.gz')) as storage:
-            tree = SBT.load(os.path.join(location, 'tree'),
-                            leaf_loader=SigLeaf.load,
-                            storage=storage)
-
-            print('*' * 60)
-            print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree.find(search_minhashes,
-                                                    to_search.data, 0.1)}
-            print(*new_result, sep='\n')
-
-            assert old_result == new_result
-
-
 def test_sbt_zipstorage(tmpdir):
     # create tree, save to a zip, then load and search.
     factory = GraphFactory(31, 1e5, 4)
@@ -689,7 +652,7 @@ def test_sbt_gather_threshold_1():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # query with empty hashes
@@ -746,7 +709,7 @@ def test_sbt_gather_threshold_5():
     # now construct query signatures with specific numbers of hashes --
     # note, these signatures all have scaled=1000.
 
-    mins = list(sorted(sig2.minhash.get_mins()))
+    mins = list(sorted(sig2.minhash.hashes.keys()))
     new_mh = sig2.minhash.copy_and_clear()
 
     # add five hashes
@@ -937,3 +900,18 @@ def test_sbt_dayhoff_command_search(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_sbt_node_cache():
+    tree = SBT.load(utils.get_test_data('v6.sbt.json'),
+                    leaf_loader=SigLeaf.load,
+                    cache_size=1)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
+
+    results = list(tree.find(search_minhashes_containment, to_search, 0.1))
+    assert len(results) == 4
+
+    assert tree._nodescache.currsize == 1
+    assert tree._nodescache.currsize == 1

@@ -1,4 +1,3 @@
-from ._compat import implements_to_string
 from ._lowlevel import lib
 
 
@@ -6,7 +5,6 @@ __all__ = ['SourmashError']
 exceptions_by_code = {}
 
 
-@implements_to_string
 class SourmashError(Exception):
     code = None
 
