@@ -139,11 +139,8 @@ def gather_signature(query_sig, dblist, ignore_abundance):
                / len(intersect_mins)
         f_match = len(intersect_mins) / match_size
 
-        # --------------------------------------
-        # new rust functions... keep?
         name = best_lca_db._best_name(best_idx)
         lineage = best_lca_db._get_lineage_from_idx(best_idx)
-        # --------------------------------------
 
         result = LCAGatherResult(intersect_bp = intersect_bp,
                                  f_unique_to_query= top_count / n_mins,

@@ -455,13 +455,15 @@ impl LcaDB {
             if self.ident_to_name.contains_key(&ident) {
                 return Err(Error::DuplicateSignature { ident });
             }
-            
-            // implement self.cache property and _invalidate_cache() method
-            // self._invalidate_cache()
                 
             // downsample to specified scaled; this has the side effect of
             // making sure they're all at the same scaled value!
-            let minhash = minhash.downsample_scaled(self.scaled).unwrap();
+            let minhash = match minhash.downsample_scaled(self.scaled) {
+                Ok(mh) => mh,
+                Err(error) => {
+                    return Err(Error::CustomError{message: "cannot downsample signature; is it a scaled signature?".into()});
+                },
+            };
     
             // store name
             self.ident_to_name.insert(ident.clone(), sig.name());

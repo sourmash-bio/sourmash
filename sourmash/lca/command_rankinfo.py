@@ -22,15 +22,14 @@ def make_lca_counts(dblist, min_num=0):
     for lca_db in dblist:
 
 
-        for hashval, idx_list in lca_db.hashval_to_idx.items():
+        for hashval in lca_db._get_hashvals():
+            idx_list = lca_db._get_idx_from_hashval(hashval)
             if min_num and len(idx_list) < min_num:
                 continue
 
             for idx in idx_list:
-                lid = lca_db.idx_to_lid.get(idx)
-                if lid is not None:
-                    lineage = lca_db.lid_to_lineage[lid]
-                    assignments[hashval].add(lineage)
+                lineage = lca_db._get_lineage_from_idx(idx)
+                assignments[hashval].add(lineage)
     
 
 

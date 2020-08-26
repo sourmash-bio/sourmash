@@ -793,17 +793,20 @@ impl KmerMinHash {
     }
 
     pub fn downsample_scaled(&self, new_scaled: u64) -> Result<KmerMinHash, Error> {
-        // if self.num != 0 {
-        //     panic!("num != 0 - cannot downsample a standard MinHash")
-        // }
-        let max_hash = max_hash_for_scaled(new_scaled).unwrap();
+        if self.num != 0 {
+            return Err(Error::DownsampleError{ message: "num != 0 - cannot downsample a standard MinHash".into() });
+        }
+        let new_max_hash = max_hash_for_scaled(new_scaled).unwrap();
+        if self.max_hash < new_max_hash {
+            return Err(Error::DownsampleError{ message: "new max_hash is higher than current sample max_hash".into() });
+        }
 
         let mut new_mh = KmerMinHash::new(
             self.num,
             self.ksize,
             self.hash_function,
             self.seed,
-            max_hash, // old max_hash => max_hash arg
+            new_max_hash, // old max_hash => max_hash arg
             self.abunds.is_some(),
         );
         if self.abunds.is_some() {

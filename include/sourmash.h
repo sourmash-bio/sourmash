@@ -30,6 +30,8 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NON_EMPTY_MIN_HASH = 106,
   SOURMASH_ERROR_CODE_MISMATCH_NUM = 107,
   SOURMASH_ERROR_CODE_DUPLICATE_SIGNATURE = 108,
+  SOURMASH_ERROR_CODE_DOWNSAMPLE_ERROR = 109,
+  SOURMASH_ERROR_CODE_CUSTOM_ERROR = 110,
   SOURMASH_ERROR_CODE_INVALID_DNA = 1101,
   SOURMASH_ERROR_CODE_INVALID_PROT = 1102,
   SOURMASH_ERROR_CODE_INVALID_CODON_LENGTH = 1103,
@@ -228,6 +230,8 @@ FFISearchResults *lcadb_gather(SourmashLcaDatabase *ptr,
                                const SourmashSignature *query,
                                float threshold_bp,
                                uintptr_t *osize);
+
+const uint64_t *lcadb_get_hashvals(SourmashLcaDatabase *ptr, uintptr_t *size);
 
 const uint32_t *lcadb_get_idx_from_hashval(SourmashLcaDatabase *ptr,
                                            uint64_t hashval,

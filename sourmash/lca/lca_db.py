@@ -10,6 +10,7 @@ import sourmash
 from sourmash._minhash import get_max_hash_for_scaled, to_bytes
 from sourmash.logging import notify, error, debug
 from sourmash.index import Index
+from sourmash.exceptions import SourmashError
 
 from sourmash._lowlevel import ffi, lib
 from sourmash.utils import RustObject, rustcall, decode_str
@@ -93,66 +94,11 @@ class LCA_Database(RustObject, Index):
 
         return filename
 
-    @cached_property
-    def idx_to_lid(self):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_idx_to_lid, size)
+    # --------------------------------------
+    # new helper functions... keep?
 
-        size = size[0]
-        if size:
-            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-            idx_to_lid = json.loads(ffi.string(buf, size).decode('utf-8'))
-
-        result = {}
-        for idx, lid in idx_to_lid.items():
-            result[int(idx)] = int(lid)
-        
-        return result
-
-    @cached_property
-    def lid_to_lineage(self):
-        from .lca_utils import taxlist, LineagePair
-
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_lid_to_lineage, size)
-
-        size = size[0]
-        if size:
-            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-            temp = ffi.string(buf, size).decode('utf-8')
-            lid_to_lineage = json.loads(temp)
-
-        # turn lineage into a list of tuples
-        result = {}
-        for (lid, lineage) in lid_to_lineage.items():
-            pairslist = []
-            for v in lineage:
-                pairslist.append(LineagePair(rank=v[0], name=v[1]))
-
-            result[int(lid)] = tuple(pairslist)
-
-        return result
-
-    @cached_property
-    def hashval_to_idx(self):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_hashval_to_idx, size)
-
-        size = size[0]
-        if size:
-            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-            hashval_to_idx = json.loads(ffi.string(buf, size).decode('utf-8'))
-
-        # convert json's u64 string to int
-        result = {}
-        for hashval, idxlist in hashval_to_idx.items():
-            result[int(hashval)] = idxlist
-
-        return result
-
-
-    # TODO: hopefully finish this function
-    def make_assignments_helper(self, min_num):
+    # TODO: hopefully finish this function: to get rid of dependency on last exposed internal properties.
+    def _make_assignments_helper(self, min_num):
         return self._methodcall(lib.make_assignments_helper, int(min_num))
 
     def _invalidate_cache(self):
@@ -201,6 +147,19 @@ class LCA_Database(RustObject, Index):
 
         return result
 
+    def _get_hashvals(self):
+        size = ffi.new('uintptr_t *')
+        rawbuff = self._methodcall(lib.lcadb_get_hashvals, size)
+        size = size[0]
+
+        result = []
+        for i in range(size):
+            result.append(rawbuff[i])
+
+        return result
+
+    # --------------------------------------
+
 
     def insert(self, sig, ident=None, lineage=None):
         from .lca_utils import taxlist, LineagePair
@@ -221,13 +180,6 @@ class LCA_Database(RustObject, Index):
         if minhash.moltype != self.moltype:
             raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
 
-        # downsample to specified scaled; this has the side effect of
-        # making sure they're all at the same scaled value!
-        try:
-            minhash = minhash.downsample_scaled(self.scaled)
-        except ValueError:
-            raise ValueError("cannot downsample signature; is it a scaled signature?")
-
         if ident is None:
             ident = sig.name()
 
@@ -246,7 +198,10 @@ class LCA_Database(RustObject, Index):
         else:
             lineage_json = ""
 
-        return self._methodcall(lib.lcadb_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+        try:
+            return self._methodcall(lib.lcadb_insert, sig._objptr, to_bytes(ident), to_bytes(lineage_json))
+        except SourmashError as e:
+            raise ValueError(str(e))
 
 
     def __repr__(self):

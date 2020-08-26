@@ -206,6 +206,24 @@ unsafe fn lcadb_get_idx_from_hashval(
 }
 
 ffi_fn! {
+unsafe fn lcadb_get_hashvals(
+    ptr: *mut SourmashLcaDatabase, 
+    size: *mut usize,
+) -> Result<*const u64> {
+    let lca_db = SourmashLcaDatabase::as_rust_mut(ptr);
+
+    let buf: Vec<u64> = lca_db.hashval_to_idx().keys().cloned().collect();
+    
+    let b = buf.into_boxed_slice();
+    *size = b.len();
+    let result = Box::into_raw(b) as *const u64;
+
+
+    Ok(result)
+}
+}
+
+ffi_fn! {
 unsafe fn lcadb_get_lineage_from_idx(
     ptr: *mut SourmashLcaDatabase, 
     idx: u32, 

@@ -23,9 +23,15 @@ pub enum SourmashError {
 
     #[error("different signatures cannot be compared")]
     MismatchSignatureType,
-
+    
     #[error("Invalid hash function: {function:?}")]
     InvalidHashFunction { function: String },
+
+    #[error("Downsample Error: {message}")]
+    DownsampleError { message: String },
+
+    #[error("{message}")]
+    CustomError { message: String },
 
     #[error("Can only set {message:?} if the MinHash is empty")]
     NonEmptyMinHash { message: String },
@@ -83,6 +89,8 @@ pub enum SourmashErrorCode {
     NonEmptyMinHash = 1_06,
     MismatchNum = 1_07,
     DuplicateSignature = 1_08,
+    DownsampleError = 1_09,
+    CustomError = 1_10,
     // Input sequence errors
     InvalidDNA = 11_01,
     InvalidProt = 11_02,
@@ -123,6 +131,8 @@ impl SourmashErrorCode {
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
             SourmashError::Utf8Error { .. } => SourmashErrorCode::Utf8Error,
             SourmashError::DuplicateSignature { .. } => SourmashErrorCode::DuplicateSignature,
+            SourmashError::DownsampleError { .. } => SourmashErrorCode::DownsampleError,
+            SourmashError::CustomError { .. } => SourmashErrorCode::CustomError,
         }
     }
 }
