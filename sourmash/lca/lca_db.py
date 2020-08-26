@@ -94,16 +94,17 @@ class LCA_Database(RustObject, Index):
 
         return filename
 
+    def _invalidate_cache(self):
+        if hasattr(self, '_cache'):
+            del self._cache
+
+
     # --------------------------------------
     # new helper functions... keep?
 
     # TODO: hopefully finish this function: to get rid of dependency on last exposed internal properties.
     def _make_assignments_helper(self, min_num):
         return self._methodcall(lib.make_assignments_helper, int(min_num))
-
-    def _invalidate_cache(self):
-        if hasattr(self, '_cache'):
-            del self._cache
 
     def _hashval_to_idx_len(self):
         return self._methodcall(lib.lcadb_hashval_to_idx_len)

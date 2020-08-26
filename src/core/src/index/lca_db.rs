@@ -461,6 +461,7 @@ impl LcaDB {
             let minhash = match minhash.downsample_scaled(self.scaled) {
                 Ok(mh) => mh,
                 Err(error) => {
+                    dbg!(&error);
                     return Err(Error::CustomError{message: "cannot downsample signature; is it a scaled signature?".into()});
                 },
             };
@@ -834,37 +835,38 @@ mod test {
 
     #[test]
     fn lca_search() {
-        let mut lca_db = LcaDB::new();
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
 
         // get signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/genome-s10.fa.gz.sig");
+        filename.push("../../tests/test-data/63.fa.sig");
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let signatures: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let signatures: Vec<Signature> = Signature::load_signatures(reader, Some(31), None, None).unwrap();
 
         lca_db.insert(&signatures[0], Some("erik"), None).unwrap();
 
         // get second signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/genome-s10+s11.sig");
+        filename.push("../../tests/test-data/47.fa.sig");
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let signatures: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let signatures: Vec<Signature> = Signature::load_signatures(reader, Some(31), None, None).unwrap();
 
         lca_db.insert(&signatures[0], Some("erik2"), None).unwrap();
         
         let tup = lca_db.search(signatures[0].clone(), 0.0, false, false).unwrap();
 
-        dbg!(&tup[1].2);
+        dbg!(&tup[0].0);
+        dbg!(&tup[1].0);
 
         // should be 1 result from one of the .insert(...)
-        assert!(tup.len() == 2);
-        assert!(tup[0].0 == 1.0); // testing the score it got
-        assert!(tup[1].0 == 0.31752306); // testing the score the second sig got
-        assert!(tup[0].2 == "".to_string()); // testing the filename it returned
+        assert_eq!(tup.len(), 2);
+        assert_eq!(tup[0].0, 1.0); // testing the score it got
+        assert_eq!(tup[1].0, 0.3206949); // testing the score the second sig got
+        assert_eq!(tup[0].2, "".to_string()); // testing the filename it returned
     }
 
     #[test]
@@ -877,23 +879,23 @@ mod test {
 
         // get signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/genome-s10+s11.sig");
+        filename.push("../../tests/test-data/47.fa.sig");
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let signatures: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let signatures: Vec<Signature> = Signature::load_signatures(reader, Some(31), None, None).unwrap();
 
         lca_db.insert(&signatures[0], Some("erik"), None).unwrap();
         lca_db.insert(&signatures[0], Some("erik2"), None).unwrap();
         
         let tup = lca_db.gather(signatures[0].clone(), 0.0);
 
-        dbg!(&tup[0].2);
+        dbg!(&tup[0].0);
 
         // should be 2 identicle results from both .insert(...)
-        assert!(tup.len() == 1);
-        assert!(tup[0].0 == 0.39); // testing the score it got
-        assert!(tup[0].2 == "delmont-1.lca.json".to_string()); // testing the filename it returned
+        assert_eq!(tup.len(), 1);
+        assert_eq!(tup[0].0, 0.0992853); // testing the score it got
+        assert_eq!(tup[0].2, "delmont-1.lca.json".to_string()); // testing the filename it returned
     }
 
     #[test]
@@ -905,11 +907,11 @@ mod test {
 
         // get signature to add
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/genome-s10+s11.sig");
+        filename.push("../../tests/test-data/47.fa.sig");
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let signatures: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let signatures: Vec<Signature> = Signature::load_signatures(reader, None, None, None).unwrap();
 
         // construct lineage
         let mut lineage: Lineage = BTreeMap::new();
@@ -923,7 +925,7 @@ mod test {
         dbg!(&sigs.len());
 
         // should be 3. 2 from the json file and 1 added using .insert(...)
-        assert!(sigs.len() == 3);
+        assert_eq!(sigs.len(), 3);
     }
 
     #[test]
@@ -938,7 +940,7 @@ mod test {
         let lineages = lca_db.get_lineage_assignments(hashval).unwrap();
 
         dbg!(&lineages);
-        assert!(lineages.len() == 1);
+        assert_eq!(lineages.len(), 1);
     }
 
     #[test]
@@ -994,31 +996,31 @@ mod test {
     fn build_default_struct() {
         let lca_db = LcaDB::new();
 
-        assert!(lca_db.ksize() == 32);
-        assert!(lca_db.scaled() == 1);
-        assert!(lca_db.filename() == "".to_string());
-        assert!(lca_db.moltype() == "DNA".to_string());
+        assert_eq!(lca_db.ksize(), 32);
+        assert_eq!(lca_db.scaled(), 1);
+        assert_eq!(lca_db.filename(), "".to_string());
+        assert_eq!(lca_db.moltype(), "DNA".to_string());
 
-        assert!(lca_db._next_index() as u32 == 0);
-        assert!(lca_db._next_lid() as u32 == 0);
-        assert!(lca_db.ident_to_name() == HashMap::new());
-        assert!(lca_db.ident_to_idx() == HashMap::new());
-        assert!(lca_db.idx_to_lid() == HashMap::new());
-        assert!(lca_db.lineage_to_lid() == HashMap::new());
-        assert!(lca_db.lid_to_lineage() == HashMap::new());
-        assert!(lca_db.hashval_to_idx() == HashMap::new());
+        assert_eq!(lca_db._next_index() as u32, 0);
+        assert_eq!(lca_db._next_lid() as u32, 0);
+        assert_eq!(lca_db.ident_to_name(), HashMap::new());
+        assert_eq!(lca_db.ident_to_idx(), HashMap::new());
+        assert_eq!(lca_db.idx_to_lid(), HashMap::new());
+        assert_eq!(lca_db.lineage_to_lid(), HashMap::new());
+        assert_eq!(lca_db.lid_to_lineage(), HashMap::new());
+        assert_eq!(lca_db.hashval_to_idx(), HashMap::new());
     }
 
     #[test]
     fn test_insert() {
-        let mut lca_db = LcaDB::new();
+        let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
 
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.push("../../tests/test-data/genome-s10+s11.sig");
+        filename.push("../../tests/test-data/47.fa.sig");
 
         let file = File::open(filename).unwrap();
         let reader = BufReader::new(file);
-        let sigs: Vec<Signature> = serde_json::from_reader(reader).expect("Loading error");
+        let sigs: Vec<Signature> = Signature::load_signatures(reader, Some(31), None, None).unwrap();
 
         // construct lineage
         let mut lineage: Lineage = BTreeMap::new();
@@ -1029,20 +1031,20 @@ mod test {
 
         // println!("{:?}", lca_db);
                                             
-        assert!(lca_db.ksize() == 32);
-        assert!(lca_db.scaled() == 1);
-        assert!(lca_db.filename() == "".to_string());
-        assert!(lca_db.moltype() == "DNA".to_string());
-        assert!(lca_db._next_index() as u32 == 1);
-        assert!(lca_db._next_lid() as u32 == 1);
+        assert_eq!(lca_db.ksize(), 31);
+        assert_eq!(lca_db.scaled(), 1000);
+        assert_eq!(lca_db.filename(), "".to_string());
+        assert_eq!(lca_db.moltype(), "DNA".to_string());
+        assert_eq!(lca_db._next_index() as u32, 1);
+        assert_eq!(lca_db._next_lid() as u32, 1);
 
         let mut ident_to_name2 = HashMap::with_capacity(1);
-        ident_to_name2.insert("test".to_string(), "s10+s11".to_string());
-        assert!(lca_db.ident_to_name() == ident_to_name2);
+        ident_to_name2.insert("test".to_string(), "NC_009665.1 Shewanella baltica OS185, complete genome".to_string());
+        assert_eq!(lca_db.ident_to_name(), ident_to_name2);
 
         let mut lid_to_lineage2 = HashMap::with_capacity(1);
         lid_to_lineage2.insert(0, lineage);
-        assert!(lca_db.lid_to_lineage() == lid_to_lineage2);
+        assert_eq!(lca_db.lid_to_lineage(), lid_to_lineage2);
     }
 
     // pub fn insert(&mut self, sig: &Signature, ident_opt: Option<&str>, lineage_opt: Option<Lineage>) -> Result<u32, Error> {
@@ -1312,11 +1314,13 @@ mod test {
 
         dbg!(&lcadb.lineage_to_lid);
 
-        let mut lineages = lcadb.lineage_to_lid.keys();
-        let lineage1: &Lineage = lineages.next().unwrap();
-        let lineage2: &Lineage = lineages.next().unwrap();
-        assert_eq!(lineage1[&"strain".to_string()], "Shewanella baltica OS185".to_string());
-        assert_eq!(lineage2[&"strain".to_string()], "Shewanella baltica OS223".to_string());
+        let mut lineages: Vec<Lineage> = lcadb.lineage_to_lid.keys().cloned().collect();
+        // most_common.sort_by(|a, b| b.1.cmp(a.1));
+        lineages.sort_by(|a, b| b[&"strain".to_string()].cmp(&a[&"strain".to_string()]));
+        let lineage1: &Lineage = &lineages[0];
+        let lineage2: &Lineage = &lineages[1];
+        assert_eq!(lineage1[&"strain".to_string()], "Shewanella baltica OS223".to_string());
+        assert_eq!(lineage2[&"strain".to_string()], "Shewanella baltica OS185".to_string());
     }
 
     // method lid_to_idx isnt really needed i dont think, it was created just to move this test to rust...
