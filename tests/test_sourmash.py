@@ -1102,10 +1102,11 @@ def test_do_sourmash_index_multiscaled_rescale(c):
     c.run_sourmash('compute', '--scaled', '10', testdata1)
     c.run_sourmash('compute', '--scaled', '1', testdata2)
 
-    c.run_sourmash('index', '-k', '31', 'zzz',
-                   '--scaled', '10',
+    c.run_sourmash('index', 'zzz',
                    'short.fa.sig',
-                   'short2.fa.sig')
+                   'short2.fa.sig',
+                   '-k', '31',
+                   '--scaled', '10')
 
     print(c)
     assert c.last_result.status == 0
@@ -1122,10 +1123,11 @@ def test_do_sourmash_index_multiscaled_rescale_fail(c):
     # this should fail: cannot go from a scaled value of 10 to 5
 
     with pytest.raises(ValueError) as e:
-        c.run_sourmash('index', '-k', '31', 'zzz',
-                       '--scaled', '5',
+        c.run_sourmash('index', 'zzz',
                        'short.fa.sig',
-                       'short2.fa.sig')
+                       'short2.fa.sig',
+                       '-k', '31',
+                       '--scaled', '5')
 
     print(e.value)
     assert c.last_result.status == -1
@@ -1141,9 +1143,10 @@ def test_do_sourmash_sbt_search_output():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz', '-k', '31',
+                                           ['index', 'zzz',
                                             'short.fa.sig',
-                                            'short2.fa.sig'],
+                                            'short2.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1170,8 +1173,9 @@ def test_do_sourmash_sbt_search_check_bug():
         testdata2 = utils.get_test_data('sbt-search-bug/bacteroides.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz', '-k', '31',
-                                            testdata1, testdata2],
+                                           ['index', 'zzz',
+                                            testdata1, testdata2,
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1194,8 +1198,9 @@ def test_do_sourmash_sbt_search_empty_sig():
         testdata2 = utils.get_test_data('sbt-search-bug/empty.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz', '-k', '31',
-                                            testdata1, testdata2],
+                                           ['index', 'zzz',
+                                            testdata1, testdata2,
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1218,9 +1223,10 @@ def test_do_sourmash_sbt_move_and_search_output():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz', '-k', '31',
+                                           ['index', 'zzz',
                                             'short.fa.sig',
-                                            'short2.fa.sig'],
+                                            'short2.fa.sig',
+                                             '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1466,7 +1472,36 @@ def test_index_metagenome_fromfile(c):
     with open(c.output('sig.list'), 'wt') as fp:
         fp.write("\n".join(testdata_sigs))
 
-    cmd = ['index', 'gcf_all', '-k', '21', testdata_sigs[0],
+    cmd = ['index', 'gcf_all', testdata_sigs[0], '-k', '21',
+           '--from-file', c.output('sig.list')]
+    c.run_sourmash(*cmd)
+
+    assert os.path.exists(c.output('gcf_all.sbt.json'))
+
+    cmd = 'search {} gcf_all -k 21'.format(query_sig)
+    cmd = cmd.split()
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    print(c.last_result.err)
+
+    assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+    assert '12 matches; showing first 3:' in out
+
+@utils.in_tempdir
+def test_index_metagenome_fromfile_no_cmdline_sig(c):
+    # test index --from-file
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    # construct a file list
+    with open(c.output('sig.list'), 'wt') as fp:
+        fp.write("\n".join(testdata_sigs))
+
+    cmd = ['index', 'gcf_all', '-k', '21',
            '--from-file', c.output('sig.list')]
     c.run_sourmash(*cmd)
 
@@ -1491,8 +1526,9 @@ def test_search_metagenome():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -1538,8 +1574,9 @@ def test_search_metagenome_downsample():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -1562,8 +1599,9 @@ def test_search_metagenome_downsample_containment():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -1596,8 +1634,8 @@ def test_search_metagenome_downsample_index(c):
     query_sig = utils.get_test_data('gather/combined.sig')
 
     # downscale during indexing, rather than during search.
-    c.run_sourmash('index', 'gcf_all', '-k', '21', '--scaled', '100000',
-                   *testdata_sigs)
+    c.run_sourmash('index', 'gcf_all', *testdata_sigs, '-k', '21',
+                   '--scaled', '100000')
 
     assert os.path.exists(c.output('gcf_all.sbt.json'))
 
@@ -1645,9 +1683,10 @@ def test_do_sourmash_index_bad_args():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
+                                           ['index', 'zzz',
                                             'short.fa.sig',
                                             'short2.fa.sig',
+                                            '-k', '31',
                                             '--dna', '--protein'],
                                            in_directory=location, fail_ok=True)
 
@@ -1665,9 +1704,10 @@ def test_do_sourmash_sbt_search():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
+                                           ['index', 'zzz',
                                             'short.fa.sig',
-                                            'short2.fa.sig'],
+                                            'short2.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1692,9 +1732,10 @@ def test_do_sourmash_sbt_search_wrong_ksize():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
+                                           ['index', 'zzz',
                                             'short.fa.sig',
-                                            'short2.fa.sig'],
+                                            'short2.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1718,15 +1759,17 @@ def test_do_sourmash_sbt_search_multiple():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig'],
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz2',
-                                            'short2.fa.sig'],
+                                           ['index', 'zzz2',
+                                            'short2.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz2.sbt.json'))
@@ -1751,8 +1794,9 @@ def test_do_sourmash_sbt_search_and_sigs():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz',
-                                            'short.fa.sig'],
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1876,8 +1920,8 @@ def test_do_sourmash_sbt_search_dnaprotquery():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        args = ['index', 'zzz', '--protein', 'short.fa.sig',
-                'short2.fa.sig']
+        args = ['index', 'zzz', 'short.fa.sig', 'short2.fa.sig',
+                '--protein']
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
@@ -2533,15 +2577,17 @@ def test_gather_multiple_sbts():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz', '-k', '31',
-                                            'short.fa.sig'],
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                           '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz2', '-k', '31',
-                                            'short2.fa.sig'],
+                                           ['index', 'zzz2',
+                                            'short2.fa.sig',
+                                             '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -2718,8 +2764,9 @@ def test_gather_metagenome():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -2749,8 +2796,9 @@ def test_gather_metagenome_num_results(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd = ['index', 'gcf_all']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
 
     c.run_sourmash(*cmd)
 
@@ -2781,8 +2829,9 @@ def test_gather_metagenome_threshold_bp():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -2810,8 +2859,9 @@ def test_multigather_metagenome():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -2842,8 +2892,9 @@ def test_multigather_metagenome_query_from_file(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd = ['index', 'gcf_all']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.json'))
@@ -2878,8 +2929,9 @@ def test_multigather_metagenome_query_with_sbt(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd = ['index', 'gcf_all.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
@@ -2913,8 +2965,9 @@ def test_multigather_metagenome_query_with_lca(c):
 
     lca_db = utils.get_test_data('lca/47+63.lca.json')
 
-    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd = ['index', '47+63.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '31'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('47+63.sbt.zip'))
@@ -2966,8 +3019,9 @@ def test_multigather_metagenome_query_with_sbt_addl_query(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd = ['index', 'gcf_all.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
@@ -3008,8 +3062,9 @@ def test_multigather_metagenome_sbt_query_from_file_with_addl_query(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd = ['index', 'gcf_all.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
@@ -3055,8 +3110,9 @@ def test_multigather_metagenome_sbt_query_from_file_incorrect(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all.sbt.zip', '-k', '21']
+    cmd = ['index', 'gcf_all.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.zip'))
@@ -3079,8 +3135,9 @@ def test_multigather_metagenome_lca_query_from_file(c):
 
     lca_db = utils.get_test_data('lca/47+63.lca.json')
 
-    cmd = ['index', '47+63.sbt.zip', '-k', '31']
+    cmd = ['index', '47+63.sbt.zip']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '31'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('47+63.sbt.zip'))
@@ -3113,8 +3170,9 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
 
     query_sig = utils.get_test_data('gather/combined.sig')
 
-    cmd = ['index', 'gcf_all', '-k', '21']
+    cmd = ['index', 'gcf_all']
     cmd.extend(testdata_sigs)
+    cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
     assert os.path.exists(c.output('gcf_all.sbt.json'))
@@ -3291,8 +3349,9 @@ def test_gather_metagenome_downsample():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
@@ -3343,8 +3402,9 @@ def test_gather_save_matches():
 
         query_sig = utils.get_test_data('gather/combined.sig')
 
-        cmd = ['index', 'gcf_all', '-k', '21']
+        cmd = ['index', 'gcf_all']
         cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
 
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
