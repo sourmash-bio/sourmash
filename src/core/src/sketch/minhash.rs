@@ -71,7 +71,7 @@ pub fn max_hash_for_scaled(scaled: u64) -> u64 {
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
         0 => 0,
-        _ => u64::max_value() / max_hash,
+        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
     }
 }
 

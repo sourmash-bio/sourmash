@@ -299,7 +299,7 @@ fn oracle_mins_scaled(hashes in vec(u64::ANY, 1..10000)) {
 proptest! {
 #[test]
 fn prop_merge(seq1 in "[ACGT]{6,100}", seq2 in "[ACGT]{6,200}") {
-    let scaled = 10;
+    let scaled: u64 = 10;
     let mut a = KmerMinHash::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
     let mut b = KmerMinHashBTree::new(scaled, 6, HashFunctions::murmur64_DNA, 42, true, 0);
 
