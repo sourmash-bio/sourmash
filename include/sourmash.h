@@ -77,9 +77,10 @@ typedef struct {
 typedef struct {
   float score;
   SourmashSignature *sig;
-  const uint8_t *filename;
-  uint32_t name_size;
+  SourmashStr filename;
 } FFISearchResults;
+
+void _gather_signature_helper(void);
 
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
@@ -220,11 +221,11 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
-const uint8_t *lcadb_best_name(SourmashLcaDatabase *ptr, uint32_t best_idx, uintptr_t *size);
+SourmashStr lcadb_best_name(SourmashLcaDatabase *ptr, uint32_t best_idx);
 
 void lcadb_downsample_scaled(SourmashLcaDatabase *ptr, uint64_t new_scaled);
 
-const uint8_t *lcadb_filename(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_filename(const SourmashLcaDatabase *ptr);
 
 FFISearchResults *lcadb_gather(SourmashLcaDatabase *ptr,
                                const SourmashSignature *query,
@@ -237,23 +238,23 @@ const uint32_t *lcadb_get_idx_from_hashval(SourmashLcaDatabase *ptr,
                                            uint64_t hashval,
                                            uintptr_t *size);
 
-const uint8_t *lcadb_get_lineage_assignments(SourmashLcaDatabase *ptr,
-                                             uint64_t hashval,
-                                             uintptr_t *size);
+const SourmashStr *lcadb_get_lineage_assignments(SourmashLcaDatabase *ptr,
+                                                 uint64_t hashval,
+                                                 uintptr_t *size);
 
-const uint8_t *lcadb_get_lineage_from_idx(SourmashLcaDatabase *ptr, uint32_t idx, uintptr_t *size);
+SourmashStr lcadb_get_lineage_from_idx(SourmashLcaDatabase *ptr, uint32_t idx);
 
 uint32_t lcadb_get_match_size(SourmashLcaDatabase *ptr, uint32_t best_idx);
 
-const uint8_t *lcadb_hashval_to_idx(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_hashval_to_idx(const SourmashLcaDatabase *ptr);
 
 uint32_t lcadb_hashval_to_idx_len(SourmashLcaDatabase *ptr);
 
-const uint8_t *lcadb_ident_to_idx(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_ident_to_idx(const SourmashLcaDatabase *ptr);
 
-const uint8_t *lcadb_ident_to_name(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_ident_to_name(const SourmashLcaDatabase *ptr);
 
-const uint8_t *lcadb_idx_to_lid(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_idx_to_lid(const SourmashLcaDatabase *ptr);
 
 uint32_t lcadb_insert(SourmashLcaDatabase *ptr,
                       const SourmashSignature *sig_ptr,
@@ -262,17 +263,15 @@ uint32_t lcadb_insert(SourmashLcaDatabase *ptr,
 
 uint32_t lcadb_ksize(const SourmashLcaDatabase *ptr);
 
-const uint8_t *lcadb_lid_to_lineage(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_lid_to_lineage(const SourmashLcaDatabase *ptr);
 
-const uint8_t *lcadb_lineage_to_lid(const SourmashLcaDatabase *ptr, uintptr_t *size);
+SourmashStr lcadb_lineage_to_lid(const SourmashLcaDatabase *ptr);
 
 SourmashLcaDatabase *lcadb_load(const char *filepath_char);
 
 SourmashLcaDatabase *lcadb_load_db(const char *filepath_char);
 
-const uint8_t *lcadb_moltype(const SourmashLcaDatabase *ptr, uintptr_t *size);
-
-SourmashLcaDatabase *lcadb_new(void);
+SourmashStr lcadb_moltype(const SourmashLcaDatabase *ptr);
 
 SourmashLcaDatabase *lcadb_new_with_params(uint32_t ksize,
                                            uint64_t scaled,

@@ -21,8 +21,7 @@ def make_lca_counts(dblist, min_num=0):
     for lca_db in dblist:
 
 
-        for hashval in lca_db._get_hashvals():
-            idx_list = lca_db._get_idx_from_hashval(hashval)
+        for hashval, idx_list in lca_db.hashval_to_idx.items():
             if min_num and len(idx_list) < min_num:
                 continue
 

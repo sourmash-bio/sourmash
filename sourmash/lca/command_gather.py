@@ -81,7 +81,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
         assignments = defaultdict(set)
         for hashval in query_mins:
             for lca_db in dblist:
-                idx_list = lca_db._get_idx_from_hashval(hashval)
+                idx_list = lca_db.hashval_to_idx.get(hashval, [])
 
                 for idx in idx_list:
                     assignments[hashval].add((lca_db, idx))

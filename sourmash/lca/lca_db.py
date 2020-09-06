@@ -71,92 +71,45 @@ class LCA_Database(RustObject, Index):
 
     @cached_property
     def moltype(self):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_moltype, size)
-
-        size = size[0]
-        buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-        moltype = ffi.string(buf, size).decode('utf-8')
-
-        return moltype
+        return decode_str(self._methodcall(lib.lcadb_moltype))
 
     @cached_property
     def filename(self):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_filename, size)
-
-        size = size[0]
-        filename = None
-        if size:
-            buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-            filename = ffi.string(buf, size).decode('utf-8')
-
-        return filename
+        return decode_str(self._methodcall(lib.lcadb_filename))
 
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):
             del self._cache
 
+    @cached_property
+    def hashval_to_idx(self):
+        buf = self._methodcall(lib.lcadb_hashval_to_idx)
+        hashval_to_idx = json.loads(decode_str(buf))
+            
+        # convert json's u64 string to int
+        result = {}
+        for hashval, idxlist in hashval_to_idx.items():
+            result[int(hashval)] = idxlist
+
+        return result
+
 
     # --------------------------------------
     # new helper functions... keep?
-
-    # TODO: hopefully finish this function: to get rid of dependency on last exposed internal properties.
-    def _make_assignments_helper(self, min_num):
-        return self._methodcall(lib.make_assignments_helper, int(min_num))
-
-    def _hashval_to_idx_len(self):
-        return self._methodcall(lib.lcadb_hashval_to_idx_len)
 
     def _get_match_size(self, best_idx):
         return self._methodcall(lib.lcadb_get_match_size, int(best_idx))
 
     def _best_name(self, best_idx):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_best_name, int(best_idx), size)
-        size = size[0]
-        buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-
-        return ffi.string(buf, size).decode('utf-8')
+        return decode_str(self._methodcall(lib.lcadb_best_name, int(best_idx)))
 
     def _get_lineage_from_idx(self, idx):
-        from .lca_utils import taxlist, LineagePair
+        from .lca_utils import taxlist, LineagePair, make_lineage
 
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_get_lineage_from_idx, int(idx), size)
-
-        size = size[0]
-        buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, size), size)
-        lineage_vec = json.loads(ffi.string(buf, size).decode('utf-8'))
-
-        result = []
-        for pair in lineage_vec:
-            result.append(LineagePair(rank=pair[0], name=pair[1]))
+        buf = self._methodcall(lib.lcadb_get_lineage_from_idx, int(idx))
+        result = make_lineage(decode_str(buf))
 
         return tuple(result)
-
-    def _get_idx_from_hashval(self, hashval):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_get_idx_from_hashval, int(hashval), size)
-
-        size = size[0]
-
-        result = []
-        for i in range(size):
-            result.append(rawbuff[i])
-
-        return result
-
-    def _get_hashvals(self):
-        size = ffi.new('uintptr_t *')
-        rawbuff = self._methodcall(lib.lcadb_get_hashvals, size)
-        size = size[0]
-
-        result = []
-        for i in range(size):
-            result.append(rawbuff[i])
-
-        return result
 
     # --------------------------------------
 
@@ -183,9 +136,7 @@ class LCA_Database(RustObject, Index):
         if ident is None:
             ident = sig.name()
 
-        self._invalidate_cache()
-
-        # trying to put lineage into a json
+        # put lineage into json
         if lineage:
             try:
                 if type(lineage[0]) is not LineagePair:
@@ -216,12 +167,8 @@ class LCA_Database(RustObject, Index):
         sigs_ptr = self._methodcall(lib.lcadb_signatures, size)
 
         size = size[0]
-        sigs = []
         for i in range(size):
             sig = SourmashSignature._from_objptr(sigs_ptr[i])
-            sigs.append(sig)
-
-        for sig in sigs:
             yield sig
 
     def select(self, ksize=None, moltype=None):
@@ -240,8 +187,6 @@ class LCA_Database(RustObject, Index):
     @classmethod
     def load(cls, db_name):
         "Load LCA_Database from a JSON file."
-        from .lca_utils import taxlist, LineagePair
-
         dbs_ptr = rustcall(lib.lcadb_load_db, to_bytes(db_name))
 
         db = LCA_Database._from_objptr(dbs_ptr)
@@ -285,12 +230,9 @@ class LCA_Database(RustObject, Index):
         results = []
         for i in range(size):
             # set filename
-            name_size = search_results[i].name_size
-            filename = None
-            if name_size:
-                rawbuff = search_results[i].filename
-                buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, name_size), name_size)
-                filename = ffi.string(buf, name_size).decode('utf-8')
+            filename = decode_str(search_results[i].filename)
+            if filename == '':
+                filename = None
 
             sig = SourmashSignature._from_objptr(search_results[i].sig)
 
@@ -315,12 +257,9 @@ class LCA_Database(RustObject, Index):
 
         for i in range(size):
             # set filename
-            name_size = gather_results[i].name_size
-            filename = None
-            if name_size > 0:
-                rawbuff = gather_results[i].filename
-                buf = ffi.gc(rawbuff, lambda o: lib.nodegraph_buffer_free(o, name_size), name_size)
-                filename = ffi.string(buf, name_size).decode('utf-8')
+            filename = decode_str(gather_results[i].filename)
+            if filename == '':
+                filename = None
 
             sig = SourmashSignature._from_objptr(gather_results[i].sig)
 
@@ -347,30 +286,28 @@ class LCA_Database(RustObject, Index):
         elif scaled < self.scaled:
             raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
 
-        self._invalidate_cache()
-
         self._methodcall(lib.lcadb_downsample_scaled, scaled)
 
     def get_lineage_assignments(self, hashval):
-        from .lca_utils import LineagePair
+        from .lca_utils import LineagePair, make_lineage
         """
         Get a list of lineages for this hashval.
         """
         size = ffi.new("uintptr_t *")
-        rawbuf = self._methodcall(lib.lcadb_get_lineage_assignments, int(hashval), size)
+        buf = self._methodcall(lib.lcadb_get_lineage_assignments, int(hashval), size)
         size = size[0]
 
-        buf = ffi.gc(rawbuf, lambda o: lib.nodegraph_buffer_free(o, size), size)
-        result = ffi.string(buf, size)
-        result = json.loads(result)
-
         lineagelist = []
-        for v in result:
-            lineage = []
-            for vv in v:
-                lineage.append(LineagePair(rank=vv[0], name=vv[1]))
-            
-            lineagelist.append(tuple(lineage))
+        for i in range(size):
+            x = decode_str(buf[i])
+
+            # some test lineages are unorthodox and require json instead of zipped lineage.
+            if x[0] == '*':
+                lin = json.loads(x[1:])
+                temp = [LineagePair(rank=rank, name=name) for rank, name in lin.items()]
+                lineagelist.append(tuple(temp))
+            else:
+                lineagelist.append(make_lineage(x))
 
         return lineagelist
 

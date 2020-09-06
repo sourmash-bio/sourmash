@@ -11,7 +11,6 @@ use typed_builder::TypedBuilder;
 use std::io;
 use std::fs::File;
 use std::path::Path;
-use std::ffi::OsStr;
 use log::debug;
 
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
@@ -27,40 +26,120 @@ use std::cmp::Ordering::Equal;
 
 pub type Lineage = BTreeMap<String, String>; 
 
-pub fn lineage_to_vec(lineage: Lineage) -> Vec<Vec<String>> {
-    let mut lineage_vec: Vec<Vec<String>> = Vec::new();
-        if lineage.contains_key(&"superkingdom".to_string()) {
-            lineage_vec.push(vec!["superkingdom".to_string(), lineage.get("superkingdom").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"phylum".to_string()) {
-            lineage_vec.push(vec!["phylum".to_string(), lineage.get("phylum").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"class".to_string()) {
-            lineage_vec.push(vec!["class".to_string(), lineage.get("class").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"order".to_string()) {
-            lineage_vec.push(vec!["order".to_string(), lineage.get("order").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"family".to_string()) {
-            lineage_vec.push(vec!["family".to_string(), lineage.get("family").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"genus".to_string()) {
-            lineage_vec.push(vec!["genus".to_string(), lineage.get("genus").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"species".to_string()) {
-            lineage_vec.push(vec!["species".to_string(), lineage.get("species").unwrap().to_string()]);
-        }
-        if lineage.contains_key(&"strain".to_string()) {
-            lineage_vec.push(vec!["strain".to_string(), lineage.get("strain").unwrap().to_string()]);
-        }
+pub fn zip_lineage(lineage: &Lineage) -> Result<String, Error> {
+    let mut zip_lineage: Vec<String> = Vec::new();
+    let mut ok = false;
 
-        // for tests that dont have normal lineages
-        if lineage_vec.len() == 0 && lineage.len() != 0 {
-            for (rank, name) in lineage {
-                lineage_vec.push(vec![rank, name]);
-            }
-        }
-        lineage_vec
+    match lineage.get("superkingdom") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("phylum") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("class") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("order") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("family") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("genus") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("species") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+    match lineage.get("strain") {
+        Some(name) => { 
+            zip_lineage.push(name.to_string());
+            ok = true;
+        },
+        None => { zip_lineage.push("".to_string()) }
+    }
+
+    if !ok {
+        return Ok("*".to_string() + serde_json::to_string(lineage).unwrap().as_str());
+    }
+
+    Ok(zip_lineage.join(","))
+}
+
+pub fn vec_to_lineage(lineage_vec: Vec<Vec<String>>) -> Lineage {
+    lineage_vec.into_iter().map(|x| (x[0].clone(), x[1].clone())).collect()
+}
+
+// to make sure lineage is ordered
+pub fn lineage_to_vec(lineage: Lineage) -> Vec<Vec<String>> {
+    let mut lineage_vec: Vec<Vec<String>> = Vec::with_capacity(lineage.len());
+
+    let mut name: Option<&String> = lineage.get("superkingdom");
+    if name != None {
+        lineage_vec.push(vec!["superkingdom".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("phylum");
+    if name != None {
+        lineage_vec.push(vec!["phylum".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("class");
+    if name != None {
+        lineage_vec.push(vec!["class".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("order");
+    if name != None {
+        lineage_vec.push(vec!["order".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("family");
+    if name != None {
+        lineage_vec.push(vec!["family".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("genus");
+    if name != None {
+        lineage_vec.push(vec!["genus".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("species");
+    if name != None {
+        lineage_vec.push(vec!["species".to_string(), name.unwrap().to_string()]);
+    }
+    name = lineage.get("strain");
+    if name != None {
+        lineage_vec.push(vec!["strain".to_string(), name.unwrap().to_string()]);
+    }
+
+    // for tests that dont have normal lineages
+    if lineage_vec.len() == 0 && lineage.len() != 0 {
+        lineage_vec = lineage.into_iter().map(|(rank, name)| vec![rank, name]).collect();
+    }
+    lineage_vec
 
 }
 
@@ -71,13 +150,8 @@ impl Serialize for LcaDB {
     {
         let n_fields = 11;
 
-        // TODO: MAKE THIS CONVERSION PRETTIER/FASTER
         // convert lineage in lid_to_lineage
-        let mut lid_to_lineage_vec: HashMap<u32, Vec<Vec<String>>> = HashMap::new();
-        for (lid, lineage) in self.lid_to_lineage.clone() {
-            let lineage_vec = lineage_to_vec(lineage);
-            lid_to_lineage_vec.insert(lid, lineage_vec);
-        }
+        let lid_to_lineage_vec: HashMap<u32, Vec<Vec<String>>> = self.lid_to_lineage.clone().into_iter().map(|(lid, lineage)| (lid, lineage_to_vec(lineage))).collect();
 
         let mut partial = serializer.serialize_struct("LcaDB", n_fields)?;
         partial.serialize_field("version", "2.1")?;
@@ -143,35 +217,22 @@ impl<'de> Deserialize<'de> for LcaDB {
             panic!("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
         }
 
-        // TODO: MAKE THIS CONVERSION PRETTIER/FASTER
         // convert lineage in lid_to_lineage
-        let mut lid_to_lineage_map: HashMap<u32, Lineage> = HashMap::new();
-        for pair in templcadb.lid_to_lineage {
-            let lid = pair.0;
-            let lineage_vec = pair.1;
+        let lid_to_lineage_map: HashMap<u32, Lineage> = templcadb.lid_to_lineage.into_iter().map(|(lid, lineage_vec)| (lid, vec_to_lineage(lineage_vec))).collect();
 
-            let mut lineage_map: Lineage = BTreeMap::new();
-            for vec_pair in lineage_vec.into_iter().rev() {
-                // lineage_vec = Vec<Vec<String>>
-                lineage_map.insert(vec_pair[0].clone(), vec_pair[1].clone());
-            }
-            lid_to_lineage_map.insert(lid, lineage_map);
-        }
-
-        // TODO: MAKE THIS CONVERSION PRETTIER/FASTER
-        // invert lid_to_lineage
-        let mut lineage_to_lid: HashMap<Lineage, u32> = HashMap::new();
-        if lid_to_lineage_map.len() > 0 {
-            for pair in &lid_to_lineage_map {
-                lineage_to_lid.insert(pair.1.clone(), pair.0.clone());
-            }
-        }
+        // invert lid_to_lineage_map for lineage_to_lid
+        let lineage_to_lid: HashMap<Lineage, u32> = if lid_to_lineage_map.len() > 0 {
+            lid_to_lineage_map.clone().into_iter().map(|(lid, lineage)| (lineage, lid)).collect()
+        } else {
+            HashMap::new()
+        };
 
         // set moltype or default to "DNA"
-        let mut moltype = "DNA".to_string();
-        if templcadb.moltype != "" {
-            moltype = templcadb.moltype.to_string();
-        }
+        let moltype = if templcadb.moltype != "" {
+            templcadb.moltype.to_string()
+        } else {
+            "DNA".to_string()
+        };
 
         let _next_index = templcadb.ident_to_idx.len() as u32;
         let _next_lid = templcadb.idx_to_lid.len() as u32;
@@ -404,11 +465,8 @@ impl LcaDB {
         Ok(())
     }
 
-    pub fn _get_ident_index(&mut self, ident: &String, fail_on_duplicate: bool) -> u32 {
+    pub fn _get_ident_index(&mut self, ident: &String) -> u32 {
         // Get (create if nec) a unique int id, idx, for each identifier.
-        if fail_on_duplicate {
-            assert!(!self.ident_to_idx.contains_key(ident));    // should be no duplicate identities
-        }
 
         let idx = match self.ident_to_idx.get(ident) {
             Some(i) => *i,
@@ -460,8 +518,7 @@ impl LcaDB {
             // making sure they're all at the same scaled value!
             let minhash = match minhash.downsample_scaled(self.scaled) {
                 Ok(mh) => mh,
-                Err(error) => {
-                    dbg!(&error);
+                Err(_) => {
                     return Err(Error::CustomError{message: "cannot downsample signature; is it a scaled signature?".into()});
                 },
             };
@@ -470,7 +527,7 @@ impl LcaDB {
             self.ident_to_name.insert(ident.clone(), sig.name());
     
             // identifier -> integer index (idx)
-            let idx = self._get_ident_index(&ident, true);
+            let idx = self._get_ident_index(&ident);
     
             if let Some(lineage) = lineage_opt {
                 // (Lineage*) -> integer lineage ids (lids)
@@ -482,8 +539,8 @@ impl LcaDB {
     
             // append idx to each hashval's idx vector
             for hashval in minhash.mins() {
-                if self.hashval_to_idx.contains_key(&hashval) {
-                    self.hashval_to_idx.get_mut(&hashval).unwrap().push(idx);
+                if let Some(idxlist) = self.hashval_to_idx.get_mut(&hashval) {
+                    idxlist.push(idx);
                 } else {
                     self.hashval_to_idx.insert(hashval, vec![idx]);
                 }
@@ -538,20 +595,11 @@ impl LcaDB {
 
     // Return all of the signatures in this LCA database.
     pub fn signatures(&self) -> Result<Vec<Signature>, Error> {
-        let mut sigs: Vec<Signature> = Vec::new();
-        for v in self._signatures().values() {
-            sigs.push(v.clone());
-        }
+        let sigs: Vec<Signature> = self._signatures().values().map(|x| x.clone()).collect();
         Ok(sigs)
     }
 
     pub fn _signatures(&self) -> HashMap<u32, Signature> {
-
-        // let hash_function: hash_function = match self.moltype.as_str() {
-        //     "protein" => HashFunctions::murmur64_protein,
-        //     "hp" => HashFunctions::murmur64_hp,
-        //     "dayhoff" => HashFunctions::murmur64_dayhoff,
-        // };
         let hash_function = HashFunctions::try_from(self.moltype.as_str()).unwrap();
 
         // defaults for the rest of the parameters
@@ -562,32 +610,40 @@ impl LcaDB {
         let mh = KmerMinHash::new(0, self.ksize, hash_function, seed, max_hash, track_abundance);
 
         debug!("creating signatures for LCA DB...");
+        // 
         let mut mhd: HashMap<u32, KmerMinHash> = HashMap::new();
+
+        // idx, Vec<hashvals>
         let mut temp_vals: HashMap<u32, Vec<u64>> = HashMap::new();
 
+        // TODO: possibly reformat this a lot
         // invert hashval_to_idx to temp_vals (idx to hashval)
         for (hashval, idlist) in &self.hashval_to_idx {
             for idx in idlist {
                 // set temp_vals and get temp_hashes
-                let temp_hashes: &mut Vec<u64> = match temp_vals.get_mut(idx) {
+                // 1. check if temp_vals contains idx
+                // 2. if yes: get corresponding hashlist and append the hashval
+                // 3. if no: insert (idx, hashval)
+                // 4. temp_hashes = idxlist
+                match temp_vals.get_mut(idx) {
                     Some(s) => {
                         s.push(*hashval);
-                        s
                     },
                     None => {
                         temp_vals.insert(*idx, vec![*hashval]);
-                        temp_vals.get_mut(idx).unwrap()
                     },
                 };
+                
 
                 // set minhash and/or add hashes
-                if temp_hashes.len() > 50 {
+                if temp_vals[&idx].len() > 50 {
+                    let temp_hashes: &Vec<u64> = &temp_vals[&idx];
                     match mhd.get_mut(idx) {
                         Some(s) => s.add_many(temp_hashes).unwrap(),
                         None => {
-                            let mut mh_temp = mh.copy_and_clear().unwrap();
-                            mh_temp.add_many(temp_hashes).unwrap();
-                            mhd.insert(*idx, mh_temp);
+                            let mut temp_mh = mh.clone();
+                            temp_mh.add_many(temp_hashes).unwrap();
+                            mhd.insert(*idx, temp_mh);
                         },
                     }
 
@@ -601,7 +657,7 @@ impl LcaDB {
             match mhd.get_mut(&idx) {
                 Some(s) => s.add_many(&hashes).unwrap(),
                 None => {
-                    let mut mh_temp = mh.copy_and_clear().unwrap();
+                    let mut mh_temp = mh.clone();
                     mh_temp.add_many(&hashes).unwrap();
                     mhd.insert(idx, mh_temp);
                 },
@@ -648,7 +704,7 @@ impl LcaDB {
         Ok(x)
     }
 
-    // default: containment = false, ignore_scaled = false, return_one = false (used for gather(...))
+    // default: containment = false, ignore_scaled = false, return_one = false (= true for gather)
     pub fn _find_signatures(
         &self, 
         mh: &KmerMinHash, 
@@ -662,7 +718,6 @@ impl LcaDB {
 
         if self.scaled > mh_scaled {
             let mh = mh.downsample_scaled(self.scaled).unwrap();
-
         } else if self.scaled < mh_scaled && !ignore_scaled {
             // note that containment can be calculated w/o matching scaled.
             return Err(Error::MismatchScaled);
@@ -685,10 +740,7 @@ impl LcaDB {
         }
 
         debug!("number of matching signatures for hashes: {}", &counter.len());
-        let mut most_common: Vec<(&u32, &u32)> = Vec::new();
-        for (idx, count) in &counter {
-            most_common.push((idx, count));
-        }
+        let mut most_common: Vec<(&u32, &u32)> = counter.keys().zip(counter.values()).collect();
 
         // sort by most common
         most_common.sort_by(|a, b| b.1.cmp(a.1));
@@ -735,8 +787,6 @@ impl LcaDB {
             panic!("cannot decrease scaled from {} to {}", self.scaled, scaled);
         }
 
-        // self._invalidate_cache()
-
         let max_hash = max_hash_for_scaled(scaled).unwrap();
 
         // filter out all hashes over max_hash in value.
@@ -756,25 +806,23 @@ impl LcaDB {
         &self, 
         query: Signature, 
         threshold_bp: f32,
-    ) -> Vec<(f32, Signature, String)> {
+    ) -> Result<Vec<(f32, Signature, String)>, Error> {
 
         let mut results: Vec<(f32, Signature, String)> = Vec::new();
 
         if query.signatures.len() == 0 {
-            return results;
+            return Ok(results);
         }
 
         if let Sketch::MinHash(mh) = &query.signatures[0] {
 
             let threshold = threshold_bp / (mh.mins().len() as f32 * self.scaled as f32);
 
-            for (score, sig, filename) in self._find_signatures(mh, threshold, true, true, true).unwrap() {
-                if score > 0.0 {
-                    results.push((score, sig, filename));
-                }
-            }
+            results = self._find_signatures(mh, threshold, true, true, true)?;
             
-            return results;
+            results = results.into_iter().filter(|x| x.0 > 0.0).collect();
+            
+            return Ok(results);
         } else {
             unimplemented!()
         }
@@ -791,10 +839,8 @@ impl LcaDB {
         ignore_abundance: bool,
     ) -> Result<Vec<(f32, Signature, String)>, Error> {
 
-        let mut results: Vec<(f32, Signature, String)> = Vec::new();
-
         if query.signatures.len() == 0 {
-            return Ok(results);
+            return Ok(vec![]);
         }
 
         if let Sketch::MinHash(mh) = &query.signatures[0] {
@@ -803,9 +849,7 @@ impl LcaDB {
                 mh.disable_abundance();
             }
 
-            for (score, sig, filename) in self._find_signatures(&mh, threshold, do_containment, false, false)? {
-                results.push((score, sig, filename));
-            }
+            let mut results = self._find_signatures(&mh, threshold, do_containment, false, false)?;
 
             // sort by score
             results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(Equal));
@@ -888,7 +932,7 @@ mod test {
         lca_db.insert(&signatures[0], Some("erik"), None).unwrap();
         lca_db.insert(&signatures[0], Some("erik2"), None).unwrap();
         
-        let tup = lca_db.gather(signatures[0].clone(), 0.0);
+        let tup = lca_db.gather(signatures[0].clone(), 0.0).unwrap();
 
         dbg!(&tup[0].0);
 
@@ -1059,7 +1103,7 @@ mod test {
         let ss = &sigs[0];
 
         let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
-        lca_db.insert(&ss, None, None);
+        lca_db.insert(&ss, None, None).unwrap();
 
         let ident = ss.name();
         assert_eq!(lca_db.ident_to_name.len(), 1);
@@ -1099,7 +1143,7 @@ mod test {
         let ss = &sigs[0];
 
         let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
-        lca_db.insert(&ss, Some("foo"), None);
+        lca_db.insert(&ss, Some("foo"), None).unwrap();
 
         let ident = "foo".to_string();
         assert_eq!(lca_db.ident_to_name.len(), 1);
@@ -1143,8 +1187,8 @@ mod test {
         let ss2 = &sigs[0];
 
         let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
-        lca_db.insert(&ss, Some("foo"), None);
-        lca_db.insert(&ss2, Some("bar"), None);
+        lca_db.insert(&ss, Some("foo"), None).unwrap();
+        lca_db.insert(&ss2, Some("bar"), None).unwrap();
 
         let ident = "foo".to_string();
         let ident2 = "bar".to_string();
@@ -1199,7 +1243,7 @@ mod test {
         lineage.insert("rank1".to_string(), "name1".to_string());
         lineage.insert("rank2".to_string(), "name2".to_string());
 
-        lca_db.insert(&ss, None, Some(lineage.clone()));
+        lca_db.insert(&ss, None, Some(lineage.clone())).unwrap();
 
         let ident = ss.name();
         assert_eq!(lca_db.ident_to_name.len(), 1);
@@ -1249,11 +1293,11 @@ mod test {
         let ss2 = &sigs[0];
 
         let mut lca_db = LcaDB::new_with_params(Some(31), Some(1000), None, None);
-        lca_db.insert(&ss, None, None);
-        lca_db.insert(&ss2, None, None);
+        lca_db.insert(&ss, None, None).unwrap();
+        lca_db.insert(&ss2, None, None).unwrap();
 
         // downsample everything to 5000
-        lca_db.downsample_scaled(5000);
+        lca_db.downsample_scaled(5000).unwrap();
 
         if let Sketch::MinHash(mh) = &ss.signatures[0] {
             if let Sketch::MinHash(mh2) = &ss2.signatures[0] {
@@ -1290,7 +1334,7 @@ mod test {
             let mh = mh.downsample_scaled(5000).unwrap();
             assert_eq!(count as usize, mh.mins().len());
             
-            lca_db.insert(&ss2, None, None);
+            lca_db.insert(&ss2, None, None).unwrap();
             if let Sketch::MinHash(mh2) = &ss2.signatures[0] {
                 let mh2 = mh2.downsample_scaled(5000).unwrap();
 
