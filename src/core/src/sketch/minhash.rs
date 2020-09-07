@@ -2106,7 +2106,6 @@ impl From<KmerMinHashBTree> for KmerMinHash {
 
 impl From<KmerMinHash> for KmerMinHashBTree {
     fn from(other: KmerMinHash) -> KmerMinHashBTree {
-
         let mut new_mh = KmerMinHashBTree::new(
             other.scaled(),
             other.ksize() as u32,
