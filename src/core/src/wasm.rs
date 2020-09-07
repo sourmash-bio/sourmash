@@ -4,7 +4,7 @@ use serde_json;
 
 use crate::cmd::ComputeParameters;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
+use crate::sketch::minhash::{HashFunctions, KmerMinHash};
 
 #[wasm_bindgen]
 impl KmerMinHash {
@@ -32,7 +32,7 @@ impl KmerMinHash {
         };
 
         KmerMinHash::new(
-            scaled,
+            scaled as u64,
             ksize,
             hash_function,
             seed as u64,
