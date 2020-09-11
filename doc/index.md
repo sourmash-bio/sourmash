@@ -28,7 +28,7 @@ background information on how and why MinHash works.
 ----
 
 To use sourmash, you must be comfortable with the UNIX command line;
-programmers may find the [Python library and API](api.rst) useful as well.
+programmers may find the [Python library and API](api.md) useful as well.
 
 If you use sourmash, please cite us!
 
@@ -62,7 +62,7 @@ be stored, searched, explored, and taxonomically annotated.
 
 * `sourmash` also has a simple Python API for interacting with signatures,
   including support for online updating and querying of signatures
-  (see [the API docs](api.rst)).
+  (see [the API docs](api.md)).
 
 * `sourmash` relies on an underlying Rust core for performance.
 
