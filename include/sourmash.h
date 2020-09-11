@@ -80,8 +80,6 @@ typedef struct {
   SourmashStr filename;
 } FFISearchResults;
 
-void _gather_signature_helper(void);
-
 bool computeparams_dayhoff(const SourmashComputeParameters *ptr);
 
 bool computeparams_dna(const SourmashComputeParameters *ptr);
@@ -232,12 +230,6 @@ FFISearchResults *lcadb_gather(SourmashLcaDatabase *ptr,
                                float threshold_bp,
                                uintptr_t *osize);
 
-const uint64_t *lcadb_get_hashvals(SourmashLcaDatabase *ptr, uintptr_t *size);
-
-const uint32_t *lcadb_get_idx_from_hashval(SourmashLcaDatabase *ptr,
-                                           uint64_t hashval,
-                                           uintptr_t *size);
-
 const SourmashStr *lcadb_get_lineage_assignments(SourmashLcaDatabase *ptr,
                                                  uint64_t hashval,
                                                  uintptr_t *size);
@@ -247,8 +239,6 @@ SourmashStr lcadb_get_lineage_from_idx(SourmashLcaDatabase *ptr, uint32_t idx);
 uint32_t lcadb_get_match_size(SourmashLcaDatabase *ptr, uint32_t best_idx);
 
 SourmashStr lcadb_hashval_to_idx(const SourmashLcaDatabase *ptr);
-
-uint32_t lcadb_hashval_to_idx_len(SourmashLcaDatabase *ptr);
 
 SourmashStr lcadb_ident_to_idx(const SourmashLcaDatabase *ptr);
 
@@ -290,8 +280,6 @@ FFISearchResults *lcadb_search(SourmashLcaDatabase *ptr,
                                uintptr_t *osize);
 
 SourmashSignature **lcadb_signatures(SourmashLcaDatabase *ptr, uintptr_t *size);
-
-uint32_t make_assignments_helper(SourmashLcaDatabase *ptr, uintptr_t min_num);
 
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
