@@ -19,18 +19,15 @@ def make_lca_counts(dblist, min_num=0):
     # gather all hashvalue assignments from across all the databases
     assignments = defaultdict(set)
     for lca_db in dblist:
-
-
         for hashval, idx_list in lca_db.hashval_to_idx.items():
             if min_num and len(idx_list) < min_num:
                 continue
 
             for idx in idx_list:
                 lineage = lca_db._get_lineage_from_idx(idx)
-                assignments[hashval].add(lineage)
+                if lineage:
+                    assignments[hashval].add(lineage)
     
-
-
     # now convert to trees -> do LCA & counts
     counts = defaultdict(int)
     for hashval, lineages in assignments.items():

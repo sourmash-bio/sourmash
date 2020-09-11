@@ -345,7 +345,6 @@ def save_signatures(siglist, fp=None, compression=0):
     # save signature into a string (potentially compressed)
     rawbuf = rustcall(lib.signatures_save_buffer, siglist_c, len(collected),
                       compression, size)
-
     size = size[0]
 
     # associate a finalizer with rawbuf so that it gets freed

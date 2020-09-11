@@ -185,9 +185,7 @@ unsafe fn lcadb_get_lineage_assignments(
     let assignments = lca_db.get_lineage_assignments(hashval).unwrap();
 
     let x: Vec<SourmashStr> = assignments.into_iter().map(|lineage| {
-        zip_lineage(&lineage).unwrap_or({
-            serde_json::to_string(&lineage).unwrap()
-        }).into()
+        zip_lineage(&lineage).unwrap_or("".to_string()).into()
     }).collect();
 
     let b = x.into_boxed_slice();
