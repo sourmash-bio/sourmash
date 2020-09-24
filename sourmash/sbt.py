@@ -44,6 +44,7 @@ then define a search function, ::
 
 from collections import namedtuple, Counter
 from collections.abc import Mapping
+import heapq
 
 from copy import copy
 import json
@@ -58,7 +59,8 @@ from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug, trace
 from .index import Index
-from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
+from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions, optimal_size
+from .hll import HLL
 
 STORAGES = {
     'FSStorage': FSStorage,
@@ -177,6 +179,7 @@ class SBT(Index):
         self._nodes = {}
         self._missing_nodes = set()
         self._leaves = {}
+        self._batched = []
         self.d = d
         self.next_node = 0
         self.storage = storage
@@ -229,12 +232,31 @@ class SBT(Index):
 
         return self.next_node
 
-    def insert(self, signature):
+    def insert(self, signature, batch=False):
         "Add a new SourmashSignature in to the SBT."
         from .sbtmh import SigLeaf
-        
+
         leaf = SigLeaf(signature.md5sum(), signature)
-        self.add_node(leaf)
+
+        if batch:
+            self._batched.append(leaf)
+        else:
+            self.add_node(leaf)
+
+    def finish(self):
+        # If not in batch mode, nothing to do
+        if not self._batched:
+            return self
+
+        # TODO: check if SBT is empty, if it is not add current leaves to be
+        # scaffolded too
+        tree = scaffold(self._batched, self.storage)
+        self._batched.clear()
+
+        # TODO: make this inplace?
+        # self.__dict__.update(tree.__dict__)
+        # return self
+        return tree
 
     def add_node(self, node):
         pos = self.new_node_pos(node)
@@ -320,7 +342,6 @@ class SBT(Index):
                 trace("(TRAVERSAL) {0}", node_p)
                 # apply search fn. If return false, truncate search.
                 if search_fn(node_g, *args):
-
                     # leaf node? it's a match!
                     if isinstance(node_g, Leaf):
                         matches.append(node_g)
@@ -1267,6 +1288,340 @@ class Leaf(object):
                    name=info['name'],
                    path=info['filename'],
                    storage=storage)
+
+
+def scaffold(original_datasets, storage, bf_size=None):
+    """ Generate an SBT with nodes clustered by amount of shared hashes
+
+    Parameters
+    ----------
+
+    datasets: List[Union[SourmashSignature, Leaf]]
+        List of signatures, or already existing leaves from another SBT, to index
+    storage: Storage
+        Where to save the nodes data during construction
+    bf_size: int, optional
+        Size for Nodegraphs. If None, will use a HyperLogLog counter to estimate
+        unique k-mers and calculate an optimal size
+
+    Returns
+    -------
+    SBT
+        A newly initialized SBT with nodes clustered by amount of shared hashes
+    """
+
+    from .sbtmh import SigLeaf
+    from .signature import SourmashSignature
+
+    InternalNode = namedtuple("InternalNode", "element left right")
+    BinaryLeaf = namedtuple("BinaryLeaf", "element")
+    THRESHOLD = 0
+
+    hll = None
+    ksize = None
+
+    datasets = []
+    for d in original_datasets:
+        try:
+            d_mh = d.data.minhash
+        except AttributeError:
+            d_mh = d.minhash
+
+        # replace MH dataset by HLL
+        d_hll = HLL(0.01, d_mh.ksize)
+        d_hll.update(d_mh)
+
+        # save MH to storage
+        if isinstance(d, SourmashSignature):
+            d = SigLeaf(d.md5sum(), d)
+
+        if isinstance(d, SigLeaf):
+            d.data
+            d.storage = storage
+
+            data = {
+              'd': d,
+              'hll': d_hll,
+            }
+            filename = os.path.basename(d.name)
+            if isinstance(storage, ZipStorage):
+                if storage.subdir is None:
+                    name = storage.path.split('/')[-1][:-8]
+                    storage.subdir = '.sbt.{}'.format(name)
+                # TODO: set _path internally when calling save()?
+                d._path = d.save(os.path.join(storage.subdir, filename))
+            elif storage is not None:
+                d._path = d.save(filename)
+
+            # unload MH
+            if storage is not None:
+                d.unload()
+
+            datasets.append(data)
+
+        else:
+            raise ValueError("unknown dataset type")
+
+    del original_datasets
+
+    heap = []
+    for i, data1 in enumerate(datasets):
+        if i % 100 == 0:
+            print(f"processed {i} out of {len(datasets)}", end='\r')
+
+        d1 = data1['hll']
+
+        if hll is None and bf_size is None:
+            ksize = d1.ksize
+            hll = HLL(0.01, ksize)
+
+        if hll is not None:
+            hll.update(d1)
+
+        for j, data2 in enumerate(datasets):
+            if i > j:
+                d2 = data2['hll']
+                common = d1.intersection(d2)
+
+                # TODO: check for a low threshold to insert
+                #       (need to change logic further down before setting threshold)
+                if common >= THRESHOLD:
+                    # heapq defaults to a min heap,
+                    # invert "common" here to avoid having to use the
+                    # internal methods for a max heap
+                    heapq.heappush(heap, (-common, i, j))
+
+    if hll is not None:
+        n_unique_hashes = len(hll)
+        num_htables, htable_size, mem_use, fp_rate = optimal_size(n_unique_hashes, fp_rate=0.9)
+        # TODO: check this, we prefer ntables = 1?
+        #htable_size *= num_htables
+    else:
+        htable_size = bf_size
+        num_htables = 1
+
+    factory = GraphFactory(31, htable_size, num_htables)
+
+    processed = set()
+    total_datasets = len(datasets)
+    next_round = []
+    while heap:
+        i = len(heap)
+        if i % 100 == 0:
+            print(f"processed {i} out of {total_datasets}", end='\r')
+
+        (_, p1, p2) = heapq.heappop(heap)
+        if p1 not in processed and p2 not in processed:
+            data1 = datasets[p1]
+            data2 = datasets[p2]
+            data1['processed'] = True
+            data2['processed'] = True
+            processed.add(p1)
+            processed.add(p2)
+
+            d1 = data1['hll']
+            d2 = data2['hll']
+
+            element = HLL(0.01, d1.ksize)
+            element.update(d1)
+            element.update(d2)
+
+            new_internal = InternalNode(element, BinaryLeaf(data1['d']), BinaryLeaf(data2['d']))
+            next_round.append(new_internal)
+        elif p1 in processed and p2 in processed:
+            # already processed both, nothing to do
+            continue
+        else:
+            # at least one (p1, p2) is still valid.
+            # only process if it is the last one
+            if total_datasets - len(processed) == 1:
+                d = datasets[p1]
+                if d is None:
+                    d = datasets[p2]
+                    assert not d['processed']
+                    d['processed'] = True
+                    processed.add(p2)
+                else:
+                    d['processed'] = True
+                    processed.add(p1)
+
+                common = d['hll']
+
+                new_internal = InternalNode(common, BinaryLeaf(d['d']), None)
+                next_round.append(new_internal)
+
+    # Finish processing leaves, start dealing with internal nodes in next_round
+    while len(next_round) > 1:
+        current_round = next_round
+        next_round = []
+        total_nodes = len(current_round)
+
+        heap = []
+        for (i, d1) in enumerate(current_round):
+            for (j, d2) in enumerate(current_round):
+                if i > j:
+                    common = d1.element.intersection(d2.element)
+                    heapq.heappush(heap, (-common, i, j))
+
+        processed = set()
+        while heap:
+            i = len(heap)
+            if i % 100 == 0:
+                print(f"processed {i} out of {total_nodes}", end='\r')
+
+            (_, p1, p2) = heapq.heappop(heap)
+            if p1 not in processed and p2 not in processed:
+                d1 = current_round[p1]
+                d2 = current_round[p2]
+                current_round[p1] = None
+                current_round[p2] = None
+                processed.add(p1)
+                processed.add(p2)
+
+                element = HLL(0.01, ksize)
+                element.update(d1.element)
+                element.update(d2.element)
+
+                new_internal = InternalNode(element, d1, d2)
+                next_round.append(new_internal)
+
+                # TODO: make Node (data = Nodegraphs) for d1 and d2
+                #       use the factory to create Nodegraph
+                # TODO: save d1 and d2 Nodes into storage and unload them
+                # PROBLEM: d1,d2 don't have stable names,
+                #          and the SBT format uses internal.N where N is
+                #          the position in the tree...
+                # SOLUTION: use md5 as name, and save internal nodes
+                #           inside internal/MD5 ?
+                #           (need new SBT version bump?)
+
+            elif p1 in processed and p2 in processed:
+                # already processed both, nothing to do
+                continue
+            else:
+                # at least one (p1, p2) is still valid.
+                # process it if it is the last element left
+                if total_nodes - len(processed) == 1:
+                    d = current_round[p1]
+                    if d is None:
+                        d = current_round[p2]
+                        current_round[p2] = None
+                        assert d is not None
+                        processed.add(p2)
+                    else:
+                        processed.add(p1)
+                        current_round[p1] = None
+
+                    new_internal = InternalNode(d.element, d, None)
+                    next_round.append(new_internal)
+
+                    # TODO: make Node (data = Nodegraphs) for d
+                    #       use the factory to create Nodegraph
+                    # TODO: save d into storage and unload it
+                    # PROBLEM: d doesn't have a stable name,
+                    #          and the SBT format uses internal.N where N is
+                    #          the position in the tree...
+                    # SOLUTION: use md5 as name, and save internal nodes
+                    #           inside internal/MD5 ?
+                    #           (need new SBT version bump)
+
+    # next_round only contains the root of the SBT
+    # Convert from binary tree to nodes/leaves
+    if total_datasets == 1:
+        d = datasets.pop()
+        common = d['hll']
+        root = InternalNode(common, BinaryLeaf(d['d']), None)
+    else:
+        root = next_round.pop()
+        # This approach puts the more complete tree on the right,
+        # we prefer to have it on the left,
+        # so let's rotate it for now.
+        root = InternalNode(root.element, root.right, root.left)
+
+    assert not next_round
+
+    nodes = {}
+    leaves = {}
+
+    def check_lift(cnode):
+        # Base case
+        if isinstance(cnode, BinaryLeaf):
+            return cnode
+
+        if cnode.right is None and cnode.left is None:
+            return cnode
+        elif cnode.right is None and cnode.left is not None:
+            return check_lift(cnode.left)
+        elif cnode.right is not None and cnode.left is None:
+            return check_lift(cnode.right)
+
+    # search the tree in order and build an SBT
+    visited = set()
+    queue = [(0, root)]
+    while queue:
+        (pos, cnode) = queue.pop(0)
+        if pos not in visited:
+            visited.add(pos)
+            #if pos == 6:
+            #    import pdb; pdb.set_trace()
+
+            if isinstance(cnode, BinaryLeaf):
+                leaves[pos] = cnode.element
+            elif isinstance(cnode, InternalNode):
+                #to_lift = check_lift(cnode)
+                to_lift = None
+                if cnode.right is None and cnode.left is not None:
+                    to_lift = cnode.left
+                elif cnode.right is not None and cnode.left is None:
+                    to_lift = cnode.right
+
+                if to_lift:
+                    # This is a lift: if the internal node only have one child,
+                    # lift the child to be the node
+                    cnode = to_lift
+                    if isinstance(cnode, BinaryLeaf):
+                        # if InternalNode only has one child and it is a Leaf,
+                        # use it instead (avoid creating a Node with only one child)
+                        leaves[pos] = cnode.element
+                        continue
+
+                new_node = Node(factory, name=f"internal.{pos}")
+                data = new_node.data
+
+                # TODO: we can't iterate elements with HLL...
+                #for e in cnode.element:
+                #    data.count(e)
+
+                nodes[pos] = new_node
+
+                # TODO: this is a one-level rotation of the internal nodes,
+                # since we want all "complete" subtrees to be to the left,
+                # and all spaces as much to the right as possible.
+                # Ideally do a pre-processing step before searching the tree in
+                # order and building the SBT.
+                left = cnode.left
+                right = cnode.right
+                if isinstance(left, InternalNode) and isinstance(right, InternalNode):
+                    # make sure the left one is "more complete" than the right one
+                    if any(c is None for c in (left.left, left.right)):
+                        left, right = right, left
+
+                if left:
+                    queue.append((2 * pos + 1, left))
+                if right:
+                    queue.append((2 * pos + 2, right))
+
+    new_tree = SBT(factory, storage=storage)
+    new_tree._nodes = nodes
+    new_tree._leaves = leaves
+
+    # TODO: none of these should be necessarily, if we can save both internal
+    # and leaf nodes consistently
+    new_tree._fill_min_n_below()
+    # TODO: need to modify _fill_internal to allow unloading after saving?
+    new_tree._fill_internal()
+
+    return new_tree
 
 
 def filter_distance(filter_a, filter_b, n=1000):

@@ -12,6 +12,7 @@ from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
+from .sbt import scaffold
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K, FileOutput
@@ -327,10 +328,14 @@ def index(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    batch = False
     if args.append:
         tree = load_sbt_index(args.sbt_name)
     else:
         tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+        batch = True
+        # TODO: set up storage here
+        # TODO: deal with factory and args.bf_size too?
 
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
@@ -375,7 +380,7 @@ def index(args):
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             scaleds.add(ss.minhash.scaled)
 
-            tree.insert(ss)
+            tree.insert(ss, batch=batch)
             n += 1
 
         if not ss:
@@ -397,6 +402,8 @@ def index(args):
             error('trying to build an SBT with incompatible signatures.')
             error('nums = {}; scaleds = {}', repr(nums), repr(scaleds))
             sys.exit(-1)
+
+    tree = tree.finish()
 
     notify('')
 
