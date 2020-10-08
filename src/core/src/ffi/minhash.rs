@@ -249,7 +249,7 @@ unsafe fn kmerminhash_set_abundances(
     };
 
     let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
-    pairs.sort();
+    pairs.sort_unstable();
 
     // Reset the minhash
     if clear {

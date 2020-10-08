@@ -203,7 +203,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             (mins, Some(abunds))
         } else {
             let mut values: Vec<_> = tmpsig.mins.into_iter().collect();
-            values.sort();
+            values.sort_unstable();
             (values, None)
         };
 
