@@ -16,28 +16,14 @@ impl ForeignObject for SourmashKmerMinHash {
 
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_new(
-    n: u32,
+    scaled: u64,
     k: u32,
-    prot: bool,
-    dayhoff: bool,
-    hp: bool,
+    hash_function: HashFunctions,
     seed: u64,
-    mx: u64,
     track_abundance: bool,
+    n: u32,
 ) -> *mut SourmashKmerMinHash {
-    // TODO: at most one of (prot, dayhoff, hp) should be true
-
-    let hash_function = if dayhoff {
-        HashFunctions::murmur64_dayhoff
-    } else if hp {
-        HashFunctions::murmur64_hp
-    } else if prot {
-        HashFunctions::murmur64_protein
-    } else {
-        HashFunctions::murmur64_DNA
-    };
-
-    let mh = KmerMinHash::new(n, k, hash_function, seed, mx, track_abundance);
+    let mh = KmerMinHash::new(scaled, k, hash_function, seed, track_abundance, n);
 
     SourmashKmerMinHash::from_rust(mh)
 }
@@ -105,7 +91,11 @@ pub unsafe extern "C" fn kmerminhash_add_hash(ptr: *mut SourmashKmerMinHash, h: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(ptr: *mut SourmashKmerMinHash, h: u64, abundance: u64) {
+pub unsafe extern "C" fn kmerminhash_add_hash_with_abundance(
+    ptr: *mut SourmashKmerMinHash,
+    h: u64,
+    abundance: u64,
+) {
     let mh = SourmashKmerMinHash::as_rust_mut(ptr);
 
     mh.add_hash_with_abundance(h, abundance);
@@ -259,7 +249,7 @@ unsafe fn kmerminhash_set_abundances(
     };
 
     let mut pairs: Vec<_> = hashes.iter().cloned().zip(abunds.iter().cloned()).collect();
-    pairs.sort();
+    pairs.sort_unstable();
 
     // Reset the minhash
     if clear {

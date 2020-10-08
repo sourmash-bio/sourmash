@@ -60,18 +60,18 @@ impl TryFrom<&str> for HashFunctions {
     }
 }
 
-pub fn max_hash_for_scaled(scaled: u64) -> Option<u64> {
+pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
-        0 => None,
-        1 => Some(u64::max_value()),
-        _ => Some((u64::max_value() as f64 / scaled as f64) as u64),
+        0 => 0,
+        1 => u64::max_value(),
+        _ => (u64::max_value() as f64 / scaled as f64) as u64,
     }
 }
 
 pub fn scaled_for_max_hash(max_hash: u64) -> u64 {
     match max_hash {
         0 => 0,
-        _ => u64::max_value() / max_hash,
+        _ => (u64::max_value() as f64 / max_hash as f64) as u64,
     }
 }
 
@@ -203,7 +203,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             (mins, Some(abunds))
         } else {
             let mut values: Vec<_> = tmpsig.mins.into_iter().collect();
-            values.sort();
+            values.sort_unstable();
             (values, None)
         };
 
@@ -222,12 +222,12 @@ impl<'de> Deserialize<'de> for KmerMinHash {
 
 impl KmerMinHash {
     pub fn new(
-        num: u32,
+        scaled: u64,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
-        max_hash: u64,
         track_abundance: bool,
+        num: u32,
     ) -> KmerMinHash {
         let mins: Vec<u64>;
         let abunds: Option<Vec<u64>>;
@@ -243,6 +243,8 @@ impl KmerMinHash {
         } else {
             abunds = None
         }
+
+        let max_hash = max_hash_for_scaled(scaled);
 
         KmerMinHash {
             num,
@@ -274,6 +276,10 @@ impl KmerMinHash {
 
     pub fn max_hash(&self) -> u64 {
         self.max_hash
+    }
+
+    pub fn scaled(&self) -> u64 {
+        scaled_for_max_hash(self.max_hash)
     }
 
     pub fn clear(&mut self) {
@@ -622,12 +628,12 @@ impl KmerMinHash {
         self.check_compatible(other)?;
 
         let mut combined_mh = KmerMinHash::new(
-            self.num,
+            self.scaled(),
             self.ksize,
             self.hash_function,
             self.seed,
-            self.max_hash,
             self.abunds.is_some(),
+            self.num,
         );
 
         combined_mh.merge(&self)?;
@@ -648,12 +654,12 @@ impl KmerMinHash {
         self.check_compatible(other)?;
 
         let mut combined_mh = KmerMinHash::new(
-            self.num,
+            self.scaled(),
             self.ksize,
             self.hash_function,
             self.seed,
-            self.max_hash,
             self.abunds.is_some(),
+            self.num,
         );
 
         combined_mh.merge(&self)?;
@@ -776,13 +782,15 @@ impl KmerMinHash {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHash, Error> {
+        let scaled = scaled_for_max_hash(max_hash);
+
         let mut new_mh = KmerMinHash::new(
-            self.num,
+            scaled,
             self.ksize,
             self.hash_function,
             self.seed,
-            max_hash, // old max_hash => max_hash arg
             self.abunds.is_some(),
+            self.num,
         );
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
@@ -1453,12 +1461,12 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
 
 impl KmerMinHashBTree {
     pub fn new(
-        num: u32,
+        scaled: u64,
         ksize: u32,
         hash_function: HashFunctions,
         seed: u64,
-        max_hash: u64,
         track_abundance: bool,
+        num: u32,
     ) -> KmerMinHashBTree {
         let mins = Default::default();
 
@@ -1467,6 +1475,8 @@ impl KmerMinHashBTree {
         } else {
             None
         };
+
+        let max_hash = max_hash_for_scaled(scaled);
 
         KmerMinHashBTree {
             num,
@@ -1499,6 +1509,10 @@ impl KmerMinHashBTree {
 
     pub fn max_hash(&self) -> u64 {
         self.max_hash
+    }
+
+    pub fn scaled(&self) -> u64 {
+        scaled_for_max_hash(self.max_hash)
     }
 
     pub fn clear(&mut self) {
@@ -1734,12 +1748,12 @@ impl KmerMinHashBTree {
         self.check_compatible(other)?;
 
         let mut combined_mh = KmerMinHashBTree::new(
-            self.num,
+            self.scaled(),
             self.ksize,
             self.hash_function,
             self.seed,
-            self.max_hash,
             self.abunds.is_some(),
+            self.num,
         );
 
         combined_mh.merge(&self)?;
@@ -1761,12 +1775,12 @@ impl KmerMinHashBTree {
         self.check_compatible(other)?;
 
         let mut combined_mh = KmerMinHashBTree::new(
-            self.num,
+            self.scaled(),
             self.ksize,
             self.hash_function,
             self.seed,
-            self.max_hash,
             self.abunds.is_some(),
+            self.num,
         );
 
         combined_mh.merge(&self)?;
@@ -1878,13 +1892,15 @@ impl KmerMinHashBTree {
 
     // create a downsampled copy of self
     pub fn downsample_max_hash(&self, max_hash: u64) -> Result<KmerMinHashBTree, Error> {
+        let scaled = scaled_for_max_hash(max_hash);
+
         let mut new_mh = KmerMinHashBTree::new(
-            self.num,
+            scaled,
             self.ksize,
             self.hash_function,
             self.seed,
-            max_hash, // old max_hash => max_hash arg
             self.abunds.is_some(),
+            self.num,
         );
         if self.abunds.is_some() {
             new_mh.add_many_with_abund(&self.to_vec_abunds())?;
@@ -2066,12 +2082,12 @@ impl SigsTrait for KmerMinHashBTree {
 impl From<KmerMinHashBTree> for KmerMinHash {
     fn from(other: KmerMinHashBTree) -> KmerMinHash {
         let mut new_mh = KmerMinHash::new(
-            other.num(),
+            other.scaled(),
             other.ksize() as u32,
             other.hash_function(),
             other.seed(),
-            other.max_hash(),
             other.track_abundance(),
+            other.num(),
         );
 
         let mins = other.mins.into_iter().collect();
@@ -2091,12 +2107,12 @@ impl From<KmerMinHashBTree> for KmerMinHash {
 impl From<KmerMinHash> for KmerMinHashBTree {
     fn from(other: KmerMinHash) -> KmerMinHashBTree {
         let mut new_mh = KmerMinHashBTree::new(
-            other.num(),
+            other.scaled(),
             other.ksize() as u32,
             other.hash_function(),
             other.seed(),
-            other.max_hash(),
             other.track_abundance(),
+            other.num(),
         );
 
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
