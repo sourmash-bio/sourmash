@@ -119,6 +119,12 @@ bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
 
+void hll_add_hash(SourmashHyperLogLog *ptr, uint64_t hash);
+
+void hll_add_sequence(SourmashHyperLogLog *ptr, const char *sequence, uintptr_t insize, bool force);
+
+uintptr_t hll_cardinality(const SourmashHyperLogLog *ptr);
+
 void hll_free(SourmashHyperLogLog *ptr);
 
 uintptr_t hll_ksize(const SourmashHyperLogLog *ptr);

@@ -38,87 +38,32 @@ pub unsafe extern "C" fn hll_ksize(ptr: *const SourmashHyperLogLog) -> usize {
     SourmashHyperLogLog::as_rust(ptr).ksize()
 }
 
-/*
-ffi_fn! {
-unsafe fn nodegraph_from_path(filename: *const c_char) -> Result<*mut SourmashNodegraph> {
-    // FIXME use buffer + len instead of c_str
-    let c_str = {
-        assert!(!filename.is_null());
-
-        CStr::from_ptr(filename)
-    };
-
-    let (mut input, _) = niffler::from_path(c_str.to_str()?)?;
-    let ng = Nodegraph::from_reader(&mut input)?;
-
-    Ok(SourmashNodegraph::from_rust(ng))
-}
+#[no_mangle]
+pub unsafe extern "C" fn hll_cardinality(ptr: *const SourmashHyperLogLog) -> usize {
+    SourmashHyperLogLog::as_rust(ptr).cardinality()
 }
 
 ffi_fn! {
-unsafe fn nodegraph_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mut SourmashNodegraph> {
-    // FIXME use SourmashSlice_u8?
+unsafe fn hll_add_sequence(
+  ptr: *mut SourmashHyperLogLog,
+  sequence: *const c_char,
+  insize: usize,
+  force: bool
+) -> Result<()> {
+
+    let hll = SourmashHyperLogLog::as_rust_mut(ptr);
+
     let buf = {
         assert!(!ptr.is_null());
-        slice::from_raw_parts(ptr as *mut u8, insize)
+        slice::from_raw_parts(sequence as *mut u8, insize)
     };
 
-    let ng = Nodegraph::from_reader(&mut &buf[..])?;
-
-    Ok(SourmashNodegraph::from_rust(ng))
+    hll.add_sequence(buf, force)
 }
 }
 
-ffi_fn! {
-unsafe fn nodegraph_save(ptr: *const SourmashNodegraph, filename: *const c_char) -> Result<()> {
-    let ng = SourmashNodegraph::as_rust(ptr);
-
-    // FIXME use buffer + len instead of c_str
-    let c_str = {
-        assert!(!filename.is_null());
-
-        CStr::from_ptr(filename)
-    };
-
-    ng.save(c_str.to_str()?)?;
-
-    Ok(())
+#[no_mangle]
+pub unsafe extern "C" fn hll_add_hash(ptr: *mut SourmashHyperLogLog, hash: u64) {
+    let hll = SourmashHyperLogLog::as_rust_mut(ptr);
+    hll.add_hash(hash);
 }
-}
-
-ffi_fn! {
-unsafe fn nodegraph_to_buffer(ptr: *const SourmashNodegraph, compression: u8, size: *mut usize) -> Result<*const u8> {
-    let ng = SourmashNodegraph::as_rust(ptr);
-
-    let mut buffer = vec![];
-    {
-      let mut writer = if compression > 0 {
-          let level = match compression {
-            1 => niffler::compression::Level::One,
-            2 => niffler::compression::Level::Two,
-            3 => niffler::compression::Level::Three,
-            4 => niffler::compression::Level::Four,
-            5 => niffler::compression::Level::Five,
-            6 => niffler::compression::Level::Six,
-            7 => niffler::compression::Level::Seven,
-            8 => niffler::compression::Level::Eight,
-            _ => niffler::compression::Level::Nine,
-          };
-
-          niffler::get_writer(Box::new(&mut buffer),
-                              niffler::compression::Format::Gzip,
-                              level)?
-      } else {
-          Box::new(&mut buffer)
-      };
-      ng.save_to_writer(&mut writer)?;
-    }
-
-    let b = buffer.into_boxed_slice();
-    *size = b.len();
-
-    // FIXME use SourmashSlice_u8?
-    Ok(Box::into_raw(b) as *const u8)
-}
-}
-*/
