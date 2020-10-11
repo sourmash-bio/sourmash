@@ -242,6 +242,8 @@ mod test {
 
     use super::HyperLogLog;
 
+    // TODO: pull more tests from khmer HLL
+
     #[test]
     fn hll_add() {
         let ERR_RATE = 0.01;

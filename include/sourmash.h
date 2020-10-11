@@ -35,15 +35,19 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_INVALID_HASH_FUNCTION = 1104,
   SOURMASH_ERROR_CODE_READ_DATA = 1201,
   SOURMASH_ERROR_CODE_STORAGE = 1202,
+  SOURMASH_ERROR_CODE_HLL_PRECISION_BOUNDS = 1301,
   SOURMASH_ERROR_CODE_IO = 100001,
   SOURMASH_ERROR_CODE_UTF8_ERROR = 100002,
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
   SOURMASH_ERROR_CODE_SERDE_ERROR = 100004,
   SOURMASH_ERROR_CODE_NIFFLER_ERROR = 100005,
+  SOURMASH_ERROR_CODE_UKHS_ERROR = 100006,
 };
 typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
+
+typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
@@ -114,6 +118,14 @@ void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
+
+void hll_free(SourmashHyperLogLog *ptr);
+
+uintptr_t hll_ksize(const SourmashHyperLogLog *ptr);
+
+SourmashHyperLogLog *hll_new(void);
+
+SourmashHyperLogLog *hll_with_error_rate(double error_rate, uintptr_t ksize);
 
 void kmerminhash_add_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 
