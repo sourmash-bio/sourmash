@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum SourmashError {
     /// Raised for internal errors in the libraries.  Should not happen.
     #[error("internal error: {message:?}")]
@@ -39,6 +40,9 @@ pub enum SourmashError {
     #[error("Codon is invalid length: {message}")]
     InvalidCodonLength { message: String },
 
+    #[error("Set error rate to a value smaller than 0.367696 and larger than 0.00203125")]
+    HLLPrecisionBounds,
+
     #[error(transparent)]
     ReadDataError(#[from] crate::index::storage::ReadDataError),
 
@@ -57,12 +61,16 @@ pub enum SourmashError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    #[error(transparent)]
+    UKHSError(#[from] ukhs::Error),
+
     #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
     #[error(transparent)]
     Panic(#[from] crate::ffi::utils::Panic),
 }
 
 #[repr(u32)]
+#[non_exhaustive]
 pub enum SourmashErrorCode {
     // no error
     NoError = 0,
@@ -87,12 +95,15 @@ pub enum SourmashErrorCode {
     // index-related errors
     ReadData = 12_01,
     Storage = 12_02,
+    // HLL errors
+    HLLPrecisionBounds = 13_01,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
     ParseInt = 100_003,
     SerdeError = 100_004,
     NifflerError = 100_005,
+    UKHSError = 100_006,
 }
 
 #[cfg(not(all(target_arch = "wasm32", target_vendor = "unknown")))]
@@ -114,6 +125,8 @@ impl SourmashErrorCode {
             SourmashError::InvalidHashFunction { .. } => SourmashErrorCode::InvalidHashFunction,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
+            SourmashError::UKHSError { .. } => SourmashErrorCode::UKHSError,
+            SourmashError::HLLPrecisionBounds { .. } => SourmashErrorCode::HLLPrecisionBounds,
             SourmashError::SerdeError { .. } => SourmashErrorCode::SerdeError,
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,

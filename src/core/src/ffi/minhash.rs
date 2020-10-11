@@ -2,11 +2,10 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::slice;
 
+use crate::encodings::{aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions};
 use crate::ffi::utils::{ForeignObject, SourmashStr};
 use crate::signature::SigsTrait;
-use crate::sketch::minhash::{
-    aa_to_dayhoff, aa_to_hp, translate_codon, HashFunctions, KmerMinHash,
-};
+use crate::sketch::minhash::KmerMinHash;
 
 pub struct SourmashKmerMinHash;
 

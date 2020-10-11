@@ -1,64 +1,23 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::convert::TryFrom;
+use std::collections::{BTreeMap, BTreeSet};
 use std::f64::consts::PI;
 use std::fmt::Write;
 use std::iter::{Iterator, Peekable};
 use std::str;
 use std::sync::Mutex;
 
-use once_cell::sync::Lazy;
 use serde::de::Deserializer;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::_hash_murmur;
+use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
 use crate::Error;
 
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
-
-#[cfg_attr(all(target_arch = "wasm32", target_vendor = "unknown"), wasm_bindgen)]
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(u32)]
-pub enum HashFunctions {
-    murmur64_DNA = 1,
-    murmur64_protein = 2,
-    murmur64_dayhoff = 3,
-    murmur64_hp = 4,
-}
-
-impl std::fmt::Display for HashFunctions {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                HashFunctions::murmur64_DNA => "dna",
-                HashFunctions::murmur64_protein => "protein",
-                HashFunctions::murmur64_dayhoff => "dayhoff",
-                HashFunctions::murmur64_hp => "hp",
-            }
-        )
-    }
-}
-
-impl TryFrom<&str> for HashFunctions {
-    type Error = Error;
-
-    fn try_from(moltype: &str) -> Result<Self, Self::Error> {
-        match moltype.to_lowercase().as_ref() {
-            "dna" => Ok(HashFunctions::murmur64_DNA),
-            "dayhoff" => Ok(HashFunctions::murmur64_dayhoff),
-            "hp" => Ok(HashFunctions::murmur64_hp),
-            "protein" => Ok(HashFunctions::murmur64_protein),
-            _ => unimplemented!(),
-        }
-    }
-}
 
 pub fn max_hash_for_scaled(scaled: u64) -> u64 {
     match scaled {
@@ -264,14 +223,6 @@ impl KmerMinHash {
 
     pub fn is_protein(&self) -> bool {
         self.hash_function == HashFunctions::murmur64_protein
-    }
-
-    fn is_dna(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_DNA
-    }
-
-    pub fn seed(&self) -> u64 {
-        self.seed
     }
 
     pub fn max_hash(&self) -> u64 {
@@ -764,10 +715,6 @@ impl KmerMinHash {
         self.hash_function == HashFunctions::murmur64_hp
     }
 
-    pub fn hash_function(&self) -> HashFunctions {
-        self.hash_function
-    }
-
     pub fn mins(&self) -> Vec<u64> {
         self.mins.clone()
     }
@@ -830,6 +777,18 @@ impl SigsTrait for KmerMinHash {
         self.ksize as usize
     }
 
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        self.hash_function
+    }
+
+    fn add_hash(&mut self, hash: u64) {
+        self.add_hash_with_abundance(hash, 1);
+    }
+
     fn check_compatible(&self, other: &KmerMinHash) -> Result<(), Error> {
         /*
         if self.num != other.num {
@@ -853,122 +812,6 @@ impl SigsTrait for KmerMinHash {
         if self.seed != other.seed {
             return Err(Error::MismatchSeed);
         }
-        Ok(())
-    }
-
-    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ksize = self.ksize as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        };
-
-        // Here we convert the sequence to upper case and
-        // pre-calculate the reverse complement for the full sequence...
-        let sequence = seq.to_ascii_uppercase();
-        let rc = revcomp(&sequence);
-
-        if self.is_dna() {
-            let mut last_position_check = 0;
-
-            let mut is_valid_kmer = |i| {
-                for j in std::cmp::max(i, last_position_check)..i + ksize {
-                    if !VALID[sequence[j] as usize] {
-                        return false;
-                    }
-                    last_position_check += 1;
-                }
-                true
-            };
-
-            for i in 0..=len - ksize {
-                // ... and then while moving the k-mer window forward for the sequence
-                // we move another window backwards for the RC.
-                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                //                   +-+---------+---------------+-------+
-                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                //  +->         +->  |0|    2    |       3       |   6   |
-                //   +->       +->   |1|    3    |       2       |   5   |
-                //    +->     +->    |2|    4    |       1       |   4   |
-                //     +->   +->     |3|    5    |       0       |   3   |
-                //                   +-+---------+---------------+-------+
-                // (leaving this table here because I had to draw to
-                //  get the indices correctly)
-
-                let kmer = &sequence[i..i + ksize];
-
-                if !is_valid_kmer(i) {
-                    if !force {
-                        // throw error if DNA is not valid
-                        return Err(Error::InvalidDNA {
-                            message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        });
-                    }
-
-                    continue; // skip invalid k-mer
-                }
-
-                let krc = &rc[len - ksize - i..len - i];
-                self.add_word(std::cmp::min(kmer, krc));
-            }
-        } else {
-            // protein
-            let aa_ksize = self.ksize / 3;
-
-            for i in 0..3 {
-                let substr: Vec<u8> = sequence
-                    .iter()
-                    .cloned()
-                    .skip(i)
-                    .take(sequence.len() - i)
-                    .collect();
-                let aa = to_aa(&substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa.windows(aa_ksize as usize).for_each(|n| self.add_word(n));
-
-                let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                let aa_rc = to_aa(&rc_substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa_rc
-                    .windows(aa_ksize as usize)
-                    .for_each(|n| self.add_word(n));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
-        let ksize = (self.ksize / 3) as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        }
-
-        if let HashFunctions::murmur64_protein = self.hash_function {
-            for aa_kmer in seq.windows(ksize) {
-                self.add_word(&aa_kmer);
-            }
-            return Ok(());
-        }
-
-        let aa_seq: Vec<_> = match self.hash_function {
-            HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
-            HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
-            invalid => {
-                return Err(Error::InvalidHashFunction {
-                    function: format!("{}", invalid),
-                })
-            }
-        };
-
-        for aa_kmer in aa_seq.windows(ksize) {
-            self.add_word(aa_kmer);
-        }
-
         Ok(())
     }
 }
@@ -1012,296 +855,6 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
         }
     }
 }
-
-const COMPLEMENT: [u8; 256] = {
-    let mut lookup = [0; 256];
-    lookup[b'A' as usize] = b'T';
-    lookup[b'C' as usize] = b'G';
-    lookup[b'G' as usize] = b'C';
-    lookup[b'T' as usize] = b'A';
-    lookup[b'N' as usize] = b'N';
-    lookup
-};
-
-#[inline]
-fn revcomp(seq: &[u8]) -> Vec<u8> {
-    seq.iter()
-        .rev()
-        .map(|nt| COMPLEMENT[*nt as usize])
-        .collect()
-}
-
-static CODONTABLE: Lazy<HashMap<&'static str, u8>> = Lazy::new(|| {
-    [
-        // F
-        ("TTT", b'F'),
-        ("TTC", b'F'),
-        // L
-        ("TTA", b'L'),
-        ("TTG", b'L'),
-        // S
-        ("TCT", b'S'),
-        ("TCC", b'S'),
-        ("TCA", b'S'),
-        ("TCG", b'S'),
-        ("TCN", b'S'),
-        // Y
-        ("TAT", b'Y'),
-        ("TAC", b'Y'),
-        // *
-        ("TAA", b'*'),
-        ("TAG", b'*'),
-        // *
-        ("TGA", b'*'),
-        // C
-        ("TGT", b'C'),
-        ("TGC", b'C'),
-        // W
-        ("TGG", b'W'),
-        // L
-        ("CTT", b'L'),
-        ("CTC", b'L'),
-        ("CTA", b'L'),
-        ("CTG", b'L'),
-        ("CTN", b'L'),
-        // P
-        ("CCT", b'P'),
-        ("CCC", b'P'),
-        ("CCA", b'P'),
-        ("CCG", b'P'),
-        ("CCN", b'P'),
-        // H
-        ("CAT", b'H'),
-        ("CAC", b'H'),
-        // Q
-        ("CAA", b'Q'),
-        ("CAG", b'Q'),
-        // R
-        ("CGT", b'R'),
-        ("CGC", b'R'),
-        ("CGA", b'R'),
-        ("CGG", b'R'),
-        ("CGN", b'R'),
-        // I
-        ("ATT", b'I'),
-        ("ATC", b'I'),
-        ("ATA", b'I'),
-        // M
-        ("ATG", b'M'),
-        // T
-        ("ACT", b'T'),
-        ("ACC", b'T'),
-        ("ACA", b'T'),
-        ("ACG", b'T'),
-        ("ACN", b'T'),
-        // N
-        ("AAT", b'N'),
-        ("AAC", b'N'),
-        // K
-        ("AAA", b'K'),
-        ("AAG", b'K'),
-        // S
-        ("AGT", b'S'),
-        ("AGC", b'S'),
-        // R
-        ("AGA", b'R'),
-        ("AGG", b'R'),
-        // V
-        ("GTT", b'V'),
-        ("GTC", b'V'),
-        ("GTA", b'V'),
-        ("GTG", b'V'),
-        ("GTN", b'V'),
-        // A
-        ("GCT", b'A'),
-        ("GCC", b'A'),
-        ("GCA", b'A'),
-        ("GCG", b'A'),
-        ("GCN", b'A'),
-        // D
-        ("GAT", b'D'),
-        ("GAC", b'D'),
-        // E
-        ("GAA", b'E'),
-        ("GAG", b'E'),
-        // G
-        ("GGT", b'G'),
-        ("GGC", b'G'),
-        ("GGA", b'G'),
-        ("GGG", b'G'),
-        ("GGN", b'G'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
-
-// Dayhoff table from
-// Peris, P., López, D., & Campos, M. (2008).
-// IgTM: An algorithm to predict transmembrane domains and topology in
-// proteins. BMC Bioinformatics, 9(1), 1029–11.
-// http://doi.org/10.1186/1471-2105-9-367
-//
-// Original source:
-// Dayhoff M. O., Schwartz R. M., Orcutt B. C. (1978).
-// A model of evolutionary change in proteins,
-// in Atlas of Protein Sequence and Structure,
-// ed Dayhoff M. O., editor.
-// (Washington, DC: National Biomedical Research Foundation; ), 345–352.
-//
-// | Amino acid    | Property              | Dayhoff |
-// |---------------|-----------------------|---------|
-// | C             | Sulfur polymerization | a       |
-// | A, G, P, S, T | Small                 | b       |
-// | D, E, N, Q    | Acid and amide        | c       |
-// | H, K, R       | Basic                 | d       |
-// | I, L, M, V    | Hydrophobic           | e       |
-// | F, W, Y       | Aromatic              | f       |
-static DAYHOFFTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
-    [
-        // a
-        (b'C', b'a'),
-        // b
-        (b'A', b'b'),
-        (b'G', b'b'),
-        (b'P', b'b'),
-        (b'S', b'b'),
-        (b'T', b'b'),
-        // c
-        (b'D', b'c'),
-        (b'E', b'c'),
-        (b'N', b'c'),
-        (b'Q', b'c'),
-        // d
-        (b'H', b'd'),
-        (b'K', b'd'),
-        (b'R', b'd'),
-        // e
-        (b'I', b'e'),
-        (b'L', b'e'),
-        (b'M', b'e'),
-        (b'V', b'e'),
-        // e
-        (b'F', b'f'),
-        (b'W', b'f'),
-        (b'Y', b'f'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
-
-// HP Hydrophobic/hydrophilic mapping
-// From: Phillips, R., Kondev, J., Theriot, J. (2008).
-// Physical Biology of the Cell. New York: Garland Science, Taylor & Francis Group. ISBN: 978-0815341635
-
-//
-// | Amino acid                            | HP
-// |---------------------------------------|---------|
-// | A, F, G, I, L, M, P, V, W, Y          | h       |
-// | N, C, S, T, D, E, R, H, K, Q          | p       |
-static HPTABLE: Lazy<HashMap<u8, u8>> = Lazy::new(|| {
-    [
-        // h
-        (b'A', b'h'),
-        (b'F', b'h'),
-        (b'G', b'h'),
-        (b'I', b'h'),
-        (b'L', b'h'),
-        (b'M', b'h'),
-        (b'P', b'h'),
-        (b'V', b'h'),
-        (b'W', b'h'),
-        (b'Y', b'h'),
-        // p
-        (b'N', b'p'),
-        (b'C', b'p'),
-        (b'S', b'p'),
-        (b'T', b'p'),
-        (b'D', b'p'),
-        (b'E', b'p'),
-        (b'R', b'p'),
-        (b'H', b'p'),
-        (b'K', b'p'),
-        (b'Q', b'p'),
-    ]
-    .iter()
-    .cloned()
-    .collect()
-});
-
-#[inline]
-pub(crate) fn translate_codon(codon: &[u8]) -> Result<u8, Error> {
-    if codon.len() == 1 {
-        return Ok(b'X');
-    }
-
-    if codon.len() == 2 {
-        let mut v = codon.to_vec();
-        v.push(b'N');
-        match CODONTABLE.get(str::from_utf8(v.as_slice()).unwrap()) {
-            Some(aa) => return Ok(*aa),
-            None => return Ok(b'X'),
-        }
-    }
-
-    if codon.len() == 3 {
-        match CODONTABLE.get(str::from_utf8(codon).unwrap()) {
-            Some(aa) => return Ok(*aa),
-            None => return Ok(b'X'),
-        }
-    }
-
-    Err(Error::InvalidCodonLength {
-        message: format!("{}", codon.len()),
-    })
-}
-
-#[inline]
-pub(crate) fn aa_to_dayhoff(aa: u8) -> u8 {
-    match DAYHOFFTABLE.get(&aa) {
-        Some(letter) => *letter,
-        None => b'X',
-    }
-}
-
-pub(crate) fn aa_to_hp(aa: u8) -> u8 {
-    match HPTABLE.get(&aa) {
-        Some(letter) => *letter,
-        None => b'X',
-    }
-}
-
-#[inline]
-fn to_aa(seq: &[u8], dayhoff: bool, hp: bool) -> Result<Vec<u8>, Error> {
-    let mut converted: Vec<u8> = Vec::with_capacity(seq.len() / 3);
-
-    for chunk in seq.chunks(3) {
-        if chunk.len() < 3 {
-            break;
-        }
-
-        let residue = translate_codon(chunk)?;
-        if dayhoff {
-            converted.push(aa_to_dayhoff(residue) as u8);
-        } else if hp {
-            converted.push(aa_to_hp(residue) as u8);
-        } else {
-            converted.push(residue);
-        }
-    }
-
-    Ok(converted)
-}
-
-const VALID: [bool; 256] = {
-    let mut lookup = [false; 256];
-    lookup[b'A' as usize] = true;
-    lookup[b'C' as usize] = true;
-    lookup[b'G' as usize] = true;
-    lookup[b'T' as usize] = true;
-    lookup
-};
 
 //#############
 // A MinHash implementation for low scaled or large cardinalities
@@ -1499,14 +1052,6 @@ impl KmerMinHashBTree {
         self.hash_function == HashFunctions::murmur64_protein
     }
 
-    fn is_dna(&self) -> bool {
-        self.hash_function == HashFunctions::murmur64_DNA
-    }
-
-    pub fn seed(&self) -> u64 {
-        self.seed
-    }
-
     pub fn max_hash(&self) -> u64 {
         self.max_hash
     }
@@ -1586,10 +1131,6 @@ impl KmerMinHashBTree {
             *data = Some(format!("{:x}", md5_ctx.compute()));
         }
         data.clone().unwrap()
-    }
-
-    pub fn add_hash(&mut self, hash: u64) {
-        self.add_hash_with_abundance(hash, 1);
     }
 
     pub fn add_hash_with_abundance(&mut self, hash: u64, abundance: u64) {
@@ -1936,6 +1477,18 @@ impl SigsTrait for KmerMinHashBTree {
         self.ksize as usize
     }
 
+    fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        self.hash_function
+    }
+
+    fn add_hash(&mut self, hash: u64) {
+        self.add_hash_with_abundance(hash, 1);
+    }
+
     fn check_compatible(&self, other: &KmerMinHashBTree) -> Result<(), Error> {
         /*
         if self.num != other.num {
@@ -1959,122 +1512,6 @@ impl SigsTrait for KmerMinHashBTree {
         if self.seed != other.seed {
             return Err(Error::MismatchSeed);
         }
-        Ok(())
-    }
-
-    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
-        let ksize = self.ksize as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        };
-
-        // Here we convert the sequence to upper case and
-        // pre-calculate the reverse complement for the full sequence...
-        let sequence = seq.to_ascii_uppercase();
-        let rc = revcomp(&sequence);
-
-        if self.is_dna() {
-            let mut last_position_check = 0;
-
-            let mut is_valid_kmer = |i| {
-                for j in std::cmp::max(i, last_position_check)..i + ksize {
-                    if !VALID[sequence[j] as usize] {
-                        return false;
-                    }
-                    last_position_check += 1;
-                }
-                true
-            };
-
-            for i in 0..=len - ksize {
-                // ... and then while moving the k-mer window forward for the sequence
-                // we move another window backwards for the RC.
-                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
-                //                   +-+---------+---------------+-------+
-                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
-                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
-                //  +->         +->  |0|    2    |       3       |   6   |
-                //   +->       +->   |1|    3    |       2       |   5   |
-                //    +->     +->    |2|    4    |       1       |   4   |
-                //     +->   +->     |3|    5    |       0       |   3   |
-                //                   +-+---------+---------------+-------+
-                // (leaving this table here because I had to draw to
-                //  get the indices correctly)
-
-                let kmer = &sequence[i..i + ksize];
-
-                if !is_valid_kmer(i) {
-                    if !force {
-                        // throw error if DNA is not valid
-                        return Err(Error::InvalidDNA {
-                            message: String::from_utf8(kmer.to_vec()).unwrap(),
-                        });
-                    }
-
-                    continue; // skip invalid k-mer
-                }
-
-                let krc = &rc[len - ksize - i..len - i];
-                self.add_word(std::cmp::min(kmer, krc));
-            }
-        } else {
-            // protein
-            let aa_ksize = self.ksize / 3;
-
-            for i in 0..3 {
-                let substr: Vec<u8> = sequence
-                    .iter()
-                    .cloned()
-                    .skip(i)
-                    .take(sequence.len() - i)
-                    .collect();
-                let aa = to_aa(&substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa.windows(aa_ksize as usize).for_each(|n| self.add_word(n));
-
-                let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
-                let aa_rc = to_aa(&rc_substr, self.dayhoff(), self.hp()).unwrap();
-
-                aa_rc
-                    .windows(aa_ksize as usize)
-                    .for_each(|n| self.add_word(n));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
-        let ksize = (self.ksize / 3) as usize;
-        let len = seq.len();
-
-        if len < ksize {
-            return Ok(());
-        }
-
-        if let HashFunctions::murmur64_protein = self.hash_function {
-            for aa_kmer in seq.windows(ksize) {
-                self.add_word(&aa_kmer);
-            }
-            return Ok(());
-        }
-
-        let aa_seq: Vec<_> = match self.hash_function {
-            HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
-            HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
-            invalid => {
-                return Err(Error::InvalidHashFunction {
-                    function: format!("{}", invalid),
-                })
-            }
-        };
-
-        for aa_kmer in aa_seq.windows(ksize) {
-            self.add_word(aa_kmer);
-        }
-
         Ok(())
     }
 }

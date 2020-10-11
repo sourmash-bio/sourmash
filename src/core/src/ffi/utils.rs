@@ -9,7 +9,6 @@ use std::slice;
 use std::str;
 use std::thread;
 
-use failure::Fail; // can remove after .backtrace() is available in error...
 use thiserror::Error;
 
 use crate::errors::SourmashErrorCode;
@@ -111,6 +110,7 @@ pub unsafe extern "C" fn sourmash_err_get_last_message() -> SourmashStr {
 /// Returns the panic information as string.
 #[no_mangle]
 pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
+    /* TODO: bring back when backtrace is available in std::error
     LAST_ERROR.with(|e| {
         if let Some(ref error) = *e.borrow() {
             if let Some(backtrace) = error.backtrace() {
@@ -125,6 +125,8 @@ pub unsafe extern "C" fn sourmash_err_get_backtrace() -> SourmashStr {
             Default::default()
         }
     })
+    */
+    SourmashStr::default()
 }
 
 /// Clears the last error.
