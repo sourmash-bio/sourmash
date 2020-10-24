@@ -406,10 +406,9 @@ class LocalizedSBT(SBT):
                 )
 
                 # Displace the whole subtree to the new place
-                for child in children_to_displace:
-                    self._leaves[new_position] = child.node
-                    new_position += 1
-                self._rebuild_from_position(new_position - 1)
+
+                self._leaves[new_position] = children_to_displace[0].node
+                self._rebuild_from_position(new_position)
                 displaced_subtree_first_pos = min(x.pos for x in children_to_displace)
                 # Update displaced position to where the child was in the new
                 # position when the tree was pushed down
