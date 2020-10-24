@@ -4,27 +4,11 @@ from __future__ import print_function, division
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
-import functools
 
-import sourmash
 from sourmash._minhash import get_max_hash_for_scaled
-from sourmash.logging import notify, error, debug
+from sourmash.logging import notify, debug
 from sourmash.index import Index
-
-
-def cached_property(fun):
-    """A memoize decorator for class properties."""
-    @functools.wraps(fun)
-    def get(self):
-        try:
-            return self._cache[fun]
-        except AttributeError:
-            self._cache = {}
-        except KeyError:
-            pass
-        ret = self._cache[fun] = fun(self)
-        return ret
-    return property(get)
+from sourmash.utils import cached_property
 
 
 class LCA_Database(Index):
@@ -166,7 +150,6 @@ class LCA_Database(Index):
 
     def signatures(self):
         "Return all of the signatures in this LCA database."
-        from sourmash import SourmashSignature
         for v in self._signatures.values():
             yield v
 

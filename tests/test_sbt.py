@@ -18,7 +18,12 @@ from sourmash.sbt_storage import (FSStorage, TarStorage, RedisStorage,
 from . import sourmash_tst_utils as utils
 
 
-def test_simple(n_children):
+@pytest.fixture(params=[True, False])
+def return_pos(request):
+    return request.param
+
+
+def test_simple(n_children, return_pos):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
@@ -68,14 +73,41 @@ def test_simple(n_children):
         return set(x)
 
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == search_kmer_in_list(kmer)
+        found_kmers = [x for x in root.find(search_kmer, kmer)]
+        assert set(found_kmers) == search_kmer_in_list(kmer)
+
+    search1 = [x for x in root.find(search_kmer, "AAAAA", return_pos=return_pos)]
+    search2 = [x for x in root.find(search_kmer, "AAAAT", return_pos=return_pos)]
+    search3 = [x for x in root.find(search_kmer, "AAAAG", return_pos=return_pos)]
+    search4 = [x for x in root.find(search_kmer, "CAAAA", return_pos=return_pos)]
+    search5 = [x for x in root.find(search_kmer, "GAAAA", return_pos=return_pos)]
+
+    # Assert positions
+    if return_pos and n_children == 2:
+        assert [x[1] for x in search1] == [6, 5, 4, 8, 7]
+        assert [x[1] for x in search2] == [5, 4, 8, 7]
+        assert [x[1] for x in search3] == [5]
+        assert [x[1] for x in search4] == [6, 4]
+        assert [x[1] for x in search5] == [6, 8]
+    if return_pos and n_children == 5:
+        assert [x[1] for x in search1] == [5, 4, 3, 2, 1]
+        assert [x[1] for x in search2] == [5, 3, 2, 1]
+        assert [x[1] for x in search3] == [2]
+        assert [x[1] for x in search4] == [4, 3]
+        assert [x[1] for x in search5] == [5, 4]
+    if return_pos and n_children == 10:
+        assert [x[1] for x in search1] == [5, 4, 3, 2, 1]
+        assert [x[1] for x in search2] == [5, 3, 2, 1]
+        assert [x[1] for x in search3] == [2]
+        assert [x[1] for x in search4] == [4, 3]
+        assert [x[1] for x in search5] == [5, 4]
 
     print('-----')
-    print([ x.metadata for x in root.find(search_kmer, "AAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAT") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAG") ])
-    print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
+    print([x.metadata for x in root.find(search_kmer, "AAAAA")])
+    print([x.metadata for x in root.find(search_kmer, "AAAAT")])
+    print([x.metadata for x in root.find(search_kmer, "AAAAG")])
+    print([x.metadata for x in root.find(search_kmer, "CAAAA")])
+    print([x.metadata for x in root.find(search_kmer, "GAAAA")])
 
     with utils.TempDirectory() as location:
         root.save(os.path.join(location, 'demo'))
