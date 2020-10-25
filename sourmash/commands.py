@@ -657,7 +657,8 @@ def gather(args):
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
                       'average_abund', 'median_abund', 'std_abund', 'name',
-                      'filename', 'md5', 'f_match_orig']
+                      'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
+                      'gather_result_rank']
 
         with FileOutput(args.output, 'wt') as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -793,7 +794,8 @@ def multigather(args):
             fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                           'f_unique_to_query', 'f_unique_weighted',
                           'average_abund', 'median_abund', 'std_abund', 'name',
-                          'filename', 'md5', 'f_match_orig']
+                          'filename', 'md5', 'f_match_orig',
+                          'unique_intersect_bp', 'gather_result_rank']
             with open(output_csv, 'wt') as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
