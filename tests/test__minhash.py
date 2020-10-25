@@ -704,6 +704,8 @@ def test_mh_merge_empty_scaled(track_abundance):
 
     assert len(c)
     assert len(c) == len(d)
+    assert len(a) != len(c)
+    assert len(b) != len(d)
 
     assert list(sorted(c.hashes)) == list(sorted(d.hashes))
     assert round(c.similarity(d), 3) == 1.0
