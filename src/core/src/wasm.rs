@@ -4,7 +4,7 @@ use serde_json;
 
 use crate::cmd::ComputeParameters;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHash};
+use crate::sketch::minhash::{HashFunctions, KmerMinHash};
 
 #[wasm_bindgen]
 impl KmerMinHash {
@@ -19,12 +19,6 @@ impl KmerMinHash {
         scaled: u32,
         track_abundance: bool,
     ) -> KmerMinHash {
-        let max_hash = if num != 0 {
-            0
-        } else {
-            max_hash_for_scaled(scaled as u64).unwrap()
-        };
-
         // TODO: at most one of (prot, dayhoff, hp) should be true
 
         let hash_function = if dayhoff {
@@ -38,12 +32,12 @@ impl KmerMinHash {
         };
 
         KmerMinHash::new(
-            num,
+            scaled as u64,
             ksize,
             hash_function,
             seed as u64,
-            max_hash,
             track_abundance,
+            num
         )
     }
 
