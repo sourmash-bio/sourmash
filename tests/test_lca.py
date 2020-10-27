@@ -54,7 +54,7 @@ def test_api_create_insert():
         set_of_values.update(vv)
     assert len(set_of_values) == 1
     assert set_of_values == { 0 }
-    
+
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
 
@@ -117,7 +117,7 @@ def test_api_create_insert_ident():
         set_of_values.update(vv)
     assert len(set_of_values) == 1
     assert set_of_values == { 0 }
-    
+
     assert not lca_db.idx_to_lid          # no lineage added
     assert not lca_db.lid_to_lineage      # no lineage added
     assert not lca_db.lineage_to_lid
@@ -175,7 +175,7 @@ def test_api_create_insert_w_lineage():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lineage = ((LineagePair('rank1', 'name1'),
                 LineagePair('rank2', 'name2')))
-    
+
     lca_db.insert(ss, lineage=lineage)
 
     # basic ident stuff
@@ -760,7 +760,7 @@ def test_index_traverse_force(c):
 
 
 @utils.in_tempdir
-def test_index_from_file(c):
+def test_index_from_file_cmdline_sig(c):
     taxcsv = utils.get_test_data('lca/delmont-1.csv')
     input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     lca_db = c.output('delmont-1.lca.json')
@@ -783,6 +783,31 @@ def test_index_from_file(c):
     assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
     assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
     assert 'WARNING: 1 duplicate signatures.' in err
+
+
+@utils.in_tempdir
+def test_index_from_file(c):
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+    lca_db = c.output('delmont-1.lca.json')
+
+    file_list = c.output('sigs.list')
+    with open(file_list, 'wt') as fp:
+        print(input_sig, file=fp)
+
+    cmd = ['lca', 'index', taxcsv, lca_db, '--from-file', file_list]
+    c.run_sourmash(*cmd)
+
+    out = c.last_result.out
+    print(out)
+    err = c.last_result.err
+    print(err)
+
+    assert os.path.exists(lca_db)
+
+    assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
+    assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
+    assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
 @utils.in_tempdir
@@ -2166,7 +2191,7 @@ def test_lca_db_protein_build():
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
@@ -2193,7 +2218,7 @@ def test_lca_db_protein_save_load(c):
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
@@ -2275,7 +2300,7 @@ def test_lca_db_hp_build():
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
@@ -2302,7 +2327,7 @@ def test_lca_db_hp_save_load(c):
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
@@ -2384,7 +2409,7 @@ def test_lca_db_dayhoff_build():
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)
@@ -2411,7 +2436,7 @@ def test_lca_db_dayhoff_save_load(c):
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
-    
+
     db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)

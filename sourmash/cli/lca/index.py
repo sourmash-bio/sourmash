@@ -8,8 +8,8 @@ def subparser(subparsers):
     subparser.add_argument('csv', help='taxonomy spreadsheet')
     subparser.add_argument('lca_db_out', help='output database name')
     subparser.add_argument(
-        'signatures', nargs='+',
-        help='one or more sourmash signatures'
+        'signatures', nargs='*',
+        help='signatures to index, optional'
     )
     subparser.add_argument(
         '--from-file',
