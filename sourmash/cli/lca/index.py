@@ -9,7 +9,7 @@ def subparser(subparsers):
     subparser.add_argument('lca_db_out', help='output database name')
     subparser.add_argument(
         'signatures', nargs='*',
-        help='signatures to index, optional'
+        help='signatures or directory of signatures to index (optional if provided via --from-file)'
     )
     subparser.add_argument(
         '--from-file',
