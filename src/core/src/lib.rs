@@ -26,6 +26,8 @@ pub mod index;
 pub mod signature;
 pub mod sketch;
 
+pub mod encodings;
+
 #[cfg(feature = "from-finch")]
 pub mod from;
 

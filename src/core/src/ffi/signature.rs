@@ -4,8 +4,8 @@ use std::io;
 use std::os::raw::c_char;
 use std::slice;
 
+use crate::encodings::HashFunctions;
 use crate::signature::Signature;
-use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
 
 use crate::ffi::cmd::compute::SourmashComputeParameters;

@@ -17,57 +17,209 @@ use typed_builder::TypedBuilder;
 #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))]
 use wasm_bindgen::prelude::*;
 
+use crate::encodings::{aa_to_dayhoff, aa_to_hp, revcomp, to_aa, HashFunctions, VALID};
 use crate::index::storage::ToWriter;
-use crate::sketch::minhash::HashFunctions;
 use crate::sketch::Sketch;
 use crate::Error;
+use crate::HashIntoType;
 
 pub trait SigsTrait {
     fn size(&self) -> usize;
     fn to_vec(&self) -> Vec<u64>;
-    fn check_compatible(&self, other: &Self) -> Result<(), Error>;
-    fn add_sequence(&mut self, seq: &[u8], _force: bool) -> Result<(), Error>;
-    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error>;
     fn ksize(&self) -> usize;
+    fn check_compatible(&self, other: &Self) -> Result<(), Error>;
+    fn seed(&self) -> u64;
+
+    fn hash_function(&self) -> HashFunctions;
+
+    fn add_hash(&mut self, hash: HashIntoType);
+    fn add_sequence(&mut self, seq: &[u8], force: bool) -> Result<(), Error> {
+        let ksize = self.ksize() as usize;
+        let len = seq.len();
+        let hash_function = self.hash_function();
+
+        if len < ksize {
+            return Ok(());
+        };
+
+        // Here we convert the sequence to upper case and
+        // pre-calculate the reverse complement for the full sequence...
+        let sequence = seq.to_ascii_uppercase();
+        let rc = revcomp(&sequence);
+
+        if hash_function.dna() {
+            let mut last_position_check = 0;
+
+            let mut is_valid_kmer = |i| {
+                for j in std::cmp::max(i, last_position_check)..i + ksize {
+                    if !VALID[sequence[j] as usize] {
+                        return false;
+                    }
+                    last_position_check += 1;
+                }
+                true
+            };
+
+            for i in 0..=len - ksize {
+                // ... and then while moving the k-mer window forward for the sequence
+                // we move another window backwards for the RC.
+                //   For a ksize = 3, and a sequence AGTCGT (len = 6):
+                //                   +-+---------+---------------+-------+
+                //   seq      RC     |i|i + ksize|len - ksize - i|len - i|
+                //  AGTCGT   ACGACT  +-+---------+---------------+-------+
+                //  +->         +->  |0|    2    |       3       |   6   |
+                //   +->       +->   |1|    3    |       2       |   5   |
+                //    +->     +->    |2|    4    |       1       |   4   |
+                //     +->   +->     |3|    5    |       0       |   3   |
+                //                   +-+---------+---------------+-------+
+                // (leaving this table here because I had to draw to
+                //  get the indices correctly)
+
+                let kmer = &sequence[i..i + ksize];
+
+                if !is_valid_kmer(i) {
+                    if !force {
+                        // throw error if DNA is not valid
+                        return Err(Error::InvalidDNA {
+                            message: String::from_utf8(kmer.to_vec()).unwrap(),
+                        });
+                    }
+
+                    continue; // skip invalid k-mer
+                }
+
+                let krc = &rc[len - ksize - i..len - i];
+                let hash = crate::_hash_murmur(std::cmp::min(kmer, krc), self.seed());
+                self.add_hash(hash);
+            }
+        } else {
+            // protein
+            let aa_ksize = self.ksize() / 3;
+
+            for i in 0..3 {
+                let substr: Vec<u8> = sequence
+                    .iter()
+                    .cloned()
+                    .skip(i)
+                    .take(sequence.len() - i)
+                    .collect();
+                let aa = to_aa(&substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
+
+                aa.windows(aa_ksize as usize).for_each(|n| {
+                    let hash = crate::_hash_murmur(n, self.seed());
+                    self.add_hash(hash);
+                });
+
+                let rc_substr: Vec<u8> = rc.iter().cloned().skip(i).take(rc.len() - i).collect();
+                let aa_rc = to_aa(&rc_substr, hash_function.dayhoff(), hash_function.hp()).unwrap();
+
+                aa_rc.windows(aa_ksize as usize).for_each(|n| {
+                    let hash = crate::_hash_murmur(n, self.seed());
+                    self.add_hash(hash);
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn add_protein(&mut self, seq: &[u8]) -> Result<(), Error> {
+        let ksize = (self.ksize() / 3) as usize;
+        let len = seq.len();
+        let hash_function = self.hash_function();
+
+        if len < ksize {
+            return Ok(());
+        }
+
+        if hash_function.protein() {
+            for aa_kmer in seq.windows(ksize) {
+                let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+                self.add_hash(hash);
+            }
+            return Ok(());
+        }
+
+        let aa_seq: Vec<_> = match hash_function {
+            HashFunctions::murmur64_dayhoff => seq.iter().cloned().map(aa_to_dayhoff).collect(),
+            HashFunctions::murmur64_hp => seq.iter().cloned().map(aa_to_hp).collect(),
+            invalid => {
+                return Err(Error::InvalidHashFunction {
+                    function: format!("{}", invalid),
+                })
+            }
+        };
+
+        for aa_kmer in aa_seq.windows(ksize) {
+            let hash = crate::_hash_murmur(&aa_kmer, self.seed());
+            self.add_hash(hash);
+        }
+
+        Ok(())
+    }
 }
 
 impl SigsTrait for Sketch {
     fn size(&self) -> usize {
         match *self {
-            Sketch::UKHS(ref ukhs) => ukhs.size(),
             Sketch::MinHash(ref mh) => mh.size(),
             Sketch::LargeMinHash(ref mh) => mh.size(),
+            Sketch::HyperLogLog(ref hll) => hll.size(),
         }
     }
 
     fn to_vec(&self) -> Vec<u64> {
         match *self {
-            Sketch::UKHS(ref ukhs) => ukhs.to_vec(),
             Sketch::MinHash(ref mh) => mh.to_vec(),
             Sketch::LargeMinHash(ref mh) => mh.to_vec(),
+            Sketch::HyperLogLog(ref hll) => hll.to_vec(),
         }
     }
 
     fn ksize(&self) -> usize {
         match *self {
-            Sketch::UKHS(ref ukhs) => ukhs.ksize(),
             Sketch::MinHash(ref mh) => mh.ksize(),
             Sketch::LargeMinHash(ref mh) => mh.ksize(),
+            Sketch::HyperLogLog(ref hll) => hll.ksize(),
+        }
+    }
+
+    fn seed(&self) -> u64 {
+        match *self {
+            Sketch::MinHash(ref mh) => mh.seed(),
+            Sketch::LargeMinHash(ref mh) => mh.seed(),
+            Sketch::HyperLogLog(ref hll) => hll.seed(),
+        }
+    }
+
+    fn hash_function(&self) -> HashFunctions {
+        match *self {
+            Sketch::MinHash(ref mh) => mh.hash_function(),
+            Sketch::LargeMinHash(ref mh) => mh.hash_function(),
+            Sketch::HyperLogLog(ref hll) => hll.hash_function(),
+        }
+    }
+
+    fn add_hash(&mut self, hash: HashIntoType) {
+        match *self {
+            Sketch::MinHash(ref mut mh) => mh.add_hash(hash),
+            Sketch::LargeMinHash(ref mut mh) => mh.add_hash(hash),
+            Sketch::HyperLogLog(ref mut hll) => hll.add_hash(hash),
         }
     }
 
     fn check_compatible(&self, other: &Self) -> Result<(), Error> {
         match *self {
-            Sketch::UKHS(ref ukhs) => match other {
-                Sketch::UKHS(ref ot) => ukhs.check_compatible(ot),
-                _ => Err(Error::MismatchSignatureType),
-            },
             Sketch::MinHash(ref mh) => match other {
                 Sketch::MinHash(ref ot) => mh.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
             Sketch::LargeMinHash(ref mh) => match other {
                 Sketch::LargeMinHash(ref ot) => mh.check_compatible(ot),
+                _ => Err(Error::MismatchSignatureType),
+            },
+            Sketch::HyperLogLog(ref hll) => match other {
+                Sketch::HyperLogLog(ref ot) => hll.check_compatible(ot),
                 _ => Err(Error::MismatchSignatureType),
             },
         }
@@ -77,7 +229,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
             Sketch::LargeMinHash(ref mut mh) => mh.add_sequence(seq, force),
-            Sketch::UKHS(_) => unimplemented!(),
+            Sketch::HyperLogLog(_) => unimplemented!(),
         }
     }
 
@@ -85,7 +237,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
-            Sketch::UKHS(_) => unimplemented!(),
+            Sketch::HyperLogLog(_) => unimplemented!(),
         }
     }
 }
@@ -197,7 +349,7 @@ impl Signature {
             match &self.signatures[0] {
                 Sketch::MinHash(mh) => mh.md5sum(),
                 Sketch::LargeMinHash(mh) => mh.md5sum(),
-                Sketch::UKHS(hs) => hs.md5sum(),
+                Sketch::HyperLogLog(_) => unimplemented!(),
             }
         } else {
             // TODO: select the correct signature
@@ -297,25 +449,7 @@ impl Signature {
                                 None => return true, // TODO: match previous behavior
                             };
                         }
-                        Sketch::UKHS(hs) => {
-                            if let Some(k) = ksize {
-                                if k != hs.ksize() as usize {
-                                    return false;
-                                }
-                            };
-
-                            match moltype {
-                                Some(x) => {
-                                    if x == HashFunctions::murmur64_DNA {
-                                        return true;
-                                    } else {
-                                        // TODO: draff only supports dna for now
-                                        unimplemented!()
-                                    }
-                                }
-                                None => unimplemented!(),
-                            };
-                        }
+                        Sketch::HyperLogLog(_) => unimplemented!(),
                     };
                     false
                 })
