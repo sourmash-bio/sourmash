@@ -37,14 +37,20 @@ def _get_max_hash_for_scaled(scaled):
     elif scaled == 1:
         return get_minhash_max_hash()
 
-    return int(round(get_minhash_max_hash() / scaled, 0))
+    return min(
+        int(round(get_minhash_max_hash() / scaled, 0)),
+        MINHASH_MAX_HASH
+    )
 
 
 def _get_scaled_for_max_hash(max_hash):
     "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
-    return int(round(get_minhash_max_hash() / max_hash, 0))
+    return min(
+        int(round(get_minhash_max_hash() / max_hash, 0)),
+        MINHASH_MAX_HASH
+    )
 
 
 def to_bytes(s):
@@ -179,10 +185,17 @@ class MinHash(RustObject):
         if dayhoff or hp:
             is_protein = False
 
-        # ok, for Rust API, go from scaled back to max_hash
-        max_hash = _get_max_hash_for_scaled(scaled)
+        if dayhoff:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+        elif hp:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+        elif is_protein:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+        else:
+            hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
+
         self._objptr = lib.kmerminhash_new(
-            n, ksize, is_protein, dayhoff, hp, seed, int(max_hash), track_abundance
+            scaled, ksize, hash_function, seed, track_abundance, n
         )
 
         if mins:
@@ -227,8 +240,17 @@ class MinHash(RustObject):
          max_hash, seed) = tup
 
         self.__del__()
+
+        hash_function = (
+            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF if dayhoff else
+            lib.HASH_FUNCTIONS_MURMUR64_HP if hp else
+            lib.HASH_FUNCTIONS_MURMUR64_PROTEIN if is_protein else
+            lib.HASH_FUNCTIONS_MURMUR64_DNA
+        )
+
+        scaled = _get_scaled_for_max_hash(max_hash)
         self._objptr = lib.kmerminhash_new(
-            n, ksize, is_protein, dayhoff, hp, seed, max_hash, track_abundance
+            scaled, ksize, hash_function, seed, track_abundance, n
         )
         if track_abundance:
             self.set_abundances(mins)

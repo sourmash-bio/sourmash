@@ -150,7 +150,7 @@ impl Default for ComputeParameters {
 }
 
 pub fn build_template(params: &ComputeParameters) -> Vec<Sketch> {
-    let max_hash = max_hash_for_scaled(params.scaled).unwrap_or(0);
+    let max_hash = max_hash_for_scaled(params.scaled);
 
     params
         .ksizes
