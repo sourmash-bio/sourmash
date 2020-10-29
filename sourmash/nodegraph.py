@@ -88,6 +88,14 @@ class Nodegraph(RustObject):
 
         return self._methodcall(lib.nodegraph_matches, mh._objptr)
 
+    def intersection_count(self, other):
+        if isinstance(other, Nodegraph):
+            return self._methodcall(lib.nodegraph_intersection_count, other._objptr)
+        else:
+            # FIXME: we could take MinHash and sets here too (or anything that can be
+            # converted to a list of ints...)
+            raise TypeError("Must be a Nodegraph")
+
     def to_khmer_nodegraph(self):
         import khmer
         try:

@@ -1322,27 +1322,14 @@ def scaffold(original_datasets, storage, bf_size=None):
 
     datasets = []
     for d in original_datasets:
-        try:
-            d_mh = d.data.minhash
-        except AttributeError:
-            d_mh = d.minhash
-
-        # replace MH dataset by HLL
-        d_hll = HLL(0.01, d_mh.ksize)
-        d_hll.update(d_mh)
-
-        # save MH to storage
         if isinstance(d, SourmashSignature):
             d = SigLeaf(d.md5sum(), d)
 
+        # save MH to storage
         if isinstance(d, SigLeaf):
             d.data
             d.storage = storage
 
-            data = {
-              'd': d,
-              'hll': d_hll,
-            }
             filename = os.path.basename(d.name)
             if isinstance(storage, ZipStorage):
                 if storage.subdir is None:
@@ -1353,15 +1340,9 @@ def scaffold(original_datasets, storage, bf_size=None):
             elif storage is not None:
                 d._path = d.save(filename)
 
-            # unload MH
-            if storage is not None:
-                d.unload()
-
-            datasets.append(data)
-
+            datasets.append(d)
         else:
             raise ValueError("unknown dataset type")
-
     del original_datasets
 
     heap = []
@@ -1369,7 +1350,7 @@ def scaffold(original_datasets, storage, bf_size=None):
         if i % 100 == 0:
             print(f"processed {i} out of {len(datasets)}", end='\r')
 
-        d1 = data1['hll']
+        d1 = data1.data.minhash
 
         if hll is None and bf_size is None:
             ksize = d1.ksize
@@ -1380,8 +1361,8 @@ def scaffold(original_datasets, storage, bf_size=None):
 
         for j, data2 in enumerate(datasets):
             if i > j:
-                d2 = data2['hll']
-                common = d1.intersection(d2)
+                d2 = data2.data.minhash
+                common = d1.count_common(d2)
 
                 # TODO: check for a low threshold to insert
                 #       (need to change logic further down before setting threshold)
@@ -1396,12 +1377,15 @@ def scaffold(original_datasets, storage, bf_size=None):
         num_htables, htable_size, mem_use, fp_rate = optimal_size(n_unique_hashes, fp_rate=0.9)
         # TODO: check this, we prefer ntables = 1?
         #htable_size *= num_htables
-    else:
-        htable_size = bf_size
+        print(len(hll), num_htables, htable_size)
+    #else:
+    if 1:
+        htable_size = 1e5
         num_htables = 1
 
-    factory = GraphFactory(31, htable_size, num_htables)
+    factory = GraphFactory(ksize, htable_size, num_htables)
 
+    print("Processing first round of internal")
     processed = set()
     total_datasets = len(datasets)
     next_round = []
@@ -1414,20 +1398,26 @@ def scaffold(original_datasets, storage, bf_size=None):
         if p1 not in processed and p2 not in processed:
             data1 = datasets[p1]
             data2 = datasets[p2]
-            data1['processed'] = True
-            data2['processed'] = True
+            datasets[p1] = None
+            datasets[p2] = None
             processed.add(p1)
             processed.add(p2)
 
-            d1 = data1['hll']
-            d2 = data2['hll']
+            d1 = data1.data.minhash
+            d2 = data2.data.minhash
 
-            element = HLL(0.01, d1.ksize)
+            #element = HLL(0.01, d1.ksize)
+            element = factory()
             element.update(d1)
             element.update(d2)
 
-            new_internal = InternalNode(element, BinaryLeaf(data1['d']), BinaryLeaf(data2['d']))
+            new_internal = InternalNode(element, BinaryLeaf(data1), BinaryLeaf(data2))
             next_round.append(new_internal)
+
+            # unload d1 and d2
+            data1.unload()
+            data2.unload()
+
         elif p1 in processed and p2 in processed:
             # already processed both, nothing to do
             continue
@@ -1438,20 +1428,25 @@ def scaffold(original_datasets, storage, bf_size=None):
                 d = datasets[p1]
                 if d is None:
                     d = datasets[p2]
-                    assert not d['processed']
-                    d['processed'] = True
+                    assert d is not None
+                    datasets[p2] = None
                     processed.add(p2)
                 else:
-                    d['processed'] = True
+                    datasets[p1] = None
                     processed.add(p1)
 
-                common = d['hll']
+                common = factory()
+                element.update(d.data.minhash)
 
-                new_internal = InternalNode(common, BinaryLeaf(d['d']), None)
+                new_internal = InternalNode(common, BinaryLeaf(d), None)
                 next_round.append(new_internal)
+
+                # unload d
+                d.unload()
 
     # Finish processing leaves, start dealing with internal nodes in next_round
     while len(next_round) > 1:
+        print("Processing next round of internal")
         current_round = next_round
         next_round = []
         total_nodes = len(current_round)
@@ -1460,7 +1455,7 @@ def scaffold(original_datasets, storage, bf_size=None):
         for (i, d1) in enumerate(current_round):
             for (j, d2) in enumerate(current_round):
                 if i > j:
-                    common = d1.element.intersection(d2.element)
+                    common = d1.element.intersection_count(d2.element)
                     heapq.heappush(heap, (-common, i, j))
 
         processed = set()
@@ -1478,7 +1473,7 @@ def scaffold(original_datasets, storage, bf_size=None):
                 processed.add(p1)
                 processed.add(p2)
 
-                element = HLL(0.01, ksize)
+                element = factory()
                 element.update(d1.element)
                 element.update(d2.element)
 
@@ -1529,8 +1524,9 @@ def scaffold(original_datasets, storage, bf_size=None):
     # Convert from binary tree to nodes/leaves
     if total_datasets == 1:
         d = datasets.pop()
-        common = d['hll']
-        root = InternalNode(common, BinaryLeaf(d['d']), None)
+        common = factory()
+        common.update(d.data.minhash)
+        root = InternalNode(common, BinaryLeaf(d), None)
     else:
         root = next_round.pop()
         # This approach puts the more complete tree on the right,
@@ -1582,15 +1578,20 @@ def scaffold(original_datasets, storage, bf_size=None):
                     if isinstance(cnode, BinaryLeaf):
                         # if InternalNode only has one child and it is a Leaf,
                         # use it instead (avoid creating a Node with only one child)
+
+                        # Technically the parent here should have all the data,
+                        # but... it didn't. I might be missing something
+                        # somewhere else...
+                        ppos = int(math.floor((pos - 1) / 2))
+                        if ppos != -1:
+                            # ppos == -1 means this is the root node
+                            nodes[ppos].data.update(cnode.element.data.minhash)
+
                         leaves[pos] = cnode.element
                         continue
 
                 new_node = Node(factory, name=f"internal.{pos}")
-                data = new_node.data
-
-                # TODO: we can't iterate elements with HLL...
-                #for e in cnode.element:
-                #    data.count(e)
+                new_node.data = cnode.element
 
                 nodes[pos] = new_node
 
@@ -1619,7 +1620,7 @@ def scaffold(original_datasets, storage, bf_size=None):
     # and leaf nodes consistently
     new_tree._fill_min_n_below()
     # TODO: need to modify _fill_internal to allow unloading after saving?
-    new_tree._fill_internal()
+    #new_tree._fill_internal()
 
     return new_tree
 
