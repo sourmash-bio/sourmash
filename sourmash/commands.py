@@ -12,7 +12,6 @@ from . import MinHash, load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sbt import scaffold
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
 from .sourmash_args import DEFAULT_LOAD_K, FileOutput
@@ -332,10 +331,13 @@ def index(args):
     if args.append:
         tree = load_sbt_index(args.sbt_name)
     else:
-        tree = create_sbt_index(args.bf_size, n_children=args.n_children)
+        bf_size = args.bf_size
+        if bf_size == 0:
+            bf_size = None
+
+        tree = create_sbt_index(bf_size, n_children=args.n_children)
         batch = True
         # TODO: set up storage here
-        # TODO: deal with factory and args.bf_size too?
 
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')

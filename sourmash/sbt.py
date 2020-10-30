@@ -250,7 +250,7 @@ class SBT(Index):
 
         # TODO: check if SBT is empty, if it is not add current leaves to be
         # scaffolded too
-        tree = scaffold(self._batched, self.storage)
+        tree = scaffold(self._batched, self.storage, self.factory)
         self._batched.clear()
 
         # TODO: make this inplace?
@@ -1290,7 +1290,7 @@ class Leaf(object):
                    storage=storage)
 
 
-def scaffold(original_datasets, storage, bf_size=None):
+def scaffold(original_datasets, storage, factory=None):
     """ Generate an SBT with nodes clustered by amount of shared hashes
 
     Parameters
@@ -1300,9 +1300,9 @@ def scaffold(original_datasets, storage, bf_size=None):
         List of signatures, or already existing leaves from another SBT, to index
     storage: Storage
         Where to save the nodes data during construction
-    bf_size: int, optional
-        Size for Nodegraphs. If None, will use a HyperLogLog counter to estimate
-        unique k-mers and calculate an optimal size
+    factory: Factory, optional
+        A factory for internal nodes. If None, will use a HyperLogLog counter
+        to estimate unique k-mers and calculate an optimal size for Nodegraphs.
 
     Returns
     -------
@@ -1345,6 +1345,10 @@ def scaffold(original_datasets, storage, bf_size=None):
             raise ValueError("unknown dataset type")
     del original_datasets
 
+    # TODO: we can build the heap in parallel.
+    # on top of doing the count_common calculations in parallel,
+    # we can also avoid building the heap (just build a list first)
+    # and then call heapify on it after the list is ready
     heap = []
     for i, data1 in enumerate(datasets):
         if i % 100 == 0:
@@ -1352,7 +1356,7 @@ def scaffold(original_datasets, storage, bf_size=None):
 
         d1 = data1.data.minhash
 
-        if hll is None and bf_size is None:
+        if hll is None and factory is None:
             ksize = d1.ksize
             hll = HLL(0.01, ksize)
 
@@ -1372,18 +1376,17 @@ def scaffold(original_datasets, storage, bf_size=None):
                     # internal methods for a max heap
                     heapq.heappush(heap, (-common, i, j))
 
-    if hll is not None:
+    if factory is None:
         n_unique_hashes = len(hll)
         num_htables, htable_size, mem_use, fp_rate = optimal_size(n_unique_hashes, fp_rate=0.9)
         # TODO: check this, we prefer ntables = 1?
         #htable_size *= num_htables
         print(len(hll), num_htables, htable_size)
-    #else:
-    if 1:
+
         htable_size = 1e5
         num_htables = 1
 
-    factory = GraphFactory(ksize, htable_size, num_htables)
+        factory = GraphFactory(ksize, htable_size, num_htables)
 
     print("Processing first round of internal")
     processed = set()
@@ -1449,6 +1452,10 @@ def scaffold(original_datasets, storage, bf_size=None):
         next_round = []
         total_nodes = len(current_round)
 
+        # TODO: we can build the heap in parallel.
+        # on top of doing the intersection_count calculations in parallel,
+        # we can also avoid building the heap (just build a list first)
+        # and then call heapify on it after the list is ready
         heap = []
         for (i, d1) in enumerate(current_round):
             for (j, d2) in enumerate(current_round):
