@@ -58,7 +58,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp')
 
 
 # build a new query object, subtracting found mins and downsampling
@@ -195,6 +195,15 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             median_abund = np.median(intersect_abunds)
             std_abund = np.std(intersect_abunds)
 
+        # construct a new query, subtracting hashes found in previous one.
+        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
+        remaining_bp = cmp_scaled * len(query)
+
+        # compute weighted_missed:
+        query_mins -= set(found_mins)
+        weighted_missed = sum((orig_query_abunds[k] for k in query_mins)) \
+             / sum_abunds
+
         # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
                               unique_intersect_bp=unique_intersect_bp,
@@ -210,15 +219,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               md5=best_match.md5sum(),
                               name=best_match.name(),
                               match=best_match,
-                              gather_result_rank=result_n)
+                              gather_result_rank=result_n,
+                              remaining_bp=remaining_bp)
         result_n += 1
-
-        # construct a new query, subtracting hashes found in previous one.
-        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
-
-        # compute weighted_missed:
-        query_mins -= set(found_mins)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_mins)) \
-             / sum_abunds
 
         yield result, weighted_missed, new_max_hash, query
