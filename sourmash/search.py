@@ -197,7 +197,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # construct a new query, subtracting hashes found in previous one.
         query = _subtract_and_downsample(found_mins, query, cmp_scaled)
-        remaining_bp = cmp_scaled * len(query)
+        remaining_bp = cmp_scaled * len(query.minhash.hashes)
 
         # compute weighted_missed:
         query_mins -= set(found_mins)
