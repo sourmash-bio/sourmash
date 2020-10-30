@@ -1403,15 +1403,12 @@ def scaffold(original_datasets, storage, bf_size=None):
             processed.add(p1)
             processed.add(p2)
 
-            d1 = data1.data.minhash
-            d2 = data2.data.minhash
+            # Name will be updated later, when we have the right position
+            new_node = Node(factory, name=f"internal.XXX")
+            data1.update(new_node)
+            data2.update(new_node)
 
-            #element = HLL(0.01, d1.ksize)
-            element = factory()
-            element.update(d1)
-            element.update(d2)
-
-            new_internal = InternalNode(element, BinaryLeaf(data1), BinaryLeaf(data2))
+            new_internal = InternalNode(new_node, BinaryLeaf(data1), BinaryLeaf(data2))
             next_round.append(new_internal)
 
             # unload d1 and d2
@@ -1435,10 +1432,11 @@ def scaffold(original_datasets, storage, bf_size=None):
                     datasets[p1] = None
                     processed.add(p1)
 
-                common = factory()
-                element.update(d.data.minhash)
+                # Name will be updated later, when we have the right position
+                new_node = Node(factory, name=f"internal.XXX")
+                d.update(new_node)
 
-                new_internal = InternalNode(common, BinaryLeaf(d), None)
+                new_internal = InternalNode(new_node, BinaryLeaf(d), None)
                 next_round.append(new_internal)
 
                 # unload d
@@ -1455,7 +1453,7 @@ def scaffold(original_datasets, storage, bf_size=None):
         for (i, d1) in enumerate(current_round):
             for (j, d2) in enumerate(current_round):
                 if i > j:
-                    common = d1.element.intersection_count(d2.element)
+                    common = d1.element.data.intersection_count(d2.element.data)
                     heapq.heappush(heap, (-common, i, j))
 
         processed = set()
@@ -1473,15 +1471,14 @@ def scaffold(original_datasets, storage, bf_size=None):
                 processed.add(p1)
                 processed.add(p2)
 
-                element = factory()
-                element.update(d1.element)
-                element.update(d2.element)
+                # Name will be updated later, when we have the right position
+                new_node = Node(factory, name=f"internal.XXX")
+                d1.element.update(new_node)
+                d2.element.update(new_node)
 
-                new_internal = InternalNode(element, d1, d2)
+                new_internal = InternalNode(new_node, d1, d2)
                 next_round.append(new_internal)
 
-                # TODO: make Node (data = Nodegraphs) for d1 and d2
-                #       use the factory to create Nodegraph
                 # TODO: save d1 and d2 Nodes into storage and unload them
                 # PROBLEM: d1,d2 don't have stable names,
                 #          and the SBT format uses internal.N where N is
@@ -1507,11 +1504,12 @@ def scaffold(original_datasets, storage, bf_size=None):
                         processed.add(p1)
                         current_round[p1] = None
 
-                    new_internal = InternalNode(d.element, d, None)
+                    new_node = Node(factory, name=f"internal.XXX")
+                    d.element.update(new_node)
+
+                    new_internal = InternalNode(new_node, d, None)
                     next_round.append(new_internal)
 
-                    # TODO: make Node (data = Nodegraphs) for d
-                    #       use the factory to create Nodegraph
                     # TODO: save d into storage and unload it
                     # PROBLEM: d doesn't have a stable name,
                     #          and the SBT format uses internal.N where N is
@@ -1585,15 +1583,13 @@ def scaffold(original_datasets, storage, bf_size=None):
                         ppos = int(math.floor((pos - 1) / 2))
                         if ppos != -1:
                             # ppos == -1 means this is the root node
-                            nodes[ppos].data.update(cnode.element.data.minhash)
+                            cnode.element.update(nodes[ppos])
 
                         leaves[pos] = cnode.element
                         continue
 
-                new_node = Node(factory, name=f"internal.{pos}")
-                new_node.data = cnode.element
-
-                nodes[pos] = new_node
+                cnode.element.name = f"internal.{pos}"
+                nodes[pos] = cnode.element
 
                 # TODO: this is a one-level rotation of the internal nodes,
                 # since we want all "complete" subtrees to be to the left,
@@ -1615,12 +1611,6 @@ def scaffold(original_datasets, storage, bf_size=None):
     new_tree = SBT(factory, storage=storage)
     new_tree._nodes = nodes
     new_tree._leaves = leaves
-
-    # TODO: none of these should be necessarily, if we can save both internal
-    # and leaf nodes consistently
-    new_tree._fill_min_n_below()
-    # TODO: need to modify _fill_internal to allow unloading after saving?
-    #new_tree._fill_internal()
 
     return new_tree
 
