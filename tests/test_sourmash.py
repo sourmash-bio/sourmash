@@ -2554,7 +2554,7 @@ def test_gather_csv():
             print(row)
             assert float(row['intersect_bp']) == 910
             assert float(row['unique_intersect_bp']) == 910
-            assert float(row['remaining_bp']) == 10
+            assert float(row['remaining_bp']) == 0
             assert float(row['f_orig_query']) == 1.0
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
