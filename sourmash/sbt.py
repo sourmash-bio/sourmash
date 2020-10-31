@@ -44,6 +44,7 @@ then define a search function, ::
 
 from collections import namedtuple, Counter
 from collections.abc import Mapping
+import hashlib
 import heapq
 
 from copy import copy
@@ -581,7 +582,7 @@ class SBT(Index):
         """
         info = {}
         info['d'] = self.d
-        info['version'] = 6
+        info['version'] = 7
         info["index_type"] = self.__class__.__name__  # TODO: check
 
         # choose between ZipStorage and FS (file system/directory) storage.
@@ -634,17 +635,11 @@ class SBT(Index):
                 if random() - sparseness <= 0:
                     continue
 
-            data = {
-                # TODO: start using md5sum instead?
-                'filename': os.path.basename(node.name),
-                'name': node.name
-            }
-
+            data = {"name": node.name}
             try:
                 node.metadata.pop('max_n_below')
             except (AttributeError, KeyError):
                 pass
-
             data['metadata'] = node.metadata
 
             if structure_only is False:
@@ -653,10 +648,14 @@ class SBT(Index):
 
                 node.storage = storage
 
+                basepath = None
                 if kind == "Zip":
-                    node.save(os.path.join(subdir, data['filename']))
-                elif kind == "FS":
-                    data['filename'] = node.save(data['filename'])
+                    basepath = subdir
+
+                data["filename"] = _save_node(node, basepath)
+            else:
+                # TODO: a dry-run mode for calculating the name?
+                data["filename"] = node._path
 
             if isinstance(node, Node):
                 nodes[i] = data
@@ -761,6 +760,7 @@ class SBT(Index):
             4: cls._load_v4,
             5: cls._load_v5,
             6: cls._load_v6,
+            7: cls._load_v6,
         }
 
         try:
@@ -1099,7 +1099,7 @@ class SBT(Index):
         for i, node in self._nodes.items():
             if isinstance(node, Node):
                 print('"{}" [shape=box fillcolor=gray style=filled]'.format(
-                      node.name))
+                      ode.name))
                 for j, child in self.children(i):
                     if child is not None:
                         print('"{}" -> "{}"'.format(node.name, child.name))
@@ -1196,9 +1196,17 @@ class Node(object):
                 name=self.name, nb=self.data.n_occupied(),
                 fpr=calc_expected_collisions(self.data, True, 1.1))
 
-    def save(self, path):
+    def save(self, subdir=None):
         buf = self.data.to_bytes(compression=1)
-        return self.storage.save(path, buf)
+        hash_md5 = hashlib.md5()
+        hash_md5.update(buf)
+        path = "internal/" + hash_md5.hexdigest()
+
+        if subdir is not None:
+            path = os.path.join(subdir, path)
+
+        self._path = self.storage.save(path, buf)
+        return self._path
 
     @property
     def data(self):
@@ -1275,9 +1283,17 @@ class Leaf(object):
             # TODO: Check that data is actually in the storage?
             self._data = None
 
-    def save(self, path):
+    def save(self, subdir=None):
         buf = self.data.to_bytes(compression=1)
-        return self.storage.save(path, buf)
+        hash_md5 = hashlib.md5()
+        hash_md5.update(buf)
+        path = hash_md5.hexdigest()
+
+        if subdir is not None:
+            path = os.path.join(subdir, path)
+
+        self._path = self.storage.save("signatures/" + path, buf)
+        return self._path
 
     def update(self, parent):
         parent.data.update(self.data)
@@ -1320,6 +1336,13 @@ def scaffold(original_datasets, storage, factory=None):
     hll = None
     ksize = None
 
+    subdir = None
+    if isinstance(storage, ZipStorage):
+        if storage.subdir is None:
+            name = storage.path.split('/')[-1][:-8]
+            storage.subdir = '.sbt.{}'.format(name)
+        subdir = storage.subdir
+
     datasets = []
     for d in original_datasets:
         if isinstance(d, SourmashSignature):
@@ -1328,18 +1351,9 @@ def scaffold(original_datasets, storage, factory=None):
         # save MH to storage
         if isinstance(d, SigLeaf):
             d.data
-            d.storage = storage
-
-            filename = os.path.basename(d.name)
-            if isinstance(storage, ZipStorage):
-                if storage.subdir is None:
-                    name = storage.path.split('/')[-1][:-8]
-                    storage.subdir = '.sbt.{}'.format(name)
-                # TODO: set _path internally when calling save()?
-                d._path = d.save(os.path.join(storage.subdir, filename))
-            elif storage is not None:
-                d._path = d.save(filename)
-
+            if storage is not None:
+                d.storage = storage
+                _save_node(d, subdir)
             datasets.append(d)
         else:
             raise ValueError("unknown dataset type")
@@ -1478,21 +1492,19 @@ def scaffold(original_datasets, storage, factory=None):
                 processed.add(p1)
                 processed.add(p2)
 
-                # Name will be updated later, when we have the right position
-                new_node = Node(factory, name=f"internal.XXX")
+                new_node = Node(factory)
                 d1.element.update(new_node)
                 d2.element.update(new_node)
 
                 new_internal = InternalNode(new_node, d1, d2)
                 next_round.append(new_internal)
 
-                # TODO: save d1 and d2 Nodes into storage and unload them
-                # PROBLEM: d1,d2 don't have stable names,
-                #          and the SBT format uses internal.N where N is
-                #          the position in the tree...
-                # SOLUTION: use md5 as name, and save internal nodes
-                #           inside internal/MD5 ?
-                #           (need new SBT version bump?)
+                # save d1 and d2 Nodes into storage and unload them, if a storage is available
+                if storage is not None:
+                    _save_node(d1.element)
+                    d1.element.unload()
+                    _save_node(d2.element)
+                    d2.element.unload()
 
             elif p1 in processed and p2 in processed:
                 # already processed both, nothing to do
@@ -1511,19 +1523,16 @@ def scaffold(original_datasets, storage, factory=None):
                         processed.add(p1)
                         current_round[p1] = None
 
-                    new_node = Node(factory, name=f"internal.XXX")
+                    new_node = Node(factory)
                     d.element.update(new_node)
 
                     new_internal = InternalNode(new_node, d, None)
                     next_round.append(new_internal)
 
-                    # TODO: save d into storage and unload it
-                    # PROBLEM: d doesn't have a stable name,
-                    #          and the SBT format uses internal.N where N is
-                    #          the position in the tree...
-                    # SOLUTION: use md5 as name, and save internal nodes
-                    #           inside internal/MD5 ?
-                    #           (need new SBT version bump)
+                    # save d into storage and unload it, if a storage is available
+                    if storage is not None:
+                        _save_node(d.element)
+                        d.element.unload()
 
     # next_round only contains the root of the SBT
     # Convert from binary tree to nodes/leaves
@@ -1563,8 +1572,6 @@ def scaffold(original_datasets, storage, factory=None):
         (pos, cnode) = queue.pop(0)
         if pos not in visited:
             visited.add(pos)
-            #if pos == 6:
-            #    import pdb; pdb.set_trace()
 
             if isinstance(cnode, BinaryLeaf):
                 leaves[pos] = cnode.element
@@ -1595,7 +1602,6 @@ def scaffold(original_datasets, storage, factory=None):
                         leaves[pos] = cnode.element
                         continue
 
-                cnode.element.name = f"internal.{pos}"
                 nodes[pos] = cnode.element
 
                 # TODO: this is a one-level rotation of the internal nodes,
@@ -1620,6 +1626,11 @@ def scaffold(original_datasets, storage, factory=None):
     new_tree._leaves = leaves
 
     return new_tree
+
+
+def _save_node(node, basepath=None):
+    path = basepath
+    return node.save(path)
 
 
 def filter_distance(filter_a, filter_b, n=1000):

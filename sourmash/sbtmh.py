@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 import sys
 
 from .sbt import Leaf, SBT, GraphFactory
@@ -43,14 +44,21 @@ class SigLeaf(Leaf):
         return '**Leaf:{name} -> {metadata}'.format(
                 name=self.name, metadata=self.metadata)
 
-    def save(self, path):
+    def save(self, subdir=None):
         # this is here only for triggering the property load
         # before we reopen the file (and overwrite the previous
         # content...)
         self.data
 
+        path = "signatures/" + self.data.md5sum()
+
+        if subdir is not None:
+            path = os.path.join(subdir, path)
+
         buf = signature.save_signatures([self.data], compression=1)
-        return self.storage.save(path, buf)
+        self._path = self.storage.save(path, buf)
+
+        return self._path
 
     def update(self, parent):
         mh = self.data.minhash
@@ -66,7 +74,7 @@ class SigLeaf(Leaf):
     @property
     def data(self):
         if self._data is None:
-            buf = BytesIO(self.storage.load(self._path))
+            buf = self.storage.load(self._path)
             self._data = signature.load_one_signature(buf)
         return self._data
 
