@@ -4,9 +4,10 @@ use wasm_bindgen::prelude::*;
 use getset::{CopyGetters, Getters, Setters};
 use typed_builder::TypedBuilder;
 
+use crate::encodings::HashFunctions;
 use crate::index::MHBT;
 use crate::signature::Signature;
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::Error;
 
