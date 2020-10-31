@@ -2553,12 +2553,15 @@ def test_gather_csv():
             row = next(reader)
             print(row)
             assert float(row['intersect_bp']) == 910
+            assert float(row['unique_intersect_bp']) == 910
+            assert float(row['remaining_bp']) == 0
             assert float(row['f_orig_query']) == 1.0
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
             assert row['name'].endswith('short2.fa')
             assert row['filename'] == 'zzz'
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+            assert row['gather_result_rank'] == '0'
 
 
 def test_gather_multiple_sbts():
@@ -3624,26 +3627,40 @@ def test_gather_abund_10_1(c):
         r = csv.DictReader(fp)
 
         overlaps = []
+        unique_overlaps = []
         f_weighted_list = []
         average_abunds = []
+        remaining_bps = []
 
-        for row in r:
+        for n, row in enumerate(r):
+            assert int(row['gather_result_rank']) == n
             overlap = float(row['intersect_bp'])
+            remaining_bp = float(row['remaining_bp'])
+            unique_overlap = float(row['unique_intersect_bp'])
             f_weighted = float(row['f_unique_weighted'])
             average_abund = float(row['average_abund'])
 
             overlaps.append(overlap)
+            unique_overlaps.append(unique_overlap)
             f_weighted_list.append(f_weighted)
             average_abunds.append(average_abund)
+            remaining_bps.append(remaining_bp)
 
-        weighted_calc = []
-        for (overlap, average_abund) in zip(overlaps, average_abunds):
-            prod = overlap*average_abund
-            weighted_calc.append(prod)
+    weighted_calc = []
+    for (overlap, average_abund) in zip(overlaps, average_abunds):
+        prod = overlap*average_abund
+        weighted_calc.append(prod)
 
-        total_weighted = sum(weighted_calc)
-        for prod, f_weighted in zip(weighted_calc, f_weighted_list):
-            assert prod / total_weighted == f_weighted, (prod, f_weighted)
+    total_weighted = sum(weighted_calc)
+    for prod, f_weighted in zip(weighted_calc, f_weighted_list):
+        assert prod / total_weighted == f_weighted, (prod, f_weighted)
+
+    query_sig = sourmash.load_one_signature(query)
+    query_mh = query_sig.minhash
+
+    total_bp_analyzed = sum(unique_overlaps) + remaining_bps[-1]
+    total_query_bp = len(query_mh) * query_mh.scaled
+    assert total_bp_analyzed == total_query_bp
 
 
 @utils.in_thisdir
