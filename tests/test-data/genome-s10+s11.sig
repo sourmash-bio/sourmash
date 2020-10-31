@@ -2,14 +2,16 @@
     {
         "class": "sourmash_signature",
         "email": "",
-        "filename": "-",
         "hash_function": "0.murmur64",
-        "name": "s10+s11",
+        "filename": "-",
+        "name": "genome-s10+s11",
+        "license": "CC0",
         "signatures": [
             {
+                "num": 500,
                 "ksize": 21,
+                "seed": 42,
                 "max_hash": 0,
-                "md5sum": "93d5d09abf399740a4506310680eb62c",
                 "mins": [
                     4644613608317,
                     8167055308830,
@@ -512,14 +514,25 @@
                     4672517028859960,
                     4674846516244173
                 ],
-                "molecule": "protein",
-                "num": 500,
-                "seed": 42
-            },
+                "md5sum": "93d5d09abf399740a4506310680eb62c",
+                "molecule": "protein"
+            }
+        ],
+        "version": 0.4
+    },
+    {
+        "class": "sourmash_signature",
+        "email": "",
+        "hash_function": "0.murmur64",
+        "filename": "-",
+        "name": "genome-s10+s11",
+        "license": "CC0",
+        "signatures": [
             {
+                "num": 500,
                 "ksize": 21,
+                "seed": 42,
                 "max_hash": 0,
-                "md5sum": "8a619747693c045afde376263841806b",
                 "mins": [
                     26808047916169,
                     34197227818852,
@@ -1022,14 +1035,25 @@
                     9363903249964323,
                     9366616833410327
                 ],
-                "molecule": "dna",
-                "num": 500,
-                "seed": 42
-            },
+                "md5sum": "8a619747693c045afde376263841806b",
+                "molecule": "dna"
+            }
+        ],
+        "version": 0.4
+    },
+    {
+        "class": "sourmash_signature",
+        "email": "",
+        "hash_function": "0.murmur64",
+        "filename": "-",
+        "name": "genome-s10+s11",
+        "license": "CC0",
+        "signatures": [
             {
+                "num": 500,
                 "ksize": 30,
+                "seed": 42,
                 "max_hash": 0,
-                "md5sum": "819dd371bf41739a1b158582d5a04b45",
                 "mins": [
                     14932590342943,
                     25297964882102,
@@ -1532,14 +1556,25 @@
                     4719569668512331,
                     4732319732279531
                 ],
-                "molecule": "protein",
-                "num": 500,
-                "seed": 42
-            },
+                "md5sum": "819dd371bf41739a1b158582d5a04b45",
+                "molecule": "protein"
+            }
+        ],
+        "version": 0.4
+    },
+    {
+        "class": "sourmash_signature",
+        "email": "",
+        "hash_function": "0.murmur64",
+        "filename": "-",
+        "name": "genome-s10+s11",
+        "license": "CC0",
+        "signatures": [
             {
+                "num": 500,
                 "ksize": 30,
+                "seed": 42,
                 "max_hash": 0,
-                "md5sum": "19ac462374cc8af809416aa72cbdb8d3",
                 "mins": [
                     20758783536340,
                     67113621906699,
@@ -2042,12 +2077,10 @@
                     8823259444635545,
                     8826361854624836
                 ],
-                "molecule": "dna",
-                "num": 500,
-                "seed": 42
+                "md5sum": "19ac462374cc8af809416aa72cbdb8d3",
+                "molecule": "dna"
             }
         ],
-        "type": "mrnaseq",
         "version": 0.4
     }
 ]
