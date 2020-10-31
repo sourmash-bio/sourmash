@@ -2,10 +2,9 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use sourmash::encodings::HashFunctions;
 use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{
-    max_hash_for_scaled, HashFunctions, KmerMinHash, KmerMinHashBTree,
-};
+use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash, KmerMinHashBTree};
 use sourmash::sketch::Sketch;
 
 use proptest::collection::vec;

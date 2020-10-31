@@ -35,6 +35,7 @@ enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_INVALID_HASH_FUNCTION = 1104,
   SOURMASH_ERROR_CODE_READ_DATA = 1201,
   SOURMASH_ERROR_CODE_STORAGE = 1202,
+  SOURMASH_ERROR_CODE_HLL_PRECISION_BOUNDS = 1301,
   SOURMASH_ERROR_CODE_IO = 100001,
   SOURMASH_ERROR_CODE_UTF8_ERROR = 100002,
   SOURMASH_ERROR_CODE_PARSE_INT = 100003,
@@ -44,6 +45,8 @@ enum SourmashErrorCode {
 typedef uint32_t SourmashErrorCode;
 
 typedef struct SourmashComputeParameters SourmashComputeParameters;
+
+typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
@@ -114,6 +117,40 @@ void computeparams_set_track_abundance(SourmashComputeParameters *ptr, bool v);
 bool computeparams_track_abundance(const SourmashComputeParameters *ptr);
 
 uint64_t hash_murmur(const char *kmer, uint64_t seed);
+
+void hll_add_hash(SourmashHyperLogLog *ptr, uint64_t hash);
+
+void hll_add_sequence(SourmashHyperLogLog *ptr, const char *sequence, uintptr_t insize, bool force);
+
+uintptr_t hll_cardinality(const SourmashHyperLogLog *ptr);
+
+double hll_containment(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+void hll_free(SourmashHyperLogLog *ptr);
+
+SourmashHyperLogLog *hll_from_buffer(const char *ptr, uintptr_t insize);
+
+SourmashHyperLogLog *hll_from_path(const char *filename);
+
+uintptr_t hll_intersection_size(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+uintptr_t hll_ksize(const SourmashHyperLogLog *ptr);
+
+uintptr_t hll_matches(const SourmashHyperLogLog *ptr, const SourmashKmerMinHash *mh_ptr);
+
+void hll_merge(SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+SourmashHyperLogLog *hll_new(void);
+
+void hll_save(const SourmashHyperLogLog *ptr, const char *filename);
+
+double hll_similarity(const SourmashHyperLogLog *ptr, const SourmashHyperLogLog *optr);
+
+const uint8_t *hll_to_buffer(const SourmashHyperLogLog *ptr, uintptr_t *size);
+
+void hll_update_mh(SourmashHyperLogLog *ptr, const SourmashKmerMinHash *optr);
+
+SourmashHyperLogLog *hll_with_error_rate(double error_rate, uintptr_t ksize);
 
 void kmerminhash_add_from(SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 

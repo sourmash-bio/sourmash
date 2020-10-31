@@ -39,6 +39,9 @@ pub enum SourmashError {
     #[error("Codon is invalid length: {message}")]
     InvalidCodonLength { message: String },
 
+    #[error("Set error rate to a value smaller than 0.367696 and larger than 0.00203125")]
+    HLLPrecisionBounds,
+
     #[error(transparent)]
     ReadDataError(#[from] crate::index::storage::ReadDataError),
 
@@ -87,6 +90,8 @@ pub enum SourmashErrorCode {
     // index-related errors
     ReadData = 12_01,
     Storage = 12_02,
+    // HLL errors
+    HLLPrecisionBounds = 13_01,
     // external errors
     Io = 100_001,
     Utf8Error = 100_002,
@@ -114,6 +119,7 @@ impl SourmashErrorCode {
             SourmashError::InvalidHashFunction { .. } => SourmashErrorCode::InvalidHashFunction,
             SourmashError::ReadDataError { .. } => SourmashErrorCode::ReadData,
             SourmashError::StorageError { .. } => SourmashErrorCode::Storage,
+            SourmashError::HLLPrecisionBounds { .. } => SourmashErrorCode::HLLPrecisionBounds,
             SourmashError::SerdeError { .. } => SourmashErrorCode::SerdeError,
             SourmashError::IOError { .. } => SourmashErrorCode::Io,
             SourmashError::NifflerError { .. } => SourmashErrorCode::NifflerError,
