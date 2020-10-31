@@ -295,7 +295,7 @@ def test_sbt_combine(n_children):
     if not next_empty:
         next_empty = n + 1
 
-    tree_1.add_node(SigLeaf(to_search.name(), to_search))
+    tree_1.add_node(SigLeaf(to_search.name, to_search))
     assert tree_1.next_node == next_empty
 
 

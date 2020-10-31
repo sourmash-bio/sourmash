@@ -630,9 +630,9 @@ def test_plot_subsample_1():
         print(out)
 
         expected = """\
-0\ts10+s11
-1\tgenome-s12.fa.gz
-2\tgenome-s10.fa.gz"""
+0\tgenome-s10+s11
+1\tgenome-s12
+2\tgenome-s10"""
         assert expected in out
 
 
@@ -657,9 +657,9 @@ def test_plot_subsample_2():
 
         print(out)
         expected = """\
-0\tgenome-s12.fa.gz
-1\ts10+s11
-2\tgenome-s11.fa.gz"""
+0\tgenome-s12
+1\tgenome-s10+s11
+2\tgenome-s11"""
         assert expected in out
 
 
@@ -765,7 +765,6 @@ def test_search_csv(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         assert float(row['similarity']) == 0.93
-        assert row['name'].endswith('short2.fa')
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
@@ -787,7 +786,7 @@ def test_search_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
 
-    assert '100.0%       GCA_001593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '100.0%       GCA_001593925' in str(c)
 
 
 @utils.in_thisdir
@@ -796,7 +795,7 @@ def test_gather_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
 
-    assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(c)
 
 
 @utils.in_thisdir
@@ -1158,8 +1157,8 @@ def test_do_sourmash_sbt_search_output():
         outfile = open(os.path.join(location, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert 'e26a306d26512' in output
+        assert '914591cd1130aa915' in output
 
 
 # check against a bug in sbt search triggered by incorrect max Jaccard
@@ -1251,8 +1250,8 @@ def test_do_sourmash_sbt_move_and_search_output():
         outfile = open(os.path.join(newpath, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert '914591cd1130aa91' in output
+        assert 'e26a306d2651' in output
 
 
 def test_search_deduce_ksize_and_select_appropriate():
@@ -2274,7 +2273,7 @@ def test_do_sourmash_check_sbt_filenames():
         sig_md5s = set()
         for f in files:
             sig = signature.load_one_signature(f)
-            sig_names.add(sig.name())
+            sig_names.add(sig.name)
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
@@ -2556,7 +2555,6 @@ def test_gather_csv():
             assert float(row['f_orig_query']) == 1.0
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
-            assert row['name'].endswith('short2.fa')
             assert row['filename'] == 'zzz'
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
 
@@ -3701,6 +3699,7 @@ def test_sbt_categorize():
         testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
         testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
+        # all four in the current directory for categorize .
         shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
         shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
         shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
@@ -3721,10 +3720,11 @@ def test_sbt_categorize():
 
         # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
         # yields 521/1000 ==> ~0.5
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+        assert 'for genome-s10+s11, found: 0.50 genome-s10' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+        print(out_csv)
+        assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance():
@@ -3872,7 +3872,7 @@ def test_watch(c):
 
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'FOUND: genome-s10.fa.gz, at 1.000' in c.last_result.out
+    assert 'FOUND: genome-s10, at 1.000' in c.last_result.out
 
 
 @utils.in_tempdir
@@ -3912,7 +3912,7 @@ def test_watch_coverage():
 
         print(out)
         print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+        assert 'FOUND: genome-s10, at 1.000' in out
 
 
 def test_storage_convert():
@@ -4033,7 +4033,7 @@ def test_license_cc0():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('short.fa')
+        assert str(sig).endswith('short.fa')
 
         assert sig.license == 'CC0'
 

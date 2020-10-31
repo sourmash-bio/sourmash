@@ -60,7 +60,7 @@ def gather_signature(query_sig, dblist, ignore_abundance):
     """
     Decompose 'query_sig' using the given list of databases.
     """
-    notify('loaded query: {}... (k={})', query_sig.name()[:30],
+    notify('loaded query: {}... (k={})', str(query_sig)[:30],
                                          query_sig.minhash.ksize)
 
     # extract the basic set of mins
@@ -196,7 +196,7 @@ def gather_main(args):
     # for each query, gather all the matches across databases
     moltype = dblist[0].moltype
     query_sig = sourmash_args.load_query_signature(args.query, ksize, moltype)
-    debug('classifying', query_sig.name())
+    debug('classifying', query_sig)
 
     # make sure we're looking at the same scaled value as database
     query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
