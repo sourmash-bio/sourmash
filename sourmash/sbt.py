@@ -1371,7 +1371,8 @@ def scaffold(original_datasets, storage, factory=None):
             raise ValueError("unknown dataset type")
     del original_datasets
 
-    # TODO: we can build the heap in parallel.
+    # TODO: we can build the heap in parallel, if the data was
+    # pickle-able for multiprocessing...
     # on top of doing the count_common calculations in parallel,
     # we can also avoid building the heap (just build a list first)
     # and then call heapify on it after the list is ready
@@ -1400,7 +1401,8 @@ def scaffold(original_datasets, storage, factory=None):
                     # heapq defaults to a min heap,
                     # invert "common" here to avoid having to use the
                     # internal methods for a max heap
-                    heapq.heappush(heap, (-common, i, j))
+                    heap.append((-common, i, j))
+    heapq.heapify(heap)
 
     if factory is None:
         n_unique_hashes = len(hll)
@@ -1409,6 +1411,8 @@ def scaffold(original_datasets, storage, factory=None):
         #htable_size *= num_htables
         print(len(hll), num_htables, htable_size)
 
+        # TODO: turns out len(hll) is too big in most cases.
+        # need a better heuristic for optimal size...
         htable_size = 1e5
         num_htables = 1
 
@@ -1433,7 +1437,7 @@ def scaffold(original_datasets, storage, factory=None):
             processed.add(p2)
 
             # Name will be updated later, when we have the right position
-            new_node = Node(factory, name=f"internal.XXX")
+            new_node = Node(factory)
             data1.update(new_node)
             data2.update(new_node)
 
@@ -1462,7 +1466,7 @@ def scaffold(original_datasets, storage, factory=None):
                     processed.add(p1)
 
                 # Name will be updated later, when we have the right position
-                new_node = Node(factory, name=f"internal.XXX")
+                new_node = Node(factory)
                 d.update(new_node)
 
                 new_internal = InternalNode(new_node, BinaryLeaf(d), None)
@@ -1478,16 +1482,15 @@ def scaffold(original_datasets, storage, factory=None):
         next_round = []
         total_nodes = len(current_round)
 
-        # TODO: we can build the heap in parallel.
-        # on top of doing the intersection_count calculations in parallel,
-        # we can also avoid building the heap (just build a list first)
-        # and then call heapify on it after the list is ready
+        # TODO: we can build the heap in parallel, if the data was
+        # pickle-able for multiprocessing...
         heap = []
         for (i, d1) in enumerate(current_round):
             for (j, d2) in enumerate(current_round):
                 if i > j:
                     common = d1.element.data.intersection_count(d2.element.data)
-                    heapq.heappush(heap, (-common, i, j))
+                    heap.append((-common, i, j))
+        heapq.heapify(heap)
 
         processed = set()
         while heap:
