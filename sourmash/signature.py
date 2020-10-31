@@ -33,7 +33,7 @@ class SourmashSignature(RustObject):
         self._objptr = lib.signature_new()
 
         if name:
-            self._name = name
+            self.name = name
         if filename:
             self.filename = filename
 
@@ -55,13 +55,15 @@ class SourmashSignature(RustObject):
         return hash(self.md5sum())
 
     def __str__(self):
-        name = self.name()
-        md5pref = self.md5sum()[:8]
-        if name != md5pref:
-            return "SourmashSignature('{}', {})".format(name, md5pref)
-        return "SourmashSignature({})".format(md5pref)
+        return self._display_name()
 
-    __repr__ = __str__
+    def __repr__(self):
+        name = self.name
+        md5pref = self.md5sum()[:8]
+        if name == md5pref:
+            return "SourmashSignature({})".format(md5pref)
+        else: # name != md5pref:
+            return "SourmashSignature('{}', {})".format(name, md5pref)
 
     #def minhashes(self):
     #    size = ffi.new("uintptr_t *")
@@ -90,20 +92,16 @@ class SourmashSignature(RustObject):
     def _name(self, value):
         self._methodcall(lib.signature_set_name, to_bytes(value))
 
+    @property
+    def name(self):
+        return decode_str(self._methodcall(lib.signature_get_name))
+
+    @name.setter
+    def name(self, value):
+        self._methodcall(lib.signature_set_name, to_bytes(value))
+
     def __ne__(self, other):
         return not self == other
-
-    def name(self):
-        "Return as nice a name as possible, defaulting to md5 prefix."
-        name = self._name
-        filename = self.filename
-
-        if name:
-            return name
-        elif filename:
-            return filename
-        else:
-            return self.md5sum()[:8]
 
     @property
     def filename(self):
@@ -117,20 +115,20 @@ class SourmashSignature(RustObject):
     def license(self):
         return decode_str(self._methodcall(lib.signature_get_license))
 
-    def _display_name(self, max_length):
+    def _display_name(self, max_length=0):
         name = self._name
         filename = self.filename
 
         if name:
-            if len(name) > max_length:
+            if max_length and len(name) > max_length:
                 name = name[: max_length - 3] + "..."
         elif filename:
             name = filename
-            if len(name) > max_length:
+            if max_length and len(name) > max_length:
                 name = "..." + name[-max_length + 3 :]
         else:
             name = self.md5sum()[:8]
-        assert len(name) <= max_length
+        assert not max_length or len(name) <= max_length
         return name
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
@@ -165,7 +163,7 @@ class SourmashSignature(RustObject):
     def __getstate__(self):  # enable pickling
         return (
             self.minhash,
-            self._name,
+            self.name,
             self.filename,
         )
 
@@ -175,7 +173,7 @@ class SourmashSignature(RustObject):
 
         self._objptr = lib.signature_new()
         if name:
-            self._name = name
+            self.name = name
         if filename:
             self.filename = filename
         self.minhash = mh
@@ -185,7 +183,7 @@ class SourmashSignature(RustObject):
             SourmashSignature,
             (
                 self.minhash,
-                self._name,
+                self.name,
                 self.filename
             ),
         )
