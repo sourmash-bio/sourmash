@@ -337,7 +337,10 @@ def index(args):
 
         tree = create_sbt_index(bf_size, n_children=args.n_children)
         batch = True
+
         # TODO: set up storage here
+        storage_info = tree._setup_storage(args.sbt_name)
+        tree.storage = storage_info.storage
 
     if args.sparseness < 0 or args.sparseness > 1.0:
         error('sparseness must be in range [0.0, 1.0].')
@@ -415,6 +418,10 @@ def index(args):
         sys.exit(-1)
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
+    # TODO: if all nodes are already saved (like in the scaffold/batch case)
+    # we can potentially set structure_only=True here. An alternative is to
+    # modify Node.save to verify if the data is already saved or still need to
+    # be saved (dirty flag?)
     tree.save(args.sbt_name, sparseness=args.sparseness)
 
 

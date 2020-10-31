@@ -72,6 +72,9 @@ STORAGES = {
 
 
 NodePos = namedtuple("NodePos", ["pos", "node"])
+StorageInfo = namedtuple("StorageInfo",
+                         ["kind", "storage", "backend", "name", "subdir",
+                          "storage_args", "index_filename"])
 
 
 class GraphFactory(object):
@@ -557,6 +560,41 @@ class SBT(Index):
         node = self._nodes.get(cd, None)
         return NodePos(cd, node)
 
+    def _setup_storage(self, path, storage=None):
+        # choose between ZipStorage and FS (file system/directory) storage.
+        if not path.endswith(".sbt.json"):
+            kind = "Zip"
+            if not path.endswith('.sbt.zip'):
+                path += '.sbt.zip'
+            if storage is None:
+                storage = ZipStorage(path)
+            backend = "FSStorage"
+            name = os.path.basename(path[:-8])
+            subdir = '.sbt.{}'.format(name)
+            storage_args = FSStorage("", subdir).init_args()
+            storage.save(subdir + "/", b"")
+            index_filename = os.path.abspath(path)
+        else:                             # path.endswith('.sbt.json')
+            assert path.endswith('.sbt.json')
+            kind = "FS"
+            subdir = None
+            name = os.path.basename(path)
+            name = name[:-9]
+            index_filename = os.path.abspath(path)
+
+            if storage is None:
+                # default storage
+                location = os.path.dirname(index_filename)
+                subdir = '.sbt.{}'.format(name)
+
+                storage = FSStorage(location, subdir)
+                index_filename = os.path.join(location, index_filename)
+
+            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            storage_args = storage.init_args()
+
+        return StorageInfo(kind, storage, backend, name, subdir, storage_args, index_filename)
+
     def save(self, path, storage=None, sparseness=0.0, structure_only=False):
         """Saves an SBT description locally and node data to a storage.
 
@@ -585,39 +623,13 @@ class SBT(Index):
         info['version'] = 7
         info["index_type"] = self.__class__.__name__  # TODO: check
 
-        # choose between ZipStorage and FS (file system/directory) storage.
-        if not path.endswith(".sbt.json"):
-            kind = "Zip"
-            if not path.endswith('.sbt.zip'):
-                path += '.sbt.zip'
-            storage = ZipStorage(path)
-            backend = "FSStorage"
-            name = os.path.basename(path[:-8])
-            subdir = '.sbt.{}'.format(name)
-            storage_args = FSStorage("", subdir).init_args()
-            storage.save(subdir + "/", b"")
-            index_filename = os.path.abspath(path)
-        else:                             # path.endswith('.sbt.json')
-            assert path.endswith('.sbt.json')
-            kind = "FS"
-            name = os.path.basename(path)
-            name = name[:-9]
-            index_filename = os.path.abspath(path)
-
-            if storage is None:
-                # default storage
-                location = os.path.dirname(index_filename)
-                subdir = '.sbt.{}'.format(name)
-
-                storage = FSStorage(location, subdir)
-                index_filename = os.path.join(location, index_filename)
-
-            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-            storage_args = storage.init_args()
+        if storage is None and self.storage is not None:
+            storage = self.storage
+        sinfo = self._setup_storage(path, storage)
 
         info['storage'] = {
-            'backend': backend,
-            'args': storage_args
+            'backend': sinfo.backend,
+            'args': sinfo.storage_args
         }
         info['factory'] = {
             'class': GraphFactory.__name__,
@@ -646,11 +658,11 @@ class SBT(Index):
                 # trigger data loading before saving to the new place
                 node.data
 
-                node.storage = storage
+                node.storage = sinfo.storage
 
                 basepath = None
-                if kind == "Zip":
-                    basepath = subdir
+                if sinfo.kind == "Zip":
+                    basepath = sinfo.subdir
 
                 data["filename"] = _save_node(node, basepath)
             else:
@@ -669,17 +681,17 @@ class SBT(Index):
         info['nodes'] = nodes
         info['signatures'] = leaves
 
-        if kind == "Zip":
+        if sinfo.kind == "Zip":
             tree_data = json.dumps(info).encode("utf-8")
-            save_path = "{}.sbt.json".format(name)
-            storage.save(save_path, tree_data)
-            storage.close()
+            save_path = "{}.sbt.json".format(sinfo.name)
+            sinfo.storage.save(save_path, tree_data)
+            sinfo.storage.close()
 
-        elif kind == "FS":
-            with open(index_filename, 'w') as fp:
+        elif sinfo.kind == "FS":
+            with open(sinfo.index_filename, 'w') as fp:
                 json.dump(info, fp)
 
-        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
+        notify("Finished saving SBT index, available at {0}\n".format(sinfo.index_filename))
 
         return path
 
@@ -1501,8 +1513,11 @@ def scaffold(original_datasets, storage, factory=None):
 
                 # save d1 and d2 Nodes into storage and unload them, if a storage is available
                 if storage is not None:
+                    d1.element.storage = storage
                     _save_node(d1.element)
                     d1.element.unload()
+
+                    d2.element.storage = storage
                     _save_node(d2.element)
                     d2.element.unload()
 
@@ -1531,6 +1546,7 @@ def scaffold(original_datasets, storage, factory=None):
 
                     # save d into storage and unload it, if a storage is available
                     if storage is not None:
+                        d.element.storage = storage
                         _save_node(d.element)
                         d.element.unload()
 
