@@ -1,7 +1,8 @@
 use finch::sketch_schemes::mash::MashSketcher;
 use finch::sketch_schemes::SketchScheme;
 
-use crate::sketch::minhash::{HashFunctions, KmerMinHash};
+use crate::encodings::HashFunctions;
+use crate::sketch::minhash::KmerMinHash;
 
 /*
  TODO:
@@ -41,8 +42,9 @@ mod test {
     use std::collections::HashSet;
     use std::iter::FromIterator;
 
+    use crate::encodings::HashFunctions;
     use crate::signature::SigsTrait;
-    use crate::sketch::minhash::{HashFunctions, KmerMinHash};
+    use crate::sketch::minhash::KmerMinHash;
 
     use finch::sketch_schemes::mash::MashSketcher;
     use needletail::kmer::CanonicalKmers;

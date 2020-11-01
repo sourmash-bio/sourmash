@@ -34,7 +34,7 @@ def test_do_sourmash_compute():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('short.fa')
+        assert str(sig).endswith('short.fa')
 
 
 @utils.in_tempdir
@@ -49,7 +49,7 @@ def test_do_sourmash_compute_outdir(c):
     assert os.path.exists(sigfile)
 
     sig = next(signature.load_signatures(sigfile))
-    assert sig.name().endswith('short.fa')
+    assert str(sig).endswith('short.fa')
 
 
 def test_do_sourmash_compute_output_valid_file():
@@ -154,7 +154,7 @@ def test_do_sourmash_compute_singleton():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('shortName')
+        assert sig.name.endswith('shortName')
 
 
 def test_do_sourmash_compute_10x_barcode():
@@ -177,7 +177,7 @@ def test_do_sourmash_compute_10x_barcode():
         assert os.path.exists(sigfile)
         siglist = list(signature.load_signatures(sigfile))
         assert len(siglist) == 16
-        barcode_signatures = list(set([sig.name().split("_")[0] for sig in siglist]))
+        barcode_signatures = list(set([sig.name.split("_")[0] for sig in siglist]))
 
         with open(utils.get_test_data('10x-example/barcodes.tsv')) as f:
             true_barcodes = set(x.strip() for x in f.readlines())
@@ -298,7 +298,7 @@ def test_do_sourmash_compute_name():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name() == 'foo'
+        assert sig.name == 'foo'
 
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '31', '--name', 'foo',
@@ -309,8 +309,8 @@ def test_do_sourmash_compute_name():
         assert os.path.exists(sigfile2)
 
         sig2 = next(signature.load_signatures(sigfile))
-        assert sig2.name() == 'foo'
-        assert sig.name() == sig2.name()
+        assert sig2.name == 'foo'
+        assert sig.name == sig2.name
 
 
 def test_do_sourmash_compute_name_fail_no_output():
@@ -354,7 +354,7 @@ def test_do_sourmash_compute_name_from_first():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name() == 'firstname'
+        assert sig.name == 'firstname'
 
 
 def test_do_sourmash_compute_multik():
@@ -798,18 +798,18 @@ def test_do_sourmash_check_protein_comparisons():
 
         # I'm not sure why load_signatures is randomizing order, but ok.
         x = list(signature.load_signatures(sig1))
-        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name())
+        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
         x = list(signature.load_signatures(sig2))
-        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name())
+        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
-        name1 = sig1_aa.name().split()[0]
+        name1 = sig1_aa.name.split()[0]
         assert name1 == 'NP_414543.1'
-        name2 = sig2_aa.name().split()[0]
+        name2 = sig2_aa.name.split()[0]
         assert name2 == 'NP_414544.1'
-        name3 = sig1_trans.name().split()[0]
+        name3 = sig1_trans.name.split()[0]
         assert name3 == 'gi|556503834:2801-3733'
-        name4 = sig2_trans.name().split()[0]
+        name4 = sig2_trans.name.split()[0]
         assert name4 == 'gi|556503834:337-2799'
 
         print(name1, name3, round(sig1_aa.similarity(sig1_trans), 3))
@@ -835,9 +835,9 @@ def test_do_sourmash_check_knowngood_dna_comparisons(c):
     assert os.path.exists(sig1)
 
     x = list(signature.load_signatures(sig1))
-    sig1, sig2 = sorted(x, key=lambda x: x.name())
-    print(sig1.name())
-    print(sig2.name())
+    sig1, sig2 = sorted(x, key=lambda x: x.name)
+    print(sig1.name)
+    print(sig2.name)
 
     knowngood = utils.get_test_data('benchmark.dna.sig')
     good = list(signature.load_signatures(knowngood))[0]
@@ -855,7 +855,7 @@ def test_do_sourmash_check_knowngood_dna_comparisons_use_rna(c):
     assert os.path.exists(sig1)
 
     x = list(signature.load_signatures(sig1))
-    sig1, sig2 = sorted(x, key=lambda x: x.name())
+    sig1, sig2 = sorted(x, key=lambda x: x.name)
 
     knowngood = utils.get_test_data('benchmark.dna.sig')
     good = list(signature.load_signatures(knowngood))[0]
@@ -878,7 +878,7 @@ def test_do_sourmash_check_knowngood_input_protein_comparisons():
         assert os.path.exists(sig1)
 
         x = list(signature.load_signatures(sig1))
-        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name())
+        sig1_aa, sig2_aa = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data('benchmark.input_prot.sig')
         good_aa = list(signature.load_signatures(knowngood))[0]
@@ -901,7 +901,7 @@ def test_do_sourmash_check_knowngood_protein_comparisons():
         assert os.path.exists(sig1)
 
         x = list(signature.load_signatures(sig1))
-        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name())
+        sig1_trans, sig2_trans = sorted(x, key=lambda x: x.name)
 
         knowngood = utils.get_test_data('benchmark.prot.sig')
         good_trans = list(signature.load_signatures(knowngood))[0]

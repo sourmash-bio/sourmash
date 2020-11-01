@@ -3,8 +3,9 @@ use wasm_bindgen::prelude::*;
 use serde_json;
 
 use crate::cmd::ComputeParameters;
+use crate::encodings::HashFunctions;
 use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::{HashFunctions, KmerMinHash};
+use crate::sketch::minhash::KmerMinHash;
 
 #[wasm_bindgen]
 impl KmerMinHash {
@@ -37,7 +38,7 @@ impl KmerMinHash {
             hash_function,
             seed as u64,
             track_abundance,
-            num
+            num,
         )
     }
 
