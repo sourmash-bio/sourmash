@@ -190,7 +190,6 @@ def dna(args):
     CTB: make usable via Python?
     """
     # for dna:
-    args.input_is_10x = False
     args.input_is_protein = False
 
     try:
@@ -210,7 +209,6 @@ def protein(args):
     CTB: make usable via Python?
     """
     # for protein:
-    args.input_is_10x = False
     args.input_is_protein = True
 
     # provide good defaults for dayhoff/hp/protein!
@@ -240,7 +238,6 @@ def translate(args):
     CTB: make usable via Python?
     """
     # for translate:
-    args.input_is_10x = False
     args.input_is_protein = False
 
     # provide good defaults for dayhoff/hp/protein!

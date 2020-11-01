@@ -166,50 +166,6 @@ def _compute_individual(args, signatures_factory):
 
             notify('calculated {} signatures for {} sequences in {}',
                    len(siglist), n + 1, filename)
-        elif args.input_is_10x:
-            from bam2fasta import cli as bam2fasta_cli
-
-            # Initializing time
-            startt = time.time()
-            metadata = [
-                "--write-barcode-meta-csv", args.write_barcode_meta_csv] if args.write_barcode_meta_csv else ['', '']
-            save_fastas = ["--save-fastas", args.save_fastas] if args.save_fastas else ['', '']
-            barcodes_file = ["--barcodes-file", args.barcodes_file] if args.barcodes_file else ['', '']
-            rename_10x_barcodes = \
-                ["--rename-10x-barcodes", args.rename_10x_barcodes] if args.rename_10x_barcodes else ['', '']
-
-            bam_to_fasta_args = [
-                '--filename', filename,
-                '--min-umi-per-barcode', str(args.count_valid_reads),
-                '--processes', str(args.processes),
-                '--line-count', str(args.line_count),
-                barcodes_file[0], barcodes_file[1],
-                rename_10x_barcodes[0], rename_10x_barcodes[1],
-                save_fastas[0], save_fastas[1],
-                metadata[0], metadata[1]]
-            bam_to_fasta_args = [arg for arg in bam_to_fasta_args if arg != '']
-
-            fastas = bam2fasta_cli.convert(bam_to_fasta_args)
-            # TODO move to bam2fasta since pool imap creates this empty lists and returns them
-            fastas = [fasta for fasta in fastas if fasta != []]
-
-            siglist = []
-            for fasta in fastas:
-                for n, record in enumerate(screed.open(fasta)):
-                    # make signatures for each sequence
-                    sigs = signatures_factory()
-                    add_seq(sigs, record.sequence,
-                            args.input_is_protein, args.check_sequence)
-
-                # @CTB check bug here wrt indentation - see #1158
-                set_sig_name(sigs, fasta, name=record.name)
-                siglist.extend(sigs)
-
-                notify('calculated {} signatures for {} sequences in {}',
-                       len(siglist), n + 1, fasta)
-
-            notify("time taken to calculate signature records for 10x file is {:.5f} seconds",
-                   time.time() - startt)
         else:
             # make a single sig for the whole file
             sigs = signatures_factory()
