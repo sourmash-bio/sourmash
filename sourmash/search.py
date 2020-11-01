@@ -217,7 +217,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               std_abund=std_abund,
                               filename=filename,
                               md5=best_match.md5sum(),
-                              name=best_match.name(),
+                              name=best_match.name,
                               match=best_match,
                               gather_result_rank=result_n,
                               remaining_bp=remaining_bp)
