@@ -390,12 +390,12 @@ def test_sbt_ipfsstorage():
 
         try:
             with IPFSStorage() as storage:
-                tree.save(os.path.join(location, 'tree'), storage=storage)
+                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
         except ipfshttpclient.exceptions.ConnectionError:
             pytest.xfail("ipfs not installed/functioning probably")
 
         with IPFSStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree'),
+            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
