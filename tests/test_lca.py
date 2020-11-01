@@ -39,7 +39,7 @@ def test_api_create_insert():
     lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
     lca_db.insert(ss)
 
-    ident = ss.name()
+    ident = ss.name
     assert len(lca_db.ident_to_name) == 1
     assert ident in lca_db.ident_to_name
     assert lca_db.ident_to_name[ident] == ident
@@ -105,7 +105,7 @@ def test_api_create_insert_ident():
     ident = 'foo'
     assert len(lca_db.ident_to_name) == 1
     assert ident in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ss.name()
+    assert lca_db.ident_to_name[ident] == ss.name
     assert len(lca_db.ident_to_idx) == 1
     assert lca_db.ident_to_idx[ident] == 0
     assert len(lca_db.hashval_to_idx) == len(ss.minhash)
@@ -140,8 +140,8 @@ def test_api_create_insert_two():
     assert len(lca_db.ident_to_name) == 2
     assert ident in lca_db.ident_to_name
     assert ident2 in lca_db.ident_to_name
-    assert lca_db.ident_to_name[ident] == ss.name()
-    assert lca_db.ident_to_name[ident2] == ss2.name()
+    assert lca_db.ident_to_name[ident] == ss.name
+    assert lca_db.ident_to_name[ident2] == ss2.name
 
     assert len(lca_db.ident_to_idx) == 2
     assert lca_db.ident_to_idx[ident] == 0
@@ -179,7 +179,7 @@ def test_api_create_insert_w_lineage():
     lca_db.insert(ss, lineage=lineage)
 
     # basic ident stuff
-    ident = ss.name()
+    ident = ss.name
     assert len(lca_db.ident_to_name) == 1
     assert ident in lca_db.ident_to_name
     assert lca_db.ident_to_name[ident] == ident
@@ -303,7 +303,7 @@ def test_api_insert_retrieve_check_name():
     sigs = list(lca_db.signatures())
     assert len(sigs) == 1
     retrieved_sig = sigs[0]
-    assert retrieved_sig.name() == ss.name()
+    assert retrieved_sig.name == ss.name
     assert retrieved_sig.minhash == ss.minhash
 
 
@@ -923,7 +923,7 @@ def test_single_classify_empty():
         print(out)
         print(err)
 
-        assert 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz,nomatch,,,,,,,,' in out
+        assert 'GCF_000005845,nomatch,,,,,,,,' in out
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 

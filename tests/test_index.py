@@ -83,13 +83,13 @@ def test_linear_index_search():
 
     # now, search for sig2
     sr = lidx.search(ss2, threshold=1.0)
-    print([s[1].name() for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 1
     assert sr[0][1] == ss2
 
     # search for sig47 with lower threshold; search order not guaranteed.
     sr = lidx.search(ss47, threshold=0.1)
-    print([s[1].name() for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 2
     sr.sort(key=lambda x: -x[0])
     assert sr[0][1] == ss47
@@ -97,7 +97,7 @@ def test_linear_index_search():
 
     # search for sig63 with lower threshold; search order not guaranteed.
     sr = lidx.search(ss63, threshold=0.1)
-    print([s[1].name() for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 2
     sr.sort(key=lambda x: -x[0])
     assert sr[0][1] == ss63
@@ -214,7 +214,7 @@ def test_linear_index_save_load():
         
     # now, search for sig2
     sr = linear2.search(ss2, threshold=1.0)
-    print([s[1].name() for s in sr])
+    print([s[1].name for s in sr])
     assert len(sr) == 1
     assert sr[0][1] == ss2
 

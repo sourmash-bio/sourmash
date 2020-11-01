@@ -27,6 +27,7 @@ doc: build .PHONY
 	cd doc && make html
 
 include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/hyperloglog.rs \
                     src/core/src/ffi/minhash.rs \
                     src/core/src/ffi/signature.rs \
                     src/core/src/ffi/nodegraph.rs \

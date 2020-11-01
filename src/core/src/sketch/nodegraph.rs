@@ -76,7 +76,7 @@ impl Nodegraph {
     pub fn with_tables(tablesize: usize, n_tables: usize, ksize: usize) -> Nodegraph {
         let mut tablesizes = Vec::with_capacity(n_tables);
 
-        let mut i = (tablesize - 1) as u64;
+        let mut i = u64::max((tablesize - 1) as u64, 2);
         if i % 2 == 0 {
             i -= 1
         }
