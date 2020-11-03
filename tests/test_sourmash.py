@@ -2558,6 +2558,7 @@ def test_gather_csv():
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
             assert row['filename'] == 'zzz'
+            assert row['name'].endswith('short2.fa')
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
             assert row['gather_result_rank'] == '0'
 
