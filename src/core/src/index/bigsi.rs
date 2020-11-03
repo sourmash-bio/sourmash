@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use failure::{Error, Fail};
 use fixedbitset::FixedBitSet;
+use thiserror::Error;
 use typed_builder::TypedBuilder;
 
 use crate::index::Index;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 use crate::HashIntoType;
 
 #[derive(Clone, TypedBuilder)]
@@ -20,9 +21,9 @@ pub struct BIGSI<L> {
     //storage: Rc<dyn Storage>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum BIGSIError {
-    #[fail(display = "BIGSI doesn't support this method")]
+    #[error("BIGSI doesn't support this method")]
     MethodDisabled,
 }
 
@@ -48,8 +49,8 @@ impl BIGSI<Signature> {
 
         // TODO: select correct minhash
         if let Sketch::MinHash(mh) = &dataset.signatures[0] {
-            for h in &mh.mins {
-                ng.count(*h);
+            for h in mh.mins() {
+                ng.count(h);
             }
         } else {
             // TODO: what if it is not a mh?
@@ -59,7 +60,8 @@ impl BIGSI<Signature> {
         self.datasets.push(dataset);
         let col = self.datasets.len() - 1;
 
-        for pos in ng.bs[0].ones() {
+        let bs = ng.into_bitsets();
+        for pos in bs[0].ones() {
             let bs = &mut self.matrix[pos];
             if bs.len() == col {
                 bs.grow(col + col / 2);
@@ -95,8 +97,8 @@ impl<'a> Index<'a> for BIGSI<Signature> {
         if let Sketch::MinHash(hashes) = &sig.signatures[0] {
             let mut counter: HashMap<usize, usize> = HashMap::with_capacity(hashes.size());
 
-            for hash in &hashes.mins {
-                self.query(*hash).for_each(|dataset_idx| {
+            for hash in hashes.mins() {
+                self.query(hash).for_each(|dataset_idx| {
                     let idx = counter.entry(dataset_idx).or_insert(0);
                     *idx += 1;
                 });

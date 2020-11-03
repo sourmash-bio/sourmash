@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 from setuptools import setup, find_packages
 import sys
@@ -37,9 +36,8 @@ CLASSIFIERS = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Rust",
-    "Programming Language :: Python :: 2.7",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
@@ -62,9 +60,9 @@ SETUP_METADATA = {
         'sourmash = sourmash.__main__:main'
         ]
     },
-    "install_requires": ["screed>=0.9", "khmer>=2.1", "cffi>=1.14.0", 'numpy',
-                         'matplotlib', 'scipy', "deprecation>=2.0.6",
-                         'termplotlib==0.3.0'],
+    "install_requires": ['screed>=0.9', 'cffi>=1.14.0', 'numpy',
+                         'matplotlib', 'scipy', 'deprecation>=2.0.6',
+                         'cachetools >=4,<5', 'termplotlib==0.3.0'],
     "setup_requires": [
         "setuptools>=38.6.0",
         "milksnake",
@@ -80,11 +78,10 @@ SETUP_METADATA = {
     "extras_require": {
         'test' : ['pytest', 'pytest-cov', 'recommonmark', 'hypothesis'],
         'demo' : ['jupyter', 'jupyter_client', 'ipython'],
-        'doc' : ['sphinx', 'recommonmark', 'alabaster',
+        'doc' : ['sphinx', 'myst-parser[sphinx]>=0.12.2', 'alabaster',
                  "sphinxcontrib-napoleon", "nbsphinx",
                  "ipython"],
-        '10x': ['bam2fasta==1.0.1'],
-        'storage': ["ipfshttpclient", "redis"]
+        'storage': ["ipfshttpclient>=0.4.13", "redis"]
     },
     "include_package_data": True,
     "classifiers": CLASSIFIERS,

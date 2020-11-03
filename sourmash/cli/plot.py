@@ -44,6 +44,11 @@ def subparser(subparsers):
     subparser.add_argument(
         '--output-dir', metavar='DIR', help='directory for output plots'
     )
+    subparser.add_argument(
+        '--csv', metavar='F',
+        help='write clustered matrix and labels out in CSV format (with column'
+        ' headers) to this file'
+    )
 
 
 def main(args):

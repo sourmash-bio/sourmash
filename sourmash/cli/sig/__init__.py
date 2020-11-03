@@ -4,6 +4,8 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 `sourmash sig` operations.
 """
 
+from . import cat
+from . import split
 from . import describe
 from . import downsample
 from . import extract
@@ -24,7 +26,7 @@ import sys
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('sig', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS)
+    subparser = subparsers.add_parser('sig', formatter_class=RawDescriptionHelpFormatter, usage=SUPPRESS, aliases=['signature'])
     desc = 'Operations\n'
     clidir = os.path.dirname(__file__)
     ops = command_list(clidir)

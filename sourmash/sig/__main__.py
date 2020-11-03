@@ -1,24 +1,26 @@
 """
 Command-line entry point for 'python -m sourmash.sig'
 """
-from __future__ import print_function, unicode_literals
 import sys
 import csv
 import json
+import os
+from collections import defaultdict
 
 import sourmash
 import copy
 from sourmash.sourmash_args import FileOutput
 
-from ..logging import set_quiet, error, notify, set_quiet, print_results, debug
-from .. import sourmash_args
-from .._minhash import get_max_hash_for_scaled
+from sourmash.logging import set_quiet, error, notify, set_quiet, print_results, debug
+from sourmash import sourmash_args
+from sourmash.minhash import _get_max_hash_for_scaled
 
 usage='''
 sourmash signature <command> [<args>] - manipulate/work with signature files.
 
 ** Commands can be:
 
+cat <signature> [<signature> ... ]        - concatenate all signatures
 describe <signature> [<signature> ... ]   - show details of signature
 downsample <signature> [<signature> ... ] - downsample one or more signatures
 extract <signature> [<signature> ... ]    - extract one or more signatures
@@ -27,6 +29,7 @@ flatten <signature> [<signature> ... ]    - remove abundances
 intersect <signature> [<signature> ...]   - intersect one or more signatures
 merge <signature> [<signature> ...]       - merge one or more signatures
 rename <signature> <name>                 - rename signature
+split <signatures> [<signature> ...]      - split signatures into single files
 subtract <signature> <other_sig> [...]    - subtract one or more signatures
 import [ ... ]                            - import a mash or other signature
 export <signature>                        - export a signature, e.g. to mash
@@ -50,7 +53,7 @@ def _set_num_scaled(mh, num, scaled):
     # Number of hashes is 0th parameter
     mh_params[0] = num
     # Scale is 8th parameter
-    mh_params[8] = get_max_hash_for_scaled(scaled)
+    mh_params[8] = _get_max_hash_for_scaled(scaled)
     mh.__setstate__(mh_params)
     assert mh.num == num
     assert mh.scaled == scaled
@@ -59,28 +62,131 @@ def _set_num_scaled(mh, num, scaled):
 ##### actual command line functions
 
 
-def describe(args):
+def cat(args):
     """
-    provide basic info on signatures
+    concatenate all signatures into one file.
     """
     set_quiet(args.quiet)
+
+    encountered_md5sums = defaultdict(int)   # used by --unique
+    progress = sourmash_args.SignatureLoadingProgress()
 
     siglist = []
     for sigfile in args.signatures:
         this_siglist = []
         try:
-            this_siglist = sourmash.load_signatures(sigfile, quiet=True, do_raise=True)
-            for k in this_siglist:
-                siglist.append((k, sigfile))
+            loader = sourmash_args.load_file_as_signatures(sigfile,
+                                                           progress=progress)
+            n_loaded = 0
+            for sig in loader:
+                n_loaded += 1
+
+                md5 = sig.md5sum()
+                encountered_md5sums[md5] += 1
+                if args.unique and encountered_md5sums[md5] > 1:
+                    continue
+
+                siglist.append(sig)
         except Exception as exc:
-            error('\nError while reading signatures from {}:'.format(sigfile))
             error(str(exc))
             error('(continuing)')
 
-        notify('loaded {} signatures from {}...', len(siglist), sigfile,
-               end='\r')
+        notify('loaded {} signatures from {}...', n_loaded, sigfile, end='\r')
 
     notify('loaded {} signatures total.', len(siglist))
+
+    with FileOutput(args.output, 'wt') as fp:
+        sourmash.save_signatures(siglist, fp=fp)
+
+    notify('output {} signatures', len(siglist))
+
+    multiple_md5 = [ 1 for cnt in encountered_md5sums.values() if cnt > 1 ]
+    if multiple_md5:
+        notify('encountered {} MinHashes multiple times', sum(multiple_md5))
+        if args.unique:
+            notify('...and removed the duplicates, because --unique was specified.')
+
+
+def split(args):
+    """
+    split all signatures into individual files
+    """
+    set_quiet(args.quiet)
+
+    output_names = set()
+    output_scaled_template = '{md5sum}.k={ksize}.scaled={scaled}.{moltype}.dup={dup}.{basename}.sig'
+    output_num_template = '{md5sum}.k={ksize}.num={num}.{moltype}.dup={dup}.{basename}.sig'
+
+    if args.outdir:
+        if not os.path.exists(args.outdir):
+            notify('Creating --outdir {}', args.outdir)
+            os.mkdir(args.outdir)
+
+    progress = sourmash_args.SignatureLoadingProgress()
+
+    total = 0
+    for sigfile in args.signatures:
+        # load signatures from input file:
+        this_siglist = sourmash_args.load_file_as_signatures(sigfile,
+                                                             progress=progress)
+
+        # save each file individually --
+        n_signatures = 0
+        for sig in this_siglist:
+            n_signatures += 1
+            md5sum = sig.md5sum()[:8]
+            minhash = sig.minhash
+            basename = os.path.basename(sig.filename)
+            if not basename or basename == '-':
+                basename = 'none'
+
+            params = dict(basename=basename,
+                          md5sum=md5sum,
+                          scaled=minhash.scaled,
+                          ksize=minhash.ksize,
+                          num=minhash.num,
+                          moltype=minhash.moltype)
+
+            if minhash.scaled:
+                output_template = output_scaled_template
+            else: # num
+                assert minhash.num
+                output_template = output_num_template
+
+            # figure out if this is duplicate, build unique filename
+            n = 0
+            params['dup'] = n
+            output_name = output_template.format(**params)
+            while output_name in output_names:
+                params['dup'] = n
+                output_name = output_template.format(**params)
+                n += 1
+
+            output_names.add(output_name)
+
+            if args.outdir:
+                output_name = os.path.join(args.outdir, output_name)
+
+            if os.path.exists(output_name):
+                notify("** overwriting existing file {}".format(output_name))
+
+            # save!
+            with open(output_name, 'wt') as outfp:
+                sourmash.save_signatures([sig], outfp)
+                notify('writing sig to {}', output_name)
+
+        notify('loaded {} signatures from {}...', n_signatures, sigfile,
+               end='\r')
+        total += n_signatures
+
+    notify('loaded and split {} signatures total.', total)
+
+
+def describe(args):
+    """
+    provide basic info on signatures
+    """
+    set_quiet(args.quiet)
 
     # write CSV?
     w = None
@@ -94,34 +200,37 @@ def describe(args):
                            extrasaction='ignore')
         w.writeheader()
 
-    # extract info, write as appropriate.
-    for (sig, signature_file) in siglist:
-        mh = sig.minhash
-        ksize = mh.ksize
-        moltype = 'DNA'
-        if mh.is_protein:
-            if mh.dayhoff:
-                moltype = 'dayhoff'
-            elif mh.hp:
-                moltype = 'hp'
-            else:
-                moltype = 'protein'
-        scaled = mh.scaled
-        num = mh.num
-        seed = mh.seed
-        n_hashes = len(mh)
-        with_abundance = 0
-        if mh.track_abundance:
-            with_abundance = 1
-        md5 = sig.md5sum()
-        name = sig.name()
-        filename = sig.filename
-        license = sig.license
+    # load signatures and display info.
+    progress = sourmash_args.SignatureLoadingProgress()
 
-        if w:
-            w.writerow(locals())
+    n_loaded = 0
+    for signature_file in args.signatures:
+        try:
+            loader = sourmash_args.load_file_as_signatures(signature_file,
+                                                           progress=progress)
+            for sig in loader:
+                n_loaded += 1
 
-        print_results('''\
+                # extract info, write as appropriate.
+                mh = sig.minhash
+                ksize = mh.ksize
+                moltype = mh.moltype
+                scaled = mh.scaled
+                num = mh.num
+                seed = mh.seed
+                n_hashes = len(mh)
+                with_abundance = 0
+                if mh.track_abundance:
+                    with_abundance = 1
+                md5 = sig.md5sum()
+                name = sig.name or "** no name **"
+                filename = sig.filename
+                license = sig.license
+
+                if w:
+                    w.writerow(locals())
+
+                print_results('''\
 ---
 signature filename: {signature_file}
 signature: {name}
@@ -131,6 +240,14 @@ k={ksize} molecule={moltype} num={num} scaled={scaled} seed={seed} track_abundan
 size: {n_hashes}
 signature license: {license}
 ''', **locals())
+
+        except Exception as exc:
+            error('\nError while reading signatures from {}:'.format(signature_file))
+            error(str(exc))
+            error('(continuing)')
+            raise
+
+    notify('loaded {} signatures total.', n_loaded)
 
     if csv_fp:
         csv_fp.close()
@@ -163,16 +280,14 @@ def overlap(args):
     sig1_file = args.signature1
     sig2_file = args.signature2
 
-    name1 = sig1.name()
-    name2 = sig2.name()
+    name1 = sig1.name
+    name2 = sig2.name
 
     md5_1 = sig1.md5sum()
     md5_2 = sig2.md5sum()
 
     ksize = sig1.minhash.ksize
-    moltype = 'DNA'
-    if sig1.minhash.is_protein:
-        moltype = 'protein'
+    moltype = sig1.minhash.moltype
 
     num = sig1.minhash.num
     size1 = len(sig1.minhash)
@@ -180,8 +295,8 @@ def overlap(args):
 
     scaled = sig1.minhash.scaled
 
-    hashes_1 = set(sig1.minhash.get_mins())
-    hashes_2 = set(sig2.minhash.get_mins())
+    hashes_1 = set(sig1.minhash.hashes)
+    hashes_2 = set(sig2.minhash.hashes)
 
     num_common = len(hashes_1.intersection(hashes_2))
     disjoint_1 = len(hashes_1 - hashes_2)
@@ -227,12 +342,16 @@ def merge(args):
     total_loaded = 0
 
     # iterate over all the sigs from all the files.
+    progress = sourmash_args.SignatureLoadingProgress()
+
     for sigfile in args.signatures:
         notify('loading signatures from {}...', sigfile, end='\r')
         this_n = 0
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
-                                               select_moltype=moltype,
-                                               do_raise=True):
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress):
+
             # first signature? initialize a bunch of stuff
             if first_sig is None:
                 first_sig = sigobj
@@ -252,7 +371,7 @@ def merge(args):
                 mh.merge(sigobj_mh)
             except:
                 error("ERROR when merging signature '{}' ({}) from file {}",
-                      sigobj.name(), sigobj.md5sum()[:8], sigfile)
+                      sigobj, sigobj.md5sum()[:8], sigfile)
                 raise
 
             this_n += 1
@@ -285,15 +404,23 @@ def intersect(args):
     mins = None
     total_loaded = 0
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     for sigfile in args.signatures:
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                               ksize=args.ksize,
                                                select_moltype=moltype,
-                                               do_raise=True):
+                                               progress=progress):
             if first_sig is None:
                 first_sig = sigobj
-                mins = set(sigobj.minhash.get_mins())
+                mins = set(sigobj.minhash.hashes)
+            else:
+                # check signature compatibility --
+                if not sigobj.minhash.is_compatible(first_sig.minhash):
+                    error("incompatible minhashes; specify -k and/or molecule type.")
+                    sys.exit(-1)
 
-            mins.intersection_update(sigobj.minhash.get_mins())
+            mins.intersection_update(sigobj.minhash.hashes)
             total_loaded += 1
         notify('loaded and intersected signatures from {}...', sigfile, end='\r')
 
@@ -317,7 +444,7 @@ def intersect(args):
             error("--track-abundance not set on loaded signature?! exiting.")
             sys.exit(-1)
         intersect_mh = abund_sig.minhash.copy_and_clear()
-        abund_mins = abund_sig.minhash.get_mins(with_abundance=True)
+        abund_mins = abund_sig.minhash.hashes
 
         # do one last intersection
         mins.intersection_update(abund_mins)
@@ -347,21 +474,27 @@ def subtract(args):
         error('Cannot use subtract on signatures with abundance tracking, sorry!')
         sys.exit(1)
 
-    subtract_mins = set(from_mh.get_mins())
+    subtract_mins = set(from_mh.hashes)
 
     notify('loaded signature from {}...', from_sigfile, end='\r')
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     total_loaded = 0
     for sigfile in args.subtraction_sigs:
-        for sigobj in sourmash.load_signatures(sigfile, ksize=args.ksize,
-                                               select_moltype=moltype,
-                                               do_raise=True):
+        for sigobj in sourmash_args.load_file_as_signatures(sigfile,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress):
+            if not sigobj.minhash.is_compatible(from_mh):
+                error("incompatible minhashes; specify -k and/or molecule type.")
+                sys.exit(-1)
 
             if sigobj.minhash.track_abundance and not args.flatten:
                 error('Cannot use subtract on signatures with abundance tracking, sorry!')
                 sys.exit(1)
 
-            subtract_mins -= set(sigobj.minhash.get_mins())
+            subtract_mins -= set(sigobj.minhash.hashes)
 
             notify('loaded and subtracted signatures from {}...', sigfile, end='\r')
             total_loaded += 1
@@ -389,11 +522,15 @@ def rename(args):
     set_quiet(args.quiet, args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     for filename in args.sigfiles:
         debug('loading {}', filename)
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype)
+        siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress)
 
         for sigobj in siglist:
             sigobj._name = args.name
@@ -412,12 +549,15 @@ def extract(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype,
-                                           do_raise=True)
+        siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -426,7 +566,7 @@ def extract(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         outlist.extend(siglist)
 
@@ -450,12 +590,15 @@ def filter(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype,
-                                           do_raise=True)
+        siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -464,7 +607,7 @@ def filter(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         for ss in siglist:
             mh = ss.minhash
@@ -473,7 +616,7 @@ def filter(args):
                        ss)
                 continue
 
-            abunds = mh.get_mins(with_abundance=True)
+            abunds = mh.hashes
             abunds2 = {}
             for k, v in abunds.items():
                 if v >= args.min_abundance:
@@ -504,12 +647,15 @@ def flatten(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype,
-                                           do_raise=True)
+        siglist = sourmash_args.load_file_as_signatures(filename,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -518,14 +664,10 @@ def flatten(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in ss.name ]
 
         for ss in siglist:
-            flattened_mh = ss.minhash.copy_and_clear()
-            flattened_mh.track_abundance = False
-            flattened_mh.add_many(ss.minhash.get_mins())
-
-            ss.minhash = flattened_mh
+            ss.minhash = ss.minhash.flatten()
 
         outlist.extend(siglist)
 
@@ -553,10 +695,15 @@ def downsample(args):
         error('cannot specify both --num and --scaled')
         sys.exit(-1)
 
+    progress = sourmash_args.SignatureLoadingProgress()
+
     output_list = []
     total_loaded = 0
     for sigfile in args.signatures:
-        siglist = sourmash.load_signatures(sigfile, ksize=args.ksize, select_moltype=moltype, do_raise=True)
+        siglist = sourmash_args.load_file_as_signatures(sigfile,
+                                                        ksize=args.ksize,
+                                                        select_moltype=moltype,
+                                                        progress=progress)
 
         for sigobj in siglist:
             mh = sigobj.minhash
@@ -565,11 +712,11 @@ def downsample(args):
             total_loaded += 1
             if args.scaled:
                 if mh.scaled:
-                    mh_new = mh.downsample_scaled(args.scaled)
+                    mh_new = mh.downsample(scaled=args.scaled)
                 else:                         # try to turn a num into a scaled
                     # first check: can we?
-                    max_hash = get_max_hash_for_scaled(args.scaled)
-                    mins = mh.get_mins()
+                    max_hash = _get_max_hash_for_scaled(args.scaled)
+                    mins = mh.hashes
                     if max(mins) < max_hash:
                         raise ValueError("this num MinHash does not have enough hashes to convert it into a scaled MinHash.")
 
@@ -577,7 +724,7 @@ def downsample(args):
                     _set_num_scaled(mh_new, 0, args.scaled)
             elif args.num:
                 if mh.num:
-                    mh_new = mh.downsample_n(args.num)
+                    mh_new = mh.downsample(num=args.num)
                 else:                         # try to turn a scaled into a num
                     # first check: can we?
                     if len(mh) < args.num:
@@ -634,9 +781,11 @@ def export(args):
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
-    ss = sourmash.load_one_signature(args.filename, ksize=args.ksize,
-                                     select_moltype=moltype)
-    mh = ss.minhash
+    query = sourmash_args.load_query_signature(args.filename,
+                                               ksize=args.ksize,
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
+    mh = query.minhash
 
     x = {}
     x['kmer'] = mh.ksize
@@ -646,12 +795,12 @@ def export(args):
     x['hashBits'] = 64
     x['hashSeed'] = mh.seed
 
-    ll = list(mh.get_mins())
+    ll = list(mh.hashes)
     x['sketches'] = [{ 'hashes': ll }]
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", ss.name(), ss.md5sum()[:8])
+    notify("exported signature {} ({})", query, query.md5sum()[:8])
 
 
 

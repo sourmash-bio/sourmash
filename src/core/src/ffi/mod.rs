@@ -7,6 +7,7 @@
 pub mod utils;
 
 pub mod cmd;
+pub mod hyperloglog;
 pub mod minhash;
 pub mod nodegraph;
 pub mod signature;

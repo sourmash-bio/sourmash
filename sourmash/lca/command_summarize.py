@@ -2,12 +2,11 @@
 """
 Summarize the taxonomic content of the given signatures, combined.
 """
-from __future__ import print_function
 import sys
 import csv
 from collections import defaultdict
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -16,7 +15,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5
 
 
-def summarize(hashvals, dblist, threshold):
+def summarize(hashvals, dblist, threshold, ignore_abundance):
     """
     Classify 'hashvals' using the given list of databases.
 
@@ -30,7 +29,10 @@ def summarize(hashvals, dblist, threshold):
     assignments = lca_utils.gather_assignments(hashvals, dblist)
 
     # now convert to trees -> do LCA & counts
-    counts = lca_utils.count_lca_for_assignments(assignments)
+    if not ignore_abundance:
+        counts = lca_utils.count_lca_for_assignments(assignments, hashvals)
+    else: # flatten
+        counts = lca_utils.count_lca_for_assignments(assignments, None)
     debug(counts.most_common())
 
     # ok, we now have the LCAs for each hashval, and their number
@@ -54,6 +56,99 @@ def summarize(hashvals, dblist, threshold):
     return aggregated_counts
 
 
+def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
+    "Load individual signatures and count them individually."
+    total_count = 0
+    n = 0
+
+    # in order to get the right reporting out of this function, we need
+    # to do our own traversal to expand the list of filenames, as opposed
+    # to using load_file_as_signatures(...)
+    filenames = sourmash_args.traverse_find_sigs(filenames)
+    filenames = list(filenames)
+
+    total_n = len(filenames)
+
+    for query_filename in filenames:
+        n += 1
+        for query_sig in sourmash_args.load_file_as_signatures(query_filename,
+                                                               ksize=ksize):
+            notify(u'\r\033[K', end=u'')
+            notify('... loading {} (file {} of {})', query_sig, n,
+                   total_n, end='\r')
+            total_count += 1
+
+            if ignore_abundance and query_sig.minhash.track_abundance:
+                notify("NOTE: discarding abundances in query, since --ignore-abundance")
+
+            # rebuild hashvals individually
+            hashvals = defaultdict(int)
+            count_signature(query_sig, scaled, hashvals)
+            yield query_filename, query_sig, hashvals
+
+    notify(u'\r\033[K', end=u'')
+    notify('loaded {} signatures from {} files total.', total_count, n)
+
+
+def count_signature(sig, scaled, hashvals):
+    "Downsample sig to given scaled, count hashvalues."
+    mh = sig.minhash.downsample(scaled=scaled)
+
+    if mh.track_abundance:
+        abunds = mh.hashes
+        for hashval, count in abunds.items():
+            hashvals[hashval] += count
+    else:
+        for hashval in mh.hashes:
+            hashvals[hashval] += 1
+
+
+def output_results(lineage_counts, total_counts, filename=None, sig=None):
+    """\
+    Output results in ~human-readable format.
+    """
+    if filename or sig:                   # require both
+        if not filename and sig:
+            raise ValueError("must include both filename and sig arguments")
+
+    for (lineage, count) in lineage_counts.items():
+        if lineage:
+            lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
+            lineage = ';'.join(lineage)
+        else:
+            lineage = '(root)'
+
+        p = count / total_counts * 100.
+        p = '{:.1f}%'.format(p)
+
+        if filename and sig:
+            print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
+        else:
+            print_results('{:5} {:>5}   {}'.format(p, count, lineage))
+
+
+def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
+    """\
+    Output results in CSV.
+    """
+    if filename or sig:                   # require both
+        assert filename and sig
+
+    w = csv.writer(csv_fp)
+    if write_header:
+        headers = ['count'] + list(lca_utils.taxlist())
+        if filename:
+            headers += ['filename', 'sig_name', 'sig_md5']
+        w.writerow(headers)
+
+    for (lineage, count) in lineage_counts.items():
+        debug('lineage:', lineage)
+        row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
+        if filename:
+            row += [filename, sig.name, sig.md5sum()]
+        w.writerow(row)
+
+
 def summarize_main(args):
     """
     main summarization function.
@@ -62,84 +157,68 @@ def summarize_main(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     if args.scaled:
         args.scaled = int(args.scaled)
 
-    # flatten --db and --query
+    ignore_abundance = args.ignore_abundance
+
+    # flatten --db and --query lists
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
 
     if not check_files_exist(*args.db):
         sys.exit(-1)
 
     # load all the databases
     dblist, ksize, scaled = lca_utils.load_databases(args.db, args.scaled)
+    if ignore_abundance:
+        notify("Ignoring any k-mer abundances in query, since --ignore-abundance given.")
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = args.query
 
-    # for each query, gather all the hashvals across databases
-    total_count = 0
-    n = 0
-    total_n = len(inp_files)
-    hashvals = defaultdict(int)
-    for query_filename in inp_files:
-        n += 1
-        for query_sig in load_signatures(query_filename, ksize=ksize):
-            notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
-                   total_n, end='\r')
-            total_count += 1
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
 
-            mh = query_sig.minhash.downsample_scaled(scaled)
-            for hashval in mh.get_mins():
-                hashvals[hashval] += 1
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query')
+        sys.exit(-1)
 
-    notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
 
-    # get the full counted list of lineage counts in this signature
-    lineage_counts = summarize(hashvals, dblist, args.threshold)
-
-    # output!
-    total = float(len(hashvals))
-    for (lineage, count) in lineage_counts.items():
-        if lineage:
-            lineage = lca_utils.zip_lineage(lineage, truncate_empty=True)
-            lineage = ';'.join(lineage)
-        else:
-            lineage = '(root)'
-
-        p = count / total * 100.
-        p = '{:.1f}%'.format(p)
-
-        print_results('{:5} {:>5}   {}'.format(p, count, lineage))
-
-    # CSV:
+    # summarize each signature individually
+    csv_fp = None
+    write_header = True
     if args.output:
-        with sourmash_args.FileOutput(args.output, 'wt') as csv_fp:
-            w = csv.writer(csv_fp)
-            headers = ['count'] + list(lca_utils.taxlist())
-            w.writerow(headers)
+        csv_fp = open(args.output, 'wt')
 
-            for (lineage, count) in lineage_counts.items():
-                debug('lineage:', lineage)
-                row = [count] + lca_utils.zip_lineage(lineage)
-                w.writerow(row)
+    try:
+        for filename, sig, hashvals in \
+          load_singletons_and_count(inp_files, ksize, scaled, ignore_abundance):
+
+            # get the full counted list of lineage counts in this signature
+            lineage_counts = summarize(hashvals, dblist, args.threshold,
+                                       ignore_abundance)
+            if not ignore_abundance:
+                total = float(sum(hashvals.values()))
+            else:
+                total = float(len(hashvals))
+
+            output_results(lineage_counts, total,
+                           filename=filename, sig=sig)
+
+            if csv_fp:
+                output_csv(lineage_counts, csv_fp, filename, sig,
+                           write_header=write_header)
+                write_header = False
+    finally:
+        if csv_fp:
+            csv_fp.close()
 
 
 if __name__ == '__main__':

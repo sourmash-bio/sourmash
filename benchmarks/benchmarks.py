@@ -1,11 +1,7 @@
-from __future__ import unicode_literals
 import random
 
 
-try:
-    from sourmash._minhash import MinHash
-except:
-    from sourmash.minhash import MinHash
+from sourmash.minhash import MinHash
 
 
 def load_sequences():
@@ -132,6 +128,12 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
         mins = self.populated_mh.get_mins(with_abundance=True)
         for i in range(500):
             mh.set_abundances(mins)
+
+    def time_set_abundances_noclear(self):
+        mh = self.mh
+        mins = self.populated_mh.get_mins(with_abundance=True)
+        for i in range(500):
+            mh.set_abundances(mins, clear=False)
 
 class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):

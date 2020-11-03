@@ -15,17 +15,17 @@ use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
 
-use failure::Error;
 use once_cell::sync::OnceCell;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::sbt::{Node, SBT};
 use crate::index::search::{search_minhashes, search_minhashes_containment};
 use crate::index::storage::{ReadData, ReadDataError, Storage};
-use crate::signature::Signature;
+use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 
 pub type MHBT = SBT<Node<Nodegraph>, Signature>;
 
@@ -131,14 +131,19 @@ pub struct DatasetInfo {
 
 #[derive(TypedBuilder, Default, Clone)]
 pub struct SigStore<T> {
-    pub(crate) filename: String,
-    pub(crate) name: String,
-    pub(crate) metadata: String,
+    #[builder(setter(into))]
+    filename: String,
 
-    pub(crate) storage: Option<Rc<dyn Storage>>,
+    #[builder(setter(into))]
+    name: String,
 
-    #[builder(default)]
-    pub(crate) data: OnceCell<T>,
+    #[builder(setter(into))]
+    metadata: String,
+
+    storage: Option<Rc<dyn Storage>>,
+
+    #[builder(setter(into), default)]
+    data: OnceCell<T>,
 }
 
 impl<T> SigStore<T> {
@@ -202,7 +207,7 @@ impl SigStore<Signature> {
         // TODO: select the right signatures...
         // TODO: better matching here, what if it is not a mh?
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
-            mh.mins.to_vec()
+            mh.mins()
         } else {
             unimplemented!()
         }
@@ -271,7 +276,7 @@ impl Comparable<SigStore<Signature>> for SigStore<Signature> {
         if let Sketch::MinHash(mh) = &ng.signatures[0] {
             if let Sketch::MinHash(omh) = &ong.signatures[0] {
                 let common = mh.count_common(&omh, false).unwrap();
-                let size = mh.mins.len();
+                let size = mh.size();
                 return common as f64 / size as f64;
             }
         }
@@ -306,7 +311,7 @@ impl Comparable<Signature> for Signature {
         if let Sketch::MinHash(mh) = &self.signatures[0] {
             if let Sketch::MinHash(omh) = &other.signatures[0] {
                 let common = mh.count_common(&omh, false).unwrap();
-                let size = mh.mins.len();
+                let size = mh.size();
                 return common as f64 / size as f64;
             }
         }

@@ -4,7 +4,6 @@ Execute a greedy search on lineages attached to hashvals in the query.
 
 Mimics `sourmash gather` but provides taxonomic information.
 """
-from __future__ import print_function, division
 import sys
 import csv
 from collections import Counter, defaultdict, namedtuple
@@ -61,15 +60,15 @@ def gather_signature(query_sig, dblist, ignore_abundance):
     """
     Decompose 'query_sig' using the given list of databases.
     """
-    notify('loaded query: {}... (k={})', query_sig.name()[:30],
+    notify('loaded query: {}... (k={})', str(query_sig)[:30],
                                          query_sig.minhash.ksize)
 
     # extract the basic set of mins
-    query_mins = set(query_sig.minhash.get_mins())
+    query_mins = set(query_sig.minhash.hashes)
     n_mins = len(query_mins)
 
     if query_sig.minhash.track_abundance and not ignore_abundance:
-        orig_abunds = query_sig.minhash.get_mins(with_abundance=True)
+        orig_abunds = query_sig.minhash.hashes
     else:
         if query_sig.minhash.track_abundance and ignore_abundance:
             notify('** ignoring abundance')
@@ -184,6 +183,10 @@ def gather_main(args):
     """
     set_quiet(args.quiet, args.debug)
 
+    notify("** WARNING: lca gather is deprecated as of sourmash 3.4, and will")
+    notify("**    be removed in sourmash 4.0; use 'gather' instead.")
+    notify('')
+
     if not check_files_exist(args.query, *args.db):
         sys.exit(-1)
 
@@ -191,11 +194,12 @@ def gather_main(args):
     dblist, ksize, scaled = lca_utils.load_databases(args.db, None)
 
     # for each query, gather all the matches across databases
-    query_sig = sourmash_args.load_query_signature(args.query, ksize, 'DNA')
-    debug('classifying', query_sig.name())
+    moltype = dblist[0].moltype
+    query_sig = sourmash_args.load_query_signature(args.query, ksize, moltype)
+    debug('classifying', query_sig)
 
     # make sure we're looking at the same scaled value as database
-    query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+    query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
 
     # do the classification, output results
     found = []
@@ -231,7 +235,7 @@ def gather_main(args):
             print_results('')
     # nothing found.
     else:
-        est_bp = len(query_sig.minhash.get_mins()) * query_sig.minhash.scaled
+        est_bp = len(query_sig.minhash) * query_sig.minhash.scaled
         print_results('')
         print_results('No assignment for est {} of sequence.',
                       format_bp(est_bp))

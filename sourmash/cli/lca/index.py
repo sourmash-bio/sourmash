@@ -1,6 +1,6 @@
 """create LCA database"""
 
-from sourmash.cli.utils import add_ksize_arg
+from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 
 def subparser(subparsers):
@@ -8,13 +8,18 @@ def subparser(subparsers):
     subparser.add_argument('csv', help='taxonomy spreadsheet')
     subparser.add_argument('lca_db_out', help='output database name')
     subparser.add_argument(
-        'signatures', nargs='+',
-        help='one or more sourmash signatures'
+        'signatures', nargs='*',
+        help='signatures or directory of signatures to index (optional if provided via --from-file)'
+    )
+    subparser.add_argument(
+        '--from-file',
+        help='a file containing a list of signatures file to load'
     )
     subparser.add_argument(
         '--scaled', metavar='S', default=10000, type=float
     )
     add_ksize_arg(subparser, 31)
+    add_moltype_args(subparser)
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
@@ -40,10 +45,6 @@ def subparser(subparsers):
         help='split names in signatures on whitspace and period'
     )
     subparser.add_argument('-f', '--force', action='store_true')
-    subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='load all signatures underneath directories'
-    )
     subparser.add_argument(
         '--report', help='output a report on anomalies, if any'
     )

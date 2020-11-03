@@ -2,7 +2,6 @@
 """
 Compare two taxonomy spreadsheets.
 """
-from __future__ import print_function
 import sys
 from collections import defaultdict
 

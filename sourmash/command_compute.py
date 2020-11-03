@@ -1,8 +1,6 @@
 """
 Functions implementing the 'compute' command and related functions.
 """
-from __future__ import print_function, division, absolute_import
-
 import os
 import os.path
 import sys
@@ -109,185 +107,151 @@ def compute(args):
         sys.exit(-1)
 
     if args.merge and not args.output:
-        error("must specify -o with --merge")
+        error("ERROR: must specify -o with --merge")
         sys.exit(-1)
 
+    if args.output and args.outdir:
+        error("ERROR: --outdir doesn't make sense with -o/--output")
+        sys.exit(-1)
 
     if args.track_abundance:
         notify('Tracking abundance of input k-mers.')
 
-    if not args.merge:
-        if args.output:
+    signatures_factory = _signatures_for_compute_factory(args)
+
+    if args.merge:               # single name specified - combine all
+        _compute_merged(args, signatures_factory)
+    else:                        # compute individual signatures
+        _compute_individual(args, signatures_factory)
+
+
+class _signatures_for_compute_factory(object):
+    "Build signatures on demand, based on args input to 'compute'."
+    def __init__(self, args):
+        self.args = args
+
+    def __call__(self):
+        args = self.args
+        params = ComputeParameters(args.ksizes, args.seed, args.protein,
+                                   args.dayhoff, args.hp, args.dna,
+                                   args.num_hashes,
+                                   args.track_abundance, args.scaled)
+        sig = SourmashSignature.from_params(params)
+        return [sig]
+
+
+def _compute_individual(args, signatures_factory):
+    siglist = []
+
+    for filename in args.filenames:
+        sigfile = os.path.basename(filename) + '.sig'
+        if args.outdir:
+            sigfile = os.path.join(args.outdir, sigfile)
+
+        if not args.output and os.path.exists(sigfile) and not \
+            args.force:
+            notify('skipping {} - already done', filename)
+            continue
+
+        if args.singleton:
             siglist = []
+            for n, record in enumerate(screed.open(filename)):
+                # make a new signature for each sequence
+                sigs = signatures_factory()
+                add_seq(sigs, record.sequence,
+                        args.input_is_protein, args.check_sequence)
 
-        for filename in args.filenames:
-            sigfile = os.path.basename(filename) + '.sig'
-            if not args.output and os.path.exists(sigfile) and not \
-                args.force:
-                notify('skipping {} - already done', filename)
-                continue
+                set_sig_name(sigs, filename, name=record.name)
+                siglist.extend(sigs)
 
-            if args.singleton:
-                siglist = []
-                for n, record in enumerate(screed.open(filename)):
-                    # make minhashes for each sequence
-                    Elist = make_minhashes(ksizes, args.seed, args.protein,
-                                           args.dayhoff, args.hp, args.dna,
-                                           args.num_hashes,
-                                           args.track_abundance, args.scaled)
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
+            notify('calculated {} signatures for {} sequences in {}',
+                   len(siglist), n + 1, filename)
+        else:
+            # make a single sig for the whole file
+            sigs = signatures_factory()
 
-                    siglist += build_siglist(Elist, filename, name=record.name)
-
-                notify('calculated {} signatures for {} sequences in {}',
-                       len(siglist), n + 1, filename)
-            elif args.input_is_10x:
-                from bam2fasta import cli as bam2fasta_cli
-
-                # Initializing time
-                startt = time.time()
-                metadata = [
-                    "--write-barcode-meta-csv", args.write_barcode_meta_csv] if args.write_barcode_meta_csv else ['', '']
-                save_fastas = ["--save-fastas", args.save_fastas] if args.save_fastas else ['', '']
-                barcodes_file = ["--barcodes-file", args.barcodes_file] if args.barcodes_file else ['', '']
-                rename_10x_barcodes = \
-                    ["--rename-10x-barcodes", args.rename_10x_barcodes] if args.rename_10x_barcodes else ['', '']
-
-                bam_to_fasta_args = [
-                    '--filename', filename,
-                    '--min-umi-per-barcode', str(args.count_valid_reads),
-                    '--processes', str(args.processes),
-                    '--line-count', str(args.line_count),
-                    barcodes_file[0], barcodes_file[1],
-                    rename_10x_barcodes[0], rename_10x_barcodes[1],
-                    save_fastas[0], save_fastas[1],
-                    metadata[0], metadata[1]]
-                bam_to_fasta_args = [arg for arg in bam_to_fasta_args if arg != '']
-
-                fastas = bam2fasta_cli.convert(bam_to_fasta_args)
-                # TODO move to bam2fasta since pool imap creates this empty lists and returns them
-                fastas = [fasta for fasta in fastas if fasta != []]
-
-                siglist = []
-                for fasta in fastas:
-                    for n, record in enumerate(screed.open(fasta)):
-                        # make minhashes for each sequence
-                        Elist = make_minhashes(ksizes, args.seed, args.protein,
-                                               args.dayhoff, args.hp, args.dna,
-                                               args.num_hashes,
-                                               args.track_abundance, args.scaled)
-                        add_seq(Elist, record.sequence,
-                                args.input_is_protein, args.check_sequence)
-
-                    siglist += build_siglist(Elist, fasta, name=record.name)
-
-                    notify('calculated {} signatures for {} sequences in {}',
-                           len(siglist), n + 1, fasta)
-
-                notify("time taken to calculate signature records for 10x file is {:.5f} seconds",
-                       time.time() - startt)
-            else:
-                # make minhashes for the whole file
-                Elist = make_minhashes(ksizes, args.seed, args.protein,
-                                       args.dayhoff, args.hp, args.dna,
-                                       args.num_hashes,
-                                       args.track_abundance, args.scaled)
-
-                # consume & calculate signatures
-                notify('... reading sequences from {}', filename)
-                name = None
-                for n, record in enumerate(screed.open(filename)):
-                    if n % 10000 == 0:
-                        if n:
-                            notify('\r...{} {}', filename, n, end='')
-                        elif args.name_from_first:
-                            name = record.name
-
-                    add_seq(Elist, record.sequence,
-                            args.input_is_protein, args.check_sequence)
-
-                notify('...{} {} sequences', filename, n, end='')
-
-                sigs = build_siglist(Elist, filename, name)
-                if args.output:
-                    siglist += sigs
-                else:
-                    siglist = sigs
-
-                notify('calculated {} signatures for {} sequences in {}',
-                       len(sigs), n + 1, filename)
-
-            if not args.output:
-                save_siglist(siglist, args.output, sigfile)
-
-        if args.output:
-            save_siglist(siglist, args.output, sigfile)
-    else:                             # single name specified - combine all
-        # make minhashes for the whole file
-        Elist = make_minhashes(ksizes, args.seed, args.protein,
-                               args.dayhoff, args.hp, args.dna,
-                               args.num_hashes,
-                               args.track_abundance, args.scaled)
-
-        n = 0
-        total_seq = 0
-        for filename in args.filenames:
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
-
+            name = None
             for n, record in enumerate(screed.open(filename)):
-                if n % 10000 == 0 and n:
-                    notify('\r... {} {}', filename, n, end='')
+                if n % 10000 == 0:
+                    if n:
+                        notify('\r...{} {}', filename, n, end='')
+                    elif args.name_from_first:
+                        name = record.name
 
-                add_seq(Elist, record.sequence,
+                add_seq(sigs, record.sequence,
                         args.input_is_protein, args.check_sequence)
-            notify('... {} {} sequences', filename, n + 1)
 
-            total_seq += n + 1
+            notify('...{} {} sequences', filename, n, end='')
 
-        siglist = build_siglist(Elist, filename, name=args.merge)
-        notify('calculated {} signatures for {} sequences taken from {} files',
-               len(siglist), total_seq, len(args.filenames))
+            set_sig_name(sigs, filename, name)
+            siglist.extend(sigs)
 
-        # at end, save!
+            notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
+
+        # if no --output specified, save to individual files w/in for loop
+        if not args.output:
+            save_siglist(siglist, sigfile)
+            siglist = []
+
+    # if --output specified, all collected signatures => args.output
+    if args.output:
         save_siglist(siglist, args.output)
+        siglist = []
+
+    assert not siglist                    # juuuust checking.
+    
+
+def _compute_merged(args, signatures_factory):
+    # make a signature for the whole file
+    sigs = signatures_factory()
+
+    n = 0
+    total_seq = 0
+    for filename in args.filenames:
+        # consume & calculate signatures
+        notify('... reading sequences from {}', filename)
+
+        for n, record in enumerate(screed.open(filename)):
+            if n % 10000 == 0 and n:
+                notify('\r... {} {}', filename, n, end='')
+
+            add_seq(sigs, record.sequence,
+                    args.input_is_protein, args.check_sequence)
+        notify('... {} {} sequences', filename, n + 1)
+
+        total_seq += n + 1
+
+    set_sig_name(sigs, filename, name=args.merge)
+    notify('calculated 1 signature for {} sequences taken from {} files',
+           total_seq, len(args.filenames))
+
+    # at end, save!
+    save_siglist(sigs, args.output)
 
 
-def make_minhashes(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled):
-    params = ComputeParameters(ksizes, seed, protein, dayhoff, hp, dna, num_hashes, track_abundance, scaled)
-    sig = SourmashSignature.from_params(params)
-    return sig
+def add_seq(sigs, seq, input_is_protein, check_sequence):
+    for sig in sigs:
+        if input_is_protein:
+            sig.add_protein(seq)
+        else:
+            sig.add_sequence(seq, not check_sequence)
 
 
-def add_seq(sig, seq, input_is_protein, check_sequence):
-    if input_is_protein:
-        sig.add_protein(seq)
-    else:
-        sig.add_sequence(seq, not check_sequence)
+def set_sig_name(sigs, filename, name=None):
+    for sig in sigs:
+        if name is not None:
+            sig._name = name
+        sig.filename = filename
 
 
-def build_siglist(sig, filename, name=None):
-    if name is not None:
-        sig._name = name
-    sig.filename = filename
-    return [sig]
-
-
-def save_siglist(siglist, sigfile_name, filename=None):
+def save_siglist(siglist, sigfile_name):
     # save!
-    if sigfile_name:
-        with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
-            save_signatures(siglist, fp)
-    else:
-        if filename is None:
-            raise Exception("internal error, filename is None")
-        with sourmash_args.FileOutput(filename, 'w') as fp:
-            sigfile_name = filename
-            save_signatures(siglist, fp)
-    notify(
-        'saved signature(s) to {}. Note: signature license is CC0.',
-        sigfile_name)
+    with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
+        save_signatures(siglist, fp)
+    notify('saved signature(s) to {}. Note: signature license is CC0.',
+           sigfile_name)
 
 
 class ComputeParameters(RustObject):
@@ -331,8 +295,9 @@ class ComputeParameters(RustObject):
     def ksizes(self):
         size = ffi.new("uintptr_t *")
         ksizes_ptr = self._methodcall(lib.computeparams_ksizes, size)
-        size = ffi.unpack(size, 1)[0]
+        size = size[0]
         ksizes = ffi.unpack(ksizes_ptr, size)
+        lib.computeparams_ksizes_free(ksizes_ptr, size)
         return ksizes
 
     @ksizes.setter

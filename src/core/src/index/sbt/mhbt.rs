@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use failure::Error;
-
 use crate::index::sbt::{Factory, FromFactory, Node, Update, SBT};
 use crate::index::storage::{ReadData, ReadDataError, ToWriter};
 use crate::index::Comparable;
 use crate::signature::{Signature, SigsTrait};
 use crate::sketch::nodegraph::Nodegraph;
 use crate::sketch::Sketch;
+use crate::Error;
 
 impl ToWriter for Nodegraph {
     fn to_writer<W>(&self, writer: &mut W) -> Result<(), Error>
@@ -49,9 +48,9 @@ impl Update<Node<Nodegraph>> for Signature {
         let mut parent_data = parent.data()?.clone();
 
         if let Sketch::MinHash(sig) = &self.signatures[0] {
-            sig.mins.iter().for_each(|h| {
-                parent_data.count(*h);
-            });
+            for h in sig.mins() {
+                parent_data.count(h);
+            }
 
             let min_n_below = parent
                 .metadata
@@ -97,7 +96,7 @@ impl Comparable<Signature> for Node<Nodegraph> {
                 return 0.0;
             }
 
-            let matches: usize = sig.mins.iter().map(|h| ng.get(*h)).sum();
+            let matches: usize = sig.mins().iter().map(|h| ng.get(*h)).sum();
 
             let min_n_below = self.metadata["min_n_below"] as f64;
 
@@ -119,7 +118,7 @@ impl Comparable<Signature> for Node<Nodegraph> {
                 return 0.0;
             }
 
-            let matches: usize = sig.mins.iter().map(|h| ng.get(*h)).sum();
+            let matches: usize = sig.mins().iter().map(|h| ng.get(*h)).sum();
 
             matches as f64 / sig.size() as f64
         } else {
@@ -152,7 +151,6 @@ mod test {
     use std::path::PathBuf;
 
     use assert_matches::assert_matches;
-    use tempfile;
 
     use super::Factory;
 
@@ -206,9 +204,7 @@ mod test {
             None,
         )
         .unwrap();
-        let sig_data = sigs[0].clone();
-
-        let leaf = sig_data.into();
+        let leaf = sigs[0].clone();
 
         let results = sbt.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);
@@ -225,11 +221,8 @@ mod test {
             linear.insert(l.1.data().unwrap().clone()).unwrap();
         }
 
-        println!(
-            "linear leaves {:?} {:?}",
-            linear.datasets.len(),
-            linear.datasets
-        );
+        let datasets = linear.signatures();
+        println!("linear leaves {:?} {:?}", datasets.len(), datasets);
 
         let results = linear.find(search_minhashes, &leaf, 0.5).unwrap();
         assert_eq!(results.len(), 1);

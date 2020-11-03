@@ -1,4 +1,4 @@
-"""search a signature against a list of signatures"""
+"""search a signature against other signatures"""
 
 from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
@@ -11,10 +11,6 @@ def subparser(subparsers):
     subparser.add_argument(
         'databases', nargs='+',
         help='signatures/SBTs to search',
-    )
-    subparser.add_argument(
-        '--traverse-directory', action='store_true',
-        help='search all signatures underneath directories'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -52,6 +48,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
+    )
+    subparser.add_argument(
+        '--md5', default=None,
+        help='select the signature with this md5 as query'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)

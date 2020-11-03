@@ -2,9 +2,11 @@ name: Hypothesis tests
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
-    branches: [master]
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   test:
@@ -24,4 +26,10 @@ jobs:
 
       - name: Run Hypothesis tests
         run: |
-          python -m pytest --run-hypothesis --hypothesis-show-statistics --hypothesis-profile ci
+          python -m pytest --cov=. --cov-report=xml --run-hypothesis --hypothesis-show-statistics --hypothesis-profile ci
+
+      - name: Upload coverage to Codecov  
+        uses: codecov/codecov-action@v1
+        with:
+            file: ./coverage.xml
+            fail_ci_if_error: true

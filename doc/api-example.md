@@ -105,6 +105,12 @@ data/GCF_000783305.1 0.0 0.0 1.0
 Note that the comparisons are quite quick; most of the time is spent in
 making the minhashes, which can be saved and loaded easily.
 
+## Plotting dendrograms and matrices
+
+If you're interested in building comparison matrices and dendrograms,
+please see the notebook
+[Building plots from `sourmash compare` output](plotting-compare.md).
+
 ## Saving and loading signature files
 
 Signature files encapsulate MinHashes in JSON, and provide a way to
@@ -112,18 +118,20 @@ add some metadata to MinHashes.
 
 ```
 >>> from sourmash import SourmashSignature, save_signatures
+>>> from tempfile import mkdtemp
 >>> sig1 = SourmashSignature(minhashes[0], name=genomes[0][:20])
->>> with open('/tmp/genome1.sig', 'wt') as fp:
+>>> tempdir = mkdtemp(suffix = "temp")
+>>> with open(tempdir + '/genome1.sig', 'wt') as fp:
 ...   save_signatures([sig1], fp)
 
 ```
 
-Here, `/tmp/genome1.sig` is a JSON file that can now be loaded and
+Here, `genome1.sig` is a JSON file that can now be loaded and
 compared -- first, load:
 
 ```
 >>> from sourmash import load_one_signature
->>> loaded_sig = load_one_signature('/tmp/genome1.sig')
+>>> loaded_sig = load_one_signature(tempdir + '/genome1.sig')
 
 ```
 
@@ -154,8 +162,8 @@ First, load two signatures:
 Then, get the hashes, and (e.g.) compute the union:
 
 ```
->>> hashes1 = set(sig1.minhash.get_mins())
->>> hashes2 = set(sig2.minhash.get_mins())
+>>> hashes1 = set(sig1.minhash.hashes.keys())
+>>> hashes2 = set(sig2.minhash.hashes.keys())
 >>> hash_union = hashes1.union(hashes2)
 >>> print('{} hashes in union of {} and {}'.format(len(hash_union), len(hashes1), len(hashes2)))
 1000 hashes in union of 500 and 500
@@ -234,7 +242,7 @@ sections.
 MinHash objects have the following methods and attributes:
 
 * `ksize`, `num`, and `scaled` - the basic parameters used to create a MinHash object.
-* `get_mins()` - retrieve all of the hashes contained in this object.
+* `hashes` - retrieve all of the hashes contained in this object.
 * `add_sequence(seq)` - hash sequence and add hash values.
 * `add(hash)` and `add_many(hashvals)` - add hash values directly.
 * `similarity(other)` - calculate Jaccard similarity with the other MinHash object.
@@ -271,7 +279,7 @@ We can downsample this to 500 by extracting the hashes and using
 `add_many` to add them to a new MinHash like so:
 
 ```
->>> hashvals = larger.get_mins()
+>>> hashvals = larger.hashes.keys()
 >>> smaller = sourmash.MinHash(n=500, ksize=31)
 >>> smaller.add_many(hashvals)
 >>> len(smaller)
@@ -282,7 +290,7 @@ We can downsample this to 500 by extracting the hashes and using
 Also note that there's a convenience function that does the same thing,
 faster!
 ```
->>> smaller2 = larger.downsample_n(500)
+>>> smaller2 = larger.downsample(num=500)
 >>> smaller2 == smaller
 True
 
@@ -296,7 +304,7 @@ The same can be done with scaled MinHashes:
 >>> len(large_scaled)
 459
 >>> small_scaled = sourmash.MinHash(n=0, ksize=31, scaled=500)
->>> small_scaled.add_many(large_scaled.get_mins())
+>>> small_scaled.add_many(large_scaled.hashes.keys())
 >>> len(small_scaled)
 69
 
@@ -304,7 +312,7 @@ The same can be done with scaled MinHashes:
 
 And, again, there's a convenience function that you can use:
 ```
->>> small_scaled2 = large_scaled.downsample_scaled(500)
+>>> small_scaled2 = large_scaled.downsample(scaled=500)
 >>> small_scaled == small_scaled2
 True
 
@@ -333,7 +341,7 @@ your MinHash, and then extract the hash values:
 ```
 >>> num_mh = sourmash.MinHash(n=1000, ksize=31)
 >>> num_mh.add_sequence(sequence)
->>> hashvals = num_mh.get_mins()
+>>> hashvals = num_mh.hashes.keys()
 
 ```
 
@@ -351,7 +359,7 @@ The same works in reverse, of course:
 ```
 >>> scaled_mh = sourmash.MinHash(n=0, ksize=31, scaled=50)
 >>> scaled_mh.add_sequence(sequence)
->>> hashvals = scaled_mh.get_mins()
+>>> hashvals = scaled_mh.hashes.keys()
 >>> num_mh = sourmash.MinHash(n=500, ksize=31)
 >>> num_mh.add_many(hashvals)
 
@@ -420,24 +428,24 @@ checks.)
 Now, save the tree:
 
 ```
->>> filename = tree.save('/tmp/test.sbt.json')
+>>> filename = tree.save(tempdir + '/test.sbt.zip')
 
 ```
 
-### Loading and search SBTs
+### Loading and searching SBTs
 
 How do we load the SBT and search it with a DNA sequence,
 from within Python?
 
-The SBT filename is `/tmp/test.sbt.json`, as above:
+The SBT filename is `test.sbt.zip`, as above:
 ```
->>> SBT_filename = '/tmp/test.sbt.json'
+>>> SBT_filename = tempdir + '/test.sbt.zip'
 
 ```
 
 and with it we can load the SBT:
 ```
->>> tree = sourmash.load_sbt_index(SBT_filename)
+>>> tree = sourmash.load_file_as_index(SBT_filename)
 
 ```
 
@@ -463,11 +471,9 @@ and create a scaled signature:
 Now do a search --
 
 ```
->>> threshold = 0.1
-                                           
->>> for found_sig, similarity in sourmash.search_sbt_index(tree, query_sig, threshold):
-...    print(query_sig.name())
-...    print(found_sig.name())
+>>> for similarity, found_sig, filename in tree.search(query_sig, threshold=0.1):
+...    print(query_sig)
+...    print(found_sig)
 ...    print(similarity)
 my favorite query
 NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome

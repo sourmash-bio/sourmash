@@ -2,11 +2,11 @@
 """
 Classify individual signature files down to deepest possible node.
 """
-from __future__ import print_function
 import sys
 import csv
 
-from .. import sourmash_args, load_signatures
+from .. import sourmash_args
+from ..sourmash_args import load_file_as_signatures
 from ..logging import notify, error, debug, set_quiet
 from . import lca_utils
 from .lca_utils import check_files_exist
@@ -14,7 +14,7 @@ from .lca_utils import check_files_exist
 DEFAULT_THRESHOLD=5                  # how many counts of a taxid at min
 
 
-def classify_signature(query_sig, dblist, threshold):
+def classify_signature(query_sig, dblist, threshold, majority):
     """
     Classify 'query_sig' using the given list of databases.
 
@@ -35,7 +35,7 @@ def classify_signature(query_sig, dblist, threshold):
 
       """
     # gather assignments from across all the databases
-    assignments = lca_utils.gather_assignments(query_sig.minhash.get_mins(),
+    assignments = lca_utils.gather_assignments(query_sig.minhash.hashes,
                                                dblist)
 
     # now convert to trees -> do LCA & counts
@@ -48,12 +48,16 @@ def classify_signature(query_sig, dblist, threshold):
 
     tree = {}
 
-    for lca, count in counts.most_common():
-        if count < threshold:
-            break
-
-        # update tree with this set of assignments
-        lca_utils.build_tree([lca], tree)
+    if counts and majority:
+        majority_vote, count = counts.most_common()[0]
+        if count > threshold:
+            lca_utils.build_tree([majority_vote], tree)
+    else:
+        for lca, count in counts.most_common():
+            if count < threshold:
+                break
+            # update tree with this set of assignments
+            lca_utils.build_tree([lca], tree)
 
     status = 'nomatch'
     if not tree:
@@ -81,19 +85,11 @@ def classify(args):
         error('Error! must specify at least one LCA database with --db')
         sys.exit(-1)
 
-    if not args.query:
-        error('Error! must specify at least one query signature with --query')
-        sys.exit(-1)
-
     set_quiet(args.quiet, args.debug)
 
     # flatten --db and --query
     args.db = [item for sublist in args.db for item in sublist]
     args.query = [item for sublist in args.query for item in sublist]
-
-    # have to have two calls as python < 3.5 can only have one expanded list
-    if not check_files_exist(*args.query):
-        sys.exit(-1)
 
     if not check_files_exist(*args.db):
         sys.exit(-1)
@@ -103,10 +99,17 @@ def classify(args):
 
     # find all the queries
     notify('finding query signatures...')
-    if args.traverse_directory:
-        inp_files = list(sourmash_args.traverse_find_sigs(args.query))
-    else:
-        inp_files = list(args.query)
+    inp_files = list(args.query)
+    if args.query_from_file:
+        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        inp_files.extend(more_files)
+
+    if not check_files_exist(*inp_files):
+        sys.exit(-1)
+
+    if not inp_files:
+        error('Error! must specify at least one query signature with --query or --query-from-file')
+        sys.exit(-1)
 
     # set up output
     csvfp = csv.writer(sys.stdout)
@@ -122,23 +125,24 @@ def classify(args):
         total_n = len(inp_files)
         for query_filename in inp_files:
             n += 1
-            for query_sig in load_signatures(query_filename, ksize=ksize):
+            for query_sig in load_file_as_signatures(query_filename,
+                                                     ksize=ksize):
                 notify(u'\r\033[K', end=u'')
-                notify('... classifying {} (file {} of {})', query_sig.name(),
+                notify('... classifying {} (file {} of {})', query_sig,
                        n, total_n, end='\r')
-                debug('classifying', query_sig.name())
+                debug('classifying', query_sig)
                 total_count += 1
 
                 # make sure we're looking at the same scaled value as database
-                query_sig.minhash = query_sig.minhash.downsample_scaled(scaled)
+                query_sig.minhash = query_sig.minhash.downsample(scaled=scaled)
 
                 # do the classification
                 lineage, status = classify_signature(query_sig, dblist,
-                                                     args.threshold)
+                                                     args.threshold, args.majority)
                 debug(lineage)
 
                 # output each classification to the spreadsheet
-                row = [query_sig.name(), status]
+                row = [query_sig.name, status]
                 row += lca_utils.zip_lineage(lineage)
 
                 # when outputting to stdout, make output intelligible

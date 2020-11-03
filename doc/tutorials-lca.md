@@ -135,7 +135,7 @@ curl -O -L https://github.com/ctb/2017-sourmash-lca/raw/master/tara-delmont-Supp
 Build a sourmash LCA database named `delmont.lca.json`:
 
 ```
-sourmash lca index tara-delmont-SuppTable3.csv delmont.lca.json delmont-subsample-sigs/*.sig
+sourmash lca index -f tara-delmont-SuppTable3.csv delmont.lca.json delmont-subsample-sigs/*.sig
 ```
 
 ### Using the LCA database to classify signatures
@@ -194,6 +194,6 @@ for an example format.
 [Return to index][3]
 
 [0]:http://ivory.idyll.org/blog/2016-sourmash-sbt-more.html
-[1]:databases.html
+[1]:databases.md
 [2]:https://www.ncbi.nlm.nih.gov/pubmed/233877
-[3]:index.html
+[3]:index.md

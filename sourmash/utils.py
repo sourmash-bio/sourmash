@@ -38,14 +38,14 @@ class RustObject(object):
             self._objptr = None
 
 
-def decode_str(s, free=False):
+def decode_str(s):
     """Decodes a SourmashStr"""
     try:
         if s.len == 0:
             return u""
         return ffi.unpack(s.data, s.len).decode("utf-8", "replace")
     finally:
-        if free:
+        if s.owned:
             lib.sourmash_str_free(ffi.addressof(s))
 
 

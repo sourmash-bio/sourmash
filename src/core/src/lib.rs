@@ -17,11 +17,16 @@
 //! Documentation and further examples for each module can be found in the module descriptions below.
 
 pub mod errors;
+pub use errors::SourmashError as Error;
+
+pub mod cmd;
 
 pub mod index;
 
 pub mod signature;
 pub mod sketch;
+
+pub mod encodings;
 
 #[cfg(feature = "from-finch")]
 pub mod from;
@@ -34,8 +39,6 @@ cfg_if! {
         pub mod wasm;
     } else {
         pub mod ffi;
-
-        pub mod cmd;
     }
 }
 

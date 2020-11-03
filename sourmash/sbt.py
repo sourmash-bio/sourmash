@@ -41,13 +41,9 @@ then define a search function, ::
         return 0
 """
 
-from __future__ import print_function, unicode_literals, division
 
-from collections import namedtuple
-try:
-    from collections.abc import Mapping
-except ImportError:  # Python 2...
-    from collections import Mapping
+from collections import namedtuple, Counter
+from collections.abc import Mapping
 
 from copy import copy
 import json
@@ -56,24 +52,22 @@ import os
 from random import randint, random
 import sys
 from tempfile import NamedTemporaryFile
+from cachetools import Cache
 
-import khmer
-
-try:
-    load_nodegraph = khmer.load_nodegraph
-except AttributeError:
-    load_nodegraph = khmer.Nodegraph.load
-
-from .sbt_storage import FSStorage, TarStorage, IPFSStorage, RedisStorage
+from .exceptions import IndexNotSupported
+from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
+from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
-    'TarStorage': TarStorage,
     'FSStorage': FSStorage,
     'IPFSStorage': IPFSStorage,
     'RedisStorage': RedisStorage,
+    'ZipStorage': ZipStorage,
 }
+
+
 NodePos = namedtuple("NodePos", ["pos", "node"])
 
 
@@ -96,10 +90,60 @@ class GraphFactory(object):
         self.n_tables = n_tables
 
     def __call__(self):
-        return khmer.Nodegraph(self.ksize, self.starting_size, self.n_tables)
+        return Nodegraph(self.ksize, self.starting_size, self.n_tables)
 
     def init_args(self):
         return (self.ksize, self.starting_size, self.n_tables)
+
+
+class _NodesCache(Cache):
+    """A cache for SBT nodes that calls .unload() when the node is removed from cache.
+
+    This is adapted from the LFU cache in https://github.com/tkem/cachetools,
+    but removing the largest node ids first (those near the bottom/leaves of
+    the SBT).
+    """
+
+    def __init__(self, maxsize, getsizeof=None):
+        Cache.__init__(self, maxsize, getsizeof)
+        self.__counter = Counter()
+
+    def __getitem__(self, key, cache_getitem=Cache.__getitem__):
+        value = cache_getitem(self, key)
+        self.__counter[key] -= 1
+        return value
+
+    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):
+        cache_setitem(self, key, value)
+        self.__counter[key] -= 1
+
+    def __delitem__(self, key, cache_delitem=Cache.__delitem__):
+        cache_delitem(self, key)
+        del self.__counter[key]
+
+    def popitem(self):
+        """Remove and return the `(key, value)` pair least recently used."""
+        try:
+            # Select least frequently used keys,
+            # limit to 50 items to avoid dealing with huge lists
+            common = self.__counter.most_common()[:50]
+
+            # common might include different values, so let's use
+            # only keys that have the same value as the first one
+            # (all those with the same count are least frequently used items)
+            count = common[0][1]
+
+            # we want to remove the item closest to the leaves,
+            # and since node ids increase as they get farther from the root
+            # we just need to select the maximum key/node id
+            (key, _) = max(c for c in common if c[1] == count)
+        except IndexError:
+            msg = '%s is empty' % self.__class__.__name__
+            raise KeyError(msg) from None
+        else:
+            value = self.pop(key)
+            value.unload()
+            return (key, value)
 
 
 class SBT(Index):
@@ -117,6 +161,10 @@ class SBT(Index):
     storage: Storage, default: None
         A Storage is any place where we can save and load data for the nodes.
         If set to None, will use a FSStorage.
+    cache_size: int, default None
+        Number of internal nodes to cache in memory.
+        If set to None, will not remove any nodes from memory
+        (cache grows without bounds).
 
     Notes
     -----
@@ -124,7 +172,7 @@ class SBT(Index):
     and another for the leaves (datasets).
     """
 
-    def __init__(self, factory, d=2, storage=None):
+    def __init__(self, factory, *, d=2, storage=None, cache_size=None):
         self.factory = factory
         self._nodes = {}
         self._missing_nodes = set()
@@ -132,10 +180,27 @@ class SBT(Index):
         self.d = d
         self.next_node = 0
         self.storage = storage
+        if cache_size is None:
+            cache_size = sys.maxsize
+        self._nodescache = _NodesCache(maxsize=cache_size)
 
     def signatures(self):
         for k in self.leaves():
             yield k.data
+
+    def select(self, ksize=None, moltype=None):
+        first_sig = next(iter(self.signatures()))
+
+        ok = True
+        if ksize is not None and first_sig.minhash.ksize != ksize:
+            ok = False
+        if moltype is not None and first_sig.minhash.moltype != moltype:
+            ok = False
+
+        if ok:
+            return self
+
+        raise ValueError("cannot select SBT on ksize {} / moltype {}".format(ksize, moltype))
 
     def new_node_pos(self, node):
         if not self._nodes:
@@ -236,14 +301,17 @@ class SBT(Index):
             # repair while searching.
             node_g = self._leaves.get(node_p, None)
             if node_g is None:
-                node_g = self._nodes.get(node_p, None)
-
-            if node_g is None:
-                if node_p in self._missing_nodes:
-                    self._rebuild_node(node_p)
-                    node_g = self._nodes[node_p]
+                if node_p in self._nodescache:
+                    node_g = self._nodescache[node_p]
                 else:
-                    continue
+                    node_g = self._nodes.get(node_p, None)
+                    if node_g is None:
+                        if node_p in self._missing_nodes:
+                            self._rebuild_node(node_p)
+                            node_g = self._nodes[node_p]
+                        else:
+                            continue
+                    self._nodescache[node_p] = node_g
 
             # if we have not visited this node before,
             if node_p not in visited:
@@ -269,14 +337,26 @@ class SBT(Index):
         return matches
 
     def search(self, query, *args, **kwargs):
+        """Return set of matches with similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+
+        Optional arguments:
+          * do_containment: default False. If True, use Jaccard containment.
+          * best_only: default False. If True, allow optimizations that
+            may. May discard matches better than threshold, but first match
+            is guaranteed to be best.
+          * ignore_abundance: default False. If True, and query signature
+            and database support k-mer abundances, ignore those abundances.
+        """
         from .sbtmh import search_minhashes, search_minhashes_containment
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
         threshold = kwargs['threshold']
-        ignore_abundance = kwargs['ignore_abundance']
-        do_containment = kwargs['do_containment']
-        best_only = kwargs['best_only']
+        ignore_abundance = kwargs.get('ignore_abundance', False)
+        do_containment = kwargs.get('do_containment', False)
+        best_only = kwargs.get('best_only', False)
         unload_data = kwargs.get('unload_data', False)
 
         # figure out scaled value of tree, downsample query if needed.
@@ -287,7 +367,7 @@ class SBT(Index):
         if tree_mh.scaled and query.minhash.scaled and \
           tree_mh.scaled > query.minhash.scaled:
             resampled_query_mh = tree_query.minhash
-            resampled_query_mh = resampled_query_mh.downsample_scaled(tree_mh.scaled)
+            resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
 
         # define both search function and post-search calculation function
@@ -315,7 +395,12 @@ class SBT(Index):
         
 
     def gather(self, query, *args, **kwargs):
+        "Return the match with the best Jaccard containment in the database."
         from .sbtmh import GatherMinHashes
+
+        if not query.minhash:             # empty query? quit.
+            return []
+
         # use a tree search function that keeps track of its best match.
         search_fn = GatherMinHashes().search
 
@@ -326,14 +411,33 @@ class SBT(Index):
         scaled = tree_mh.scaled
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * scaled)
+        threshold = 0.0
 
+        # are we setting a threshold?
+        if threshold_bp:
+            # if we have a threshold_bp of N, then that amounts to N/scaled
+            # hashes:
+            n_threshold_hashes = threshold_bp / scaled
+
+            # that then requires the following containment:
+            threshold = n_threshold_hashes / len(query.minhash)
+
+            # is it too high to ever match? if so, exit.
+            if threshold > 1.0:
+                return []
+
+        # actually do search!
         results = []
-        for leaf in self.find(search_fn, query, threshold, unload_data=unload_data):
-            leaf_e = leaf.data.minhash
-            similarity = query.minhash.contained_by(leaf_e, True)
-            if similarity > 0.0:
-                results.append((similarity, leaf.data, None))
+
+        for leaf in self.find(search_fn, query, threshold,
+                              unload_data=unload_data):
+            leaf_mh = leaf.data.minhash
+            containment = query.minhash.contained_by(leaf_mh, True)
+
+            assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
+            results.append((containment, leaf.data, None))
+
+        results.sort(key=lambda x: -x[0])
 
         return results
 
@@ -452,101 +556,44 @@ class SBT(Index):
         str
             full path to the new SBT description
         """
-        version = 4
-
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
-
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
-
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
-
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-
         info = {}
         info['d'] = self.d
-        info['version'] = version
+        info['version'] = 6
+        info["index_type"] = self.__class__.__name__  # TODO: check
+
+        # choose between ZipStorage and FS (file system/directory) storage.
+        if not path.endswith(".sbt.json"):
+            kind = "Zip"
+            if not path.endswith('.sbt.zip'):
+                path += '.sbt.zip'
+            storage = ZipStorage(path)
+            backend = "FSStorage"
+            name = os.path.basename(path[:-8])
+            subdir = '.sbt.{}'.format(name)
+            storage_args = FSStorage("", subdir).init_args()
+            storage.save(subdir + "/", b"")
+            index_filename = os.path.abspath(path)
+        else:                             # path.endswith('.sbt.json')
+            assert path.endswith('.sbt.json')
+            kind = "FS"
+            name = os.path.basename(path)
+            name = name[:-9]
+            index_filename = os.path.abspath(path)
+
+            if storage is None:
+                # default storage
+                location = os.path.dirname(index_filename)
+                subdir = '.sbt.{}'.format(name)
+
+                storage = FSStorage(location, subdir)
+                index_filename = os.path.join(location, index_filename)
+
+            backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
+            storage_args = storage.init_args()
+
         info['storage'] = {
             'backend': backend,
-            'args': storage.init_args()
-        }
-        info['factory'] = {
-            'class': GraphFactory.__name__,
-            'args': self.factory.init_args()
-        }
-
-        nodes = {}
-        total_nodes = len(self)
-        for n, (i, node) in enumerate(self):
-            if node is None:
-                continue
-
-            if isinstance(node, Node):
-                if random() - sparseness <= 0:
-                    continue
-
-            data = {
-                # TODO: start using md5sum instead?
-                'filename': os.path.basename(node.name),
-                'name': node.name
-            }
-
-            try:
-                node.metadata.pop('max_n_below')
-            except (AttributeError, KeyError):
-                pass
-
-            data['metadata'] = node.metadata
-
-            if structure_only is False:
-                # trigger data loading before saving to the new place
-                node.data
-
-                node.storage = storage
-
-                data['filename'] = node.save(data['filename'])
-
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
-            nodes[i] = data
-
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
-
-        notify("\nFinished saving nodes, now saving SBT json file.")
-        info['nodes'] = nodes
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
-
-        return fn
-
-    def _save_v5(self, path, storage=None, sparseness=0.0, structure_only=False):
-        version = 5
-
-        if path.endswith('.sbt.json'):
-            path = path[:-9]
-        fn = os.path.abspath(path + '.sbt.json')
-
-        if storage is None:
-            # default storage
-            location = os.path.dirname(fn)
-            subdir = '.sbt.{}'.format(os.path.basename(path))
-
-            storage = FSStorage(location, subdir)
-            fn = os.path.join(location, fn)
-
-        backend = [k for (k, v) in STORAGES.items() if v == type(storage)][0]
-
-        info = {}
-        info['d'] = self.d
-        info['version'] = version
-        info['storage'] = {
-            'backend': backend,
-            'args': storage.init_args()
+            'args': storage_args
         }
         info['factory'] = {
             'class': GraphFactory.__name__,
@@ -583,27 +630,40 @@ class SBT(Index):
 
                 node.storage = storage
 
-                data['filename'] = node.save(data['filename'])
+                if kind == "Zip":
+                    node.save(os.path.join(subdir, data['filename']))
+                elif kind == "FS":
+                    data['filename'] = node.save(data['filename'])
 
-            node.storage = storage
-            data['filename'] = node.save(data['filename'])
             if isinstance(node, Node):
                 nodes[i] = data
             else:
                 leaves[i] = data
 
-            notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
+            if n % 100 == 0:
+                notify("{} of {} nodes saved".format(n+1, total_nodes), end='\r')
 
-        notify("\nFinished saving nodes, now saving SBT json file.")
+        notify("Finished saving nodes, now saving SBT index file.")
         info['nodes'] = nodes
-        info['leaves'] = leaves
-        with open(fn, 'w') as fp:
-            json.dump(info, fp)
+        info['signatures'] = leaves
 
-        return fn
+        if kind == "Zip":
+            tree_data = json.dumps(info).encode("utf-8")
+            save_path = "{}.sbt.json".format(name)
+            storage.save(save_path, tree_data)
+            storage.close()
+
+        elif kind == "FS":
+            with open(index_filename, 'w') as fp:
+                json.dump(info, fp)
+
+        notify("Finished saving SBT index, available at {0}\n".format(index_filename))
+
+        return path
+
 
     @classmethod
-    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
+    def load(cls, location, *, leaf_loader=None, storage=None, print_version_warning=True, cache_size=None):
         """Load an SBT description from a file.
 
         Parameters
@@ -621,10 +681,55 @@ class SBT(Index):
         SBT
             the SBT tree built from the description.
         """
-        dirname = os.path.dirname(os.path.abspath(location))
-        sbt_name = os.path.basename(location)
-        if sbt_name.endswith('.sbt.json'):
-            sbt_name = sbt_name[:-9]
+        tempfile = None
+        sbt_name = None
+        tree_data = None
+
+        if storage is None:
+            if ZipStorage.can_open(location):
+                storage = ZipStorage(location)
+            else:
+                if not location.endswith('.sbt.zip'):
+                    location2 = location + '.sbt.zip'
+                    if ZipStorage.can_open(location2):
+                        storage = ZipStorage(location2)
+
+            if storage:
+                sbts = storage.list_sbts()
+                if len(sbts) != 1:
+                    print("no SBT, or too many SBTs!")
+                else:
+                    tree_data = storage.load(sbts[0])
+
+                tempfile = NamedTemporaryFile()
+
+                tempfile.write(tree_data)
+                tempfile.flush()
+
+                dirname = os.path.dirname(tempfile.name)
+                sbt_name = os.path.basename(tempfile.name)
+
+        if sbt_name is None:
+            dirname = os.path.dirname(os.path.abspath(location))
+            sbt_name = os.path.basename(location)
+            if sbt_name.endswith('.sbt.json'):
+                sbt_name = sbt_name[:-9]
+
+        sbt_fn = os.path.join(dirname, sbt_name)
+        if not sbt_fn.endswith('.sbt.json') and tempfile is None:
+            sbt_fn += '.sbt.json'
+        with open(sbt_fn) as fp:
+            jnodes = json.load(fp)
+
+        if tempfile is not None:
+            tempfile.close()
+
+        version = 1
+        if isinstance(jnodes, Mapping):
+            version = jnodes['version']
+
+        if leaf_loader is None:
+            leaf_loader = Leaf.load
 
         loaders = {
             1: cls._load_v1,
@@ -632,37 +737,31 @@ class SBT(Index):
             3: cls._load_v3,
             4: cls._load_v4,
             5: cls._load_v5,
+            6: cls._load_v6,
         }
 
-        # @CTB hack: check to make sure khmer Nodegraph supports the
-        # correct methods.
-        x = khmer.Nodegraph(1, 1, 1)
         try:
-            x.count(10)
-        except TypeError:
-            raise Exception("khmer version is too old; need >= 2.1,<3")
+            loader = loaders[version]
+        except KeyError:
+            raise IndexNotSupported()
 
-        if leaf_loader is None:
-            leaf_loader = Leaf.load
-
-        sbt_fn = os.path.join(dirname, sbt_name)
-        if not sbt_fn.endswith('.sbt.json'):
-            sbt_fn += '.sbt.json'
-        with open(sbt_fn) as fp:
-            jnodes = json.load(fp)
-
-        version = 1
-        if isinstance(jnodes, Mapping):
-            version = jnodes['version']
+        #if version >= 6:
+        #    if jnodes.get("index_type", "SBT") == "LocalizedSBT":
+        #        loaders[6] = LocalizedSBT._load_v6
 
         if version < 3 and storage is None:
             storage = FSStorage(dirname, '.sbt.{}'.format(sbt_name))
+        elif storage is None:
+            klass = STORAGES[jnodes['storage']['backend']]
+            if jnodes['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, jnodes['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**jnodes['storage']['args'])
 
-        return loaders[version](jnodes, leaf_loader, dirname, storage,
-                                print_version_warning)
+        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -670,7 +769,7 @@ class SBT(Index):
         sbt_nodes = {}
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
-        ksize, tablesize, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        ksize, tablesize, ntables = extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(ksize, tablesize, ntables)
 
         for i, jnode in enumerate(jnodes):
@@ -687,13 +786,13 @@ class SBT(Index):
 
             sbt_nodes[i] = sbt_node
 
-        tree = SBT(factory)
+        tree = SBT(factory, cache_size=cache_size)
         tree._nodes = sbt_nodes
 
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -703,7 +802,7 @@ class SBT(Index):
         sbt_leaves = {}
 
         sample_bf = os.path.join(dirname, nodes[0]['filename'])
-        k, size, ntables = khmer.extract_nodegraph_info(sample_bf)[:3]
+        k, size, ntables = extract_nodegraph_info(sample_bf)[:3]
         factory = GraphFactory(k, size, ntables)
 
         for k, node in nodes.items():
@@ -720,14 +819,14 @@ class SBT(Index):
                 sbt_node = leaf_loader(node, storage)
                 sbt_leaves[k] = sbt_node
 
-        tree = cls(factory, d=info['d'])
+        tree = cls(factory, d=info['d'], cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
 
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -735,12 +834,6 @@ class SBT(Index):
 
         sbt_nodes = {}
         sbt_leaves = {}
-
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
 
         factory = GraphFactory(*info['factory']['args'])
 
@@ -759,7 +852,7 @@ class SBT(Index):
 
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -774,7 +867,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v4(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v4(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -782,12 +875,6 @@ class SBT(Index):
 
         sbt_nodes = {}
         sbt_leaves = {}
-
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
 
         factory = GraphFactory(*info['factory']['args'])
 
@@ -803,7 +890,7 @@ class SBT(Index):
 
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -814,7 +901,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v5(cls, info, leaf_loader, dirname, storage, print_version_warning=True):
+    def _load_v5(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['leaves'].items()}
 
@@ -824,11 +911,12 @@ class SBT(Index):
         sbt_nodes = {}
         sbt_leaves = {}
 
-        klass = STORAGES[info['storage']['backend']]
-        if info['storage']['backend'] == "FSStorage":
-            storage = FSStorage(dirname, info['storage']['args']['path'])
-        elif storage is None:
-            storage = klass(**info['storage']['args'])
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
 
         factory = GraphFactory(*info['factory']['args'])
 
@@ -845,7 +933,48 @@ class SBT(Index):
             sbt_leaves[k] = sbt_leaf
             max_node = max(max_node, k)
 
-        tree = cls(factory, d=info['d'], storage=storage)
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
+        tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
+        tree._missing_nodes = {i for i in range(max_node)
+                              if i not in sbt_nodes and i not in sbt_leaves}
+
+        return tree
+
+    @classmethod
+    def _load_v6(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+        nodes = {int(k): v for (k, v) in info['nodes'].items()}
+        leaves = {int(k): v for (k, v) in info['signatures'].items()}
+
+        if not leaves:
+            raise ValueError("Empty tree!")
+
+        sbt_nodes = {}
+        sbt_leaves = {}
+
+        if storage is None:
+            klass = STORAGES[info['storage']['backend']]
+            if info['storage']['backend'] == "FSStorage":
+                storage = FSStorage(dirname, info['storage']['args']['path'])
+            elif storage is None:
+                storage = klass(**info['storage']['args'])
+
+        factory = GraphFactory(*info['factory']['args'])
+
+        max_node = 0
+        for k, node in nodes.items():
+            node['factory'] = factory
+            sbt_node = Node.load(node, storage)
+
+            sbt_nodes[k] = sbt_node
+            max_node = max(max_node, k)
+
+        for k, node in leaves.items():
+            sbt_leaf = leaf_loader(node, storage)
+            sbt_leaves[k] = sbt_leaf
+            max_node = max(max_node, k)
+
+        tree = cls(factory, d=info['d'], storage=storage, cache_size=cache_size)
         tree._nodes = sbt_nodes
         tree._leaves = sbt_leaves
         tree._missing_nodes = {i for i in range(max_node)
@@ -1040,16 +1169,11 @@ class Node(object):
     def __str__(self):
         return '*Node:{name} [occupied: {nb}, fpr: {fpr:.2}]'.format(
                 name=self.name, nb=self.data.n_occupied(),
-                fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
+                fpr=calc_expected_collisions(self.data, True, 1.1))
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes(compression=1)
+        return self.storage.save(path, buf)
 
     @property
     def data(self):
@@ -1058,12 +1182,7 @@ class Node(object):
                 self._data = self._factory()
             else:
                 data = self.storage.load(self._path)
-                # We need to do this tempfile dance because khmer only load
-                # data from files.
-                with NamedTemporaryFile(suffix=".gz") as f:
-                    f.write(data)
-                    f.file.flush()
-                    self._data = load_nodegraph(f.name)
+                self._data = Nodegraph.from_buffer(data)
         return self._data
 
     @data.setter
@@ -1071,7 +1190,10 @@ class Node(object):
         self._data = new_data
 
     def unload(self):
-        self._data = None
+        if self.storage:
+            # Don't unload data if there is no Storage
+            # TODO: Check that data is actually in the storage?
+            self._data = None
 
     @staticmethod
     def load(info, storage=None):
@@ -1109,18 +1231,13 @@ class Leaf(object):
         return '**Leaf:{name} [occupied: {nb}, fpr: {fpr:.2}] -> {metadata}'.format(
                 name=self.name, metadata=self.metadata,
                 nb=self.data.n_occupied(),
-                fpr=khmer.calc_expected_collisions(self.data, True, 1.1))
+                fpr=calc_expected_collisions(self.data, True, 1.1))
 
     @property
     def data(self):
         if self._data is None:
             data = self.storage.load(self._path)
-            # We need to do this tempfile dance because khmer only load
-            # data from files.
-            with NamedTemporaryFile(suffix=".gz") as f:
-                f.write(data)
-                f.file.flush()
-                self._data = load_nodegraph(f.name)
+            self._data = Nodegraph.from_buffer(data)
         return self._data
 
     @data.setter
@@ -1128,16 +1245,14 @@ class Leaf(object):
         self._data = new_data
 
     def unload(self):
-        self._data = None
+        if self.storage:
+            # Don't unload data if there is no Storage
+            # TODO: Check that data is actually in the storage?
+            self._data = None
 
     def save(self, path):
-        # We need to do this tempfile dance because khmer only load
-        # data from files.
-        with NamedTemporaryFile(suffix=".gz") as f:
-            self.data.save(f.name)
-            f.file.flush()
-            f.file.seek(0)
-            return self.storage.save(path, f.read())
+        buf = self.data.to_bytes(compression=1)
+        return self.storage.save(path, buf)
 
     def update(self, parent):
         parent.data.update(self.data)
@@ -1201,8 +1316,8 @@ def convert_cmd(name, backend):
         backend = IPFSStorage
     elif backend.lower() in ('redis', 'redisstorage'):
         backend = RedisStorage
-    elif backend.lower() in ('tar', 'tarstorage'):
-        backend = TarStorage
+    elif backend.lower() in ('zip', 'zipstorage'):
+        backend = ZipStorage
     elif backend.lower() in ('fs', 'fsstorage'):
         backend = FSStorage
         if options:

@@ -3,12 +3,12 @@
 ## Development environment
 
 
-You can get the latest development master branch with:
+You can get the latest development branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
 ```
-sourmash runs under both Python 2.7.x and Python 3.5+.  The base
-requirements are screed and ijson, together with a Rust environment (for the
+sourmash runs under Python 3.7 and later.  The base
+requirements are screed and cffi, together with a Rust environment (for the
 extension code). We suggest using `rustup` to install the Rust environment:
 
     curl https://sh.rustup.rs -sSf | sh
@@ -31,6 +31,15 @@ pip install -e .
 You can run tests by invoking `make test` in the sourmash directory;
 `python -m pytest` will run the Python tests, and `cargo test` will
 run the Rust tests.
+
+### If you're having trouble installing or using the development environment
+
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash.minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+
+```
+make clean
+```
+
 
 ## Automated tests and code coverage calculation
 
@@ -151,6 +160,24 @@ src/core
 └── tests/               | Integration tests (using the public API of the crate)
 ```
 
+### Exposing new functions on the FFI
+
+If you change anything in `src/core/src/ffi` (where the boundary between Rust
+and C is defined) you need to regenerate the `include/sourmash.h` header,
+and potentially fix any differences in the Python CFFI layer (which reads the C
+header file and expose functionality to Python).
+
+To regenerate the C header, run
+```
+$ make include/sourmash.h
+```
+This requires a nightly Rust compiler and `cbindgen`.
+They can be installed by running
+```
+$ rustup toolchain add nightly
+$ cargo install --force cbindgen
+```
+
 ### Changing code touching all layers: an example PR
 
 Luiz wrote a [blog post] describing a PR that changes code at the Python API down to the Rust code library,
@@ -174,7 +201,18 @@ From their definition:
 [`setuptools_scm`]: https://github.com/pypa/setuptools_scm
 [Semantic Versioning]: https://semver.org/
 
-For the Rust core library we use `rMAJOR.MINOR.PATH`
+For the Rust core library we use `rMAJOR.MINOR.PATCH`
 (note it starts with `r`, and not `v`).
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.
+
+## Contents
+
+```{toctree}
+:maxdepth: 2
+
+release
+requirements
+storage
+release-notes/releases
+```
