@@ -29,10 +29,13 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--max', type=int, default=None,
-        help='max value for histgram range (default none)')
+        help='max value for histogram range (default none)')
     subparser.add_argument(
         '--min', type=int, default=None,
-        help='min value for histgram range (default none)')
+        help='min value for histogram range (default none)')
+    subparser.add_argument(
+        '--bins', type=int, default=10,
+        help='number of bins (default 10)')
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

@@ -852,7 +852,7 @@ def abundhist(args):
     if args.max is not None:
         max_range = args.max
 
-    n_bins = 10
+    n_bins = args.bins
     if max_range - min_range + 1 < n_bins:
         n_bins = max_range - min_range + 1
 
