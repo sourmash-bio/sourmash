@@ -409,8 +409,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
                 for line in fp:
                     line = line.strip()
                     if line:
-                        sig = sourmash.load_signatures(line, quiet=True, do_raise=True)
-                        db += list(sig)
+                        sigs = load_file_as_signatures(line)
+                        db += list(sigs)
 
             loaded = True
             dbtype = DatabaseType.SIGLIST
