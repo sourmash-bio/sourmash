@@ -402,6 +402,21 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     except Exception as exc:
         pass
 
+    if not loaded:   # try load signatures from single file (list of signature paths)
+        try:
+            db = []
+            with open(filename, 'rt') as fp:
+                for line in fp:
+                    line = line.strip()
+                    if line:
+                        sig = sourmash.load_signatures(line, quiet=True, do_raise=True)
+                        db += list(sig)
+
+            loaded = True
+            dbtype = DatabaseType.SIGLIST
+        except Exception as exc:
+            pass
+
     if not loaded:                    # try load as SBT
         try:
             db = load_sbt_index(filename, cache_size=cache_size)
