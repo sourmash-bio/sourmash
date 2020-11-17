@@ -40,10 +40,10 @@ from collections import namedtuple, Counter
 import csv
 from io import TextIOWrapper
 
-from .search import make_jaccard_search_query, make_gather_query
-from .manifest import CollectionManifest
-from .logging import debug_literal
-from .signature import load_signatures, save_signatures
+from ..search import make_jaccard_search_query, make_gather_query
+from ..manifest import CollectionManifest
+from ..logging import debug_literal
+from ..signature import load_signatures, save_signatures
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -979,7 +979,7 @@ class MultiIndex(Index):
         if they are listed in the text file; it uses 'load_file_as_index'
         underneath.
         """
-        from .sourmash_args import (load_pathlist_from_file,
+        from ..sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
         src_list = []
