@@ -4,11 +4,11 @@ on: [push, pull_request]
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.arch }} ${{ matrix.distro }}
+    runs-on: ${{ matrix.arch }}
     strategy:
       matrix:
-        include::
+        include:
           - arch: aarch64
             distro: ubuntu18.04
           - arch: aarch64
