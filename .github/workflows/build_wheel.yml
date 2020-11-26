@@ -38,8 +38,9 @@ jobs:
           CIBW_BEFORE_BUILD: 'source .travis/install_cargo.sh'
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+          CIBW_BUILD_VERBOSITY: 3
         run: |
-          python -m cibuildwheel --output-dir wheelhouse -vvv
+          python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v2
         with:
