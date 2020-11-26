@@ -10,7 +10,7 @@ jobs:
       matrix:
         include:
           - arch: aarch64
-            distro: ubuntu18.04
+            distro: ubuntu-18.04
           - arch: aarch64
             distro: macos-latest
 
