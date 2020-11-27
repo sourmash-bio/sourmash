@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.arch }} ${{ matrix.distro }}
-    runs-on: ${{ matrix.distro }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
          os: [ubuntu-18.04, macos-latest]
