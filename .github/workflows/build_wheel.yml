@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.arch }} ${{ matrix.distro }}
+    name: Build wheels on ${{ matrix.os }
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -35,6 +35,7 @@ jobs:
       - name: Build wheels
         env:
           CIBW_BUILD: "cp37-*"
+          CIBW_SKIP: "'*-win32 *-manylinux_i686'"
           CIBW_BEFORE_BUILD: 'source .travis/install_cargo.sh'
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.11'
