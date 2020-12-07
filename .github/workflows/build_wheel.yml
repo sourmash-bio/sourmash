@@ -1,6 +1,12 @@
 name: cibuildwheel
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [latest]
+  pull_request:
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   build_wheels:
