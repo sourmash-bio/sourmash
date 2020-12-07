@@ -1,0 +1,48 @@
+name: Python tests
+
+on:
+  push:
+    branches: [latest]
+    tags: v*
+  pull_request:
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest]
+        py: [3.9, 3.8, 3.7]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.py }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.py }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox tox-gh-actions
+
+      - name: Set up Pandoc
+        uses: r-lib/actions/setup-pandoc@v1
+
+      - name: Test with tox
+        run: tox -vv
+        env:
+          PYTHONDEVMODE: 1
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+            file: ./coverage.xml
+            fail_ci_if_error: true
