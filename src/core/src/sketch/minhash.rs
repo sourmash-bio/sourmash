@@ -14,6 +14,7 @@ use typed_builder::TypedBuilder;
 use crate::_hash_murmur;
 use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
+use crate::sketch::hyperloglog::estimators;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
@@ -58,6 +59,9 @@ pub struct KmerMinHash {
 
     #[builder(default)]
     md5sum: Mutex<Option<String>>,
+
+    #[builder(default)]
+    counts: Mutex<Option<Vec<u16>>>,
 }
 
 impl PartialEq for KmerMinHash {
@@ -78,6 +82,7 @@ impl Clone for KmerMinHash {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             md5sum: Mutex::new(Some(self.md5sum())),
+            counts: Mutex::new(None),
         }
     }
 }
@@ -93,6 +98,7 @@ impl Default for KmerMinHash {
             mins: Vec::with_capacity(1000),
             abunds: None,
             md5sum: Mutex::new(None),
+            counts: Mutex::new(None),
         }
     }
 }
@@ -176,6 +182,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             mins,
             abunds,
             hash_function,
+            counts: Mutex::new(None),
         })
     }
 }
@@ -215,6 +222,7 @@ impl KmerMinHash {
             mins,
             abunds,
             md5sum: Mutex::new(None),
+            counts: Mutex::new(None),
         }
     }
 
@@ -767,6 +775,10 @@ impl KmerMinHash {
     }
 
     pub fn as_hll(&self) -> HyperLogLog {
+        // TODO: is this an HLL for the original data (we can build this for
+        // scaled minhash,
+        // with a reduced p-q combination)
+        // or for the current data in the minhash?
         let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
 
         for h in &self.mins {
@@ -774,6 +786,63 @@ impl KmerMinHash {
         }
 
         hll
+    }
+
+    /// Cardinality of the MinHash sketch (how many unique elements are present)
+    pub fn cardinality(&self) -> usize {
+        self.mins.len()
+    }
+
+    /// Cardinality of the original dataset;
+    /// how many unique elements were present in original data,
+    /// calculated from the Scaled MinHash sketch.
+    ///
+    /// This uses the Ertl estimators first derived for HyperLogLog sketches.
+    /// Since a Scaled MinHash sketch contains all the data necessary to use these
+    /// estimators with a smaller `p` and `q` values,
+    /// we generate the equivalent registers and use the estimators with the
+    /// reduced hash range.
+    pub fn cardinality_original(&self, error_rate: f64) -> Result<usize, Error> {
+        let mut counts = self.counts.lock().unwrap();
+
+        // TODO: throw an error if it is not a scaled minhash
+
+        let p = (1.04 / error_rate).powi(2).log2().ceil() as usize;
+
+        // The proper `q` for the Scaled MinHash is derived from the max_hash.
+        // The max_hash sets the bound for the largest hash size representable
+        // in the Scaled MinHash, and `hash_size = p + q`
+        let hash_size = (self.max_hash as f64).log2().ceil() as usize;
+        let q = hash_size - p;
+
+        // Check if the counts are available
+        if counts.is_none() {
+            // They are not, let's calculate and update
+
+            // First, build the equivalent registers
+            let size = (1 as usize) << p;
+            let mut registers = vec![0; size];
+
+            for hash in &self.mins {
+                let value = hash >> p;
+                let index = (hash - (value << p)) as usize;
+
+                let leftmost = value.leading_zeros() + 1 - (p as u32);
+                // remove the scaled effect
+                let leftmost = leftmost - (64 - hash_size as u32);
+
+                let old_value = registers[index];
+                registers[index] = old_value.max(leftmost as estimators::CounterType);
+            }
+
+            *counts = Some(estimators::counts(&registers, q));
+        }
+
+        if counts.is_some() {
+            Ok(estimators::mle(counts.as_ref().unwrap(), p, q, 0.01) as usize)
+        } else {
+            unimplemented!("Return error")
+        }
     }
 }
 
@@ -1474,6 +1543,11 @@ impl KmerMinHashBTree {
                 .zip(std::iter::repeat(1))
                 .collect()
         }
+    }
+
+    /// Cardinality of the MinHash sketch (how many unique elements are present)
+    pub fn cardinality(&self) -> usize {
+        self.mins.len()
     }
 }
 
