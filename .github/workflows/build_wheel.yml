@@ -1,0 +1,55 @@
+name: cibuildwheel
+
+on:
+  push:
+    branches: [latest]
+  pull_request:
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+         os: [ubuntu-18.04, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.7.1
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "cp37-*"
+          CIBW_SKIP: "'*-win32 *-manylinux_i686'"
+          CIBW_BEFORE_BUILD: 'source .travis/install_cargo.sh'
+          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
+          CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+          CIBW_BUILD_VERBOSITY: 3
+        run: |
+          python -m cibuildwheel --output-dir dist
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: './dist/sourmash*.whl'
+
+      # if it matches a Python release tag, upload to github releases
+      # TODO: check https://github.com/actions/upload-release-asset
+      - name: Release
+        uses: fnkr/github-action-ghr@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+            GHR_PATH: './dist/sourmash*.whl'
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
