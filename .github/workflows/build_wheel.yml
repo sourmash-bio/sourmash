@@ -41,6 +41,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 3
         run: |
           python -m cibuildwheel --output-dir dist
+          ls -lR ./dist
 
       - uses: actions/upload-artifact@v2
         with:
@@ -52,5 +53,5 @@ jobs:
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/v')
         env:
-            GHR_PATH: './dist/sourmash*.whl'
+            GHR_PATH: ./dist/
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
