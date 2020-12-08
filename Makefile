@@ -37,7 +37,7 @@ include/sourmash.h: src/core/src/lib.rs \
 
 coverage: all
 	$(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=. --cov-report term-missing
+	$(PYTHON) -m pytest --cov=. --cov-report term-missing --cov-report=xml
 
 benchmark:
 	asv continuous latest `git rev-parse HEAD`
