@@ -8,12 +8,7 @@ cache:
     - "$HOME/.cargo"
     - "target"
 
-if: |
-  (type = push AND (branch = latest)) OR \
-  (tag =~ ^v) OR \
-  (type = pull_request)
-
-script: tox -vv
+if: tag =~ ^v
 
 install:
   - source .travis/install_cargo.sh
