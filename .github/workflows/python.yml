@@ -3,7 +3,6 @@ name: Python tests
 on:
   push:
     branches: [latest]
-    tags: v*
   pull_request:
     branches: [latest]
   schedule:
