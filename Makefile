@@ -38,7 +38,7 @@ coverage: all
 	tox -e coverage
 
 benchmark:
-	asv continuous latest `git rev-parse HEAD`
+	tox -e asv
 	cargo bench
 
 check:

@@ -2,7 +2,6 @@
 
 ## Development environment
 
-
 You can get the latest development branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
@@ -13,24 +12,29 @@ extension code). We suggest using `rustup` to install the Rust environment:
 
     curl https://sh.rustup.rs -sSf | sh
 
-To install all of the necessary Python dependencies, do:
+We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
+running tests and checks during development.
+To install it, do:
 ```
-pip install -r requirements.txt
+pip install tox
 ```
-Briefly, we use `py.test` and `cargo test` for testing, and `coverage` for code
-coverage analysis.
+and use `tox -l` to list available tasks.
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
 sourmash clone directory, you can do:
 ```
-python -m virtualenv dev
-. dev/bin/activate
-pip install -e .
+tox -e dev
+. .tox/dev/bin/activate
 ```
 
 You can run tests by invoking `make test` in the sourmash directory;
-`python -m pytest` will run the Python tests, and `cargo test` will
-run the Rust tests.
+`tox -e py39` will run the Python tests with Python 3.9,
+and `cargo test` will run the Rust tests.
+
+You can also explicitly install all the dependencies for sourmash by running
+```
+pip install -r requirements.txt
+```
 
 ### If you're having trouble installing or using the development environment
 
@@ -40,14 +44,22 @@ If you are getting an error that contains `ImportError: cannot import name 'to_b
 make clean
 ```
 
+## Adding new changes
+
+We use [`pre-commit`](https://pre-commit.com/) to run automatic checks and fixes
+when developing sourmash. You can run it with
+```
+tox -e fix_lint
+```
+which prints a "hint" at the end of the run with instructions to set it up to
+run automatically every time you run `git commit`.
 
 ## Automated tests and code coverage calculation
 
-We use [Travis][0] and [GitHub Actions][2] for continuous integration.
+We use [GitHub Actions][2] for continuous integration.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-[0]: https://travis-ci.com/dib-lab/sourmash
 [1]: https://codecov.io/gh/dib-lab/sourmash/
 [2]: https://github.com/dib-lab/sourmash/actions
 
