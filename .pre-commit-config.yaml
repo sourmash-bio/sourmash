@@ -24,6 +24,14 @@ repos:
 #  hooks:
 #  - id: isort
 #    additional_dependencies: [toml]
+
+# format using black
+# when the full codebase is black, use it directly;
+#  while it isn't, let's use darker to format new/changed code
+-   repo: https://github.com/akaihola/darker
+    rev: 1.2.1
+    hooks:
+    -   id: darker
 #- repo: https://github.com/psf/black
 #  rev: 20.8b1
 #  hooks:
@@ -38,6 +46,7 @@ repos:
 #    additional_dependencies:
 #    - black==19.10b0
 #    language_version: python3.8
+
 #- repo: https://github.com/asottile/add-trailing-comma
 #  rev: v2.0.1
 #  hooks:
