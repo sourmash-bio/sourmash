@@ -50,7 +50,7 @@ jobs:
 
       - name: Set up IPFS
         if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
-        uses: luizirber/setup-ipfs@fix_add_path
+        uses: ibnesayeed/setup-ipfs@master
         with:
           ipfs_version: 0.6
           run_daemon: true
