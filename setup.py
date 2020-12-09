@@ -64,10 +64,11 @@ SETUP_METADATA = {
                          'matplotlib', 'scipy', 'deprecation>=2.0.6',
                          'cachetools >=4,<5'],
     "setup_requires": [
-        "setuptools>=38.6.0",
+        "setuptools>=48",
         "milksnake",
-        "setuptools_scm>=3.2.0",
+        "setuptools_scm[toml] >= 4, <5",
         "setuptools_scm_git_archive",
+        "wheel >= 0.29.0",
     ],
     "use_scm_version": {
         "write_to": "sourmash/version.py",
