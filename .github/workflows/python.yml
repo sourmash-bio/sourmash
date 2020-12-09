@@ -74,7 +74,8 @@ jobs:
         env:
           PYTHONDEVMODE: 1
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          fail_ci_if_error: true
+      - name: set coverage location
+        id: covloc
+        run: |
+          PYNAME=$(echo ${{ matrix.py }} | tr -d .)
+          echo "::set-output name=coverage_file::.tox/junit.py${PYNAME}.xml"
