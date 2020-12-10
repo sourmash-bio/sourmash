@@ -16,7 +16,7 @@ We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
 running tests and checks during development.
 To install it, do:
 ```
-pip install tox
+python -m pip install tox
 ```
 and use `tox -l` to list available tasks.
 
