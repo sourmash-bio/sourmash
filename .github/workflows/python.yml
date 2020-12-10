@@ -73,9 +73,3 @@ jobs:
         run: tox
         env:
           PYTHONDEVMODE: 1
-
-      - name: set coverage location
-        id: covloc
-        run: |
-          PYNAME=$(echo ${{ matrix.py }} | tr -d .)
-          echo "::set-output name=coverage_file::.tox/junit.py${PYNAME}.xml"
