@@ -1,4 +1,4 @@
-name: khmer compatibility tests
+name: Hypothesis tests
 
 on:
   push:
@@ -24,8 +24,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install tox
 
-      - name: Run tests with latest released khmer
-        run: tox -e khmer,coverage
-
-      - name: Run tests with khmer master branch
-        run: tox -e khmer_master,coverage
+      - name: Run Hypothesis tests
+        run: tox -e hypothesis,coverage
