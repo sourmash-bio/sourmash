@@ -66,7 +66,7 @@ SETUP_METADATA = {
     "setup_requires": [
         "setuptools>=48",
         "milksnake",
-        "setuptools_scm[toml] >= 4, <5",
+        "setuptools_scm[toml] >= 4, < 6",
         "setuptools_scm_git_archive",
         "wheel >= 0.29.0",
     ],
