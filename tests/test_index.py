@@ -6,7 +6,8 @@ import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
-from . import sourmash_tst_utils as utils
+
+import sourmash_tst_utils as utils
 
 
 def test_simple_index(n_children):

@@ -13,7 +13,7 @@ from sourmash.sbtmh import (SigLeaf, search_minhashes,
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_simple(n_children):

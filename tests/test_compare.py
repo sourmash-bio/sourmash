@@ -6,7 +6,7 @@ import pytest
 
 import sourmash
 from sourmash.compare import compare_all_pairs, compare_parallel, compare_serial
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 @pytest.fixture()

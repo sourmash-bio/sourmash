@@ -1,4 +1,4 @@
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 def test_bug_781():
     with utils.TempDirectory() as location:

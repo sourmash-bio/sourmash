@@ -5,7 +5,7 @@ import pytest
 import sourmash
 from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):

@@ -7,7 +7,7 @@ import csv
 import pytest
 import glob
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 

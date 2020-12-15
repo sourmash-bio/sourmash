@@ -2,7 +2,6 @@
 
 ## Development environment
 
-
 You can get the latest development branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
@@ -13,24 +12,29 @@ extension code). We suggest using `rustup` to install the Rust environment:
 
     curl https://sh.rustup.rs -sSf | sh
 
-To install all of the necessary Python dependencies, do:
+We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
+running tests and checks during development.
+To install it, do:
 ```
-pip install -r requirements.txt
+python -m pip install tox
 ```
-Briefly, we use `py.test` and `cargo test` for testing, and `coverage` for code
-coverage analysis.
+and use `tox -l` to list available tasks.
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
 sourmash clone directory, you can do:
 ```
-python -m virtualenv dev
-. dev/bin/activate
-pip install -e .
+tox -e dev
+. .tox/dev/bin/activate
 ```
 
 You can run tests by invoking `make test` in the sourmash directory;
-`python -m pytest` will run the Python tests, and `cargo test` will
-run the Rust tests.
+`tox -e py39` will run the Python tests with Python 3.9,
+and `cargo test` will run the Rust tests.
+
+You can also explicitly install all the dependencies for sourmash by running
+```
+pip install -r requirements.txt
+```
 
 ### If you're having trouble installing or using the development environment
 
@@ -40,22 +44,30 @@ If you are getting an error that contains `ImportError: cannot import name 'to_b
 make clean
 ```
 
+## Adding new changes
+
+We use [`pre-commit`](https://pre-commit.com/) to run automatic checks and fixes
+when developing sourmash. You can run it with
+```
+tox -e fix_lint
+```
+which prints a "hint" at the end of the run with instructions to set it up to
+run automatically every time you run `git commit`.
 
 ## Automated tests and code coverage calculation
 
-We use [Travis][0] and [GitHub Actions][2] for continuous integration.
+We use [GitHub Actions][2] for continuous integration.
 
 Code coverage can be viewed interactively at [codecov.io][1].
 
-[0]: https://travis-ci.com/dib-lab/sourmash
 [1]: https://codecov.io/gh/dib-lab/sourmash/
 [2]: https://github.com/dib-lab/sourmash/actions
 
 ## Code organization
 
 There are three main components in the sourmash repo:
-- Python module (in `sourmash/`)
-- The command-line interface (in `sourmash/cli`)
+- Python module (in `src/sourmash/`)
+- The command-line interface (in `src/sourmash/cli`)
 - The Rust core library  (in `src/core`)
 
 `setup.py` has all the configuration to prepare a Python package containing these three components.
@@ -72,10 +84,9 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── data/               | data used for demos
 ├── doc/                | the documentation rendered in sourmash.bio
 ├── include/            | C/C++ header files for using core library
-├── sourmash/           | The Python module and CLI code
-├── sourmash_lib/       | DEPRECATED: previous name of the Python module
 ├── src/                |
-│   └── core            | Code for the core library (Rust)
+│   ├── core/           | Code for the core library (Rust)
+│   └── sourmash/       | The Python module and CLI code
 ├── tests/              | Tests for the Python module and CLI
 ├── utils/              |
 ├── asv.conf.json       | benchmarking config file (for ASV)
@@ -88,20 +99,21 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── Makefile            | Entry point for most development tasks
 ├── MANIFEST.in         | Describes what files to add to the Python package
 ├── matplotlibrc        | Configuration for matplotlib
-├── netlify.toml        | Configuration for netlify (build docs for preview)
+├── nix.shell           | Nix configuration for creating a dev environment
 ├── paper.bib           | References in the JOSS paper
 ├── paper.md            | JOSS paper content
-├── pytest.ini          | pytest configuration
+├── pyproject.toml      | Python project definitions (build system and tooling)
 ├── README.md           | Info to get started
 ├── requirements.txt    | Python dependencies for development
-├── setup.py            | Python package definition
+├── setup.py            | Entry point for Python package setup
+├── setup.cfg           | Python package definitions
 └── tox.ini             | Configuration for test automation
 ```
 
 ### The Python module (and CLI)
 
 ```
-sourmash
+src/sourmash
 ├── cli/                | Command-line parsing, help messages and overall infrastucture
 ├── command_compute.py  | compute command implementation
 ├── commands.py         | implementation for other CLI commands
