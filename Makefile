@@ -9,7 +9,7 @@ build: .PHONY
 
 clean:
 	$(PYTHON) setup.py clean --all
-	rm -f sourmash/*.so
+	rm -f src/sourmash/*.so
 	cd doc && make clean
 
 install: all

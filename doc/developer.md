@@ -66,8 +66,8 @@ Code coverage can be viewed interactively at [codecov.io][1].
 ## Code organization
 
 There are three main components in the sourmash repo:
-- Python module (in `sourmash/`)
-- The command-line interface (in `sourmash/cli`)
+- Python module (in `src/sourmash/`)
+- The command-line interface (in `src/sourmash/cli`)
 - The Rust core library  (in `src/core`)
 
 `setup.py` has all the configuration to prepare a Python package containing these three components.
@@ -84,10 +84,9 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── data/               | data used for demos
 ├── doc/                | the documentation rendered in sourmash.bio
 ├── include/            | C/C++ header files for using core library
-├── sourmash/           | The Python module and CLI code
-├── sourmash_lib/       | DEPRECATED: previous name of the Python module
 ├── src/                |
-│   └── core            | Code for the core library (Rust)
+│   ├── core/           | Code for the core library (Rust)
+│   └── sourmash/       | The Python module and CLI code
 ├── tests/              | Tests for the Python module and CLI
 ├── utils/              |
 ├── asv.conf.json       | benchmarking config file (for ASV)
@@ -100,20 +99,21 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── Makefile            | Entry point for most development tasks
 ├── MANIFEST.in         | Describes what files to add to the Python package
 ├── matplotlibrc        | Configuration for matplotlib
-├── netlify.toml        | Configuration for netlify (build docs for preview)
+├── nix.shell           | Nix configuration for creating a dev environment
 ├── paper.bib           | References in the JOSS paper
 ├── paper.md            | JOSS paper content
-├── pytest.ini          | pytest configuration
+├── pyproject.toml      | Python project definitions (build system and tooling)
 ├── README.md           | Info to get started
 ├── requirements.txt    | Python dependencies for development
-├── setup.py            | Python package definition
+├── setup.py            | Entry point for Python package setup
+├── setup.cfg           | Python package definitions
 └── tox.ini             | Configuration for test automation
 ```
 
 ### The Python module (and CLI)
 
 ```
-sourmash
+src/sourmash
 ├── cli/                | Command-line parsing, help messages and overall infrastucture
 ├── command_compute.py  | compute command implementation
 ├── commands.py         | implementation for other CLI commands
