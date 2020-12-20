@@ -349,17 +349,19 @@ def test_do_sourmash_sketchdna_output_and_name_valid_file_outdir(c):
 
 def test_do_sourmash_sketchdna_singleton():
     with utils.TempDirectory() as location:
-        testdata1 = utils.get_test_data('short.fa')
+        testdata1 = utils.get_test_data('short3.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['sketch', 'dna', '--singleton',
                                             testdata1],
                                            in_directory=location)
 
-        sigfile = os.path.join(location, 'short.fa.sig')
+        sigfile = os.path.join(location, 'short3.fa.sig')
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert str(sig).endswith('shortName')
+        assert str(sig).endswith('firstname')
+        sig = next(signature.load_signatures(sigfile))
+        assert str(sig).endswith('other')
 
 
 def test_do_sourmash_sketchdna_name():
