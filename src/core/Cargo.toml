@@ -63,7 +63,7 @@ criterion = "0.3.2"
 needletail = { version = "0.4.0", default-features = false }
 predicates = "1.0.4"
 proptest = { version = "0.9.6", default-features = false, features = ["std"]}  # Upgrade to 0.10 requires rust 1.39
-rand = "0.7.3"
+rand = "0.8.0"
 tempfile = "3.1.0"
 
 [[bench]]
