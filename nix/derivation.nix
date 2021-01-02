@@ -40,7 +40,11 @@ in
 
   nixpkgs.mkShell {
     buildInputs = [
-      customPython
+      #customPython
+      (python38.withPackages(ps: with ps; [ virtualenv tox ]))
+      python39
+      python37
+      python36
       git
 #      stdenv
       ruststable
