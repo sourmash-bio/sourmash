@@ -409,7 +409,11 @@ class LCA_Database(Index):
             is_hp = True
         elif self.moltype == 'dayhoff':
             is_dayhoff = True
-        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
+
+        ksize = self.ksize
+        if is_protein or is_dayhoff or is_hp:
+            ksize = self.ksize * 3
+        minhash = MinHash(n=0, ksize=ksize, scaled=self.scaled,
                           is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
 
         debug('creating signatures for LCA DB...')
