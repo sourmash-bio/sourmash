@@ -311,13 +311,14 @@ def test_do_compare_output_multiple_moltype(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
-    c.run_sourmash('compute', '-k', '21', '--protein', testdata2)
+    c.run_sourmash('compute', '-k', '63', '--no-dna', '--protein', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
                        fail_ok=True)
 
     assert c.last_result.status == -1
+    print(c.last_result.err)
     assert 'multiple molecule types loaded;' in c.last_result.err
 
 
