@@ -381,7 +381,11 @@ class MinHash(RustObject):
 
     @property
     def ksize(self):
-        return self._methodcall(lib.kmerminhash_ksize)
+        k = self._methodcall(lib.kmerminhash_ksize)
+        if not self.is_dna:
+            assert k % 3 == 0
+            k = int(k / 3)
+        return k
 
     @property
     @deprecated(deprecated_in="3.5", removed_in="5.0",
