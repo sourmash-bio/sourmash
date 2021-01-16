@@ -337,7 +337,7 @@ def test_linear_index_multik_select():
 
 
 def test_linear_index_moltype_select():
-    # this loads two ksizes(21, 30), and two moltypes (DNA and protein)
+    # this loads two ksizes(21, 10), and two moltypes (DNA and protein)
     filename = utils.get_test_data('genome-s10+s11.sig')
     siglist = sourmash.load_signatures(filename)
 
@@ -350,7 +350,7 @@ def test_linear_index_moltype_select():
     assert len(linear2) == 1
 
     # select most specific protein
-    linear2 = linear.select(ksize=30, moltype='protein')
+    linear2 = linear.select(ksize=10, moltype='protein')
     assert len(linear2) == 1
 
     # can leave off ksize, selects all ksizes
