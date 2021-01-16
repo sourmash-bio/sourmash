@@ -466,7 +466,7 @@ def test_do_sourmash_compute_multik_only_protein(c):
         assert len(ksizes) == 2
 
 
-def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
+def test_do_sourmash_compute_multik_protein_input_bad_ksize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short-protein.fa')
         status, out, err = utils.runscript('sourmash',
@@ -477,8 +477,8 @@ def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
                                            in_directory=location,
                                            fail_ok=True)
         outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert os.path.exists(outfile)
-#        assert 0
+        assert status != 0
+        assert 'protein ksizes must be divisible by 3' in err
 
 
 @utils.in_tempdir
