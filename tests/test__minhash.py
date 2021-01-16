@@ -36,6 +36,7 @@
 import itertools
 import pickle
 import math
+from copy import copy
 
 import pytest
 
@@ -649,7 +650,7 @@ def test_mh_merge_typeerror(track_abundance):
 
 
 def test_mh_merge(track_abundance):
-    # test merging two identically configured minhashes
+    # test merging two identically configured minhashes in diff order
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -658,61 +659,62 @@ def test_mh_merge(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = MinHash(20, 10, track_abundance=track_abundance)
+    c.merge(a)
+    c.merge(b)
+
+    d = MinHash(20, 10, track_abundance=track_abundance)
+    d.merge(b)
+    d.merge(a)
 
     assert len(c) == len(d)
     assert list(sorted(c.hashes)) == list(sorted(d.hashes))
 
-    if track_abundance:
-        assert round(c.similarity(d), 3) == 0.91
-        assert round(d.similarity(c), 3) == 0.91
-    else:
-        assert round(c.similarity(d), 3) == 1.0
-        assert round(d.similarity(c), 3) == 1.0
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
-def test_mh_merge_empty_num(track_abundance):
-    # test merging two identically configured minhashes, one empty
+def test_mh_add_empty_num(track_abundance):
+    # test adding two identically configured num minhashes, one empty
     a = MinHash(20, 10, track_abundance=track_abundance)
 
     b = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a + b
+    d = b + a
 
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
 
-def test_mh_merge_empty_scaled(track_abundance):
-    # test merging two identically configured minhashes, one empty
+def test_mh_add_empty_scaled(track_abundance):
+    # test adding two identically configured scaled minhashes, one empty
     a = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
 
     b = MinHash(0, 10, scaled=1, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a + b
+    d = b + a
 
     assert len(c)
     assert len(c) == len(d)
     assert len(a) != len(c)
     assert len(b) != len(d)
 
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
 
-def test_mh_merge_check_length(track_abundance):
+def test_mh_add_check_length(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -721,7 +723,7 @@ def test_mh_merge_check_length(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
+    c = a + b
     assert len(c.hashes) == 20
 
 
@@ -751,8 +753,8 @@ def test_mh_asymmetric_merge(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a + b
+    d = b + a
 
     assert len(a) == 20
     assert len(b) == 10

@@ -216,7 +216,7 @@ class MinHash(RustObject):
             seed=self.seed,
             max_hash=self.max_hash,
         )
-        a.merge(self)
+        a += self
         return a
 
     def __getstate__(self):
@@ -528,6 +528,11 @@ class MinHash(RustObject):
             return 0.0
 
         return self.count_common(other, downsample) / len(self)
+
+    def __add__(self, other):
+        x = self.__copy__()
+        x.merge(other)
+        return x
 
     def __iadd__(self, other):
         self.merge(other)
