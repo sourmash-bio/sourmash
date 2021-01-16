@@ -282,8 +282,12 @@ class MinHash(RustObject):
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
-        if len(kmer) != self.ksize:
-            raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        if self.is_dna:
+            if len(kmer) != self.ksize:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        else:
+            if len(kmer) != self.ksize*3:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize*3))
         self.add_sequence(kmer)
 
     def add_many(self, hashes):
