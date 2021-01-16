@@ -933,8 +933,13 @@ def test_compare_no_choose_molecule_fail():
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
+                                            '--dna',
+                                            testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '90',
+                                            '--no-dna', '--protein',
+                                            testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
