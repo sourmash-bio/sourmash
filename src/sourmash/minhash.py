@@ -187,10 +187,13 @@ class MinHash(RustObject):
 
         if dayhoff:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+            ksize = ksize*3
         elif hp:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+            ksize = ksize*3
         elif is_protein:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+            ksize = ksize*3
         else:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
 

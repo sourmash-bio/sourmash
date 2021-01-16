@@ -84,11 +84,14 @@ def test_dna_mh(track_abundance):
 
 
 def test_protein_mh(track_abundance):
-    e1 = MinHash(n=5, ksize=6, is_protein=True,
+    e1 = MinHash(n=5, ksize=2, is_protein=True,
                     track_abundance=track_abundance)
-    e2 = MinHash(n=5, ksize=6, is_protein=True,
+    e2 = MinHash(n=5, ksize=2, is_protein=True,
                     track_abundance=track_abundance)
 
+    # ok, so this is confusing, but: we are adding _DNA_ kmers here,
+    # and translating. so, add_sequence and add_kmer actually both add
+    # 6-mers.
     seq = 'ATGGCAGTGACGATGCCG'
     e1.add_sequence(seq)
 
