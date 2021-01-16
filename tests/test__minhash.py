@@ -664,6 +664,10 @@ def test_mh_merge(track_abundance):
     assert len(c) == len(d)
     assert list(sorted(c.hashes)) == list(sorted(d.hashes))
 
+    print(list(sorted(c.hashes.items())))
+    print(list(sorted(d.hashes.items())))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
+
     if track_abundance:
         assert round(c.similarity(d), 3) == 0.91
         assert round(d.similarity(c), 3) == 0.91
