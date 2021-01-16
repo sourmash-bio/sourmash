@@ -40,11 +40,11 @@ impl HyperLogLog {
     }
 
     pub fn new(p: usize, ksize: usize) -> Result<HyperLogLog, Error> {
-        if p < 4 || p > 18 {
+        if !(4..=18).contains(&p) {
             return Err(Error::HLLPrecisionBounds);
         }
 
-        let size = (1 as usize) << p;
+        let size = (1_usize) << p;
         let registers = vec![0; size];
 
         Ok(HyperLogLog {
