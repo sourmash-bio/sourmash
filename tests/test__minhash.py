@@ -36,6 +36,7 @@
 import itertools
 import pickle
 import math
+from copy import copy
 
 import pytest
 
@@ -674,6 +675,33 @@ def test_mh_merge(track_abundance):
     else:
         assert round(c.similarity(d), 3) == 1.0
         assert round(d.similarity(c), 3) == 1.0
+
+
+def test_mh_iadd(track_abundance):
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 40, 2):
+        a.add_hash(i)
+
+    b = MinHash(20, 10, track_abundance=track_abundance)
+    for i in range(0, 80, 4):
+        b.add_hash(i)
+
+    c = copy(a)
+    d = copy(b)
+
+    c += b
+    d += a
+
+    assert len(c) == len(d)
+    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+
+    print(list(sorted(c.hashes.items())))
+    print(list(sorted(d.hashes.items())))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
+
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_empty_num(track_abundance):
