@@ -222,7 +222,7 @@ def describe(args):
                 if mh.track_abundance:
                     with_abundance = 1
                 md5 = sig.md5sum()
-                name = sig.name()
+                name = sig.name or "** no name **"
                 filename = sig.filename
                 license = sig.license
 
@@ -279,8 +279,8 @@ def overlap(args):
     sig1_file = args.signature1
     sig2_file = args.signature2
 
-    name1 = sig1.name()
-    name2 = sig2.name()
+    name1 = sig1.name
+    name2 = sig2.name
 
     md5_1 = sig1.md5sum()
     md5_2 = sig2.md5sum()
@@ -370,7 +370,7 @@ def merge(args):
                 mh.merge(sigobj_mh)
             except:
                 error("ERROR when merging signature '{}' ({}) from file {}",
-                      sigobj.name(), sigobj.md5sum()[:8], sigfile)
+                      sigobj, sigobj.md5sum()[:8], sigfile)
                 raise
 
             this_n += 1
@@ -565,7 +565,7 @@ def extract(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         outlist.extend(siglist)
 
@@ -606,7 +606,7 @@ def filter(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in str(ss) ]
 
         for ss in siglist:
             mh = ss.minhash
@@ -663,7 +663,7 @@ def flatten(args):
         if args.md5 is not None:
             siglist = [ ss for ss in siglist if args.md5 in ss.md5sum() ]
         if args.name is not None:
-            siglist = [ ss for ss in siglist if args.name in ss.name() ]
+            siglist = [ ss for ss in siglist if args.name in ss.name ]
 
         for ss in siglist:
             ss.minhash = ss.minhash.flatten()
@@ -799,7 +799,7 @@ def export(args):
 
     with FileOutput(args.output, 'wt') as fp:
         print(json.dumps(x), file=fp)
-    notify("exported signature {} ({})", query.name(), query.md5sum()[:8])
+    notify("exported signature {} ({})", query, query.md5sum()[:8])
 
 
 def main(arglist=None):

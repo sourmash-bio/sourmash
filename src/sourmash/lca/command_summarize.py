@@ -74,7 +74,7 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
         for query_sig in sourmash_args.load_file_as_signatures(query_filename,
                                                                ksize=ksize):
             notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig.name(), n,
+            notify('... loading {} (file {} of {})', query_sig, n,
                    total_n, end='\r')
             total_count += 1
 
@@ -122,7 +122,7 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
         p = '{:.1f}%'.format(p)
 
         if filename and sig:
-            print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig.name()))
+            print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
         else:
             print_results('{:5} {:>5}   {}'.format(p, count, lineage))
 
@@ -145,7 +145,7 @@ def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
         debug('lineage:', lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
         if filename:
-            row += [filename, sig.name(), sig.md5sum()]
+            row += [filename, sig.name, sig.md5sum()]
         w.writerow(row)
 
 

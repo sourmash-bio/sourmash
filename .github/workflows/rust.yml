@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - 'src/core/**'
+      - 'tests/test-data/**'
   schedule:
     - cron: "0 0 * * *" # daily
 
@@ -129,7 +130,7 @@ jobs:
       - name: Upload Rust coverage to codecov
         uses: codecov/codecov-action@v1
         with:
-          flags: rusttests
+          flags: rust
           fail_ci_if_error: true
 
   lints:
@@ -200,7 +201,7 @@ jobs:
       - name: Install wasmtime
         run: "curl https://wasmtime.dev/install.sh -sSf | bash"
       - name: Add wasmtime to PATH
-        run: echo "::add-path::$HOME/.wasmtime/bin"
+        run: echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
       - name: Install cargo-wasi command
         uses: actions-rs/cargo@v1
         with:

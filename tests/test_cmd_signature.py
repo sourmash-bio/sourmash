@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 import sourmash
 
 ## command line tests
@@ -186,7 +186,7 @@ def test_sig_filter_1(c):
     out = c.last_result.out
 
     filtered_sigs = list(sourmash.load_signatures(out))
-    filtered_sigs.sort(key=lambda x: x.name())
+    filtered_sigs.sort(key=lambda x: str(x))
 
     assert len(filtered_sigs) == 2
 
@@ -563,8 +563,8 @@ def test_sig_rename_1(c):
     print(actual_rename_sig.minhash)
 
     assert actual_rename_sig.minhash == test_rename_sig.minhash
-    assert test_rename_sig.name() != actual_rename_sig.name()
-    assert actual_rename_sig.name() == 'fiz bar'
+    assert test_rename_sig.name != actual_rename_sig.name
+    assert actual_rename_sig.name == 'fiz bar'
 
 
 @utils.in_tempdir
@@ -579,7 +579,7 @@ def test_sig_rename_1_multisig(c):
 
     n = 0
     for sig in sourmash.load_signatures(out):
-        assert sig.name() == 'fiz bar'
+        assert sig.name == 'fiz bar'
         n += 1
 
     assert n == 9, n
@@ -597,7 +597,7 @@ def test_sig_rename_1_multisig_ksize(c):
 
     n = 0
     for sig in sourmash.load_signatures(out):
-        assert sig.name() == 'fiz bar'
+        assert sig.name == 'fiz bar'
         n += 1
 
     assert n == 7, n
@@ -615,7 +615,7 @@ def test_sig_rename_2_output_to_same(c):
     c.run_sourmash('sig', 'rename', '-d', inplace, 'fiz bar', '-o', inplace)
 
     actual_rename_sig = sourmash.load_one_signature(inplace)
-    assert actual_rename_sig.name() == 'fiz bar'
+    assert actual_rename_sig.name == 'fiz bar'
 
 
 @utils.in_tempdir
@@ -738,6 +738,52 @@ def test_sig_cat_2_out_inplace(c):
     print(len(siglist))
 
     assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_filelist(c):
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    multisig = utils.get_test_data('47+63-multisig.sig')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sig47abund, multisig)))
+
+    c.run_sourmash('sig', 'cat', filelist,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+
+
+@utils.in_tempdir
+def test_sig_cat_filelist_with_dbs(c):
+    # cat using a file list as input
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    sbt = utils.get_test_data('v6.sbt.zip')
+
+    filelist = c.output("filelist")
+    with open(filelist, 'w') as f:
+        f.write("\n".join((sig47, sig47abund, sbt)))
+
+    c.run_sourmash('sig', 'cat', filelist,
+                   '-o', 'out.sig')
+
+    # stdout should be same signatures
+    out = c.output('out.sig')
+
+    siglist = list(sourmash.load_signatures(out))
+    print(len(siglist))
+
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 6d6e87e1), SourmashSignature('', 60f7e23c), SourmashSignature('', 0107d767), SourmashSignature('', f71e7817), SourmashSignature('', f0c834bc), SourmashSignature('', 4e94e602), SourmashSignature('', b59473c9)]"""
 
 
 @utils.in_tempdir
@@ -1229,7 +1275,7 @@ def test_sig_describe_1_hp(c):
     expected_output = """\
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: e45a080101751e044d6df861d3d0f3fd
 k=21 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
@@ -1238,7 +1284,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: ef4fa1f3a90f3873187370f1eacc0d9a
 k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
@@ -1246,7 +1292,7 @@ size: 500
 signature license: CC0
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 20be00d9d577da9faeb77477bf07d3fb
 k=21 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
@@ -1254,7 +1300,7 @@ size: 500
 signature license: CC0
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 1136a8a68420bd93683e45cdaf109b80
 k=21 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
@@ -1263,7 +1309,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 4244d1612598af044e799587132f007e
 k=30 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
@@ -1272,7 +1318,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 5647819f2eac913e04af51c8d548ad56
 k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
@@ -1281,7 +1327,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: ad1e329dd98b5e32422e9decf298aa5f
 k=30 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
@@ -1290,7 +1336,7 @@ signature license: CC0
 
 ---
 signature filename: short.fa.sig
-signature: short.fa
+signature: ** no name **
 source file: short.fa
 md5: 71f7c111c01785e5f38efad45b00a0e1
 k=30 molecule=DNA num=500 scaled=0 seed=42 track_abundance=0
@@ -1333,8 +1379,8 @@ def test_sig_describe_1_sbt(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1350,8 +1396,8 @@ def test_sig_describe_1_lca(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1367,8 +1413,8 @@ def test_sig_describe_1_dir(c):
     print(c.last_result)
 
     expected_output = """\
-signature: GCA_001593925.1_ASM159392v1_protein.faa.gz
-signature: GCA_001593935.1_ASM159393v1_protein.faa.gz
+signature: GCA_001593925
+signature: GCA_001593935
 """.splitlines()
     for line in expected_output:
         assert line.strip() in out
@@ -1382,7 +1428,7 @@ def test_sig_describe_stdin(c):
 
     c.run_sourmash('sig', 'describe', '-', stdin_data=data)
 
-    assert 'signature: GCA_001593925.1_ASM159392v1_protein.faa.gz' in c.last_result.out
+    assert 'signature: GCA_001593925' in c.last_result.out
 
 
 @utils.in_tempdir

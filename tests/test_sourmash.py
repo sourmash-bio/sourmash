@@ -12,7 +12,8 @@ import pytest
 import sys
 import zipfile
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
+
 import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node
@@ -630,9 +631,9 @@ def test_plot_subsample_1():
         print(out)
 
         expected = """\
-0\ts10+s11
-1\tgenome-s12.fa.gz
-2\tgenome-s10.fa.gz"""
+0\tgenome-s10+s11
+1\tgenome-s12
+2\tgenome-s10"""
         assert expected in out
 
 
@@ -657,9 +658,9 @@ def test_plot_subsample_2():
 
         print(out)
         expected = """\
-0\tgenome-s12.fa.gz
-1\ts10+s11
-2\tgenome-s11.fa.gz"""
+0\tgenome-s12
+1\tgenome-s10+s11
+2\tgenome-s11"""
         assert expected in out
 
 
@@ -765,7 +766,6 @@ def test_search_csv(c):
         reader = csv.DictReader(fp)
         row = next(reader)
         assert float(row['similarity']) == 0.93
-        assert row['name'].endswith('short2.fa')
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
 
@@ -787,7 +787,7 @@ def test_search_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
 
-    assert '100.0%       GCA_001593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '100.0%       GCA_001593925' in str(c)
 
 
 @utils.in_thisdir
@@ -796,7 +796,7 @@ def test_gather_query_db_md5(c):
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
 
-    assert '340.9 kbp    100.0%  100.0%    ...01593925.1_ASM159392v1_protein.faa.gz' in str(c)
+    assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(c)
 
 
 @utils.in_thisdir
@@ -1149,7 +1149,7 @@ def test_do_sourmash_sbt_search_output():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
@@ -1158,8 +1158,8 @@ def test_do_sourmash_sbt_search_output():
         outfile = open(os.path.join(location, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert 'e26a306d26512' in output
+        assert '914591cd1130aa915' in output
 
 
 # check against a bug in sbt search triggered by incorrect max Jaccard
@@ -1178,14 +1178,14 @@ def test_do_sourmash_sbt_search_check_bug():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', testdata1, 'zzz'],
                                            in_directory=location)
         assert '1 matches:' in out
 
-        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.zip'))
         assert tree._nodes[0].metadata['min_n_below'] == 431
 
 
@@ -1203,14 +1203,14 @@ def test_do_sourmash_sbt_search_empty_sig():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', testdata1, 'zzz'],
                                            in_directory=location)
         assert '1 matches:' in out
 
-        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.json'))
+        tree = load_sbt_index(os.path.join(location, 'zzz.sbt.zip'))
         assert tree._nodes[0].metadata['min_n_below'] == 1
 
 
@@ -1223,10 +1223,10 @@ def test_do_sourmash_sbt_move_and_search_output():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', 'zzz',
+                                           ['index', 'zzz.sbt.json',
                                             'short.fa.sig',
                                             'short2.fa.sig',
-                                             '-k', '31'],
+                                            '-k', '31'],
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -1246,13 +1246,13 @@ def test_do_sourmash_sbt_move_and_search_output():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', '../short.fa.sig',
-                                            'zzz', '-o', 'foo'],
+                                            'zzz.sbt.json', '-o', 'foo'],
                                            in_directory=newpath)
         outfile = open(os.path.join(newpath, 'foo'))
         output = outfile.read()
         print(output)
-        assert 'short.fa' in output
-        assert 'short2.fa' in output
+        assert '914591cd1130aa91' in output
+        assert 'e26a306d2651' in output
 
 
 def test_search_deduce_ksize_and_select_appropriate():
@@ -1365,7 +1365,7 @@ def test_search_containment_sbt():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
                                             'zzz', '--containment'],
@@ -1476,7 +1476,7 @@ def test_index_metagenome_fromfile(c):
            '--from-file', c.output('sig.list')]
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     cmd = 'search {} gcf_all -k 21'.format(query_sig)
     cmd = cmd.split()
@@ -1505,7 +1505,7 @@ def test_index_metagenome_fromfile_no_cmdline_sig(c):
            '--from-file', c.output('sig.list')]
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     cmd = 'search {} gcf_all -k 21'.format(query_sig)
     cmd = cmd.split()
@@ -1533,7 +1533,7 @@ def test_search_metagenome():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'search {} gcf_all -k 21'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -1581,7 +1581,7 @@ def test_search_metagenome_downsample():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'search {} gcf_all -k 21 --scaled 100000'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -1606,7 +1606,7 @@ def test_search_metagenome_downsample_containment():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'search {} gcf_all -k 21 --scaled 100000 --containment'
         cmd = cmd.format(query_sig)
@@ -1637,7 +1637,7 @@ def test_search_metagenome_downsample_index(c):
     c.run_sourmash('index', 'gcf_all', *testdata_sigs, '-k', '21',
                    '--scaled', '100000')
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     c.run_sourmash('search', query_sig, 'gcf_all', '-k', '21',
                    '--containment')
@@ -1710,7 +1710,7 @@ def test_do_sourmash_sbt_search():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
@@ -1738,7 +1738,7 @@ def test_do_sourmash_sbt_search_wrong_ksize():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', '-k', '51',
@@ -1764,7 +1764,7 @@ def test_do_sourmash_sbt_search_multiple():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['index', 'zzz2',
@@ -1772,7 +1772,7 @@ def test_do_sourmash_sbt_search_multiple():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz2.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz2.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
@@ -1799,7 +1799,7 @@ def test_do_sourmash_sbt_search_and_sigs():
                                             '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
@@ -1832,7 +1832,7 @@ def test_do_sourmash_sbt_search_downsample():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'query.sig', 'zzz'],
@@ -1878,7 +1878,7 @@ def test_do_sourmash_index_single():
                                             'short.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
@@ -1925,7 +1925,7 @@ def test_do_sourmash_sbt_search_dnaprotquery():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         args = ['search', 'short.fa.sig', 'zzz']
         status, out, err = utils.runscript('sourmash', args,
@@ -1948,7 +1948,7 @@ def test_do_sourmash_index_traverse():
                                            ['index', '-k', '31', 'zzz', '.'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
         assert 'loaded 2 sigs; saving SBT under' in err
 
         status, out, err = utils.runscript('sourmash',
@@ -1978,7 +1978,7 @@ def test_do_sourmash_index_traverse_force(c):
     c.run_sourmash('index', '-k', '31', 'zzz', '.', '-f')
 
     err = c.last_result.err
-    assert os.path.exists(c.output('zzz.sbt.json'))
+    assert os.path.exists(c.output('zzz.sbt.zip'))
     assert 'loaded 2 sigs; saving SBT under' in err
 
     c.run_sourmash('search', out1, 'zzz')
@@ -1999,7 +1999,7 @@ def test_do_sourmash_index_sparseness():
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz', '.',
+                                           ['index', '-k', '31', 'zzz.sbt.json', '.',
                                             '--sparseness', '1.0'],
                                            in_directory=location)
 
@@ -2008,7 +2008,7 @@ def test_do_sourmash_index_sparseness():
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', 'short.fa.sig',
-                                            'zzz'],
+                                            'zzz.sbt.json'],
                                            in_directory=location)
         print(out)
 
@@ -2027,14 +2027,14 @@ def test_do_sourmash_sbt_combine():
                                            ['index', '-k', '31', 'zzz'] + files,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['sbt_combine', 'joined',
-                                            'zzz.sbt.json', 'zzz.sbt.json'],
+                                            'zzz.sbt.zip', 'zzz.sbt.zip'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'joined.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'joined.sbt.zip'))
 
         filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
@@ -2069,7 +2069,7 @@ def test_do_sourmash_index_append():
                                             'short.fa.sig', 'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short3.fa.sig')
@@ -2087,7 +2087,7 @@ def test_do_sourmash_index_append():
                                             'short3.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short3.fa.sig')
@@ -2116,7 +2116,7 @@ def test_do_sourmash_sbt_search_otherdir():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'xxx', 'zzz.sbt.zip'))
 
         sbt_name = os.path.join(location, 'xxx', 'zzz',)
         sig_loc = os.path.join(location, 'short.fa.sig')
@@ -2148,7 +2148,7 @@ def test_do_sourmash_sbt_search_scaled_vs_num_1():
                                             'short.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short2.fa.sig')
@@ -2180,7 +2180,7 @@ def test_do_sourmash_sbt_search_scaled_vs_num_2():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         sbt_name = os.path.join(location, 'zzz',)
         sig_loc = os.path.join(location, 'short.fa.sig')
@@ -2250,7 +2250,7 @@ def test_do_sourmash_check_search_vs_actual_similarity():
                                            ['index', '-k', '31', 'zzz'] + files,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         filename = os.path.splitext(os.path.basename(utils.SIG_FILES[0]))[0]
 
@@ -2265,7 +2265,7 @@ def test_do_sourmash_check_sbt_filenames():
         files = [utils.get_test_data(f) for f in utils.SIG_FILES]
 
         status, out, err = utils.runscript('sourmash',
-                                           ['index', '-k', '31', 'zzz'] + files,
+                                           ['index', '-k', '31', 'zzz.sbt.json'] + files,
                                            in_directory=location)
 
         assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
@@ -2274,7 +2274,7 @@ def test_do_sourmash_check_sbt_filenames():
         sig_md5s = set()
         for f in files:
             sig = signature.load_one_signature(f)
-            sig_names.add(sig.name())
+            sig_names.add(sig.name)
             sig_md5s.add(sig.md5sum())
 
         sbt_files = glob.glob(os.path.join(location, '.sbt.zzz', '*'))
@@ -2302,7 +2302,7 @@ def test_do_sourmash_sbt_search_bestonly():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', '--best-only',
@@ -2331,7 +2331,7 @@ def test_do_sourmash_sbt_search_bestonly_scaled():
                                             '--scaled', '10'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['search', '--best-only',
@@ -2500,7 +2500,7 @@ def test_gather():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -2535,7 +2535,7 @@ def test_gather_csv():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -2553,12 +2553,15 @@ def test_gather_csv():
             row = next(reader)
             print(row)
             assert float(row['intersect_bp']) == 910
+            assert float(row['unique_intersect_bp']) == 910
+            assert float(row['remaining_bp']) == 0
             assert float(row['f_orig_query']) == 1.0
             assert float(row['f_unique_to_query']) == 1.0
             assert float(row['f_match']) == 1.0
-            assert row['name'].endswith('short2.fa')
             assert row['filename'] == 'zzz'
+            assert row['name'].endswith('short2.fa')
             assert row['md5'] == 'c9d5a795eeaaf58e286fb299133e1938'
+            assert row['gather_result_rank'] == '0'
 
 
 def test_gather_multiple_sbts():
@@ -2582,7 +2585,7 @@ def test_gather_multiple_sbts():
                                            '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['index', 'zzz2',
@@ -2590,7 +2593,7 @@ def test_gather_multiple_sbts():
                                              '-k', '31'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -2625,7 +2628,7 @@ def test_gather_sbt_and_sigs():
                                             'short.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -2661,7 +2664,7 @@ def test_gather_file_output():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -2771,7 +2774,7 @@ def test_gather_metagenome():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'gather {} gcf_all -k 21 --threshold-bp=0'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -2802,7 +2805,7 @@ def test_gather_metagenome_num_results(c):
 
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     cmd = 'gather {} gcf_all -k 21 --num-results 10'.format(query_sig)
     cmd = cmd.split(' ')
@@ -2836,7 +2839,7 @@ def test_gather_metagenome_threshold_bp():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'gather {} gcf_all -k 21 --threshold-bp 2e6'.format(query_sig)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
@@ -2866,7 +2869,7 @@ def test_multigather_metagenome():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         cmd = 'multigather --query {} --db gcf_all -k 21 --threshold-bp=0'.format(
             query_sig)
@@ -2897,7 +2900,7 @@ def test_multigather_metagenome_query_from_file(c):
     cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     # make list w/query sig
     query_list = c.output('query.list')
@@ -3175,7 +3178,7 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
     cmd.extend(['-k', '21'])
     c.run_sourmash(*cmd)
 
-    assert os.path.exists(c.output('gcf_all.sbt.json'))
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
 
     # make list w/query sig
     query_list = c.output('query.list')
@@ -3356,7 +3359,7 @@ def test_gather_metagenome_downsample():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
@@ -3409,7 +3412,7 @@ def test_gather_save_matches():
         status, out, err = utils.runscript('sourmash', cmd,
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
@@ -3462,7 +3465,7 @@ def test_gather_error_no_cardinality_query():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
@@ -3494,7 +3497,7 @@ def test_gather_deduce_ksize():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', 'query.fa.sig', 'zzz',
@@ -3530,7 +3533,7 @@ def test_gather_deduce_moltype():
                                             'short2.fa.sig'],
                                            in_directory=location)
 
-        assert os.path.exists(os.path.join(location, 'zzz.sbt.json'))
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', 'query.fa.sig', 'zzz',
@@ -3624,26 +3627,40 @@ def test_gather_abund_10_1(c):
         r = csv.DictReader(fp)
 
         overlaps = []
+        unique_overlaps = []
         f_weighted_list = []
         average_abunds = []
+        remaining_bps = []
 
-        for row in r:
+        for n, row in enumerate(r):
+            assert int(row['gather_result_rank']) == n
             overlap = float(row['intersect_bp'])
+            remaining_bp = float(row['remaining_bp'])
+            unique_overlap = float(row['unique_intersect_bp'])
             f_weighted = float(row['f_unique_weighted'])
             average_abund = float(row['average_abund'])
 
             overlaps.append(overlap)
+            unique_overlaps.append(unique_overlap)
             f_weighted_list.append(f_weighted)
             average_abunds.append(average_abund)
+            remaining_bps.append(remaining_bp)
 
-        weighted_calc = []
-        for (overlap, average_abund) in zip(overlaps, average_abunds):
-            prod = overlap*average_abund
-            weighted_calc.append(prod)
+    weighted_calc = []
+    for (overlap, average_abund) in zip(overlaps, average_abunds):
+        prod = overlap*average_abund
+        weighted_calc.append(prod)
 
-        total_weighted = sum(weighted_calc)
-        for prod, f_weighted in zip(weighted_calc, f_weighted_list):
-            assert prod / total_weighted == f_weighted, (prod, f_weighted)
+    total_weighted = sum(weighted_calc)
+    for prod, f_weighted in zip(weighted_calc, f_weighted_list):
+        assert prod / total_weighted == f_weighted, (prod, f_weighted)
+
+    query_sig = sourmash.load_one_signature(query)
+    query_mh = query_sig.minhash
+
+    total_bp_analyzed = sum(unique_overlaps) + remaining_bps[-1]
+    total_query_bp = len(query_mh) * query_mh.scaled
+    assert total_bp_analyzed == total_query_bp
 
 
 @utils.in_thisdir
@@ -3701,6 +3718,7 @@ def test_sbt_categorize():
         testdata3 = utils.get_test_data('genome-s12.fa.gz.sig')
         testdata4 = utils.get_test_data('genome-s10+s11.sig')
 
+        # all four in the current directory for categorize .
         shutil.copyfile(testdata1, os.path.join(location, '1.sig'))
         shutil.copyfile(testdata2, os.path.join(location, '2.sig'))
         shutil.copyfile(testdata3, os.path.join(location, '3.sig'))
@@ -3721,10 +3739,11 @@ def test_sbt_categorize():
 
         # mash dist genome-s10.fa.gz genome-s10+s11.fa.gz
         # yields 521/1000 ==> ~0.5
-        assert 'for s10+s11, found: 0.50 genome-s10.fa.gz' in err
+        assert 'for genome-s10+s11, found: 0.50 genome-s10' in err
 
         out_csv = open(os.path.join(location, 'out.csv')).read()
-        assert './4.sig,s10+s11,genome-s10.fa.gz,0.50' in out_csv
+        print(out_csv)
+        assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
 def test_sbt_categorize_ignore_abundance():
@@ -3872,7 +3891,7 @@ def test_watch(c):
 
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'FOUND: genome-s10.fa.gz, at 1.000' in c.last_result.out
+    assert 'FOUND: genome-s10, at 1.000' in c.last_result.out
 
 
 @utils.in_tempdir
@@ -3912,7 +3931,7 @@ def test_watch_coverage():
 
         print(out)
         print(err)
-        assert 'FOUND: genome-s10.fa.gz, at 1.000' in out
+        assert 'FOUND: genome-s10, at 1.000' in out
 
 
 def test_storage_convert():
@@ -4033,7 +4052,7 @@ def test_license_cc0():
         assert os.path.exists(sigfile)
 
         sig = next(signature.load_signatures(sigfile))
-        assert sig.name().endswith('short.fa')
+        assert str(sig).endswith('short.fa')
 
         assert sig.license == 'CC0'
 
@@ -4077,6 +4096,7 @@ def test_do_sourmash_index_zipfile(c):
     assert c.last_result.status == 0
     assert 'Finished saving SBT index, available at' in c.last_result.err
 
+    # look internally at the zip file
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
         assert len(content) == 25
@@ -4118,6 +4138,7 @@ def test_do_sourmash_index_zipfile_append(c):
     assert c.last_result.status == 0
     assert 'Finished saving SBT index, available at' in c.last_result.err
 
+    # look internally at the zip file
     with zipfile.ZipFile(outfile) as zf:
         content = zf.namelist()
         assert len(content) == 25

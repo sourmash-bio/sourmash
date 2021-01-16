@@ -1,5 +1,5 @@
 from sourmash import signature
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 def test_load_textmode(track_abundance):
     # ijson required a file in binary mode or bytes,
@@ -10,4 +10,4 @@ def test_load_textmode(track_abundance):
     with open(sigfile, 'rt') as sigfp:
         siglist = list(signature.load_signatures(sigfp))
     loaded_sig = siglist[0]
-    assert loaded_sig.name() == 's10+s11'
+    assert loaded_sig.name == 'genome-s10+s11'

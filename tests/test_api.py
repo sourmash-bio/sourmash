@@ -1,7 +1,7 @@
 import pytest
 import sourmash
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_sourmash_signature_api():

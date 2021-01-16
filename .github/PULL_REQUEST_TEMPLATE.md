@@ -1,3 +1,5 @@
+## Checklist
+
 - [ ] Is it mergeable?
 - [ ] `make test` Did it pass the tests?
 - [ ] `make coverage` Is the new code covered?

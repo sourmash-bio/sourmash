@@ -13,7 +13,7 @@ from sourmash.sbtmh import (SigLeaf, search_minhashes,
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_simple(n_children):
@@ -295,7 +295,7 @@ def test_sbt_combine(n_children):
     if not next_empty:
         next_empty = n + 1
 
-    tree_1.add_node(SigLeaf(to_search.name(), to_search))
+    tree_1.add_node(SigLeaf(to_search.name, to_search))
     assert tree_1.next_node == next_empty
 
 
@@ -318,9 +318,9 @@ def test_sbt_fsstorage():
         print(*old_result, sep='\n')
 
         with FSStorage(location, '.fstree') as storage:
-            tree.save(os.path.join(location, 'tree'), storage=storage)
+            tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
 
-        tree = SBT.load(os.path.join(location, 'tree'), leaf_loader=SigLeaf.load)
+        tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
         new_result = {str(s) for s in tree.find(search_minhashes,
@@ -352,10 +352,10 @@ def test_sbt_zipstorage(tmpdir):
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree.save(str(tmpdir.join("tree")), storage=storage)
+        tree.save(str(tmpdir.join("tree.sbt.json")), storage=storage)
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
-        tree = SBT.load(str(tmpdir.join("tree")),
+        tree = SBT.load(str(tmpdir.join("tree.sbt.json")),
                         leaf_loader=SigLeaf.load,
                         storage=storage)
 
@@ -390,12 +390,12 @@ def test_sbt_ipfsstorage():
 
         try:
             with IPFSStorage() as storage:
-                tree.save(os.path.join(location, 'tree'), storage=storage)
+                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
         except ipfshttpclient.exceptions.ConnectionError:
             pytest.xfail("ipfs not installed/functioning probably")
 
         with IPFSStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree'),
+            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 
@@ -429,12 +429,12 @@ def test_sbt_redisstorage():
 
         try:
             with RedisStorage() as storage:
-                tree.save(os.path.join(location, 'tree'), storage=storage)
+                tree.save(os.path.join(location, 'tree.sbt.json'), storage=storage)
         except redis.exceptions.ConnectionError:
             pytest.xfail("Couldn't connect to redis server")
 
         with RedisStorage() as storage:
-            tree = SBT.load(os.path.join(location, 'tree'),
+            tree = SBT.load(os.path.join(location, 'tree.sbt.json'),
                             leaf_loader=SigLeaf.load,
                             storage=storage)
 

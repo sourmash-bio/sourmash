@@ -4,9 +4,10 @@ use wasm_bindgen::prelude::*;
 use getset::{CopyGetters, Getters, Setters};
 use typed_builder::TypedBuilder;
 
+use crate::encodings::HashFunctions;
 use crate::index::MHBT;
 use crate::signature::Signature;
-use crate::sketch::minhash::{max_hash_for_scaled, HashFunctions, KmerMinHashBTree};
+use crate::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use crate::sketch::Sketch;
 use crate::Error;
 
@@ -63,30 +64,6 @@ pub struct ComputeParameters {
     singleton: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = 0usize)]
-    count_valid_reads: usize,
-
-    #[getset(get = "pub", set = "pub")]
-    #[builder(default = None)]
-    barcodes_file: Option<String>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = 1500usize)]
-    line_count: usize,
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    rename_10x_barcodes: Option<bool>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    write_barcode_meta_csv: Option<bool>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = None)]
-    save_fastas: Option<bool>, // TODO: check
-
-    #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = 0u64)]
     scaled: u64,
 
@@ -133,10 +110,6 @@ pub struct ComputeParameters {
     #[getset(get = "pub", set = "pub")]
     #[builder(default = "CC0".into())]
     license: String,
-
-    #[getset(get_copy = "pub", set = "pub")]
-    #[builder(default = false)]
-    input_is_10x: bool,
 
     #[getset(get_copy = "pub", set = "pub")]
     #[builder(default = 2usize)]

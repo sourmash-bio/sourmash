@@ -50,7 +50,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name()))
+                              name=match.name))
     return x
 
 ###
@@ -58,7 +58,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
 ###
 
 GatherResult = namedtuple('GatherResult',
-                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match,f_match_orig')
+                          'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp')
 
 
 # build a new query object, subtracting found mins and downsampling
@@ -89,7 +89,7 @@ def _find_best(dblist, query, threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
-            if (cont == best_cont and match.name() < best_match.name()) or \
+            if (cont == best_cont and str(match) < str(best_match)) or \
                cont > best_cont:
                 # update best match.
                 best_cont = cont
@@ -127,6 +127,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         orig_query_abunds = orig_query_mh.hashes
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
+    result_n = 0
     while query.minhash:
         # find the best match!
         best_cont, best_match, filename = _find_best(databases, query,
@@ -161,6 +162,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # calculate intersection with query mins:
         intersect_mins = query_mins.intersection(found_mins)
+        unique_intersect_bp = cmp_scaled * len(intersect_mins)
         intersect_orig_query_mins = orig_query_mins.intersection(found_mins)
         intersect_bp = cmp_scaled * len(intersect_orig_query_mins)
 
@@ -193,8 +195,18 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             median_abund = np.median(intersect_abunds)
             std_abund = np.std(intersect_abunds)
 
+        # construct a new query, subtracting hashes found in previous one.
+        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
+        remaining_bp = cmp_scaled * len(query.minhash.hashes)
+
+        # compute weighted_missed:
+        query_mins -= set(found_mins)
+        weighted_missed = sum((orig_query_abunds[k] for k in query_mins)) \
+             / sum_abunds
+
         # build a result namedtuple
         result = GatherResult(intersect_bp=intersect_bp,
+                              unique_intersect_bp=unique_intersect_bp,
                               f_orig_query=f_orig_query,
                               f_match=f_match,
                               f_match_orig=f_match_orig,
@@ -205,15 +217,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               std_abund=std_abund,
                               filename=filename,
                               md5=best_match.md5sum(),
-                              name=best_match.name(),
-                              match=best_match)
-
-        # construct a new query, subtracting hashes found in previous one.
-        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
-
-        # compute weighted_missed:
-        query_mins -= set(found_mins)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_mins)) \
-             / sum_abunds
+                              name=str(best_match),
+                              match=best_match,
+                              gather_result_rank=result_n,
+                              remaining_bp=remaining_bp)
+        result_n += 1
 
         yield result, weighted_missed, new_max_hash, query

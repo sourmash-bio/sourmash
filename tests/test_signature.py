@@ -5,7 +5,7 @@ import pytest
 import sourmash
 from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):
@@ -194,29 +194,29 @@ def test_md5(track_abundance):
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
 
 
-def test_name(track_abundance):
+def test_str(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, name='foo')
-    assert sig.name() == 'foo'
+    assert str(sig) == 'foo'
 
 
-def test_name_2(track_abundance):
+def test_str_2(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, filename='foo.txt')
-    assert sig.name() == 'foo.txt'
+    assert str(sig) == 'foo.txt'
 
 
-def test_name_3(track_abundance):
+def test_str_3(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, name='foo',
                             filename='foo.txt')
-    assert sig.name() == 'foo'
+    assert str(sig) == 'foo'
 
 
 def test_name_4(track_abundance):
     e = sourmash.MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e)
-    assert sig.name() == sig.md5sum()[:8]
+    assert str(sig) == sig.md5sum()[:8]
 
 
 def test_save_load_multisig(track_abundance):
@@ -280,8 +280,8 @@ def test_save_minified(track_abundance):
 
     y = list(load_signatures(x))
     assert len(y) == 2
-    assert any(sig.name() == 'foo' for sig in y)
-    assert any(sig.name() == 'bar baz' for sig in y)
+    assert any(sig.name == 'foo' for sig in y)
+    assert any(sig.name == 'bar baz' for sig in y)
 
 
 def test_load_minified(track_abundance):
