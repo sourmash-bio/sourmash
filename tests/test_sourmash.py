@@ -987,7 +987,7 @@ def test_search_deduce_molecule():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '(k=30, protein)' in err
+        assert '(k=10, protein)' in err
 
 
 def test_search_deduce_ksize():
