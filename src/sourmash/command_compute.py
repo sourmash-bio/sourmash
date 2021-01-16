@@ -75,7 +75,7 @@ def compute(args):
                'signatures.')
         num_sigs = 2*len(ksizes)
     elif args.dna and args.hp:
-        notify('Computing both nucleotide and Hp-encoded protein '
+        notify('Computing both nucleotide and hp-encoded protein '
                'signatures.')
         num_sigs = 2*len(ksizes)
     elif args.dna:
