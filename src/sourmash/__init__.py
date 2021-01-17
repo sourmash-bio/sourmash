@@ -30,11 +30,19 @@ DEFAULT_SEED = get_minhash_default_seed()
 MAX_HASH = get_minhash_max_hash()
 
 from .signature import (
-    load_signatures,
-    load_one_signature,
+    load_signatures as load_signatures_private,
+    load_one_signature,                   # @CTB move/refactor/deprecate?
     SourmashSignature,
-    save_signatures,
+    save_signatures,                      # @CTB move/refactor/deprecate?
 )
+
+def load_signatures(*args, **kwargs):
+    "Docstring HERE. @CTB"
+    # raise DeprecationWarning HERE
+    # * do not use any more
+    # if you must, remove quiet= and know that raise=True will be default.
+    return load_signatures_private(*args, **kwargs)
+
 
 from .sbtmh import load_sbt_index, search_sbt_index, create_sbt_index
 from . import lca
