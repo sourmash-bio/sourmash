@@ -652,11 +652,11 @@ def test_mh_merge_typeerror(track_abundance):
 def test_mh_merge(track_abundance):
     # test merging two identically configured minhashes
     a = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 40, 2):
+    for i in range(0, 4, 2):
         a.add_hash(i)
 
     b = MinHash(20, 10, track_abundance=track_abundance)
-    for i in range(0, 80, 4):
+    for i in range(0, 8, 4):
         b.add_hash(i)
 
     c = a.merge(b)
@@ -665,8 +665,10 @@ def test_mh_merge(track_abundance):
     assert len(c) == len(d)
     assert list(sorted(c.hashes)) == list(sorted(d.hashes))
 
-    print(list(sorted(c.hashes.items())))
-    print(list(sorted(d.hashes.items())))
+    print('a', list(sorted(a.hashes.items())))
+    print('b', list(sorted(b.hashes.items())))
+    print('c', list(sorted(c.hashes.items())))
+    print('d', list(sorted(d.hashes.items())))
     assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
 
     if track_abundance:
@@ -702,6 +704,29 @@ def test_mh_iadd(track_abundance):
 
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
+
+
+def test_mh_iadd_abund():
+    track_abundance = True
+
+    # test merging two identically configured minhashes
+    a = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(20, 10, track_abundance=track_abundance)
+
+    a.add_hash(1)
+    a.add_hash(2)
+    a.add_hash(2)
+    b.add_hash(1)
+    b.add_hash(3)
+    b.add_hash(3)
+
+    c = copy(a)
+    c += b
+
+    print(list(sorted(a.hashes.items())))
+    print(list(sorted(b.hashes.items())))
+    print(list(sorted(c.hashes.items())))
+    assert 0
 
 
 def test_mh_merge_empty_num(track_abundance):
