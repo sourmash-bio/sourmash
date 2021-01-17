@@ -40,7 +40,9 @@ def load_signatures(*args, **kwargs):
     "Docstring HERE. @CTB"
     # raise DeprecationWarning HERE
     # * do not use any more
-    # if you must, remove quiet= and know that raise=True will be default.
+    # * use <other functions> here
+    # * quiet has been removed
+    # * if you must, remove quiet= and know that do_raise=True will be default.
     return load_signatures_private(*args, **kwargs)
 
 
