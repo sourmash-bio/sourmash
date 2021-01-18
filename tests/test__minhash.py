@@ -673,19 +673,22 @@ def test_mh_merge(track_abundance):
 
 def test_mh_merge_empty_num(track_abundance):
     # test merging two identically configured minhashes, one empty
-    a = MinHash(20, 10, track_abundance=track_abundance)
+    a = MinHash(100, 10, track_abundance=track_abundance)
 
-    b = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(100, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a.__copy__()
+    c.merge(b)
+
+    d = b.__copy__()
+    d.merge(a)
 
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
