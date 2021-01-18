@@ -1553,3 +1553,94 @@ def test_is_molecule_type_4(track_abundance):
     assert not mh.is_protein
     assert not mh.hp
     assert mh.dayhoff
+
+
+def test_addition_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    mh3 = mh1 + mh2
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+
+    assert hashcounts[0] == 4
+
+
+def test_addition_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    mh3 = mh1 + mh2
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1
+
+
+def test_iaddition_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    mh1 += mh2
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 4
+
+    hashcounts2 = mh2.hashes
+    assert len(hashcounts2) == 1
+    assert hashcounts2[0] == 3
+
+
+def test_iaddition_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    mh1 += mh2
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1
+
+
+def test_merge_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    ret = mh1.merge(mh2)
+    assert ret is None
+
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 4
+
+    hashcounts2 = mh2.hashes
+    assert len(hashcounts2) == 1
+    assert hashcounts2[0] == 3
+
+
+def test_merge_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    ret = mh1.merge(mh2)
+    assert ret is None
+
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1
