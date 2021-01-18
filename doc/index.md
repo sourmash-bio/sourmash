@@ -25,6 +25,10 @@ background information on how and why MinHash works.
 
 **Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/)!
 
+**Want to migrate to sourmash v4?** sourmash v4 is now available, and
+has a number of incompatibilites with v2 and v3. Please see 
+[our migration guide](support.md#migrating-from-sourmash-v3-x-to-sourmash-4-x)!
+
 ----
 
 To use sourmash, you must be comfortable with the UNIX command line;

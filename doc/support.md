@@ -102,3 +102,6 @@ we suggest you use the following procedure to migrate:
 * now, run python with the argument `-W error` to turn warnings into errors.
 * fix all errors!
 * finally, upgrade to sourmash v4.0.
+
+@CTB add stuff here
+
