@@ -159,7 +159,7 @@ First, load two signatures:
 
 ```
 
-Then, get the hashes, and (e.g.) compute the union:
+Then, get the hashes, and (e.g.) calculate the union:
 
 ```
 >>> hashes1 = set(sig1.minhash.hashes.keys())
@@ -222,7 +222,7 @@ looking at the `num` and `scaled` attributes on a MinHash object:
 
 The MinHash class is otherwise identical between the two types of signatures.
 
-Note that you cannot compute Jaccard similarity or containment for
+Note that you cannot calculate Jaccard similarity or containment for
 MinHash objects with different num or scaled values (or different ksizes):
 
 ```
@@ -382,15 +382,20 @@ downsample` if you are interested.)
 
 ## Working with fast search trees (Sequence Bloom Trees, or SBTs)
 
-Suppose we have a number of signatures calculated with `--scaled`, like so:
+Suppose we create some `scaled` signatures:
 
 ```
-sourmash compute --scaled 10000 data/GCF*.fna.gz
+sourmash sketch dna -p scaled=10000 data/GCF*.fna.gz --outdir data/
 ```
 
-and now we want to create a Sequence Bloom Tree (SBT) so that we can
-search them efficiently.  You can do this with `sourmash index`, but
-you can also access the Python API directly.
+and we want to create a Sequence Bloom Tree (SBT) so that we can
+search them efficiently.  You can do this with `sourmash index`,
+
+```
+sourmash index foo.sbt.zip data/GCF*.sig -k 31
+```
+
+but you can also access the Python API directly.
 
 ### Creating a search tree
 
