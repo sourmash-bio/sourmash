@@ -2,6 +2,9 @@
 
 usage="""
 
+** WARNING: the sourmash compute command is DEPRECATED as of 4.0 and
+** will be removed in 5.0. Please see the 'sourmash sketch' command instead.
+
    sourmash compute -k 21,31,51 *.fa *.fq
 
 Create MinHash sketches at k-mer sizes of 21, 31 and 51, for
@@ -126,4 +129,10 @@ def subparser(subparsers):
 
 def main(args):
     from sourmash.command_compute import compute
+    from sourmash.logging import notify
+
+    notify("""\
+** WARNING: the sourmash compute command is DEPRECATED as of 4.0 and
+** will be removed in 5.0. Please see the 'sourmash sketch' command instead.
+""")
     return compute(args)

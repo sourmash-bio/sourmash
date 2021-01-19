@@ -311,13 +311,14 @@ def test_do_compare_output_multiple_moltype(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
-    c.run_sourmash('compute', '-k', '21', '--protein', testdata2)
+    c.run_sourmash('compute', '-k', '63', '--no-dna', '--protein', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
                        fail_ok=True)
 
     assert c.last_result.status == -1
+    print(c.last_result.err)
     assert 'multiple molecule types loaded;' in c.last_result.err
 
 
@@ -932,8 +933,13 @@ def test_compare_no_choose_molecule_fail():
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
+                                            '--dna',
+                                            testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '90',
+                                            '--no-dna', '--protein',
+                                            testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -981,7 +987,7 @@ def test_search_deduce_molecule():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '(k=30, protein)' in err
+        assert '(k=10, protein)' in err
 
 
 def test_search_deduce_ksize():
