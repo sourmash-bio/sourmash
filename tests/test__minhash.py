@@ -120,7 +120,7 @@ def test_bytes_dna(track_abundance):
 
 def test_bytes_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False,
+    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False,
                  track_abundance=track_abundance)
 
     expected_moltype = 'protein'
@@ -137,7 +137,7 @@ def test_bytes_protein_dayhoff(track_abundance, dayhoff):
 
 def test_protein_dayhoff(track_abundance, dayhoff):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
+    mh = MinHash(10, 2, True, dayhoff=dayhoff, hp=False, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     assert len(mh.hashes) == 4
@@ -145,7 +145,7 @@ def test_protein_dayhoff(track_abundance, dayhoff):
 
 def test_bytes_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     expected_moltype = 'protein'
     if hp:
         expected_moltype = 'hp'
@@ -163,7 +163,7 @@ def test_bytes_protein_hp(track_abundance, hp):
 
 def test_protein_hp(track_abundance, hp):
     # verify that we can hash protein/aa sequences
-    mh = MinHash(10, 6, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
+    mh = MinHash(10, 2, True, dayhoff=False, hp=hp, track_abundance=track_abundance)
     mh.add_protein('AGYYG')
 
     if hp:
@@ -185,13 +185,13 @@ def test_module_translate_codon(track_abundance):
 
 def test_dayhoff(track_abundance):
     # verify that we can hash to dayhoff-encoded protein/aa sequences
-    mh_dayhoff = MinHash(10, 6, is_protein=True,
+    mh_dayhoff = MinHash(10, 2, is_protein=True,
                          dayhoff=True, hp=False, track_abundance=track_abundance)
     mh_dayhoff.add_sequence('ACTGAC')
 
     assert len(mh_dayhoff.hashes) == 2
     # verify that dayhoff-encoded hashes are different from protein/aa hashes
-    mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
+    mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
     assert len(mh_protein.hashes) == 2
@@ -202,7 +202,7 @@ def test_dayhoff(track_abundance):
 
 def test_hp(track_abundance):
     # verify that we can hash to hp-encoded protein/aa sequences
-    mh_hp = MinHash(10, 6, is_protein=True,
+    mh_hp = MinHash(10, 2, is_protein=True,
                     dayhoff=False, hp=True, track_abundance=track_abundance)
     assert mh_hp.moltype == 'hp'
 
@@ -210,7 +210,7 @@ def test_hp(track_abundance):
 
     assert len(mh_hp.hashes) == 2
     # verify that hp-encoded hashes are different from protein/aa hashes
-    mh_protein = MinHash(10, 6, is_protein=True, track_abundance=track_abundance)
+    mh_protein = MinHash(10, 2, is_protein=True, track_abundance=track_abundance)
     mh_protein.add_sequence('ACTGAC')
 
     assert len(mh_protein.hashes) == 2

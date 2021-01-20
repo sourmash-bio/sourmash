@@ -221,6 +221,9 @@ class LCA_Database(Index):
             ksize = int(load_d['ksize'])
             scaled = int(load_d['scaled'])
             moltype = load_d.get('moltype', 'DNA')
+            if moltype != 'DNA':
+                assert ksize % 3 == 0
+                ksize = int(ksize / 3)
 
             db = cls(ksize, scaled, moltype)
 
@@ -273,7 +276,12 @@ class LCA_Database(Index):
             save_d['version'] = '2.1'
             save_d['type'] = 'sourmash_lca'
             save_d['license'] = 'CC0'
-            save_d['ksize'] = self.ksize
+
+            if self.moltype != 'DNA':
+                ksize = self.ksize*3
+            else:
+                ksize = self.ksize
+            save_d['ksize'] = ksize
             save_d['scaled'] = self.scaled
             save_d['moltype'] = self.moltype
 
@@ -409,6 +417,7 @@ class LCA_Database(Index):
             is_hp = True
         elif self.moltype == 'dayhoff':
             is_dayhoff = True
+
         minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
                           is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
 

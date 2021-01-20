@@ -55,7 +55,7 @@ def compute(args):
         if args.num_hashes != 0:
             notify('setting num_hashes to 0 because --scaled is set')
             args.num_hashes = 0
- 
+
     notify('computing signatures for files: {}', ", ".join(args.filenames))
 
     if args.randomize:
@@ -75,7 +75,7 @@ def compute(args):
                'signatures.')
         num_sigs = 2*len(ksizes)
     elif args.dna and args.hp:
-        notify('Computing both nucleotide and Hp-encoded protein '
+        notify('Computing both nucleotide and hp-encoded protein '
                'signatures.')
         num_sigs = 2*len(ksizes)
     elif args.dna:
@@ -93,7 +93,12 @@ def compute(args):
                'signatures.')
         num_sigs = len(ksizes)
 
-    if (args.protein or args.dayhoff or args.hp) and not args.input_is_protein:
+    if (args.protein or args.dayhoff or args.hp):
+        notify("")
+        notify("WARNING: you are using 'compute' to make a protein/dayhoff/hp signature,")
+        notify("WARNING: but the meaning of ksize has changed in 4.0. Please see the")
+        notify("WARNING: migration guide to sourmash v4.0 at http://sourmash.rtfd.io/")
+        notify("")
         bad_ksizes = [ str(k) for k in ksizes if k % 3 != 0 ]
         if bad_ksizes:
             error('protein ksizes must be divisible by 3, sorry!')
@@ -201,7 +206,7 @@ def _compute_individual(args, signatures_factory):
         siglist = []
 
     assert not siglist                    # juuuust checking.
-    
+
 
 def _compute_merged(args, signatures_factory):
     # make a signature for the whole file

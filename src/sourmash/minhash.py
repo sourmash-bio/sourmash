@@ -187,10 +187,13 @@ class MinHash(RustObject):
 
         if dayhoff:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+            ksize = ksize*3
         elif hp:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+            ksize = ksize*3
         elif is_protein:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+            ksize = ksize*3
         else:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
 
@@ -282,8 +285,12 @@ class MinHash(RustObject):
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
-        if len(kmer) != self.ksize:
-            raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        if self.is_dna:
+            if len(kmer) != self.ksize:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        else:
+            if len(kmer) != self.ksize*3:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize*3))
         self.add_sequence(kmer)
 
     def add_many(self, hashes):
@@ -381,7 +388,11 @@ class MinHash(RustObject):
 
     @property
     def ksize(self):
-        return self._methodcall(lib.kmerminhash_ksize)
+        k = self._methodcall(lib.kmerminhash_ksize)
+        if not self.is_dna:
+            assert k % 3 == 0
+            k = int(k / 3)
+        return k
 
     @property
     @deprecated(deprecated_in="3.5", removed_in="5.0",

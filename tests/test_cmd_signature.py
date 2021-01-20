@@ -886,12 +886,12 @@ def test_sig_split_4_sbt_prot(c):
     sbt3 = utils.get_test_data('prot/hp.sbt.zip')
     c.run_sourmash('sig', 'split', sbt1, sbt2, sbt3)
 
-    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
-               '120d311c.k=57.scaled=100.protein.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
-               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
-               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
-               'ea2a1ad2.k=57.scaled=100.hp.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
-               'bb0e6d90.k=57.scaled=100.hp.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig']
+    outlist = ['16869d2c.k=19.scaled=100.protein.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '120d311c.k=19.scaled=100.protein.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'fbca5e52.k=19.scaled=100.dayhoff.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               '1cbd888b.k=19.scaled=100.dayhoff.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig',
+               'ea2a1ad2.k=19.scaled=100.hp.dup=0.GCA_001593925.1_ASM159392v1_protein.faa.gz.sig',
+               'bb0e6d90.k=19.scaled=100.hp.dup=0.GCA_001593935.1_ASM159393v1_protein.faa.gz.sig']
     for filename in outlist:
         assert os.path.exists(c.output(filename))
 
@@ -907,12 +907,12 @@ def test_sig_split_4_lca_prot(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    outlist = ['16869d2c.k=57.scaled=100.protein.dup=0.none.sig',
-               '120d311c.k=57.scaled=100.protein.dup=0.none.sig',
-               'fbca5e52.k=57.scaled=100.dayhoff.dup=0.none.sig',
-               '1cbd888b.k=57.scaled=100.dayhoff.dup=0.none.sig',
-               'ea2a1ad2.k=57.scaled=100.hp.dup=0.none.sig',
-               'bb0e6d90.k=57.scaled=100.hp.dup=0.none.sig']
+    outlist = ['16869d2c.k=19.scaled=100.protein.dup=0.none.sig',
+               '120d311c.k=19.scaled=100.protein.dup=0.none.sig',
+               'fbca5e52.k=19.scaled=100.dayhoff.dup=0.none.sig',
+               '1cbd888b.k=19.scaled=100.dayhoff.dup=0.none.sig',
+               'ea2a1ad2.k=19.scaled=100.hp.dup=0.none.sig',
+               'bb0e6d90.k=19.scaled=100.hp.dup=0.none.sig']
     for filename in outlist:
         assert os.path.exists(c.output(filename))
 
@@ -1232,7 +1232,7 @@ def test_sig_describe_protein(c):
     testdata = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     c.run_sourmash('sig', 'describe', testdata)
 
-    assert 'k=57 molecule=protein num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+    assert 'k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
 
 
 @utils.in_thisdir
@@ -1241,7 +1241,7 @@ def test_sig_describe_hp(c):
     testdata = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     c.run_sourmash('sig', 'describe', testdata)
 
-    assert 'k=57 molecule=hp num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+    assert 'k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
 
 
 @utils.in_thisdir
@@ -1250,7 +1250,7 @@ def test_sig_describe_dayhoff(c):
     testdata = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     c.run_sourmash('sig', 'describe', testdata)
 
-    assert 'k=57 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
+    assert 'k=19 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0' in c.last_result.out
 
 
 @utils.in_tempdir
@@ -1278,7 +1278,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: e45a080101751e044d6df861d3d0f3fd
-k=21 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+k=7 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 
@@ -1287,7 +1287,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: ef4fa1f3a90f3873187370f1eacc0d9a
-k=21 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+k=7 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 ---
@@ -1295,7 +1295,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: 20be00d9d577da9faeb77477bf07d3fb
-k=21 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
+k=7 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 ---
@@ -1312,7 +1312,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: 4244d1612598af044e799587132f007e
-k=30 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
+k=10 molecule=protein num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 
@@ -1321,7 +1321,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: 5647819f2eac913e04af51c8d548ad56
-k=30 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
+k=10 molecule=dayhoff num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 
@@ -1330,7 +1330,7 @@ signature filename: short.fa.sig
 signature: ** no name **
 source file: short.fa
 md5: ad1e329dd98b5e32422e9decf298aa5f
-k=30 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
+k=10 molecule=hp num=500 scaled=0 seed=42 track_abundance=0
 size: 500
 signature license: CC0
 

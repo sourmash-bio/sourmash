@@ -773,7 +773,7 @@ def test_sbt_protein_command_index(c):
     db_out = c.output('protein.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--protein')
+                   '--scaled', '100', '-k', '19', '--protein')
 
     db2 = sourmash.load_sbt_index(db_out)
 
@@ -819,7 +819,7 @@ def test_sbt_hp_command_index(c):
     db_out = c.output('hp.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--hp')
+                   '--scaled', '100', '-k', '19', '--hp')
 
     db2 = sourmash.load_sbt_index(db_out)
 
@@ -865,7 +865,7 @@ def test_sbt_dayhoff_command_index(c):
     db_out = c.output('dayhoff.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--dayhoff')
+                   '--scaled', '100', '-k', '19', '--dayhoff')
 
     db2 = sourmash.load_sbt_index(db_out)
 
