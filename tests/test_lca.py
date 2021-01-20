@@ -1949,7 +1949,7 @@ def test_lca_gather_protein(c):
     c.run_sourmash('lca', 'gather', testquery, db1)
 
     assert c.last_result.status == 0
-    assert 'loaded 1 LCA databases. ksize=57, scaled=100 moltype=protein' in c.last_result.err
+    assert 'loaded 1 LCA databases. ksize=19, scaled=100 moltype=protein' in c.last_result.err
     assert '340.9 kbp   100.0%  100.0%      s__B26-1 sp001593925 sp.' in c.last_result.out
 
 
@@ -2192,7 +2192,7 @@ def test_lca_db_protein_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2219,7 +2219,7 @@ def test_lca_db_protein_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2233,6 +2233,8 @@ def test_lca_db_protein_save_load(c):
     # check reconstruction --
     mh_list = [ x.minhash for x in db2.signatures() ]
     assert len(mh_list) == 2
+    print('XXX', mh_list[0].ksize)
+    print('YYY', sig1.minhash.ksize)
     assert sig1.minhash in mh_list
     assert sig2.minhash in mh_list
 
@@ -2255,7 +2257,7 @@ def test_lca_db_protein_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--protein')
+                   '--scaled', '100', '-k', '19', '--protein')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2301,7 +2303,7 @@ def test_lca_db_hp_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2328,7 +2330,7 @@ def test_lca_db_hp_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2364,7 +2366,7 @@ def test_lca_db_hp_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--hp')
+                   '--scaled', '100', '-k', '19', '--hp')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2410,7 +2412,7 @@ def test_lca_db_dayhoff_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2437,7 +2439,7 @@ def test_lca_db_dayhoff_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2473,7 +2475,7 @@ def test_lca_db_dayhoff_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--dayhoff')
+                   '--scaled', '100', '-k', '19', '--dayhoff')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]

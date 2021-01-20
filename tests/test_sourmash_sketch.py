@@ -494,8 +494,8 @@ def test_do_sketch_translate_multik_with_protein():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
 
 def test_do_sketch_translate_multik_with_dayhoff():
@@ -515,8 +515,8 @@ def test_do_sketch_translate_multik_with_dayhoff():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.dayhoff for x in siglist)
 
 
@@ -537,8 +537,8 @@ def test_do_sketch_translate_multik_with_hp():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.hp for x in siglist)
 
 
@@ -556,8 +556,8 @@ def test_do_sourmash_sketch_translate_multik_only_protein(c):
         siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
 
 
 def test_do_sourmash_sketch_translate_bad_sequences():
@@ -577,8 +577,8 @@ def test_do_sourmash_sketch_translate_bad_sequences():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
 
 def test_do_sketch_protein_multik_input():
@@ -597,8 +597,8 @@ def test_do_sketch_protein_multik_input():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
             moltype = set([ x.minhash.moltype == 'protein'
                             for x in siglist ])

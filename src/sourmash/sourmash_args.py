@@ -402,7 +402,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     except Exception as exc:
         pass
 
-    if not loaded:   # try load signatures from single file (list of signature paths)
+    # try load signatures from single file (list of signature paths)
+    if not loaded:
         try:
             db = []
             with open(filename, 'rt') as fp:
@@ -433,6 +434,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         except:
             pass
 
+    # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
+    # so we can provide a better error message to users.
     if not loaded:
         successful_screed_load = False
         it = None
