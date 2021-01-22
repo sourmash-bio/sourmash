@@ -1,3 +1,7 @@
+# TODO: check https://github.com/lightspeed/palisade for suggestions on setting
+# up a nix dev env
+# also https://rycwo.xyz/2019/02/16/nixos-series-dev-env
+
 let
   moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
   nixpkgs = import <nixpkgs> { overlays = [ moz_overlay ]; };
@@ -38,9 +42,15 @@ in
     buildInputs = [
       customPython
       git
-      stdenv
+#      stdenv
       ruststable
       stdenv.cc.cc.lib
+#      openssl
+#      pkg-config
+#      nasm
+#      rustup
+#      cmake
+#      zlib
    ];
 
   shellHook = ''

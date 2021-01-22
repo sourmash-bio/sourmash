@@ -99,7 +99,7 @@ A short description of the high-level files and dirs in the sourmash repo:
 ├── Makefile            | Entry point for most development tasks
 ├── MANIFEST.in         | Describes what files to add to the Python package
 ├── matplotlibrc        | Configuration for matplotlib
-├── nix.shell           | Nix configuration for creating a dev environment
+├── shell.nix           | Nix configuration for creating a dev environment
 ├── paper.bib           | References in the JOSS paper
 ├── paper.md            | JOSS paper content
 ├── pyproject.toml      | Python project definitions (build system and tooling)
