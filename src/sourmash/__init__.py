@@ -5,6 +5,7 @@ An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
 import re
 import math
 import os
+from deprecation import deprecated
 
 from ._lowlevel import ffi, lib
 
@@ -36,17 +37,57 @@ from .signature import (
     save_signatures,                      # @CTB move/refactor/deprecate?
 )
 
+@deprecated(deprecated_in="3.5.1", removed_in="5.0",
+            current_version=VERSION,
+            details='Use load_file_as_signatures instead.')
 def load_signatures(*args, **kwargs):
-    "Docstring HERE. @CTB"
-    # raise DeprecationWarning HERE
-    # * do not use any more
-    # * use <other functions> here
-    # * quiet has been removed
-    # * if you must, remove quiet= and know that do_raise=True will be default.
+    """Load a JSON string with signatures into classes.
+
+    Returns list of SourmashSignature objects.
+
+    Note, the order is not necessarily the same as what is in the source file.
+
+    This function has been deprecated as of 3.5.1; please use
+    'load_file_as_signatures' instead. Note that in 4.0, the 'quiet' argument
+    has been removed and the function no longer outputs to stderr.
+    Moreover, do_raise is now True by default.
+    """
     return load_signatures_private(*args, **kwargs)
 
+from .sbtmh import load_sbt_index as load_sbt_index_private
+from .sbtmh import search_sbt_index as search_sbt_index_private
 
-from .sbtmh import load_sbt_index, search_sbt_index, create_sbt_index
+@deprecated(deprecated_in="3.5.1", removed_in="5.0",
+            current_version=VERSION,
+            details='Use load_file_as_index instead.')
+def load_sbt_index(*args, **kwargs):
+    """Load and return an SBT index.
+
+    This function has been deprecated as of 3.5.1; please use
+    'load_file_as_index' instead.
+    """
+    return load_sbt_index_private(*args, **kwargs)
+
+
+@deprecated(deprecated_in="3.5.1", removed_in="5.0",
+            current_version=VERSION,
+            details='Use the new Index API instead.')
+def search_sbt_index(*args, **kwargs):
+    """\
+    Search an SBT index `tree` with signature `query` for matches above
+    `threshold`.
+
+    Usage:
+
+        for match_sig, similarity in search_sbt_index(tree, query, threshold):
+           ...
+
+    This function has been deprecated as of 3.5.1; please use
+    'idx = load_file_as_index(...); idx.search(query, threshold=...)' instead.
+    """
+    return load_sbt_index_private(*args, **kwargs)
+
+from .sbtmh import create_sbt_index
 from . import lca
 from . import sbt
 from . import sbtmh

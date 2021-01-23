@@ -1,5 +1,5 @@
 """
-Utility functions for dealing with input args to the sourmash command line.
+Utility functions for sourmash CLI commands.
 """
 import sys
 import os
