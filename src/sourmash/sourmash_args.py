@@ -9,7 +9,7 @@ from enum import Enum
 
 import screed
 
-from sourmash import load_sbt_index
+from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
