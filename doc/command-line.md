@@ -101,6 +101,9 @@ indexed databases (the SBT and LCA formats) as well as from signature files.
 
 @CTB fixme
 
+Note: `sourmash compute` is deprecated in sourmash 4.0 and will be removed in
+sourmash 5.0; please switch to using `sourmash sketch` (link).
+
 The `compute` subcommand computes and saves signatures for
 each sequence in one or more sequence files.  It takes as input FASTA
 or FASTQ files, and these files can be uncompressed or compressed with
@@ -133,7 +136,7 @@ Optional arguments:
 
 The `compare` subcommand compares one or more signatures
 (created with `sketch`) using estimated [Jaccard index][3] or
-(if signatures are computed with `-p abund`) the [angular
+(if signatures are created with `-p abund`) the [angular
 similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
 
 The default output
@@ -883,7 +886,7 @@ Moreover, `sourmash sketch` and the `sourmash sig` commands will
 output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
-signatures that were just computed.
+signatures that were just created.
 
 (This is a relatively new feature as of 3.4 and our testing may need
 some work, so please
