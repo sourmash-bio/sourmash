@@ -69,7 +69,7 @@ walkthrough of these commands.
 * `compare` compares signatures and builds a distance matrix.
 * `plot` plots distance matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
-* `gather` finds non-overlapping matches to a metagenome in a collection of signatures.
+* `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
@@ -94,7 +94,7 @@ Finally, there are a number of utility and information commands:
 Please use the command line option `--help` to get more detailed usage
 information for each command.
 
-Note that as of sourmash v3.4, most commands will load signatures from
+Note that as of sourmash v3.4, all commands should load signatures from
 indexed databases (the SBT and LCA formats) as well as from signature files.
 
 ### `sourmash compute` - make sourmash signatures from sequence data
@@ -226,11 +226,12 @@ similarity   match
 
 ### `sourmash gather` - find metagenome members
 
-The `gather` subcommand finds all non-overlapping matches to the
-query.  This is specifically meant for metagenome and genome bin
-analysis.  (See [Classifying Signatures](classifying-signatures.md)
-for more information on the different approaches that can be used
-here.)
+The `gather` subcommand selects the best reference genomes to use for
+a metagenome analysis, by finding the smallest set of non-overlapping
+matches to the query in a database.  This is specifically meant for
+metagenome and genome bin analysis.  (See
+[Classifying Signatures](classifying-signatures.md) for more
+information on the different approaches that can be used here.)
 
 If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
@@ -818,7 +819,7 @@ signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
 
-#### Storing (and searching) signatures
+### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
 signatures.
@@ -848,7 +849,7 @@ will complain. In contrast, signature files can
 contain many different types of signatures, and compatible ones will
 be discovered automatically.
 
-#### Passing in lists of files
+### Passing in lists of files
 
 Various sourmash commands will also take `--from-file` or
 `--query-from-file`, which will take a path to a text file containing
@@ -856,7 +857,7 @@ a list of file paths. This can be useful for situations where you want
 to specify thousands of queries, or a subset of signatures produced by
 some other command.
 
-#### Loading all signatures under a directory
+### Loading all signatures under a directory
 
 All of the `sourmash` commands support loading signatures from
 directories provided on the command line.
@@ -866,7 +867,7 @@ directories provided on the command line.
 All of the commands in sourmash operate in "online" mode, so you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
-them.  The only addendum to this rule is that if you have multiple
+them.  The only caveat to this rule is that if you have multiple
 identical matches, the first one to be found will differ depending on
 the order that the files are passed in on the command line.
 
