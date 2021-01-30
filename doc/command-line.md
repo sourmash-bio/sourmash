@@ -643,7 +643,7 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 `file1.sig`, and save the new signature to `subtracted.sig`.
 
 To use `subtract` on signatures calculated with
-`--track-abundance`, you must specify `--flatten`.
+`-p abund`, you must specify `--flatten`.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
@@ -667,7 +667,7 @@ Downsample one or more signatures.
 
 With `downsample`, you can --
 
-* increase the `--scaled` value for a signature created with `-p scaled=SCALED`, shrinking it in size;
+* increase the `scaled` value for a signature created with `-p scaled=SCALED`, shrinking it in size;
 * decrease the `num` value for a traditional num MinHash, shrinking it in size;
 * try to convert a `scaled` signature to a `num` signature;
 * try to convert a `num` signature to a `scaled` signature.

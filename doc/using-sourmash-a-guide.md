@@ -40,27 +40,27 @@ guidance, we'll link to them here!)
 ## What resolution should my signatures be / how should I create them?
 
 sourmash supports two ways of choosing the resolution or size of
-your signatures: using `-n` to specify the maximum number of hashes,
-or `--scaled` to specify the compression ratio.  Which should you use?
+your signatures: using `num` to specify the maximum number of hashes,
+or `scaled` to specify the compression ratio.  Which should you use?
 
-We suggest calculating all your signatures using `--scaled
-1000`.  This will give you a compression ratio of 1000-to-1 while
-making it possible to detect regions of similarity in the 10kb range.
+We suggest calculating all your signatures using `-p scaled=1000`.
+This will give you a compression ratio of 1000-to-1 while making it
+possible to detect regions of similarity in the 10kb range.
 
 For comparison with more traditional MinHash approaches like `mash`,
-if you have a 5 Mbp genome and use `--scaled 1000`, you will extract
+if you have a 5 Mbp genome and use `-p scaled=1000`, you will extract
 approximately 5000 hashes. So a scaled of 1000 is equivalent to using
-`-n 5000` with mash on a 5 Mbp genome.
+`-p num=5000` with mash on a 5 Mbp genome.
 
-The difference between using `-n` and `--scaled` is in metagenome
-analysis: fixing the number of hashes with `-n` limits your ability to
+The difference between using `num` and `scaled` is in metagenome
+analysis: fixing the number of hashes with `num` limits your ability to
 detect rare organisms, or alternatively results in very large
-signatures (e.g. if you use n larger than 10000).  `--scaled` will scale
+signatures (e.g. if you use n larger than 10000).  `scaled` will scale
 your resolution with the diversity of the metagenome.
 
 You can read more about this in this blog post from the mash folk,
 [Mash Screen: What's in my sequencing run?](https://genomeinformatics.github.io/mash-screen/) What
-we do with sourmash and `--scaled` is similar to the 'modulo hash'
+we do with sourmash and `scaled` is similar to the 'modulo hash'
 mentioned in that blog post.
 
 (Again, when we have formal guidance on this based on benchmarks, we'll
