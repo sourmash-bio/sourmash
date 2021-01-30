@@ -97,12 +97,30 @@ information for each command.
 Note that as of sourmash v3.4, all commands should load signatures from
 indexed databases (the SBT and LCA formats) as well as from signature files.
 
+### `sourmash sketch` - make sourmash signatures from sequence data
+
+Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
+
+To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
+
+```
+sourmash sketch dna
+sourmash sketch protein
+sourmash sketch translate
+```
+
+The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
+
+The `sketch protein` command reads in **protein sequences** and outputs **protein sketches**.
+
+The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
+
+Please see [the `sourmash sketch` documentation page](sourmash-sketch.md) for details!
+
 ### `sourmash compute` - make sourmash signatures from sequence data
 
-@CTB fixme
-
-Note: `sourmash compute` is deprecated in sourmash 4.0 and will be removed in
-sourmash 5.0; please switch to using `sourmash sketch` (link).
+**Note: `sourmash compute` is deprecated in sourmash 4.0 and will be removed in
+sourmash 5.0; please switch to using `sourmash sketch`, above.**
 
 The `compute` subcommand computes and saves signatures for
 each sequence in one or more sequence files.  It takes as input FASTA
