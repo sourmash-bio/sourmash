@@ -32,9 +32,9 @@ MAX_HASH = get_minhash_max_hash()
 
 from .signature import (
     load_signatures as load_signatures_private,
-    load_one_signature,                   # @CTB move/refactor/deprecate?
+    load_one_signature,
     SourmashSignature,
-    save_signatures,                      # @CTB move/refactor/deprecate?
+    save_signatures,
 )
 
 @deprecated(deprecated_in="3.5.1", removed_in="5.0",
