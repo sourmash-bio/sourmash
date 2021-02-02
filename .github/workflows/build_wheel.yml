@@ -15,23 +15,39 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux-x86_64, linux-aarch64, linux-ppc64le, linux-s390x, macos-x86_64]
+        build: [
+          linux-x86_64,
+          linux-aarch64,
+          linux-ppc64le,
+          linux-s390x,
+          macos-x86_64,
+          macos-arm64
+        ]
         include:
           - build: linux-x86_64
             os: ubuntu-18.04
             arch: x86_64
+            macos_target: ''
           - build: linux-aarch64
             os: ubuntu-18.04
             arch: aarch64
+            macos_target: ''
           - build: linux-ppc64le
             os: ubuntu-18.04
             arch: ppc64le
+            macos_target: ''
           - build: linux-s390x
             os: ubuntu-18.04
             arch: s390x
+            macos_target: ''
           - build: macos-x86_64
             os: macos-latest
             arch: x86_64
+            macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+          - build: macos-arm64
+            os: macos-11.0
+            arch: universal2 arm64
+            macos_target: ''
       fail-fast: false
 
     steps:
@@ -42,7 +58,7 @@ jobs:
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: '3.7'
+          python-version: '3.9'
 
       - name: Install cibuildwheel
         run: |
@@ -56,13 +72,14 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BUILD: "cp37-*"
+          CIBW_BUILD: "cp39-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686"
           CIBW_BEFORE_BUILD: 'source .ci/install_cargo.sh'
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
-          CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.11'
+          CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_BUILD_VERBOSITY: 3
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_ARCHS_MACOS: ${{ matrix.arch }}
         run: |
           python -m cibuildwheel --output-dir dist
           ls -lR ./dist
