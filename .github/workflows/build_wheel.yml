@@ -11,11 +11,27 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheels for ${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-         os: [ubuntu-18.04, macos-latest]
+        build: [linux-x86_64, linux-aarch64, linux-ppc64le, linux-s390x, macos-x86_64]
+        include:
+          - build: linux-x86_64
+            os: ubuntu-18.04
+            arch: x86_64
+          - build: linux-aarch64
+            os: ubuntu-18.04
+            arch: aarch64
+          - build: linux-ppc64le
+            os: ubuntu-18.04
+            arch: ppc64le
+          - build: linux-s390x
+            os: ubuntu-18.04
+            arch: s390x
+          - build: macos-x86_64
+            os: macos-latest
+            arch: x86_64
       fail-fast: false
 
     steps:
@@ -46,9 +62,7 @@ jobs:
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.11'
           CIBW_BUILD_VERBOSITY: 3
-          CIBW_ARCHS_LINUX: auto aarch64
-          # TODO: this takes too long to build all...
-          #CIBW_ARCHS_LINUX: auto aarch64 ppc64le s390x
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
         run: |
           python -m cibuildwheel --output-dir dist
           ls -lR ./dist
