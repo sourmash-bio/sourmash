@@ -21,7 +21,6 @@ jobs:
           linux-ppc64le,
           linux-s390x,
           macos-x86_64,
-          macos-arm64
         ]
         include:
           - build: linux-x86_64
@@ -44,10 +43,6 @@ jobs:
             os: macos-latest
             arch: x86_64
             macos_target: 'MACOSX_DEPLOYMENT_TARGET=10.11'
-          - build: macos-arm64
-            os: macos-11.0
-            arch: universal2 arm64
-            macos_target: ''
       fail-fast: false
 
     steps:
