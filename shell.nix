@@ -35,10 +35,9 @@ in
       #customPython
       git
       stdenv.cc.cc.lib
-      (python38.withPackages(ps: with ps; [ virtualenv tox ]))
-      python39
-      python37
-      python36
+      (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
+      (python39.withPackages(ps: with ps; [ virtualenv setuptools ]))
+      (python37.withPackages(ps: with ps; [ virtualenv setuptools ]))
     ];
 
     shellHook = ''
