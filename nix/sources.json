@@ -1,16 +1,4 @@
 {
-    "mach-nix": {
-        "branch": "master",
-        "description": "Create highly reproducible python environments",
-        "homepage": "",
-        "owner": "DavHau",
-        "repo": "mach-nix",
-        "rev": "f75bd25168232db620f2ddbe5c5281d14c17d03b",
-        "sha256": "0gy7nmvki9fcybrpkmjrdda1qf76jfjggcy78akrig1xsh8gq5ij",
-        "type": "tarball",
-        "url": "https://github.com/DavHau/mach-nix/archive/f75bd25168232db620f2ddbe5c5281d14c17d03b.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "niv": {
         "branch": "master",
         "description": "Easy dependency management for Nix projects",
@@ -29,10 +17,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "fd0daed2e8d590418fc565de70ea6ca47a6d2dcb",
-        "sha256": "0ph7npwvrvccv5spaxhriv8mk9z9cl9c3i456fm207w56vjllqvn",
+        "rev": "d1f97a5eb5115289071d8449f26e7b92ce6b6709",
+        "sha256": "098rb747w4p5lxz74bj738bpjd4xjn0ahssjp9n8237dmmx3wg5p",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/fd0daed2e8d590418fc565de70ea6ca47a6d2dcb.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/d1f97a5eb5115289071d8449f26e7b92ce6b6709.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "rust-overlay": {
@@ -41,10 +29,10 @@
         "homepage": null,
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "42f12ecafbd66f8813767dbf77f56ffe8addf4a2",
-        "sha256": "074q5r8wnh0gp90jhw8bxagdgxyqwcyygnkn8n6aqnwnz174yddf",
+        "rev": "0bb9ef6d8b34e5579d7384201f3106a49ce3deca",
+        "sha256": "09cva1r53x1ihyzbssdscx4n5913pra8f006q095ww9wvfvz8bxf",
         "type": "tarball",
-        "url": "https://github.com/oxalica/rust-overlay/archive/42f12ecafbd66f8813767dbf77f56ffe8addf4a2.tar.gz",
+        "url": "https://github.com/oxalica/rust-overlay/archive/0bb9ef6d8b34e5579d7384201f3106a49ce3deca.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
