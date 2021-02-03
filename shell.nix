@@ -2,37 +2,12 @@
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs { overlays = [ (import sources.rust-overlay) ]; };
-  mach-nix = import sources.mach-nix {
-    python = "python38";
-  };
-
-  customPython = mach-nix.mkPython {
-    requirements = ''
-       screed>=0.9
-       cffi>=1.14.0
-       numpy
-       matplotlib
-       scipy
-       deprecation>=2.0.6
-       cachetools >=4,<5
-       setuptools>=38.6.0
-       milksnake
-       setuptools_scm>=3.2.0
-       setuptools_scm_git_archive
-       pytest
-       pytest-cov
-       hypothesis
-       tox
-    '';
-  };
-
 in
   with pkgs;
 
   pkgs.mkShell {
     buildInputs = [
       rust-bin.stable.latest.rust
-      #customPython
       git
       stdenv.cc.cc.lib
       (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
