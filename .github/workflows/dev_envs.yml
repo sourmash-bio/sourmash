@@ -8,8 +8,9 @@ jobs:
   nix:
     runs-on: ubuntu-latest
     steps:
-
     - uses: actions/checkout@v2.3.4
+      with:
+        fetch-depth: 0
 
     - uses: cachix/install-nix-action@v12
       with:
@@ -20,8 +21,9 @@ jobs:
   mamba:
     runs-on: ubuntu-latest
     steps:
-
     - uses: actions/checkout@v2.3.4
+      with:
+        fetch-depth: 0
 
     - name: cache conda
       uses: actions/cache@v1
@@ -33,13 +35,13 @@ jobs:
           ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
 
     - name: setup conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@e23d871804685e8c52189e5bd45e9145019f10af
       with:
         auto-update-conda: true
         python-version: 3.9
         channels: conda-forge,bioconda,defaults
         miniforge-variant: Mambaforge
-        use-mambda: true
+        use-mamba: true
         activate-environment: sourmash_dev
         auto-activate-base: false
         use-only-tar-bz2: true
