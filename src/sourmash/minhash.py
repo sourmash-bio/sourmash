@@ -463,13 +463,7 @@ class MinHash(RustObject):
         elif scaled is not None:
             if self.num:
                 raise ValueError("num != 0 - cannot downsample a standard MinHash")
-            max_hash = self._max_hash
-            if max_hash is None:
-                # @CTB when would this happen?!
-                raise ValueError("no max_hash available - cannot downsample")
-
-            # @CTB refactor?
-            old_scaled = _get_scaled_for_max_hash(self._max_hash)
+            old_scaled = self.scaled
             if old_scaled > scaled:
                 raise ValueError(
                     "new scaled {} is lower than current sample scaled {}".format(

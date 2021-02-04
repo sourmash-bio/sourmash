@@ -131,7 +131,7 @@ def test_roundtrip_empty(track_abundance):
 
 def test_roundtrip_scaled(track_abundance):
     e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
-                         max_hash=10) # @CTB
+                         max_hash=10)
     e.add_hash(5)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
