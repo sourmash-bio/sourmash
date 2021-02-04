@@ -1,7 +1,9 @@
 name: "Dev env instructions"
 on:
-  pull_request: [latest]
-  push: [latest]
+  pull_request:
+    branches: [latest]
+  push:
+    branches: [latest]
 jobs:
   nix:
     runs-on: ubuntu-latest

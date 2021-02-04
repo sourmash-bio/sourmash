@@ -6,19 +6,51 @@ You can get the latest development branch with:
 ```
 git clone https://github.com/dib-lab/sourmash.git
 ```
-sourmash runs under Python 3.7 and later.  The base
-requirements are screed and cffi, together with a Rust environment (for the
-extension code). We suggest using `rustup` to install the Rust environment:
+sourmash runs under Python 3.7 and later.
+The base dependencies are screed and cffi, together with a Rust environment
+(for the core library code).
+
+
+
+### Using mamba (conda alternative)
+
+Follow the [installation instructions](https://github.com/conda-forge/miniforge#install) for
+installing `mambaforge` (a conda distribution that uses [`mamba`]() and the
+[`conda-forge`]() channel by default).
+
+Once `mamba` is installed,
+```
+mamba create -n sourmash_dev tox-conda rust git compilers pandoc
+```
+
+To activate the new environment, run
+```
+conda activate sourmash_dev
+```
+and proceed to the [Running tests and checks]() section.
+
+### Using Nix
+
+Follow the [installation instructions](https://nixos.org/manual/nix/stable/#chap-installation)
+for setting up Nix in your system (Linux or macOS).
+
+Once Nix is installed,
+run
+```
+nix-shell
+```
+to start an environment ready for [running tests and checks]().
+
+### General instructions
+
+We suggest using `rustup` to install the Rust environment:
 
     curl https://sh.rustup.rs -sSf | sh
 
-We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
-running tests and checks during development.
 To install it, do:
 ```
 python -m pip install tox
 ```
-and use `tox -l` to list available tasks.
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
 sourmash clone directory, you can do:
@@ -27,22 +59,20 @@ tox -e dev
 . .tox/dev/bin/activate
 ```
 
-You can run tests by invoking `make test` in the sourmash directory;
-`tox -e py39` will run the Python tests with Python 3.9,
-and `cargo test` will run the Rust tests.
-
-You can also explicitly install all the dependencies for sourmash by running
+You can also explicitly install all the Python dependencies for sourmash by running
 ```
 pip install -r requirements.txt
 ```
 
-### If you're having trouble installing or using the development environment
+## Running tests and checks
 
-If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash.minhash'`, then it's likely you need to update Rust and clean up your environment. Some installation issues can be solved by simply removing the intermediate build files with: 
+We use [`tox`](https://tox.readthedocs.io) for managing dependencies and
+running tests and checks during development.
+`tox -l` lists available tasks.
 
-```
-make clean
-```
+You can run tests by invoking `make test` in the sourmash directory;
+`tox -e py39` will run the Python tests with Python 3.9,
+and `cargo test` will run the Rust tests.
 
 ## Adding new changes
 
@@ -217,6 +247,18 @@ For the Rust core library we use `rMAJOR.MINOR.PATCH`
 (note it starts with `r`, and not `v`).
 The Rust version is not automated,
 and must be bumped in `src/core/Cargo.toml`.
+
+## Common errors and solutions
+
+### Cannot import name `to_bytes` from `sourmash.minhash`
+
+If you are getting an error that contains `ImportError: cannot import name 'to_bytes' from 'sourmash.minhash'`,
+then it's likely you need to update Rust and clean up your environment.
+Some installation issues can be solved by simply removing the intermediate build files with:
+
+```
+make clean
+```
 
 ## Contents
 
