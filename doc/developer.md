@@ -7,62 +7,68 @@ You can get the latest development branch with:
 git clone https://github.com/dib-lab/sourmash.git
 ```
 sourmash runs under Python 3.7 and later.
-The base dependencies are screed and cffi, together with a Rust environment
-(for the core library code).
 
-
+We recommend using `conda` or `Nix` for setting up an environment for developing
+new features, running tests and code quality checks.
+Here are some suggestions on how to set them up (note: you only need one =])
 
 ### Using mamba (conda alternative)
 
 Follow the [installation instructions](https://github.com/conda-forge/miniforge#install) for
-installing `mambaforge` (a conda distribution that uses [`mamba`]() and the
-[`conda-forge`]() channel by default).
+installing `mambaforge` (a conda distribution that uses
+[`mamba`](https://github.com/TheSnakePit/mamba)
+and the [`conda-forge`](https://conda-forge.org/) channel by default).
 
-Once `mamba` is installed,
+Once `mamba` is installed, run
 ```
 mamba create -n sourmash_dev tox-conda rust git compilers pandoc
 ```
+to create an environment called `sourmash_dev` containing the programs needed
+for development.
 
 To activate the new environment, run
 ```
 conda activate sourmash_dev
 ```
-and proceed to the [Running tests and checks]() section.
+and proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
 
 ### Using Nix
 
 Follow the [installation instructions](https://nixos.org/manual/nix/stable/#chap-installation)
 for setting up Nix in your system (Linux or macOS).
 
-Once Nix is installed,
-run
+Once Nix is installed, run
 ```
 nix-shell
 ```
-to start an environment ready for [running tests and checks]().
+to start an environment ready for [running tests and checks](#running-tests-and-checks).
 
 ### General instructions
 
-We suggest using `rustup` to install the Rust environment:
+As long as you have `tox` and a Rust compiler available,
+you can skip `mamba` or `Nix`.
 
-    curl https://sh.rustup.rs -sSf | sh
-
-To install it, do:
+For Rust, we suggest using `rustup` to install the Rust environment:
+```
+curl https://sh.rustup.rs -sSf | sh
+```
+And for `tox` you can run
 ```
 python -m pip install tox
 ```
 
 We suggest working on sourmash in a virtualenv; e.g. from within the
-sourmash clone directory, you can do:
+cloned repository (and after installing `tox` and Rust), you can do:
 ```
 tox -e dev
 . .tox/dev/bin/activate
 ```
 
-You can also explicitly install all the Python dependencies for sourmash by running
+Finally, ou can also explicitly install all the Python dependencies for sourmash by running
 ```
 pip install -r requirements.txt
 ```
+(but they are already installed in the virtualenv created with `tox -e dev`).
 
 ## Running tests and checks
 
