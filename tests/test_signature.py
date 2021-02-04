@@ -139,7 +139,7 @@ def test_roundtrip_max_hash(track_abundance):
     sig2 = siglist[0]
     e2 = sig2.minhash
 
-    assert e.max_hash == e2.max_hash
+    assert e._max_hash == e2._max_hash
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0

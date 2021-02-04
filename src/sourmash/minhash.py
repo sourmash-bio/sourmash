@@ -217,7 +217,7 @@ class MinHash(RustObject):
             hp=self.hp,
             track_abundance=self.track_abundance,
             seed=self.seed,
-            max_hash=self.max_hash,
+            max_hash=self._max_hash,
         )
         a.merge(self)
         return a
@@ -233,7 +233,7 @@ class MinHash(RustObject):
             self.hashes,
             None,
             self.track_abundance,
-            self.max_hash,
+            self._max_hash,
             self.seed,
         )
 
@@ -274,7 +274,7 @@ class MinHash(RustObject):
             self.hp,
             self.track_abundance,
             self.seed,
-            self.max_hash,
+            self._max_hash,
         )
         return a
 
@@ -401,6 +401,11 @@ class MinHash(RustObject):
     def max_hash(self):
         return self._methodcall(lib.kmerminhash_max_hash)
 
+    # a non-deprecated `max_hash` property for internal testing purposes only
+    @property
+    def _max_hash(self):
+        return self._methodcall(lib.kmerminhash_max_hash)
+
     @property
     def track_abundance(self):
         return self._methodcall(lib.kmerminhash_track_abundance)
@@ -458,11 +463,13 @@ class MinHash(RustObject):
         elif scaled is not None:
             if self.num:
                 raise ValueError("num != 0 - cannot downsample a standard MinHash")
-            max_hash = self.max_hash
+            max_hash = self._max_hash
             if max_hash is None:
+                # @CTB when would this happen?!
                 raise ValueError("no max_hash available - cannot downsample")
 
-            old_scaled = _get_scaled_for_max_hash(self.max_hash)
+            # @CTB refactor?
+            old_scaled = _get_scaled_for_max_hash(self._max_hash)
             if old_scaled > scaled:
                 raise ValueError(
                     "new scaled {} is lower than current sample scaled {}".format(
@@ -492,7 +499,7 @@ class MinHash(RustObject):
         # create new object:
         a = MinHash(
             self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self.max_hash
+            False, self.seed, self._max_hash
         )
         a.add_many(self)
 

@@ -81,7 +81,7 @@ def compare(args):
 
     # check to make sure they're potentially compatible - either using
     # max_hash/scaled, or not.
-    scaled_sigs = [s.minhash.max_hash for s in siglist]
+    scaled_sigs = [s.minhash._max_hash for s in siglist]
     is_scaled = all(scaled_sigs)
     is_scaled_2 = any(scaled_sigs)
 
@@ -426,7 +426,7 @@ def search(args):
 
     # downsample if requested
     if args.scaled:
-        if query.minhash.max_hash == 0:
+        if query.minhash._max_hash == 0:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
 
@@ -608,7 +608,7 @@ def gather(args):
 
     found = []
     weighted_missed = 1
-    new_max_hash = query.minhash.max_hash
+    new_max_hash = query.minhash._max_hash
     next_query = query
 
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
@@ -725,7 +725,7 @@ def multigather(args):
                    query.minhash.ksize, sourmash_args.get_moltype(query))
 
             # verify signature was computed right.
-            if query.minhash.max_hash == 0:
+            if query.minhash._max_hash == 0:
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 

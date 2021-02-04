@@ -241,7 +241,7 @@ def test_scaled(track_abundance):
     scaled = _get_scaled_for_max_hash(35)
     print('XX', scaled, _get_max_hash_for_scaled(scaled))
     mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
-    assert mh.max_hash == 35
+    assert mh._max_hash == 35
 
     mh.add_hash(10)
     mh.add_hash(20)
@@ -1177,7 +1177,7 @@ def test_mh_copy_and_clear(track_abundance):
     b = a.copy_and_clear()
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == 0
+    assert b._max_hash == 0
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1196,7 +1196,7 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     b = a.copy_and_clear()
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == 20
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1220,8 +1220,8 @@ def test_pickle_max_hash(track_abundance):
     b = pickle.loads(pickle.dumps(a))
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == a.max_hash
-    assert b.max_hash == 20
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1239,8 +1239,8 @@ def test_pickle_scaled(track_abundance):
     b = pickle.loads(pickle.dumps(a))
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == a.max_hash
-    assert b.max_hash == 20
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1401,7 +1401,7 @@ def test_flatten():
     # test behavior with scaled
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
-    assert mh.max_hash == 35
+    assert mh._max_hash == 35
 
     mh.add_hash(10)
     mh.add_hash(10)
@@ -1512,7 +1512,7 @@ def test_downsample_scaled(track_abundance):
     assert list(sorted(mh.hashes)) == list(mins)
 
     mh2 = mh.downsample(scaled=2)
-    print(mh.max_hash, mh2.max_hash)
+    print(mh._max_hash, mh2._max_hash)
 
     assert len(mh2) == 3
     assert list(sorted(mh2.hashes)) == list(mins[:3])

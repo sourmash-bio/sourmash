@@ -124,7 +124,7 @@ def test_pickle(track_abundance):
     assert e1.num == e2.num
     assert e1.ksize == e2.ksize
     assert e1.is_protein == e2.is_protein
-    assert e1.max_hash == e2.max_hash
+    assert e1._max_hash == e2._max_hash
     assert e1.seed == e2.seed
 
 
