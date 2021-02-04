@@ -80,7 +80,7 @@ def compare(args):
     notify('loaded {} signatures total.'.format(len(siglist)))
 
     # check to make sure they're potentially compatible - either using
-    # max_hash/scaled, or not.
+    # scaled, or not.
     scaled_sigs = [s.minhash.scaled for s in siglist]
     is_scaled = all(scaled_sigs)
     is_scaled_2 = any(scaled_sigs)
