@@ -129,9 +129,9 @@ def test_roundtrip_empty(track_abundance):
     assert sig2.similarity(sig) == 0
 
 
-def test_roundtrip_max_hash(track_abundance):
+def test_roundtrip_scaled(track_abundance):
     e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
-                         max_hash=10)
+                         max_hash=10) # @CTB
     e.add_hash(5)
     sig = SourmashSignature(e)
     s = save_signatures([sig])
@@ -139,7 +139,7 @@ def test_roundtrip_max_hash(track_abundance):
     sig2 = siglist[0]
     e2 = sig2.minhash
 
-    assert e._max_hash == e2._max_hash
+    assert e.scaled == e2.scaled
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0
