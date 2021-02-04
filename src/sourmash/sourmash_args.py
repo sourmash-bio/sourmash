@@ -1,5 +1,5 @@
 """
-Utility functions for dealing with input args to the sourmash command line.
+Utility functions for sourmash CLI commands.
 """
 import sys
 import os
@@ -9,7 +9,7 @@ from enum import Enum
 
 import screed
 
-from sourmash import load_sbt_index
+from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
@@ -365,7 +365,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # special case stdin
     if not loaded and filename == '-':
-        db = sourmash.load_signatures(sys.stdin, quiet=True, do_raise=True)
+        db = signature.load_signatures(sys.stdin, do_raise=True)
         db = list(db)
         loaded = True
         dbtype = DatabaseType.SIGLIST
@@ -376,7 +376,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         for thisfile in traverse_find_sigs([filename], traverse_yield_all):
             try:
                 with open(thisfile, 'rt') as fp:
-                    x = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+                    x = signature.load_signatures(fp, do_raise=True)
                     siglist = list(x)
                     all_sigs.extend(siglist)
             except (IOError, sourmash.exceptions.SourmashError):
@@ -394,7 +394,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         # CTB: could make this a generator, with some trickery; but for
         # now, just force into list.
         with open(filename, 'rt') as fp:
-            db = sourmash.load_signatures(fp, quiet=True, do_raise=True)
+            db = signature.load_signatures(fp, do_raise=True)
             db = list(db)
 
         loaded = True
