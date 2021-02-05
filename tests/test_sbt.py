@@ -5,7 +5,8 @@ import os
 import pytest
 
 import sourmash
-from sourmash import load_one_signature, SourmashSignature, load_signatures
+from sourmash import (load_one_signature, SourmashSignature,
+                      load_file_as_signatures)
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
@@ -340,7 +341,7 @@ def test_sbt_zipstorage(tmpdir):
     tree = SBT(factory)
 
     for f in utils.SIG_FILES:
-        sig = next(load_signatures(utils.get_test_data(f)))
+        sig = next(load_file_as_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
