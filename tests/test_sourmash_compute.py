@@ -580,9 +580,9 @@ def test_do_sourmash_compute_with_scaled_1():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash.MAX_HASH }
+        scaled_vals = [ x.minhash.scaled for x in siglist ]
+        assert len(scaled_vals) == 2
+        assert set(scaled_vals) == { 1 }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -599,7 +599,7 @@ def test_do_sourmash_compute_with_scaled_2():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
@@ -618,7 +618,7 @@ def test_do_sourmash_compute_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 

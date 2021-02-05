@@ -21,7 +21,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
 
         If the sketches are abundance weighted, calculate the angular
         similarity.
-    :param boolean downsample by max_hash if True
+    :param boolean downsample by scaled if True
     :return: np.array similarity matrix
     """
     import numpy as np
@@ -45,7 +45,7 @@ def compare_serial_containment(siglist, downsample=False):
     process. Best to use when there is few signatures.
 
     :param list siglist: list of signatures to compare
-    :param boolean downsample by max_hash if True
+    :param boolean downsample by scaled if True
     :return: np.array similarity matrix
     """
     import numpy as np
@@ -83,7 +83,7 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
 
         If the sketches are abundance weighted, calculate the angular
         similarity.
-    :param boolean downsample by max_hash if True
+    :param boolean downsample by scaled if True
     :param siglist list of signatures
     :return: list of similarities for the combinations of signature at index
         with rest of the signatures from index+1
@@ -114,7 +114,7 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
 
         If the sketches are abundance weighted, calculate the angular
         similarity.
-    :param boolean downsample by max_hash if True
+    :param boolean downsample by scaled if True
     :param int n_jobs number of processes to run the similarity calculations on
     :return: np.array similarity matrix
     """
@@ -194,7 +194,7 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None):
 
         If the sketches are abundance weighted, calculate the angular
         similarity.
-    :param boolean downsample by max_hash if True
+    :param boolean downsample by scaled if True
     :param int n_jobs number of processes to run the similarity calculations on,
     if number of jobs is None or 1, compare serially, otherwise parallely.
     :return: np.array similarity matrix

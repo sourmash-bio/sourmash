@@ -6,7 +6,7 @@ import sys
 import csv
 from collections import defaultdict
 
-from sourmash import sourmash_args, load_signatures
+from sourmash import sourmash_args
 from sourmash.sourmash_args import load_file_as_signatures
 from sourmash.logging import notify, error, debug, set_quiet
 from . import lca_utils

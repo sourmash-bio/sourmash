@@ -1180,7 +1180,7 @@ def test_sig_downsample_2_num_to_scaled(c):
     actual_mins = actual_downsample_sig.minhash.hashes.keys()
 
     # select those mins that are beneath the new max hash...
-    max_hash = actual_downsample_sig.minhash.max_hash
+    max_hash = actual_downsample_sig.minhash._max_hash
     test_mins_down = { k for k in test_mins if k < max_hash }
     assert test_mins_down == set(actual_mins)
 
