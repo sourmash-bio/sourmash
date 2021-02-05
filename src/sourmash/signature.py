@@ -222,7 +222,6 @@ def _detect_input_type(data):
 
 def load_signatures(
     data, ksize=None, select_moltype=None, ignore_md5sum=False, do_raise=False,
-    quiet=False
 ):
     """Load a JSON string with signatures into classes.
 
@@ -248,8 +247,6 @@ def load_signatures(
 
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
-        if not quiet:
-            error("Error in parsing signature; quitting. Cannot open file or invalid signature")
         if do_raise:
             raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
@@ -301,9 +298,6 @@ def load_signatures(
             yield sig
 
     except Exception as e:
-        if not quiet:
-            error("Error in parsing signature; quitting.")
-            error("Exception: {}", str(e))
         if do_raise:
             raise
 
