@@ -157,8 +157,7 @@ def test_linear_index_save():
         filename = os.path.join(location, 'foo')
         linear.save(filename)
 
-        from sourmash import load_signatures
-        si = set(load_signatures(filename))
+        si = set(sourmash.load_file_as_signatures(filename))
 
     x = {ss2, ss47, ss63}
 
@@ -321,7 +320,7 @@ def test_linear_gather_threshold_5():
 def test_linear_index_multik_select():
     # this loads three ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
-    siglist = sourmash.load_signatures(sig2)
+    siglist = sourmash.load_file_as_signatures(sig2)
 
     linear = LinearIndex()
     for ss in siglist:
@@ -339,7 +338,7 @@ def test_linear_index_multik_select():
 def test_linear_index_moltype_select():
     # this loads two ksizes(21, 10), and two moltypes (DNA and protein)
     filename = utils.get_test_data('genome-s10+s11.sig')
-    siglist = sourmash.load_signatures(filename)
+    siglist = sourmash.load_file_as_signatures(filename)
 
     linear = LinearIndex()
     for ss in siglist:
