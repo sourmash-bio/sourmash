@@ -145,7 +145,7 @@ class LinearIndex(Index):
     @classmethod
     def load(cls, location):
         from .signature import load_signatures
-        si = load_signatures(location)
+        si = load_signatures(location, do_raise=True)
 
         lidx = LinearIndex(si, filename=location)
         return lidx

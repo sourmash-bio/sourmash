@@ -8,7 +8,8 @@ import sys
 
 import screed
 from .compare import compare_all_pairs, compare_serial_containment
-from . import MinHash, load_sbt_index, create_sbt_index
+from . import MinHash
+from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
