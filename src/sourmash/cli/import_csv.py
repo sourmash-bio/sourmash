@@ -16,6 +16,6 @@ def subparser(subparsers):
 def main(args):
     import sourmash
     notify("** WARNING: 'import_csv' is deprecated as of sourmash 4.0, and will")
-    notify("**    be removed in sourmash 5.0; use 'sourmash sig import' instead.")
+    notify("**    be removed in sourmash 5.0; use 'sourmash sig import --csv' instead.")
     notify('')
     return sourmash.commands.import_csv(args)
