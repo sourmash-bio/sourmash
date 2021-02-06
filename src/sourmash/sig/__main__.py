@@ -749,26 +749,52 @@ def sig_import(args):
     set_quiet(args.quiet)
 
     siglist = []
-    for filename in args.filenames:
-        with open(filename) as fp:
-            x = json.loads(fp.read())
+    if args.csv:
+        for filename in args.filenames:
+            with open(filename, 'rt') as fp:
+                reader = csv.reader(fp)
+                siglist = []
+                for row in reader:
+                    hashfn = row[0]
+                    hashseed = int(row[1])
 
-        ksize = x['kmer']
-        num = x['sketchSize']
+                    # only support a limited import type, for now ;)
+                    assert hashfn == 'murmur64'
+                    assert hashseed == 42
 
-        assert x['hashType'] == "MurmurHash3_x64_128"
-        assert x['hashBits'] == 64
-        assert x['hashSeed'] == 42
+                    _, _, ksize, name, hashes = row
+                    ksize = int(ksize)
 
-        xx = x['sketches'][0]
-        hashes = xx['hashes']
+                    hashes = hashes.strip()
+                    hashes = list(map(int, hashes.split(' ' )))
 
-        mh = sourmash.MinHash(ksize=ksize, n=num, is_protein=False)
-        mh.add_many(hashes)
+                    e = sourmash.MinHash(len(hashes), ksize)
+                    e.add_many(hashes)
+                    s = sourmash.SourmashSignature(e, filename=name)
+                    siglist.append(s)
+                    notify('loaded signature: {} {}', name, s.md5sum()[:8])
+    else:
+        for filename in args.filenames:
+            with open(filename) as fp:
+                x = json.loads(fp.read())
 
-        s = sourmash.SourmashSignature(mh, filename=filename)
-        siglist.append(s)
+            ksize = x['kmer']
+            num = x['sketchSize']
 
+            assert x['hashType'] == "MurmurHash3_x64_128"
+            assert x['hashBits'] == 64
+            assert x['hashSeed'] == 42
+
+            xx = x['sketches'][0]
+            hashes = xx['hashes']
+
+            mh = sourmash.MinHash(ksize=ksize, n=num, is_protein=False)
+            mh.add_many(hashes)
+
+            s = sourmash.SourmashSignature(mh, filename=filename)
+            siglist.append(s)
+
+    notify('saving {} signatures to JSON', len(siglist))
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures(siglist, fp)
 
