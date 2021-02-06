@@ -541,13 +541,24 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
+    def __add__(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only add MinHash objects to MinHash objects!")
+
+        new_obj = self.__copy__()
+        new_obj += other
+        return new_obj
+
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
-            raise TypeError("Must be a MinHash!")
+            raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
         return self
 
-    merge = __iadd__
+    def merge(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only add MinHash objects to MinHash objects!")
+        self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
