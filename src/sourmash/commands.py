@@ -8,7 +8,8 @@ import sys
 
 import screed
 from .compare import compare_all_pairs, compare_serial_containment
-from . import MinHash, load_sbt_index, create_sbt_index
+from . import MinHash
+from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
@@ -80,8 +81,8 @@ def compare(args):
     notify('loaded {} signatures total.'.format(len(siglist)))
 
     # check to make sure they're potentially compatible - either using
-    # max_hash/scaled, or not.
-    scaled_sigs = [s.minhash.max_hash for s in siglist]
+    # scaled, or not.
+    scaled_sigs = [s.minhash.scaled for s in siglist]
     is_scaled = all(scaled_sigs)
     is_scaled_2 = any(scaled_sigs)
 
@@ -426,7 +427,7 @@ def search(args):
 
     # downsample if requested
     if args.scaled:
-        if query.minhash.max_hash == 0:
+        if not query.minhash.scaled:
             error('cannot downsample a signature not created with --scaled')
             sys.exit(-1)
 
@@ -580,7 +581,7 @@ def gather(args):
                                              sourmash_args.get_moltype(query))
 
     # verify signature was computed right.
-    if query.minhash.scaled == 0:
+    if not query.minhash.scaled:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
@@ -608,7 +609,7 @@ def gather(args):
 
     found = []
     weighted_missed = 1
-    new_max_hash = query.minhash.max_hash
+    new_max_hash = query.minhash._max_hash
     next_query = query
 
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
@@ -725,7 +726,7 @@ def multigather(args):
                    query.minhash.ksize, sourmash_args.get_moltype(query))
 
             # verify signature was computed right.
-            if query.minhash.max_hash == 0:
+            if not query.minhash.scaled:
                 error('query signature needs to be created with --scaled; skipping')
                 continue
 

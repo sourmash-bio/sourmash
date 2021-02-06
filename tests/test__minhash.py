@@ -241,7 +241,7 @@ def test_scaled(track_abundance):
     scaled = _get_scaled_for_max_hash(35)
     print('XX', scaled, _get_max_hash_for_scaled(scaled))
     mh = MinHash(0, 4, track_abundance=track_abundance, scaled=scaled)
-    assert mh.max_hash == 35
+    assert mh._max_hash == 35
 
     mh.add_hash(10)
     mh.add_hash(20)
@@ -650,43 +650,45 @@ def test_mh_merge_typeerror(track_abundance):
 
 def test_mh_merge(track_abundance):
     # test merging two identically configured minhashes
-    a = MinHash(20, 10, track_abundance=track_abundance)
+    a = MinHash(100, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
 
-    b = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(100, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a.__copy__()
+    c.merge(b)
+
+    d = b.__copy__()
+    d.merge(a)
 
     assert len(c) == len(d)
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
 
-    if track_abundance:
-        assert round(c.similarity(d), 3) == 0.91
-        assert round(d.similarity(c), 3) == 0.91
-    else:
-        assert round(c.similarity(d), 3) == 1.0
-        assert round(d.similarity(c), 3) == 1.0
+    assert round(c.similarity(d), 3) == 1.0
+    assert round(d.similarity(c), 3) == 1.0
 
 
 def test_mh_merge_empty_num(track_abundance):
     # test merging two identically configured minhashes, one empty
-    a = MinHash(20, 10, track_abundance=track_abundance)
+    a = MinHash(100, 10, track_abundance=track_abundance)
 
-    b = MinHash(20, 10, track_abundance=track_abundance)
+    b = MinHash(100, 10, track_abundance=track_abundance)
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a.__copy__()
+    c.merge(b)
+
+    d = b.__copy__()
+    d.merge(a)
 
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -699,13 +701,16 @@ def test_mh_merge_empty_scaled(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a.__copy__()
+    c.merge(b)
+
+    d = b.__copy__()
+    d.merge(a)
 
     assert len(c)
     assert len(c) == len(d)
 
-    assert list(sorted(c.hashes)) == list(sorted(d.hashes))
+    assert list(sorted(c.hashes.items())) == list(sorted(d.hashes.items()))
     assert round(c.similarity(d), 3) == 1.0
     assert round(d.similarity(c), 3) == 1.0
 
@@ -719,7 +724,8 @@ def test_mh_merge_check_length(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
+    c = a.__copy__()
+    c.merge(b)
     assert len(c.hashes) == 20
 
 
@@ -735,7 +741,8 @@ def test_mh_merge_check_length2(track_abundance):
     b.add_hash(1)
     b.add_hash(4)
 
-    c = a.merge(b)
+    c = a.__copy__()
+    c.merge(b)
     assert len(c.hashes) == 3
 
 def test_mh_asymmetric_merge(track_abundance):
@@ -749,8 +756,10 @@ def test_mh_asymmetric_merge(track_abundance):
     for i in range(0, 80, 4):
         b.add_hash(i)
 
-    c = a.merge(b)
-    d = b.merge(a)
+    c = a.__copy__()
+    c.merge(b)
+    d = b.__copy__()
+    d.merge(a)
 
     assert len(a) == 20
     assert len(b) == 10
@@ -764,15 +773,15 @@ def test_mh_asymmetric_merge(track_abundance):
     a = a.downsample(num=d.num)
 
     if track_abundance:
-        assert round(d.similarity(a), 3) == 0.91
+        assert round(d.similarity(a), 3) == 0.795
     else:
         assert round(d.similarity(a), 3) == 1.0
 
     c = c.downsample(num=b.num)
     if track_abundance:
-        assert round(c.similarity(b), 3) == 0.91
+        assert round(c.similarity(b), 3) == 0.436
     else:
-        assert c.similarity(b) == 1.0
+        assert c.similarity(b) == 0.5
 
 
 def test_mh_inplace_concat_asymmetric(track_abundance):
@@ -1177,7 +1186,7 @@ def test_mh_copy_and_clear(track_abundance):
     b = a.copy_and_clear()
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == 0
+    assert b._max_hash == 0
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1196,7 +1205,7 @@ def test_mh_copy_and_clear_with_max_hash(track_abundance):
     b = a.copy_and_clear()
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == 20
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1220,8 +1229,8 @@ def test_pickle_max_hash(track_abundance):
     b = pickle.loads(pickle.dumps(a))
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == a.max_hash
-    assert b.max_hash == 20
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1239,8 +1248,8 @@ def test_pickle_scaled(track_abundance):
     b = pickle.loads(pickle.dumps(a))
     assert a.ksize == b.ksize
     assert b.num == a.num
-    assert b.max_hash == a.max_hash
-    assert b.max_hash == 20
+    assert b._max_hash == a._max_hash
+    assert b._max_hash == 20
     assert not b.is_protein
     assert b.track_abundance == track_abundance
     assert b.seed == a.seed
@@ -1401,7 +1410,7 @@ def test_flatten():
     # test behavior with scaled
     scaled = _get_scaled_for_max_hash(35)
     mh = MinHash(0, 4, track_abundance=True, scaled=scaled)
-    assert mh.max_hash == 35
+    assert mh._max_hash == 35
 
     mh.add_hash(10)
     mh.add_hash(10)
@@ -1512,7 +1521,7 @@ def test_downsample_scaled(track_abundance):
     assert list(sorted(mh.hashes)) == list(mins)
 
     mh2 = mh.downsample(scaled=2)
-    print(mh.max_hash, mh2.max_hash)
+    print(mh._max_hash, mh2._max_hash)
 
     assert len(mh2) == 3
     assert list(sorted(mh2.hashes)) == list(mins[:3])
@@ -1553,3 +1562,94 @@ def test_is_molecule_type_4(track_abundance):
     assert not mh.is_protein
     assert not mh.hp
     assert mh.dayhoff
+
+
+def test_addition_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    mh3 = mh1 + mh2
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+
+    assert hashcounts[0] == 4
+
+
+def test_addition_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    mh3 = mh1 + mh2
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1
+
+
+def test_iaddition_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    mh1 += mh2
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 4
+
+    hashcounts2 = mh2.hashes
+    assert len(hashcounts2) == 1
+    assert hashcounts2[0] == 3
+
+
+def test_iaddition_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    mh1 += mh2
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1
+
+
+def test_merge_abund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=True)
+
+    mh1.set_abundances({ 0: 1 })
+    mh2.set_abundances({ 0: 3 })
+
+    ret = mh1.merge(mh2)
+    assert ret is None
+
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 4
+
+    hashcounts2 = mh2.hashes
+    assert len(hashcounts2) == 1
+    assert hashcounts2[0] == 3
+
+
+def test_merge_noabund():
+    mh1 = MinHash(10, 21, track_abundance=False)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    mh1.add_hash(0)
+    mh2.add_hash(0)
+
+    ret = mh1.merge(mh2)
+    assert ret is None
+
+    hashcounts = mh1.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 1

@@ -4121,6 +4121,12 @@ def test_do_sourmash_index_zipfile_append(c):
     first_half = testdata_sigs[:half_point]
     second_half = testdata_sigs[half_point:]
 
+    print(first_half)
+    print(second_half)
+
+    # should be no overlap
+    assert not set(first_half).intersection(set(second_half))
+
     with pytest.warns(None) as record:
         c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
                        *first_half)
@@ -4138,7 +4144,8 @@ def test_do_sourmash_index_zipfile_append(c):
         c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
                        *second_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
-    assert not record
+    print(record)
+    assert not record, record
 
     print(c)
     assert c.last_result.status == 0

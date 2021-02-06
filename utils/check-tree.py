@@ -15,7 +15,7 @@ def main():
     p.add_argument('sbt')
     args = p.parse_args()
 
-    db = sourmash.load_sbt_index(args.sbt)
+    db = sourmash.sbtmh.load_sbt_index(args.sbt)
     threshold = THRESHOLD
 
     for leaf in db.leaves():
