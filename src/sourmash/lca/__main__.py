@@ -5,7 +5,7 @@ Command-line entry point for 'python -m sourmash.lca'
 import sys
 import argparse
 
-from . import classify, index, summarize_main, rankinfo_main, gather_main
+from . import classify, index, summarize_main, rankinfo_main
 from .command_compare_csv import compare_csv
 from ..logging import set_quiet, error
 
@@ -16,7 +16,6 @@ sourmash lca <command> [<args>] - work with taxonomic information.
 
 index <taxonomy.csv> <output_db name> <signature [...]>  - create LCA database
 classify --db <db_name [...]> --query <signature [...]>  - classify genomes
-gather <signature> <db_name [...]>                       - classify metagenomes
 summarize --db <db_name [...]> --query <signature [...]> - summarize mixture
 rankinfo <db_name [...]>                                 - database rank info
 compare_csv <csv1> <csv2>                                - compare spreadsheets
