@@ -1,5 +1,9 @@
 # Using sourmash: a practical guide
 
+```{contents}
+   :depth: 2
+```
+
 So! You've installed sourmash, run a few of the tutorials and commands,
 and now you actually want to *use* it.  This guide is here to answer some
 of your questions, and explain why we can't answer others.
@@ -145,3 +149,60 @@ names them based on their FASTA headers, and places them all in a single
 `.sig` file, `file.fa.sig`.  (This behavior is triggered by the option
 `--singleton`, which tells sourmash to treat each individual sequence in
 the file as an independent sequence.)
+
+## How do I store and search collections of signatures?
+
+sourmash supports a variety of signature loading and storage options for
+flexibility.  If you have only a few hundred signatures, here are some
+options -
+
+* you can put all your signature files in a directory and search them all
+  using the path to the directory.
+* you can use `sourmash sig cat` to concatenate multiple signatures into a
+  single file.
+* you can compress any signature file using `gzip` and sourmash will
+  load them.
+
+If you have more than a few hundred genome signatures that you
+regularly search, it might be worth creating an indexed database of
+them that will support faster searches.
+
+sourmash supports two types of indexed databases: Sequence Bloom
+Trees, or SBTs; and reverse indices, or LCAs.  (You can read more
+detail about their implementation and design considerations
+[in Chapter 2 of Dr. Luiz Irber's thesis, "Efficient indexing of collections of signatures"](https://github.com/luizirber/phd/releases/download/2020.09.28/thesis.pdf).)
+
+### Sequence Bloom Tree (SBT) indexed databases
+
+Sequence Bloom Trees (SBTs) (see
+[Solomon and Kingsford, 2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4804353/))
+are on disk databases that support low-memory query of 10s-100s of
+thousands of signatures.  They can be created using `sourmash index`.
+
+SBTs are the lowest-memory way to run search or gather on a collection
+of signatures. The tradeoff is that they may be quite large on disk,
+because SBTs also contain intermediate nodes in the tree.  The default
+way to store SBTs is in a Zip file, named `.sbt.zip`, that can be
+built and searched directly from the command line.
+
+### Reverse indexed (LCA) databases
+
+Reverse indexed or LCA databases are *in-memory* databases that, once
+loaded from disk, support fast search and gather across 10s of thousands
+of signatures.  They can be created using `sourmash lca index` ([docs](command-line.md#sourmash-lca-index-build-an-lca-database))
+
+LCA databases are currently stored in JSON files (that can be gzipped).
+As these files get larger, the time required to load them from disk
+can be substantial.
+
+LCA databases are also currently (sourmash 2.0-4.0) the only databases
+that support the inclusion of taxonomic information in the database,
+and there is an associated collection of commands
+[under `sourmash lca`](command.md#sourmash-lca-subcommands-for-taxonomic-classification).
+However, they can also be used as regular indexed databases for search
+and gather as above.
+
+(These are called "LCA databases" because they originally were created
+to support "lowest common ancestor" taxonomic analyses, e.g. like
+Kraken; their functionality has evolved a lot since, but their name
+hasn't changed to match!)

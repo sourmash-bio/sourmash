@@ -61,8 +61,8 @@ Matrix:
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
-There are five main subcommands: `sketch`, `compare`, `plot`,
-`search`, and `gather`.  See [the tutorial](tutorials.md) for a
+There are six main subcommands: `sketch`, `compare`, `plot`,
+`search`, `gather`, and `index`.  See [the tutorial](tutorials.md) for a
 walkthrough of these commands.
 
 * `sketch` creates signatures.
@@ -70,6 +70,7 @@ walkthrough of these commands.
 * `plot` plots distance matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
 * `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures
+* `index` build a fast index for many (thousands) of signatures
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
@@ -287,6 +288,37 @@ Use `sourmash gather` to classify a metagenome against a collection of
 genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
+
+### `sourmash index` - build an SBT index of signatures
+
+The `sourmash index` command creates a Zipped SBT database
+(`.sbt.zip`) from a collection of signatures.  This can be used to
+create databases from private collections of genomes, and can also be
+used to create databases for e.g. subsets of GenBank.
+
+These databases support fast search and gather on large collections
+of signatures in low memory.
+
+SBTs can only be created on scaled signatures, and all signatures in
+an SBT must be of compatible types (i.e. the same k-mer size and
+molecule type). You can specify the usual command line selectors
+(`-k`, `--scaled`, `--dna`, `--protein`, etc.) to pick out the types
+of signatures to include.
+
+Usage:
+```
+sourmash index database [ list of input signatures/directories/databases ]
+```
+
+This will create a `database.sbt.zip` file containing the SBT of the
+input signatures. You can create an "unpacked" version by specifying
+`database.sbt.json` and it will create the JSON file as well as a
+subdirectory of files under `.sbt.database`.
+
+Note that you can use `--from-file` to pass `index` a text file
+containing a list of files to index; you can also provide individual
+signature files, directories full of signatures, or other sourmash
+databases.
 
 ## `sourmash lca` subcommands for taxonomic classification
 
