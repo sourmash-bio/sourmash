@@ -2,7 +2,9 @@
 
 All of sourmash's functionality is available via its [Python API](api.md). Below are both basic and advanced examples that use the API to accomplish common tasks.
 
-[toc]
+```{contents}
+   :depth: 2
+```
 
 ## A first example: two k-mers
 
