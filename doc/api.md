@@ -31,7 +31,7 @@ its Python API.  Please also see [examples of using the API](api-example.md).
    :undoc-members:
 ```
 
-# `sourmash.fig`: make plots and figures
+## `sourmash.fig`: make plots and figures
 
 ```{eval-rst}
 .. automodule:: sourmash.fig
