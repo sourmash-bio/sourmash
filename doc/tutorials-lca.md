@@ -66,9 +66,9 @@ Download a random genome from genbank:
 curl -L -o some-genome.fa.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/178/875/GCF_000178875.2_ASM17887v2/GCF_000178875.2_ASM17887v2_genomic.fna.gz
 ```
 
-Compute a signature for this genome:
+Create a signature for this genome:
 ```
-sourmash compute -k 31 --scaled=1000 --name-from-first some-genome.fa.gz
+sourmash sketch -p scaled=1000,k=31 --name-from-first some-genome.fa.gz
 ```
 
 Now, classify the signature with sourmash `lca classify`,
@@ -119,7 +119,7 @@ on the command line; separate them with `--db` or `--query`.
 
 (This is an abbreviated version of [this blog post](http://ivory.idyll.org/blog/2017-classify-genome-bins-with-custom-db-try-again.html), updated to use the `sourmash lca` commands.)
 
-Download some pre-computed signatures:
+Download some pre-calculated signatures:
 
 ```
 curl -L https://osf.io/bw8d7/download?version=1 -o delmont-subsample-sigs.tar.gz

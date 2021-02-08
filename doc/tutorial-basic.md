@@ -66,7 +66,7 @@ Compute a scaled signature from our reads:
 mkdir ~/sourmash
 cd ~/sourmash
 
-sourmash compute --scaled 10000 ~/data/ecoli_ref*.fastq.gz -o ecoli-reads.sig -k 31
+sourmash sketch dna -p scaled=10000,k=31 ~/data/ecoli_ref*.fastq.gz -o ecoli-reads.sig
 ```
 
 ## Compare reads to assemblies
@@ -76,14 +76,14 @@ Use case: how much of the read content is contained in the reference genome?
 Build a signature for an E. coli genome:
 
 ```
-sourmash compute --scaled 1000 -k 31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
+sourmash sketch dna -p scaled=1000,k=31 ~/data/ecoliMG1655.fa.gz -o ecoli-genome.sig
 ```
 
 and now evaluate *containment*, that is, what fraction of the read content is
 contained in the genome:
 
 ```
-sourmash search -k 31 ecoli-reads.sig ecoli-genome.sig --containment
+sourmash search 31 ecoli-reads.sig ecoli-genome.sig --containment
 ```
 
 and you should see:
@@ -102,7 +102,7 @@ similarity   match
 Try the reverse - why is it bigger?
 
 ```
-sourmash search -k 31 ecoli-genome.sig ecoli-reads.sig --containment
+sourmash search ecoli-genome.sig ecoli-reads.sig --containment
 ```
 
 ## Make and search a database quickly.
@@ -135,7 +135,7 @@ ls ecoli_many_sigs
 Let's turn this into an easily-searchable database with `sourmash index` --
 
 ```
-sourmash index -k 31 ecolidb ecoli_many_sigs/*.sig
+sourmash index ecolidb ecoli_many_sigs/*.sig
 ```
 
 and now we can search!
@@ -213,7 +213,7 @@ curl -L -o genbank-k31.lca.json.gz https://osf.io/4f8n3/download
 
 Next, run the 'gather' command to see what's in your ecoli genome --
 ```
-sourmash gather -k 31 ecoli-genome.sig genbank-k31.lca.json.gz
+sourmash gather ecoli-genome.sig genbank-k31.lca.json.gz
 ```
 
 and you should get:
