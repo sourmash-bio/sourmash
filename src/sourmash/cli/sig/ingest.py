@@ -1,4 +1,4 @@
-"""import a mash or other signature"""
+"""ingest/import a mash or other signature"""
 
 import sys
 
@@ -8,6 +8,8 @@ def subparser(subparsers):
     # If desired, this function can be removed with a major version bump.
     for cmd in ('ingest', 'import'):
         subparser = subparsers.add_parser(cmd)
+        subparser.add_argument('--csv', action='store_true',
+                               help='import in Mash CSV format')
         subparser.add_argument('filenames', nargs='+')
         subparser.add_argument(
             '-q', '--quiet', action='store_true',

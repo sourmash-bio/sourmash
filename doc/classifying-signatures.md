@@ -81,9 +81,6 @@ differences between the `sourmash lca` subcommands and the basic
 output structured taxonomic information, and these are what you should look
 to if you are interested in doing classification.
 
-The command `lca gather` applies the `gather` algorithm to search an
-LCA database; it reports taxonomy.
-
 It's important to note that taxonomy based on k-mers is very, very
 specific and if you get a match, it's pretty reliable. On the
 converse, however, k-mer identification is very brittle with respect
@@ -120,8 +117,8 @@ containment queries against genome databases.  This will give you
 numbers that (approximately) match what you get from counting mapped
 reads.
 
-If you create your input signatures with `-p abund`, both
-`sourmash gather` and `sourmash lca gather` will use that information
+If you create your input signatures with `-p abund`,
+`sourmash gather` will use that information
 to calculate an abundance-weighted result.  This will weight
 each match to a hash value by the multiplicity of the hash value in
 the query signature.  You can turn off this behavior with

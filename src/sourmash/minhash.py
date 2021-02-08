@@ -187,10 +187,13 @@ class MinHash(RustObject):
 
         if dayhoff:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+            ksize = ksize*3
         elif hp:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_HP
+            ksize = ksize*3
         elif is_protein:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+            ksize = ksize*3
         else:
             hash_function = lib.HASH_FUNCTIONS_MURMUR64_DNA
 
@@ -214,7 +217,7 @@ class MinHash(RustObject):
             hp=self.hp,
             track_abundance=self.track_abundance,
             seed=self.seed,
-            max_hash=self.max_hash,
+            max_hash=self._max_hash,
         )
         a.merge(self)
         return a
@@ -230,7 +233,7 @@ class MinHash(RustObject):
             self.hashes,
             None,
             self.track_abundance,
-            self.max_hash,
+            self._max_hash,
             self.seed,
         )
 
@@ -271,7 +274,7 @@ class MinHash(RustObject):
             self.hp,
             self.track_abundance,
             self.seed,
-            self.max_hash,
+            self._max_hash,
         )
         return a
 
@@ -282,8 +285,12 @@ class MinHash(RustObject):
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
-        if len(kmer) != self.ksize:
-            raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        if self.is_dna:
+            if len(kmer) != self.ksize:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize))
+        else:
+            if len(kmer) != self.ksize*3:
+                raise ValueError("kmer to add is not {} in length".format(self.ksize*3))
         self.add_sequence(kmer)
 
     def add_many(self, hashes):
@@ -381,13 +388,22 @@ class MinHash(RustObject):
 
     @property
     def ksize(self):
-        return self._methodcall(lib.kmerminhash_ksize)
+        k = self._methodcall(lib.kmerminhash_ksize)
+        if not self.is_dna:
+            assert k % 3 == 0
+            k = int(k / 3)
+        return k
 
     @property
     @deprecated(deprecated_in="3.5", removed_in="5.0",
                 current_version=VERSION,
                 details='Use scaled instead.')
     def max_hash(self):
+        return self._methodcall(lib.kmerminhash_max_hash)
+
+    # a non-deprecated `max_hash` property for internal testing purposes only
+    @property
+    def _max_hash(self):
         return self._methodcall(lib.kmerminhash_max_hash)
 
     @property
@@ -447,11 +463,7 @@ class MinHash(RustObject):
         elif scaled is not None:
             if self.num:
                 raise ValueError("num != 0 - cannot downsample a standard MinHash")
-            max_hash = self.max_hash
-            if max_hash is None:
-                raise ValueError("no max_hash available - cannot downsample")
-
-            old_scaled = _get_scaled_for_max_hash(self.max_hash)
+            old_scaled = self.scaled
             if old_scaled > scaled:
                 raise ValueError(
                     "new scaled {} is lower than current sample scaled {}".format(
@@ -481,7 +493,7 @@ class MinHash(RustObject):
         # create new object:
         a = MinHash(
             self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self.max_hash
+            False, self.seed, self._max_hash
         )
         a.add_many(self)
 
@@ -529,13 +541,24 @@ class MinHash(RustObject):
 
         return self.count_common(other, downsample) / len(self)
 
+    def __add__(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only add MinHash objects to MinHash objects!")
+
+        new_obj = self.__copy__()
+        new_obj += other
+        return new_obj
+
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
-            raise TypeError("Must be a MinHash!")
+            raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
         return self
 
-    merge = __iadd__
+    def merge(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only add MinHash objects to MinHash objects!")
+        self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where

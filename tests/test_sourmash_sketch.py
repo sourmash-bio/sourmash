@@ -494,8 +494,8 @@ def test_do_sketch_translate_multik_with_protein():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
 
 def test_do_sketch_translate_multik_with_dayhoff():
@@ -515,8 +515,8 @@ def test_do_sketch_translate_multik_with_dayhoff():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.dayhoff for x in siglist)
 
 
@@ -537,8 +537,8 @@ def test_do_sketch_translate_multik_with_hp():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.hp for x in siglist)
 
 
@@ -556,8 +556,8 @@ def test_do_sourmash_sketch_translate_multik_only_protein(c):
         siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
 
 
 def test_do_sourmash_sketch_translate_bad_sequences():
@@ -577,8 +577,8 @@ def test_do_sourmash_sketch_translate_bad_sequences():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
 
 def test_do_sketch_protein_multik_input():
@@ -597,8 +597,8 @@ def test_do_sketch_protein_multik_input():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
 
             moltype = set([ x.minhash.moltype == 'protein'
                             for x in siglist ])
@@ -638,9 +638,9 @@ def test_do_sourmash_sketchdna_with_scaled_1():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash.MAX_HASH }
+        scaled_vals = [ x.minhash.scaled for x in siglist ]
+        assert len(scaled_vals) == 2
+        assert set(scaled_vals) == { 1 }
 
 
 def test_do_sourmash_sketchdna_with_scaled_2():
@@ -657,7 +657,7 @@ def test_do_sourmash_sketchdna_with_scaled_2():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
@@ -676,7 +676,7 @@ def test_do_sourmash_sketchdna_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 

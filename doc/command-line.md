@@ -78,7 +78,6 @@ walkthrough of these commands.
 
 * `lca classify` classifies many signatures against an LCA database.
 * `lca summarize` summarizes the content of metagenomes using an LCA database.
-* `lca gather` finds non-overlapping matches to a metagenome in an LCA database.
 * `lca index` creates a database for use with LCA subcommands.
 * `lca rankinfo` summarizes the content of a database.
 * `lca compare_csv` compares lineage spreadsheets, e.g. those output by `lca classify`.
@@ -286,8 +285,8 @@ Note:
 
 Use `sourmash gather` to classify a metagenome against a collection of
 genomes with no (or incomplete) taxonomic information.  Use `sourmash
-lca summarize` and `sourmash lca gather` to classify a metagenome
-using a collection of genomes with taxonomic information.
+lca summarize` to classify a metagenome using a collection of genomes
+with taxonomic information.
 
 ## `sourmash lca` subcommands for taxonomic classification
 
@@ -455,39 +454,6 @@ Note: you can specify a list of files to load signatures from in a
 text file passed to `sourmash lca summarize` with the
 `--query-from-file` flag; these files will be appended to the `--query`
 input.
-
-### `sourmash lca gather` - find metagenome taxonomy (DEPRECATED for 4.0)
-
-The `sourmash lca gather` command finds all non-overlapping
-matches to the query, similar to the `sourmash gather` command.  This
-is specifically meant for metagenome and genome bin analysis.  (See
-[Classifying Signatures](classifying-signatures.md) for more
-information on the different approaches that can be used here.)
-
-If the input signature was created with `-p abund`, output
-will be abundance weighted (unless `--ignore-abundances` is
-specified).  `-o/--output` will create a CSV file containing the
-matches.
-
-Usage:
-
-```
-sourmash lca gather query.sig [<lca database> ...]
-```
-
-Example output:
-
-```
-overlap     p_query p_match
----------   ------- --------
-1.8 Mbp      14.6%    9.1%      Fusobacterium nucleatum
-1.0 Mbp       7.8%   16.3%      Proteiniclasticum ruminis
-1.0 Mbp       7.7%   25.9%      Haloferax volcanii
-0.9 Mbp       7.4%   11.8%      Nostoc sp. PCC 7120
-0.9 Mbp       7.0%    5.8%      Shewanella baltica
-0.8 Mbp       6.0%    8.6%      Desulfovibrio vulgaris
-0.6 Mbp       4.9%   12.6%      Thermus thermophilus
-```
 
 ### `sourmash lca index` - build an LCA database
 

@@ -1807,203 +1807,9 @@ def test_compare_csv_real():
         assert '0 incompatible at rank species' in err
 
 
-def test_single_gather():
-    with utils.TempDirectory() as location:
-        db1 = utils.get_test_data('lca/delmont-1.lca.json')
-        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
-        in_dir = os.path.join(location, 'sigs')
-        os.mkdir(in_dir)
-        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
-
-        cmd = ['lca', 'gather', input_sig, db1]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '2.0 Mbp     100.0%  100.0%      Alteromonas_macleodii' in out
-        assert 'Query is completely assigned.'
-
-
-def test_gather_unknown_hashes():
-    with utils.TempDirectory() as location:
-        taxcsv = utils.get_test_data('lca-root/tax.csv')
-        input_sig1 = utils.get_test_data('lca-root/TARA_MED_MAG_00029.fa.sig')
-        input_sig2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
-        lca_db = os.path.join(location, 'lca-root.lca.json')
-
-        cmd = ['lca', 'index', taxcsv, lca_db, input_sig2]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert os.path.exists(lca_db)
-
-        assert '1 identifiers used out of 2 distinct identifiers in spreadsheet.' in err
-
-        cmd = ['lca', 'gather', input_sig1, lca_db]
-        status, out, err = utils.runscript('sourmash', cmd)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '270.0 kbp    11.5%   21.4%      Archaea; family novelFamily_I' in out
-        assert '88.5% (2.1 Mbp) of hashes have no assignment.' in out
-
-
-def test_gather_combined_results():
-    with utils.TempDirectory() as location:
-        query_sig = utils.get_test_data('47+63.fa.sig')
-        lca_db = utils.get_test_data('lca/47+63.lca.json')
-
-        cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '5.5 Mbp      69.4%  100.0%      Shewanella baltica OS223' in out
-        assert '2.4 Mbp      30.6%   47.1%      Shewanella baltica OS185' in out
-
-
-def test_gather_equiv_results():
-    with utils.TempDirectory() as location:
-        query_sig = utils.get_test_data('47+63-intersect.fa.sig')
-        lca_db = utils.get_test_data('lca/47+63.lca.json')
-
-        cmd = ['lca', 'gather', query_sig, lca_db, '-o', 'matches.csv']
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location)
-
-        print(cmd)
-        print(out)
-        print(err)
-
-        assert '2.7 Mbp     100.0%' in out
-        assert 'Shewanella baltica' in out
-        assert '(** 1 equal matches)' in out
-        assert ('OS223' in out) or ('OS185' in out)
-
-        assert os.path.exists(lca_db)
-
-        r = csv.DictReader(open(os.path.join(location, 'matches.csv')))
-        row = next(r)
-        assert row['n_equal_matches'] == '1'
-
-
-def test_gather_old_lca_db():
-    with utils.TempDirectory() as location:
-        query_sig = utils.get_test_data('47+63.fa.sig')
-        lca_db = utils.get_test_data('lca/old-db-format-1.json')
-
-        cmd = ['lca', 'gather', query_sig, lca_db]
-        status, out, err = utils.runscript('sourmash', cmd,
-                                           in_directory=location,
-                                           fail_ok=True)
-
-        print(cmd)
-        print(out)
-        print(err)
-        assert 'Error! This is an old-style LCA DB.' in err
-        assert status != 0
-
-
-@utils.in_tempdir
-def test_incompat_lca_db_scaled(c):
-    # create a database with scaled of 10000
-    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '10000', testdata1,
-                   '-o', 'test_db.sig')
-    print(c)
-
-    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
-                   'test.lca.json', 'test_db.sig',
-                    '-k', '25', '--scaled', '10000')
-    print(c)
-
-    # next, create a query sig with scaled of 100000
-    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '100000', testdata1,
-                   '-o', 'test_query.sig')
-    print(c)
-
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('lca', 'gather', 'test_query.sig', 'test.lca.json')
-        print(c)
-
-    assert 'new scaled 10000 is lower than current sample scaled 10000' in str(e.value)
-
-
-@utils.in_thisdir
-def test_lca_gather_protein(c):
-    # test lca gather on protein foo
-    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db1 = utils.get_test_data('prot/protein.lca.json.gz')
-
-    c.run_sourmash('lca', 'gather', testquery, db1)
-
-    assert c.last_result.status == 0
-    assert 'loaded 1 LCA databases. ksize=57, scaled=100 moltype=protein' in c.last_result.err
-    assert '340.9 kbp   100.0%  100.0%      s__B26-1 sp001593925 sp.' in c.last_result.out
-
-
-@utils.in_thisdir
-def test_lca_gather_deprecated_message(c):
-    # lca gather is deprecated for 4.0; check message
-    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db1 = utils.get_test_data('prot/protein.lca.json.gz')
-
-    c.run_sourmash('lca', 'gather', testquery, db1)
-
-    assert c.last_result.status == 0
-    assert 'WARNING: lca gather is deprecated as of sourmash 3.4' in c.last_result.err
-
-
-@utils.in_thisdir
-def test_incompat_lca_db_moltype(c):
-    # test load of incompatible LCA DBs
-    testquery = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
-    db1 = utils.get_test_data('prot/protein.lca.json.gz')
-    db2 = utils.get_test_data('prot/dayhoff.lca.json.gz')
-
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('lca', 'gather', testquery, db1, db2)
-
-    assert 'Exception: multiple moltypes, quitting' in str(e.value)
-
-
-@utils.in_tempdir
-def test_incompat_lca_db_ksize(c):
-    # create a database with ksize of 25
-    testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
-    c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
-                   '-o', 'test_db.sig')
-    print(c)
-
-    c.run_sourmash('lca', 'index', utils.get_test_data('lca/delmont-1.csv',),
-                   'test.lca.json', 'test_db.sig',
-                    '-k', '25', '--scaled', '10000')
-    print(c)
-
-    # this should fail: the LCA database has ksize 25, and the query sig has
-    # no compatible ksizes.
-    with pytest.raises(ValueError) as e:
-        c.run_sourmash('lca', 'gather', utils.get_test_data('lca/TARA_ASE_MAG_00031.sig'), 'test.lca.json')
-    print(c.last_result)
-
-    assert '0 signatures matching ksize and molecule type;' in str(e.value)
-
-
 @utils.in_tempdir
 def test_incompat_lca_db_ksize_2(c):
-    # test on gather, not just lca gather
-    # create a database with ksize of 25
+    # test on gather - create a database with ksize of 25
     testdata1 = utils.get_test_data('lca/TARA_ASE_MAG_00031.fa.gz')
     c.run_sourmash('compute', '-k', '25', '--scaled', '1000', testdata1,
                    '-o', 'test_db.sig')
@@ -2192,7 +1998,7 @@ def test_lca_db_protein_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2219,7 +2025,7 @@ def test_lca_db_protein_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='protein')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='protein')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2233,6 +2039,8 @@ def test_lca_db_protein_save_load(c):
     # check reconstruction --
     mh_list = [ x.minhash for x in db2.signatures() ]
     assert len(mh_list) == 2
+    print('XXX', mh_list[0].ksize)
+    print('YYY', sig1.minhash.ksize)
     assert sig1.minhash in mh_list
     assert sig2.minhash in mh_list
 
@@ -2255,7 +2063,7 @@ def test_lca_db_protein_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--protein')
+                   '--scaled', '100', '-k', '19', '--protein')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2301,7 +2109,7 @@ def test_lca_db_hp_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2328,7 +2136,7 @@ def test_lca_db_hp_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='hp')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='hp')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2364,7 +2172,7 @@ def test_lca_db_hp_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--hp')
+                   '--scaled', '100', '-k', '19', '--hp')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]
@@ -2410,7 +2218,7 @@ def test_lca_db_dayhoff_build():
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2437,7 +2245,7 @@ def test_lca_db_dayhoff_save_load(c):
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
 
-    db = sourmash.lca.LCA_Database(ksize=57, scaled=100, moltype='dayhoff')
+    db = sourmash.lca.LCA_Database(ksize=19, scaled=100, moltype='dayhoff')
     assert db.insert(sig1)
     assert db.insert(sig2)
 
@@ -2473,7 +2281,7 @@ def test_lca_db_dayhoff_command_index(c):
 
     c.run_sourmash('lca', 'index', lineages, db_out, sigfile1, sigfile2,
                    '-C', '3', '--split-identifiers', '--require-taxonomy',
-                   '--scaled', '100', '-k', '57', '--dayhoff')
+                   '--scaled', '100', '-k', '19', '--dayhoff')
 
     x = sourmash.lca.lca_db.load_single_database(db_out)
     db2 = x[0]

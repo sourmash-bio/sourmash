@@ -6,7 +6,6 @@ The top level CLI is defined in ../__init__.py. This module defines the CLI for
 
 from . import classify
 from . import compare_csv
-from . import gather
 from . import index
 from . import rankinfo
 from . import summarize
