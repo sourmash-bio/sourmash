@@ -33,7 +33,7 @@ migrating to sourmash 4.0 in the
 * remove Python 2.7 support (& end Python 2 compatibility) (#1145, #1144)
 * remove `lca gather` (#1307)
 * remove 10x support from `sourmash compute` (#1229)
-* remove 'dump' command (#1157)
+* remove `dump` command (#1157)
 
 ### Feature/function deprecations 
 * deprecate `sourmash compute` (#1159)
