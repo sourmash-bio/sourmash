@@ -118,11 +118,14 @@ Second, **`sourmash index` will now save databases in the Zip format (`.sbt.zip`
 
 Third, all sourmash commands that operate on signatures should now be able to directly read from lists of signatures in signature files, SBT databases, LCA databases, directories, and files containing lists of filenames (see [updated docs](command-line.md#advanced-command-line-usage)).
 
-Fourth, if you use `sourmash lca` commands, **`sourmash lca gather` has been removed**. In addition, there are some **changes in how `summarize` works**: it now uses abundances by default, and no longer combines all signatures before summarizing. Specify `--ignore-abundance` and combine your signatures using `sourmash sig merge` to recover the old behavior.
+Fourth, if you use `sourmash lca` commands, **`sourmash lca gather` has been removed**. In addition, there are some **changes in how `summarize` works**: it now uses abundances by default, and no longer combines all signatures before summarizing. Specify `--ignore-abundance` and combine your signatures using `sourmash sig merge` to recover the old behavior. Note also that `lca summarize` now includes a new column, `filename`, in the CSV output.
 
 Finally, **k-mer sizes have changed for amino acid sequences** in v4. If you use protein, Dayhoff, or HP signatures, we now interpret k-mer sizes differently on the command line. Briefly, k-mer sizes for protein/dayhoff/hp signatures are now the size of the k-mer in amino acid space, *not* the space of the k-mer in DNA space (as previously used). In practice this means that you need to divide all your old k-mer sizes by 3 when working with k-mers in amino acid space!
 
 Note also that while `sourmash compute` still behaves the same way in v4.x as it did in sourmash 3.5.x, `sourmash sketch translate` and `sourmash sketch protein` both use the *new* approach to amino acid k-mer sizes, as do all of the the command line options for searching, manipulation, and display. Again, in practice this means that you need to divide all your old k-mer sizes by 3 if they apply to amino acid k-mers.
+
+There are several minor changes where error messages should occur appropriately* `--traverse-directory` is no longer needed on the command line for `sourmash index` or other functions; directory traversal happens automatically.
+* the command lines for `sourmash index` and `sourmash lca index` no longer require signature files to be specified, which can break existing command lines. To fix this, reorder arguments so that any signatures are specified at the end of the command line.
 
 ### Python API
 
@@ -132,6 +135,10 @@ Second, the `MinHash` class API has changed significantly!
 * `get_mins()` has been deprecated in favor of `.hashes`, which is a dictionary that contains abundances.
 * `merge` now just modifies `MinHash` objects in-place, and no longer returns the merged object; use `__iadd__` (`+=`) for the old behavior, or `__add__` (`+`) to create a new merged object.
 * `max_hash` has been deprecated in favor of `scaled`.
+* instead of `downsample_scaled(s)` use `downsample(scaled=s)`
+* instead of `downsample_n(m)` use `downsample(num=m)`
+* `is_molecule_type` has been replaced with a property, `moltype` -- instead of `is_molecule_type(t)` use `moltype == t`.
+
 
 Third, `SourmashSignature` objects no longer have a `name()` method but instead a `name` property, which can be assigned to. This property is now `None` when no name has been assigned. Note that `str(sig)` should now be used to retrieve a display name, and should replace all previous uses of `sig.name()`.
 
@@ -139,6 +146,8 @@ Fourth, a few top-level functions have been deprecated: `load_signatures(...)`, 
 * `load_signatures(...)`, `load_one_signature(...)` should be replaced with `load_file_as_signatures(...)`. Note there is currently no top-level way to load signatures from strings. For now, if you need that functionality, you can use `sourmash.signature.load_signatures(...)` and `sourmash.signature.load_one_signature(...)`, but please be aware that these are not considered part of the public API that is under semantic versioning, so they may change in the next minor point release; this is tracked in  https://github.com/dib-lab/sourmash/issues/1312.
 * `load_sbt_index(...)` have been deprecated.  Please use `load_file_as_index(...)` instead.
 * `create_sbt_index(...)` has been deprecated. There is currently no replacement, although you can use it directly from `sourmash.sbtmh` if necessary.
+
+Fifth, directory traversal now happens by default when loading signatures, so remove `traverse=True` arguments to several functions in `sourmash_args` - `load_dbs_and_sigs`, `load_file_as_index`, `and load_file_as_signatures`.
 
 Please post questions and concerns to the
 [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues)
