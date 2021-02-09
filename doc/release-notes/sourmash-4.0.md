@@ -47,7 +47,7 @@ migrating to sourmash 4.0 in the
 * remove deprecated minhash functions (#1149)
 * fix Rust panic error in signature creation (#1172)
 * cache nodes in SBT during search (#1161)
-* fix two bugs in gather --output-unassigned (#1156)
+* fix two bugs in gather `--output-unassigned` (#1156)
 
 ## Documentation updates
 
