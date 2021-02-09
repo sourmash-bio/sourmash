@@ -2,10 +2,10 @@ name: cibuildwheel
 
 on:
   push:
-    branches: [latest]
+    branches: [stable]
     tags: v*
   pull_request:
-    branches: [latest]
+    branches: [stable]
   schedule:
     - cron: "0 0 * * *" # daily
 
