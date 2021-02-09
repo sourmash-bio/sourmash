@@ -51,8 +51,8 @@ migrating to sourmash 4.0 in the
 
 ## Documentation updates
 
-* add information about versioning, migrations, etc to the docs (#1153)
-* @CTB MORE GOES HERE
+* major update and cleanup of docs given new functionality; add sourmash sketch documentation (#1283)
+* add information about versioning, migrations, etc to the docs (#1153, #1283)
 
 ## Infrastructure and CI changes:
 
