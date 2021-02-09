@@ -124,7 +124,8 @@ Finally, **k-mer sizes have changed for amino acid sequences** in v4. If you use
 
 Note also that while `sourmash compute` still behaves the same way in v4.x as it did in sourmash 3.5.x, `sourmash sketch translate` and `sourmash sketch protein` both use the *new* approach to amino acid k-mer sizes, as do all of the the command line options for searching, manipulation, and display. Again, in practice this means that you need to divide all your old k-mer sizes by 3 if they apply to amino acid k-mers.
 
-There are several minor changes where error messages should occur appropriately* `--traverse-directory` is no longer needed on the command line for `sourmash index` or other functions; directory traversal happens automatically.
+There are several minor changes where error messages should occur appropriately:
+* `--traverse-directory` is no longer needed on the command line for `sourmash index` or other functions; directory traversal happens automatically.
 * the command lines for `sourmash index` and `sourmash lca index` no longer require signature files to be specified, which can break existing command lines. To fix this, reorder arguments so that any signatures are specified at the end of the command line.
 
 ### Python API
