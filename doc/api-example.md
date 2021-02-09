@@ -146,7 +146,7 @@ raising an exception.
 
 ```
 
-And now the result MinHash objects can be compared against each other:
+And now the resulting MinHash objects can be compared against each other:
 
 ```
 >>> import sys
