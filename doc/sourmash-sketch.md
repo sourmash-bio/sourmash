@@ -20,7 +20,7 @@ The `sketch translate` command reads in **DNA sequences**, translates them in al
 
 ### DNA sketches for genomes and reads
 
-To compute a DNA sketch for a genome, run:
+To create a DNA sketch for a genome, run:
 ```
 sourmash sketch dna genome.fna
 ```
@@ -31,7 +31,7 @@ Sourmash can work with unassembled reads; run
 ```
 sourmash sketch dna -p k=21,k=31,k=51,abund metagenome.fq.gz
 ```
-to compute three abundance-weighted sketches at k=21, 31, and 51, for the given FASTQ file.
+to create three abundance-weighted sketches at k=21, 31, and 51, for the given FASTQ file.
 
 ### Protein sketches for genomes and proteomes
 
@@ -87,7 +87,7 @@ A parameter string is a space-delimited collection that can contain one or more 
 * `abund` / `noabund` - create abundance-weighted (or not) sketches. See [Classify signatures: Abundance Weighting](classifying-signatures.md#abundance-weighting) for details of how this works.
 * `dna`, `protein`, `dayhoff`, `hp` - create this kind of sketch. Note that `sourmash sketch dna -p protein` and `sourmash sketch protein -p dna` are invalid; please use `sourmash sketch translate` for the former.
 
-For all field names but `k`, if multiple fields in a parameter string are provided, the last one encountered overrides the previous values. For `k`, if multiple ksizes are specified a single parameter string, sketches for all ksizes specified are computed.
+For all field names but `k`, if multiple fields in a parameter string are provided, the last one encountered overrides the previous values. For `k`, if multiple ksizes are specified in a single parameter string, sketches for all ksizes specified are created.
 
 If a field isn't specified, then the default value for that sketch type is used; so, for example, `sourmash sketch dna -p abund` would calculate a sketch with `k=31,scaled=1000,abund`. See below for the defaults.
 
@@ -98,7 +98,7 @@ The default parameters for sketches are as follows:
 * dna: `k=31,scaled=1000,noabund`
 * protein: `k=10,scaled=200,noabund`
 * dayhoff: `k=16,scaled=200,noabund`
-* hp=`k=42,scaled=200,noabund`
+* hp: `k=42,scaled=200,noabund`
 
 These were chosen by a committee of PhDs as being good defaults for an initial analysis, so, beware :).
 
@@ -111,8 +111,32 @@ The protein, dayhoff, and hp parameters were selected based on unpublished resea
 Below are some more complicated `sourmash sketch` command lines:
 
 * `sourmash sketch dna -p k=51` - default to a scaled=1000 and noabund for a k-mer size of 51 (based on moltype/command)
-* `sourmash sketch dna -p k=31,k=51,k=21` - compute multiple ksizes, using the defaults otherwise
-* `sourmash sketch translate -p k=20,num=500,protein -p k=19,num=400,dayhoff,abund -p k=30,scaled=200,hp` - compute multiple ksizes, moltypes, and scaled/num.
+* `sourmash sketch dna -p k=31,k=51,k=21` - create one signature with multiple ksizes, using the defaults otherwise
+* `sourmash sketch translate -p k=20,num=500,protein -p k=19,num=400,dayhoff,abund -p k=30,scaled=200,hp` - create three signatures with different ksizes, moltypes, and scaled/num.
+
+### Signature naming
+
+Signature names are displayed in the output for search, gather, and
+compare, and can be specified in a few different ways.
+
+With default arguments, `sourmash sketch` does not set a name, and the
+filename is used in display output.
+
+You can set a name using `--name`, but this has the side effect of
+merging the sequence records before signature creation. So, for example,
+`sourmash sketch dna genome1.fa genome2.fa --name genome1 -o
+genome.sig` would produce one signature after combining `genome1.fa`
+and `genome2.fa`.
+
+The option `--name-from-first` will set the signature name from the
+first record header encountered in each file.  When used with `--singleton`,
+this will name each signature based on the record that it is created from.
+
+You can examine the signature name using `sourmash sig describe`.
+
+Individual signature renaming can be done from the command line using
+`sourmash sig split` to create individual files for each signature,
+and then `sourmash sig rename`.
 
 ### Locations for output files
 
