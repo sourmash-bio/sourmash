@@ -2,10 +2,13 @@ name: Rust checks
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
     paths:
       - 'src/core/**'
+      - 'tests/test-data/**'
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   check:
@@ -125,10 +128,9 @@ jobs:
         run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
 
       - name: Upload Rust coverage to codecov
-        uses: codecov/codecov-action@797e92895ec0eac368405352c0add9af878fe257
+        uses: codecov/codecov-action@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: rusttests
+          flags: rust
           fail_ci_if_error: true
 
   lints:
@@ -162,7 +164,7 @@ jobs:
     name: Check if wasm-pack builds a valid package for the sourmash crate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -190,7 +192,7 @@ jobs:
     name: Run tests under wasm32-wasi
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - name: Install wasm32-wasi target
         uses: actions-rs/toolchain@v1
         with:
@@ -199,7 +201,7 @@ jobs:
       - name: Install wasmtime
         run: "curl https://wasmtime.dev/install.sh -sSf | bash"
       - name: Add wasmtime to PATH
-        run: echo "::add-path::$HOME/.wasmtime/bin"
+        run: echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
       - name: Install cargo-wasi command
         uses: actions-rs/cargo@v1
         with:

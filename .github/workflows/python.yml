@@ -1,0 +1,75 @@
+name: Python tests
+
+on:
+  push:
+    branches: [latest]
+  pull_request:
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest]
+        py: [3.9, 3.8, 3.7]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.py }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.py }}
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox tox-gh-actions
+
+      - name: Set up Pandoc
+        uses: r-lib/actions/setup-pandoc@v1
+
+      - name: Set up IPFS
+        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
+        uses: ibnesayeed/setup-ipfs@master
+        with:
+          ipfs_version: 0.6
+          run_daemon: true
+
+      - name: Start Redis
+        if: startsWith(runner.os, 'Linux') && (matrix.py == '3.9')
+        uses: supercharge/redis-github-action@4687e0c1d27b144de1dadc32967b7ce7e1227c7f
+        with:
+          redis-version: 6
+
+      - name: tox cache
+        uses: actions/cache@v2
+        with:
+          path: .tox/
+          key: ${{ runner.os }}-tox-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-tox-
+
+      - name: Test with tox
+        run: tox
+        env:
+          PYTHONDEVMODE: 1

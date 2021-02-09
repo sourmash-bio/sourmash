@@ -2,9 +2,11 @@ name: khmer compatibility tests
 
 on:
   push:
-    branches: [master]
+    branches: [latest]
   pull_request:
-    branches: [master]
+    branches: [latest]
+  schedule:
+    - cron: "0 0 * * *" # daily
 
 jobs:
   test:
@@ -20,21 +22,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .[test]
+          pip install tox
 
       - name: Run tests with latest released khmer
-        run: |
-          python -m pip install khmer
-          python -m pytest -k test_nodegraph --cov=. --cov-report=xml
+        run: tox -e khmer,coverage
 
-      - name: Run tests with khmer master tests
-        run: |
-          python -m pip install -U git+https://github.com/dib-lab/khmer.git#egg=khmer
-          python -m pytest -k test_nodegraph --cov=. --cov-report=xml
-
-      - name: Upload coverage to Codecov  
-        uses: codecov/codecov-action@v1
-        with:
-            token: ${{ secrets.CODECOV_TOKEN }}
-            file: ./coverage.xml
-            fail_ci_if_error: true
+      - name: Run tests with khmer master branch
+        run: tox -e khmer_master,coverage
