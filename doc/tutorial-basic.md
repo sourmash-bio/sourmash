@@ -3,9 +3,11 @@
 This tutorial should run without modification on Linux or Mac OS X,
 under [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-You'll need about 5 GB of free disk space,
-and about 5 GB of RAM to search GenBank.  The tutorial should take about
-20 minutes total to run.
+You'll need about 5 GB of free disk space, and about 5 GB of RAM to
+search GenBank.  The tutorial should take about 20 minutes total to
+run. In fact, we have successfully tested it on
+[binder.pangeo.io](https://binder.pangeo.io/v2/gh/binder-examples/r-conda/master?urlpath=urlpath%3Drstudio)
+if you want to give it a try!
 
 ## Install miniconda
 
@@ -56,8 +58,8 @@ Download some reads and a reference genome:
 ```
 mkdir ~/data
 cd ~/data
-wget https://s3.amazonaws.com/public.ged.msu.edu/ecoli_ref-5m.fastq.gz
-wget https://s3.amazonaws.com/public.ged.msu.edu/ecoliMG1655.fa.gz
+curl -L https://osf.io/ruanf/download -o ecoliMG1655.fa.gz
+curl -L https://osf.io/q472x/download -o ecoli_ref-5m.fastq.gz
 ```
 
 Compute a scaled signature from our reads:
@@ -89,17 +91,19 @@ sourmash search ecoli-reads.sig ecoli-genome.sig --containment
 and you should see:
 
 ```
-# running sourmash subcommand: search
-loaded query: /home/ubuntu/data/ecoli_ref-5m... (k=31, DNA)
-loaded 1 signatures from ecoli-genome.sig
+
+select query k=31 automatically.
+loaded query: /home/jovyan/data/ecoli_ref-5m... (k=31, DNA)
+loaded 1 signatures.
+
 1 matches:
 similarity   match
 ----------   -----
- 10.6%       /home/ubuntu/data/ecoliMG1655.fa.gz
+ 31.0%       /home/jovyan/data/ecoliMG1655.fa.gz
 ```
 
 
-Try the reverse - why is it bigger?
+Try the reverse, too!
 
 ```
 sourmash search ecoli-genome.sig ecoli-reads.sig --containment
@@ -141,7 +145,7 @@ sourmash index ecolidb ecoli_many_sigs/*.sig
 and now we can search!
 
 ```
-sourmash search ecoli-genome.sig ecolidb.sbt.json -n 20
+sourmash search ecoli-genome.sig ecolidb.sbt.zip -n 20
 ```
 
 You should see output like this:
@@ -226,7 +230,7 @@ loaded 1 databases.
 
 overlap     p_query p_match
 ---------   ------- -------
-4.9 Mbp      100.0%  100.0%    AP009048.1 Escherichia coli str. K-12...
+4.9 Mbp      100.0%  100.0%    LRDF01000001.1 Escherichia coli strai...
 
 found 1 matches total;
 the recovered matches hit 100.0% of the query
@@ -287,11 +291,11 @@ the recovered matches hit 73.1% of the query
 
 If you use the `-o` flag, gather will write out a csv that contains additional information. The column headers and their meanings are:  
 
-+ intersect_bp: the approximate number of base pairs in common between the query and the match  
-+ f_orig_query: fraction of original query; the fraction of the original query that is contained within the match  
-+ f_match: fraction of match; the fraction of the match that is contained within the query  
-+ f_unique_to_query: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
-+ f_unique_weighted: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
++ `intersect_bp`: the approximate number of base pairs in common between the query and the match  
++ `f_orig_query`: fraction of original query; the fraction of the original query that is contained within the match  
++ `f_match`: fraction of match; the fraction of the match that is contained within the query  
++ `f_unique_to_query`: fraction unique to query; the fraction of the query that uniquely overlaps with the match  
++ `f_unique_weighted`: fraction unique to query weighted by abundance; fraction unique to query, weighted by abundance in the query     
 
 It is straightforward to build your own databases for use with `search`
 and `gather`; see `sourmash index`, above, [the LCA tutorial][4], or
