@@ -80,13 +80,13 @@ Release notes for minor and patch versions are available on the
 
 sourmash v3.x supports Python 2.7 as well as Python 3.x, through Python 3.8.
 
-sourmash v4.0 dropped support for version of Python before Python 3.7,
+sourmash v4.0 dropped support for versions of Python before Python 3.7,
 and our intent is that it will support as-yet unreleased versions of Python 3.x
 (e.g. 3.9) moving forward.
 
 For future versions of sourmash, we plan to follow the
 [Numpy NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html)
-proposal for Python version support in the future. For example, this
+proposal for Python version support. For example, this
 would mean that we would drop support for Python 3.7 on December 26,
 2021.
 

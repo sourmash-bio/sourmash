@@ -66,7 +66,7 @@ By default, `sourmash sketch` will produce signatures for each input *file*. If 
 
 If you specify `--singleton`, `sourmash sketch` will produce signatures for each *record*.
 
-If you specify `--merge <name>`, sourmash sketch will produce signatures for all input files combined into one.
+If you specify `--merge <name>`, sourmash sketch will produce signatures for all input files and combine them into one signature.
 
 The output signature(s) will be saved in locations that depend on your input parameters. By default, `sourmash sketch` will put the signatures in the current directory, in a file named for the input file with a `.sig` suffix. If you specify `-o`, all of the signatures will be placed in that file.
 
@@ -81,7 +81,7 @@ We are still in the process of benchmarking these encodings; ask [on the issue t
 The `-p` argument to `sourmash sketch` provides parameter strings to sourmash, and these control what signatures and sketches are calculated and output. Zero or more parameter strings can be given to sourmash. Each parameter string produces at least one sketch.
 
 A parameter string is a space-delimited collection that can contain one or more fields, comma-separated.
-* `k=<ksize>` - compute a sketch at this k-mer size; can provide more than one time in a parameter string. Typically `ksize` is between 4 and 100.
+* `k=<ksize>` - create a sketch at this k-mer size; can provide more than one time in a parameter string. Typically `ksize` is between 4 and 100.
 * `scaled=<int>` - create a scaled MinHash with k-mers sampled deterministically at 1 per `<scaled>` value. This controls sketch compression rates and resolution; for example, a 5 Mbp genome sketched with a scaled of 1000 would yield approximately 5,000 k-mers. `scaled` is incompatible with `num`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them) for more information.
 * `num=<int>` - create a standard MinHash with no more than `<num>` k-mers kept. This will produce sketches identical to [mash sketches](https://mash.readthedocs.io/en/latest/). `num` is incompatible with `scaled`. See [our guide to signature resolution](using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them) for more information.
 * `abund` / `noabund` - create abundance-weighted (or not) sketches. See [Classify signatures: Abundance Weighting](classifying-signatures.md#abundance-weighting) for details of how this works.
@@ -124,17 +124,17 @@ Specify `--outdir` to put all the signatures in a specific directory.
 
 ### Downsampling and flattening signatures
 
-Calculating signatures is probably the most time consuming part of using sourmash, and it is the only part that requires access to the raw data. Moreover, the output signatures are generally much smaller than the input data. So, we generally suggest calculating a large set of signatures once.
+Creating signatures is probably the most time consuming part of using sourmash, and it is the only part that requires access to the raw data. Moreover, the output signatures are generally much smaller than the input data. So, we generally suggest creating a large set of signatures once.
 
 To support this, sourmash can do two kinds of signature conversion without going back to the raw data.
 
-First, you can downsample `num` and `scaled` signatures using `sourmash sig downsample`.  For any sketch calculated with `num` parameter, you can decrease that `num`. And, for any `scaled` parameter, you can increase the `scaled`. This will decrease the size of the sketch accordingly; for example, going from a num of 5000 to a num of 1000 will decrease the sketch size by a factor of 5, and going from a scaled of 1000 to a scaled of 10000 will decrease the sketch size by a factor of 10.
+First, you can downsample `num` and `scaled` signatures using `sourmash sig downsample`.  For any sketch created with `num` parameter, you can decrease that `num`. And, for any `scaled` parameter, you can increase the `scaled`. This will decrease the size of the sketch accordingly; for example, going from a `num` of 5000 to a `num` of 1000 will decrease the sketch size by a factor of 5, and going from a `scaled` of 1000 to a `scaled` of 10000 will decrease the sketch size by a factor of 10.
 
-(Note that decreasing num or increasing scaled will increase calculation speed and lower the accuracy of your results.)
+(Note that decreasing `num` or increasing `scaled` will increase calculation speed and lower the accuracy of your results.)
 
-Second, you can flatten abundances using `sourmash sig flatten`. For any sketch calculated with `abund`, you can convert it to a `noabund` sketch.  This will  decrease the sketch size, although not necessarily by a lot.
+Second, you can flatten abundances using `sourmash sig flatten`. For any sketch created with `abund`, you can convert it to a `noabund` sketch.  This will decrease the sketch size, although not necessarily by a lot.
 
-Unfortunately, changing the k-mer size or using different DNA/protein encodings cannot be done on a sketch, and you need to calculate new signatures from the raw data for that.
+Unfortunately, changing the k-mer size or using different DNA/protein encodings cannot be done on a sketch, and you need to create new signatures from the raw data for that.
 
 ### Examining the output of `sourmash sketch`
 
