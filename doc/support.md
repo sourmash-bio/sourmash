@@ -122,7 +122,7 @@ Fourth, if you use `sourmash lca` commands, **`sourmash lca gather` has been rem
 
 Finally, **k-mer sizes have changed for amino acid sequences** in v4. if you use protein, Dayhoff, or HP signatures, we now interpret k-mer sizes differently on the command line. Briefly, k-mer sizes for protein/dayhoff/hp signatures are now the size of the k-mer in amino acid space, *not* the space of the k-mer in DNA space (as previously used). In practice this means that you need to divide all your k-mer sizes by 3 when working with k-mers in amino acid space!
 
-Note also that while `sourmash compute` still behaves the same way in v4.x as it did in sourmash 3.5.x, `sourmash sketch translate` and `sourmash sketch protein` both use the *new* approach to amino acid k-mer sizes, as do all of the the command line options for searching, manipulation, and display. Again, in practice this means that you need to divide all your k-mer sizes by 3 if they apply to amino acid k-mers.
+Note also that while `sourmash compute` still behaves the same way in v4.x as it did in sourmash 3.5.x, `sourmash sketch translate` and `sourmash sketch protein` both use the *new* approach to amino acid k-mer sizes, as do all of the the command line options for searching, manipulation, and display. Again, in practice this means that you need to divide all your old k-mer sizes by 3 if they apply to amino acid k-mers.
 
 ### Python API
 
