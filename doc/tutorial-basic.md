@@ -83,7 +83,7 @@ and now evaluate *containment*, that is, what fraction of the read content is
 contained in the genome:
 
 ```
-sourmash search 31 ecoli-reads.sig ecoli-genome.sig --containment
+sourmash search ecoli-reads.sig ecoli-genome.sig --containment
 ```
 
 and you should see:

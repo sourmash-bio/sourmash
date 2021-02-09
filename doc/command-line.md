@@ -115,7 +115,16 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
-Please see [the `sourmash sketch` documentation page](sourmash-sketch.md) for details!
+`sourmash sketch` takes FASTA or FASTQ sequences as input, and they can be
+uncompressed, compressed with gzip, or compressed with bzip2. The output
+will be one or more JSON signature files that can be used with the other
+sourmash commands.
+
+Please see
+[the `sourmash sketch` documentation page](sourmash-sketch.md) for
+details on `sketch`, and see
+[Using sourmash: a practical guide](using-sourmash-a-guide.md) for
+more information on creating signatures.
 
 ### `sourmash compute` - make sourmash signatures from sequence data
 

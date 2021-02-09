@@ -153,9 +153,7 @@ for use in clustering.
 For more information on the value of this kind of comparison for
 metagenomics, please see the simka paper,
 [Multiple comparative metagenomics using multiset k-mer counting](https://peerj.com/articles/cs-94/),
-Benoit et al., 2016. Initial comparisons of metagenome similarity
-approximations calculated with sourmash to the output of simka suggest a
-significant correlation.
+Benoit et al., 2016.
 
 **Implementation note:** Angular similarity searches cannot be done on
 SBT or LCA databases currently; you have to provide lists of signature
