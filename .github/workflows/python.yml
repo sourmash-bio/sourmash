@@ -2,9 +2,9 @@ name: Python tests
 
 on:
   push:
-    branches: [latest]
+    branches: [stable]
   pull_request:
-    branches: [latest]
+    branches: [stable]
   schedule:
     - cron: "0 0 * * *" # daily
 
