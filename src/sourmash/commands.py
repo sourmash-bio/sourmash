@@ -153,7 +153,7 @@ def compare(args):
 
     # output CSV?
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutput(args.csv, 'w', newline='') as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(labeltext)
 

@@ -559,15 +559,16 @@ class FileOutput(object):
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt'):
+    def __init__(self, filename, mode='wt', newline=None):
         self.filename = filename
         self.mode = mode
         self.fp = None
+        self.newline = newline
 
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, self.mode)
+        self.fp = open(self.filename, self.mode, newline=self.newline)
         return self.fp
 
     def __enter__(self):
