@@ -8,6 +8,10 @@ from tempfile import NamedTemporaryFile
 import zipfile
 from abc import ABC
 
+from deprecation import deprecated
+
+from . import VERSION
+
 
 class Storage(ABC):
 
@@ -87,6 +91,9 @@ class FSStorage(Storage):
 
 class TarStorage(Storage):
 
+    @deprecated(deprecated_in="3.5", removed_in="4.0",
+                current_version=VERSION,
+                details='Use ZipStorage instead')
     def __init__(self, path=None):
         # TODO: leave it open, or close/open every time?
 
