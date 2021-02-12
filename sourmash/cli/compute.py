@@ -30,7 +30,6 @@ from argparse import FileType
 
 from sourmash.minhash import get_minhash_default_seed
 from sourmash.cli.utils import add_construct_moltype_args
-from sourmash.logging import notify
 
 
 def ksize_parser(ksizes):
@@ -168,8 +167,4 @@ def subparser(subparsers):
 
 def main(args):
     from sourmash.command_compute import compute
-    if args.input_is_10x:
-        notify("** WARNING: 10x support is deprecated as of sourmash 3.5.x, and will")
-        notify("**    be removed in sourmash 4.0; use kmermaid instead.")
-        notify('')
     return compute(args)
