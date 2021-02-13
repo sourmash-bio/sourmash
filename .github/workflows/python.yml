@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-latest]
-        py: [3.9, 3.8, 3.7, 2.7]
+        py: [3.9, 3.8, 3.7]
       fail-fast: false
 
     steps:
@@ -70,6 +70,6 @@ jobs:
             ${{ runner.os }}-tox-
 
       - name: Test with tox
-        run: tox
+        run: tox -e py
         env:
           PYTHONDEVMODE: 1
