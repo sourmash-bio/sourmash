@@ -40,6 +40,7 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+    from sourmash.logging import notify
 
     notify("** WARNING: lca summarize behavior is changing in sourmash 4.0")
     notify("**   As of 4.0, lca summarize will always apply --singleton.")
