@@ -4,12 +4,13 @@ from __future__ import unicode_literals, division
 import math
 import copy
 import collections
+import warnings
+from deprecation import deprecated
 
 from . import VERSION
 from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
-from deprecation import deprecated
 
 # default MurmurHash seed
 MINHASH_DEFAULT_SEED = 42
@@ -625,7 +626,9 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
         return self
 
-    merge = __iadd__
+    def merge(self, other):
+        warnings.warn("Warning, MinHash.merge(...) will return None in sourmash 4.0; use '+' operator for old behavior.")
+        return self.__iadd__(other)
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where

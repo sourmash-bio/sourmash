@@ -40,4 +40,11 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
+    from sourmash.logging import notify
+
+    notify("** WARNING: lca summarize behavior is changing in sourmash 4.0")
+    notify("**   As of 4.0, lca summarize will always apply --singleton.")
+    notify("**   In addition, --with-abundance is on by default;")
+    notify("**   please use --ignore-abundance to ignore abundances.")
+
     return sourmash.lca.command_summarize.summarize_main(args)
