@@ -1,7 +1,7 @@
 # Support, Versioning, and Migration
 
 ```{contents}
-   :depth: 2
+   :depth: 3
 ```
 
 ## Asking questions and filing bugs
@@ -19,6 +19,10 @@ You can also ask questions of Titus on Twitter at [@ctitusbrown][1].
 [1]:https://twitter.com/ctitusbrown/
 
 ## Versioning
+
+**Summary:** We recommend using _version pinning_ for software and workflows
+that depend on sourmash, e.g. specifying `sourmash >=3,<4` for software that
+is tested with sourmash 3.x. Read on for details!
 
 Our goal is to support the use of sourmash in pipelines and
 applications by communicating clearly about bug fixes, feature
@@ -93,6 +97,20 @@ For future versions of sourmash, we plan to follow the
 proposal for Python version support. For example, this
 would mean that we would drop support for Python 3.7 on December 26,
 2021.
+
+### Version pinning
+
+We recommend pinning versions to the current _major_ release for
+software and workflows that depend on sourmash.
+
+With Python toolchains such as pip, you should be able to use:
+
+```
+sourmash>=3,<4
+```
+to pin the version requirement to any sourmash v3.x release.
+
+For conda, the same syntax should work.
 
 ## Migrating from sourmash v3.x to sourmash v4.x.
 
