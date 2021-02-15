@@ -24,8 +24,8 @@ taken.
 
 Grab three bacterial genomes from NCBI:
 ```
-curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
 curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/783/305/GCA_000783305.1_ASM78330v1/GCA_000783305.1_ASM78330v1_genomic.fna.gz
 ```
 Compute signatures for each:
@@ -36,20 +36,20 @@ This will produce three `.sig` files containing MinHash signatures at k=31.
 
 Next, compare all the signatures to each other:
 ```
-sourmash compare *.sig -o cmp
+sourmash compare *.sig -o cmp.dist
 ```
 
 Optionally, parallelize compare to 8 threads with `-p 8`:
 
 ```
-sourmash compare -p 8 *.sig -o cmp
+sourmash compare -p 8 *.sig -o cmp.dist
 ```
 
 Finally, plot a dendrogram:
 ```
-sourmash plot cmp --labels
+sourmash plot cmp.dist --labels
 ```
-This will output two files, `cmp.dendro.png` and `cmp.matrix.png`,
+This will output two files, `cmp.dist.dendro.png` and `cmp.dist.matrix.png`,
 containing a clustering & dendrogram of the sequences, as well as a
 similarity matrix and heatmap.
 
@@ -69,8 +69,8 @@ walkthrough of these commands.
 * `compare` compares signatures and builds a distance matrix.
 * `plot` plots distance matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
-* `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures
-* `index` build a fast index for many (thousands) of signatures
+* `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures.
+* `index` builds a fast index for many (thousands) of signatures.
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
@@ -115,7 +115,7 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
-`sourmash sketch` takes FASTA or FASTQ sequences as input, and they can be
+`sourmash sketch` takes FASTA or FASTQ sequences as input; input data can be
 uncompressed, compressed with gzip, or compressed with bzip2. The output
 will be one or more JSON signature files that can be used with the other
 sourmash commands.
@@ -186,7 +186,8 @@ Options:
 --containment -- calculate containment instead of similarity.
         C(i, j) = size(i intersection j) / size(i).
 --from-file -- append the list of files in this text file to the input
-        signatures
+        signatures.
+--ignore-abundance -- ignore abundances in signatures.
 ```
 
 **Note:** compare by default produces a symmetric similarity matrix that can be used as an input to clustering. With `--containment`, however, this matrix is no longer symmetric and cannot formally be used for clustering.
@@ -325,7 +326,7 @@ input signatures. You can create an "unpacked" version by specifying
 subdirectory of files under `.sbt.database`.
 
 Note that you can use `--from-file` to pass `index` a text file
-containing a list of files to index; you can also provide individual
+containing a list of file names to index; you can also provide individual
 signature files, directories full of signatures, or other sourmash
 databases.
 
@@ -393,7 +394,7 @@ species level assignments would not be reported.
 (This is the approach that Kraken and other lowest common ancestor
 implementations use, we believe.)
 
-Note: you can specify a list of files to load signatures from in a
+Note: you can specify a list of file names to load signatures from in a
 text file passed to `sourmash lca classify` with the
 `--query-from-file` flag; these files will be appended to the `--query`
 input.
@@ -491,7 +492,7 @@ genome is present only once; when weighted by abundance, the Bacterial genome
 is only 41.8% of the metagenome content, while the Archaeal genome is
 58.1% of the metagenome content.
 
-Note: you can specify a list of files to load signatures from in a
+Note: you can specify a list of file names to load signatures from in a
 text file passed to `sourmash lca summarize` with the
 `--query-from-file` flag; these files will be appended to the `--query`
 input.
@@ -514,7 +515,7 @@ see
 [the NCBI lineage repository](https://github.com/dib-lab/2018-ncbi-lineages).
 
 You can use `--from-file` to pass `lca index` a text file containing a
-list of files to index.
+list of file names to index.
 
 ### `sourmash lca rankinfo` - examine an LCA database
 
@@ -885,7 +886,7 @@ some other command.
 ### Loading all signatures under a directory
 
 All of the `sourmash` commands support loading signatures from
-directories provided on the command line.
+beneath directories provide; provide the paths on the command line.
 
 ### Combining search databases on the command line
 
