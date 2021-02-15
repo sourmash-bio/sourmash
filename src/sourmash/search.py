@@ -186,7 +186,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         f_unique_weighted /= sum_abunds
 
         # calculate stats on abundances, if desired.
-        average_abund, median_abund, std_abund = 0, 0, 0
+        average_abund, median_abund, std_abund = None, None, None
         if track_abundance:
             intersect_abunds = (orig_query_abunds[k] for k in intersect_mins)
             intersect_abunds = list(intersect_abunds)
