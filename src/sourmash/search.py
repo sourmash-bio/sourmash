@@ -105,9 +105,11 @@ def _find_best(dblist, query, threshold_bp):
 
 
 def _filter_max_hash(values, max_hash):
+    results = set()
     for v in values:
         if v < max_hash:
-            yield v
+            results.add(v)
+    return results
 
 
 def gather_databases(query, databases, threshold_bp, ignore_abundance):
@@ -118,10 +120,10 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
     # track original query information for later usage.
     track_abundance = query.minhash.track_abundance and not ignore_abundance
     orig_query_mh = query.minhash
-    orig_query_mins = orig_query_mh.hashes.keys()
+    orig_query_hashes = set(orig_query_mh.hashes)
 
     # do we pay attention to abundances?
-    orig_query_abunds = { k: 1 for k in orig_query_mins }
+    orig_query_abunds = { k: 1 for k in orig_query_hashes }
     if track_abundance:
         import numpy as np
         orig_query_abunds = orig_query_mh.hashes
@@ -138,8 +140,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             break
 
         # subtract found hashes from search hashes, construct new search
-        query_mins = set(query.minhash.hashes.keys())
-        found_mins = best_match.minhash.hashes.keys()
+        query_hashes = set(query.minhash.hashes)
+        found_hashes = set(best_match.minhash.hashes)
 
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled
@@ -151,44 +153,44 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # pick the highest scaled / lowest resolution
         cmp_scaled = max(cmp_scaled, match_scaled)
 
-        # eliminate mins under this new resolution.
+        # eliminate hashes under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
         new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
-        query_mins = set(_filter_max_hash(query_mins, new_max_hash))
-        found_mins = set(_filter_max_hash(found_mins, new_max_hash))
-        orig_query_mins = set(_filter_max_hash(orig_query_mins, new_max_hash))
-        sum_abunds = sum(( v for (k,v) in orig_query_abunds.items() if k < new_max_hash ))
+        query_hashes = _filter_max_hash(query_hashes, new_max_hash)
+        found_hashes = _filter_max_hash(found_hashes, new_max_hash)
+        orig_query_hashes = _filter_max_hash(orig_query_hashes, new_max_hash)
+        sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_hashes))
 
-        # calculate intersection with query mins:
-        intersect_mins = query_mins.intersection(found_mins)
-        unique_intersect_bp = cmp_scaled * len(intersect_mins)
-        intersect_orig_query_mins = orig_query_mins.intersection(found_mins)
-        intersect_bp = cmp_scaled * len(intersect_orig_query_mins)
+        # calculate intersection with query hashes:
+        intersect_hashes = query_hashes.intersection(found_hashes)
+        unique_intersect_bp = cmp_scaled * len(intersect_hashes)
+        intersect_orig_hashes = orig_query_hashes.intersection(found_hashes)
+        intersect_bp = cmp_scaled * len(intersect_orig_hashes)
 
         # calculate fractions wrt first denominator - genome size
-        genome_n_mins = len(found_mins)
-        f_match = len(intersect_mins) / float(genome_n_mins)
-        f_orig_query = len(intersect_orig_query_mins) / \
-            float(len(orig_query_mins))
+        genome_n_hashes = len(found_hashes)
+        f_match = len(intersect_hashes) / float(genome_n_hashes)
+        f_orig_query = len(intersect_orig_hashes) / \
+            float(len(orig_query_hashes))
 
         # calculate fractions wrt second denominator - metagenome size
         orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
-        query_n_mins = len(orig_query_mh)
-        f_unique_to_query = len(intersect_mins) / float(query_n_mins)
+        query_n_hashes = len(orig_query_mh) # @CTB reuse ^^^?
+        f_unique_to_query = len(intersect_hashes) / float(query_n_hashes)
 
         # calculate fraction of subject match with orig query
         f_match_orig = best_match.minhash.contained_by(orig_query_mh,
                                                        downsample=True)
 
         # calculate scores weighted by abundances
-        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mins))
+        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_hashes))
         f_unique_weighted /= sum_abunds
 
         # calculate stats on abundances, if desired.
         average_abund, median_abund, std_abund = None, None, None
         if track_abundance:
-            intersect_abunds = (orig_query_abunds[k] for k in intersect_mins)
+            intersect_abunds = (orig_query_abunds[k] for k in intersect_hashes)
             intersect_abunds = list(intersect_abunds)
 
             average_abund = np.mean(intersect_abunds)
@@ -196,12 +198,12 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        query = _subtract_and_downsample(found_mins, query, cmp_scaled)
+        query = _subtract_and_downsample(found_hashes, query, cmp_scaled)
         remaining_bp = cmp_scaled * len(query.minhash.hashes)
 
         # compute weighted_missed:
-        query_mins -= set(found_mins)
-        weighted_missed = sum((orig_query_abunds[k] for k in query_mins)) \
+        query_hashes -= set(found_hashes)
+        weighted_missed = sum((orig_query_abunds[k] for k in query_hashes)) \
              / sum_abunds
 
         # build a result namedtuple
