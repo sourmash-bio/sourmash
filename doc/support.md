@@ -18,15 +18,25 @@ You can also ask questions of Titus on Twitter at [@ctitusbrown][1].
 [0]:https://github.com/dib-lab/sourmash/issues
 [1]:https://twitter.com/ctitusbrown/
 
-## Versioning
+## Versioning and stability of features and APIs
 
-**Summary:** We recommend using _version pinning_ for software and workflows
-that depend on sourmash, e.g. specifying `sourmash >=3,<4` for software that
-is tested with sourmash 3.x. Read on for details!
+We do our best to guarantee stability of features and APIs within
+major versions - because of this, upgrading from (e.g.) sourmash v3.4 to
+sourmash v3.5 should be a simple matter of installing the new version.
+
+We also recommend using _version pinning_ for software and workflows
+that depend on sourmash, e.g. specifying `sourmash >=3,<4` for
+software that is tested with sourmash 3.x. Read on for details!
+
+Upgrading major versions (to sourmash 4.0, for example) will often involve
+more work; see the [next section](#upgrading-versions) for more
+our suggested process.
+
+### Semantic versioning
 
 Our goal is to support the use of sourmash in pipelines and
 applications by communicating clearly about bug fixes, feature
-additions, and feature changes.  Versions are tagged in a
+additions, and feature changes in sourmash.  Versions are tagged in a
 `vMAJOR.MINOR.PATCH` format, following the [Semantic Versioning]
 convention.  From their definition:
 
@@ -48,6 +58,20 @@ So, for example,
 We do sometimes (rarely!) alter behavior in minor versions by fixing
 bugs; this will be documented in release notes.
 
+### Version pinning
+
+For software and workflows that depend on sourmash, we recommend
+pinning versions to the current _major_ release of sourmash.
+
+For example, with Python toolchains such as pip, you should be able to use:
+
+```
+sourmash>=3,<4
+```
+to pin the version requirement to any sourmash v3.x release.
+
+For conda, the same syntax should work.
+
 ### Command line stability
 
 We intend that all command-line commands, command-line options, input
@@ -68,22 +92,6 @@ will contain deprecations for all top-level API changes at the time of
 the first major release.  See below for our suggested migration
 procedure.
 
-### Rust API
-
-The Rust API is not yet at 1.0 and should not be regarded as stable.
-
-### How to "pin" sourmash versions
-
-If you are relying on sourmash in a pipeline or application, we
-suggest specifying your version requirements at the major release,
-e.g. in conda you would specify `sourmash>=3,<4` to rely on sourmash
-v3.x features.
-
-Release notes for minor and patch versions are available on the
-[GitHub releases page](https://github.com/dib-lab/sourmash/releases).
-
-[Semantic Versioning]: https://semver.org/
-
 ### Python version support
 
 sourmash v3.x supports Python 2.7 as well as Python 3.x, through Python 3.8.
@@ -98,33 +106,41 @@ proposal for Python version support. For example, this
 would mean that we would drop support for Python 3.7 on December 26,
 2021.
 
-### Version pinning
+### Rust API
 
-We recommend pinning versions to the current _major_ release for
-software and workflows that depend on sourmash.
+The Rust API is not yet at 1.0 and should not be regarded as stable.
 
-With Python toolchains such as pip, you should be able to use:
+## Upgrading major versions
 
-```
-sourmash>=3,<4
-```
-to pin the version requirement to any sourmash v3.x release.
+If you depend on sourmash, we recommend using the following process:
 
-For conda, the same syntax should work.
+* pin sourmash to the major version you developed against, e.g. `sourmash >=3,<4`.
+* when ready to upgrade sourmash, upgrade to the latest minor release within that major version (e.g. sourmash 3.5.x).
+* scan for deprecations that affect you, check [the release notes](https://github.com/dib-lab/sourmash/releases), 
+and fix any major issues noted.
+* upgrade to the next major version (e.g. sourmash 4.0) and run your integration tests or workflow.
+* fix outstanding issues.
 
-## Migrating from sourmash v3.x to sourmash v4.x.
+In particular, we recommend upgrading major versions of sourmash in
+isolation, without adding any new features to your software.
 
-Our intent is to provide a clear path for migration between versions for our users. We rely on *semantic versioning* and deprecation warnings to do this -
-* Within each major version release (v2, v3, v4), the command-line interface and Python APIs should remain the same, with features being only *added*.
-* Across major versions (e.g. v2 to v3, and v3 to v4) we provide warnings when functionality will change in the next major version.
+### Migrating from sourmash v3.x to sourmash v4.x.
 
-So: if you want to upgrade workflows and scripts from prior releases of sourmash to sourmash v4.0, we suggest doing this in two stages.
+If you want to upgrade workflows and scripts from prior releases of
+sourmash to sourmash v4.0, we suggest doing this in two stages.
 
-First, upgrade to the latest version of sourmash 3.5.x (currently [v3.5.0](https://github.com/dib-lab/sourmash/releases/tag/v3.5.0)), which is compatible with all files and command lines used in previous versions of sourmash (v2.x and v3.x). After upgrading to 3.5.x, scan the sourmash output for deprecation warnings and fix those.
+First, upgrade to the latest version of sourmash 3.5.x (currently
+[v3.5.0](https://github.com/dib-lab/sourmash/releases/tag/v3.5.0)),
+which is compatible with all files and command lines used in previous
+versions of sourmash (v2.x and v3.x). After upgrading to 3.5.x, scan
+the sourmash output for deprecation warnings and fix those.
 
-Next, upgrade to the latest version of 4.x, which will introduce some backwards incompatibilities based upon the deprecation warnings.
+Next, upgrade to the latest version of 4.x, which will introduce some
+backwards incompatibilities based upon the deprecation warnings.
 
-The major changes are detailed below; please see the [full release notes for 4.0](release-notes/sourmash-4.0.md) for all the details and links to the code changes.
+The major changes are detailed below; please see the
+[full release notes for 4.0](release-notes/sourmash-4.0.md) for all
+the details and links to the code changes.
 
 ### Sourmash command line
 
