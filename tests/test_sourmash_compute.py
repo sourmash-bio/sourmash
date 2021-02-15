@@ -274,15 +274,14 @@ def test_do_sourmash_compute_10x_filter_umis():
         barcodes = [filename.replace(".fasta", "") for filename in fasta_files]
         assert len(barcodes) == 1
         assert len(fasta_files) == 1
-        print((barcodes[0],))
-        assert barcodes[0].startswith('lung_epithelial_cell_AAATGCCCAAACTGCT-1')
+        assert barcodes[0] == 'lung_epithelial_cell|AAATGCCCAAACTGCT-1'
         count = 0
         fasta_file_name = os.path.join(fastas_dir, fasta_files[0])
         for record in screed.open(fasta_file_name):
             name = record.name
             sequence = record.sequence
             count += 1
-            assert name.startswith('lung_epithelial_cell_AAATGCCCAAACTGCT-1')
+            assert name.startswith('lung_epithelial_cell|AAATGCCCAAACTGCT-1')
             assert sequence.count(">") == 0
             assert sequence.count("X") == 0
 
