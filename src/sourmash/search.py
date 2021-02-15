@@ -169,15 +169,13 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         intersect_bp = cmp_scaled * len(intersect_orig_hashes)
 
         # calculate fractions wrt first denominator - genome size
-        genome_n_hashes = len(found_hashes)
-        f_match = len(intersect_hashes) / float(genome_n_hashes)
-        f_orig_query = len(intersect_orig_hashes) / \
-            float(len(orig_query_hashes))
+        assert intersect_hashes.issubset(found_hashes)
+        f_match = len(intersect_hashes) / len(found_hashes)
+        f_orig_query = len(intersect_orig_hashes) / len(orig_query_hashes)
 
         # calculate fractions wrt second denominator - metagenome size
-        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
-        query_n_hashes = len(orig_query_mh) # @CTB reuse ^^^?
-        f_unique_to_query = len(intersect_hashes) / float(query_n_hashes)
+        assert intersect_hashes.issubset(orig_query_hashes)
+        f_unique_to_query = len(intersect_hashes) / len(orig_query_hashes)
 
         # calculate fraction of subject match with orig query
         f_match_orig = best_match.minhash.contained_by(orig_query_mh,
