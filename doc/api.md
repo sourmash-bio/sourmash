@@ -1,7 +1,9 @@
 # `sourmash` Python API
 
 The primary programmatic way of interacting with `sourmash` is via
-its Python API.  Please also see [examples of using the API](api-example.md).
+its Python API.
+
+**Please also see [examples of using the API](api-example.md).**
 
 ```{contents}
    :depth: 2
@@ -31,7 +33,7 @@ its Python API.  Please also see [examples of using the API](api-example.md).
    :undoc-members:
 ```
 
-# `sourmash.fig`: make plots and figures
+## `sourmash.fig`: make plots and figures
 
 ```{eval-rst}
 .. automodule:: sourmash.fig

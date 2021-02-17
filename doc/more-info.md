@@ -2,7 +2,7 @@
 
 ## Computational requirements
 
-Read more about the [compute requirements, here.](requirements.md)
+Read more about the [computational requirements, here.](requirements.md)
 
 ## Prepared search database
 
@@ -91,8 +91,10 @@ for samples.
 ## Interoperability with mash
 
 
-The default sketches computed by sourmash and mash are comparable, but
-we are still [working on ways to convert the file formats][11]
+The hashing functions used by sourmash and mash are the same, but we
+are still [working on ways to convert the file formats][11]. Please
+keep an eye on `sourmash signature import` and `sourmash signature
+export`!
 
 ## Developing sourmash
 

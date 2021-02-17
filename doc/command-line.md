@@ -4,11 +4,12 @@
 :depth: 3
 ```
 
-From the command line, sourmash can be used to compute
-[MinHash sketches][0] from DNA sequences, compare them to each other,
-and plot the results; these sketches are saved into "signature files".
-These signatures allow you to estimate sequence similarity quickly and
-accurately in large collections, among other capabilities.
+From the command line, sourmash can be used to create
+[MinHash sketches][0] from DNA and protein sequences, compare them to
+each other, and plot the results; these sketches are saved into
+"signature files".  These signatures allow you to estimate sequence
+similarity quickly and accurately in large collections, among other
+capabilities.
 
 Please see the [mash software][1] and the
 [mash paper (Ondov et al., 2016)][2] for background information on
@@ -25,11 +26,11 @@ Grab three bacterial genomes from NCBI:
 ```
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
 curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
-curl -L -O ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Sphingobacteriaceae_bacterium_DW12/latest_assembly_versions/GCF_000783305.1_ASM78330v1/GCF_000783305.1_ASM78330v1_genomic.fna.gz
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/783/305/GCA_000783305.1_ASM78330v1/GCA_000783305.1_ASM78330v1_genomic.fna.gz
 ```
 Compute signatures for each:
 ```
-   sourmash compute -k 31 *.fna.gz
+sourmash sketch dna -p k=31 *.fna.gz
 ```
 This will produce three `.sig` files containing MinHash signatures at k=31.
 
@@ -60,15 +61,16 @@ Matrix:
 
 To get a list of subcommands, run `sourmash` without any arguments.
 
-There are five main subcommands: `compute`, `compare`, `plot`,
-`search`, and `gather`.  See [the tutorial](tutorials.md) for a
+There are six main subcommands: `sketch`, `compare`, `plot`,
+`search`, `gather`, and `index`.  See [the tutorial](tutorials.md) for a
 walkthrough of these commands.
 
-* `compute` creates signatures.
+* `sketch` creates signatures.
 * `compare` compares signatures and builds a distance matrix.
 * `plot` plots distance matrices created by `compare`.
 * `search` finds matches to a query signature in a collection of signatures.
-* `gather` finds non-overlapping matches to a metagenome in a collection of signatures.
+* `gather` finds the best reference genomes for a metagenome, using the provided collection of signatures
+* `index` build a fast index for many (thousands) of signatures
 
 There are also a number of commands that work with taxonomic
 information; these are grouped under the `sourmash lca`
@@ -92,10 +94,42 @@ Finally, there are a number of utility and information commands:
 Please use the command line option `--help` to get more detailed usage
 information for each command.
 
-Note that as of sourmash v3.4, most commands will load signatures from
+Note that as of sourmash v3.4, all commands should load signatures from
 indexed databases (the SBT and LCA formats) as well as from signature files.
 
+### `sourmash sketch` - make sourmash signatures from sequence data
+
+Most of the commands in sourmash work with **signatures**, which contain information about genomic or proteomic sequences. Each signature contains one or more **sketches**, which are compressed versions of these sequences. Using sourmash, you can search, compare, and analyze these sequences in various ways.
+
+To create a signature with one or more sketches, you use the `sourmash sketch` command. There are three main commands:
+
+```
+sourmash sketch dna
+sourmash sketch protein
+sourmash sketch translate
+```
+
+The `sketch dna` command reads in **DNA sequences** and outputs **DNA sketches**.
+
+The `sketch protein` command reads in **protein sequences** and outputs **protein sketches**.
+
+The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
+
+`sourmash sketch` takes FASTA or FASTQ sequences as input, and they can be
+uncompressed, compressed with gzip, or compressed with bzip2. The output
+will be one or more JSON signature files that can be used with the other
+sourmash commands.
+
+Please see
+[the `sourmash sketch` documentation page](sourmash-sketch.md) for
+details on `sketch`, and see
+[Using sourmash: a practical guide](using-sourmash-a-guide.md) for
+more information on creating signatures.
+
 ### `sourmash compute` - make sourmash signatures from sequence data
+
+**Note: `sourmash compute` is deprecated in sourmash 4.0 and will be removed in
+sourmash 5.0; please switch to using `sourmash sketch`, above.**
 
 The `compute` subcommand computes and saves signatures for
 each sequence in one or more sequence files.  It takes as input FASTA
@@ -128,8 +162,8 @@ Optional arguments:
 
 
 The `compare` subcommand compares one or more signatures
-(created with `compute`) using estimated [Jaccard index][3] or
-(if signatures are computed with `--track-abundance`) the [angular
+(created with `sketch`) using estimated [Jaccard index][3] or
+(if signatures are created with `-p abund`) the [angular
 similarity](https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity).
 
 The default output
@@ -149,7 +183,7 @@ Options:
 ```
 --output -- save the distance matrix to this file (as a numpy binary matrix)
 --ksize -- do the comparisons at this k-mer size.
---containment -- compute containment instead of similarity.
+--containment -- calculate containment instead of similarity.
         C(i, j) = size(i intersection j) / size(i).
 --from-file -- append the list of files in this text file to the input
         signatures
@@ -160,7 +194,7 @@ Options:
 ### `sourmash plot` - cluster and visualize comparisons of many signatures
 
 The `plot` subcommand produces two plots -- a dendrogram and a
-dendrogram+matrix -- from a distance matrix computed by `sourmash compare
+dendrogram+matrix -- from a distance matrix created by `sourmash compare
 --output <matrix>`.  The default output is two PNG files.
 
 Usage:
@@ -219,13 +253,14 @@ similarity   match
 
 ### `sourmash gather` - find metagenome members
 
-The `gather` subcommand finds all non-overlapping matches to the
-query.  This is specifically meant for metagenome and genome bin
-analysis.  (See [Classifying Signatures](classifying-signatures.md)
-for more information on the different approaches that can be used
-here.)
+The `gather` subcommand selects the best reference genomes to use for
+a metagenome analysis, by finding the smallest set of non-overlapping
+matches to the query in a database.  This is specifically meant for
+metagenome and genome bin analysis.  (See
+[Classifying Signatures](classifying-signatures.md) for more
+information on the different approaches that can be used here.)
 
-If the input signature was computed with `--track-abundance`, output
+If the input signature was created with `-p abund`, output
 will be abundance weighted (unless `--ignore-abundances` is
 specified).  `-o/--output` will create a CSV file containing the
 matches.
@@ -262,6 +297,37 @@ Use `sourmash gather` to classify a metagenome against a collection of
 genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
+
+### `sourmash index` - build an SBT index of signatures
+
+The `sourmash index` command creates a Zipped SBT database
+(`.sbt.zip`) from a collection of signatures.  This can be used to
+create databases from private collections of genomes, and can also be
+used to create databases for e.g. subsets of GenBank.
+
+These databases support fast search and gather on large collections
+of signatures in low memory.
+
+SBTs can only be created on scaled signatures, and all signatures in
+an SBT must be of compatible types (i.e. the same k-mer size and
+molecule type). You can specify the usual command line selectors
+(`-k`, `--scaled`, `--dna`, `--protein`, etc.) to pick out the types
+of signatures to include.
+
+Usage:
+```
+sourmash index database [ list of input signatures/directories/databases ]
+```
+
+This will create a `database.sbt.zip` file containing the SBT of the
+input signatures. You can create an "unpacked" version by specifying
+`database.sbt.json` and it will create the JSON file as well as a
+subdirectory of files under `.sbt.database`.
+
+Note that you can use `--from-file` to pass `index` a text file
+containing a list of files to index; you can also provide individual
+signature files, directories full of signatures, or other sourmash
+databases.
 
 ## `sourmash lca` subcommands for taxonomic classification
 
@@ -570,8 +636,8 @@ sourmash signature merge file1.sig file2.sig -o merged.sig
 will output the union of all the hashes in `file1.sig` and `file2.sig`
 to `merged.sig`.
 
-All of the signatures passed to merge must either have been computed
-with `--track-abundance`, or not.  If they have `track_abundance` on,
+All of the signatures passed to merge must either have been created
+with `-p abund`, or not.  If they have `track_abundance` on,
 then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
@@ -603,7 +669,7 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 `file1.sig`, and save the new signature to `subtracted.sig`.
 
 To use `subtract` on signatures calculated with
-`--track-abundance`, you must specify `--flatten`.
+`-p abund`, you must specify `--flatten`.
 
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
@@ -627,10 +693,10 @@ Downsample one or more signatures.
 
 With `downsample`, you can --
 
-* increase the `--scaled` value for a signature computed with `--scaled`, shrinking it in size;
+* increase the `scaled` value for a signature created with `-p scaled=SCALED`, shrinking it in size;
 * decrease the `num` value for a traditional num MinHash, shrinking it in size;
-* try to convert a `--scaled` signature to a `num` signature;
-* try to convert a `num` signature to a `--scaled` signature.
+* try to convert a `scaled` signature to a `num` signature;
+* try to convert a `num` signature to a `scaled` signature.
 
 For example,
 ```
@@ -724,7 +790,7 @@ sourmash signature export filename.sig -o filename.sig.msh.json
 
 ### `sourmash signature overlap` - detailed comparison of two signatures' overlap
 
-Display a detailed comparison of two signatures. This computes the
+Display a detailed comparison of two signatures. This calculates the
 Jaccard similarity (as in `sourmash compare` or `sourmash search`) and
 the Jaccard containment in both directions (as with `--containment`).
 It also displays the number of hash values in the union and
@@ -778,14 +844,14 @@ signatures with multiple ksizes or moltypes at the same time; you need
 to pick the ksize and moltype to use for your search. Where possible,
 scaled values will be made compatible.
 
-#### Storing (and searching) signatures
+### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
 signatures.
 
 The simplest is one signature in a single JSON file. You can also put
 many signatures in a single JSON file, either by building them that
-way with `sourmash compute` or by using `sourmash sig cat` or other
+way with `sourmash sketch` or by using `sourmash sig cat` or other
 commands. Searching or comparing these files involves loading them
 sequentially and iterating across all of the signatures - which can be
 slow, especially for many (100s or 1000s) of signatures.
@@ -808,7 +874,7 @@ will complain. In contrast, signature files can
 contain many different types of signatures, and compatible ones will
 be discovered automatically.
 
-#### Passing in lists of files
+### Passing in lists of files
 
 Various sourmash commands will also take `--from-file` or
 `--query-from-file`, which will take a path to a text file containing
@@ -816,7 +882,7 @@ a list of file paths. This can be useful for situations where you want
 to specify thousands of queries, or a subset of signatures produced by
 some other command.
 
-#### Loading all signatures under a directory
+### Loading all signatures under a directory
 
 All of the `sourmash` commands support loading signatures from
 directories provided on the command line.
@@ -826,7 +892,7 @@ directories provided on the command line.
 All of the commands in sourmash operate in "online" mode, so you can
 combine multiple databases and signatures on the command line and get
 the same answer as if you built a single large database from all of
-them.  The only addendum to this rule is that if you have multiple
+them.  The only caveat to this rule is that if you have multiple
 identical matches, the first one to be found will differ depending on
 the order that the files are passed in on the command line.
 
@@ -842,11 +908,11 @@ been useful. :)
 ### Using stdin
 
 Most commands will take stdin via the usual UNIX convention, `-`.
-Moreover, `sourmash compute` and the `sourmash sig` commands will
+Moreover, `sourmash sketch` and the `sourmash sig` commands will
 output to stdout.  So, for example,
 
-`sourmash compute ... -o - | sourmash sig describe -` will describe the
-signatures that were just computed.
+`sourmash sketch ... -o - | sourmash sig describe -` will describe the
+signatures that were just created.
 
 (This is a relatively new feature as of 3.4 and our testing may need
 some work, so please
