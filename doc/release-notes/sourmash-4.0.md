@@ -36,6 +36,7 @@ migrating to sourmash 4.0 in the
 * remove `dump` command (#1157)
 
 ### Feature/function deprecations 
+
 * deprecate `sourmash compute` (#1159)
 * deprecate `load_signatures`, `sourmash.load_one_signature`, `create_sbt_index`, and `load_sbt_index` (#1279, #1304)
 * deprecate `import_csv` in favor of new `sourmash sig import --csv` (#1281)

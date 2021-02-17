@@ -130,7 +130,7 @@ If you want to upgrade workflows and scripts from prior releases of
 sourmash to sourmash v4.0, we suggest doing this in two stages.
 
 First, upgrade to the latest version of sourmash 3.5.x (currently
-[v3.5.0](https://github.com/dib-lab/sourmash/releases/tag/v3.5.0)),
+[v3.5.1](https://github.com/dib-lab/sourmash/releases/tag/v3.5.1)),
 which is compatible with all files and command lines used in previous
 versions of sourmash (v2.x and v3.x). After upgrading to 3.5.x, scan
 the sourmash output for deprecation warnings and fix those.
