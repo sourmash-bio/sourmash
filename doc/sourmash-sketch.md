@@ -16,6 +16,11 @@ The `sketch protein` command reads in **protein sequences** and outputs **protei
 
 The `sketch translate` command reads in **DNA sequences**, translates them in all six frames, and outputs **protein sketches**.
 
+All `sourmash sketch` commands take FASTA or FASTQ sequences as input;
+input data can be uncompressed, compressed with gzip, or compressed
+with bzip2. The output will be one or more JSON signature files that
+can be used with the other sourmash commands.
+
 ## Quickstart
 
 ### DNA sketches for genomes and reads

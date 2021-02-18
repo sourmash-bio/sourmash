@@ -8,8 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
-    htslib pysam twine
+conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make twine
 ```
 
 Then activate it with `conda activate sourmash-rc`.
