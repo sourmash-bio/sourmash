@@ -24,7 +24,7 @@ The latest major release is sourmash v4, which has several
 command-line and Python incompatibilities with previous
 versions. Please
 [visit our migration guide](https://sourmash.readthedocs.io/en/latest/support.html#migrating-from-sourmash-v3-x-to-sourmash-4-x)
-to ugprade!
+to upgrade!
 
 ----
 
