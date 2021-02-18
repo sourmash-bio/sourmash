@@ -886,7 +886,7 @@ some other command.
 ### Loading all signatures under a directory
 
 All of the `sourmash` commands support loading signatures from
-beneath directories provide; provide the paths on the command line.
+beneath directories; provide the paths on the command line.
 
 ### Combining search databases on the command line
 
