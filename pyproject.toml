@@ -1,0 +1,21 @@
+[build-system]
+requires = [
+    "setuptools >= 48",
+    "setuptools_scm[toml] >= 4, <6",
+    "setuptools_scm_git_archive",
+    "milksnake",
+    "wheel >= 0.29.0",
+]
+build-backend = 'setuptools.build_meta'
+
+[tool.setuptools_scm]
+write_to = "src/sourmash/version.py"
+git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+
+[tool.isort]
+known_third_party = ["deprecation", "hypothesis", "mmh3", "numpy", "pkg_resources", "pytest", "screed", "setuptools", "sourmash_tst_utils"]
+multi_line_output = 3 
+include_trailing_comma = true
+force_grid_wrap = 0
+line_length = 88
+known_first_party = ["sourmash"]

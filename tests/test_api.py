@@ -1,16 +1,18 @@
 import pytest
 import sourmash
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
-def test_sourmash_signature_api():
+@utils.in_tempdir
+def test_sourmash_signature_api(c):
     e = sourmash.MinHash(n=1, ksize=20)
     sig = sourmash.SourmashSignature(e)
 
-    s = sourmash.save_signatures([sig])
-    sig_x1 = sourmash.load_one_signature(s)
-    sig_x2 = list(sourmash.load_signatures(s))[0]
+    with open(c.output('xxx.sig'), 'wt') as fp:
+        sourmash.save_signatures([sig], fp)
+    sig_x1 = sourmash.load_one_signature(c.output('xxx.sig'))
+    sig_x2 = list(sourmash.load_file_as_signatures(c.output('xxx.sig')))[0]
 
     assert sig_x1 == sig
     assert sig_x2 == sig

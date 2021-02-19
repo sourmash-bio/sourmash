@@ -6,7 +6,7 @@ import pytest
 
 from sourmash.hll import HLL
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 K = 21  # size of kmer
 ERR_RATE = 0.01

@@ -5,7 +5,7 @@ import pytest
 import sourmash
 from sourmash.signature import SourmashSignature, save_signatures, \
     load_signatures, load_one_signature
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_compare(track_abundance):
@@ -129,7 +129,7 @@ def test_roundtrip_empty(track_abundance):
     assert sig2.similarity(sig) == 0
 
 
-def test_roundtrip_max_hash(track_abundance):
+def test_roundtrip_scaled(track_abundance):
     e = sourmash.MinHash(n=0, ksize=20, track_abundance=track_abundance,
                          max_hash=10)
     e.add_hash(5)
@@ -139,7 +139,7 @@ def test_roundtrip_max_hash(track_abundance):
     sig2 = siglist[0]
     e2 = sig2.minhash
 
-    assert e.max_hash == e2.max_hash
+    assert e.scaled == e2.scaled
 
     assert sig.similarity(sig2) == 1.0
     assert sig2.similarity(sig) == 1.0

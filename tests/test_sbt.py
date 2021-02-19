@@ -5,15 +5,16 @@ import os
 import pytest
 
 import sourmash
-from sourmash import load_one_signature, SourmashSignature, load_signatures
+from sourmash import (load_one_signature, SourmashSignature,
+                      load_file_as_signatures)
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
-                            search_minhashes_containment)
+                            search_minhashes_containment, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
 
 
 def test_simple(n_children):
@@ -340,7 +341,7 @@ def test_sbt_zipstorage(tmpdir):
     tree = SBT(factory)
 
     for f in utils.SIG_FILES:
-        sig = next(load_signatures(utils.get_test_data(f)))
+        sig = next(load_file_as_signatures(utils.get_test_data(f)))
         leaf = SigLeaf(os.path.basename(f), sig)
         tree.add_node(leaf)
         to_search = leaf
@@ -773,9 +774,9 @@ def test_sbt_protein_command_index(c):
     db_out = c.output('protein.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--protein')
+                   '--scaled', '100', '-k', '19', '--protein')
 
-    db2 = sourmash.load_sbt_index(db_out)
+    db2 = load_sbt_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
@@ -819,9 +820,9 @@ def test_sbt_hp_command_index(c):
     db_out = c.output('hp.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--hp')
+                   '--scaled', '100', '-k', '19', '--hp')
 
-    db2 = sourmash.load_sbt_index(db_out)
+    db2 = load_sbt_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)
@@ -865,9 +866,9 @@ def test_sbt_dayhoff_command_index(c):
     db_out = c.output('dayhoff.sbt.zip')
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
-                   '--scaled', '100', '-k', '57', '--dayhoff')
+                   '--scaled', '100', '-k', '19', '--dayhoff')
 
-    db2 = sourmash.load_sbt_index(db_out)
+    db2 = load_sbt_index(db_out)
 
     sig1 = sourmash.load_one_signature(sigfile1)
     sig2 = sourmash.load_one_signature(sigfile2)

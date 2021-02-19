@@ -3,7 +3,7 @@
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
-[![Build Status](https://travis-ci.com/dib-lab/sourmash.svg?branch=latest)](https://travis-ci.com/dib-lab/sourmash)
+[![Build Status](https://github.com/dib-lab/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/dib-lab/sourmash/actions/)
 [![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
 <a href="https://pypi.org/project/sourmash/"><img alt="PyPI" src="https://badge.fury.io/py/sourmash.svg"></a>
 [![codecov](https://codecov.io/gh/dib-lab/sourmash/branch/latest/graph/badge.svg)](https://codecov.io/gh/dib-lab/sourmash)
@@ -14,11 +14,17 @@ Quickly search, compare, and analyze genomic and metagenomic data sets.
 
 Usage:
 
-    sourmash compute *.fq.gz
-    sourmash compare *.sig -o distances
-    sourmash plot distances
+    sourmash sketch dna *.fq.gz
+    sourmash compare *.sig -o distances.cmp -k 31
+    sourmash plot distances.cmp
 
 sourmash 1.0 is [published on JOSS](https://doi.org/10.21105/joss.00027); please cite that paper if you use sourmash (`doi: 10.21105/joss.00027`):.
+
+The latest major release is sourmash v4, which has several
+command-line and Python incompatibilities with previous
+versions. Please
+[visit our migration guide](https://sourmash.readthedocs.io/en/latest/support.html#migrating-from-sourmash-v3-x-to-sourmash-4-x)
+to upgrade!
 
 ----
 
@@ -42,7 +48,7 @@ We recommend using bioconda to install sourmash:
 ```
 conda install -c conda-forge -c bioconda sourmash
 ```
-This will install the latest stable version of sourmash 3.
+This will install the latest stable version of sourmash 4.
 
 You can also use pip to install sourmash:
 
@@ -70,7 +76,7 @@ you can install sourmash by running:
 ```bash
 $ conda create -n sourmash_env -c conda-forge -c bioconda sourmash python=3.7
 $ source activate sourmash_env
-$ sourmash compute -h
+$ sourmash --help
 ```
 
 which will install
@@ -107,4 +113,4 @@ on getting set up with a development environment.
 ----
 
 CTB
-July 2020
+Feb 2021

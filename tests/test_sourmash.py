@@ -12,7 +12,8 @@ import pytest
 import sys
 import zipfile
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
+
 import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node
@@ -310,13 +311,14 @@ def test_do_compare_output_multiple_moltype(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
-    c.run_sourmash('compute', '-k', '21', '--protein', testdata2)
+    c.run_sourmash('compute', '-k', '63', '--no-dna', '--protein', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
                        fail_ok=True)
 
     assert c.last_result.status == -1
+    print(c.last_result.err)
     assert 'multiple molecule types loaded;' in c.last_result.err
 
 
@@ -931,8 +933,13 @@ def test_compare_no_choose_molecule_fail():
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
                                            ['compute', '-k', '30',
-                                            '--dna', '--protein',
-                                            testdata1, testdata2],
+                                            '--dna',
+                                            testdata1],
+                                           in_directory=location)
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', '-k', '90',
+                                            '--no-dna', '--protein',
+                                            testdata2],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -980,7 +987,7 @@ def test_search_deduce_molecule():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '(k=30, protein)' in err
+        assert '(k=10, protein)' in err
 
 
 def test_search_deduce_ksize():
@@ -3662,7 +3669,7 @@ def test_gather_abund_10_1(c):
     assert total_bp_analyzed == total_query_bp
 
 
-@utils.in_thisdir
+@utils.in_tempdir
 def test_gather_abund_10_1_ignore_abundance(c):
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -3679,7 +3686,9 @@ def test_gather_abund_10_1_ignore_abundance(c):
 
     status, out, err = c.run_sourmash('gather', query,
                                       '--ignore-abundance',
-                                      *against_list)
+                                      *against_list,
+                                      '-o', c.output('results.csv'))
+
 
     print(out)
     print(err)
@@ -3694,6 +3703,18 @@ def test_gather_abund_10_1_ignore_abundance(c):
     assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
     assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
     assert 'genome-s12.fa.gz' not in out
+
+    with open(c.output('results.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        some_results = False
+        for row in r:
+            some_results = True
+            assert row['average_abund'] is ''
+            assert row['median_abund'] is ''
+            assert row['std_abund'] is ''
+
+        assert some_results
+            
 
 
 @utils.in_tempdir
@@ -4114,6 +4135,12 @@ def test_do_sourmash_index_zipfile_append(c):
     first_half = testdata_sigs[:half_point]
     second_half = testdata_sigs[half_point:]
 
+    print(first_half)
+    print(second_half)
+
+    # should be no overlap
+    assert not set(first_half).intersection(set(second_half))
+
     with pytest.warns(None) as record:
         c.run_sourmash('index', '-k', '31', 'zzz.sbt.zip',
                        *first_half)
@@ -4131,7 +4158,8 @@ def test_do_sourmash_index_zipfile_append(c):
         c.run_sourmash('index', "--append", '-k', '31', 'zzz.sbt.zip',
                        *second_half)
     # UserWarning is raised when there are duplicated entries in the zipfile
-    assert not record
+    print(record)
+    assert not record, record
 
     print(c)
     assert c.last_result.status == 0

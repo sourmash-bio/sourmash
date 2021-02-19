@@ -8,8 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
-    htslib pysam twine
+conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make twine
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -146,7 +145,7 @@ git push --delete origin v${new_version}${rc}
 
 3\. Upload wheels from GitHub Releases to PyPI
 
-[Travis will automatically build wheels and upload them to GitHub Releases](https://travis-ci.com/github/dib-lab/sourmash/).
+[GitHub Actions will automatically build wheels and upload them to GitHub Releases](https://github.com/dib-lab/sourmash/actions?query=workflow%3Acibuildwheel).
 This will take about 45 minutes, or more. After they're built, they must be
 copied over to PyPI manually.
 

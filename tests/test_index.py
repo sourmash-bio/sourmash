@@ -6,7 +6,8 @@ import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
-from . import sourmash_tst_utils as utils
+
+import sourmash_tst_utils as utils
 
 
 def test_simple_index(n_children):
@@ -156,8 +157,7 @@ def test_linear_index_save():
         filename = os.path.join(location, 'foo')
         linear.save(filename)
 
-        from sourmash import load_signatures
-        si = set(load_signatures(filename))
+        si = set(sourmash.load_file_as_signatures(filename))
 
     x = {ss2, ss47, ss63}
 
@@ -320,7 +320,7 @@ def test_linear_gather_threshold_5():
 def test_linear_index_multik_select():
     # this loads three ksizes, 21/31/51
     sig2 = utils.get_test_data('2.fa.sig')
-    siglist = sourmash.load_signatures(sig2)
+    siglist = sourmash.load_file_as_signatures(sig2)
 
     linear = LinearIndex()
     for ss in siglist:
@@ -336,9 +336,9 @@ def test_linear_index_multik_select():
 
 
 def test_linear_index_moltype_select():
-    # this loads two ksizes(21, 30), and two moltypes (DNA and protein)
+    # this loads two ksizes(21, 10), and two moltypes (DNA and protein)
     filename = utils.get_test_data('genome-s10+s11.sig')
-    siglist = sourmash.load_signatures(filename)
+    siglist = sourmash.load_file_as_signatures(filename)
 
     linear = LinearIndex()
     for ss in siglist:
@@ -349,7 +349,7 @@ def test_linear_index_moltype_select():
     assert len(linear2) == 1
 
     # select most specific protein
-    linear2 = linear.select(ksize=30, moltype='protein')
+    linear2 = linear.select(ksize=10, moltype='protein')
     assert len(linear2) == 1
 
     # can leave off ksize, selects all ksizes

@@ -10,7 +10,8 @@ import json
 import csv
 import pytest
 
-from . import sourmash_tst_utils as utils
+import sourmash_tst_utils as utils
+
 import sourmash
 from sourmash import MinHash
 from sourmash.sbt import SBT, Node
@@ -243,6 +244,7 @@ def test_do_sourmash_compute_multik():
         ksizes = set([ x.minhash.ksize for x in siglist ])
         assert 21 in ksizes
         assert 31 in ksizes
+        assert len(ksizes) == 2
 
 
 def test_do_sourmash_compute_multik_with_protein():
@@ -263,6 +265,9 @@ def test_do_sourmash_compute_multik_with_protein():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
+            assert len(ksizes) == 4
 
 
 def test_do_sourmash_compute_multik_with_dayhoff():
@@ -283,9 +288,10 @@ def test_do_sourmash_compute_multik_with_dayhoff():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.dayhoff for x in siglist)
+            assert len(ksizes) == 2
 
 
 def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
@@ -306,8 +312,11 @@ def test_do_sourmash_compute_multik_with_dayhoff_and_dna():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
             assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
+            assert len(ksizes) == 4
 
 
 def test_do_sourmash_compute_multik_with_hp():
@@ -328,9 +337,10 @@ def test_do_sourmash_compute_multik_with_hp():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert all(x.minhash.hp for x in siglist)
+            assert len(ksizes) == 2
 
 
 def test_do_sourmash_compute_multik_with_hp_and_dna():
@@ -343,6 +353,17 @@ def test_do_sourmash_compute_multik_with_hp_and_dna():
                                            in_directory=location)
         outfile = os.path.join(location, 'short.fa.sig')
         assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 4
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 7 in ksizes
+            assert 10 in ksizes
+            assert 21 in ksizes
+            assert 30 in ksizes
+            assert len(ksizes) == 4
 
 
 def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
@@ -363,9 +384,12 @@ def test_do_sourmash_compute_multik_with_dayhoff_dna_protein():
             ksizes = set([ x.minhash.ksize for x in siglist ])
             assert 21 in ksizes
             assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
             assert sum(x.minhash.moltype == 'dayhoff' for x in siglist) == 2
             assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
+            assert len(ksizes) == 4
 
 
 def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
@@ -384,6 +408,8 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 8
             ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 7 in ksizes
+            assert 10 in ksizes
             assert 21 in ksizes
             assert 30 in ksizes
             assert sum(x.minhash.moltype == 'DNA' for x in siglist) == 2
@@ -391,6 +417,7 @@ def test_do_sourmash_compute_multik_with_dayhoff_hp_dna_protein():
             assert sum(x.minhash.moltype == 'hp' for x in siglist) == 2
             # 2 = dayhoff, 2 = hp = 4 protein
             assert sum(x.minhash.moltype == 'protein' for x in siglist) == 2
+            assert len(ksizes) == 4
 
 
 def test_do_sourmash_compute_multik_with_nothing():
@@ -434,11 +461,12 @@ def test_do_sourmash_compute_multik_only_protein(c):
         siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
+        assert len(ksizes) == 2
 
 
-def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
+def test_do_sourmash_compute_multik_protein_input_bad_ksize():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short-protein.fa')
         status, out, err = utils.runscript('sourmash',
@@ -449,7 +477,8 @@ def test_do_sourmash_compute_multik_protein_input_non_div3_ksize():
                                            in_directory=location,
                                            fail_ok=True)
         outfile = os.path.join(location, 'short-protein.fa.sig')
-        assert os.path.exists(outfile)
+        assert status != 0
+        assert 'protein ksizes must be divisible by 3' in err
 
 
 @utils.in_tempdir
@@ -467,8 +496,9 @@ def test_do_sourmash_compute_multik_only_protein_no_rna(c):
         siglist = list(signature.load_signatures(sigdata))
         assert len(siglist) == 2
         ksizes = set([ x.minhash.ksize for x in siglist ])
-        assert 21 in ksizes
-        assert 30 in ksizes
+        assert 7 in ksizes
+        assert 10 in ksizes
+        assert len(ksizes) == 2
 
 
 def test_do_sourmash_compute_protein_bad_sequences():
@@ -488,8 +518,9 @@ def test_do_sourmash_compute_protein_bad_sequences():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
+            assert len(ksizes) == 2
 
 
 def test_do_sourmash_compute_multik_input_is_protein():
@@ -508,8 +539,9 @@ def test_do_sourmash_compute_multik_input_is_protein():
             siglist = list(signature.load_signatures(sigdata))
             assert len(siglist) == 2
             ksizes = set([ x.minhash.ksize for x in siglist ])
-            assert 21 in ksizes
-            assert 30 in ksizes
+            assert 7 in ksizes
+            assert 10 in ksizes
+            assert len(ksizes) == 2
 
             moltype = set([ x.minhash.moltype == 'protein'
                             for x in siglist ])
@@ -548,9 +580,9 @@ def test_do_sourmash_compute_with_scaled_1():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
-        assert len(max_hashes) == 2
-        assert set(max_hashes) == { sourmash.MAX_HASH }
+        scaled_vals = [ x.minhash.scaled for x in siglist ]
+        assert len(scaled_vals) == 2
+        assert set(scaled_vals) == { 1 }
 
 
 def test_do_sourmash_compute_with_scaled_2():
@@ -567,7 +599,7 @@ def test_do_sourmash_compute_with_scaled_2():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /2.) ])
 
@@ -586,7 +618,7 @@ def test_do_sourmash_compute_with_scaled():
         siglist = list(signature.load_signatures(outfile))
         assert len(siglist) == 2
 
-        max_hashes = [ x.minhash.max_hash for x in siglist ]
+        max_hashes = [ x.minhash._max_hash for x in siglist ]
         assert len(max_hashes) == 2
         assert set(max_hashes) == set([ int(2**64 /100.) ])
 
