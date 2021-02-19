@@ -844,9 +844,8 @@ def abundhist(args):
     outlist = []
     total_loaded = 0
     for filename in args.signatures:
-        siglist = sourmash.load_signatures(filename, ksize=args.ksize,
-                                           select_moltype=moltype,
-                                           do_raise=True)
+        siglist = sourmash.load_file_as_signatures(filename, ksize=args.ksize,
+                                                   select_moltype=moltype)
         siglist = list(siglist)
 
         total_loaded += len(siglist)
@@ -865,8 +864,7 @@ def abundhist(args):
 
     counts_d = collections.defaultdict(int)
     for ss in siglist:
-        abunds = ss.minhash.get_mins(with_abundance=True)
-        for hashval, abund in abunds.items():
+        for hashval, abund in ss.minhash.hashes.items():
             counts_d[hashval] += abund
 
     all_counts = list(counts_d.values())
