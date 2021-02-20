@@ -29,6 +29,23 @@ def notify(s, *args, **kwargs):
         sys.stderr.flush()
 
 
+def short_notify(msg_template, end='\n', screen_width=80, *args, **kwargs):
+    """Shorten the notification message so that it fits on one line.
+
+    Good for repeating notifications with end='\r' especially...
+    """
+
+    if args or kwargs:
+        msg = msg_template.format(*args, **kwargs)
+        w = self.screen_width
+
+    if len(msg) > w:
+        truncate_len = len(msg) - w + 3
+        msg = '<<<' + msg[truncate_len:]
+
+    notify(msg, end=end)
+
+
 def debug(s, *args, **kwargs):
     "A debug logging function => stderr."
     if _quiet or not _debug:
