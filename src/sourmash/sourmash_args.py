@@ -581,6 +581,37 @@ class FileOutput(object):
 
         return False
 
+class FileOutputCSV(FileOutput):
+    """A context manager for CSV file outputs.
+
+    Usage:
+
+       with FileOutputCSV(filename) as fp:
+          ...
+
+    does what you'd expect, but it handles the situation where 'filename'
+    is '-' or None. This makes it nicely compatible with argparse usage,
+    e.g.
+
+    p = argparse.ArgumentParser()
+    p.add_argument('--output')
+    args = p.parse_args()
+    ...
+    with FileOutputCSV(args.output) as w:
+       ...
+
+    will properly handle no argument or '-' as sys.stdout.
+    """
+    def __init__(self, filename):
+        self.filename = filename
+        self.fp = None
+
+    def open(self):
+        if self.filename == '-' or self.filename is None:
+            return sys.stdout
+        self.fp = open(self.filename, 'w', newline='')
+        return self.fp
+
 
 class SignatureLoadingProgress(object):
     """A wrapper for signature loading progress reporting.

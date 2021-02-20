@@ -191,7 +191,7 @@ def describe(args):
     w = None
     csv_fp = None
     if args.csv:
-        csv_fp = open(args.csv, 'wt')
+        csv_fp = open(args.csv, 'w', newline='')
         w = csv.DictWriter(csv_fp,
                            ['signature_file', 'md5', 'ksize', 'moltype', 'num',
                             'scaled', 'n_hashes', 'seed', 'with_abundance',
@@ -751,8 +751,8 @@ def sig_import(args):
     siglist = []
     if args.csv:
         for filename in args.filenames:
-            with open(filename, 'rt') as fp:
-                reader = csv.reader(fp)
+            with open(filename, newline='') as csv_fp:
+                reader = csv.reader(csv_fp)
                 siglist = []
                 for row in reader:
                     hashfn = row[0]

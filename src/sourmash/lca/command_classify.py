@@ -114,7 +114,7 @@ def classify(args):
     # set up output
     csvfp = csv.writer(sys.stdout)
     notify("outputting classifications to {}", args.output)
-    with sourmash_args.FileOutput(args.output, 'wt') as outfp:
+    with sourmash_args.FileOutputCSV(args.output) as outfp:
         csvfp = csv.writer(outfp)
 
         csvfp.writerow(['ID','status'] + list(lca_utils.taxlist()))

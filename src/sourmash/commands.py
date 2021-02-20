@@ -15,7 +15,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput
+from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -153,7 +153,7 @@ def compare(args):
 
     # output CSV?
     if args.csv:
-        with FileOutput(args.csv, 'w', newline='') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(labeltext)
 
@@ -263,7 +263,7 @@ def plot(args):
 
     # write out re-ordered matrix and labels
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(rlabels)
 
@@ -278,7 +278,7 @@ def plot(args):
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
 
-    with open(args.mash_csvfile, 'r') as fp:
+    with open(args.mash_csvfile, newline='') as fp:
         reader = csv.reader(fp)
         siglist = []
         for row in reader:
@@ -479,7 +479,7 @@ def search(args):
     if args.output:
         fieldnames = ['similarity', 'name', 'filename', 'md5']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
             w.writeheader()
@@ -503,7 +503,7 @@ def categorize(args):
     # eliminate names we've already categorized
     already_names = set()
     if args.load_csv:
-        with open(args.load_csv, 'rt') as fp:
+        with open(args.load_csv, newline='') as fp:
             r = csv.reader(fp)
             for row in r:
                 already_names.add(row[0])
@@ -523,7 +523,7 @@ def categorize(args):
     csv_w = None
     csv_fp = None
     if args.csv:
-        csv_fp = open(args.csv, 'wt')
+        csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
     for queryfile, query, query_moltype, query_ksize in loader:
@@ -661,7 +661,7 @@ def gather(args):
                       'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
                       'gather_result_rank', 'remaining_bp']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
             for result in found:
@@ -797,7 +797,7 @@ def multigather(args):
                           'filename', 'md5', 'f_match_orig',
                           'unique_intersect_bp', 'gather_result_rank',
                           'remaining_bp']
-            with open(output_csv, 'wt') as fp:
+            with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
                 for result in found:

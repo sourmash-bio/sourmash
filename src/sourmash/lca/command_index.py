@@ -23,10 +23,8 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     The 'assignments' dictionary that's returned maps identifiers to
     lineage tuples.
     """
-    mode = 'rt'
-
     # parse spreadsheet!
-    fp = open(filename, mode)
+    fp = open(filename, newline='')
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(start_column - 2)
