@@ -10,7 +10,7 @@ import time
 
 from . import sourmash_args
 from .signature import SourmashSignature, save_signatures
-from .logging import notify, error, set_quiet
+from .logging import notify, error, set_quiet, short_notify
 from .utils import RustObject
 from ._lowlevel import ffi, lib
 

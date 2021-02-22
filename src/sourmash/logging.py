@@ -29,15 +29,16 @@ def notify(s, *args, **kwargs):
         sys.stderr.flush()
 
 
-def short_notify(msg_template, end='\n', screen_width=80, *args, **kwargs):
+def short_notify(msg_template, *args, end='\n', screen_width=80, **kwargs):
     """Shorten the notification message so that it fits on one line.
 
     Good for repeating notifications with end='\r' especially...
     """
-
+    w = screen_width
     if args or kwargs:
         msg = msg_template.format(*args, **kwargs)
-        w = self.screen_width
+    else:
+        msg = msg_template
 
     if len(msg) > w:
         truncate_len = len(msg) - w + 3
