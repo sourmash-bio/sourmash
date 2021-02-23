@@ -357,10 +357,12 @@ class SBT(Index):
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = float(threshold)
+
         if do_containment and do_max_containment:
             raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
-
-        threshold = float(threshold)
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))

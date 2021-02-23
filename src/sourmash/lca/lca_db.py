@@ -302,7 +302,8 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None, do_containment=False,
+               do_max_containment=False, ignore_abundance=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -321,12 +322,10 @@ class LCA_Database(Index):
             return []
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if threshold is None:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
-        do_containment = kwargs.get('do_containment', False)
-        do_max_containment = kwargs.get('do_max_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        threshold = float(threshold)
+
         mh = query.minhash
         if ignore_abundance:
             mh.track_abundance = False
