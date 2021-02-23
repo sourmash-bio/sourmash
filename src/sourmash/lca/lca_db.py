@@ -500,7 +500,8 @@ class LCA_Database(Index):
                 score = count / len(query_mins)
             elif max_containment:
                 # @CTB @CTB
-                score = count / len(query_mins)
+                denom = min((len(query_mins), match_size))
+                score = count / denom
             else:
                 # query_mins is size of query signature
                 # match_size is size of match signature
