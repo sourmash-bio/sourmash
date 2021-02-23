@@ -349,7 +349,8 @@ class SBT(Index):
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import (search_minhashes, search_minhashes_containment,
+                            search_minhashes_max_containment)
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
@@ -375,6 +376,8 @@ class SBT(Index):
         query_match = lambda x: tree_query.similarity(
             x, downsample=False, ignore_abundance=ignore_abundance)
         if do_containment:
+            if max_containment:
+                raise Exception # @CTB
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
         elif do_max_containment:
@@ -389,7 +392,8 @@ class SBT(Index):
         results = []
 
         # here, self.find is used only to find candidate nodes;
-        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+        for leaf in self.find(search_fn, tree_query, threshold,
+                              unload_data=unload_data):
             # the actual calculation of node match is done here:
             similarity = query_match(leaf.data)
 

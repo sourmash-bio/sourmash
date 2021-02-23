@@ -169,16 +169,23 @@ def search_minhashes_max_containment(node, sig, threshold, results=None,
     mh = sig.minhash
 
     if isinstance(node, SigLeaf):
-        matches = node.data.minhash.count_common(mh, downsample)
+        node_mh = node.data.minhash
+
+        matches = node_mh.count_common(mh, downsample)
+        node_size = len(node_mh)
     else:  # Node or Leaf, Nodegraph by minhash comparison
         matches = node.data.matches(mh)
 
-    if results is not None:
-        results[node.name] = float(matches) / len(mh)
+        # get the size of the smallest collection of hashes below this point
+        node_size = node.metadata.get('min_n_below', -1)
 
-    # @CTB @CTB
-    # the challenge here is that it is not clear we have a way to properly
-    # estimate max_containment. Can we use min_n_below?
+        if node_size == -1:
+            raise Exception('cannot do max_containment search on this SBT; need to rebuild.')
+
+    denom = min((len(mh), len(mh))
+
+    if results is not None:
+        results[node.name] = float(matches) / denom
 
     if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
