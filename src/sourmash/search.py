@@ -25,16 +25,11 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance, unload_data=False):
+def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
     for (obj, filename, filetype) in databases:
-        search_iter = obj.search(query, threshold=threshold,
-                                 do_containment=do_containment,
-                                 ignore_abundance=ignore_abundance,
-                                 best_only=best_only,
-                                 unload_data=unload_data)
+        search_iter = obj.search(query, **kwargs)
         for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
