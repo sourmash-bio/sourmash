@@ -38,7 +38,9 @@ class Index(ABC):
                 matches.append(node)
         return matches
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None,
+               do_containment=False, do_max_containment=False,
+               ignore_abundance=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -55,13 +57,12 @@ class Index(ABC):
         """
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if threshold is None:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
+        threshold = float(threshold)
 
-        do_containment = kwargs.get('do_containment', False)
-        do_max_containment = kwargs.get('do_max_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
         # configure search - containment? ignore abundance?
         if do_containment:

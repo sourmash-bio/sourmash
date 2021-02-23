@@ -336,7 +336,10 @@ class SBT(Index):
 
         return matches
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None,
+               ignore_abundance=False, do_containment=False,
+               do_max_containment=False, best_only=False,
+               unload_data=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -354,11 +357,10 @@ class SBT(Index):
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
-        threshold = kwargs['threshold']
-        ignore_abundance = kwargs.get('ignore_abundance', False)
-        do_containment = kwargs.get('do_containment', False)
-        best_only = kwargs.get('best_only', False)
-        unload_data = kwargs.get('unload_data', False)
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
+
+        threshold = float(threshold)
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -376,8 +378,6 @@ class SBT(Index):
         query_match = lambda x: tree_query.similarity(
             x, downsample=False, ignore_abundance=ignore_abundance)
         if do_containment:
-            if max_containment:
-                raise Exception # @CTB
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
         elif do_max_containment:
