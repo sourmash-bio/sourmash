@@ -332,7 +332,8 @@ class LCA_Database(Index):
 
         # find all the matches, then sort & return.
         results = []
-        for x in self._find_signatures(mh, threshold, do_containment):
+        for x in self._find_signatures(mh, threshold, do_containment,
+                                       do_max_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
@@ -470,7 +471,7 @@ class LCA_Database(Index):
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that containment can be calculated w/o matching scaled.
+            # note that containment cannot be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         query_mins = set(minhash.hashes)
@@ -498,7 +499,6 @@ class LCA_Database(Index):
             if containment:
                 score = count / len(query_mins)
             elif max_containment:
-                # @CTB @CTB
                 denom = min((len(query_mins), match_size))
                 score = count / denom
             else:
