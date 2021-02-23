@@ -182,7 +182,7 @@ def search_minhashes_max_containment(node, sig, threshold, results=None,
         if node_size == -1:
             raise Exception('cannot do max_containment search on this SBT; need to rebuild.')
 
-    denom = min((len(mh), len(mh))
+    denom = min((len(mh), len(mh)))
 
     if results is not None:
         results[node.name] = float(matches) / denom
