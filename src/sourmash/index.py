@@ -67,7 +67,7 @@ class Index(ABC):
         if do_containment:
             query_match = lambda x: query.contained_by(x, downsample=True)
         elif do_max_containment:
-            query_match = lambda x: query.max_containmenty(x, downsample=True)
+            query_match = lambda x: query.max_containment(x, downsample=True)
         else:
             query_match = lambda x: query.similarity(
                 x, downsample=True, ignore_abundance=ignore_abundance)
