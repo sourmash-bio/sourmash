@@ -387,7 +387,10 @@ class SBT(Index):
 
         # now, search!
         results = []
+
+        # here, self.find is used only to find candidate nodes;
         for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+            # the actual calculation of node match is done here:
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold

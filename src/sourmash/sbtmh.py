@@ -177,6 +177,8 @@ def search_minhashes_max_containment(node, sig, threshold, results=None,
         results[node.name] = float(matches) / len(mh)
 
     # @CTB @CTB
+    # the challenge here is that it is not clear we have a way to properly
+    # estimate max_containment. Can we use min_n_below?
 
     if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
