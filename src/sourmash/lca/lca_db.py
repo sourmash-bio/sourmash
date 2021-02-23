@@ -325,6 +325,7 @@ class LCA_Database(Index):
             raise TypeError("'search' requires 'threshold'")
         threshold = kwargs['threshold']
         do_containment = kwargs.get('do_containment', False)
+        do_max_containment = kwargs.get('do_max_containment', False)
         ignore_abundance = kwargs.get('ignore_abundance', False)
         mh = query.minhash
         if ignore_abundance:
@@ -457,7 +458,8 @@ class LCA_Database(Index):
         return sigd
 
     def _find_signatures(self, minhash, threshold, containment=False,
-                       ignore_scaled=False):
+                         max_containment=False,
+                         ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search, yield results.
 
@@ -495,6 +497,9 @@ class LCA_Database(Index):
 
             # calculate the containment or similarity
             if containment:
+                score = count / len(query_mins)
+            elif max_containment:
+                # @CTB @CTB
                 score = count / len(query_mins)
             else:
                 # query_mins is size of query signature

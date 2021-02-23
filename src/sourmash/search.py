@@ -35,18 +35,18 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                                  ignore_abundance=ignore_abundance,
                                  best_only=best_only,
                                  unload_data=unload_data)
-        for (similarity, match, filename) in search_iter:
+        for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
-                results.append((similarity, match, filename))
+                results.append((score, match, filename))
                 found_md5.add(md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])
 
     x = []
-    for (similarity, match, filename) in results:
-        x.append(SearchResult(similarity=similarity,
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,

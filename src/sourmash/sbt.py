@@ -377,6 +377,10 @@ class SBT(Index):
         if do_containment:
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            search_fn = search_minhashes_max_containment
+            query_match = lambda x: tree_query.max_containment(x,
+                                                               downsample=True)
 
         if best_only:            # this needs to be reset for each SBT
             search_fn = SearchMinHashesFindBest().search

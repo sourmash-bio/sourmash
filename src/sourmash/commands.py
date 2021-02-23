@@ -437,8 +437,9 @@ def search(args):
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
+    is_containment = args.containment or args.max_containment
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment)
+                                                is_containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:

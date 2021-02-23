@@ -164,6 +164,25 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     return 0
 
 
+def search_minhashes_max_containment(node, sig, threshold, results=None,
+                                     downsample=True):
+    mh = sig.minhash
+
+    if isinstance(node, SigLeaf):
+        matches = node.data.minhash.count_common(mh, downsample)
+    else:  # Node or Leaf, Nodegraph by minhash comparison
+        matches = node.data.matches(mh)
+
+    if results is not None:
+        results[node.name] = float(matches) / len(mh)
+
+    # @CTB @CTB
+
+    if len(mh) and float(matches) / len(mh) >= threshold:
+        return 1
+    return 0
+
+
 class GatherMinHashes(object):
     def __init__(self):
         self.best_match = 0

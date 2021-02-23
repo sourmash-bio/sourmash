@@ -60,11 +60,14 @@ class Index(ABC):
         threshold = kwargs['threshold']
 
         do_containment = kwargs.get('do_containment', False)
+        do_max_containment = kwargs.get('do_max_containment', False)
         ignore_abundance = kwargs.get('ignore_abundance', False)
 
         # configure search - containment? ignore abundance?
         if do_containment:
             query_match = lambda x: query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            query_match = lambda x: query.max_containmenty(x, downsample=True)
         else:
             query_match = lambda x: query.similarity(
                 x, downsample=True, ignore_abundance=ignore_abundance)
@@ -73,9 +76,9 @@ class Index(ABC):
         matches = []
 
         for ss in self.signatures():
-            similarity = query_match(ss)
-            if similarity >= threshold:
-                matches.append((similarity, ss, self.filename))
+            score = query_match(ss)
+            if score >= threshold:
+                matches.append((score, ss, self.filename))
 
         # sort!
         matches.sort(key=lambda x: -x[0])
