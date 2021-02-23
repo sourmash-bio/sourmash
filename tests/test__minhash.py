@@ -1653,3 +1653,41 @@ def test_merge_noabund():
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 1
+
+
+def test_max_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.max_containment(mh2) == 1/2
+    assert mh2.max_containment(mh1) == 1/2
+
+
+def test_max_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.max_containment(mh2) == 0
+    assert mh2.max_containment(mh1) == 0
+
+
+def test_max_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.max_containment(mh2) == 1
+    assert mh2.max_containment(mh1) == 1
