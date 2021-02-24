@@ -245,9 +245,12 @@ def add_seq(sigs, seq, input_is_protein, check_sequence):
 
 
 def set_sig_name(sigs, filename, name=None):
+    if filename == '-':         # if stdin, set filename to empty.
+        filename = ''
     for sig in sigs:
         if name is not None:
             sig._name = name
+
         sig.filename = filename
 
 
