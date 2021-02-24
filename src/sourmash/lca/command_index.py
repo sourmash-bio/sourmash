@@ -207,7 +207,11 @@ def index(args):
             md5_to_name[sig.md5sum()] = str(sig)
 
             # parse identifier, potentially with splitting
-            ident = sig.name
+            if sig.name:
+                ident = sig.name
+            else:
+                ident = sig.filename
+
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
