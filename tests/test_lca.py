@@ -661,6 +661,10 @@ def test_index_empty_sketch_name(c):
     c.run_sourmash(*cmd)
     assert os.path.exists(c.output('zzz.lca.json'))
 
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'WARNING: no lineage provided for 2 sig' in c.last_result.err
+
 
 def test_basic_index_and_classify_with_tsv_and_gz():
     with utils.TempDirectory() as location:

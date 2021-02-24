@@ -183,7 +183,7 @@ def index(args):
     n = 0
     total_n = len(inp_files)
     record_duplicates = set()
-    record_no_lineage = set()
+    record_no_lineage = []
     record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
@@ -246,7 +246,7 @@ def index(args):
             # track lineage info - either no lineage, or this lineage used.
             else:
                 debug('WARNING: no lineage assignment for {}.', ident)
-                record_no_lineage.add(ident)
+                record_no_lineage.append(ident)
 
     # end main add signatures loop
 
