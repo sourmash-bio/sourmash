@@ -643,6 +643,25 @@ def test_basic_index_column_start():
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
 
 
+@utils.in_tempdir
+def test_index_empty_sketch_name(c):
+    # create two signatures with empty 'name' attributes
+    cmd = ['sketch', 'dna', utils.get_test_data('genome-s12.fa.gz'),
+           utils.get_test_data('genome-s11.fa.gz')]
+    c.run_sourmash(*cmd)
+
+    sig1 = c.output('genome-s11.fa.gz.sig')
+    assert os.path.exists(sig1)
+    sig2 = c.output('genome-s12.fa.gz.sig')
+    assert os.path.exists(sig2)
+
+    # can we insert them both?
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    cmd = ['lca', 'index', taxcsv, 'zzz', sig1, sig2]
+    c.run_sourmash(*cmd)
+    assert os.path.exists(c.output('zzz.lca.json'))
+
+
 def test_basic_index_and_classify_with_tsv_and_gz():
     with utils.TempDirectory() as location:
         taxcsv = utils.get_test_data('lca/delmont-1.tsv')
