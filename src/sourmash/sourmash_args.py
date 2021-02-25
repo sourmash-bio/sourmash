@@ -16,7 +16,7 @@ import sourmash.exceptions
 from . import signature
 from .logging import notify, error
 
-from .index import LinearIndex
+from .index import LinearIndex, ZipFileLinearIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
@@ -322,6 +322,19 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                    filename, end='\r')
             n_signatures += len(linear)
 
+        # zip file full of signatures
+        elif dbtype == DatabaseType.ZIPFILE:
+            db = db.select(ksize=query_ksize, moltype=query_moltype)
+
+            if not check_lca_db_is_compatible(filename, db, query):
+                sys.exit(-1)
+            query_scaled = query.minhash.scaled
+
+            notify('loaded zip file {}', filename, end='\r')
+            n_databases += 1
+
+            databases.append((db, filename, 'Zip File'))
+
         # unknown!?
         else:
             raise Exception("unknown dbtype {}".format(dbtype))
@@ -351,6 +364,7 @@ class DatabaseType(Enum):
     SIGLIST = 1
     SBT = 2
     LCA = 3
+    ZIPFILE = 4
 
 
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
@@ -433,6 +447,15 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             dbtype = DatabaseType.LCA
         except:
             pass
+
+    if not loaded:                    # try load as ZipFileLinearIndex
+        if filename.endswith('.zip'):
+            try:
+                db = ZipFileLinearIndex.load(filename)
+                loaded = True
+                dbtype = DatabaseType.ZIPFILE
+            except:
+                pass
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
     # so we can provide a better error message to users.

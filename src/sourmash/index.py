@@ -2,6 +2,7 @@
 
 from abc import abstractmethod, ABC
 from collections import namedtuple
+import zipfile
 
 
 class Index(ABC):
@@ -159,3 +160,46 @@ class LinearIndex(Index):
 
         siglist=select_sigs(self._signatures, ksize, moltype)
         return LinearIndex(siglist, self.filename)
+
+
+class ZipFileLinearIndex(Index):
+    def __init__(self, zf, select_ksize=None, select_moltype=None,
+                 force=False):
+        self.zf = zf
+        self.ksize = select_ksize
+        self.moltype = select_moltype
+        self.force = force
+
+    @property
+    def filename(self):
+        return self.zf.filename
+
+    def insert(self, signature):
+        raise NotImplementedError
+
+    def save(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, location, force=False):
+        print('XXX loading', location)
+        if not location.endswith('.zip'):
+            raise Exception
+        zf = zipfile.ZipFile(location, 'r')
+        return cls(zf, force=force)
+
+    def signatures(self):
+        from .signature import load_signatures
+        for zipinfo in self.zf.infolist():
+            # should we load this file? if it ends in .sig OR we are forcing:
+            if zipinfo.filename.endswith('.sig') or self.force:
+                fp = self.zf.open(zipinfo)
+
+                # now load all the signatures and select on ksize/moltype:
+                for ss in load_signatures(fp):
+                    if (self.ksize is None or ss.minhash.ksize == self.ksize) and \
+                       (self.moltype is None or ss.minhash.moltype == self.moltype):
+                        yield ss
+
+    def select(self, ksize=None, moltype=None):
+        return ZipFileLinearIndex(self.zf, ksize, moltype, self.force)
