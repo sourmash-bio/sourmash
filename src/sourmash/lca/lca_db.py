@@ -133,7 +133,7 @@ class LCA_Database(Index):
             ident = str(sig)
 
         if ident in self.ident_to_name:
-            raise ValueError("signature {} is already in this LCA db.".format(ident))
+            raise ValueError("signature '{}' is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
         self._invalidate_cache()

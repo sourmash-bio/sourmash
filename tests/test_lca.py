@@ -69,6 +69,22 @@ def test_api_create_insert_bad_ksize():
         lca_db.insert(ss)
 
 
+def test_api_create_insert_bad_ident():
+    # can we insert a ksize=21 signature into a ksize=31 DB? hopefully not.
+    ss1 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                      ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+    ss1.name = ''
+    ss1.filename = ''
+    ss2.name = ''
+    ss2.filename = ''
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss1)
+    lca_db.insert(ss2)
+
+
 def test_api_create_insert_bad_scaled():
     # can we insert a scaled=1000 signature into a scaled=500 DB?
     # hopefully not.
