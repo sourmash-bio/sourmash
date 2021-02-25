@@ -535,13 +535,13 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     db, dbtype = _load_database(filename, yield_all_files)
 
     loader = None
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT, DatabaseType.ZIPFILE):
         db = db.select(moltype=select_moltype, ksize=ksize)
         loader = db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
         loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
     else:
-        assert 0                          # unknown enum!?
+        raise Exception("unknown database type")
 
     if progress:
         return progress.start_file(filename, loader)

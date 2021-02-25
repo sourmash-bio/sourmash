@@ -182,9 +182,6 @@ class ZipFileLinearIndex(Index):
 
     @classmethod
     def load(cls, location, force=False):
-        print('XXX loading', location)
-        if not location.endswith('.zip'):
-            raise Exception
         zf = zipfile.ZipFile(location, 'r')
         return cls(zf, force=force)
 
