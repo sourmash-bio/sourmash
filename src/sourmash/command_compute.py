@@ -160,6 +160,7 @@ def _compute_individual(args, signatures_factory):
 
         if args.singleton:
             siglist = []
+            n = None
             for n, record in enumerate(screed.open(filename)):
                 # make a new signature for each sequence
                 sigs = signatures_factory()
@@ -169,8 +170,9 @@ def _compute_individual(args, signatures_factory):
                 set_sig_name(sigs, filename, name=record.name)
                 siglist.extend(sigs)
 
-            notify('calculated {} signatures for {} sequences in {}',
-                   len(siglist), n + 1, filename)
+            if n is not None:
+                notify('calculated {} signatures for {} sequences in {}',
+                       len(siglist), n + 1, filename)
         else:
             # make a single sig for the whole file
             sigs = signatures_factory()
@@ -178,6 +180,7 @@ def _compute_individual(args, signatures_factory):
             # consume & calculate signatures
             notify('... reading sequences from {}', filename)
             name = None
+            n = None
             for n, record in enumerate(screed.open(filename)):
                 if n % 10000 == 0:
                     if n:
@@ -188,12 +191,13 @@ def _compute_individual(args, signatures_factory):
                 add_seq(sigs, record.sequence,
                         args.input_is_protein, args.check_sequence)
 
-            notify('...{} {} sequences', filename, n, end='')
+            if n is not None:       # don't write out signatures if no input
+                notify('...{} {} sequences', filename, n, end='')
 
-            set_sig_name(sigs, filename, name)
-            siglist.extend(sigs)
+                set_sig_name(sigs, filename, name)
+                siglist.extend(sigs)
 
-            notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
+                notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
 
         # if no --output specified, save to individual files w/in for loop
         if not args.output:
@@ -202,7 +206,8 @@ def _compute_individual(args, signatures_factory):
 
     # if --output specified, all collected signatures => args.output
     if args.output:
-        save_siglist(siglist, args.output)
+        if siglist:
+            save_siglist(siglist, args.output)
         siglist = []
 
     assert not siglist                    # juuuust checking.
@@ -212,28 +217,29 @@ def _compute_merged(args, signatures_factory):
     # make a signature for the whole file
     sigs = signatures_factory()
 
-    n = 0
     total_seq = 0
     for filename in args.filenames:
         # consume & calculate signatures
         notify('... reading sequences from {}', filename)
 
+        n = None
         for n, record in enumerate(screed.open(filename)):
             if n % 10000 == 0 and n:
                 notify('\r... {} {}', filename, n, end='')
 
             add_seq(sigs, record.sequence,
                     args.input_is_protein, args.check_sequence)
-        notify('... {} {} sequences', filename, n + 1)
+        if n is not None:
+            notify('... {} {} sequences', filename, n + 1)
+            total_seq += n + 1
 
-        total_seq += n + 1
+    if total_seq:
+        set_sig_name(sigs, filename, name=args.merge)
+        notify('calculated 1 signature for {} sequences taken from {} files',
+               total_seq, len(args.filenames))
 
-    set_sig_name(sigs, filename, name=args.merge)
-    notify('calculated 1 signature for {} sequences taken from {} files',
-           total_seq, len(args.filenames))
-
-    # at end, save!
-    save_siglist(sigs, args.output)
+        # at end, save!
+        save_siglist(sigs, args.output)
 
 
 def add_seq(sigs, seq, input_is_protein, check_sequence):

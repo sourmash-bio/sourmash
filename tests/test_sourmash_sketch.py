@@ -241,6 +241,39 @@ def test_do_sourmash_sketchdna():
 
 
 @utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig')]
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+
+
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput_singleton(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig'), '--singleton']
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+
+
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput_merge(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig'), '--merge', 'name']
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+
+
+@utils.in_tempdir
 def test_do_sourmash_sketchdna_outdir(c):
     testdata1 = utils.get_test_data('short.fa')
     status, out, err = utils.runscript('sourmash',
