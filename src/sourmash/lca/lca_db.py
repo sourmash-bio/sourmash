@@ -130,15 +130,10 @@ class LCA_Database(Index):
             raise ValueError("cannot downsample signature; is it a scaled signature?")
 
         if not ident:
-            if sig.name:
-                ident = sig.name
-            elif sig.filename:
-                ident = sig.filename
-            else:
-                ident = sig.md5sum()[:8]
+            ident = str(sig)
 
         if ident in self.ident_to_name:
-            raise ValueError("signature {} is already in this LCA db.".format(ident))
+            raise ValueError("signature '{}' is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
         self._invalidate_cache()
