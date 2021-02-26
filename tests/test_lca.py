@@ -69,6 +69,24 @@ def test_api_create_insert_bad_ksize():
         lca_db.insert(ss)
 
 
+def test_api_create_insert_bad_ident():
+    # can we insert a signature with no/empty ident?
+    ss1 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                      ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+    ss1.name = ''
+    ss1.filename = ''
+    ss2.name = ''
+    ss2.filename = ''
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss1)
+    lca_db.insert(ss2)
+    # SUCCESS!
+    # would fail, previously :)
+
+
 def test_api_create_insert_bad_scaled():
     # can we insert a scaled=1000 signature into a scaled=500 DB?
     # hopefully not.
@@ -641,6 +659,29 @@ def test_basic_index_column_start():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+
+
+@utils.in_tempdir
+def test_index_empty_sketch_name(c):
+    # create two signatures with empty 'name' attributes
+    cmd = ['sketch', 'dna', utils.get_test_data('genome-s12.fa.gz'),
+           utils.get_test_data('genome-s11.fa.gz')]
+    c.run_sourmash(*cmd)
+
+    sig1 = c.output('genome-s11.fa.gz.sig')
+    assert os.path.exists(sig1)
+    sig2 = c.output('genome-s12.fa.gz.sig')
+    assert os.path.exists(sig2)
+
+    # can we insert them both?
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    cmd = ['lca', 'index', taxcsv, 'zzz', sig1, sig2]
+    c.run_sourmash(*cmd)
+    assert os.path.exists(c.output('zzz.lca.json'))
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'WARNING: no lineage provided for 2 sig' in c.last_result.err
 
 
 def test_basic_index_and_classify_with_tsv_and_gz():
