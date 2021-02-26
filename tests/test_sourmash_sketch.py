@@ -249,6 +249,7 @@ def test_do_sourmash_sketchdna_noinput(c):
 
     sigfile = c.output('xxx.sig')
     assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
 
 
 @utils.in_tempdir
@@ -260,6 +261,7 @@ def test_do_sourmash_sketchdna_noinput_singleton(c):
 
     sigfile = c.output('xxx.sig')
     assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
 
 
 @utils.in_tempdir
@@ -271,6 +273,7 @@ def test_do_sourmash_sketchdna_noinput_merge(c):
 
     sigfile = c.output('xxx.sig')
     assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
 
 
 @utils.in_tempdir

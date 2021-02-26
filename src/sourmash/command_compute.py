@@ -173,6 +173,8 @@ def _compute_individual(args, signatures_factory):
             if n is not None:
                 notify('calculated {} signatures for {} sequences in {}',
                        len(siglist), n + 1, filename)
+            else:
+                notify(f"no sequences found in '{filename}'?!")
         else:
             # make a single sig for the whole file
             sigs = signatures_factory()
@@ -198,6 +200,8 @@ def _compute_individual(args, signatures_factory):
                 siglist.extend(sigs)
 
                 notify(f'calculated {len(siglist)} signatures for {n+1} sequences in {filename}')
+            else:
+                notify(f"no sequences found in '{filename}'?!")
 
         # if no --output specified, save to individual files w/in for loop
         if not args.output:
@@ -232,6 +236,8 @@ def _compute_merged(args, signatures_factory):
         if n is not None:
             notify('... {} {} sequences', filename, n + 1)
             total_seq += n + 1
+        else:
+            notify(f"no sequences found in '{filename}'?!")
 
     if total_seq:
         set_sig_name(sigs, filename, name=args.merge)
