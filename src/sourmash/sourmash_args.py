@@ -253,7 +253,7 @@ def check_lca_db_is_compatible(filename, db, query):
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
     """
-    Load one or more SBTs, LCAs, and/or signatures.
+    Load one or more SBTs, LCAs, and/or collections of signatures.
 
     Check for compatibility with query.
     """
@@ -368,7 +368,7 @@ class DatabaseType(Enum):
 
 
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
-    """Load file as a database - list of signatures, LCA, SBT, etc.
+    """Load file as a database - list of signatures, LCA, SBT, Zip file, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
 
@@ -491,8 +491,8 @@ def _select_sigs(siglist, ksize, moltype):
 def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    the appropriate objects.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return the appropriate objects.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return an Index object containing those signatures.
@@ -502,14 +502,14 @@ def load_file_as_index(filename, yield_all_files=False):
     attempt to load all files.
     """
     db, dbtype = _load_database(filename, yield_all_files)
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT, DatabaseType.ZIPFILE):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
         # turn siglist into a LinearIndex
         idx = LinearIndex(db, filename)
         return idx
     else:
-        assert 0                          # unknown enum!?
+        raise Exception                   # unknown enum!?
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
@@ -517,8 +517,8 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    a signatures() generator.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return a signatures() generator.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return a list of those signatures.
