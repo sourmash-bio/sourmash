@@ -123,6 +123,9 @@ class Index(ABC):
         ""
 
 class LinearIndex(Index):
+    """\
+    An in-memory collection of signatures.
+    """
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -163,12 +166,17 @@ class LinearIndex(Index):
 
 
 class ZipFileLinearIndex(Index):
+    """\
+    A read-only collection of signatures in a zip file.
+
+    Does not support `insert` or `save`.
+    """
     def __init__(self, zf, select_ksize=None, select_moltype=None,
-                 force=False):
+                 traverse_yield_all=False):
         self.zf = zf
         self.ksize = select_ksize
         self.moltype = select_moltype
-        self.force = force
+        self.traverse_yield_all = traverse_yield_all
 
     @property
     def filename(self):
@@ -181,15 +189,17 @@ class ZipFileLinearIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load(cls, location, force=False):
+    def load(cls, location, traverse_yield_all=False):
+        "Class method to load a zipfile."
         zf = zipfile.ZipFile(location, 'r')
-        return cls(zf, force=force)
+        return cls(zf, traverse_yield_all=traverse_yield_all)
 
     def signatures(self):
+        "Load all signatures in the zip file."
         from .signature import load_signatures
         for zipinfo in self.zf.infolist():
             # should we load this file? if it ends in .sig OR we are forcing:
-            if zipinfo.filename.endswith('.sig') or self.force:
+            if zipinfo.filename.endswith('.sig') or self.traverse_yield_all:
                 fp = self.zf.open(zipinfo)
 
                 # now load all the signatures and select on ksize/moltype:
@@ -199,4 +209,6 @@ class ZipFileLinearIndex(Index):
                         yield ss
 
     def select(self, ksize=None, moltype=None):
-        return ZipFileLinearIndex(self.zf, ksize, moltype, self.force)
+        "Select signatures in zip file based on ksize/moltype."
+        return ZipFileLinearIndex(self.zf, ksize, moltype,
+                                  self.traverse_yield_all)

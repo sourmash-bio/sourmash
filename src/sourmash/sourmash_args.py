@@ -451,10 +451,12 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     if not loaded:                    # try load as ZipFileLinearIndex
         if filename.endswith('.zip'):
             try:
-                db = ZipFileLinearIndex.load(filename)
+                db = ZipFileLinearIndex.load(filename,
+                                             traverse_yield_all=traverse_yield_all)
                 loaded = True
                 dbtype = DatabaseType.ZIPFILE
             except:
+                raise
                 pass
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
@@ -492,7 +494,9 @@ def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
-    Zip file, will return the appropriate objects.
+    Zip file, will return the appropriate objects. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return an Index object containing those signatures.
@@ -518,7 +522,9 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, or a regular
-    Zip file, will return a signatures() generator.
+    Zip file, will return a signatures() generator. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return a list of those signatures.
