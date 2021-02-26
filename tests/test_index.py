@@ -393,3 +393,87 @@ def test_index_same_md5sum_zipstorage(c):
     # should have 3 files, 1 internal and two sigs. We check for 4 because the
     # directory also shows in namelist()
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
+
+
+@utils.in_thisdir
+def test_zip_protein_command_search(c):
+    # test command-line search/gather of zipfile with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zip_hp_command_search(c):
+    # test command-line search/gather of zipfile with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/hp.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zip_dayhoff_command_search(c):
+    # test command-line search/gather of zipfile with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/dayhoff.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zip_protein_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zip_hp_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zip_dayhoff_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
