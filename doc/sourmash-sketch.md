@@ -63,7 +63,15 @@ sourmash sketch protein -p k=25,scaled=500,dayhoff genome.faa
 
 `sourmash sketch` auto-detects and reads FASTQ or FASTA files, either uncompressed or compressed with gzip or bzip2. The filename doesn't matter; `sourmash sketch` will figure out the format from the file contents.
 
-You can also stream any of these formats into `sourmash sketch` via stdin by using `-` as the input filename.
+You can also stream any of these formats into `sourmash sketch` via stdin by using `-` as the input filename. For example,
+```
+gunzip -c data/GCF*.fna.gz | sourmash sketch dna - -o out.sig
+```
+will make a single DNA signature from all of the FASTA sequences in
+`data/GCF*.fna.gz`.
+
+Note, for signatures calculated from stdin, the signature filename attribute
+will be left empty, and `sourmash sig describe` will output `** no name **`.
 
 ### Input contents and output signatures
 

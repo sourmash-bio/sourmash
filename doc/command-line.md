@@ -22,40 +22,36 @@ taken.
 
 ## An example
 
-Grab three bacterial genomes from NCBI:
+Download three bacterial genomes from NCBI:
 ```
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/325/GCF_000017325.1_ASM1732v1/GCF_000017325.1_ASM1732v1_genomic.fna.gz
+curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/021/665/GCF_000021665.1_ASM2166v1/GCF_000021665.1_ASM2166v1_genomic.fna.gz
 curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Escherichia_coli/reference/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
-curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/Salmonella_enterica/reference/GCF_000006945.2_ASM694v2/GCF_000006945.2_ASM694v2_genomic.fna.gz
-curl -L -O https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/783/305/GCA_000783305.1_ASM78330v1/GCA_000783305.1_ASM78330v1_genomic.fna.gz
 ```
-Compute signatures for each:
+Compute sourmash signatures for them all:
 ```
 sourmash sketch dna -p k=31 *.fna.gz
 ```
-This will produce three `.sig` files containing MinHash signatures at k=31.
+This will produce three `.sig` files containing MinHash signatures using a k-mer size of 31.
 
 Next, compare all the signatures to each other:
 ```
 sourmash compare *.sig -o cmp.dist
 ```
 
-Optionally, parallelize compare to 8 threads with `-p 8`:
-
-```
-sourmash compare -p 8 *.sig -o cmp.dist
-```
-
-Finally, plot a dendrogram:
-```
-sourmash plot cmp.dist --labels
-```
-This will output two files, `cmp.dist.dendro.png` and `cmp.dist.matrix.png`,
-containing a clustering & dendrogram of the sequences, as well as a
-similarity matrix and heatmap.
+Finally, plot a dendrogram: ``` sourmash plot cmp.dist --labels ```
+This will output three files, `cmp.dist.dendro.png`,
+`cmp.dist.matrix.png`, and `cmp.dist.hist.png`, containing a
+clustering & dendrogram of the sequences, a similarity matrix and
+heatmap, and a histogram of the pairwise distances between the three
+genomes.
 
 Matrix:
 
 ![Matrix](_static/cmp.matrix.png)
+
+Here, the two genomes that cluster together are strains of the same
+species, while the third is from a completely different genus.
 
 ## The `sourmash` command and its subcommands
 
