@@ -27,6 +27,8 @@ migrating to sourmash 4.0 in the
 *  `lca summarize` no longer merges all signatures, and uses hash abundance by default (#1175)
 * `index `and `lca index` (#1186, #1222) now support `--from-file` and no longer require signature files on command line
 * `--traverse-directory` is now on by default for signature loading behavior (#1178)
+* `sourmash sketch` and `sourmash compute` no longer create empty signatures from empty files and stdin (#1347)
+* `sourmash sketch` and `sourmash compute` set `sig.filename` to empty string when filename is `-` (#1347)
 
 ### Feature removal
 
