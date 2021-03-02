@@ -16,6 +16,16 @@ migrating to sourmash 4.0 in the
 
 ## Major changes for 4.0
 
+### Numerical output and search results are unchanged
+
+There are no changes to numerical output or search results in this
+release; you should get the same results with v4 as you get with v3,
+except where command-line parameters need to be adjusted as noted
+below (see: protein ksize #1277, lca summarize changes #1175, sourmash
+gather on signatures without abundance #1328). Please
+[file an issue](https://github.com/dib-lab/sourmash/issues) if your
+results change!
+
 ### New or changed behavior
 
 * default SBT storage is now .sbt.zip (#1174, #1170)
