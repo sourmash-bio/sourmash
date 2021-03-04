@@ -75,7 +75,11 @@ will be left empty, and `sourmash sig describe` will output `** no name **`.
 
 ### Input contents and output signatures
 
-By default, `sourmash sketch` will produce signatures for each input *file*. If the file contains multiple FASTA/FASTQ records, these records will be merged into the output signature.
+By default, `sourmash sketch` will produce signatures for each input
+*file*. If the file contains multiple FASTA/FASTQ records, these
+records will be merged into the output signature.  You can provide a
+*list of FASTA files* in a text file to `sourmash sketch` by passing
+the text file path in via `--from-file`.
 
 If you specify `--singleton`, `sourmash sketch` will produce signatures for each *record*.
 

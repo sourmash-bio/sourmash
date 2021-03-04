@@ -29,7 +29,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--from-file',
-        help='a file containing a list of signatures file to compare'
+        help='a text file containing a list of files to load signatures from'
     )
     subparser.add_argument(
         '-f', '--force', action='store_true',
