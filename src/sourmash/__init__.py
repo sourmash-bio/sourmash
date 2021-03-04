@@ -1,10 +1,20 @@
-#! /usr/bin/env python
+"""A library for computing hash sketches from DNA sequences, comparing
+them to each other, and plotting the results.
+
+Public API:
+
+    load_file_as_signatures(...) - load `[SourmashSignature, ]` from filename
+    load_file_as_index(...) - load collections of `SourmashSignature`s
+    save_signatures(...) - save `[SourmashSignature, ]`
+
+    class SourmashSignature - one or more hash sketches
+    class MinHash - hash sketch class
+
+Please see https://sourmash.readthedocs.io/en/latest/api.html for API docs.
+
+The sourmash code is available at github.com/dib-lab/sourmash/ under the
+BSD 3-Clause license.
 """
-An implementation of a MinHash bottom sketch, applied to k-mers in DNA.
-"""
-import re
-import math
-import os
 from deprecation import deprecated
 
 from ._lowlevel import ffi, lib
