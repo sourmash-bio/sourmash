@@ -9,6 +9,60 @@ authors:
  - name: Luiz Irber
    orcid: 0000-0003-4371-9659
    affiliation: University of California, Davis
+ - name: Tim Head
+   orcid: 0000-0003-0931-3698
+   affiliation: @@@
+ - name: Harriet Alexander
+   orcid: 0000-0003-1308-8008
+   affiliation: Woods Hole Oceanographic Institute
+ - name: Olga Botvinnik
+   orcid: 0000-0003-4412-7970
+   affiliation: Chan-Zuckerberg Biohub
+ - name: Phillip Brooks
+   orcid: 0000-0003-3987-244X
+   affiliation: 10x Genomics
+ - name: Laurent Gautier
+   orcid: 0000-0003-0638-3391
+   affiliation: @@@
+ - name: Lisa Johnson
+   orcid: 0000-0002-3600-7218
+   affiliation: 10x Genomics
+ - name: Fabian Klötzl
+   orcid: @@@
+   affiliation: @@@
+ - name: David Koslicki
+   orcid: 0000-0002-0640-954X
+   affiliation: Pennsylvania State University
+ - name: Katrin Leinweber
+   orcid: 0000-0001-5135-5758
+   affiliation: @@@
+ - name: Ivan Ogasawara
+   orcid: @@@
+   affiliation: @@@
+ - name: N. Tessa Pierce
+   orcid: 0000-0002-2942-5331
+   affiliation: University of California, Davis
+ - name: Taylor Reiter
+   orcid: 0000-0002-7388-421X
+   affiliation: University of California, Davis
+ - name: Camille Scott
+   orcid: 0000-0001-8822-8779
+   affiliation: University of California, Davis
+ - name: Connor Skennerton
+   orcid: 0000-0003-1320-4873
+   affiliation: @@@
+ - name: Daniel Standage
+   orcid: 0000-0003-0342-8531.
+   affiliation: @@@
+ - name: Joshua Swamidass
+   orcid: 0000-0003-2191-0778
+   affiliation: @@@
+ - name: Connor Tiffany
+   orcid: @@@
+   affiliation: @@@
+ - name: Erik Young
+   orcid: @@@
+   affiliation: University of California, Davis
  - name: C. Titus Brown
    orcid: 0000-0001-6001-2677
    affiliation: University of California, Davis
