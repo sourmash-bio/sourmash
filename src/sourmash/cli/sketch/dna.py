@@ -22,12 +22,16 @@ def subparser(subparsers):
     )
     
     subparser.add_argument(
-        'filenames', nargs='+', help='file(s) of sequences'
+        'filenames', nargs='*', help='file(s) of sequences'
     )
     file_args = subparser.add_argument_group('File handling options')
     file_args.add_argument(
         '-f', '--force', action='store_true',
         help='recompute signatures even if the file exists'
+    )
+    subparser.add_argument(
+        '--from-file',
+        help='a text file containing a list of sequence files to load'
     )
     file_args.add_argument(
         '-o', '--output',
