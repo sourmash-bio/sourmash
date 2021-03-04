@@ -90,4 +90,20 @@ In particular, sourmash now has robust support for both Jaccard similarity
 and containment calculations, which supports robust analysis and comparison
 of large metagenomic samples.
 
+# Statement of Need
+
+Large collections of genomes, transcriptomes, and raw sequencing data
+are readily available in biology, and we need lightweight
+computational methods for searching and summarizing both public and
+private collections. sourmash provides a flexible set of programmatic
+functionality for this purpose, together with a robust and well-tested
+command-line interface. It has been used in over 70 publications (based
+on citations of the [@Brown2016]) and it continues to expand in
+functionality.
+
+# Acknowledgements
+
+This work is funded in part by the Gordon and Betty Moore Foundation’s
+Data-Driven Discovery Initiative [GBMF4551 to CTB].
+
 # References
