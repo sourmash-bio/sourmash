@@ -1,32 +1,39 @@
 ---
-title: 'sourmash: a library for MinHash sketching of DNA'
+title: 'sourmash: a tool to quickly search, compare, and analyze genomic and metagenomic data sets'
 tags:
   - MinHash
   - k-mers
   - Python
+  - Rust
 authors:
- - name: C. Titus Brown
-   orcid: 0000-0001-6001-2677
-   affiliation: University of California, Davis
  - name: Luiz Irber
    orcid: 0000-0003-4371-9659
    affiliation: University of California, Davis
-date: 13 Sep 2016
+ - name: C. Titus Brown
+   orcid: 0000-0001-6001-2677
+   affiliation: University of California, Davis
+date: 3 Mar 2021
 bibliography: paper.bib
 ---
 
 # Summary
 
-sourmash is a toolbox for creating, comparing, and manipulating MinHash
-sketches of genomic data.
+sourmash is a command line tool and Python library for sketching
+collections of DNA, RNA, and amino acid k-mers for biological sequence
+search, comparison, and analysis [@Pierce2019]. The most recent
+release, sourmash v4, is built on top of Rust and provides an
+experimental Rust interface.
 
 MinHash sketches provide a lightweight way to store "signatures" of
 large DNA or RNA sequence collections, and then compare or search them
-using a Jaccard index.  MinHash sketches can be used to identify samples,
-find similar samples, identify data sets with shared sequences, and
-build phylogenetic trees [@ondov2015fast].
+using a Jaccard index [@ondov2015fast].  MinHash sketches can be used
+to identify samples, find similar samples, identify data sets with
+shared sequences, and build phylogenetic trees
 
-sourmash provides a command line script, a Python library, and a CPython
-module for MinHash sketches.
+Since sourmash v1 was released in 2016 [@Brown2016], sourmash has expanded
+to support new database types and many more command line functions.
+In particular, sourmash now has robust support for both Jaccard similarity
+and containment calculations, which supports robust analysis and comparison
+of large metagenomic samples.
 
 # References
