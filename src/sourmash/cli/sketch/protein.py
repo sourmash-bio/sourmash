@@ -22,7 +22,7 @@ def subparser(subparsers):
     )
     
     subparser.add_argument(
-        'filenames', nargs='+', help='file(s) of sequences'
+        'filenames', nargs='*', help='file(s) of sequences'
     )
     file_args = subparser.add_argument_group('File handling options')
     file_args.add_argument(
@@ -32,6 +32,10 @@ def subparser(subparsers):
     file_args.add_argument(
         '-o', '--output',
         help='output computed signatures to this file'
+    )
+    subparser.add_argument(
+        '--from-file',
+        help='a text file containing a list of sequence files to load'
     )
     file_args.add_argument(
         '--merge', '--name', type=str, default='', metavar="FILE",
