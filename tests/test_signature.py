@@ -195,7 +195,7 @@ def test_md5(track_abundance):
     assert sig.md5sum() == 'eae27d77ca20db309e056e3d2dcd7d69', sig.md5sum()
 
 
-def test_str(track_abundance):
+def test_str_1(track_abundance):
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
     sig = SourmashSignature(e, name='foo')
     assert str(sig) == 'foo'
