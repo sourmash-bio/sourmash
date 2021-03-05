@@ -1381,6 +1381,33 @@ def test_search_containment_sbt():
         assert '95.8%' in out
 
 
+def test_search_containment_s10():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2, '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in out
+        assert '16.7%' in out
+
+
+def test_search_max_containment_s10():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--max-containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '1 matches' in out
+        assert '100.0%' in out
+
+
 def test_search_gzip():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
