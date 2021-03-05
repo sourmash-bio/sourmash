@@ -17,6 +17,18 @@ BSD 3-Clause license.
 """
 from deprecation import deprecated
 
+__all__ = ['MinHash', 'SourmashSignature',
+           'load_one_signature',
+           'SourmashSignature',
+           'load_file_as_index',
+           'load_file_as_signatures',
+           'save_signatures',
+           'create_sbt_index',
+           'load_signatures',     # deprecated - remove in 5.0
+           'load_sbt_index',      # deprecated - remove in 5.0
+           'search_sbt_index',    # deprecated - remove in 5.0
+          ]
+
 from ._lowlevel import ffi, lib
 
 ffi.init_once(lib.sourmash_init, "init")
