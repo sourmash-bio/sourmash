@@ -82,11 +82,9 @@ def test_str(track_abundance):
     sig = SourmashSignature(e)
 
     print(sig)
-    assert str(sig) == 'SourmashSignature(59502a74)'
-    assert repr(sig) == 'SourmashSignature(59502a74)'
+    assert repr(sig) == "SourmashSignature('', 59502a74)"
 
     sig._name = 'fizbar'
-    assert str(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
     assert repr(sig) == 'SourmashSignature(\'fizbar\', 59502a74)'
 
 
