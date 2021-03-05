@@ -9,6 +9,8 @@ from enum import Enum
 
 import screed
 
+from . import storage
+
 from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
@@ -367,6 +369,69 @@ class DatabaseType(Enum):
     ZIPFILE = 4
 
 
+# @CTB add storage handler decorator
+def storage_load_signatures(filename, traverse_yield_all, **kwargs):
+    close_fp = False
+    if filename == '-':
+        fp = sys.stdin
+    else:
+        fp = open(filename, 'rt')
+        close_fp = True
+
+    try:
+        db = signature.load_signatures(fp, do_raise=True)
+        db = list(db)
+
+        loaded = True
+        dbtype = DatabaseType.SIGLIST
+    finally:
+        if close_fp:
+            fp.close()
+
+    return db, dbtype
+
+
+storage.add_handler_obj(storage.GlobHandler(".sig JSON loader from stdin",
+                                            "-",
+                                            100,
+                                            storage_load_signatures))
+storage.add_handler_obj(storage.GlobHandler(".sig JSON loader from file",
+                                            "*.sig",
+                                            300,
+                                            storage_load_signatures))
+
+def storage_traverse_directory(filename, traverse_yield_all, **kwargs):
+    all_sigs = []
+    for thisfile in traverse_find_sigs([filename], traverse_yield_all):
+        try:
+            with open(thisfile, 'rt') as fp:
+                x = signature.load_signatures(fp, do_raise=True)
+                siglist = list(x)
+                all_sigs.extend(siglist)
+        except (IOError, sourmash.exceptions.SourmashError):
+            if traverse_yield_all:
+                continue
+            else:
+                raise
+
+    loaded=True
+    if all_sigs:
+        return all_sigs, DatabaseType.SIGLIST
+
+    return None, None
+
+
+def match_load_directory(filename):
+    if os.path.isdir(filename):
+        notify(f"matcher matched '{filename}' - is directory!")
+        return True
+    return False
+
+storage.add_handler_obj(storage.Handler("load from directory",
+                                        match_load_directory,
+                                        200,
+                                        storage_traverse_directory))
+
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, Zip file, etc.
 
@@ -377,44 +442,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     loaded = False
     dbtype = None
 
-    # special case stdin
-    if not loaded and filename == '-':
-        db = signature.load_signatures(sys.stdin, do_raise=True)
-        db = list(db)
-        loaded = True
-        dbtype = DatabaseType.SIGLIST
-
-    # load signatures from directory
-    if not loaded and os.path.isdir(filename):
-        all_sigs = []
-        for thisfile in traverse_find_sigs([filename], traverse_yield_all):
-            try:
-                with open(thisfile, 'rt') as fp:
-                    x = signature.load_signatures(fp, do_raise=True)
-                    siglist = list(x)
-                    all_sigs.extend(siglist)
-            except (IOError, sourmash.exceptions.SourmashError):
-                if traverse_yield_all:
-                    continue
-                else:
-                    raise
-
-        loaded=True
-        db = all_sigs
-        dbtype = DatabaseType.SIGLIST
-
-    # load signatures from single file
-    try:
-        # CTB: could make this a generator, with some trickery; but for
-        # now, just force into list.
-        with open(filename, 'rt') as fp:
-            db = signature.load_signatures(fp, do_raise=True)
-            db = list(db)
-
-        loaded = True
-        dbtype = DatabaseType.SIGLIST
-    except Exception as exc:
-        pass
+    db, dbtype = storage.load(filename, traverse_yield_all, cache_size)
+    if db: loaded = True
 
     # try load signatures from single file (list of signature paths)
     if not loaded:
