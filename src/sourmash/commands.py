@@ -616,11 +616,11 @@ def gather(args):
 
         scaled = query.minhash.scaled
 
-        for db, _, _ in databases:
+        for db in databases:
             for match in db.prefetch(query, args.threshold_bp, scaled):
                 prefetch_idx.insert(match)
 
-        databases = [ (prefetch_idx, '', None) ]
+        databases = [ prefetch_idx ]
 
     found = []
     weighted_missed = 1
