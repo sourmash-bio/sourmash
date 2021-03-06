@@ -979,6 +979,18 @@ def prefetch(args):
 
     noident_mh = copy.copy(query_mh)
 
+    csvout_fp = None
+    csvout_w = None
+    if args.output:
+        fieldnames = ['intersect_bp', 'jaccard',
+                      'max_containment', 'f_query_match', 'f_match_query',
+                      'match_filename', 'match_name', 'match_md5', 'match_bp',
+                      'query_filename', 'query_name', 'query_md5', 'query_bp']
+
+        csvout_fp = FileOutput(args.output, 'wt').open()
+        csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
+        csvout_w.writeheader()
+
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
@@ -997,11 +1009,21 @@ def prefetch(args):
             noident_mh.remove_many(match.minhash.hashes)
             n += 1
 
+            if csvout_fp:
+                d = dict(result._asdict())
+                del d['match']                 # actual signatures not in CSV.
+                del d['query']
+                csvout_w.writerow(d)
+
             if n % 10 == 0:
                 notify(f"total of {n} searched, {len(keep)} matching signatures.",
                        end="\r")
 
     notify(f"total of {n} searched, {len(keep)} matching signatures.")
+
+    if csvout_fp:
+        notify(f"saved {len(keep)} matches to CSV file '{args.output}'")
+        csvout_fp.close()
 
     matched_query_mh = copy.copy(query_mh)
     matched_query_mh.remove_many(noident_mh.hashes)
