@@ -183,6 +183,7 @@ class SBT(Index):
         if cache_size is None:
             cache_size = sys.maxsize
         self._nodescache = _NodesCache(maxsize=cache_size)
+        self.location = None
 
     def signatures(self):
         for k in self.leaves():
@@ -389,7 +390,7 @@ class SBT(Index):
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, None))
+            results.append((similarity, leaf.data, self.location))
 
         return results
         
@@ -435,7 +436,7 @@ class SBT(Index):
             containment = query.minhash.contained_by(leaf_mh, True)
 
             assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, None))
+            results.append((containment, leaf.data, self.location))
 
         results.sort(key=lambda x: -x[0])
 
@@ -758,7 +759,9 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**jnodes['storage']['args'])
 
-        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
+        obj = loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
+        obj.location = location
+        return obj
 
     @staticmethod
     def _load_v1(jnodes, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):

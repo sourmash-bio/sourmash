@@ -85,7 +85,7 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename) in dblist:
+    for (obj, _) in dblist:
         for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
@@ -95,9 +95,7 @@ def _find_best(dblist, query, threshold_bp):
                 # update best match.
                 best_cont = cont
                 best_match = match
-
-                # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename # @CTB
+                best_filename = fname
 
     if not best_match:
         return None, None, None
