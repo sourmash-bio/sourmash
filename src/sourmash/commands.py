@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+import copy
 
 import screed
 from .compare import compare_all_pairs, compare_serial_containment
@@ -930,3 +931,115 @@ def migrate(args):
 
     notify('saving SBT under "{}".', args.sbt_name)
     tree.save(args.sbt_name, structure_only=True)
+
+
+def prefetch(args):
+    "@CTB"
+    # flatten --db and --query lists
+    args.db = [item for sublist in args.db for item in sublist]
+    args.query = [item for sublist in args.query for item in sublist]
+
+    # load from files, too.
+    if args.db_from_file:
+        more_db = sourmash_args.load_file_list_fo_signatures(args.db_from_file)
+        args.db.extend(more_db)
+
+    if args.query_from_file:
+        more_query = sourmash_args.load_file_list_fo_signatures(args.query_from_file)
+        args.query.extend(more_query)
+
+    if not args.query:
+        notify("ERROR: no signatures to search given via --query or --query-from-file!?")
+        return -1
+
+    if not args.db:
+        notify("ERROR: no signatures to search given via --db or --db-from-file!?")
+        return -1
+
+    ksize = args.ksize
+    moltype = sourmash_args.calculate_moltype(args)
+
+    # build one big query:
+    query_sigs = []
+    n_loaded = 0
+    for query_file in args.query:
+        sigs = sourmash_args.load_file_as_signatures(query_file, ksize=ksize,
+                                                     select_moltype=moltype)
+        # @CTB check if scaled.
+        query_sigs.extend(sigs)
+
+    if not len(query_sigs):
+        notify("ERROR: no query signatures loaded!?")
+        sys.exit(-1)
+
+    all_query_mh = query_sigs[0].minhash
+    scaled = all_query_mh.scaled
+    if args.scaled:
+        scaled = int(args.scaled)
+
+    notify(f"all sketches will be downsampled to {scaled}")
+
+    for query_sig in query_sigs[1:]:
+        this_mh = query_sig.minhash.downsample(scaled=scaled)
+        all_query_mh += this_mh
+
+    if not all_query_mh.scaled:
+        # @CTB do nicer error reporting.
+        notify("ERROR: must use scaled signatures.")
+        sys.exit(-1)
+
+    noident_mh = copy.copy(all_query_mh)
+
+    notify(f"Loaded {len(all_query_mh.hashes)} hashes from {len(query_sigs)} query signatures.")
+
+    # iterate over signatures in db one at a time, for each db;
+    # find those with any kind of containment.
+    keep = []
+    n = 0
+    for dbfilename in args.db:
+        notify(f"loading signatures from '{dbfilename}'")
+        # @CTB use _load_databases? or is this fine? want to use .signatures
+        # explicitly / support lazy loading.
+        db = sourmash_args.load_file_as_signatures(dbfilename, ksize=ksize,
+                                                   select_moltype=moltype)
+        for ss in db:
+            n += 1
+            db_mh = ss.minhash.downsample(scaled=scaled)
+            common = all_query_mh.count_common(db_mh)
+            if common:
+                if common * all_query_mh.scaled >= args.threshold_bp:
+                    keep.append(ss)
+                    noident_mh.remove_many(db_mh.hashes)
+
+            if n % 10 == 0:
+                notify(f"total of {n} searched, {len(keep)} matching signatures.",
+                       end="\r")
+
+    notify(f"total of {n} searched, {len(keep)} matching signatures.")
+
+    matched_query_mh = copy.copy(all_query_mh)
+    matched_query_mh.remove_many(noident_mh.hashes)
+    notify(f"of {len(all_query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
+    notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
+
+    if args.save_matches:
+        notify("saving all matching database signatures to '{}'", args.save_matches)
+        with sourmash_args.FileOutput(args.save_matches, "wt") as fp:
+            sig.save_signatures(keep, fp)
+
+    if args.save_matching_hashes:
+        filename = args.save_matching_hashes
+        notify(f"saving {len(matched_query_mh)} matched hashes to '{filename}'")
+        ss = sig.SourmashSignature(matched_query_mh)
+        with open(filename, "wt") as fp:
+            sig.save_signatures([ss], fp)
+
+    if args.save_unmatched_hashes:
+        filename = args.save_unmatched_hashes
+        notify(f"saving {len(noident_mh)} unmatched hashes to '{filename}'")
+        ss = sig.SourmashSignature(noident_mh)
+        with open(filename, "wt") as fp:
+            sig.save_signatures([ss], fp)
+
+    return 0
+    
