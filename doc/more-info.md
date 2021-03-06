@@ -2,11 +2,11 @@
 
 ## Computational requirements
 
-Read more about the [compute requirements, here.](requirements.html)
+Read more about the [computational requirements, here.](requirements.md)
 
 ## Prepared search database
 
-We offer a number of [prepared search databases.](databases.html)
+We offer a number of [prepared search databases.](databases.md)
 
 ## Other MinHash implementations for DNA
 
@@ -91,8 +91,10 @@ for samples.
 ## Interoperability with mash
 
 
-The default sketches computed by sourmash and mash are comparable, but
-we are still [working on ways to convert the file formats][11]
+The hashing functions used by sourmash and mash are the same, but we
+are still [working on ways to convert the file formats][11]. Please
+keep an eye on `sourmash signature import` and `sourmash signature
+export`!
 
 ## Developing sourmash
 
@@ -118,7 +120,7 @@ Newer versions of matplotlib do not seem to have this problem.
 [1]:https://github.com/edawson/rkmh
 [2]:https://github.com/lskatz/mashtree/blob/master/README.md
 [3]:https://github.com/onecodex/finch-rs
-[4]:https://github.com/dib-lab/sourmash/blob/master/utils/compute-dna-mh-another-way.py
+[4]:https://github.com/dib-lab/sourmash/blob/latest/utils/compute-dna-mh-another-way.py
 [5]:http://ivory.idyll.org/blog/2016-sourmash.html
 [6]:http://ivory.idyll.org/blog/2016-sourmash-signatures.html
 [7]:http://ivory.idyll.org/blog/2016-sourmash-sbt.html
@@ -138,5 +140,5 @@ Newer versions of matplotlib do not seem to have this problem.
 [21]:https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x
 [22]:http://joss.theoj.org/papers/3d793c6e7db683bee7c03377a4a7f3c9
 [23]:https://www.biorxiv.org/content/early/2017/09/04/184150
-[24]:developer.html
-[25]:release.html
+[24]:developer.md
+[25]:release.md

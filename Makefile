@@ -1,12 +1,15 @@
 PYTHON ?= python
 
-all:
-	$(PYTHON) setup.py build_ext -i
+all: build
 
 .PHONY:
 
+build: .PHONY
+	$(PYTHON) setup.py build_ext -i
+
 clean:
 	$(PYTHON) setup.py clean --all
+	rm -f src/sourmash/*.so
 	cd doc && make clean
 
 install: all
@@ -15,25 +18,28 @@ install: all
 dist: FORCE
 	$(PYTHON) setup.py sdist
 
-test: all
-	pip install -e '.[test]'
-	$(PYTHON) -m pytest
+test:
+	tox -e py38
+	cargo test
 
 doc: .PHONY
-	cd doc && make html
+	tox -e docs
 
-include/sourmash.h: src/lib.rs src/ffi/minhash.rs src/ffi/signature.rs src/errors.rs
-	rustup override set nightly
-	RUST_BACKTRACE=1 cbindgen --clean -c cbindgen.toml -o $@
-	rustup override set stable
+include/sourmash.h: src/core/src/lib.rs \
+                    src/core/src/ffi/hyperloglog.rs \
+                    src/core/src/ffi/minhash.rs \
+                    src/core/src/ffi/signature.rs \
+                    src/core/src/ffi/nodegraph.rs \
+                    src/core/src/errors.rs
+	cd src/core && \
+	RUSTUP_TOOLCHAIN=nightly cbindgen -c cbindgen.toml . -o ../../$@
 
 coverage: all
-	$(PYTHON) setup.py clean --all
-	SOURMASH_COVERAGE=1 $(PYTHON) setup.py build_ext -i
-	$(PYTHON) -m pytest --cov=. --cov-report term-missing
+	tox -e coverage
 
 benchmark:
-	asv continuous master $(git rev-parse HEAD)
+	tox -e asv
+	cargo bench
 
 check:
 	cargo build
@@ -44,7 +50,7 @@ last-tag:
 	git fetch -p -q; git tag -l | sort -V | tail -1
 
 wasm:
-	wasm-pack build
+	wasm-pack build src/core -d ../../pkg
 
 wasi:
 	cargo wasi build

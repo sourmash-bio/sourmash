@@ -16,6 +16,9 @@
 import sys
 import os
 
+import sourmash
+print('sourmash at:', sourmash)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -35,7 +38,9 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinxcontrib.napoleon',
-    'nbsphinx'
+    'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting',
+    'myst_parser'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -54,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'sourmash'
-copyright = '2016, C. Titus Brown and Luiz Irber'
+copyright = '2016-2020, C. Titus Brown and Luiz Irber'
 author = 'C. Titus Brown and Luiz Irber'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -119,7 +124,11 @@ html_theme = 'alabaster'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'logo': 'logo.png',
+    'logo_name': True,
+    'description': 'Quickly search, compare, and analyze genomic and metagenomic data sets'
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -160,7 +169,7 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {'*': ['navigation.html', 'relations.html',
+html_sidebars = {'*': ['about.html', 'navigation.html', 'relations.html',
                        'sourcelink.html', 'searchbox.html']}
 
 # Additional templates that should be rendered to pages, maps page names to
@@ -292,14 +301,4 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-try:
-    from recommonmark.parser import CommonMarkParser
-
-    source_parsers = {
-        '.md': CommonMarkParser,
-    }
-except ImportError:
-    raise
-    pass
-
-autodoc_mock_imports = ["sourmash._minhash"]
+autodoc_mock_imports = ["sourmash.minhash"]

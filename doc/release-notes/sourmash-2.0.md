@@ -18,16 +18,16 @@ in the
 
 This is a list of substantial new features and functionality in sourmash 2.0.
 
-* Added Sequence Bloom Tree search to enable similarity and containment queries on very large collections of signatures in low memory; see `sourmash index`, `sourmash search`, and `sourmash gather` in [the command line documentation](../command-line.html).
-* Added "LCA databases" for fast searching of large databases in not-so-low memory; see [`sourmash lca index` in command-line docs](../command-line.html#sourmash-lca-subcommands-for-taxonomic-classification).
-* Created [precomputed databases](../databases.html) for most of GenBank genomes.
-* Added taxonomic reporting functionality in the `sourmash lca` submodule - [see command-line docs](../command-line.html#sourmash-lca-subcommands-for-taxonomic-classification).
-* Added signature manipulation utilities in the `sourmash signature` submodule - [see command-line docs](../command-line.html#sourmash-signature-subcommands-for-signature-manipulation)
-* Introduced new modulo hash or "scaled" signatures for containment analysis; see [Using sourmash: a practical guide](../using-sourmash-a-guide.html#what-resolution-should-my-signatures-be-how-should-i-compute-them) and [more details in the Python API examples](../api-example.html#sourmash-minhash-objects-and-manipulations).
+* Added Sequence Bloom Tree search to enable similarity and containment queries on very large collections of signatures in low memory; see `sourmash index`, `sourmash search`, and `sourmash gather` in [the command line documentation](../command-line.md).
+* Added "LCA databases" for fast searching of large databases in not-so-low memory; see [`sourmash lca index` in command-line docs](../command-line.md#sourmash-lca-subcommands-for-taxonomic-classification).
+* Created [precomputed databases](../databases.md) for most of GenBank genomes.
+* Added taxonomic reporting functionality in the `sourmash lca` submodule - [see command-line docs](../command-line.md#sourmash-lca-subcommands-for-taxonomic-classification).
+* Added signature manipulation utilities in the `sourmash signature` submodule - [see command-line docs](../command-line.md#sourmash-signature-subcommands-for-signature-manipulation)
+* Introduced new modulo hash or "scaled" signatures for containment analysis; see [Using sourmash: a practical guide](../using-sourmash-a-guide.md#what-resolution-should-my-signatures-be-how-should-i-create-them) and [more details in the Python API examples](../api-example.md#advanced-features-of-sourmash-minhash-objects-scaled-and-num).
 * Switched to using JSON instead of YAML for signatures.
 * Many performance optimizations!
 * Many more tests!
-* A much cleaner and more robust [Python API](../api-example.html).
+* A much cleaner and more robust [Python API](../api-example.md).
 * Installation via bioconda is now recommended (and actively maintained :)
 * Support for building signatures from BAM files.
 

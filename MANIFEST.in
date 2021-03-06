@@ -1,10 +1,10 @@
-include LICENSE Makefile Dockerfile LICENSE Makefile README.md requirements.txt
-include index.ipynb
-recursive-include sourmash_lib *
-recursive-include sourmash *
-recursive-include third-party *.cc *.h
-exclude tests/*
+include LICENSE Makefile README.md requirements.txt
+include Cargo.toml
+include include/sourmash.h
+prune .eggs
+global-exclude *.rlib
 global-exclude *.orig
 global-exclude *.pyc
 global-exclude *.so
-prune tests/test-data/
+prune tests/test-data
+global-exclude *.git

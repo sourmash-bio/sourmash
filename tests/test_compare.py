@@ -5,8 +5,9 @@ import numpy as np
 import pytest
 
 import sourmash
-from sourmash.compare import compare_all_pairs, compare_parallel, compare_serial
-from . import sourmash_tst_utils as utils
+from sourmash.compare import (compare_all_pairs, compare_parallel,
+                              compare_serial)
+import sourmash_tst_utils as utils
 
 
 @pytest.fixture()
@@ -15,7 +16,7 @@ def siglist():
     filenames = sorted(glob.glob(os.path.join(demo_path, "*.sig")))
     sigs = []
     for filename in filenames:
-        sigs.extend(sourmash.load_signatures(filename))
+        sigs.extend(sourmash.load_file_as_signatures(filename))
     return sigs
 
 

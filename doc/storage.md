@@ -14,15 +14,15 @@ Saves internal SBT data in a hidden directory near the SBT JSON description.
         We used to create a tar file of JSON + hidden directory,
         which requires extracting and using more disk space.
 
-### TarStorage
+### ZipStorage
 
 Similar to FSStorage,
-but saves the internal SBT data in a `tar` file.
+but saves the internal SBT data in a `zip` file.
 - Pros
-  * easy to distribute (two files)
+  * easy to distribute (one file)
 - Cons
   * still need to distribute and download everything
-    (you need the full tar file available locally to be able to use the SBT).
+    (you need the full zip file available locally to be able to use the SBT).
 
 ### IPFSStorage
 

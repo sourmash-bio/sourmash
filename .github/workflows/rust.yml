@@ -1,0 +1,292 @@
+name: Rust checks
+
+on:
+  push:
+    branches: [latest]
+  pull_request:
+    paths:
+      - 'src/core/**'
+      - 'tests/test-data/**'
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Run cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [beta, stable, windows, macos]
+        include:
+          - build: macos
+            os: macos-latest
+            rust: stable
+            continue: false
+          - build: windows
+            os: windows-latest
+            rust: stable
+            continue: true
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+            continue: false
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+            continue: false
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+
+      - name: Install dependencies
+        continue-on-error: ${{ matrix.continue }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast
+
+  test_all_features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-all-features
+          version: latest
+          use-tool-cache: true
+
+      - name: Run tests for all feature combinations
+        run: cargo test-all-features --no-fail-fast --all
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-tarpaulin
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+
+      - name: Coverage with tarpaulin
+        run: cargo tarpaulin --all --all-features --timeout 600 --out Xml -- --test-threads 1
+
+      - name: Upload Rust coverage to codecov
+        uses: codecov/codecov-action@v1
+        with:
+          flags: rust
+          fail_ci_if_error: true
+
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+
+  wasm-pack:
+    name: Check if wasm-pack builds a valid package for the sourmash crate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: wasm-pack
+          version: latest
+
+      - name: Prepare node for running tests
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - name: run wasm tests
+        run: wasm-pack test --node src/core
+
+      - name: run wasm-pack build
+        run: wasm-pack build src/core -d ../../pkg
+
+  wasm32-wasi:
+    name: Run tests under wasm32-wasi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install wasm32-wasi target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-wasi
+      - name: Install wasmtime
+        run: "curl https://wasmtime.dev/install.sh -sSf | bash"
+      - name: Add wasmtime to PATH
+        run: echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
+      - name: Install cargo-wasi command
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --force cargo-wasi
+      - name: Build code with cargo-wasi
+        uses: actions-rs/cargo@v1
+        continue-on-error: true  ## TODO: remove this when build works...
+        with:
+          command: wasi
+          args: build
+      - name: Run tests under wasm32-wasi
+        uses: actions-rs/cargo@v1
+        continue-on-error: true  ## TODO: remove this when tests work...
+        with:
+          command: wasi
+          args: test
+
+  publish:
+    name: Publish (dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Make sure we can publish the sourmash crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --dry-run --manifest-path src/core/Cargo.toml
+
+  minimum_rust_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.37.0
+          override: true
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast
+
+  check_cbindgen:
+    name: "Check if cbindgen runs cleanly for generating the C headers"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cbindgen
+          version: 0.14.2
+          use-tool-cache: true
+
+      - run: make include/sourmash.h
+
+      - name: check if headers have the same content
+        run: |
+          git update-index --refresh
+          git diff
+          git diff-index --quiet HEAD -- include/sourmash.h || echo "::error file=include/sourmash.h::Header doesn't match committed file, did you forget to rerun cbindgen?"
