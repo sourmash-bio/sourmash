@@ -13,7 +13,9 @@ def subparser(subparsers):
         help="one or more signature files to use as queries",
     )
     subparser.add_argument(
-        "--query-from-file", default=None, help="load list of query signatures from this file"
+        "--query-from-file",
+        default=None,
+        help="load list of query signatures from this file"
     )
     subparser.add_argument(
         "--db",
@@ -23,7 +25,9 @@ def subparser(subparsers):
         default=[],
     )
     subparser.add_argument(
-        "--db-from-file", default=None, help="load list of subject signatures from this file"
+        "--db-from-file",
+        default=None,
+        help="load list of subject signatures from this file"
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -36,13 +40,11 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE',
         help='output CSV containing matches to this file'
     )
-    # @CTB also save known/unknown?
     subparser.add_argument(
         '--save-matches', metavar='FILE',
         help='save all matched signatures from the databases to the '
         'specified file'
     )
-    # @CTB default to smaller?
     subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,
         help='reporting threshold (in bp) for estimated overlap with remaining query hashes (default=50kb)'
@@ -60,11 +62,6 @@ def subparser(subparsers):
     subparser.add_argument(
         '--scaled', metavar='FLOAT', type=float, default=None,
         help='downsample signatures to the specified scaled factor'
-    )
-    # @CTB remove?
-    subparser.add_argument(
-        '--md5', default=None,
-        help='select the signature with this md5 as query'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
