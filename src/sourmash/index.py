@@ -159,3 +159,59 @@ class LinearIndex(Index):
 
         siglist=select_sigs(self._signatures, ksize, moltype)
         return LinearIndex(siglist, self.filename)
+
+
+class IndexOfIndexes(Index):
+    def __init__(self, index_list, source_list):
+        self.index_list = list(index_list)
+        self.source_list = list(source_list)
+        assert len(index_list) == len(source_list)
+
+    def signatures(self):
+        for idx in self.index_list:
+            for ss in idx.signatures():
+                yield ss
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, ksize=None, moltype=None):
+        new_idx_list = []
+        new_src_list = []
+        for idx, src in zip(self.index_list, self.source_list):
+            idx = idx.select(ksize=ksize, moltype=moltype)
+            new_idx_list.append(idx)
+            new_src_list.append(src)
+
+        return IndexOfIndexes(new_idx_list, new_src_list)
+
+
+    def search(self, query, *args, **kwargs):
+        # do the actual search:
+        matches = []
+        for idx, src in zip(self.index_list, self.source_list):
+            for (score, ss, filename) in idx.search(query, *args, **kwargs):
+                matches.append((score, ss, src))
+                
+        # sort!
+        matches.sort(key=lambda x: -x[0])
+        return matches
+
+    def gather(self, query, *args, **kwargs):
+        "Return the match with the best Jaccard containment in the Index."
+        # actually do search!
+        results = []
+        for idx, src in zip(self.index_list, self.source_list):
+            for (score, ss, filename) in idx.gather(query, *args, **kwargs):
+                results.append((score, ss, src))
+            
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+
+        return results

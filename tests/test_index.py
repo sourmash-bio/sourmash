@@ -4,7 +4,7 @@ import zipfile
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import LinearIndex
+from sourmash.index import LinearIndex, IndexOfIndexes
 from sourmash.sbt import SBT, GraphFactory, Leaf
 
 import sourmash_tst_utils as utils
@@ -393,3 +393,85 @@ def test_index_same_md5sum_zipstorage(c):
     # should have 3 files, 1 internal and two sigs. We check for 4 because the
     # directory also shows in namelist()
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
+
+
+def test_indexindex_search():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex()
+    lidx1.insert(ss2)
+    lidx2 = LinearIndex()
+    lidx2.insert(ss47)
+    lidx3 = LinearIndex()
+    lidx3.insert(ss63)
+
+    lidx = IndexOfIndexes([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[1][1] == ss63
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[1][1] == ss47
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+
+
+def test_indexindex_gather():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+
+    lidx1 = LinearIndex()
+    lidx1.insert(ss2)
+    lidx2 = LinearIndex()
+    lidx2.insert(ss47)
+    lidx3 = LinearIndex()
+    lidx3.insert(ss63)
+
+    lidx = IndexOfIndexes([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss2
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 2
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+    assert round(matches[1][0], 2) == 0.49
+    assert matches[1][1] == ss63
+
+
