@@ -11,6 +11,10 @@ You'll need about 5 GB of free disk space to download the database,
 and about 5 GB of RAM to search it.  The tutorial should take about
 20 minutes total to run.
 
+Note, we have successfully tested it on
+[binder.pangeo.io](https://binder.pangeo.io/v2/gh/binder-examples/r-conda/master?urlpath=urlpath%3Drstudio)
+if you want to give it a try!
+
 ## Install miniconda
 
 If you don't have the `conda` command installed, you'll need to install
@@ -63,12 +67,12 @@ curl -L -o genbank-k31.lca.json.gz https://osf.io/4f8n3/download
 
 Download a random genome from genbank:
 ```
-curl -L -o some-genome.fa.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/178/875/GCF_000178875.2_ASM17887v2/GCF_000178875.2_ASM17887v2_genomic.fna.gz
+curl -L -o some-genome.fa.gz https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/178/875/GCF_000178875.2_ASM17887v2/GCF_000178875.2_ASM17887v2_genomic.fna.gz
 ```
 
-Compute a signature for this genome:
+Create a signature for this genome:
 ```
-sourmash compute -k 31 --scaled=1000 --name-from-first some-genome.fa.gz
+sourmash sketch dna -p scaled=1000,k=31 --name-from-first some-genome.fa.gz
 ```
 
 Now, classify the signature with sourmash `lca classify`,
@@ -119,7 +123,7 @@ on the command line; separate them with `--db` or `--query`.
 
 (This is an abbreviated version of [this blog post](http://ivory.idyll.org/blog/2017-classify-genome-bins-with-custom-db-try-again.html), updated to use the `sourmash lca` commands.)
 
-Download some pre-computed signatures:
+Download some pre-calculated signatures:
 
 ```
 curl -L https://osf.io/bw8d7/download?version=1 -o delmont-subsample-sigs.tar.gz

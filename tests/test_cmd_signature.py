@@ -1433,6 +1433,35 @@ def test_sig_describe_stdin(c):
 
 
 @utils.in_tempdir
+def test_sig_describe_empty(c):
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    ss = sourmash.load_file_as_signatures(sig)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+
+    ss.name = ''
+    ss.filename = ''
+
+    outsig = c.output('xxx.sig')
+    with open(outsig, 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    ss = sourmash.load_file_as_signatures(outsig)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert ss.name == ''
+    assert ss.filename == ''
+
+    c.run_sourmash('sig', 'describe', outsig)
+    print(c.last_result.out)
+    assert 'signature: ** no name **' in c.last_result.out
+    assert 'source file: ** no name **' in c.last_result.out
+
+
+@utils.in_tempdir
 def test_sig_describe_2(c):
     # get info in CSV spreadsheet
     sig47 = utils.get_test_data('47.fa.sig')

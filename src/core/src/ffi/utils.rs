@@ -18,6 +18,7 @@ thread_local! {
     pub static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
 }
 
+#[allow(clippy::clippy::wrong_self_convention)]
 pub trait ForeignObject: Sized {
     type RustObject;
 

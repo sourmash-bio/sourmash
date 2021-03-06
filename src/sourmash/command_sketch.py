@@ -152,6 +152,14 @@ class _signatures_for_sketch_factory(object):
         return sigs
 
 
+def _add_from_file_to_filenames(args):
+    "Add filenames from --from-file to args.filenames"
+    from .sourmash_args import load_file_list_of_signatures
+    if args.from_file:
+        file_list = load_file_list_of_signatures(args.from_file)
+        args.filenames.extend(file_list)
+
+
 def _execute_sketch(args, signatures_factory):
     "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
@@ -200,6 +208,7 @@ def dna(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -229,6 +238,7 @@ def protein(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -258,4 +268,5 @@ def translate(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)

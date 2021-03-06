@@ -3669,7 +3669,7 @@ def test_gather_abund_10_1(c):
     assert total_bp_analyzed == total_query_bp
 
 
-@utils.in_thisdir
+@utils.in_tempdir
 def test_gather_abund_10_1_ignore_abundance(c):
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
@@ -3686,7 +3686,9 @@ def test_gather_abund_10_1_ignore_abundance(c):
 
     status, out, err = c.run_sourmash('gather', query,
                                       '--ignore-abundance',
-                                      *against_list)
+                                      *against_list,
+                                      '-o', c.output('results.csv'))
+
 
     print(out)
     print(err)
@@ -3701,6 +3703,18 @@ def test_gather_abund_10_1_ignore_abundance(c):
     assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
     assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
     assert 'genome-s12.fa.gz' not in out
+
+    with open(c.output('results.csv'), 'rt') as fp:
+        r = csv.DictReader(fp)
+        some_results = False
+        for row in r:
+            some_results = True
+            assert row['average_abund'] is ''
+            assert row['median_abund'] is ''
+            assert row['std_abund'] is ''
+
+        assert some_results
+            
 
 
 @utils.in_tempdir

@@ -624,13 +624,13 @@ def gather(args):
                 print_results("---------   ------- -------")
 
 
-        # print interim result & save in a list for later use
+        # print interim result & save in `found` list for later use
         pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
         pct_genome = '{:.1f}%'.format(result.f_match*100)
-        average_abund ='{:.1f}'.format(result.average_abund)
         name = result.match._display_name(40)
 
         if query.minhash.track_abundance and not args.ignore_abundance:
+            average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
                       average_abund, name)
@@ -758,10 +758,10 @@ def multigather(args):
                 # print interim result & save in a list for later use
                 pct_query = '{:.1f}%'.format(result.f_unique_weighted*100)
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
-                average_abund ='{:.1f}'.format(result.average_abund)
                 name = result.match._display_name(40)
 
                 if query.minhash.track_abundance and not args.ignore_abundance:
+                    average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
                               average_abund, name)
