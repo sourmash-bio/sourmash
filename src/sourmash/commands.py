@@ -970,12 +970,14 @@ def prefetch(args):
                query_mh.scaled, int(args.scaled))
         query_mh = query_mh.downsample(scaled=args.scaled)
 
+    scaled = query_mh.scaled
+
     # empty?
     if not len(query_mh):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    notify(f"all sketches will be downsampled to {query_mh.scaled}")
+    notify(f"all sketches will be downsampled to {scaled}")
 
     noident_mh = copy.copy(query_mh)
 
@@ -997,13 +999,10 @@ def prefetch(args):
     n = 0
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
-        # @CTB use _load_databases? or is this fine? want to use .signatures
-        # explicitly / support lazy loading.
-        db = sourmash_args.load_file_as_signatures(dbfilename, ksize=ksize,
-                                                   select_moltype=moltype)
+        db = sourmash_args.load_file_as_index(dbfilename)
+        db = db.select(ksize=ksize, moltype=moltype)
 
-        for result in prefetch_database(query, query_mh, db,
-                                        args.threshold_bp):
+        for result in prefetch_database(query, db, args.threshold_bp, scaled):
             match = result.match
             keep.append(match)
             noident_mh.remove_many(match.minhash.hashes)

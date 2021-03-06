@@ -234,32 +234,25 @@ PrefetchResult = namedtuple('PrefetchResult',
                             'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
 
 
-def prefetch_database(query, query_mh, database, threshold_bp):
+def prefetch_database(query, database, threshold_bp, scaled):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
     """
-    scaled = query_mh.scaled
+    query_mh = query.minhash.downsample(scaled=scaled)
     threshold = threshold_bp / scaled
     query_hashes = set(query_mh.hashes)
 
     # iterate over all signatures in database, find matches
-    # NOTE: this is intentionally a linear search that is not using 'find'!
-    for ss in database:
-        # downsample the database minhash explicitly here, so that we know
-        # that 'common' is calculated at the query scaled.
-        db_mh = ss.minhash.downsample(scaled=query_mh.scaled)
-        common = query_mh.count_common(db_mh)
-
-        # if intersection is below threshold, skip to next.
-        if common < threshold:
-            continue
-
-        match = ss
+    for match in database.prefetch(query, threshold_bp, query_mh.scaled):
+        # base intersections etc on downsampled
+        # NOTE TO SELF @CTB: match should be unmodified (not downsampled)
+        # for output.
+        db_mh = match.minhash.downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
         match_hashes = set(db_mh.hashes)
         intersect_hashes = query_hashes.intersection(match_hashes)
-        assert common == len(intersect_hashes)
+        assert len(intersect_hashes) >= threshold
 
         f_query_match = db_mh.contained_by(query_mh)
         f_match_query = query_mh.contained_by(db_mh)

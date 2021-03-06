@@ -81,6 +81,24 @@ class Index(ABC):
         matches.sort(key=lambda x: -x[0])
         return matches
 
+    def prefetch(self, query, threshold_bp, scaled=None):
+        "Return all matches with minimum overlap, using a linear search."
+        query_mh = query.minhash
+
+        # adjust scaled for searching --
+        if scaled and query_mh.scaled != scaled:
+            query_mh = query_mh.downsample(scaled=scaled)
+        else:
+            scaled = query_mh.scaled
+        threshold = threshold_bp / scaled
+
+        # iterate across all signatuers
+        for ss in self.signatures():
+            ss_mh = ss.minhash.downsample(scaled=scaled)
+            common = query_mh.count_common(ss_mh)
+            if common >= threshold:
+                yield ss        # yield original match signature
+
     def gather(self, query, *args, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
         if not query.minhash:             # empty query? quit.
