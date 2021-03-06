@@ -29,7 +29,7 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                      ignore_abundance, unload_data=False):
     results = []
     found_md5 = set()
-    for (obj, filename, filetype) in databases:
+    for (obj, filename) in databases:
         search_iter = obj.search(query, threshold=threshold,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
@@ -84,7 +84,7 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename, filetype) in dblist:
+    for (obj, filename) in dblist:
         for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
