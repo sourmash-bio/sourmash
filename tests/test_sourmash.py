@@ -3404,6 +3404,27 @@ def test_gather_query_downsample():
                     'NC_003197.2' in out))
 
 
+def test_gather_query_downsample_explicit():
+    # do an explicit downsampling to fix `test_gather_query_downsample`
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', '-k', '31', '--scaled', '10000',
+                                            query_sig] + testdata_sigs,
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'loaded 12 signatures' in err
+        assert all(('4.9 Mbp      100.0%  100.0%' in out,
+                    'NC_003197.2' in out))
+
+
 def test_gather_save_matches():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
