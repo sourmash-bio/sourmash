@@ -283,7 +283,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
             siglist = filter_compatible_signatures(query, siglist, 1)
             linear = LinearIndex(siglist, filename=filename)
-            databases.append((linear, filename))
+            databases.append(linear)
 
             n_signatures += len(linear)
 
@@ -293,7 +293,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                                             is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((db, filename))
+            databases.append(db)
             notify('loaded SBT {}', filename, end='\r')
             n_databases += 1
 
@@ -306,7 +306,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify('loaded LCA {}', filename, end='\r')
             n_databases += 1
 
-            databases.append((db, filename))
+            databases.append(db)
 
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
@@ -318,7 +318,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 sys.exit(-1)
 
             linear = LinearIndex(siglist, filename=filename)
-            databases.append((linear, filename))
+            databases.append(linear)
 
             notify('loaded {} signatures from {}', len(linear),
                    filename, end='\r')
