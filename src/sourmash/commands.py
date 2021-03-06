@@ -935,81 +935,67 @@ def migrate(args):
 
 def prefetch(args):
     "@CTB"
-    # flatten --db and --query lists
-    args.db = [item for sublist in args.db for item in sublist]
-    args.query = [item for sublist in args.query for item in sublist]
+    from .search import prefetch_database
 
-    # load from files, too.
+    # load databases from files, too.
     if args.db_from_file:
         more_db = sourmash_args.load_file_list_fo_signatures(args.db_from_file)
-        args.db.extend(more_db)
+        args.databases.extend(more_db)
 
-    if args.query_from_file:
-        more_query = sourmash_args.load_file_list_fo_signatures(args.query_from_file)
-        args.query.extend(more_query)
-
-    if not args.query:
-        notify("ERROR: no signatures to search given via --query or --query-from-file!?")
-        return -1
-
-    if not args.db:
-        notify("ERROR: no signatures to search given via --db or --db-from-file!?")
+    if not args.databases:
+        notify("ERROR: no signatures to search!?")
         return -1
 
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
 
-    # build one big query:
-    query_sigs = []
-    n_loaded = 0
-    for query_file in args.query:
-        sigs = sourmash_args.load_file_as_signatures(query_file, ksize=ksize,
-                                                     select_moltype=moltype)
-        # @CTB check if scaled.
-        query_sigs.extend(sigs)
+    # load the query signature & figure out all the things
+    query = sourmash_args.load_query_signature(args.query,
+                                               ksize=args.ksize,
+                                               select_moltype=moltype,
+                                               select_md5=args.md5)
+    notify('loaded query: {}... (k={}, {})', str(query)[:30],
+                                             query.minhash.ksize,
+                                             sourmash_args.get_moltype(query))
 
-    if not len(query_sigs):
-        notify("ERROR: no query signatures loaded!?")
+    # verify signature was computed right.
+    if not query.minhash.scaled:
+        error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    all_query_mh = query_sigs[0].minhash
-    scaled = all_query_mh.scaled
+    # downsample if requested
+    query_mh = query.minhash
     if args.scaled:
-        scaled = int(args.scaled)
+        notify('downsampling query from scaled={} to {}',
+               query_mh.scaled, int(args.scaled))
+        query_mh = query_mh.downsample(scaled=args.scaled)
 
-    notify(f"all sketches will be downsampled to {scaled}")
-
-    for query_sig in query_sigs[1:]:
-        this_mh = query_sig.minhash.downsample(scaled=scaled)
-        all_query_mh += this_mh
-
-    if not all_query_mh.scaled:
-        # @CTB do nicer error reporting.
-        notify("ERROR: must use scaled signatures.")
+    # empty?
+    if not len(query_mh):
+        error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    noident_mh = copy.copy(all_query_mh)
+    notify(f"all sketches will be downsampled to {query_mh.scaled}")
 
-    notify(f"Loaded {len(all_query_mh.hashes)} hashes from {len(query_sigs)} query signatures.")
+    noident_mh = copy.copy(query_mh)
 
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
     n = 0
-    for dbfilename in args.db:
+    for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
         # @CTB use _load_databases? or is this fine? want to use .signatures
         # explicitly / support lazy loading.
         db = sourmash_args.load_file_as_signatures(dbfilename, ksize=ksize,
                                                    select_moltype=moltype)
-        for ss in db:
+
+        for result in prefetch_database(query, query_mh, db,
+                                        args.threshold_bp):
+            match = result.match
+            keep.append(match)
+            noident_mh.remove_many(match.minhash.hashes)
             n += 1
-            db_mh = ss.minhash.downsample(scaled=scaled)
-            common = all_query_mh.count_common(db_mh)
-            if common:
-                if common * all_query_mh.scaled >= args.threshold_bp:
-                    keep.append(ss)
-                    noident_mh.remove_many(db_mh.hashes)
 
             if n % 10 == 0:
                 notify(f"total of {n} searched, {len(keep)} matching signatures.",
@@ -1017,9 +1003,9 @@ def prefetch(args):
 
     notify(f"total of {n} searched, {len(keep)} matching signatures.")
 
-    matched_query_mh = copy.copy(all_query_mh)
+    matched_query_mh = copy.copy(query_mh)
     matched_query_mh.remove_many(noident_mh.hashes)
-    notify(f"of {len(all_query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
+    notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
     if args.save_matches:

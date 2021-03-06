@@ -224,3 +224,64 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         result_n += 1
 
         yield result, weighted_missed, new_max_hash, query
+
+
+###
+### prefetch code
+###
+
+PrefetchResult = namedtuple('PrefetchResult',
+                            'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
+
+
+def prefetch_database(query, query_mh, database, threshold_bp):
+    """
+    Find all matches to `query_mh` >= `threshold_bp` in `database`.
+    """
+    scaled = query_mh.scaled
+    threshold = threshold_bp / scaled
+    query_hashes = set(query_mh.hashes)
+
+    # iterate over all signatures in database, find matches
+    # NOTE: this is intentionally a linear search that is not using 'find'!
+    for ss in database:
+        # downsample the database minhash explicitly here, so that we know
+        # that 'common' is calculated at the query scaled.
+        db_mh = ss.minhash.downsample(scaled=query_mh.scaled)
+        common = query_mh.count_common(db_mh)
+
+        # if intersection is below threshold, skip to next.
+        if common < threshold:
+            continue
+
+        match = ss
+
+        # calculate db match intersection with query hashes:
+        match_hashes = set(db_mh.hashes)
+        intersect_hashes = query_hashes.intersection(match_hashes)
+        assert common == len(intersect_hashes)
+
+        f_query_match = db_mh.contained_by(query_mh)
+        f_match_query = query_mh.contained_by(db_mh)
+        max_containment = max(f_query_match, f_match_query)
+
+        # build a result namedtuple
+        result = PrefetchResult(
+            intersect_bp=len(intersect_hashes) * scaled,
+            query_bp = len(query_mh) * scaled,
+            match_bp = len(db_mh) * scaled,
+            jaccard=db_mh.jaccard(query_mh),
+            max_containment=max_containment,
+            f_query_match=f_query_match,
+            f_match_query=f_match_query,
+            match=match,
+            match_filename=match.filename,
+            match_name=match.name,
+            match_md5=match.md5sum()[:8],
+            query=query,
+            query_filename=query.filename,
+            query_name=query.name,
+            query_md5=query.md5sum()[:8]
+        )
+
+        yield result

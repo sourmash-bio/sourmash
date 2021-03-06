@@ -5,24 +5,10 @@ from sourmash.cli.utils import add_ksize_arg, add_moltype_args
 
 def subparser(subparsers):
     subparser = subparsers.add_parser('prefetch')
-    subparser.add_argument(
-        "--query",
+    subparser.add_argument('query', help='query signature')
+    subparser.add_argument("databases",
         nargs="*",
-        default=[],
-        action="append",
-        help="one or more signature files to use as queries",
-    )
-    subparser.add_argument(
-        "--query-from-file",
-        default=None,
-        help="load list of query signatures from this file"
-    )
-    subparser.add_argument(
-        "--db",
-        nargs="*",
-        action="append",
         help="one or more databases to search",
-        default=[],
     )
     subparser.add_argument(
         "--db-from-file",
@@ -62,6 +48,10 @@ def subparser(subparsers):
     subparser.add_argument(
         '--scaled', metavar='FLOAT', type=float, default=None,
         help='downsample signatures to the specified scaled factor'
+    )
+    subparser.add_argument(
+        '--md5', default=None,
+        help='select the signature with this md5 as query'
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
