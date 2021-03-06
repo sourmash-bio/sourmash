@@ -10,7 +10,7 @@ import argparse
 import sourmash
 from sourmash import MinHash
 from sourmash import sourmash_args
-from sourmash._minhash import hash_murmur
+from sourmash.minhash import hash_murmur
 import screed
 import csv
 from sourmash.logging import notify, error
@@ -64,7 +64,7 @@ def main():
 
     # first, load the signature and extract the hashvals
     sigobj = sourmash.load_one_signature(args.query)
-    query_hashvals = set(sigobj.minhash.get_mins())
+    query_hashvals = set(sigobj.minhash.hashes)
     query_ksize = sigobj.minhash.ksize
 
     # track found kmers
@@ -86,11 +86,14 @@ def main():
                 watermark += NOTIFY_EVERY_BP
 
             # now do the hard work of finding the matching k-mers!
+            found = False
             for kmer, hashval in get_kmers_for_hashvals(record.sequence,
                                                         query_hashvals,
                                                         query_ksize):
                 found_kmers[kmer] = hashval
+                found = True
 
+            if found:
                 # write out sequence
                 if seqout_fp:
                     seqout_fp.write('>{}\n{}\n'.format(record.name,

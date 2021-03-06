@@ -10,7 +10,7 @@ import argparse
 import sourmash
 from sourmash import MinHash
 from sourmash import sourmash_args
-from sourmash._minhash import hash_murmur
+from sourmash.minhash import hash_murmur
 import screed
 import csv
 from sourmash.logging import notify, error
