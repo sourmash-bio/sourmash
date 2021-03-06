@@ -608,6 +608,20 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    # @CTB experimental! w00t fun!
+    if args.prefetch:
+        notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
+        from .index import LinearIndex
+        prefetch_idx = LinearIndex()
+
+        scaled = query.minhash.scaled
+
+        for db, _, _ in databases:
+            for match in db.prefetch(query, args.threshold_bp, scaled):
+                prefetch_idx.insert(match)
+
+        databases = [ (prefetch_idx, '', None) ]
+
     found = []
     weighted_missed = 1
     new_max_hash = query.minhash._max_hash
