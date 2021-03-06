@@ -29,12 +29,13 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                      ignore_abundance, unload_data=False):
     results = []
     found_md5 = set()
-    for (obj, filename) in databases:
+    for (obj, _) in databases:
         search_iter = obj.search(query, threshold=threshold,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
                                  best_only=best_only,
                                  unload_data=unload_data)
+
         for (similarity, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
@@ -96,7 +97,7 @@ def _find_best(dblist, query, threshold_bp):
                 best_match = match
 
                 # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename
+                best_filename = fname or filename # @CTB
 
     if not best_match:
         return None, None, None
@@ -215,7 +216,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               average_abund=average_abund,
                               median_abund=median_abund,
                               std_abund=std_abund,
-                              filename=filename,
+                              filename=filename, # @CTB
                               md5=best_match.md5sum(),
                               name=str(best_match),
                               match=best_match,
