@@ -364,10 +364,9 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # special case stdin
     if not loaded and filename == '-':
-        db = signature.load_signatures(sys.stdin, do_raise=True)
-        db = list(db)
-        loaded = True
+        db = LinearIndex.load(sys.stdin)
         dbtype = DatabaseType.SIGLIST
+        loaded = True
 
     # load signatures from directory
     if not loaded and os.path.isdir(filename):
@@ -480,14 +479,7 @@ def load_file_as_index(filename, yield_all_files=False):
     attempt to load all files.
     """
     db, dbtype = _load_database(filename, yield_all_files)
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
-        return db                         # already an index!
-    elif dbtype == DatabaseType.SIGLIST:
-        # turn siglist into a LinearIndex
-        idx = LinearIndex(db, filename)
-        return idx
-    else:
-        assert 0                          # unknown enum!?
+    return db
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
