@@ -122,6 +122,7 @@ class Index(ABC):
         ""
 
 class LinearIndex(Index):
+    "An Index for a collection of signatures. Can load from a .sig file."
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -198,7 +199,8 @@ class MultiIndex(Index):
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.search(query, *args, **kwargs):
-                matches.append((score, ss, src))
+                best_src = src or filename # override if src provided
+                matches.append((score, ss, best_src))
                 
         # sort!
         matches.sort(key=lambda x: -x[0])
@@ -210,7 +212,8 @@ class MultiIndex(Index):
         results = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.gather(query, *args, **kwargs):
-                results.append((score, ss, src))
+                best_src = src or filename # override if src provided
+                results.append((score, ss, best_src))
             
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
