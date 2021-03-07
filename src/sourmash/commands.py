@@ -611,8 +611,9 @@ def gather(args):
     # @CTB experimental! w00t fun!
     if args.prefetch:
         notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
-        from .index import LinearIndex
-        prefetch_idx = LinearIndex()
+        from .index import LinearIndex, CounterGatherIndex
+        #prefetch_idx = LinearIndex()
+        prefetch_idx = CounterGatherIndex(query)
 
         scaled = query.minhash.scaled
 
