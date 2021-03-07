@@ -306,7 +306,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
-            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
+            db = db.select(moltype=query_moltype, ksize=query_ksize)
+            siglist = db.signatures()
             siglist = filter_compatible_signatures(query, siglist, False)
             siglist = list(siglist)
             if not siglist:
@@ -388,32 +389,33 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             db = MultiIndex(index_list, source_list)
             dbtype = DatabaseType.SIGLIST
 
-    # load signatures from single file
-    try:
-        # CTB: could make this a generator, with some trickery; but for
-        # now, just force into list.
-        with open(filename, 'rt') as fp:
-            db = signature.load_signatures(fp, do_raise=True)
-            db = list(db)
-
-        loaded = True
-        dbtype = DatabaseType.SIGLIST
-    except Exception as exc:
-        pass
+    # load signatures from single signature file
+    if not loaded:
+        try:
+            with open(filename, 'rt') as fp:
+                db = LinearIndex.load(fp)
+            dbtype = DatabaseType.SIGLIST
+            loaded = True
+        except Exception as exc:
+            pass
 
     # try load signatures from single file (list of signature paths)
     if not loaded:
         try:
-            db = []
-            with open(filename, 'rt') as fp:
-                for line in fp:
-                    line = line.strip()
-                    if line:
-                        sigs = load_file_as_signatures(line)
-                        db += list(sigs)
+            idx_list = []
+            src_list = []
 
-            loaded = True
+            file_list = load_file_list_of_signatures(filename)
+            for fname in file_list:
+                idx = load_file_as_index(fname)
+                src = fname
+
+                idx_list.append(idx)
+                src_list.append(src)
+
+            db = MultiIndex(idx_list, src_list)
             dbtype = DatabaseType.SIGLIST
+            loaded = True
         except Exception as exc:
             pass
 
@@ -451,7 +453,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             raise OSError("Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(filename))
 
     if not loaded:
-        raise OSError("Error while reading signatures from '{}'.".format(filename))
+        raise OSError(f"Error while reading signatures from '{filename}'.")
 
     return db, dbtype
 
@@ -509,15 +511,8 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
         progress.notify(filename)
 
     db, dbtype = _load_database(filename, yield_all_files)
-
-    loader = None
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
-        db = db.select(moltype=select_moltype, ksize=ksize)
-        loader = db.signatures()
-    elif dbtype == DatabaseType.SIGLIST:
-        loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
-    else:
-        assert 0                          # unknown enum!?
+    db = db.select(moltype=select_moltype, ksize=ksize)
+    loader = db.signatures()
 
     if progress:
         return progress.start_file(filename, loader)
