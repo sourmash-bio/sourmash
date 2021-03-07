@@ -243,7 +243,7 @@ class CounterGatherIndex(Index):
                 if counter[dataset_id] == 0:
                     del counter[dataset_id]
 
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+        assert len(results) <= 1 #  no sorting needed
 
         return results
 
