@@ -163,7 +163,16 @@ class LinearIndex(Index):
 
 
 class MultiIndex(Index):
-    "An Index class that wraps other Index classes."
+    """An Index class that wraps other Index classes.
+
+    The MultiIndex constructor takes two arguments: a list of Index
+    objects, and a matching list of sources (filenames, etc.)  If the
+    source is not None, then it will be used to override the 'filename'
+    in the triple that is returned by search and gather.
+
+    One specific use for this is when loading signatures from a directory;
+    MultiIndex will properly record which files provided which signatures.
+    """
     def __init__(self, index_list, source_list):
         self.index_list = list(index_list)
         self.source_list = list(source_list)
