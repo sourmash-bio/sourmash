@@ -3447,7 +3447,7 @@ def test_gather_error_no_sigs_traverse(c):
 
     err = c.last_result.err
     print(err)
-    assert '** ERROR: no signatures or databases loaded?' in err
+    assert f"Error while reading signatures from '{emptydir}'" in err
     assert not 'found 0 matches total;' in err
 
 
