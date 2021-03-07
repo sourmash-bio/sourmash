@@ -480,3 +480,25 @@ def test_multi_index_gather():
     assert matches[1][2] == 'C'       # source override
 
 
+def test_multi_index_signatures():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    siglist = list(lidx.signatures())
+    assert len(siglist) == 3
+    assert ss2 in siglist
+    assert ss47 in siglist
+    assert ss63 in siglist
