@@ -4,7 +4,7 @@ import zipfile
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import LinearIndex, IndexOfIndexes
+from sourmash.index import LinearIndex, MultiIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 
 import sourmash_tst_utils as utils
@@ -411,7 +411,7 @@ def test_indexindex_search():
     lidx3 = LinearIndex()
     lidx3.insert(ss63)
 
-    lidx = IndexOfIndexes([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
+    lidx = MultiIndex([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
 
     # now, search for sig2
     sr = lidx.search(ss2, threshold=1.0)
@@ -460,7 +460,7 @@ def test_indexindex_gather():
     lidx3 = LinearIndex()
     lidx3.insert(ss63)
 
-    lidx = IndexOfIndexes([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
+    lidx = MultiIndex([lidx1, lidx2, lidx3], [sig2, sig47, sig63])
 
     matches = lidx.gather(ss2)
     assert len(matches) == 1

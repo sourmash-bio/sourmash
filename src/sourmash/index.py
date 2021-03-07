@@ -161,7 +161,8 @@ class LinearIndex(Index):
         return LinearIndex(siglist, self.filename)
 
 
-class IndexOfIndexes(Index):
+class MultiIndex(Index):
+    "An Index class that wraps other Index classes."
     def __init__(self, index_list, source_list):
         self.index_list = list(index_list)
         self.source_list = list(source_list)
