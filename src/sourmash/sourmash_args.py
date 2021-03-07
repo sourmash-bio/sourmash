@@ -525,7 +525,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     else:
         return loader
 
-def load_file_list_of_signatures(filename):
+def load_pathlist_from_file(filename):
     "Load a list-of-files text file."
     try:
         with open(filename, 'rt') as fp:

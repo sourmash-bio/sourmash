@@ -32,7 +32,7 @@ def compare(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
@@ -342,7 +342,7 @@ def index(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     if not inp_files:
@@ -703,7 +703,7 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     # need a query to get ksize, moltype for db loading
