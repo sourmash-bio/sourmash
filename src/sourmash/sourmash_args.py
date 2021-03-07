@@ -16,7 +16,7 @@ import sourmash.exceptions
 from . import signature
 from .logging import notify, error
 
-from .index import LinearIndex
+from .index import LinearIndex, MultiIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
@@ -278,12 +278,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         if os.path.isdir(filename):
             assert dbtype == DatabaseType.SIGLIST
 
-            siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = filter_compatible_signatures(query, siglist, 1)
-            linear = LinearIndex(siglist, filename=filename)
-            databases.append((linear, filename, False))
+            db = db.select(moltype=query_moltype, ksize=query_ksize)
+            databases.append((db, filename, False))
 
-            n_signatures += len(linear)
+            n_signatures += 1 # @CTB
 
         # SBT
         elif dbtype == DatabaseType.SBT:
@@ -372,22 +370,23 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     # load signatures from directory
     if not loaded and os.path.isdir(filename):
-        all_sigs = []
+        index_list = []
+        source_list = []
         for thisfile in traverse_find_sigs([filename], traverse_yield_all):
             try:
-                with open(thisfile, 'rt') as fp:
-                    x = signature.load_signatures(fp, do_raise=True)
-                    siglist = list(x)
-                    all_sigs.extend(siglist)
+                idx = LinearIndex.load(thisfile)
+                index_list.append(idx)
+                source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
                 if traverse_yield_all:
                     continue
                 else:
                     raise
 
-        loaded=True
-        db = all_sigs
-        dbtype = DatabaseType.SIGLIST
+        if index_list:
+            loaded=True
+            db = MultiIndex(index_list, source_list)
+            dbtype = DatabaseType.SIGLIST
 
     # load signatures from single file
     try:

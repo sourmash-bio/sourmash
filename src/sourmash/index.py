@@ -191,8 +191,7 @@ class MultiIndex(Index):
             new_idx_list.append(idx)
             new_src_list.append(src)
 
-        return IndexOfIndexes(new_idx_list, new_src_list)
-
+        return MultiIndex(new_idx_list, new_src_list)
 
     def search(self, query, *args, **kwargs):
         # do the actual search:
