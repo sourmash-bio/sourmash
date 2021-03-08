@@ -1571,6 +1571,9 @@ def test_search_metagenome_traverse():
 
 
 def test_search_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
     with utils.TempDirectory() as location:
         testdata_dir = utils.get_test_data('gather')
 
@@ -3274,6 +3277,9 @@ def test_gather_metagenome_traverse():
 
 
 def test_gather_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
     with utils.TempDirectory() as location:
         # set up a directory $location/gather that contains
         # everything in the 'tests/test-data/gather' directory
