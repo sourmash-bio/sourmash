@@ -183,6 +183,9 @@ class MultiIndex(Index):
             for ss in idx.signatures():
                 yield ss
 
+    def __len__(self):
+        return sum([ len(idx) for idx in self.index_list ])
+
     def insert(self, *args):
         raise NotImplementedError
 

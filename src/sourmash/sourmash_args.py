@@ -273,15 +273,17 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             sys.exit(-1)
 
         # are we collecting signatures from a directory/path?
-        # NOTE: error messages about loading will now be attributed to
-        # directory, not individual file.
         if os.path.isdir(filename):
+            # CTB: combine with SIGLIST below?
             assert dbtype == DatabaseType.SIGLIST
 
             db = db.select(moltype=query_moltype, ksize=query_ksize)
+            if not db:
+                notify("no compatible signatures found in '{}'", filename)
+                sys.exit(-1)
             databases.append((db, filename, False))
 
-            n_signatures += 1 # @CTB
+            n_signatures += len(db)
 
         # SBT
         elif dbtype == DatabaseType.SBT:
@@ -297,7 +299,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         elif dbtype == DatabaseType.LCA:
             if not check_lca_db_is_compatible(filename, db, query):
                 sys.exit(-1)
-            query_scaled = query.minhash.scaled
 
             notify('loaded LCA {}', filename, end='\r')
             n_databases += 1
