@@ -222,9 +222,9 @@ class CounterGatherIndex(Index):
         siglist = self.siglist
         match_size = n_threshold_hashes
 
-        if counter and match_size >= n_threshold_hashes:
+        if counter:
             most_common = counter.most_common()
-            dataset_id, size = most_common[0]
+            dataset_id, size = most_common.pop(0)
             if size >= n_threshold_hashes:
                 match_size = size
             else:
@@ -235,11 +235,16 @@ class CounterGatherIndex(Index):
             cont = query.minhash.contained_by(match.minhash, True)
             if cont and cont >= threshold:
                 results.append((cont, match, getattr(self, "filename", None)))
+            intersect_mh = query.minhash.copy_and_clear()
+            hashes = set(query.minhash.hashes).intersection(match.minhash.hashes)
+            intersect_mh.add_many(hashes)
 
             # Prepare counter for finding the next match by decrementing
             # all hashes found in the current match in other datasets
             for (dataset_id, _) in most_common:
-                counter[dataset_id] -= siglist[dataset_id].minhash.count_common(match.minhash, True)
+                remaining_sig = siglist[dataset_id]
+                intersect_count = remaining_sig.minhash.count_common(intersect_mh, True)
+                counter[dataset_id] -= intersect_count
                 if counter[dataset_id] == 0:
                     del counter[dataset_id]
 
