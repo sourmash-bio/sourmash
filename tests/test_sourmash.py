@@ -1345,7 +1345,8 @@ def test_search_containment():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '1'],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1354,7 +1355,7 @@ def test_search_containment():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '95.8%' in out
+        assert '95.6%' in out
 
 
 def test_search_containment_sbt():
@@ -1363,7 +1364,8 @@ def test_search_containment_sbt():
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
         status, out, err = utils.runscript('sourmash',
-                                           ['compute', testdata1, testdata2],
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '1'],
                                            in_directory=location)
 
         status, out, err = utils.runscript('sourmash',
@@ -1378,7 +1380,7 @@ def test_search_containment_sbt():
                                            in_directory=location)
         print(status, out, err)
         assert '1 matches' in out
-        assert '95.8%' in out
+        assert '95.6%' in out
 
 
 def test_search_gzip():
