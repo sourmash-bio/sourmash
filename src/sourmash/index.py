@@ -33,10 +33,9 @@ class Index(ABC):
 
         matches = []
 
-        for node in self.signatures():
-            if search_fn(node, *args):
-                matches.append(node)
-        return matches
+        for ss in self.signatures():
+            if search_fn(ss, *args):
+                yield ss
 
     def search(self, query, *args, **kwargs):
         """Return set of matches with similarity above 'threshold'.
