@@ -181,16 +181,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                     yield fullname
 
 
-def filter_compatible_signatures(query, siglist, force=False):
-    for ss in siglist:
-        if check_signatures_are_compatible(query, ss):
-            yield ss
-        else:
-            if not force:
-                raise ValueError("incompatible signature")
-
-
-def check_signatures_are_compatible(query, subject):
+def _check_signatures_are_compatible(query, subject):
     # is one scaled, and the other not? cannot do search
     if query.minhash.scaled and not subject.minhash.scaled or \
        not query.minhash.scaled and subject.minhash.scaled:
@@ -280,7 +271,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             assert dbtype == DatabaseType.SIGLIST
 
             db = db.select(moltype=query_moltype, ksize=query_ksize)
-            # @CTB filter compatible signatures here, too. write test.
+            filter_fn = lambda s: _check_signatures_are_compatible(query, s)
+            db = db.filter(filter_fn)
             if not db:
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
@@ -315,21 +307,20 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 # CTB: it's not clear to me that filter_compatible_signatures
                 # should fail here, on incompatible signatures; but that's
                 # what we have it doing currently. Revisit.
-                siglist = filter_compatible_signatures(query, siglist, False)
-                siglist = list(siglist)
+                filter_fn = lambda s: _check_signatures_are_compatible(query,
+                                                                       s)
+                db = db.filter(filter_fn)
             except ValueError:
-                siglist = []
+                db = None
 
-            if not siglist:
-                notify("no compatible signatures found in '{}'", filename)
+            if not db:
+                notify(f"no compatible signatures found in '{filename}'")
                 sys.exit(-1)
 
-            linear = LinearIndex(siglist, filename=filename)
-            databases.append(linear)
+            databases.append(db)
 
-            notify('loaded {} signatures from {}', len(linear),
-                   filename, end='\r')
-            n_signatures += len(linear)
+            notify(f'loaded {len(db)} signatures from {filename}', end='\r')
+            n_signatures += len(db)
 
         # unknown!?
         else:
@@ -402,7 +393,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     if not loaded:
         try:
             with open(filename, 'rt') as fp:
-                db = LinearIndex.load(fp)
+                db = LinearIndex.load(filename)
             dbtype = DatabaseType.SIGLIST
             loaded = True
         except Exception as exc:

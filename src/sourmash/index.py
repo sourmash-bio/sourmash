@@ -152,13 +152,19 @@ class LinearIndex(Index):
         return lidx
 
     def select(self, ksize=None, moltype=None):
-        def select_sigs(siglist, ksize, moltype):
-            for ss in siglist:
-                if (ksize is None or ss.minhash.ksize == ksize) and \
-                   (moltype is None or ss.minhash.moltype == moltype):
-                   yield ss
+        def select_sigs(ss, ksize=ksize, moltype=moltype):
+            if (ksize is None or ss.minhash.ksize == ksize) and \
+               (moltype is None or ss.minhash.moltype == moltype):
+               return True
 
-        siglist=select_sigs(self._signatures, ksize, moltype)
+        return self.filter(select_sigs)
+
+    def filter(self, filter_fn):
+        siglist = []
+        for ss in self._signatures:
+            if filter_fn(ss):
+                siglist.append(ss)
+
         return LinearIndex(siglist, self.filename)
 
 
@@ -201,6 +207,16 @@ class MultiIndex(Index):
         new_src_list = []
         for idx, src in zip(self.index_list, self.source_list):
             idx = idx.select(ksize=ksize, moltype=moltype)
+            new_idx_list.append(idx)
+            new_src_list.append(src)
+
+        return MultiIndex(new_idx_list, new_src_list)
+
+    def filter(self, filter_fn):
+        new_idx_list = []
+        new_src_list = []
+        for idx, src in zip(self.index_list, self.source_list):
+            idx = idx.filter(filter_fn)
             new_idx_list.append(idx)
             new_src_list.append(src)
 
