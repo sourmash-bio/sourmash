@@ -183,7 +183,7 @@ class SBT(Index):
         if cache_size is None:
             cache_size = sys.maxsize
         self._nodescache = _NodesCache(maxsize=cache_size)
-        self.location = None
+        self._location = None
 
     def signatures(self):
         for k in self.leaves():
