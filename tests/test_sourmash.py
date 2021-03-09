@@ -859,8 +859,8 @@ def test_compare_no_matching_sigs(c):
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
     with pytest.raises(ValueError) as exc:
-        c.last_result.status, c.last_result.out, c.last_result.err = c.run_sourmash('compare', '-k', '100', query,
-                                                                                    fail_ok=True)
+        c.last_result.status, c.last_result.out, c.last_result.err = \
+            c.run_sourmash('compare', '-k', '100', query, fail_ok=True)
 
     print(c.last_result.out)
     print(c.last_result.err)
@@ -1598,6 +1598,37 @@ def test_search_metagenome_traverse_check_csv():
 
         assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
         assert '13 matches; showing first 3:' in out
+
+
+@utils.in_thisdir
+def test_search_incompatible(c):
+    num_sig = utils.get_test_data('num/47.fa.sig')
+    scaled_sig = utils.get_test_data('47.fa.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash("search", scaled_sig, num_sig, fail_ok=True)
+    assert c.last_result.status != 0
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'incompatible - cannot compare.' in c.last_result.err
+    assert 'was calculated with --scaled,' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_search_traverse_incompatible(c):
+    searchdir = c.output('searchme')
+    os.mkdir(searchdir)
+
+    num_sig = utils.get_test_data('num/47.fa.sig')
+    scaled_sig = utils.get_test_data('47.fa.sig')
+    shutil.copyfile(num_sig, c.output('searchme/num.sig'))
+    shutil.copyfile(scaled_sig, c.output('searchme/scaled.sig'))
+
+    c.run_sourmash("search", scaled_sig, c.output('searchme'))
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'incompatible - cannot compare.' in c.last_result.err
+    assert 'was calculated with --scaled,' in c.last_result.err
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -3317,6 +3348,23 @@ def test_gather_metagenome_traverse_check_csv():
                     'NC_003198.1 Salmonella enterica subsp...' in out))
         assert all(('4.7 Mbp        0.5%    1.5%' in out,
                     'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
+@utils.in_tempdir
+def test_gather_traverse_incompatible(c):
+    searchdir = c.output('searchme')
+    os.mkdir(searchdir)
+
+    num_sig = utils.get_test_data('num/47.fa.sig')
+    scaled_sig = utils.get_test_data('47.fa.sig')
+    shutil.copyfile(num_sig, c.output('searchme/num.sig'))
+    shutil.copyfile(scaled_sig, c.output('searchme/scaled.sig'))
+
+    c.run_sourmash("gather", scaled_sig, c.output('searchme'))
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'incompatible - cannot compare.' in c.last_result.err
+    assert 'was calculated with --scaled,' in c.last_result.err
 
 
 def test_gather_metagenome_output_unassigned():
