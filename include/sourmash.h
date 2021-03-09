@@ -307,7 +307,7 @@ SourmashKmerMinHash **signature_get_mhs(const SourmashSignature *ptr, uintptr_t 
 
 SourmashStr signature_get_name(const SourmashSignature *ptr);
 
-uint64_t signature_get_seqlen(SourmashSignature *ptr);
+uint64_t signature_get_seqlen(const SourmashSignature *ptr);
 
 uintptr_t signature_len(const SourmashSignature *ptr);
 
