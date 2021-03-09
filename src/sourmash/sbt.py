@@ -390,7 +390,7 @@ class SBT(Index):
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, self.location))
+            results.append((similarity, leaf.data, self._location))
 
         return results
         
@@ -436,7 +436,7 @@ class SBT(Index):
             containment = query.minhash.contained_by(leaf_mh, True)
 
             assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, self.location))
+            results.append((containment, leaf.data, self._location))
 
         results.sort(key=lambda x: -x[0])
 
@@ -760,7 +760,7 @@ class SBT(Index):
                 storage = klass(**jnodes['storage']['args'])
 
         obj = loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
-        obj.location = location
+        obj._location = location
         return obj
 
     @staticmethod
