@@ -536,7 +536,7 @@ class MinHash(RustObject):
         """\
         Calculate how much of self is contained by other.
         """
-        assert self.scaled and other.scaled
+        assert self.is_compatible(other)
         if not len(self):
             return 0.0
 

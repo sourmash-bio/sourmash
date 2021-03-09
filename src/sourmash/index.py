@@ -109,7 +109,7 @@ class Index(ABC):
         # actually do search!
         results = []
         for ss in self.signatures():
-            print('looking at:', ss.minhash.scaled)
+            print('CTB looking at:', ss.minhash.scaled)
             cont = query.minhash.contained_by(ss.minhash, True)
             if cont and cont >= threshold:
                 results.append((cont, ss, self.filename))
