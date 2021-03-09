@@ -93,7 +93,7 @@ def test_div_zero(track_abundance):
 
 def test_div_zero_contained(track_abundance):
     # verify that empty MHs do not yield divide by zero errors for contained_by
-    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
     mh2 = mh.copy_and_clear()
 
     mh.add_sequence('ATGC')
