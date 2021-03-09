@@ -794,6 +794,8 @@ def test_sbt_protein_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
 
 
 @utils.in_thisdir
@@ -840,6 +842,8 @@ def test_sbt_hp_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
 
 
 @utils.in_thisdir
@@ -886,6 +890,8 @@ def test_sbt_dayhoff_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
 
 
 @utils.in_thisdir
