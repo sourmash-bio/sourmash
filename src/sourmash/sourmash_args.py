@@ -266,21 +266,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             sys.exit(-1)
 
         # are we collecting signatures from a directory/path?
-        if os.path.isdir(filename):
-            # CTB: combine with SIGLIST below?
-            assert dbtype == DatabaseType.SIGLIST
-
-            db = db.select(moltype=query_moltype, ksize=query_ksize)
-            filter_fn = lambda s: _check_signatures_are_compatible(query, s)
-            db = db.filter(filter_fn)
-            if not db:
-                notify("no compatible signatures found in '{}'", filename)
-                sys.exit(-1)
-            databases.append(db)
-            n_signatures += len(db)
-
-        # SBT
-        elif dbtype == DatabaseType.SBT:
+        if dbtype == DatabaseType.SBT:
             if not check_tree_is_compatible(filename, db, query,
                                             is_similarity_query):
                 sys.exit(-1)
@@ -303,15 +289,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         elif dbtype == DatabaseType.SIGLIST:
             db = db.select(moltype=query_moltype, ksize=query_ksize)
             siglist = db.signatures()
-            try:
-                # CTB: it's not clear to me that filter_compatible_signatures
-                # should fail here, on incompatible signatures; but that's
-                # what we have it doing currently. Revisit.
-                filter_fn = lambda s: _check_signatures_are_compatible(query,
-                                                                       s)
-                db = db.filter(filter_fn)
-            except ValueError:
-                db = None
+            filter_fn = lambda s: _check_signatures_are_compatible(query, s)
+            db = db.filter(filter_fn)
 
             if not db:
                 notify(f"no compatible signatures found in '{filename}'")
@@ -369,7 +348,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         dbtype = DatabaseType.SIGLIST
         loaded = True
 
-    # load signatures from directory
+    # load signatures from directory, using MultiIndex to preserve source.
     if not loaded and os.path.isdir(filename):
         index_list = []
         source_list = []
@@ -400,6 +379,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             pass
 
     # try load signatures from single file (list of signature paths)
+    # use MultiIndex to preserve source filenames.
     if not loaded:
         try:
             idx_list = []
@@ -458,14 +438,6 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     return db, dbtype
 
 
-# note: dup from index.py internal function.
-def _select_sigs(siglist, ksize, moltype):
-    for ss in siglist:
-        if (ksize is None or ss.minhash.ksize == ksize) and \
-           (moltype is None or ss.minhash.moltype == moltype):
-           yield ss
-
-
 def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
@@ -511,6 +483,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
         return progress.start_file(filename, loader)
     else:
         return loader
+
 
 def load_file_list_of_signatures(filename):
     "Load a list-of-files text file."
