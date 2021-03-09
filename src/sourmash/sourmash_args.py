@@ -281,7 +281,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             assert dbtype == DatabaseType.SIGLIST
 
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = filter_compatible_signatures(query, siglist, 1)
+            siglist = filter_compatible_signatures(query, siglist, True)
             linear = LinearIndex(siglist, filename=filename)
             databases.append(linear)
 
@@ -311,8 +311,15 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = filter_compatible_signatures(query, siglist, False)
-            siglist = list(siglist)
+            try:
+                # CTB: it's not clear to me that filter_compatible_signatures
+                # should fail here, on incompatible signatures; but that's
+                # what we have it doing currently. Revisit.
+                siglist = filter_compatible_signatures(query, siglist, False)
+                siglist = list(siglist)
+            except ValueError:
+                siglist = []
+
             if not siglist:
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
