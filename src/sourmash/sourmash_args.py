@@ -280,6 +280,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             assert dbtype == DatabaseType.SIGLIST
 
             db = db.select(moltype=query_moltype, ksize=query_ksize)
+            # @CTB filter compatible signatures here, too. write test.
             if not db:
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
