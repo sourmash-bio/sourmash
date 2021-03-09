@@ -29,12 +29,13 @@ def search_databases(query, databases, threshold, do_containment, best_only,
                      ignore_abundance, unload_data=False):
     results = []
     found_md5 = set()
-    for (obj, filename, filetype) in databases:
-        search_iter = obj.search(query, threshold=threshold,
+    for db in databases:
+        search_iter = db.search(query, threshold=threshold,
                                  do_containment=do_containment,
                                  ignore_abundance=ignore_abundance,
                                  best_only=best_only,
                                  unload_data=unload_data)
+
         for (similarity, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
@@ -84,8 +85,8 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
+    for db in dblist:
+        for cont, match, fname in db.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
@@ -94,9 +95,7 @@ def _find_best(dblist, query, threshold_bp):
                 # update best match.
                 best_cont = cont
                 best_match = match
-
-                # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename
+                best_filename = fname
 
     if not best_match:
         return None, None, None

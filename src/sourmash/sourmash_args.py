@@ -256,6 +256,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     Load one or more SBTs, LCAs, and/or signatures.
 
     Check for compatibility with query.
+
+    This is basically a user-focused wrapping of _load_databases.
     """
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
@@ -282,7 +284,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
             databases.append((db, filename, False))
-
             n_signatures += len(db)
 
         # SBT
@@ -291,7 +292,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                                             is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((db, filename, 'SBT'))
+            databases.append(db)
             notify('loaded SBT {}', filename, end='\r')
             n_databases += 1
 
@@ -303,7 +304,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify('loaded LCA {}', filename, end='\r')
             n_databases += 1
 
-            databases.append((db, filename, 'LCA'))
+            databases.append(db)
 
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
@@ -316,7 +317,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 sys.exit(-1)
 
             linear = LinearIndex(siglist, filename=filename)
-            databases.append((linear, filename, 'signature'))
+            databases.append(linear)
 
             notify('loaded {} signatures from {}', len(linear),
                    filename, end='\r')
