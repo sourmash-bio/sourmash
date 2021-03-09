@@ -214,7 +214,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
                               average_abund=average_abund,
                               median_abund=median_abund,
                               std_abund=std_abund,
-                              filename=filename, # @CTB
+                              filename=filename,
                               md5=best_match.md5sum(),
                               name=str(best_match),
                               match=best_match,
