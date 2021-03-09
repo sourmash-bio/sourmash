@@ -283,7 +283,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             if not db:
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
-            databases.append((db, filename, False))
+            databases.append(db)
             n_signatures += len(db)
 
         # SBT
