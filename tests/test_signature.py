@@ -331,8 +331,6 @@ def test_load_signatures_no_file_do_not_raise(tmpdir):
     assert not siglist
 
 
-
-
 def test_max_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
     mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
