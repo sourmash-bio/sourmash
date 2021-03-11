@@ -187,7 +187,7 @@ def search_minhashes_max_containment(node, sig, threshold, results=None,
     if results is not None:
         results[node.name] = float(matches) / denom
 
-    if len(mh) and float(matches) / len(mh) >= threshold:
+    if len(mh) and float(matches) / denom >= threshold:
         return 1
     return 0
 
