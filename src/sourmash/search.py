@@ -29,8 +29,8 @@ def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
     for db in databases:
-        search_iter = db.search(query, **kwargs):
-        for (similarity, match, filename) in search_iter:
+        search_iter = db.search(query, **kwargs)
+        for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
                 results.append((score, match, filename))
