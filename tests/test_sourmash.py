@@ -1396,6 +1396,21 @@ def test_search_containment_s10():
         assert '16.7%' in out
 
 
+@utils.in_thisdir
+def test_search_containment_s10_no_max(c):
+    # check --containment for s10/s10-small
+    q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+    q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', q1, q2, '--containment',
+                       '--max-containment')
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert "'do_containment' and 'do_max_containment' cannot both be True" in c.last_result.err
+
+
 def test_search_max_containment_s10_pairwise():
     # check --containment for s10/s10-small
     with utils.TempDirectory() as location:
