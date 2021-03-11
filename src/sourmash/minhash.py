@@ -536,6 +536,8 @@ class MinHash(RustObject):
         """\
         Calculate how much of self is contained by other.
         """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
 

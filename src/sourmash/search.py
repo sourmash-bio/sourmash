@@ -28,9 +28,9 @@ def format_bp(bp):
 def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
-    for (obj, filename, filetype) in databases:
-        search_iter = obj.search(query, **kwargs)
-        for (score, match, filename) in search_iter:
+    for db in databases:
+        search_iter = db.search(query, **kwargs):
+        for (similarity, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
                 results.append((score, match, filename))
@@ -79,8 +79,8 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
+    for db in dblist:
+        for cont, match, fname in db.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
@@ -89,9 +89,7 @@ def _find_best(dblist, query, threshold_bp):
                 # update best match.
                 best_cont = cont
                 best_match = match
-
-                # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename
+                best_filename = fname
 
     if not best_match:
         return None, None, None
