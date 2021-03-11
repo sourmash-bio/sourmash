@@ -1396,7 +1396,7 @@ def test_search_containment_s10():
         assert '16.7%' in out
 
 
-def test_search_max_containment_s10():
+def test_search_max_containment_s10_pairwise():
     # check --containment for s10/s10-small
     with utils.TempDirectory() as location:
         q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
@@ -1408,6 +1408,104 @@ def test_search_max_containment_s10():
         print(status, out, err)
         assert '1 matches' in out
         assert '100.0%' in out
+
+
+def test_search_containment_s10_siglist():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/*.sig')
+        q2 = glob.glob(q2)
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, *q2,
+                                            '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert ' 16.7%       ../genome-s10-small.fa.gz' in out
+        assert '100.0%       ../genome-s10.fa.gz' in out
+        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+
+def test_search_max_containment_s10_siglist():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/*.sig')
+        q2 = glob.glob(q2)
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, *q2,
+                                            '--max-containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert '100.0%       ../genome-s10-small.fa.gz' in out
+        assert '100.0%       ../genome-s10.fa.gz' in out
+        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+
+def test_search_containment_s10_sbt():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+        assert '100.0%       ../genome-s10.fa.gz' in out
+        assert ' 16.7%       ../genome-s10-small.fa.gz' in out
+
+
+def test_search_max_containment_s10_sbt():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--max-containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert '100.0%       ../genome-s10-small.fa.gz' in out
+        assert '100.0%       ../genome-s10.fa.gz' in out
+        assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+
+def test_search_containment_s10_lca():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.lca.json')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert '100.0%       455c2f95' in out
+        assert '100.0%       684aa226' in out
+        assert ' 16.7%       7f7835d2' in out
+
+
+def test_search_max_containment_s10_lca():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.lca.json')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--max-containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '3 matches' in out
+        assert '100.0%       455c2f95' in out
+        assert '100.0%       684aa226' in out
+        assert '100.0%       7f7835d2' in out
 
 
 def test_search_gzip():
