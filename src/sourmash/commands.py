@@ -109,7 +109,7 @@ def compare(args):
     if is_containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment and --max-containment means signature abundances are ignored.')
+            notify('NOTE: --containment and --max-containment ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
