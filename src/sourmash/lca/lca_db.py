@@ -300,7 +300,8 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None, do_containment=False,
+               do_max_containment=False, ignore_abundance=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -319,18 +320,18 @@ class LCA_Database(Index):
             return []
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if threshold is None:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
-        do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        threshold = float(threshold)
+
         mh = query.minhash
         if ignore_abundance:
             mh.track_abundance = False
 
         # find all the matches, then sort & return.
         results = []
-        for x in self._find_signatures(mh, threshold, do_containment):
+        for x in self._find_signatures(mh, threshold, do_containment,
+                                       do_max_containment):
             (score, match, filename) = x
             results.append((score, match, filename))
 
@@ -455,7 +456,8 @@ class LCA_Database(Index):
         return sigd
 
     def _find_signatures(self, minhash, threshold, containment=False,
-                       ignore_scaled=False):
+                         max_containment=False,
+                         ignore_scaled=False):
         """
         Do a Jaccard similarity or containment search, yield results.
 
@@ -467,7 +469,7 @@ class LCA_Database(Index):
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that containment can be calculated w/o matching scaled.
+            # note that containment cannot be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         query_mins = set(minhash.hashes)
@@ -494,6 +496,9 @@ class LCA_Database(Index):
             # calculate the containment or similarity
             if containment:
                 score = count / len(query_mins)
+            elif max_containment:
+                denom = min((len(query_mins), match_size))
+                score = count / denom
             else:
                 # query_mins is size of query signature
                 # match_size is size of match signature
