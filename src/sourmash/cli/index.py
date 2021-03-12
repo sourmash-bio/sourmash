@@ -38,7 +38,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--from-file',
-        help='a file containing a list of signatures file to load'
+        help='a text file containing a list of files to load signatures from'
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
