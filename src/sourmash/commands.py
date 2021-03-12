@@ -534,11 +534,11 @@ def categorize(args):
         search_fn = SearchMinHashesFindBest().search
 
         # note, "ignore self" here may prevent using newer 'tree.search' fn.
-        for leaf in tree.find(search_fn, query, args.threshold):
-            if leaf.data.md5sum() != query.md5sum(): # ignore self.
+        for match in tree.find(search_fn, query, args.threshold):
+            if match.md5sum() != query.md5sum(): # ignore self.
                 similarity = query.similarity(
-                    leaf.data, ignore_abundance=args.ignore_abundance)
-                results.append((similarity, leaf.data))
+                    match, ignore_abundance=args.ignore_abundance)
+                results.append((similarity, match))
 
         best_hit_sim = 0.0
         best_hit_query_name = ""

@@ -67,24 +67,28 @@ def test_simple(n_children):
         return set(x)
 
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == search_kmer_in_list(kmer)
+        assert set(root._find_nodes(search_kmer, kmer)) == search_kmer_in_list(kmer)
 
     print('-----')
-    print([ x.metadata for x in root.find(search_kmer, "AAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAT") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAG") ])
-    print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAT") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAG") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "CAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "GAAAA") ])
 
     with utils.TempDirectory() as location:
         root.save(os.path.join(location, 'demo'))
         root = SBT.load(os.path.join(location, 'demo'))
 
         for kmer in kmers:
-            new_result = {str(r) for r in root.find(search_kmer, kmer)}
+            new_result = {str(r.data) for r in root._find_nodes(search_kmer, kmer)}
             print(*new_result, sep='\n')
 
-            assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
+            y = {str(r.data) for r in search_kmer_in_list(kmer)}
+            print('a', new_result - y)
+            print('b', y - new_result)
+
+            assert new_result == {str(r.data) for r in search_kmer_in_list(kmer)}
 
 
 def test_longer_search(n_children):
@@ -133,13 +137,13 @@ def test_longer_search(n_children):
             return 1
         return 0
 
-    try1 = [ x.metadata for x in root.find(search_transcript, "AAAAT", 1.0) ]
+    try1 = [ x.metadata for x in root._find_nodes(search_transcript, "AAAAT", 1.0) ]
     assert set(try1) == set([ 'a', 'b', 'c', 'e' ]), try1 # no 'd'
 
-    try2 = [ x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6) ]
+    try2 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAAAT", 0.6) ]
     assert set(try2) == set([ 'a', 'b', 'c', 'd', 'e' ])
 
-    try3 = [ x.metadata for x in root.find(search_transcript, "GAAAA", 1.0) ]
+    try3 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAA", 1.0) ]
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
@@ -154,9 +158,9 @@ def test_tree_old_load(old_version):
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
+    results_v1 = {str(s) for s in tree_v1._find_nodes(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
+    results_cur = {str(s) for s in tree_cur._find_nodes(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v1 == results_cur
@@ -185,8 +189,8 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
+    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
+                                                   to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -196,8 +200,8 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
+                                                       to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -217,8 +221,8 @@ def test_search_minhashes():
 
     # this fails if 'search_minhashes' is calc containment and not similarity.
     results = tree.find(search_minhashes, to_search.data, 0.08)
-    for leaf in results:
-        assert to_search.data.similarity(leaf.data) >= 0.08
+    for match in results:
+        assert to_search.data.similarity(match) >= 0.08
 
     print(results)
 

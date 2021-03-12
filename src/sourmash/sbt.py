@@ -285,7 +285,7 @@ class SBT(Index):
             node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
 
-    def find(self, search_fn, *args, **kwargs):
+    def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
         unload_data = kwargs.get("unload_data", False)
@@ -335,7 +335,11 @@ class SBT(Index):
                 if unload_data:
                     node_g.unload()
 
-        return [ m.data for m in matches ]
+        return matches
+
+    def find(self, search_fn, *args, **kwargs):
+        nodes = self._find_nodes(search_fn, *args, **kwargs)
+        return [ n.data for n in nodes ]
 
     def search(self, query, *args, **kwargs):
         """Return set of matches with similarity above 'threshold'.
