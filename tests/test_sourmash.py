@@ -432,6 +432,20 @@ def test_compare_max_containment(c):
 
 
 @utils.in_tempdir
+def test_compare_max_containment_and_containment(c):
+    testdata_glob = utils.get_test_data('scaled/*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('compare', '--max-containment', '-k', '31',
+                       '--containment',
+                       '--csv', 'output.csv', *testdata_sigs)
+
+    print(c.last_result.err)
+    assert "ERROR: cannot specify both --containment and --max-containment!" in c.last_result.err
+
+
+@utils.in_tempdir
 def test_compare_containment_abund_flatten(c):
     s47 = utils.get_test_data('track_abund/47.fa.sig')
     s63 = utils.get_test_data('track_abund/63.fa.sig')
