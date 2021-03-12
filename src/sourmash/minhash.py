@@ -544,7 +544,7 @@ class MinHash(RustObject):
         return self.count_common(other, downsample) / len(self)
 
     def max_containment(self, other, downsample=False):
-        """\
+        """
         Calculate maximum containment.
         """
         if not (self.scaled and other.scaled):
