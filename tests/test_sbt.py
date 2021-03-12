@@ -52,12 +52,14 @@ def test_simple(n_children):
     root.add_node(leaf4)
     root.add_node(leaf5)
 
-    def search_kmer(obj, seq):
-        return obj.data.get(seq)
+    # return True if leaf node contains nodegraph w/kmer
+    def search_kmer(leaf, kmer):
+        return leaf.data.get(kmer)
 
     leaves = [leaf1, leaf2, leaf3, leaf4, leaf5 ]
     kmers = [ "AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA" ]
 
+    # define an exhaustive search function that looks in all the leaf nodes.
     def search_kmer_in_list(kmer):
         x = []
         for l in leaves:
@@ -66,6 +68,8 @@ def test_simple(n_children):
 
         return set(x)
 
+    # for all k-mers, ensure that tree._find_nodes matches the exhaustive
+    # search.
     for kmer in kmers:
         assert set(root._find_nodes(search_kmer, kmer)) == search_kmer_in_list(kmer)
 
@@ -76,19 +80,16 @@ def test_simple(n_children):
     print([ x.metadata for x in root._find_nodes(search_kmer, "CAAAA") ])
     print([ x.metadata for x in root._find_nodes(search_kmer, "GAAAA") ])
 
+    # save SBT to a directory and then reload
     with utils.TempDirectory() as location:
         root.save(os.path.join(location, 'demo'))
         root = SBT.load(os.path.join(location, 'demo'))
 
         for kmer in kmers:
-            new_result = {str(r.data) for r in root._find_nodes(search_kmer, kmer)}
+            new_result = {str(r) for r in root._find_nodes(search_kmer, kmer)}
             print(*new_result, sep='\n')
 
-            y = {str(r.data) for r in search_kmer_in_list(kmer)}
-            print('a', new_result - y)
-            print('b', y - new_result)
-
-            assert new_result == {str(r.data) for r in search_kmer_in_list(kmer)}
+            assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
 
 
 def test_longer_search(n_children):
