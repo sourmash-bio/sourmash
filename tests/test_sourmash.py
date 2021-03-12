@@ -454,7 +454,7 @@ def test_compare_containment_abund_flatten(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert 'NOTE: --containment and --max-containment means signature abundances are ignored.' in \
+    assert 'NOTE: --containment and --max-containment ignore signature abundances.' in \
         c.last_result.err
 
 
@@ -1488,7 +1488,7 @@ def test_search_containment_s10_siglist():
 
 
 def test_search_max_containment_s10_siglist():
-    # check --containment for s10/s10-small
+    # check --max-containment for s10/s10-small
     with utils.TempDirectory() as location:
         q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
         q2 = utils.get_test_data('scaled/*.sig')
@@ -1520,8 +1520,22 @@ def test_search_containment_s10_sbt():
         assert ' 16.7%       ../genome-s10-small.fa.gz' in out
 
 
+def test_search_containment_s10_sbt_empty():
+    # check --containment for s10/s10-small at absurd scaled/empty mh
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--scaled', '1e7',
+                                            '--containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '0 matches' in out
+
+
 def test_search_max_containment_s10_sbt():
-    # check --containment for s10/s10-small
+    # check --max-containment for s10/s10-small
     with utils.TempDirectory() as location:
         q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
         q2 = utils.get_test_data('scaled/all.sbt.zip')
@@ -1534,6 +1548,20 @@ def test_search_max_containment_s10_sbt():
         assert '100.0%       ../genome-s10-small.fa.gz' in out
         assert '100.0%       ../genome-s10.fa.gz' in out
         assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+
+def test_search_max_containment_s10_sbt_empty():
+    # check --max-containment for s10/s10-small at absurd scaled/empty mh.
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--scaled', '1e7',
+                                            '--max-containment'],
+                                           in_directory=location)
+        print(status, out, err)
+        assert '0 matches' in out
 
 
 def test_search_containment_s10_lca():
@@ -1553,7 +1581,7 @@ def test_search_containment_s10_lca():
 
 
 def test_search_max_containment_s10_lca():
-    # check --containment for s10/s10-small
+    # check --max-containment for s10/s10-small
     with utils.TempDirectory() as location:
         q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
         q2 = utils.get_test_data('scaled/all.lca.json')
