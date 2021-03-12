@@ -1,7 +1,12 @@
-# `sourmash` API examples
+# `sourmash` Python API examples
+
+All of sourmash's functionality is available via its [Python API](api.md). Below are both basic and advanced examples that use the API to accomplish common tasks.
+
+```{contents}
+   :depth: 2
+```
 
 ## A first example: two k-mers
-
 
 Define two sequences:
 
@@ -42,7 +47,7 @@ and of course the MinHashes match themselves:
 
 ```
 
-We can add sequences and query at any time --
+We can add sequences to the MinHash objects and query at any time --
 
 ```
 >>> mh1.add_sequence(seq2)
@@ -52,8 +57,63 @@ We can add sequences and query at any time --
 
 ```
 
-## Consuming files
+## Set operations on hashes
 
+All of the hashes are available via the `hashes` property:
+
+```
+>>> list(mh1.hashes)
+[1274996984489324440, 2529443451610975987, 3115010115530738562, 5059920851104263793, 5740495330885152257, 8652222673649005300, 18398176440806921933]
+
+```
+
+and you can easily do your own set operations with `.hashes` - e.g.
+the following calculates the Jaccard similarity (intersection over union) of two 
+```
+>>> s1 = set(mh1.hashes)
+>>> s2 = set(mh2.hashes)
+>>> round(len(s1 & s2) / len(s1 | s2), 3)
+0.571
+
+```
+However, the MinHash class also supports a number of basic operations - the following operations work directly on the hashes:
+```
+>>> combined = mh1 + mh2
+>>> combined += mh1
+>>> combined.remove_many(mh1.hashes)
+>>> combined.add_many(mh2.hashes)
+
+```
+
+You can create an empty copy of a MinHash object with `copy_and_clear`:
+```
+>>> new_mh = mh1.copy_and_clear()
+
+```
+
+and you can also access the various parameters of a MinHash object directly as properties --
+```
+>>> mh1.ksize
+3
+>>> mh1.scaled
+0
+>>> mh1.num
+20
+>>> mh1.is_dna
+True
+>>> mh1.is_protein
+False
+>>> mh1.dayhoff
+False
+>>> mh1.hp
+False
+>>> mh1.moltype
+'DNA'
+
+```
+see the "Advanced" section, below, for a more complete discussion of MinHash objects.
+
+## Creating MinHash sketches programmatically, from genome files
 
 Suppose we want to create MinHash sketches from genomes --
 
@@ -73,7 +133,7 @@ into `add_sequence` directly; here we set `force=True` in `add_sequence`
 to skip over k-mers containing characters other than ACTG, rather than
 raising an exception.
 
-(Note, just for speed reasons, we'll truncate the sequences to 50kb in length.)
+(Note, just for speed reasons, we're truncating the sequences to 50kb in length.)
 
 ```
 >>> import screed
@@ -86,7 +146,7 @@ raising an exception.
 
 ```
 
-And now the minhashes can be compared against each other:
+And now the resulting MinHash objects can be compared against each other:
 
 ```
 >>> import sys
@@ -103,7 +163,7 @@ data/GCF_000783305.1 0.0 0.0 1.0
 ```
 
 Note that the comparisons are quite quick; most of the time is spent in
-making the minhashes, which can be saved and loaded easily.
+building the minhashes.
 
 ## Plotting dendrograms and matrices
 
@@ -114,7 +174,7 @@ please see the notebook
 ## Saving and loading signature files
 
 Signature files encapsulate MinHashes in JSON, and provide a way to
-add some metadata to MinHashes.
+wrap MinHash objects with some metadata (the name and filename). To save signatures, use `save_signatures` with a list of signatures and a Python file pointer:
 
 ```
 >>> from sourmash import SourmashSignature, save_signatures
@@ -127,7 +187,7 @@ add some metadata to MinHashes.
 ```
 
 Here, `genome1.sig` is a JSON file that can now be loaded and
-compared -- first, load:
+compared -- first, load it using `load_one_signature`:
 
 ```
 >>> from sourmash import load_one_signature
@@ -145,9 +205,24 @@ then compare:
 
 ```
 
-## Manipulating signatures and their hashes.
+There are two primary signature loading functions - `load_one_signature`, used above, which loads exactly one signature or else raises an exception; and the  powerful and more generic `load_file_as_signatures`, which takes in a filename or directory containing a collection of signatures and returns the individual signatures -- for example, you can load all of the signatures under the `tempdir` created above like so,
 
-It is relatively straightforward to work directly with hashes.
+```
+>>> loaded_sigs = list(sourmash.load_file_as_signatures(tempdir))
+
+```
+
+Both `load_file_as_signatures` and `load_one_signature` take molecule type and k-mer size selectors, e.g.
+```
+>>> loaded_sigs = load_one_signature(tempdir + '/genome1.sig', select_moltype='DNA', ksize=31)
+
+```
+will load precisely one signature containing a DNA MinHash created at k-mer size of 31.
+
+## Going from signatures back to MinHash objects and their hashes -
+
+Once you load a signature, you can go back to its MinHash object with
+`.minhash`; e.g.
 
 First, load two signatures:
 
@@ -159,18 +234,18 @@ First, load two signatures:
 
 ```
 
-Then, get the hashes, and (e.g.) compute the union:
+Then, get the hashes, and (e.g.) calculate the union:
 
 ```
 >>> hashes1 = set(sig1.minhash.hashes.keys())
 >>> hashes2 = set(sig2.minhash.hashes.keys())
 >>> hash_union = hashes1.union(hashes2)
->>> print('{} hashes in union of {} and {}'.format(len(hash_union), len(hashes1), len(hashes2)))
+>>> print(f'{len(hash_union)} hashes in union of {len(hashes1)} and {len(hashes2)}')
 1000 hashes in union of 500 and 500
 
 ```
 
-## sourmash MinHash objects and manipulations
+## Advanced features of sourmash MinHash objects - `scaled` and `num`
 
 sourmash supports two basic kinds of signatures, MinHash and modulo hash
 signatures. MinHash signatures are equivalent to mash signatures;
@@ -186,9 +261,7 @@ be collected for a given input data set.
 Because of this parameter, below we'll call them 'num' signatures.
 
 Modulo hash (or 'scaled') signatures are specific to sourmash and they
-enable an expanded range of metagenome analyses, with the downside
-that they can become arbitrarily large.  The key parameter for modulo
-hash signatures is `scaled`, which specifies the average sampling rate
+enable containment operations that are useful for metagenome analyses. The tradeoff is that unlike num MinHashes, they can become arbitrarily large.  The key parameter for modulo hash signatures is `scaled`, which specifies the average sampling rate
 for hashes for a given input data set.  A scaled factor  of 1000 means that,
 on average, 1 in 1000 k-mers will be turned into a hash for later
 comparisons; this is a sort of compression factor, in that a 5 Mbp
@@ -222,7 +295,7 @@ looking at the `num` and `scaled` attributes on a MinHash object:
 
 The MinHash class is otherwise identical between the two types of signatures.
 
-Note that you cannot compute Jaccard similarity or containment for
+You cannot calculate Jaccard similarity or containment for
 MinHash objects with different num or scaled values (or different ksizes):
 
 ```
@@ -234,7 +307,7 @@ TypeError: must have same num: 500 != 1000
 
 ```
 
-You can make signatures compatible by downsampling; see the next
+However, you can make signatures compatible by downsampling; see the next
 sections.
 
 ### A brief introduction to MinHash object methods and attributes
@@ -380,19 +453,34 @@ you.*
 (You can also take a look at the logic in `sourmash signature
 downsample` if you are interested.)
 
-## Working with fast search trees (Sequence Bloom Trees, or SBTs)
+## Working with indexed collections of signatures
 
-Suppose we have a number of signatures calculated with `--scaled`, like so:
+If you want to search large collections of signatures, sourmash provides
+two different indexing strategies, together with a generic `Index` class
+that supports a common API for searching the collections.
+
+The first indexing strategy is a Sequence Bloom Tree, which is
+designed to support fast and efficient containment operations on large
+collections of signatures.  SBTs are an _on disk_ search structure, so
+they are a low-memory way to search collections.
+
+To use SBTs from the command line, we first
+need to create some `scaled` signatures:
 
 ```
-sourmash compute --scaled 10000 data/GCF*.fna.gz
+sourmash sketch dna -p scaled=10000 data/GCF*.fna.gz --outdir data/
 ```
 
-and now we want to create a Sequence Bloom Tree (SBT) so that we can
-search them efficiently.  You can do this with `sourmash index`, but
-you can also access the Python API directly.
+and then build a Sequence Bloom Tree (SBT) index with `sourmash
+index`, like so:
 
-### Creating a search tree
+```
+sourmash index foo.sbt.zip data/GCF*.sig -k 31
+```
+
+Here, sourmash is storing the entire SBT in a single portable Zip file.
+
+### Creating an on-disk SBT in Python
 
 Let's start by using 'glob' to grab some example signatures from the
 test data in the sourmash repository:
@@ -403,11 +491,11 @@ test data in the sourmash repository:
 
 ```
 
-Now, create a tree:
+Now, create an SBT:
 
 ```
->>> import sourmash
->>> tree = sourmash.create_sbt_index()
+>>> import sourmash.sbtmh
+>>> tree = sourmash.sbtmh.create_sbt_index()
 
 ```
 
@@ -423,7 +511,7 @@ Load each signature, and add it to the tree:
 ```
 (note, you'll need to make sure that all of the signatures are compatible
 with each other! The `sourmash index` command does all of the necessary
-checks.)
+checks, but the Python API doesn't.)
 
 Now, save the tree:
 
@@ -454,7 +542,7 @@ Now, load a DNA sequence:
 ```
 >>> filename = 'data/GCF_000005845.2_ASM584v2_genomic.fna.gz'
 >>> query_seq = next(iter(screed.open(filename))).sequence
->>> print('got {} DNA characters to query'.format(len(query_seq)))
+>>> print(f'got {len(query_seq)} DNA characters to query')
 got 4641652 DNA characters to query
 
 ```
@@ -482,3 +570,48 @@ NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome
 ```
 
 et voila!
+
+### In-memory databases: the LCA or "reverse index" database.
+
+The LCA database lets you work with large collections of signatures in
+memory.
+
+The LCA database was initially designed to support individual hash
+queries for taxonomic operations - hence its name, which stands for
+"Lowest Common Ancestor." However, it supports all of the standard
+`Index` operations, just like the SBT. 
+
+First, let's create an LCA database programmatically.
+
+```
+>>> from sourmash.lca import LCA_Database
+>>> db = LCA_Database(ksize=31, scaled=10000, moltype='DNA')
+
+```
+
+Now, let's load in all of the signatures from the test directory:
+
+```
+>>> for sig in sourmash.load_file_as_signatures('tests/test-data/doctest-data', ksize=31):
+...    hashes_inserted = db.insert(sig)
+...    print(f"Inserted {hashes_inserted} hashes into db.")
+Inserted 493 hashes into db.
+Inserted 525 hashes into db.
+Inserted 490 hashes into db.
+
+```
+
+and now you have an `Index` class that supports all the generic index operations (below). You can save an LCA Database to disk with `db.save(filename)`, and load it with `sourmash.load_file_as_index`, below.
+
+### The `Index` class API.
+
+The `Index` class supports a generic API for SBTs, LCAs, and other collections of signatures.
+
+To load an SBT or an LCA database from a file, use `sourmash.load_file_as_index`:
+```
+>>> sbt_db = sourmash.load_file_as_index('tests/test-data/prot/protein.sbt.zip')
+>>> lca_db = sourmash.load_file_as_index('tests/test-data/prot/protein.lca.json.gz')
+
+```
+
+`Index` objects provide `search`, `insert`, `load`, `save`, and `__len__`. The signatures can be accessed directly via the  `.signatures()` method, which returns an iterable.  Last but not least, `Index.select(ksize=..., moltype=...)` will return a view on the Index object that contains only signatures with the desired k-mer size/molecule type.

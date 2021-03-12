@@ -181,7 +181,7 @@ def index(args):
     n = 0
     total_n = len(inp_files)
     record_duplicates = set()
-    record_no_lineage = set()
+    record_no_lineage = []
     record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
@@ -205,7 +205,11 @@ def index(args):
             md5_to_name[sig.md5sum()] = str(sig)
 
             # parse identifier, potentially with splitting
-            ident = sig.name
+            if sig.name:
+                ident = sig.name
+            else:
+                ident = sig.filename
+
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
@@ -240,7 +244,7 @@ def index(args):
             # track lineage info - either no lineage, or this lineage used.
             else:
                 debug('WARNING: no lineage assignment for {}.', ident)
-                record_no_lineage.add(ident)
+                record_no_lineage.append(ident)
 
     # end main add signatures loop
 

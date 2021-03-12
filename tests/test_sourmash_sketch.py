@@ -240,6 +240,62 @@ def test_do_sourmash_sketchdna():
         assert str(sig).endswith('short.fa')
 
 
+def test_do_sourmash_sketchdna_from_file():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+
+        file_list = os.path.join(location, "filelist.txt")
+        with open(file_list, 'wt') as fp:
+            print(testdata1, file=fp)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna',
+                                            '--from-file', file_list],
+                                           in_directory=location)
+
+        sigfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(sigfile)
+
+        sig = next(signature.load_signatures(sigfile))
+        assert str(sig).endswith('short.fa')
+
+
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig')]
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput_singleton(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig'), '--singleton']
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
+
+
+@utils.in_tempdir
+def test_do_sourmash_sketchdna_noinput_merge(c):
+    data = ""
+
+    cmd = ['sketch', 'dna', '-', '-o', c.output('xxx.sig'), '--merge', 'name']
+    c.run_sourmash(*cmd, stdin_data=data)
+
+    sigfile = c.output('xxx.sig')
+    assert not os.path.exists(sigfile)
+    assert 'no sequences found' in c.last_result.err
+
+
 @utils.in_tempdir
 def test_do_sourmash_sketchdna_outdir(c):
     testdata1 = utils.get_test_data('short.fa')
@@ -498,6 +554,31 @@ def test_do_sketch_translate_multik_with_protein():
             assert 10 in ksizes
 
 
+def test_do_sketch_translate_multik_with_protein_from_file():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+
+        file_list = os.path.join(location, "filelist.txt")
+        with open(file_list, 'wt') as fp:
+            print(testdata1, file=fp)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'translate',
+                                            '-p', 'k=7,k=10,num=500',
+                                            '--from-file', file_list],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'short.fa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 7 in ksizes
+            assert 10 in ksizes
+
+
 def test_do_sketch_translate_multik_with_dayhoff():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -588,6 +669,36 @@ def test_do_sketch_protein_multik_input():
                                            ['sketch', 'protein',
                                             '-p', 'k=7,k=10,num=500',
                                             testdata1],
+                                           in_directory=location)
+        outfile = os.path.join(location, 'ecoli.faa.sig')
+        assert os.path.exists(outfile)
+
+        with open(outfile, 'rt') as fp:
+            sigdata = fp.read()
+            siglist = list(signature.load_signatures(sigdata))
+            assert len(siglist) == 2
+            ksizes = set([ x.minhash.ksize for x in siglist ])
+            assert 7 in ksizes
+            assert 10 in ksizes
+
+            moltype = set([ x.minhash.moltype == 'protein'
+                            for x in siglist ])
+            assert len(moltype) == 1
+            assert True in moltype
+
+
+def test_do_sketch_protein_multik_input_from_file():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('ecoli.faa')
+
+        file_list = os.path.join(location, "filelist.txt")
+        with open(file_list, 'wt') as fp:
+            print(testdata1, file=fp)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'protein',
+                                            '-p', 'k=7,k=10,num=500',
+                                            '--from-file', file_list],
                                            in_directory=location)
         outfile = os.path.join(location, 'ecoli.faa.sig')
         assert os.path.exists(outfile)

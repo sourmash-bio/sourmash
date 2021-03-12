@@ -223,7 +223,7 @@ def describe(args):
                     with_abundance = 1
                 md5 = sig.md5sum()
                 name = sig.name or "** no name **"
-                filename = sig.filename
+                filename = sig.filename or "** no name **"
                 license = sig.license
 
                 if w:
