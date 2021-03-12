@@ -569,12 +569,12 @@ def test_mh_copy(track_abundance):
 def test_mh_len(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
-    assert len(a) == 20
+    assert len(a) == 0
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     assert len(a) == 20
 
 
-def test_mh_len(track_abundance):
+def test_mh_len_2(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
