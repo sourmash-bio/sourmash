@@ -7,7 +7,8 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs, compare_serial_containment
+from .compare import (compare_all_pairs, compare_serial_containment,
+                      compare_serial_max_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -91,16 +92,24 @@ def compare(args):
         error('cannot mix scaled signatures with bounded signatures')
         sys.exit(-1)
 
+    is_containment = False
+    if args.containment or args.max_containment:
+        is_containment = True
+
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     # complain if --containment and not is_scaled
-    if args.containment and not is_scaled:
-        error('must use scaled signatures with --containment option')
+    if is_containment and not is_scaled:
+        error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
-    if args.containment:
+    if is_containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment means signature abundances are flattened.')
+            notify('NOTE: --containment and --max-containment ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -127,6 +136,8 @@ def compare(args):
     labeltext = [str(item) for item in siglist]
     if args.containment:
         similarity = compare_serial_containment(siglist)
+    elif args.max_containment:
+        similarity = compare_serial_max_containment(siglist)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes)
@@ -437,8 +448,14 @@ def search(args):
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
+    is_containment = args.containment or args.max_containment
+    if is_containment:
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment)
+                                                not is_containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:
@@ -450,8 +467,11 @@ def search(args):
 
     # do the actual search
     results = search_databases(query, databases,
-                               args.threshold, args.containment,
-                               args.best_only, args.ignore_abundance,
+                               threshold=args.threshold,
+                               do_containment=args.containment,
+                               do_max_containment=args.max_containment,
+                               best_only=args.best_only,
+                               ignore_abundance=args.ignore_abundance,
                                unload_data=True)
 
     n_matches = len(results)
@@ -477,7 +497,8 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5']
+        fieldnames = ['similarity', 'name', 'filename', 'md5',
+                      'query_filename', 'query_name', 'query_md5']
 
         with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -486,6 +507,7 @@ def search(args):
             for sr in results:
                 d = dict(sr._asdict())
                 del d['match']
+                del d['query']
                 w.writerow(d)
 
     # save matching signatures upon request

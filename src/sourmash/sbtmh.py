@@ -104,6 +104,8 @@ def search_minhashes(node, sig, threshold, results=None):
     """\
     Default tree search function, searching for best Jaccard similarity.
     """
+    assert results is None
+
     sig_mh = sig.minhash
     score = 0
 
@@ -111,9 +113,6 @@ def search_minhashes(node, sig, threshold, results=None):
         score = node.data.minhash.similarity(sig_mh)
     else:  # Node minhash comparison
         score = _max_jaccard_underneath_internal_node(node, sig_mh)
-
-    if results is not None:
-        results[node.name] = score
 
     if score >= threshold:
         return 1
@@ -126,6 +125,7 @@ class SearchMinHashesFindBest(object):
         self.best_match = 0.
 
     def search(self, node, sig, threshold, results=None):
+        assert results is None
         sig_mh = sig.minhash
         score = 0
 
@@ -133,9 +133,6 @@ class SearchMinHashesFindBest(object):
             score = node.data.minhash.similarity(sig_mh)
         else:  # internal object, not leaf.
             score = _max_jaccard_underneath_internal_node(node, sig_mh)
-
-        if results is not None:
-            results[node.name] = score
 
         if score >= threshold:
             # have we done better than this elsewhere? if yes, truncate.
@@ -149,6 +146,7 @@ class SearchMinHashesFindBest(object):
 
 
 def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
+    assert results is None
     mh = sig.minhash
 
     if isinstance(node, SigLeaf):
@@ -156,11 +154,36 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     else:  # Node or Leaf, Nodegraph by minhash comparison
         matches = node.data.matches(mh)
 
-    if results is not None:
-        results[node.name] = float(matches) / len(mh)
-
     if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
+    return 0
+
+
+def search_minhashes_max_containment(node, sig, threshold, results=None,
+                                     downsample=True):
+    assert results is None
+
+    mh = sig.minhash
+
+    if isinstance(node, SigLeaf):
+        node_mh = node.data.minhash
+
+        matches = node_mh.count_common(mh, downsample)
+        node_size = len(node_mh)
+    else:  # Node or Leaf, Nodegraph by minhash comparison
+        matches = node.data.matches(mh)
+
+        # get the size of the smallest collection of hashes below this point
+        node_size = node.metadata.get('min_n_below', -1)
+
+        if node_size == -1:
+            raise Exception('cannot do max_containment search on this SBT; need to rebuild.')
+
+    denom = min((len(mh), node_size))
+
+    if len(mh) and matches / denom >= threshold:
+        return 1
+
     return 0
 
 
@@ -169,6 +192,8 @@ class GatherMinHashes(object):
         self.best_match = 0
 
     def search(self, node, query, threshold, results=None):
+        assert results is None
+
         mh = query.minhash
         if not len(mh):
             return 0
@@ -185,10 +210,6 @@ class GatherMinHashes(object):
 
         if score < threshold:
             return 0
-
-        # store results if we have passed in an appropriate dictionary
-        if results is not None:
-            results[node.name] = score
 
         # have we done better than this? if no, truncate searches below.
         if score >= self.best_match:
