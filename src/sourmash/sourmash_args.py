@@ -9,6 +9,8 @@ from enum import Enum
 
 import screed
 
+from . import storage
+
 from sourmash.sbtmh import load_sbt_index
 from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
@@ -16,7 +18,7 @@ import sourmash.exceptions
 from . import signature
 from .logging import notify, error
 
-from .index import LinearIndex
+from .index import LinearIndex, ZipFileLinearIndex
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
@@ -253,7 +255,7 @@ def check_lca_db_is_compatible(filename, db, query):
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
     """
-    Load one or more SBTs, LCAs, and/or signatures.
+    Load one or more SBTs, LCAs, and/or collections of signatures.
 
     Check for compatibility with query.
 
@@ -331,6 +333,19 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                    filename, end='\r')
             n_signatures += len(linear)
 
+        # zip file full of signatures
+        elif dbtype == DatabaseType.ZIPFILE:
+            db = db.select(ksize=query_ksize, moltype=query_moltype)
+
+            if not check_lca_db_is_compatible(filename, db, query):
+                sys.exit(-1)
+            query_scaled = query.minhash.scaled
+
+            notify('loaded zip file {}', filename, end='\r')
+            n_databases += 1
+
+            databases.append((db, filename, 'Zip File'))
+
         # unknown!?
         else:
             raise Exception("unknown dbtype {}".format(dbtype))
@@ -360,10 +375,74 @@ class DatabaseType(Enum):
     SIGLIST = 1
     SBT = 2
     LCA = 3
+    ZIPFILE = 4
 
+
+# @CTB add storage handler decorator
+def storage_load_signatures(filename, traverse_yield_all, **kwargs):
+    close_fp = False
+    if filename == '-':
+        fp = sys.stdin
+    else:
+        fp = open(filename, 'rt')
+        close_fp = True
+
+    try:
+        db = signature.load_signatures(fp, do_raise=True)
+        db = list(db)
+
+        loaded = True
+        dbtype = DatabaseType.SIGLIST
+    finally:
+        if close_fp:
+            fp.close()
+
+    return db, dbtype
+
+
+storage.add_handler_obj(storage.GlobHandler(".sig JSON loader from stdin",
+                                            "-",
+                                            100,
+                                            storage_load_signatures))
+storage.add_handler_obj(storage.GlobHandler(".sig JSON loader from file",
+                                            "*.sig",
+                                            300,
+                                            storage_load_signatures))
+
+def storage_traverse_directory(filename, traverse_yield_all, **kwargs):
+    all_sigs = []
+    for thisfile in traverse_find_sigs([filename], traverse_yield_all):
+        try:
+            with open(thisfile, 'rt') as fp:
+                x = signature.load_signatures(fp, do_raise=True)
+                siglist = list(x)
+                all_sigs.extend(siglist)
+        except (IOError, sourmash.exceptions.SourmashError):
+            if traverse_yield_all:
+                continue
+            else:
+                raise
+
+    loaded=True
+    if all_sigs:
+        return all_sigs, DatabaseType.SIGLIST
+
+    return None, None
+
+
+def match_load_directory(filename):
+    if os.path.isdir(filename):
+        notify(f"matcher matched '{filename}' - is directory!")
+        return True
+    return False
+
+storage.add_handler_obj(storage.Handler("load from directory",
+                                        match_load_directory,
+                                        200,
+                                        storage_traverse_directory))
 
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
-    """Load file as a database - list of signatures, LCA, SBT, etc.
+    """Load file as a database - list of signatures, LCA, SBT, Zip file, etc.
 
     Return (db, dbtype), where dbtype is a DatabaseType enum.
 
@@ -372,44 +451,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     loaded = False
     dbtype = None
 
-    # special case stdin
-    if not loaded and filename == '-':
-        db = signature.load_signatures(sys.stdin, do_raise=True)
-        db = list(db)
-        loaded = True
-        dbtype = DatabaseType.SIGLIST
-
-    # load signatures from directory
-    if not loaded and os.path.isdir(filename):
-        all_sigs = []
-        for thisfile in traverse_find_sigs([filename], traverse_yield_all):
-            try:
-                with open(thisfile, 'rt') as fp:
-                    x = signature.load_signatures(fp, do_raise=True)
-                    siglist = list(x)
-                    all_sigs.extend(siglist)
-            except (IOError, sourmash.exceptions.SourmashError):
-                if traverse_yield_all:
-                    continue
-                else:
-                    raise
-
-        loaded=True
-        db = all_sigs
-        dbtype = DatabaseType.SIGLIST
-
-    # load signatures from single file
-    try:
-        # CTB: could make this a generator, with some trickery; but for
-        # now, just force into list.
-        with open(filename, 'rt') as fp:
-            db = signature.load_signatures(fp, do_raise=True)
-            db = list(db)
-
-        loaded = True
-        dbtype = DatabaseType.SIGLIST
-    except Exception as exc:
-        pass
+    db, dbtype = storage.load(filename, traverse_yield_all, cache_size)
+    if db: loaded = True
 
     # try load signatures from single file (list of signature paths)
     if not loaded:
@@ -442,6 +485,17 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             dbtype = DatabaseType.LCA
         except:
             pass
+
+    if not loaded:                    # try load as ZipFileLinearIndex
+        if filename.endswith('.zip'):
+            try:
+                db = ZipFileLinearIndex.load(filename,
+                                             traverse_yield_all=traverse_yield_all)
+                loaded = True
+                dbtype = DatabaseType.ZIPFILE
+            except:
+                raise
+                pass
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
     # so we can provide a better error message to users.
@@ -477,8 +531,10 @@ def _select_sigs(siglist, ksize, moltype):
 def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    the appropriate objects.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return the appropriate objects. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return an Index object containing those signatures.
@@ -488,14 +544,14 @@ def load_file_as_index(filename, yield_all_files=False):
     attempt to load all files.
     """
     db, dbtype = _load_database(filename, yield_all_files)
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT, DatabaseType.ZIPFILE):
         return db                         # already an index!
     elif dbtype == DatabaseType.SIGLIST:
         # turn siglist into a LinearIndex
         idx = LinearIndex(db, filename)
         return idx
     else:
-        assert 0                          # unknown enum!?
+        raise Exception                   # unknown enum!?
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
@@ -503,8 +559,10 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    a signatures() generator.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return a signatures() generator. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return a list of those signatures.
@@ -521,13 +579,13 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     db, dbtype = _load_database(filename, yield_all_files)
 
     loader = None
-    if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
+    if dbtype in (DatabaseType.LCA, DatabaseType.SBT, DatabaseType.ZIPFILE):
         db = db.select(moltype=select_moltype, ksize=ksize)
         loader = db.signatures()
     elif dbtype == DatabaseType.SIGLIST:
         loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
     else:
-        assert 0                          # unknown enum!?
+        raise Exception("unknown database type")
 
     if progress:
         return progress.start_file(filename, loader)
