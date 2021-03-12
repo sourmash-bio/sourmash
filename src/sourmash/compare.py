@@ -42,7 +42,7 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
 def compare_serial_containment(siglist, downsample=False):
     """Compare all combinations of signatures and return a matrix
     of containments. Processes combinations serially on a single
-    process. Best to use when there is few signatures.
+    process. Best to only use when there are few signatures.
 
     :param list siglist: list of signatures to compare
     :param boolean downsample by scaled if True
@@ -56,6 +56,28 @@ def compare_serial_containment(siglist, downsample=False):
     for i in range(n):
         for j in range(n):
             containments[i][j] = siglist[j].contained_by(siglist[i],
+                                                         downsample=downsample)
+
+    return containments
+
+
+def compare_serial_max_containment(siglist, downsample=False):
+    """Compare all combinations of signatures and return a matrix
+    of max_containments. Processes combinations serially on a single
+    process. Best to only use when there are few signatures.
+
+    :param list siglist: list of signatures to compare
+    :param boolean downsample by scaled if True
+    :return: np.array similarity matrix
+    """
+    import numpy as np
+
+    n = len(siglist)
+
+    containments = np.ones((n, n))
+    for i in range(n):
+        for j in range(n):
+            containments[i][j] = siglist[j].max_containment(siglist[i],
                                                          downsample=downsample)
 
     return containments

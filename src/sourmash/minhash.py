@@ -536,10 +536,24 @@ class MinHash(RustObject):
         """\
         Calculate how much of self is contained by other.
         """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
 
         return self.count_common(other, downsample) / len(self)
+
+    def max_containment(self, other, downsample=False):
+        """
+        Calculate maximum containment.
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+        min_denom = min((len(self), len(other)))
+        if not min_denom:
+            return 0.0
+
+        return self.count_common(other, downsample) / min_denom
 
     def __add__(self, other):
         if not isinstance(other, MinHash):
