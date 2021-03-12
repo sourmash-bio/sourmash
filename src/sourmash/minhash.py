@@ -547,6 +547,8 @@ class MinHash(RustObject):
         """\
         Calculate maximum containment.
         """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
         min_denom = min((len(self), len(other)))
         if not min_denom:
             return 0.0

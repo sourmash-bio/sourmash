@@ -102,18 +102,33 @@ def test_div_zero_contained(track_abundance):
 
 
 def test_contained_requires_scaled(track_abundance):
-    # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
-    mh = MinHash(1, 4, track_abundance=track_abundance)
-    assert mh.moltype == 'DNA'
+    # test that contained_by requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
 
-    mh.add_sequence('ATGC')
-    a = mh.hashes
-
-    mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
-    b = mh.hashes
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
 
     with pytest.raises(TypeError):
-        mh.contained_by(mh)
+        mh2.contained_by(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.contained_by(mh2)
+
+
+def test_contained_requires_scaled_2(track_abundance):
+    # test that max_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.max_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.max_containment(mh2)
 
 
 def test_bytes_dna(track_abundance):
