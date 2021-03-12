@@ -389,6 +389,8 @@ class SBT(Index):
                                                                downsample=True)
 
         if best_only:            # this needs to be reset for each SBT
+            if do_containment or do_max_containment:
+                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
             search_fn = SearchMinHashesFindBest().search
 
         # now, search!

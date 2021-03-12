@@ -1520,6 +1520,20 @@ def test_search_containment_s10_sbt():
         assert ' 16.7%       ../genome-s10-small.fa.gz' in out
 
 
+def test_search_containment_s10_sbt_best_only():
+    # check --containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--containment', '--best-only'],
+                                           in_directory=location, fail_ok=True)
+
+        assert status != 0
+
+
 def test_search_containment_s10_sbt_empty():
     # check --containment for s10/s10-small at absurd scaled/empty mh
     with utils.TempDirectory() as location:
@@ -1548,6 +1562,18 @@ def test_search_max_containment_s10_sbt():
         assert '100.0%       ../genome-s10-small.fa.gz' in out
         assert '100.0%       ../genome-s10.fa.gz' in out
         assert '100.0%       ../genome-s10+s11.fa.gz' in out
+
+
+def test_search_max_containment_s10_sbt_best_only():
+    # check --max-containment for s10/s10-small
+    with utils.TempDirectory() as location:
+        q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
+        q2 = utils.get_test_data('scaled/all.sbt.zip')
+        status, out, err = utils.runscript('sourmash',
+                                           ['search', q1, q2,
+                                            '--max-containment', '--best-only'],
+                                           in_directory=location, fail_ok=True)
+        assert status != 0
 
 
 def test_search_max_containment_s10_sbt_empty():
