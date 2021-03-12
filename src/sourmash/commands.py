@@ -509,10 +509,11 @@ def categorize(args):
                 already_names.add(row[0])
 
     # load search database
-    tree = load_sbt_index(args.sbt_name)
+    db = sourmash_args.load_file_as_index(args.database)
 
     # load query filenames
     inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
+    print('XXX', inp_files, args.queries)
     inp_files = inp_files - already_names
 
     notify('found {} files to query', len(inp_files))
@@ -533,12 +534,13 @@ def categorize(args):
         results = []
         search_fn = SearchMinHashesFindBest().search
 
-        # note, "ignore self" here may prevent using newer 'tree.search' fn.
-        for leaf in tree.find(search_fn, query, args.threshold):
-            if leaf.data.md5sum() != query.md5sum(): # ignore self.
+        # note, "ignore self" here may prevent using newer 'db.search' fn.
+        for match in db.find(search_fn, query, args.threshold):
+            print('XXX', match)
+            if match.md5sum() != query.md5sum(): # ignore self.
                 similarity = query.similarity(
-                    leaf.data, ignore_abundance=args.ignore_abundance)
-                results.append((similarity, leaf.data))
+                    match, ignore_abundance=args.ignore_abundance)
+                results.append((similarity, match))
 
         best_hit_sim = 0.0
         best_hit_query_name = ""
