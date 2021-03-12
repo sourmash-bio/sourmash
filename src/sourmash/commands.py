@@ -7,7 +7,8 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs, compare_serial_containment
+from .compare import (compare_all_pairs, compare_serial_containment,
+                      compare_serial_max_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -91,16 +92,24 @@ def compare(args):
         error('cannot mix scaled signatures with bounded signatures')
         sys.exit(-1)
 
+    is_containment = False
+    if args.containment or args.max_containment:
+        is_containment = True
+
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     # complain if --containment and not is_scaled
-    if args.containment and not is_scaled:
-        error('must use scaled signatures with --containment option')
+    if is_containment and not is_scaled:
+        error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
-    if args.containment:
+    if is_containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment means signature abundances are flattened.')
+            notify('NOTE: --containment and --max-containment means signature abundances are ignored.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -127,6 +136,8 @@ def compare(args):
     labeltext = [str(item) for item in siglist]
     if args.containment:
         similarity = compare_serial_containment(siglist)
+    elif args.max_containment:
+        similarity = compare_serial_max_containment(siglist)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes)

@@ -413,7 +413,7 @@ def test_compare_containment_abund_flatten(c):
     print(c.last_result.out)
     print(c.last_result.err)
 
-    assert 'NOTE: --containment means signature abundances are flattened' in \
+    assert 'NOTE: --containment and --max-containment means signature abundances are ignored.' in \
         c.last_result.err
 
 
@@ -426,7 +426,7 @@ def test_compare_containment_require_scaled(c):
         c.run_sourmash('compare', '--containment', '-k', '31', s47, s63,
                        fail_ok=True)
 
-    assert 'must use scaled signatures with --containment option' in \
+    assert 'must use scaled signatures with --containment and --max-containment' in \
         c.last_result.err
     assert c.last_result.status != 0
 
