@@ -341,7 +341,10 @@ class SBT(Index):
         nodes = self._find_nodes(search_fn, *args, **kwargs)
         return [ n.data for n in nodes ]
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None,
+               ignore_abundance=False, do_containment=False,
+               do_max_containment=False, best_only=False,
+               unload_data=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -354,15 +357,17 @@ class SBT(Index):
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import (search_minhashes, search_minhashes_containment,
+                            search_minhashes_max_containment)
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
-        threshold = kwargs['threshold']
-        ignore_abundance = kwargs.get('ignore_abundance', False)
-        do_containment = kwargs.get('do_containment', False)
-        best_only = kwargs.get('best_only', False)
-        unload_data = kwargs.get('unload_data', False)
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = float(threshold)
+
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -382,8 +387,14 @@ class SBT(Index):
         if do_containment:
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            search_fn = search_minhashes_max_containment
+            query_match = lambda x: tree_query.max_containment(x,
+                                                               downsample=True)
 
         if best_only:            # this needs to be reset for each SBT
+            if do_containment or do_max_containment:
+                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
             search_fn = SearchMinHashesFindBest().search
 
         # now, search!
