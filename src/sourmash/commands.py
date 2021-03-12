@@ -449,6 +449,11 @@ def search(args):
 
     # set up the search databases
     is_containment = args.containment or args.max_containment
+    if is_containment:
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment)
 

@@ -1449,7 +1449,7 @@ def test_search_containment_s10_no_max(c):
 
     print(c.last_result.out)
     print(c.last_result.err)
-    assert "'do_containment' and 'do_max_containment' cannot both be True" in c.last_result.err
+    assert "ERROR: cannot specify both --containment and --max-containment!" in c.last_result.err
 
 
 def test_search_max_containment_s10_pairwise():
