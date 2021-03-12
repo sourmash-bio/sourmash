@@ -8,7 +8,7 @@ from .minhash import _get_max_hash_for_scaled
 
 # generic SearchResult.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name')
+                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
 
 
 def format_bp(bp):
@@ -25,33 +25,32 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance, unload_data=False):
+def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
     for db in databases:
-        search_iter = db.search(query, threshold=threshold,
-                                 do_containment=do_containment,
-                                 ignore_abundance=ignore_abundance,
-                                 best_only=best_only,
-                                 unload_data=unload_data)
-
-        for (similarity, match, filename) in search_iter:
+        search_iter = db.search(query, **kwargs)
+        for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
-                results.append((similarity, match, filename))
+                results.append((score, match, filename))
                 found_md5.add(md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])
 
     x = []
-    for (similarity, match, filename) in results:
-        x.append(SearchResult(similarity=similarity,
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name))
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
     return x
 
 ###

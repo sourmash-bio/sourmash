@@ -28,6 +28,10 @@ def subparser(subparsers):
         help='calculate containment instead of similarity'
     )
     subparser.add_argument(
+        '--max-containment', action='store_true',
+        help='calculate max containment instead of similarity'
+    )
+    subparser.add_argument(
         '--from-file',
         help='a text file containing a list of files to load signatures from'
     )

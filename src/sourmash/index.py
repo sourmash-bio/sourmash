@@ -38,7 +38,9 @@ class Index(ABC):
                 matches.append(node)
         return matches
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None,
+               do_containment=False, do_max_containment=False,
+               ignore_abundance=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -55,16 +57,18 @@ class Index(ABC):
         """
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if threshold is None:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
+        threshold = float(threshold)
 
-        do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
         # configure search - containment? ignore abundance?
         if do_containment:
             query_match = lambda x: query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            query_match = lambda x: query.max_containment(x, downsample=True)
         else:
             query_match = lambda x: query.similarity(
                 x, downsample=True, ignore_abundance=ignore_abundance)
@@ -73,9 +77,9 @@ class Index(ABC):
         matches = []
 
         for ss in self.signatures():
-            similarity = query_match(ss)
-            if similarity >= threshold:
-                matches.append((similarity, ss, self.filename))
+            score = query_match(ss)
+            if score >= threshold:
+                matches.append((score, ss, self.filename))
 
         # sort!
         matches.sort(key=lambda x: -x[0])
