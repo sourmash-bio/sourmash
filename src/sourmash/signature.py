@@ -146,6 +146,10 @@ class SourmashSignature(RustObject):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample)
 
+    def max_containment(self, other, downsample=False):
+        "Compute max containment w/other signature. Note: ignores abundance."
+        return self.minhash.max_containment(other.minhash, downsample)
+
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
 

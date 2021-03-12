@@ -798,6 +798,27 @@ def test_sbt_protein_command_index(c):
     assert results[0][2] == db_out
 
 
+@utils.in_tempdir
+def test_sbt_protein_search_no_threshold(c):
+    # test the '.search' method on SBTs w/no threshold
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('protein.sbt.zip')
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '19', '--protein')
+
+    db2 = load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+
+    # and search, gather
+    with pytest.raises(TypeError) as exc:
+        results = db2.search(sig1)
+    assert "'search' requires 'threshold'" in str(exc)
+
+
 @utils.in_thisdir
 def test_sbt_protein_command_search(c):
     # test command-line search/gather of LCA database with protein sigs
