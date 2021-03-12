@@ -807,9 +807,13 @@ def test_search_csv(c):
     with open(csv_file) as fp:
         reader = csv.DictReader(fp)
         row = next(reader)
+        print(row)
         assert float(row['similarity']) == 0.93
         assert row['filename'].endswith('short2.fa.sig')
         assert row['md5'] == '914591cd1130aa915fe0c0c63db8f19d'
+        assert row['query_filename'].endswith('short.fa')
+        assert row['query_name'] == ''
+        assert row['query_md5'] == 'e26a306d'
 
 
 @utils.in_tempdir

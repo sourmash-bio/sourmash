@@ -8,7 +8,7 @@ from .minhash import _get_max_hash_for_scaled
 
 # generic SearchResult.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name')
+                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
 
 
 def format_bp(bp):
@@ -45,7 +45,12 @@ def search_databases(query, databases, **kwargs):
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name))
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
     return x
 
 ###

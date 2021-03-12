@@ -497,7 +497,8 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5']
+        fieldnames = ['similarity', 'name', 'filename', 'md5',
+                      'query_filename', 'query_name', 'query_md5']
 
         with FileOutput(args.output, 'wt') as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
@@ -506,6 +507,7 @@ def search(args):
             for sr in results:
                 d = dict(sr._asdict())
                 del d['match']
+                del d['query']
                 w.writerow(d)
 
     # save matching signatures upon request
