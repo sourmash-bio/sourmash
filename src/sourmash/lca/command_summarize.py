@@ -195,7 +195,7 @@ def summarize_main(args):
     csv_fp = None
     write_header = True
     if args.output:
-        csv_fp = open(args.output, 'wt')
+        csv_fp = open(args.output, 'w', newline='')
 
     try:
         for filename, sig, hashvals in \
