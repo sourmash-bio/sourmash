@@ -335,7 +335,7 @@ class SBT(Index):
                 if unload_data:
                     node_g.unload()
 
-        return matches
+        return [ m.data for m in matches ]
 
     def search(self, query, *args, **kwargs):
         """Return set of matches with similarity above 'threshold'.
@@ -384,13 +384,13 @@ class SBT(Index):
 
         # now, search!
         results = []
-        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
-            similarity = query_match(leaf.data)
+        for match in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+            similarity = query_match(match)
 
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, self._location))
+            results.append((similarity, match, self._location))
 
         return results
         
@@ -407,9 +407,8 @@ class SBT(Index):
 
         unload_data = kwargs.get('unload_data', False)
 
-        leaf = next(iter(self.leaves()))
-        tree_mh = leaf.data.minhash
-        scaled = tree_mh.scaled
+        first_sig = next(iter(self.signatures()))
+        scaled = first_sig.minhash.scaled
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = 0.0
@@ -430,13 +429,13 @@ class SBT(Index):
         # actually do search!
         results = []
 
-        for leaf in self.find(search_fn, query, threshold,
+        for match in self.find(search_fn, query, threshold,
                               unload_data=unload_data):
-            leaf_mh = leaf.data.minhash
-            containment = query.minhash.contained_by(leaf_mh, True)
+            match_mh = match.minhash
+            containment = query.minhash.contained_by(match_mh, True)
 
             assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, self._location))
+            results.append((containment, match, self._location))
 
         results.sort(key=lambda x: -x[0])
 
