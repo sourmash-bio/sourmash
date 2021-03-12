@@ -1,7 +1,5 @@
 """create protein signature from DNA/RNA sequence"""
 
-import csv
-
 import sourmash
 from sourmash.logging import notify, print_results, error
 
