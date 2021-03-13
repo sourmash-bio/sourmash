@@ -174,8 +174,6 @@ class Index(ABC):
             is guaranteed to be best.
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
-
-        Note, the "best only" hint is ignored by LinearIndex.
         """
         # check arguments
         if threshold is None:

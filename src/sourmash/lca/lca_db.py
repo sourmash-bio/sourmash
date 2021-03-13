@@ -314,8 +314,6 @@ class LCA_Database(Index):
             is guaranteed to be best.
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
-
-        Note, the "best only" hint is ignored by LCA_Database
         """
         if not query.minhash:
             return []
@@ -325,14 +323,15 @@ class LCA_Database(Index):
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        mh = query.minhash
-        if ignore_abundance:
-            mh.track_abundance = False
-
         search_obj = get_search_obj(do_containment,
                                     do_max_containment,
                                     best_only,
                                     threshold)
+
+        # @CTB what does this do?
+        mh = query.minhash
+        if ignore_abundance:
+            mh.track_abundance = False
 
         if not search_obj:
             return []

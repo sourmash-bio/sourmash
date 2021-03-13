@@ -9,8 +9,7 @@ from sourmash import (load_one_signature, SourmashSignature,
                       load_file_as_signatures)
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash.sbtmh import (SigLeaf, search_minhashes,
-                            search_minhashes_containment, load_sbt_index)
+from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
