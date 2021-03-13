@@ -161,7 +161,7 @@ def test_tree_old_load(old_version):
 
     print(list(tree_old.leaves()))
 
-    search_obj = get_search_obj(True, False, False, 0.1)
+    search_obj = get_search_obj(False, False, False, 0.05)
     results_old = {str(s) for s in tree_old.find(search_obj, to_search)}
     results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
 
@@ -948,7 +948,7 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    search_obj = get_search_obj(True, False, False, 0.1)
+    search_obj = get_search_obj(False, False, False, 0.05)
     results = list(tree.find(search_obj, to_search))
     assert len(results) == 4
 
