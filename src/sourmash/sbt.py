@@ -343,12 +343,25 @@ class SBT(Index):
 
         query_mh = query.minhash
 
-        # reconcile scaled values
+        # figure out downsampling
         a_leaf = next(iter(self.leaves()))
+
         tree_scaled = a_leaf.data.minhash.scaled
-        scaled = max(query_mh.scaled, tree_scaled)
-        if query_mh.scaled < tree_scaled:
-            query_mh = query_mh.downsample(scaled=tree_scaled)
+        if tree_scaled:
+            assert query_mh.scaled
+            scaled = max(query_mh.scaled, tree_scaled)
+            if query_mh.scaled < tree_scaled:
+                query_mh = query_mh.downsample(scaled=tree_scaled)
+
+            def downsample_node(node_mh):
+                return node_mh.downsample(scaled=scaled)
+        else:
+            assert query_mh.num
+            min_num = min(query_mh.num, a_leaf.data.minhash.num)
+            if query_mh.num > min_num:
+                query_mh = query_mh.downsample(num=min_num)
+            def downsample_node(node_mh):
+                return node_mh.downsample(num=min_num)
 
         query_size = len(query_mh)
 
@@ -365,7 +378,7 @@ class SBT(Index):
                 node_mh = node.data.minhash
                 subj_size = len(node_mh)
                 matches = node_mh.count_common(query_mh, downsample=True)
-                total_size = len(query_mh + node_mh.downsample(scaled=scaled))
+                total_size = len(query_mh + downsample_node(node_mh))
                 is_leaf = True
             else:  # Node or Leaf, Nodegraph by minhash comparison
                 matches = node.data.matches(query_mh)
