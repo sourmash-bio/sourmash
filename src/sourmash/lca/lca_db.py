@@ -334,6 +334,9 @@ class LCA_Database(Index):
                                     best_only,
                                     threshold)
 
+        if not search_obj:
+            return []
+
         # find all the matches, then sort & return.
         results = []
         for match, score in self.find(search_obj, query):
@@ -349,6 +352,8 @@ class LCA_Database(Index):
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         search_obj = get_gather_obj(query.minhash, threshold_bp)
+        if not search_obj:
+            return []
 
         results = []
 
@@ -359,7 +364,7 @@ class LCA_Database(Index):
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
-        return results
+        return results[:1]
 
     def downsample_scaled(self, scaled):
         """
@@ -465,7 +470,7 @@ class LCA_Database(Index):
         minhash = query.minhash
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
-        elif self.scaled < minhash.scaled and not ignore_scaled:
+        elif self.scaled < minhash.scaled:
             # note that containment cannot be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
