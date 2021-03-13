@@ -559,6 +559,9 @@ class MinHash(RustObject):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
 
+        if self.num and other.num:
+            assert self.num == other.num
+
         new_obj = self.__copy__()
         new_obj += other
         return new_obj

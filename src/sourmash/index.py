@@ -67,7 +67,7 @@ class IndexSearch:
             score_fn = self.score_max_containment
             require_scaled = True
         self.score_fn = score_fn
-        self.require_scaled = require_scaled
+        self.require_scaled = require_scaled # @CTB
 
         if threshold is None:
             threshold = 0
@@ -129,11 +129,17 @@ class Index(ABC):
 
         Returns a list.
         """
+        query_mh = query.minhash
+        query_size = len(query_mh)
         for subj in self.signatures():
-            query_size = len(query.minhash)
-            subj_size = len(subj.minhash)
-            shared_size = query.minhash.count_common(subj.minhash)
-            total_size = len(query.minhash + subj.minhash)
+            subj_mh = subj.minhash
+            subj_size = len(subj_mh)
+
+            # respects num
+            merged = query_mh + subj_mh
+            intersect = set(query_mh.hashes) & set(subj_mh.hashes) & set(merged.hashes)
+            shared_size = len(intersect)
+            total_size = len(query_mh + subj_mh)
 
             score = search_fn.score_fn(query_size,
                                        shared_size,
@@ -197,7 +203,6 @@ class Index(ABC):
         # actually do search!
         results = []
         for subj, score in self.find(search_obj, query):
-            print('ABC', score, self.filename)
             results.append((score, subj, self.filename))
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))

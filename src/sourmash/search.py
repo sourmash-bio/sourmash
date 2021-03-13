@@ -86,7 +86,6 @@ def _find_best(dblist, query, threshold_bp):
     # search across all databases
     for db in dblist:
         for cont, match, fname in db.gather(query, threshold_bp=threshold_bp):
-            print('ZZZ', db, cont, match, fname)
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.

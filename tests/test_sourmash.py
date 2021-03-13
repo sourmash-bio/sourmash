@@ -746,6 +746,7 @@ def test_search_second_subject_sig_does_not_exist(c):
     assert c.last_result.status == -1
     assert "Error while reading signatures from 'short2.fa.sig'." in c.last_result.err
 
+
 @utils.in_tempdir
 def test_search(c):
     testdata1 = utils.get_test_data('short.fa')
