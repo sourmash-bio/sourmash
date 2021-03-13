@@ -1,3 +1,6 @@
+"""
+Tests for `Index` class and descendants.
+"""
 import glob
 import os
 import zipfile
@@ -46,26 +49,20 @@ def test_simple_index(n_children):
     root.add_node(leaf5)
 
     def search_kmer(obj, seq):
-        return obj.data.get(seq)
+        return obj.get(seq)
 
     kmers = ["AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA"]
 
     linear = LinearIndex()
-    linear.insert(leaf1)
-    linear.insert(leaf2)
-    linear.insert(leaf3)
-    linear.insert(leaf4)
-    linear.insert(leaf5)
+    linear.insert(leaf1.data)
+    linear.insert(leaf2.data)
+    linear.insert(leaf3.data)
+    linear.insert(leaf4.data)
+    linear.insert(leaf5.data)
 
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == set(linear.find(search_kmer, kmer))
-
-    print("-----")
-    print([x.metadata for x in root.find(search_kmer, "AAAAA")])
-    print([x.metadata for x in root.find(search_kmer, "AAAAT")])
-    print([x.metadata for x in root.find(search_kmer, "AAAAG")])
-    print([x.metadata for x in root.find(search_kmer, "CAAAA")])
-    print([x.metadata for x in root.find(search_kmer, "GAAAA")])
+        linear_found = linear.find(search_kmer, kmer)
+        assert set(root.find(search_kmer, kmer)) == set(linear_found)
 
 
 def test_linear_index_search():

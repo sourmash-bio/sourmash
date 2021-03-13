@@ -52,12 +52,14 @@ def test_simple(n_children):
     root.add_node(leaf4)
     root.add_node(leaf5)
 
-    def search_kmer(obj, seq):
-        return obj.data.get(seq)
+    # return True if leaf node contains nodegraph w/kmer
+    def search_kmer(leaf, kmer):
+        return leaf.data.get(kmer)
 
     leaves = [leaf1, leaf2, leaf3, leaf4, leaf5 ]
     kmers = [ "AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA" ]
 
+    # define an exhaustive search function that looks in all the leaf nodes.
     def search_kmer_in_list(kmer):
         x = []
         for l in leaves:
@@ -66,22 +68,25 @@ def test_simple(n_children):
 
         return set(x)
 
+    # for all k-mers, ensure that tree._find_nodes matches the exhaustive
+    # search.
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == search_kmer_in_list(kmer)
+        assert set(root._find_nodes(search_kmer, kmer)) == search_kmer_in_list(kmer)
 
     print('-----')
-    print([ x.metadata for x in root.find(search_kmer, "AAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAT") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAG") ])
-    print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAT") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAG") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "CAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "GAAAA") ])
 
+    # save SBT to a directory and then reload
     with utils.TempDirectory() as location:
         root.save(os.path.join(location, 'demo'))
         root = SBT.load(os.path.join(location, 'demo'))
 
         for kmer in kmers:
-            new_result = {str(r) for r in root.find(search_kmer, kmer)}
+            new_result = {str(r) for r in root._find_nodes(search_kmer, kmer)}
             print(*new_result, sep='\n')
 
             assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
@@ -133,13 +138,13 @@ def test_longer_search(n_children):
             return 1
         return 0
 
-    try1 = [ x.metadata for x in root.find(search_transcript, "AAAAT", 1.0) ]
+    try1 = [ x.metadata for x in root._find_nodes(search_transcript, "AAAAT", 1.0) ]
     assert set(try1) == set([ 'a', 'b', 'c', 'e' ]), try1 # no 'd'
 
-    try2 = [ x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6) ]
+    try2 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAAAT", 0.6) ]
     assert set(try2) == set([ 'a', 'b', 'c', 'd', 'e' ])
 
-    try3 = [ x.metadata for x in root.find(search_transcript, "GAAAA", 1.0) ]
+    try3 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAA", 1.0) ]
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
@@ -154,9 +159,9 @@ def test_tree_old_load(old_version):
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
+    results_v1 = {str(s) for s in tree_v1._find_nodes(search_minhashes_containment,
                                                to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
+    results_cur = {str(s) for s in tree_cur._find_nodes(search_minhashes_containment,
                                                  to_search, 0.1)}
 
     assert results_v1 == results_cur
@@ -185,8 +190,8 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
+    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
+                                                   to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -196,8 +201,8 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
+                                                       to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -216,7 +221,7 @@ def test_search_minhashes():
     to_search = next(iter(tree.leaves()))
 
     # this fails if 'search_minhashes' is calc containment and not similarity.
-    results = tree.find(search_minhashes, to_search.data, 0.08)
+    results = tree._find_nodes(search_minhashes, to_search.data, 0.08)
     for leaf in results:
         assert to_search.data.similarity(leaf.data) >= 0.08
 
@@ -245,7 +250,7 @@ def test_binary_nary_tree():
     print('*' * 60)
     print("{}:".format(to_search.metadata))
     for d, tree in trees.items():
-        results[d] = {str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)}
+        results[d] = {str(s) for s in tree._find_nodes(search_minhashes, to_search.data, 0.1)}
     print(*results[2], sep='\n')
 
     assert results[2] == results[5]
@@ -279,9 +284,9 @@ def test_sbt_combine(n_children):
     assert t1_leaves == t_leaves
 
     to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-    t1_result = {str(s) for s in tree_1.find(search_minhashes,
+    t1_result = {str(s) for s in tree_1._find_nodes(search_minhashes,
                                              to_search, 0.1)}
-    tree_result = {str(s) for s in tree.find(search_minhashes,
+    tree_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                              to_search, 0.1)}
     assert t1_result == tree_result
 
@@ -314,7 +319,7 @@ def test_sbt_fsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
+        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
@@ -324,7 +329,7 @@ def test_sbt_fsstorage():
         tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
+        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                 to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
@@ -348,7 +353,7 @@ def test_sbt_zipstorage(tmpdir):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
+    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                             to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
@@ -362,7 +367,7 @@ def test_sbt_zipstorage(tmpdir):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
+        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                 to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
@@ -385,7 +390,7 @@ def test_sbt_ipfsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
+        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
@@ -402,7 +407,7 @@ def test_sbt_ipfsstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree.find(search_minhashes,
+            new_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                     to_search.data, 0.1)}
             print(*new_result, sep='\n')
 
@@ -424,7 +429,7 @@ def test_sbt_redisstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
+        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                 to_search.data, 0.1)}
         print(*old_result, sep='\n')
 
@@ -441,7 +446,7 @@ def test_sbt_redisstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree.find(search_minhashes,
+            new_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                                     to_search.data, 0.1)}
             print(*new_result, sep='\n')
 
@@ -468,8 +473,8 @@ def test_save_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    old_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
-    new_result = {str(s) for s in new_tree.find(search_minhashes, to_search, 0.1)}
+    old_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
+    new_result = {str(s) for s in new_tree._find_nodes(search_minhashes, to_search, 0.1)}
     print(*new_result, sep="\n")
 
     assert old_result == new_result
@@ -489,7 +494,7 @@ def test_load_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    new_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -510,7 +515,7 @@ def test_load_zip_uncompressed(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    new_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -525,9 +530,9 @@ def test_tree_repair():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_repair = {str(s) for s in tree_repair.find(search_minhashes,
+    results_repair = {str(s) for s in tree_repair._find_nodes(search_minhashes,
                                                        to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+    results_cur = {str(s) for s in tree_cur._find_nodes(search_minhashes,
                                                  to_search, 0.1)}
 
     assert results_repair == results_cur
@@ -566,7 +571,7 @@ def test_save_sparseness(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
+    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
                                             to_search.data, 0.1)}
     print(*old_result, sep='\n')
 
@@ -578,7 +583,7 @@ def test_save_sparseness(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree_loaded.find(search_minhashes,
+        new_result = {str(s) for s in tree_loaded._find_nodes(search_minhashes,
                                                        to_search.data, 0.1)}
         print(*new_result, sep='\n')
 
@@ -798,6 +803,27 @@ def test_sbt_protein_command_index(c):
     assert results[0][2] == db_out
 
 
+@utils.in_tempdir
+def test_sbt_protein_search_no_threshold(c):
+    # test the '.search' method on SBTs w/no threshold
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('protein.sbt.zip')
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '19', '--protein')
+
+    db2 = load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+
+    # and search, gather
+    with pytest.raises(TypeError) as exc:
+        results = db2.search(sig1)
+    assert "'search' requires 'threshold'" in str(exc)
+
+
 @utils.in_thisdir
 def test_sbt_protein_command_search(c):
     # test command-line search/gather of LCA database with protein sigs
@@ -917,7 +943,7 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results = list(tree.find(search_minhashes_containment, to_search, 0.1))
+    results = list(tree._find_nodes(search_minhashes_containment, to_search, 0.1))
     assert len(results) == 4
 
     assert tree._nodescache.currsize == 1

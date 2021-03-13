@@ -285,7 +285,7 @@ class SBT(Index):
             node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
 
-    def find(self, search_fn, *args, **kwargs):
+    def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
         unload_data = kwargs.get("unload_data", False)
@@ -337,7 +337,17 @@ class SBT(Index):
 
         return matches
 
-    def search(self, query, *args, **kwargs):
+    def find(self, search_fn, *args, **kwargs):
+        # wrap...
+        def node_search(node, *args, **kwargs):
+            return search_fn(node.data, *args, **kwargs)
+        nodes = self._find_nodes(node_search, *args, **kwargs)
+        return [ n.data for n in nodes ]
+
+    def search(self, query, threshold=None,
+               ignore_abundance=False, do_containment=False,
+               do_max_containment=False, best_only=False,
+               unload_data=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -350,15 +360,17 @@ class SBT(Index):
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import (search_minhashes, search_minhashes_containment,
+                            search_minhashes_max_containment)
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
-        threshold = kwargs['threshold']
-        ignore_abundance = kwargs.get('ignore_abundance', False)
-        do_containment = kwargs.get('do_containment', False)
-        best_only = kwargs.get('best_only', False)
-        unload_data = kwargs.get('unload_data', False)
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = float(threshold)
+
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -378,19 +390,26 @@ class SBT(Index):
         if do_containment:
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            search_fn = search_minhashes_max_containment
+            query_match = lambda x: tree_query.max_containment(x,
+                                                               downsample=True)
 
         if best_only:            # this needs to be reset for each SBT
+            if do_containment or do_max_containment:
+                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
             search_fn = SearchMinHashesFindBest().search
 
         # now, search!
         results = []
-        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
-            similarity = query_match(leaf.data)
+        for leaf in self._find_nodes(search_fn, tree_query, threshold, unload_data=unload_data):
+            match = leaf.data
+            similarity = query_match(match)
 
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, self._location))
+            results.append((similarity, match, self._location))
 
         return results
         
@@ -407,9 +426,8 @@ class SBT(Index):
 
         unload_data = kwargs.get('unload_data', False)
 
-        leaf = next(iter(self.leaves()))
-        tree_mh = leaf.data.minhash
-        scaled = tree_mh.scaled
+        first_sig = next(iter(self.signatures()))
+        scaled = first_sig.minhash.scaled
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = 0.0
@@ -430,13 +448,14 @@ class SBT(Index):
         # actually do search!
         results = []
 
-        for leaf in self.find(search_fn, query, threshold,
+        for leaf in self._find_nodes(search_fn, query, threshold,
                               unload_data=unload_data):
-            leaf_mh = leaf.data.minhash
-            containment = query.minhash.contained_by(leaf_mh, True)
+            match = leaf.data
+            match_mh = match.minhash
+            containment = query.minhash.contained_by(match_mh, True)
 
             assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, self._location))
+            results.append((containment, match, self._location))
 
         results.sort(key=lambda x: -x[0])
 
