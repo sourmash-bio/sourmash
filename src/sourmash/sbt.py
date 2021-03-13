@@ -338,16 +338,16 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, query, *args, **kwargs):
-        # wrap...
+        from .sbtmh import SigLeaf
 
         query_mh = query.minhash
         query_size = len(query_mh)
         results = {}
 
+        # construct a function to pass into ._find_nodes:
         def node_search(node, *args, **kwargs):
-            from .sbtmh import SigLeaf
-
             is_leaf = False
+
             if isinstance(node, SigLeaf):
                 node_mh = node.data.minhash
                 subj_size = len(node_mh)
@@ -357,8 +357,9 @@ class SBT(Index):
             else:  # Node or Leaf, Nodegraph by minhash comparison
                 matches = node.data.matches(query_mh)
                 subj_size = node.metadata.get('min_n_below', -1)
-                total_size = subj_size # approximate
+                total_size = subj_size # approximate; do not collect
 
+            # calculate score (exact, if leaf; approximate, if not)
             score = search_fn.score_fn(query_size,
                                        matches,
                                        subj_size,
@@ -371,6 +372,7 @@ class SBT(Index):
                 return True
             return False
 
+        # & execute!
         for n in self._find_nodes(node_search, *args, **kwargs):
             yield n.data, results[n.data]
 
@@ -390,9 +392,6 @@ class SBT(Index):
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        from .sbtmh import (search_minhashes, search_minhashes_containment,
-                            search_minhashes_max_containment)
-        from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
         if threshold is None:
@@ -419,11 +418,11 @@ class SBT(Index):
             search_cls = IndexSearchBestOnly
 
         if do_containment:
-            search_obj = search_cls(SearchType.CONTAINMENT)
+            search_obj = search_cls(SearchType.CONTAINMENT, threshold)
         elif do_max_containment:
-            search_obj = search_cls(SearchType.MAX_CONTAINMENT)
+            search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
         else:
-            search_obj = search_cls(SearchType.JACCARD)
+            search_obj = search_cls(SearchType.JACCARD, threshold)
 
         # do the actual search:
         matches = []
@@ -437,13 +436,9 @@ class SBT(Index):
 
     def gather(self, query, *args, **kwargs):
         "Return the match with the best Jaccard containment in the database."
-        from .sbtmh import GatherMinHashes
 
         if not query.minhash:             # empty query? quit.
             return []
-
-        # use a tree search function that keeps track of its best match.
-        search_fn = GatherMinHashes().search
 
         unload_data = kwargs.get('unload_data', False)
 
