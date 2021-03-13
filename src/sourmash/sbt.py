@@ -57,7 +57,7 @@ from cachetools import Cache
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index
+from .index import Index, IndexSearch, IndexSearchBestOnly, SearchType
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
@@ -337,12 +337,42 @@ class SBT(Index):
 
         return matches
 
-    def find(self, search_fn, *args, **kwargs):
+    def find(self, search_fn, query, *args, **kwargs):
         # wrap...
+
+        query_mh = query.minhash
+        query_size = len(query_mh)
+        results = {}
+
         def node_search(node, *args, **kwargs):
-            return search_fn(node.data, *args, **kwargs)
-        nodes = self._find_nodes(node_search, *args, **kwargs)
-        return [ n.data for n in nodes ]
+            from .sbtmh import SigLeaf
+
+            is_leaf = False
+            if isinstance(node, SigLeaf):
+                node_mh = node.data.minhash
+                subj_size = len(node_mh)
+                matches = node_mh.count_common(query_mh)
+                total_size = len(node_mh + query_mh)
+                is_leaf = True
+            else:  # Node or Leaf, Nodegraph by minhash comparison
+                matches = node.data.matches(query_mh)
+                subj_size = node.metadata.get('min_n_below', -1)
+                total_size = subj_size # approximate
+
+            score = search_fn.score_fn(query_size,
+                                       matches,
+                                       subj_size,
+                                       total_size)
+
+            if score >= search_fn.threshold:
+                if is_leaf:     # terminal node? keep.
+                    results[node.data] = score
+                    search_fn.collect(score)
+                return True
+            return False
+
+        for n in self._find_nodes(node_search, *args, **kwargs):
+            yield n.data, results[n.data]
 
     def search(self, query, threshold=None,
                ignore_abundance=False, do_containment=False,
@@ -383,36 +413,27 @@ class SBT(Index):
             resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
 
-        # define both search function and post-search calculation function
-        search_fn = search_minhashes
-        query_match = lambda x: tree_query.similarity(
-            x, downsample=False, ignore_abundance=ignore_abundance)
+        # configure search - containment? ignore abundance? best only?
+        search_cls = IndexSearch
+        if best_only:
+            search_cls = IndexSearchBestOnly
+
         if do_containment:
-            search_fn = search_minhashes_containment
-            query_match = lambda x: tree_query.contained_by(x, downsample=True)
+            search_obj = search_cls(SearchType.CONTAINMENT)
         elif do_max_containment:
-            search_fn = search_minhashes_max_containment
-            query_match = lambda x: tree_query.max_containment(x,
-                                                               downsample=True)
+            search_obj = search_cls(SearchType.MAX_CONTAINMENT)
+        else:
+            search_obj = search_cls(SearchType.JACCARD)
 
-        if best_only:            # this needs to be reset for each SBT
-            if do_containment or do_max_containment:
-                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
-            search_fn = SearchMinHashesFindBest().search
+        # do the actual search:
+        matches = []
 
-        # now, search!
-        results = []
-        for leaf in self._find_nodes(search_fn, tree_query, threshold, unload_data=unload_data):
-            match = leaf.data
-            similarity = query_match(match)
+        for subj, score in self.find(search_obj, query):
+            matches.append((score, subj, self._location))
 
-            # tree search should always/only return matches above threshold
-            assert similarity >= threshold
-
-            results.append((similarity, match, self._location))
-
-        return results
-        
+        # sort!
+        matches.sort(key=lambda x: -x[0])
+        return matches
 
     def gather(self, query, *args, **kwargs):
         "Return the match with the best Jaccard containment in the database."
@@ -445,19 +466,15 @@ class SBT(Index):
             if threshold > 1.0:
                 return []
 
+        search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
+                                         threshold=threshold)
+
         # actually do search!
         results = []
+        for subj, score in self.find(search_obj, query):
+            results.append((score, subj, self._location))
 
-        for leaf in self._find_nodes(search_fn, query, threshold,
-                              unload_data=unload_data):
-            match = leaf.data
-            match_mh = match.minhash
-            containment = query.minhash.contained_by(match_mh, True)
-
-            assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, match, self._location))
-
-        results.sort(key=lambda x: -x[0])
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
         return results
 
