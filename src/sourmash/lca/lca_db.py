@@ -8,7 +8,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index
+from sourmash.index import Index, IndexSearch, IndexSearchBestOnly, SearchType
 
 
 def cached_property(fun):
@@ -301,7 +301,8 @@ class LCA_Database(Index):
             json.dump(save_d, fp)
 
     def search(self, query, threshold=None, do_containment=False,
-               do_max_containment=False, ignore_abundance=False, **kwargs):
+               do_max_containment=False, ignore_abundance=False,
+               best_only=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -328,12 +329,21 @@ class LCA_Database(Index):
         if ignore_abundance:
             mh.track_abundance = False
 
+        search_cls = IndexSearch
+        if best_only:
+            search_cls = IndexSearchBestOnly
+
+        if do_containment:
+            search_obj = search_cls(SearchType.CONTAINMENT, threshold)
+        elif do_max_containment:
+            search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
+        else:
+            search_obj = search_cls(SearchType.JACCARD, threshold)
+
         # find all the matches, then sort & return.
         results = []
-        for x in self._find_signatures(mh, threshold, do_containment,
-                                       do_max_containment):
-            (score, match, filename) = x
-            results.append((score, match, filename))
+        for match, score in self.find(search_obj, query):
+            results.append((score, match, self.filename))
 
         results.sort(key=lambda x: -x[0])
         return results
@@ -347,21 +357,16 @@ class LCA_Database(Index):
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = threshold_bp / (len(query.minhash) * self.scaled)
 
+        search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
+                                         threshold=threshold)
+
         # grab first match, if any, and return that; since _find_signatures
         # is a generator, this will truncate further searches.
-        for x in self._find_signatures(query.minhash, threshold,
-                                       containment=True, ignore_scaled=True):
-            (score, match, filename) = x
-            if score:
-                results.append((score, match, filename))
+        for match, score in self.find(search_obj, query):
+            results.append((score, match, self.filename))
             break
 
         return results
-
-    def find(self, search_fn, *args, **kwargs):
-        """Not implemented; 'find' cannot be implemented efficiently on
-        an LCA database."""
-        raise NotImplementedError
 
     def downsample_scaled(self, scaled):
         """
@@ -455,9 +460,7 @@ class LCA_Database(Index):
         debug('=> {} signatures!', len(sigd))
         return sigd
 
-    def _find_signatures(self, minhash, threshold, containment=False,
-                         max_containment=False,
-                         ignore_scaled=False):
+    def find(self, search_fn, query):
         """
         Do a Jaccard similarity or containment search, yield results.
 
@@ -466,6 +469,7 @@ class LCA_Database(Index):
         searches (containment=False) will not be returned in sorted order.
         """
         # make sure we're looking at the same scaled value as database
+        minhash = query.minhash
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
@@ -483,31 +487,29 @@ class LCA_Database(Index):
 
         debug('number of matching signatures for hashes: {}', len(c))
 
+        query_size = len(query_mins)
+
         # for each match, in order of largest overlap,
         for idx, count in c.most_common():
             # pull in the hashes. This reconstructs & caches all input
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
-            match_sig = self._signatures[idx]
-            match_mh = match_sig.minhash
-            match_size = len(match_mh)
 
-            # calculate the containment or similarity
-            if containment:
-                score = count / len(query_mins)
-            elif max_containment:
-                denom = min((len(query_mins), match_size))
-                score = count / denom
-            else:
-                # query_mins is size of query signature
-                # match_size is size of match signature
-                # count is overlap
-                score = count / (len(query_mins) + match_size - count)
+            subj = self._signatures[idx]
+            subj_mh = subj.minhash
+            subj_size = len(subj_mh)
+            shared_size = minhash.count_common(subj_mh)
+            total_size = len(minhash + subj_mh)
 
-            # ...and return.
-            if score >= threshold:
-                yield score, match_sig, self.filename
+            # @CTB:
+            # score = count / (len(query_mins) + match_size - count)
+
+            score = search_fn.score_fn(query_size, shared_size, subj_size,
+                                       total_size)
+            if score >= search_fn.threshold:
+                search_fn.collect(score)
+                yield subj, score
 
     @cached_property
     def lid_to_idx(self):
