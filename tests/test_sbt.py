@@ -12,6 +12,7 @@ from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
+from sourmash.index import get_search_obj
 
 import sourmash_tst_utils as utils
 
@@ -149,7 +150,7 @@ def test_longer_search(n_children):
 
 @pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
 def test_tree_old_load(old_version):
-    tree_v1 = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
+    tree_old = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
                        leaf_loader=SigLeaf.load)
 
     tree_cur = SBT.load(utils.get_test_data('v6.sbt.json'),
@@ -158,13 +159,14 @@ def test_tree_old_load(old_version):
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_v1 = {str(s) for s in tree_v1._find_nodes(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur._find_nodes(search_minhashes_containment,
-                                                 to_search, 0.1)}
+    print(list(tree_old.leaves()))
 
-    assert results_v1 == results_cur
-    assert len(results_v1) == 4
+    search_obj = get_search_obj(True, False, False, 0.1)
+    results_old = {str(s) for s in tree_old.find(search_obj, to_search)}
+    results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
+
+    assert results_old == results_cur
+    assert len(results_old) == 4
 
 
 def test_load_future(tmpdir):
@@ -189,8 +191,8 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                   to_search.data, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -200,8 +202,8 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                       to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -219,8 +221,9 @@ def test_search_minhashes():
 
     to_search = next(iter(tree.leaves()))
 
-    # this fails if 'search_minhashes' is calc containment and not similarity.
-    results = tree._find_nodes(search_minhashes, to_search.data, 0.08)
+    # this fails if 'search_obj' is calc containment and not similarity.
+    search_obj = get_search_obj(False, False, False, 0.08)
+    results = tree.find(search_obj, to_search.data)
     for leaf in results:
         assert to_search.data.similarity(leaf.data) >= 0.08
 
@@ -249,7 +252,8 @@ def test_binary_nary_tree():
     print('*' * 60)
     print("{}:".format(to_search.metadata))
     for d, tree in trees.items():
-        results[d] = {str(s) for s in tree._find_nodes(search_minhashes, to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        results[d] = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*results[2], sep='\n')
 
     assert results[2] == results[5]
@@ -283,10 +287,9 @@ def test_sbt_combine(n_children):
     assert t1_leaves == t_leaves
 
     to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-    t1_result = {str(s) for s in tree_1._find_nodes(search_minhashes,
-                                             to_search, 0.1)}
-    tree_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                             to_search, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    t1_result = {str(s) for s in tree_1.find(search_obj, to_search)}
+    tree_result = {str(s) for s in tree.find(search_obj, to_search)}
     assert t1_result == tree_result
 
     # TODO: save and load both trees
@@ -318,8 +321,8 @@ def test_sbt_fsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         with FSStorage(location, '.fstree') as storage:
@@ -328,8 +331,8 @@ def test_sbt_fsstorage():
         tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -352,8 +355,8 @@ def test_sbt_zipstorage(tmpdir):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                            to_search.data, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
@@ -366,8 +369,8 @@ def test_sbt_zipstorage(tmpdir):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -389,8 +392,8 @@ def test_sbt_ipfsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         try:
@@ -406,8 +409,8 @@ def test_sbt_ipfsstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                    to_search.data, 0.1)}
+            search_obj = get_search_obj(False, False, False, 0.1)
+            new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
             assert old_result == new_result
@@ -428,8 +431,8 @@ def test_sbt_redisstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = get_search_obj(False, False, False, 0.1)
+        old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         try:
@@ -445,8 +448,8 @@ def test_sbt_redisstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                                    to_search.data, 0.1)}
+            search_obj = get_search_obj(False, False, False, 0.1)
+            new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
             assert old_result == new_result
@@ -472,8 +475,9 @@ def test_save_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    old_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
-    new_result = {str(s) for s in new_tree._find_nodes(search_minhashes, to_search, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    old_result = {str(s) for s in tree.find(search_obj, to_search)}
+    new_result = {str(s) for s in new_tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
 
     assert old_result == new_result
@@ -493,7 +497,8 @@ def test_load_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    new_result = {str(s) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -514,7 +519,8 @@ def test_load_zip_uncompressed(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree._find_nodes(search_minhashes, to_search, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    new_result = {str(s) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -529,10 +535,9 @@ def test_tree_repair():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_repair = {str(s) for s in tree_repair._find_nodes(search_minhashes,
-                                                       to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur._find_nodes(search_minhashes,
-                                                 to_search, 0.1)}
+    search_obj = get_search_obj(False, False, False, 0.1)
+    results_repair = {str(s) for s in tree_repair.find(search_obj, to_search)}
+    results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
 
     assert results_repair == results_cur
     assert len(results_repair) == 2
@@ -570,8 +575,9 @@ def test_save_sparseness(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree._find_nodes(search_minhashes,
-                                            to_search.data, 0.1)}
+
+    search_obj = get_search_obj(False, False, False, 0.1)
+    old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -582,8 +588,8 @@ def test_save_sparseness(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree_loaded._find_nodes(search_minhashes,
-                                                       to_search.data, 0.1)}
+        new_result = {str(s) for s in tree_loaded.find(search_obj,
+                                                       to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -942,7 +948,8 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results = list(tree._find_nodes(search_minhashes_containment, to_search, 0.1))
+    search_obj = get_search_obj(True, False, False, 0.1)
+    results = list(tree.find(search_obj, to_search))
     assert len(results) == 4
 
     assert tree._nodescache.currsize == 1
