@@ -7,8 +7,9 @@ import zipfile
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import LinearIndex
-from sourmash.sbt import SBT, GraphFactory, Leaf
+from sourmash.index import LinearIndex, get_search_obj
+from sourmash.sbt import SBT, GraphFactory
+from sourmash.sbtmh import SigLeaf
 
 import sourmash_tst_utils as utils
 
@@ -17,52 +18,63 @@ def test_simple_index(n_children):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
-    leaf1 = Leaf("a", factory())
-    leaf1.data.count("AAAAA")
-    leaf1.data.count("AAAAT")
-    leaf1.data.count("AAAAC")
+    leaf1_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf1_mh.add_sequence("AAAAA")
+    leaf1_mh.add_sequence("AAAAT")
+    leaf1_mh.add_sequence("AAAAC")
+    leaf1_sig = SourmashSignature(leaf1_mh)
+    root.insert(leaf1_sig)
 
-    leaf2 = Leaf("b", factory())
-    leaf2.data.count("AAAAA")
-    leaf2.data.count("AAAAT")
-    leaf2.data.count("AAAAG")
+    leaf2_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf2_mh.add_sequence("AAAAA")
+    leaf2_mh.add_sequence("AAAAT")
+    leaf2_mh.add_sequence("AAAAG")
+    leaf2_sig = SourmashSignature(leaf2_mh)
+    root.insert(leaf2_sig)
+    
+    leaf3_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf3_mh.add_sequence("AAAAA")
+    leaf3_mh.add_sequence("AAAAT")
+    leaf3_mh.add_sequence("CAAAA")
+    leaf3_sig = SourmashSignature(leaf3_mh)
+    root.insert(leaf3_sig)
+    
+    leaf4_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf4_mh.add_sequence("AAAAA")
+    leaf4_mh.add_sequence("CAAAA")
+    leaf4_mh.add_sequence("GAAAA")
+    leaf4_sig = SourmashSignature(leaf4_mh)
+    root.insert(leaf4_sig)
+    
+    leaf5_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf5_mh.add_sequence("AAAAA")
+    leaf5_mh.add_sequence("AAAAT")
+    leaf5_mh.add_sequence("GAAAA")
+    leaf5_sig = SourmashSignature(leaf5_mh)
+    root.insert(leaf5_sig)
+    
+    linear = LinearIndex()
+    linear.insert(leaf1_sig)
+    linear.insert(leaf2_sig)
+    linear.insert(leaf3_sig)
+    linear.insert(leaf4_sig)
+    linear.insert(leaf5_sig)
 
-    leaf3 = Leaf("c", factory())
-    leaf3.data.count("AAAAA")
-    leaf3.data.count("AAAAT")
-    leaf3.data.count("CAAAA")
-
-    leaf4 = Leaf("d", factory())
-    leaf4.data.count("AAAAA")
-    leaf4.data.count("CAAAA")
-    leaf4.data.count("GAAAA")
-
-    leaf5 = Leaf("e", factory())
-    leaf5.data.count("AAAAA")
-    leaf5.data.count("AAAAT")
-    leaf5.data.count("GAAAA")
-
-    root.add_node(leaf1)
-    root.add_node(leaf2)
-    root.add_node(leaf3)
-    root.add_node(leaf4)
-    root.add_node(leaf5)
-
-    def search_kmer(obj, seq):
-        return obj.get(seq)
+    search_fn = get_search_obj(True, False, False, 0.0)
 
     kmers = ["AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA"]
-
-    linear = LinearIndex()
-    linear.insert(leaf1.data)
-    linear.insert(leaf2.data)
-    linear.insert(leaf3.data)
-    linear.insert(leaf4.data)
-    linear.insert(leaf5.data)
-
     for kmer in kmers:
-        linear_found = linear.find(search_kmer, kmer)
-        assert set(root.find(search_kmer, kmer)) == set(linear_found)
+        search_mh = sourmash.MinHash(0, 5, scaled=1)
+        search_mh.add_sequence(kmer)
+        search_sig = sourmash.SourmashSignature(search_mh)
+
+        linear_found = linear.find(search_fn, search_sig)
+        linear_found = set(linear_found)
+
+        tree_found = set(root.find(search_fn, search_sig))
+        
+        assert tree_found
+        assert tree_found == set(linear_found)
 
 
 def test_linear_index_search():
