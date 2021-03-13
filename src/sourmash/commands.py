@@ -14,7 +14,7 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sbtmh import SearchMinHashesFindBest, SigLeaf
+from .index import get_search_obj
 
 from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
 
@@ -535,7 +535,6 @@ def categorize(args):
 
     # load query filenames
     inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    print('XXX', inp_files, args.queries)
     inp_files = inp_files - already_names
 
     notify('found {} files to query', len(inp_files))
@@ -549,19 +548,18 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
+    search_obj = get_search_obj(False, False, True, args.threshold)
     for queryfile, query, query_moltype, query_ksize in loader:
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
                query_ksize, query_moltype)
 
         results = []
-        search_fn = SearchMinHashesFindBest().search
-
-        # note, "ignore self" here may prevent using newer 'db.search' fn.
-        for leaf in db._find_nodes(search_fn, query, args.threshold):
-            match = leaf.data
+        # @CTB note - not properly ignoring abundance just yet
+        for match, score in db.find(search_obj, query):
             if match.md5sum() != query.md5sum(): # ignore self.
                 similarity = query.similarity(
                     match, ignore_abundance=args.ignore_abundance)
+                assert similarity == score
                 results.append((similarity, match))
 
         best_hit_sim = 0.0
