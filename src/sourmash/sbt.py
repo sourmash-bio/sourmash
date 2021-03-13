@@ -342,18 +342,30 @@ class SBT(Index):
         from .sbtmh import SigLeaf
 
         query_mh = query.minhash
+
+        # reconcile scaled values
+        a_leaf = next(iter(self.leaves()))
+        tree_scaled = a_leaf.data.minhash.scaled
+        scaled = max(query_mh.scaled, tree_scaled)
+        if query_mh.scaled < tree_scaled:
+            query_mh = query_mh.downsample(scaled=tree_scaled)
+
         query_size = len(query_mh)
+
+        # store scores here so we don't need to recalculate
         results = {}
 
-        # construct a function to pass into ._find_nodes:
+        # construct a function to pass into ._find_nodes; this function
+        # will be used to prune tree searches based on internal node scores,
+        # in addition to finding leaf nodes.
         def node_search(node, *args, **kwargs):
             is_leaf = False
 
             if isinstance(node, SigLeaf):
                 node_mh = node.data.minhash
                 subj_size = len(node_mh)
-                matches = node_mh.count_common(query_mh)
-                total_size = len(node_mh + query_mh)
+                matches = node_mh.count_common(query_mh, downsample=True)
+                total_size = len(query_mh + node_mh.downsample(scaled=scaled))
                 is_leaf = True
             else:  # Node or Leaf, Nodegraph by minhash comparison
                 matches = node.data.matches(query_mh)

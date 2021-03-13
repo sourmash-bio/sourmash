@@ -131,15 +131,26 @@ class Index(ABC):
         """
         query_mh = query.minhash
         query_size = len(query_mh)
+
+        if query_mh.scaled:
+            def downsample(a, b):
+                max_scaled = max(a.scaled, b.scaled)
+                return a.downsample(scaled=max_scaled), \
+                    b.downsample(scaled=max_scaled)
+        else:                   # num
+            def downsample(a, b):
+                min_num = min(a.num, b.num)
+                return a.downsample(num=min_num), b.downsample(num=min_num)
+
         for subj in self.signatures():
-            subj_mh = subj.minhash
+            qmh, subj_mh = downsample(query_mh, subj.minhash)
             subj_size = len(subj_mh)
 
             # respects num
-            merged = query_mh + subj_mh
-            intersect = set(query_mh.hashes) & set(subj_mh.hashes) & set(merged.hashes)
+            merged = qmh + subj_mh
+            intersect = set(qmh.hashes) & set(subj_mh.hashes) & set(merged.hashes)
             shared_size = len(intersect)
-            total_size = len(query_mh + subj_mh)
+            total_size = len(qmh + subj_mh)
 
             score = search_fn.score_fn(query_size,
                                        shared_size,
