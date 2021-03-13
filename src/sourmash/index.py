@@ -36,6 +36,7 @@ def get_gather_obj(query_mh, threshold_bp):
     if not scaled: raise TypeError #  @CTB
 
     # are we setting a threshold?
+    threshold=0
     if threshold_bp:
         # if we have a threshold_bp of N, then that amounts to N/scaled
         # hashes:
@@ -73,7 +74,7 @@ class IndexSearch:
         self.threshold = float(threshold)
 
     def passes(self, score):
-        if score >= self.threshold:
+        if score and score >= self.threshold:
             return True
         return False
 
@@ -138,7 +139,7 @@ class Index(ABC):
                                        shared_size,
                                        subj_size,
                                        total_size)
-            if score >= search_fn.threshold:
+            if search_fn.passes(score):
                 search_fn.collect(score)
                 yield subj, score
 
@@ -190,10 +191,13 @@ class Index(ABC):
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         search_obj = get_gather_obj(query.minhash, threshold_bp)
+        if not search_obj:
+            return []
 
         # actually do search!
         results = []
         for subj, score in self.find(search_obj, query):
+            print('ABC', score, self.filename)
             results.append((score, subj, self.filename))
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))

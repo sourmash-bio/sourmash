@@ -366,7 +366,7 @@ class SBT(Index):
                                        subj_size,
                                        total_size)
 
-            if score >= search_fn.threshold:
+            if search_fn.passes(score):
                 if is_leaf:     # terminal node? keep.
                     results[node.data] = score
                     search_fn.collect(score)

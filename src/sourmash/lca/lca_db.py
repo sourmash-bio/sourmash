@@ -500,7 +500,7 @@ class LCA_Database(Index):
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
-            if score >= search_fn.threshold:
+            if search_fn.passes(score):
                 search_fn.collect(score)
                 yield subj, score
 
