@@ -224,8 +224,9 @@ def test_search_minhashes():
     # this fails if 'search_obj' is calc containment and not similarity.
     search_obj = get_search_obj(False, False, False, 0.08)
     results = tree.find(search_obj, to_search.data)
-    for leaf in results:
-        assert to_search.data.similarity(leaf.data) >= 0.08
+    for (match, score) in results:
+        print(match, score, to_search.data)
+        assert to_search.data.jaccard(match) >= 0.08
 
     print(results)
 
@@ -749,8 +750,8 @@ def test_sbt_gather_threshold_5():
 
 
 @utils.in_tempdir
-def test_gather_multiple_return(c):
-    # test gather() method number of returns
+def test_gather_single_return(c):
+    # test gather() number of returns
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
     sig63file = utils.get_test_data('63.fa.sig')
@@ -771,7 +772,7 @@ def test_gather_multiple_return(c):
     # right order?
     results = tree.gather(sig63)
     print(len(results))
-    assert len(results) == 2
+    assert len(results) == 1
     assert results[0][0] == 1.0
 
 
