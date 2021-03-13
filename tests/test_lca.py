@@ -429,17 +429,6 @@ def test_lca_index_select():
         db.select(moltype='protein')
 
 
-def test_lca_index_find_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.find(None)
-
-
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
