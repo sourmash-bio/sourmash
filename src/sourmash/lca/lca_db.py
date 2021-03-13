@@ -356,7 +356,8 @@ class LCA_Database(Index):
         # is a generator, this will truncate further searches.
         for match, score in self.find(search_obj, query):
             results.append((score, match, self.filename))
-            break
+
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
         return results
 

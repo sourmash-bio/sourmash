@@ -48,8 +48,7 @@ def get_gather_obj(query_mh, threshold_bp):
         if threshold > 1.0:
             return None
 
-    search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
-                                     threshold=threshold)
+    search_obj = IndexSearch(SearchType.CONTAINMENT, threshold=threshold)
 
     return search_obj
 
