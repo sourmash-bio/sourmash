@@ -382,6 +382,8 @@ class SBT(Index):
             if isinstance(node, SigLeaf):
                 node_mh = node.data.minhash
                 subj_size = len(node_mh)
+
+                # @CTB refactor to qmh/smh
                 matches = node_mh.count_common(query_mh, downsample=True)
                 total_size = len(query_mh + downsample_node(node_mh))
                 is_leaf = True

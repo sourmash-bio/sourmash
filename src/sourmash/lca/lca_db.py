@@ -405,6 +405,7 @@ class LCA_Database(Index):
         """
         # make sure we're looking at the same scaled value as database
 
+        # @CTB we probably don't need to do this for query every time.
         def downsample(a, b):
             max_scaled = max(a.scaled, b.scaled)
             return a.downsample(scaled=max_scaled), \
