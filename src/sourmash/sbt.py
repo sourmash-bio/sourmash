@@ -186,6 +186,10 @@ class SBT(Index):
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
 
+    @property
+    def location(self):
+        return self._location
+
     def signatures(self):
         for k in self.leaves():
             yield k.data
@@ -339,6 +343,7 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, query, *args, **kwargs):
+        # @CTB unload_data
         from .sbtmh import SigLeaf
 
         query_mh = query.minhash
@@ -401,78 +406,6 @@ class SBT(Index):
         # & execute!
         for n in self._find_nodes(node_search, *args, **kwargs):
             yield n.data, results[n.data]
-
-    def search(self, query, threshold=None,
-               ignore_abundance=False, do_containment=False,
-               do_max_containment=False, best_only=False,
-               unload_data=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
-
-        Results will be sorted by similarity, highest to lowest.
-
-        Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
-          * best_only: default False. If True, allow optimizations that
-            may. May discard matches better than threshold, but first match
-            is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-        """
-        from .signature import SourmashSignature
-
-        if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
-        threshold = float(threshold)
-
-        # figure out scaled value of tree, downsample query if needed.
-        # @CTB
-        leaf = next(iter(self.leaves()))
-        tree_mh = leaf.data.minhash
-
-        tree_query = query
-        if tree_mh.scaled and query.minhash.scaled and \
-          tree_mh.scaled > query.minhash.scaled:
-            resampled_query_mh = tree_query.minhash
-            resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
-            tree_query = SourmashSignature(resampled_query_mh)
-
-        search_obj = get_search_obj(do_containment,
-                                    do_max_containment,
-                                    best_only,
-                                    threshold)
-
-        # do the actual search:
-        matches = []
-
-        for subj, score in self.find(search_obj, query):
-            matches.append((score, subj, self._location))
-
-        # sort!
-        matches.sort(key=lambda x: -x[0])
-        return matches
-
-    def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the database."
-
-        if not query.minhash:             # empty query? quit.
-            return []
-
-        # @CTB
-        unload_data = kwargs.get('unload_data', False)
-
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
-        search_obj = get_gather_obj(query.minhash, threshold_bp)
-        if not search_obj:
-            return []
-
-        # actually do search!
-        results = []
-        for subj, score in self.find(search_obj, query):
-            results.append((score, subj, self._location))
-
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
-
-        return results
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).

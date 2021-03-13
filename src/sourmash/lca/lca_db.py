@@ -70,6 +70,10 @@ class LCA_Database(Index):
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
 
+    @property
+    def location(self):
+        return self.filename
+
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):
             del self._cache

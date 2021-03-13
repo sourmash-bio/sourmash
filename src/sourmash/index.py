@@ -104,6 +104,11 @@ class IndexSearchBestOnly(IndexSearch):
 
 
 class Index(ABC):
+    @property
+    def location(self):
+        "Return a resolvable location for this index, if possible."
+        return None
+
     @abstractmethod
     def signatures(self):
         "Return an iterator over all signatures in the Index object."
@@ -189,7 +194,7 @@ class Index(ABC):
         matches = []
 
         for subj, score in self.find(search_obj, query):
-            matches.append((score, subj, self.filename))
+            matches.append((score, subj, self.location))
 
         # sort!
         matches.sort(key=lambda x: -x[0])
@@ -212,7 +217,7 @@ class Index(ABC):
         # actually do search!
         results = []
         for subj, score in self.find(search_obj, query):
-            results.append((score, subj, self.filename))
+            results.append((score, subj, self.location))
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
@@ -228,6 +233,10 @@ class LinearIndex(Index):
         if _signatures:
             self._signatures = list(_signatures)
         self.filename = filename
+
+    @property
+    def location(self):
+        return self.filename
 
     def signatures(self):
         return iter(self._signatures)
