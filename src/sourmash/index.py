@@ -73,6 +73,11 @@ class IndexSearch:
             threshold = 0
         self.threshold = float(threshold)
 
+    def check_is_compatible(self, sig):
+        if self.require_scaled:
+            if not sig.minhash.scaled:
+                raise TypeError("this search requires a scaled signature")
+
     def passes(self, score):
         if score and score >= self.threshold:
             return True
@@ -134,6 +139,7 @@ class Index(ABC):
 
         Returns a list.
         """
+        search_fn.check_is_compatible(query)
         query_mh = query.minhash
 
         if query_mh.scaled:

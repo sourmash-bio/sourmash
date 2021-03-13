@@ -346,6 +346,8 @@ class SBT(Index):
         # @CTB unload_data
         from .sbtmh import SigLeaf
 
+        search_fn.check_is_compatible(query)
+
         query_mh = query.minhash
 
         # figure out downsampling

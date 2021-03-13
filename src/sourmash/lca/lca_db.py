@@ -403,8 +403,9 @@ class LCA_Database(Index):
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values.
         """
-        # make sure we're looking at the same scaled value as database
+        search_fn.check_is_compatible(query)
 
+        # make sure we're looking at the same scaled value as database
         # @CTB we probably don't need to do this for query every time.
         def downsample(a, b):
             max_scaled = max(a.scaled, b.scaled)
