@@ -29,7 +29,7 @@ def search_sbt_index(tree, query, threshold):
         for match_sig, similarity in search_sbt_index(tree, query, threshold):
            ...
     """
-    for leaf in tree.find(search_minhashes, query, threshold, unload_data=True):
+    for leaf in tree._find_nodes(search_minhashes, query, threshold, unload_data=True):
         similarity = query.similarity(leaf.data)
         yield leaf.data, similarity
 

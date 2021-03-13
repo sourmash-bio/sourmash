@@ -338,7 +338,10 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, *args, **kwargs):
-        nodes = self._find_nodes(search_fn, *args, **kwargs)
+        # wrap...
+        def node_search(node, *args, **kwargs):
+            return search_fn(node.data, *args, **kwargs)
+        nodes = self._find_nodes(node_search, *args, **kwargs)
         return [ n.data for n in nodes ]
 
     def search(self, query, threshold=None,
@@ -399,7 +402,8 @@ class SBT(Index):
 
         # now, search!
         results = []
-        for match in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+        for leaf in self._find_nodes(search_fn, tree_query, threshold, unload_data=unload_data):
+            match = leaf.data
             similarity = query_match(match)
 
             # tree search should always/only return matches above threshold
@@ -444,8 +448,9 @@ class SBT(Index):
         # actually do search!
         results = []
 
-        for match in self.find(search_fn, query, threshold,
+        for leaf in self._find_nodes(search_fn, query, threshold,
                               unload_data=unload_data):
+            match = leaf.data
             match_mh = match.minhash
             containment = query.minhash.contained_by(match_mh, True)
 

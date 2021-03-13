@@ -49,27 +49,20 @@ def test_simple_index(n_children):
     root.add_node(leaf5)
 
     def search_kmer(obj, seq):
-        return obj.data.get(seq)
+        return obj.get(seq)
 
     kmers = ["AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA"]
 
     linear = LinearIndex()
-    linear.insert(leaf1)
-    linear.insert(leaf2)
-    linear.insert(leaf3)
-    linear.insert(leaf4)
-    linear.insert(leaf5)
+    linear.insert(leaf1.data)
+    linear.insert(leaf2.data)
+    linear.insert(leaf3.data)
+    linear.insert(leaf4.data)
+    linear.insert(leaf5.data)
 
     for kmer in kmers:
-        linear_found = [ x.data for x in linear.find(search_kmer, kmer) ]
+        linear_found = linear.find(search_kmer, kmer)
         assert set(root.find(search_kmer, kmer)) == set(linear_found)
-
-    print("-----")
-    print([x.metadata for x in root._find_nodes(search_kmer, "AAAAA")])
-    print([x.metadata for x in root._find_nodes(search_kmer, "AAAAT")])
-    print([x.metadata for x in root._find_nodes(search_kmer, "AAAAG")])
-    print([x.metadata for x in root._find_nodes(search_kmer, "CAAAA")])
-    print([x.metadata for x in root._find_nodes(search_kmer, "GAAAA")])
 
 
 def test_linear_index_search():
