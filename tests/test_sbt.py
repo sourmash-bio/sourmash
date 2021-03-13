@@ -225,7 +225,6 @@ def test_search_minhashes():
     search_obj = get_search_obj(False, False, False, 0.08)
     results = tree.find(search_obj, to_search.data)
     for (match, score) in results:
-        print(match, score, to_search.data)
         assert to_search.data.jaccard(match) >= 0.08
 
     print(results)

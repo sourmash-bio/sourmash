@@ -380,21 +380,23 @@ class SBT(Index):
             is_leaf = False
 
             if isinstance(node, SigLeaf):
-                node_mh = node.data.minhash
-                subj_size = len(node_mh)
+                smh = downsample_node(node.data.minhash)
+                subj_size = len(smh)
 
-                # @CTB refactor to qmh/smh
-                matches = node_mh.count_common(query_mh, downsample=True)
-                total_size = len(query_mh + downsample_node(node_mh))
+                # @CTB clean up
+                merged = smh + query_mh
+                intersect = set(query_mh.hashes) & set(smh.hashes) & set(merged.hashes)
+                shared_size = len(intersect)
+                total_size = len(merged)
                 is_leaf = True
             else:  # Node or Leaf, Nodegraph by minhash comparison
-                matches = node.data.matches(query_mh)
+                shared_size = node.data.matches(query_mh)
                 subj_size = node.metadata.get('min_n_below', -1)
                 total_size = subj_size # approximate; do not collect
 
             # calculate score (exact, if leaf; approximate, if not)
             score = search_fn.score_fn(query_size,
-                                       matches,
+                                       shared_size,
                                        subj_size,
                                        total_size)
 
