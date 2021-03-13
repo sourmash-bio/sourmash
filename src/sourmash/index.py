@@ -1,7 +1,65 @@
 "An Abstract Base Class for collections of signatures."
 
 from abc import abstractmethod, ABC
+from enum import Enum
 from collections import namedtuple
+
+
+class SearchType(Enum):
+    JACCARD = 1
+    CONTAINMENT = 2
+    MAX_CONTAINMENT = 3
+    #ANGULAR_SIMILARITY = 4
+
+
+class IndexSearch:
+    def __init__(self, search_type, threshold=None):
+        score_fn = None
+        require_scaled = False
+
+        if search_type == SearchType.JACCARD:
+            score_fn = self.score_jaccard
+        elif search_type == SearchType.CONTAINMENT:
+            score_fn = self.score_containment
+            require_scaled = True
+        elif search_type == SearchType.MAX_CONTAINMENT:
+            score_fn = self.score_max_containment
+            require_scaled = True
+        self.score_fn = score_fn
+        self.require_scaled = require_scaled
+
+        if threshold is None:
+            threshold = 0
+        self.threshold = float(threshold)
+
+    def passes(self, score):
+        if score >= self.threshold:
+            return True
+        return False
+
+    def collect(self, score):
+        pass
+
+    def score_jaccard(self, query_size, shared_size, subject_size, total_size):
+        return shared_size / total_size
+
+    def score_containment(self, query_size, shared_size, subject_size,
+                          total_size):
+        if query_size == 0:
+            return 0
+        return shared_size / query_size
+
+    def score_max_containment(self, query_size, shared_size, subject_size,
+                              total_size):
+        min_denom = min(query_size, subject_size)
+        if min_denom == 0:
+            return 0
+        return shared_size / min_denom
+
+
+class IndexSearchBestOnly(IndexSearch):
+    def collect(self, score):
+        self.threshold = max(self.threshold, score)
 
 
 class Index(ABC):
@@ -22,7 +80,7 @@ class Index(ABC):
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """ """
 
-    def find(self, search_fn, *args, **kwargs):
+    def find(self, search_fn, query, *args, **kwargs):
         """Use search_fn to find matching signatures in the index.
 
         search_fn(other_sig, *args) should return a boolean that indicates
@@ -30,17 +88,23 @@ class Index(ABC):
 
         Returns a list.
         """
+        for subj in self.signatures():
+            query_size = len(query.minhash)
+            subj_size = len(subj.minhash)
+            shared_size = query.minhash.count_common(subj.minhash)
+            total_size = len(query.minhash + subj.minhash)
 
-        matches = []
-
-        for node in self.signatures():
-            if search_fn(node, *args):
-                matches.append(node)
-        return matches
+            score = search_fn.score_fn(query_size,
+                                       shared_size,
+                                       subj_size,
+                                       total_size)
+            if score >= search_fn.threshold:
+                search_fn.collect(score)
+                yield subj, score
 
     def search(self, query, threshold=None,
                do_containment=False, do_max_containment=False,
-               ignore_abundance=False, **kwargs):
+               ignore_abundance=False, best_only=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -55,7 +119,6 @@ class Index(ABC):
 
         Note, the "best only" hint is ignored by LinearIndex.
         """
-
         # check arguments
         if threshold is None:
             raise TypeError("'search' requires 'threshold'")
@@ -64,22 +127,23 @@ class Index(ABC):
         if do_containment and do_max_containment:
             raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
-        # configure search - containment? ignore abundance?
+        # configure search - containment? ignore abundance? best only?
+        search_cls = IndexSearch
+        if best_only:
+            search_cls = IndexSearchBestOnly
+
         if do_containment:
-            query_match = lambda x: query.contained_by(x, downsample=True)
+            search_obj = search_cls(SearchType.CONTAINMENT)
         elif do_max_containment:
-            query_match = lambda x: query.max_containment(x, downsample=True)
+            search_obj = search_cls(SearchType.MAX_CONTAINMENT)
         else:
-            query_match = lambda x: query.similarity(
-                x, downsample=True, ignore_abundance=ignore_abundance)
+            search_obj = search_cls(SearchType.JACCARD)
 
         # do the actual search:
         matches = []
 
-        for ss in self.signatures():
-            score = query_match(ss)
-            if score >= threshold:
-                matches.append((score, ss, self.filename))
+        for subj, score in self.find(search_obj, query):
+            matches.append((score, subj, self.filename))
 
         # sort!
         matches.sort(key=lambda x: -x[0])
@@ -110,12 +174,13 @@ class Index(ABC):
             if threshold > 1.0:
                 return []
 
+        search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
+                                         threshold=threshold)
+
         # actually do search!
         results = []
-        for ss in self.signatures():
-            cont = query.minhash.contained_by(ss.minhash, True)
-            if cont and cont >= threshold:
-                results.append((cont, ss, self.filename))
+        for subj, score in self.find(search_obj, query):
+            results.append((score, subj, self.filename))
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
