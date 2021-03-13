@@ -57,7 +57,8 @@ from cachetools import Cache
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index, IndexSearch, IndexSearchBestOnly, SearchType
+from .index import Index, get_search_obj, get_gather_obj
+
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
@@ -398,10 +399,8 @@ class SBT(Index):
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        if do_containment and do_max_containment:
-            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
-
         # figure out scaled value of tree, downsample query if needed.
+        # @CTB
         leaf = next(iter(self.leaves()))
         tree_mh = leaf.data.minhash
 
@@ -412,17 +411,10 @@ class SBT(Index):
             resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
             tree_query = SourmashSignature(resampled_query_mh)
 
-        # configure search - containment? ignore abundance? best only?
-        search_cls = IndexSearch
-        if best_only:
-            search_cls = IndexSearchBestOnly
-
-        if do_containment:
-            search_obj = search_cls(SearchType.CONTAINMENT, threshold)
-        elif do_max_containment:
-            search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
-        else:
-            search_obj = search_cls(SearchType.JACCARD, threshold)
+        search_obj = get_search_obj(do_containment,
+                                    do_max_containment,
+                                    best_only,
+                                    threshold)
 
         # do the actual search:
         matches = []
@@ -440,29 +432,13 @@ class SBT(Index):
         if not query.minhash:             # empty query? quit.
             return []
 
+        # @CTB
         unload_data = kwargs.get('unload_data', False)
 
-        first_sig = next(iter(self.signatures()))
-        scaled = first_sig.minhash.scaled
-
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = 0.0
-
-        # are we setting a threshold?
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = threshold_bp / scaled
-
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / len(query.minhash)
-
-            # is it too high to ever match? if so, exit.
-            if threshold > 1.0:
-                return []
-
-        search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
-                                         threshold=threshold)
+        search_obj = get_gather_obj(query.minhash, threshold_bp)
+        if not search_obj:
+            return []
 
         # actually do search!
         results = []

@@ -8,7 +8,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index, IndexSearch, IndexSearchBestOnly, SearchType
+from sourmash.index import Index, get_search_obj, get_gather_obj
 
 
 def cached_property(fun):
@@ -329,16 +329,10 @@ class LCA_Database(Index):
         if ignore_abundance:
             mh.track_abundance = False
 
-        search_cls = IndexSearch
-        if best_only:
-            search_cls = IndexSearchBestOnly
-
-        if do_containment:
-            search_obj = search_cls(SearchType.CONTAINMENT, threshold)
-        elif do_max_containment:
-            search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
-        else:
-            search_obj = search_cls(SearchType.JACCARD, threshold)
+        search_obj = get_search_obj(do_containment,
+                                    do_max_containment,
+                                    best_only,
+                                    threshold)
 
         # find all the matches, then sort & return.
         results = []
@@ -353,12 +347,10 @@ class LCA_Database(Index):
         if not query.minhash:
             return []
 
-        results = []
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * self.scaled)
+        search_obj = get_gather_obj(query.minhash, threshold_bp)
 
-        search_obj = IndexSearchBestOnly(SearchType.CONTAINMENT,
-                                         threshold=threshold)
+        results = []
 
         # grab first match, if any, and return that; since _find_signatures
         # is a generator, this will truncate further searches.
