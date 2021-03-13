@@ -458,8 +458,13 @@ def test_search_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    with pytest.raises(ValueError) as e:
-        results = db.search(sig, threshold=.01, ignore_abundance=True)
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    print(results)
+    assert results[0][0] == 1.0
+    match = results[0][1]
+
+    orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():

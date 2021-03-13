@@ -130,7 +130,6 @@ class Index(ABC):
         Returns a list.
         """
         query_mh = query.minhash
-        query_size = len(query_mh)
 
         if query_mh.scaled:
             def downsample(a, b):
@@ -144,13 +143,14 @@ class Index(ABC):
 
         for subj in self.signatures():
             qmh, subj_mh = downsample(query_mh, subj.minhash)
+            query_size = len(qmh)
             subj_size = len(subj_mh)
 
             # respects num
             merged = qmh + subj_mh
             intersect = set(qmh.hashes) & set(subj_mh.hashes) & set(merged.hashes)
             shared_size = len(intersect)
-            total_size = len(qmh + subj_mh)
+            total_size = len(merged)
 
             score = search_fn.score_fn(query_size,
                                        shared_size,
@@ -216,7 +216,7 @@ class Index(ABC):
 
         results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
 
-        return results
+        return results[:1]
 
     @abstractmethod
     def select(self, ksize=None, moltype=None):

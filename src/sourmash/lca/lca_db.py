@@ -300,71 +300,6 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def search(self, query, threshold=None, do_containment=False,
-               do_max_containment=False, ignore_abundance=False,
-               best_only=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
-
-        Results will be sorted by similarity, highest to lowest.
-
-        Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
-          * best_only: default False. If True, allow optimizations that
-            may. May discard matches better than threshold, but first match
-            is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-        """
-        if not query.minhash:
-            return []
-
-        # check arguments
-        if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
-        threshold = float(threshold)
-
-        search_obj = get_search_obj(do_containment,
-                                    do_max_containment,
-                                    best_only,
-                                    threshold)
-
-        # @CTB what does this do?
-        mh = query.minhash
-        if ignore_abundance:
-            mh.track_abundance = False
-
-        if not search_obj:
-            return []
-
-        # find all the matches, then sort & return.
-        results = []
-        for match, score in self.find(search_obj, query):
-            results.append((score, match, self.filename))
-
-        results.sort(key=lambda x: -x[0])
-        return results
-
-    def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the database."
-        if not query.minhash:
-            return []
-
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
-        search_obj = get_gather_obj(query.minhash, threshold_bp)
-        if not search_obj:
-            return []
-
-        results = []
-
-        # grab first match, if any, and return that; since _find_signatures
-        # is a generator, this will truncate further searches.
-        for match, score in self.find(search_obj, query):
-            results.append((score, match, self.filename))
-
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
-
-        return results[:1]
-
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
@@ -462,29 +397,26 @@ class LCA_Database(Index):
         Do a Jaccard similarity or containment search, yield results.
 
         This is essentially a fast implementation of find that collects all
-        the signatures with overlapping hash values. Note that similarity
-        searches (containment=False) will not be returned in sorted order.
+        the signatures with overlapping hash values.
         """
         # make sure we're looking at the same scaled value as database
-        minhash = query.minhash
-        if self.scaled > minhash.scaled:
-            minhash = minhash.downsample(scaled=self.scaled)
-        elif self.scaled < minhash.scaled:
-            # note that containment cannot be calculated w/o matching scaled.
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
-        query_mins = set(minhash.hashes)
+        def downsample(a, b):
+            max_scaled = max(a.scaled, b.scaled)
+            return a.downsample(scaled=max_scaled), \
+                b.downsample(scaled=max_scaled)
+
+        query_mh = query.minhash
+        query_hashes = set(query_mh.hashes)
 
         # collect matching hashes for the query:
         c = Counter()
-        for hashval in query_mins:
+        for hashval in query_hashes:
             idx_list = self.hashval_to_idx.get(hashval, [])
             for idx in idx_list:
                 c[idx] += 1
 
         debug('number of matching signatures for hashes: {}', len(c))
-
-        query_size = len(query_mins)
 
         # for each match, in order of largest overlap,
         for idx, count in c.most_common():
@@ -495,9 +427,13 @@ class LCA_Database(Index):
 
             subj = self._signatures[idx]
             subj_mh = subj.minhash
-            subj_size = len(subj_mh)
-            shared_size = minhash.count_common(subj_mh)
-            total_size = len(minhash + subj_mh)
+
+            # all numbers calculated after downsampling --
+            qmh, smh = downsample(query_mh, subj_mh)
+            query_size = len(qmh)
+            subj_size = len(smh)
+            shared_size = qmh.count_common(smh)
+            total_size = len(qmh + smh)
 
             # @CTB:
             # score = count / (len(query_mins) + match_size - count)
