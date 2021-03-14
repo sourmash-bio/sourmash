@@ -631,12 +631,13 @@ def gather(args):
 
     found = []
     weighted_missed = 1
+    is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     new_max_hash = query.minhash._max_hash
     next_query = query
 
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         if not len(found):                # first result? print header.
-            if query.minhash.track_abundance and not args.ignore_abundance:
+            if is_abundance:
                 print_results("")
                 print_results("overlap     p_query p_match avg_abund")
                 print_results("---------   ------- ------- ---------")
@@ -651,7 +652,7 @@ def gather(args):
         pct_genome = '{:.1f}%'.format(result.f_match*100)
         name = result.match._display_name(40)
 
-        if query.minhash.track_abundance and not args.ignore_abundance:
+        if is_abundance:
             average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,

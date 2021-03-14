@@ -126,6 +126,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         import numpy as np
         orig_query_abunds = orig_query_mh.hashes
 
+    query.minhash = query.minhash.flatten()
+
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     result_n = 0
     while query.minhash:
