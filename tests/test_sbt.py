@@ -161,6 +161,11 @@ def test_tree_old_load(old_version):
 
     print(list(tree_old.leaves()))
 
+    # note: earlier versions of this test did containment on
+    # the num MinHash in `to_search`, which doesn't work properly.
+    # (See test_sbt_no_containment_on_num for test). So, to
+    # fix the test for the new get_search_obj API, we had to adjust
+    # the threshold.
     search_obj = get_search_obj(False, False, False, 0.05)
     results_old = {str(s) for s in tree_old.find(search_obj, to_search)}
     results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
@@ -948,9 +953,29 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
+    # note: earlier versions of this test did containment on
+    # the num MinHash in `to_search`, which doesn't work properly.
+    # (See test_sbt_no_containment_on_num for test). So, to
+    # fix the test for the new get_search_obj API, we had to adjust
+    # the threshold.
     search_obj = get_search_obj(False, False, False, 0.05)
     results = list(tree.find(search_obj, to_search))
     assert len(results) == 4
 
     assert tree._nodescache.currsize == 1
     assert tree._nodescache.currsize == 1
+
+
+def test_sbt_no_containment_on_num():
+    tree = SBT.load(utils.get_test_data('v6.sbt.json'),
+                    leaf_loader=SigLeaf.load,
+                    cache_size=1)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
+
+    search_obj = get_search_obj(True, False, False, 0.05)
+    with pytest.raises(TypeError) as exc:
+        results = list(tree.find(search_obj, to_search))
+
+    assert "this search requires a scaled signature" in str(exc)
