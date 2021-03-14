@@ -1637,8 +1637,69 @@ def test_addition_abund_merge_noabund():
 
     hashcounts = mh3.hashes
     assert len(hashcounts) == 2
+    assert hashcounts[0] == 2
+    assert hashcounts[5] == 1
 
-    assert hashcounts[0] == 4
+    # add, other order!
+    mh3 = mh2 + mh1
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 2
+    assert hashcounts[0] == 2
+    assert hashcounts[5] == 1
+
+
+def test_addition_abund_merge_noabund_2():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    # add hash 0 with abundance 2 to mh1
+    mh1.add_hash(0)
+    mh1.add_hash(0)
+
+    # keep mh2 empty
+
+    # add!
+    mh3 = mh2 + mh1
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 2
+
+    # add!
+    mh3 = mh1 + mh2
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 1
+    assert hashcounts[0] == 2
+
+
+def test_addition_abund_merge_noabund_3():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    # add hash 5 with abundance 2 to mh1
+    mh1.add_hash(5)
+    mh1.add_hash(5)
+
+    # add hash 0 to mh2 (no abundance)
+    mh2.add_hash(0)
+
+    # add!
+    mh3 = mh2 + mh1
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 2
+    assert hashcounts[5] == 2
+    assert hashcounts[0] == 1
+
+    # add, in other order
+    mh3 = mh1 + mh2
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 2
+    assert hashcounts[5] == 2
+    assert hashcounts[0] == 1
 
 
 def test_iaddition_abund():

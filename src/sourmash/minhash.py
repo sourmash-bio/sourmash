@@ -566,12 +566,14 @@ class MinHash(RustObject):
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
+        #assert self.track_abundance == other.track_abundance
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
         return self
 
     def merge(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
+        #assert self.track_abundance == other.track_abundance
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
     def set_abundances(self, values, clear=True):
