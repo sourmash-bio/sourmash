@@ -1621,6 +1621,26 @@ def test_addition_noabund():
     assert hashcounts[0] == 1
 
 
+def test_addition_abund_merge_noabund():
+    mh1 = MinHash(10, 21, track_abundance=True)
+    mh2 = MinHash(10, 21, track_abundance=False)
+
+    # add hash 0 with abundance 2 to mh1
+    mh1.add_hash(0)
+    mh1.add_hash(0)
+
+    # add hash 5 to mh2 (no abundance)
+    mh2.add_hash(5)
+
+    # add!
+    mh3 = mh1 + mh2
+
+    hashcounts = mh3.hashes
+    assert len(hashcounts) == 2
+
+    assert hashcounts[0] == 4
+
+
 def test_iaddition_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
