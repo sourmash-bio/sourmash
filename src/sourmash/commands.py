@@ -632,6 +632,7 @@ def gather(args):
     found = []
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+    orig_query_mh = query.minhash
     new_max_hash = query.minhash._max_hash
     next_query = query
 
@@ -702,6 +703,18 @@ def gather(args):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
             notify('saving unassigned hashes to "{}"', args.output_unassigned)
+
+            if is_abundance:
+                # reinflate abundances
+                hashes = set(next_query.minhash.hashes)
+                orig_abunds = orig_query_mh.hashes
+                abunds = { h: orig_abunds[h] for h in hashes }
+
+                abund_query_mh = orig_query_mh.copy_and_clear()
+                # orig_query might have been downsampled...
+                abund_query_mh.downsample(scaled=next_query.minhash.scaled)
+                abund_query_mh.set_abundances(abunds)
+                next_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ next_query ], fp)
