@@ -386,6 +386,7 @@ class SBT(Index):
                 subj_size = len(smh)
 
                 # @CTB clean up
+                assert not smh.track_abundance
                 merged = smh + query_mh
                 intersect = set(query_mh.hashes) & set(smh.hashes) & set(merged.hashes)
                 shared_size = len(intersect)

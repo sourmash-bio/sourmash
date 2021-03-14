@@ -385,6 +385,8 @@ def index(args):
 
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            if ss.minhash.track_abundance:
+                ss.minhash = ss.minhash.flatten() # @CTB test explicitly
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -779,9 +781,10 @@ def multigather(args):
 
             found = []
             weighted_missed = 1
+            is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
                 if not len(found):                # first result? print header.
-                    if query.minhash.track_abundance and not args.ignore_abundance:
+                    if is_abundance:
                         print_results("")
                         print_results("overlap     p_query p_match avg_abund")
                         print_results("---------   ------- ------- ---------")
@@ -796,7 +799,7 @@ def multigather(args):
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
                 name = result.match._display_name(40)
 
-                if query.minhash.track_abundance and not args.ignore_abundance:
+                if is_abundance:
                     average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
@@ -858,6 +861,7 @@ def multigather(args):
 
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
                     e.add_many(next_query.minhash.hashes)
+                    # @CTB: note, multigather does not save abundances
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
             n += 1
 
