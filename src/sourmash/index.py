@@ -77,6 +77,8 @@ class IndexSearch:
         if self.require_scaled:
             if not sig.minhash.scaled:
                 raise TypeError("this search requires a scaled signature")
+        if sig.minhash.track_abundance:
+            raise TypeError("this search cannot be done with an abund signature")
 
     def passes(self, score):
         if score and score >= self.threshold:
