@@ -148,8 +148,10 @@ class SearchMinHashesFindBest(object):
 def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
     assert results is None
     mh = sig.minhash
+    assert sig.minhash.scaled
 
     if isinstance(node, SigLeaf):
+        assert node.data.minhash.scaled
         matches = node.data.minhash.count_common(mh, downsample)
     else:  # Node or Leaf, Nodegraph by minhash comparison
         matches = node.data.matches(mh)

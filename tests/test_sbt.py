@@ -9,8 +9,7 @@ from sourmash import (load_one_signature, SourmashSignature,
                       load_file_as_signatures)
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash.sbtmh import (SigLeaf, search_minhashes,
-                            search_minhashes_containment, load_sbt_index)
+from sourmash.sbtmh import (SigLeaf, search_minhashes, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
 
@@ -154,10 +153,15 @@ def test_tree_old_load(old_version):
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
+    # CTB HACK: convert testdata into a scaled signature so that we can do
+    # containment search.
+    new_mh = sourmash.MinHash(0, 31, scaled=1000)
+    to_search.minhash
+
+    results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
+                                               to_search, 0.05)}
+    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
+                                                 to_search, 0.05)}
 
     assert results_v1 == results_cur
     assert len(results_v1) == 4
@@ -938,7 +942,7 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results = list(tree.find(search_minhashes_containment, to_search, 0.1))
+    results = list(tree.find(search_minhashes, to_search, 0.05))
     assert len(results) == 4
 
     assert tree._nodescache.currsize == 1
