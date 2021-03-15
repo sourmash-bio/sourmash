@@ -463,6 +463,10 @@ def search(args):
     if not query.minhash.track_abundance:
         args.ignore_abundance = True
 
+    if args.ignore_abundance:
+        if query.minhash.track_abundance:
+            query.minhash = query.minhash.flatten()
+
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
@@ -473,7 +477,6 @@ def search(args):
                                do_containment=args.containment,
                                do_max_containment=args.max_containment,
                                best_only=args.best_only,
-                               ignore_abundance=args.ignore_abundance,
                                unload_data=True)
 
     n_matches = len(results)

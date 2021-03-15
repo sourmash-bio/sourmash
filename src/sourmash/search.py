@@ -28,6 +28,7 @@ def format_bp(bp):
 def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
+
     for db in databases:
         search_iter = db.search(query, **kwargs)
         for (score, match, filename) in search_iter:
