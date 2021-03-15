@@ -142,29 +142,24 @@ def test_longer_search(n_children):
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
+@pytest.mark.parametrize("old_version", ["v4", "v6"])
 def test_tree_old_load(old_version):
-    tree_v1 = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
-                       leaf_loader=SigLeaf.load)
+    tree_path = utils.get_test_data(f'sbt-versions/{old_version}.sbt.json')
+    tree_v1 = SBT.load(tree_path, leaf_loader=SigLeaf.load)
 
-    tree_cur = SBT.load(utils.get_test_data('v6.sbt.json'),
+    tree_cur = SBT.load(utils.get_test_data('sbt-versions/v6.sbt.json'),
                         leaf_loader=SigLeaf.load)
 
-    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    testdata1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     to_search = load_one_signature(testdata1)
 
-    # CTB HACK: convert testdata into a scaled signature so that we can do
-    # containment search.
-    new_mh = sourmash.MinHash(0, 31, scaled=1000)
-    to_search.minhash
-
     results_v1 = {str(s) for s in tree_v1.find(search_minhashes,
-                                               to_search, 0.05)}
+                                               to_search, 0.5)}
     results_cur = {str(s) for s in tree_cur.find(search_minhashes,
-                                                 to_search, 0.05)}
+                                                 to_search, 0.5)}
 
     assert results_v1 == results_cur
-    assert len(results_v1) == 4
+    assert len(results_v1) == 2
 
 
 def test_load_future(tmpdir):
