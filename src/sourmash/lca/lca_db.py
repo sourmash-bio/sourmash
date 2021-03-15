@@ -325,6 +325,7 @@ class LCA_Database(Index):
         threshold = float(threshold)
 
         mh = query.minhash
+        assert mh.scaled
         if ignore_abundance:
             mh.track_abundance = False
 
@@ -342,6 +343,8 @@ class LCA_Database(Index):
         "Return the match with the best Jaccard containment in the database."
         if not query.minhash:
             return []
+
+        assert query.minhash.scaled
 
         results = []
         threshold_bp = kwargs.get('threshold_bp', 0.0)

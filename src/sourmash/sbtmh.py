@@ -148,7 +148,7 @@ class SearchMinHashesFindBest(object):
 def search_minhashes_containment(node, sig, threshold, results=None, downsample=True):
     assert results is None
     mh = sig.minhash
-    assert sig.minhash.scaled
+    assert mh.scaled
 
     if isinstance(node, SigLeaf):
         assert node.data.minhash.scaled
@@ -164,8 +164,8 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
 def search_minhashes_max_containment(node, sig, threshold, results=None,
                                      downsample=True):
     assert results is None
-
     mh = sig.minhash
+    assert mh.scaled
 
     if isinstance(node, SigLeaf):
         node_mh = node.data.minhash
@@ -197,6 +197,8 @@ class GatherMinHashes(object):
         assert results is None
 
         mh = query.minhash
+        assert mh.scaled
+
         if not len(mh):
             return 0
 
