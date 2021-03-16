@@ -566,6 +566,10 @@ def categorize(args):
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
                query_ksize, query_moltype)
 
+        if args.ignore_abundance:
+            # @CTB note this changes md5 of query
+            query.minhash = query.minhash.flatten()
+
         results = []
         # @CTB note - not properly ignoring abundance just yet
         for match, score in db.find(search_obj, query):
