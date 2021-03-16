@@ -1,11 +1,36 @@
 """create DNA signatures"""
 
+usage="""
+
+    sourmash sketch dna data/*.fna.gz
+
+The 'sketch dna' command reads in DNA sequences and outputs DNA
+sketches.
+
+By default, 'sketch dna' uses the parameter string 'k=31,scaled=1000,noabund'.
+
+This creates sketches with a k-mer size of 31, a scaled factor of
+1000, and no abundance tracking of k-mers.  You can specify one or
+more parameter strings of your own with -p, e.g.  'sourmash sketch dna
+-p k=31,noabund -p k=21,scaled=100,abund'.
+
+'sourmash sketch' takes input sequences in FASTA and FASTQ,
+uncompressed or gz/bz2 compressed.
+
+Please see the 'sketch' documentation for more details:
+  https://sourmash.readthedocs.io/en/latest/sourmash-sketch.html
+"""
+
 import sourmash
 from sourmash.logging import notify, print_results, error
 
+from sourmash import command_sketch
+assert command_sketch.DEFAULTS['dna'] == 'k=31,scaled=1000,noabund'
+
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('dna', aliases=['rna'])
+    subparser = subparsers.add_parser('dna', aliases=['rna'],
+                                      usage=usage)
     subparser.add_argument(
         '--license', default='CC0', type=str,
         help='signature license. Currently only CC0 is supported.'
