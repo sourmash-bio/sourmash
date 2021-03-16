@@ -424,7 +424,8 @@ def index(args):
 
 
 def search(args):
-    from .search import search_databases
+    from .search import (search_databases_with_flat_query,
+                         search_databases_with_abund_query)
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -459,25 +460,32 @@ def search(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment)
 
-    # forcibly ignore abundances if query has no abundances
-    if not query.minhash.track_abundance:
-        args.ignore_abundance = True
-
-    if args.ignore_abundance:
-        if query.minhash.track_abundance:
-            query.minhash = query.minhash.flatten()
-
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    # forcibly ignore abundances if query has no abundances
+    if not query.minhash.track_abundance:
+        args.ignore_abundance = True
+    else:
+        if args.ignore_abundance:
+            query.minhash = query.minhash.flatten()
+
     # do the actual search
-    results = search_databases(query, databases,
-                               threshold=args.threshold,
-                               do_containment=args.containment,
-                               do_max_containment=args.max_containment,
-                               best_only=args.best_only,
-                               unload_data=True)
+    if query.minhash.track_abundance:
+        results = search_databases_with_abund_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
+    else:
+        results = search_databases_with_flat_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
 
     n_matches = len(results)
     if args.best_only:

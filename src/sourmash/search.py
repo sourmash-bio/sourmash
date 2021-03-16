@@ -25,12 +25,42 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, **kwargs):
+def search_databases_with_flat_query(query, databases, **kwargs):
     results = []
     found_md5 = set()
 
     for db in databases:
         search_iter = db.search(query, **kwargs)
+        for (score, match, filename) in search_iter:
+            md5 = match.md5sum()
+            if md5 not in found_md5:
+                results.append((score, match, filename))
+                found_md5.add(md5)
+
+    # sort results on similarity (reverse)
+    results.sort(key=lambda x: -x[0])
+
+    x = []
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
+                              match=match,
+                              md5=match.md5sum(),
+                              filename=filename,
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
+    return x
+
+
+def search_databases_with_abund_query(query, databases, **kwargs):
+    results = []
+    found_md5 = set()
+
+    for db in databases:
+        search_iter = db.search_abund(query, **kwargs)
         for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:

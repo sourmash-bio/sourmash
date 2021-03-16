@@ -155,7 +155,10 @@ class Index(ABC):
                 return a.downsample(num=min_num), b.downsample(num=min_num)
 
         for subj in self.signatures():
-            qmh, subj_mh = downsample(query_mh, subj.minhash)
+            subj_mh = subj.minhash
+            if subj_mh.track_abundance:
+                subj_mh = subj_mh.flatten()
+            qmh, subj_mh = downsample(query_mh, subj_mh)
             query_size = len(qmh)
             subj_size = len(subj_mh)
 
@@ -173,9 +176,33 @@ class Index(ABC):
                 search_fn.collect(score)
                 yield subj, score
 
+    def search_abund(self, query, threshold=None, **kwargs):
+        """Return set of matches with angular similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+        """
+        assert query.minhash.track_abundance
+
+        # check arguments
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = float(threshold)
+
+        # do the actual search:
+        matches = []
+        for subj in self.signatures():
+            assert subj.minhash.track_abundance
+            score = query.similarity(subj)
+            if score >= threshold:
+                matches.append((score, subj, self.location))
+
+        # sort!
+        matches.sort(key=lambda x: -x[0])
+        return matches
+
     def search(self, query, threshold=None,
                do_containment=False, do_max_containment=False,
-               ignore_abundance=False, best_only=False, **kwargs):
+               best_only=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -185,8 +212,6 @@ class Index(ABC):
           * best_only: default False. If True, allow optimizations that
             may. May discard matches better than threshold, but first match
             is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
         """
         # check arguments
         if threshold is None:
