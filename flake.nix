@@ -91,12 +91,15 @@
             openssl
             pkgconfig
 
+            cmake
+
             git
             stdenv.cc.cc.lib
             (python310.withPackages (ps: with ps; [ virtualenv tox setuptools ]))
             (python39.withPackages (ps: with ps; [ virtualenv setuptools ]))
             (python38.withPackages (ps: with ps; [ virtualenv setuptools ]))
 
+            rust-bindgen
             rust-cbindgen
 
             wasmtime
