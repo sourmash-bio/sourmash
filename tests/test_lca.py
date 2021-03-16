@@ -974,7 +974,7 @@ def test_single_classify_to_output_no_name():
 
         outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
         print((outdata,))
-        assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
