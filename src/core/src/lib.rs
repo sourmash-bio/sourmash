@@ -20,8 +20,7 @@ pub mod errors;
 pub use errors::SourmashError as Error;
 
 pub mod cmd;
-
-pub mod index;
+pub mod traits;
 
 pub mod signature;
 pub mod sketch;
@@ -38,6 +37,7 @@ cfg_if! {
     if #[cfg(all(target_arch = "wasm32", target_vendor = "unknown"))] {
         pub mod wasm;
     } else {
+        pub mod index;
         pub mod ffi;
     }
 }
