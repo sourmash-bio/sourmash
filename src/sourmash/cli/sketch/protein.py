@@ -13,7 +13,7 @@ By default, 'sketch protein' uses the parameter string
 This corresponds to an amino-acid k-mer size of 10, a scaled factor
 of 200, and no abundance tracking of k-mers. You can specify one or
 more parameter strings of your own with -p, e.g. 'sourmash sketch
-protein -p k=11,noabund -p k=12,scaled=100,abund'.
+protein -p k=11,noabund -p k=12,scaled=100,abund'. Note that a single `-p` parameter string can contain multiple ksize values, but only a single scaled value or abundance value e.g. -p k=11,k=12,scaled=100,abund.
 
 'sourmash sketch' takes input sequences in FASTA and FASTQ,
 uncompressed or gz/bz2 compressed.
