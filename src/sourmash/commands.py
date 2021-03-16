@@ -561,7 +561,7 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    search_obj = get_search_obj(False, False, True, args.threshold)
+    search_obj = get_search_obj(False, False, False, args.threshold)
     for queryfile, query, query_moltype, query_ksize in loader:
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
                query_ksize, query_moltype)
@@ -569,6 +569,9 @@ def categorize(args):
         if args.ignore_abundance:
             # @CTB note this changes md5 of query
             query.minhash = query.minhash.flatten()
+        else:
+            # queries with abundances is not tested, apparently. @CTB.
+            assert not query.minhash.track_abundance
 
         results = []
         # @CTB note - not properly ignoring abundance just yet
