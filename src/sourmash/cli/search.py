@@ -34,12 +34,16 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--containment', action='store_true',
-        help='evaluate containment rather than similarity'
+        help='score based on containment rather than similarity'
+    )
+    subparser.add_argument(
+        '--max-containment', action='store_true',
+        help='score based on max containment rather than similarity'
     )
     subparser.add_argument(
         '--ignore-abundance', action='store_true',
         help='do NOT use k-mer abundances if present; note: has no effect if '
-        '--containment is specified'
+        '--containment or --max-containment is specified'
     )
     subparser.add_argument(
         '--scaled', metavar='FLOAT', type=float, default=0,

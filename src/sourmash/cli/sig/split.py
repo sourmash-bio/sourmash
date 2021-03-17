@@ -1,6 +1,5 @@
 """concatenate signature files"""
 
-import csv
 import sourmash
 
 
