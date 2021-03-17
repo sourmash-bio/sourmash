@@ -16,7 +16,16 @@ import csv
 from sourmash.logging import notify, error
 
 
-NOTIFY_EVERY_BP=1e7
+NOTIFY_EVERY_BP=1e5
+CHUNKSIZE=1e5
+
+
+def iterate_sequence_chunks(record, ksize):
+    global CHUNKSIZE
+    CHUNKSIZE = int(CHUNKSIZE)
+
+    for start in range(0, len(record.sequence), CHUNKSIZE):
+        yield record.name, record.sequence[start:start + CHUNKSIZE + ksize]
 
 
 def get_kmers_for_hashvals(sequence, hashvals, ksize):
@@ -45,6 +54,7 @@ def main():
                    help='save matching sequences to this file.')
     p.add_argument('--output-kmers', type=str, default=None,
                    help='save matching kmers to this file.')
+    p.add_argument('-k', '--ksize', default=31)
     args = p.parse_args()
 
     # set up the outputs.
@@ -63,9 +73,14 @@ def main():
         return(-1)
 
     # first, load the signature and extract the hashvals
-    sigobj = sourmash.load_one_signature(args.query)
+    sigobj = sourmash.load_one_signature(args.query, args.ksize)
+    assert sigobj.minhash.moltype == 'DNA'
     query_hashvals = set(sigobj.minhash.hashes)
     query_ksize = sigobj.minhash.ksize
+    new_mh = sigobj.minhash.copy_and_clear()
+
+    notify(f"loaded signature from '{args.query}'")
+    notify(f"ksize={query_ksize} moltype={sigobj.minhash.moltype}")
 
     # track found kmers
     found_kmers = {}
@@ -76,29 +91,34 @@ def main():
     n = 0 # bp loaded
     m = 0 # bp in found sequences
     p = 0 # number of k-mers found
-    watermark = NOTIFY_EVERY_BP
+    watermark = 0
     for filename in args.seqfiles:
         for record in screed.open(filename):
-            n += len(record.sequence)
-            n_seq += 1
-            while n >= watermark:
-                sys.stderr.write('... {} {} {}\r'.format(n_seq, watermark, filename))
-                watermark += NOTIFY_EVERY_BP
-
-            # now do the hard work of finding the matching k-mers!
             found = False
-            for kmer, hashval in get_kmers_for_hashvals(record.sequence,
-                                                        query_hashvals,
-                                                        query_ksize):
-                found_kmers[kmer] = hashval
-                found = True
+            for name, sequence in iterate_sequence_chunks(record, query_ksize):
+                n += len(sequence)
+                n_seq += 1
+                while n >= watermark:
+                    notify(f'... {filename[:20]} read {int(watermark/1e3)} kb / found kmers:{p}/{len(sigobj.minhash)}', end='\r')
+                    watermark += NOTIFY_EVERY_BP
+
+                # now do the hard work of finding the matching k-mers!
+                new_mh.add_sequence(sequence, force=True)
+                for kmer, hashval in get_kmers_for_hashvals(sequence,
+                                                            query_hashvals,
+                                                            query_ksize):
+                    found_kmers[kmer] = hashval
+                    found = True
+
+                p = len(found_kmers)
 
             if found:
-                # write out sequence
+                # write out sequence?
                 if seqout_fp:
-                    seqout_fp.write('>{}\n{}\n'.format(record.name,
-                                    record.sequence))
-                    m += len(record.sequence)
+                    seqout_fp.write('>{}\n{}\n'.format(name, record.sequence))
+                    m += len(sequence)
+
+    notify('done reading sequences!')
 
     if seqout_fp:
         notify('read {} bp, wrote {} bp in matching sequences', n, m)
@@ -108,6 +128,11 @@ def main():
             kmerout_w.writerow([kmer, str(hashval)])
         notify('read {} bp, found {} kmers matching hashvals', n,
                len(found_kmers))
+
+    notify(f'jaccard similarity between query and found k-mers is {new_mh.jaccard(sigobj.minhash)}')
+    notify(f'jaccard containment of found k-mers by query is {sigobj.minhash.contained_by(new_mh)}')
+    notify(f'jaccard containment of query by found k-mers is {new_mh.contained_by(sigobj.minhash)}')
+
 
 
 if __name__ == '__main__':
