@@ -37,6 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         build: [beta, stable, windows, macos]
+        clang: [["11.0", "clang_11_0"]]
         include:
           - build: macos
             os: macos-latest
@@ -57,6 +58,20 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
+      # LLVM and Clang
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v2
+        with:
+          path: ${{ runner.temp }}/llvm-${{ matrix.clang[0] }}
+          key: ${{ matrix.os }}-llvm-${{ matrix.clang[0] }}
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: ${{ matrix.clang[0] }}
+          directory: ${{ runner.temp }}/llvm-${{ matrix.clang[0] }}
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
@@ -75,6 +90,9 @@ jobs:
 
       - name: Run tests
         uses: actions-rs/cargo@v1
+        env:
+          LIBCLANG_PATH: ${{ runner.temp }}/llvm-${{ matrix.clang[0] }}/lib
+          LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm-${{ matrix.clang[0] }}/bin/llvm-config
         with:
           command: test
           args: --no-fail-fast
