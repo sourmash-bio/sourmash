@@ -386,7 +386,7 @@ def index(args):
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
             if ss.minhash.track_abundance:
-                ss.minhash = ss.minhash.flatten() # @CTB test explicitly
+                ss.minhash = ss.minhash.flatten()
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)

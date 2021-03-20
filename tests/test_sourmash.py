@@ -2144,6 +2144,23 @@ def test_do_sourmash_sbt_search_downsample_2():
         assert 'Cannot do similarity search.' in err
 
 
+@utils.in_tempdir
+def test_do_sourmash_index_abund(c):
+    # 'sourmash index' should flatten signatures w/track_abund.
+    testdata2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+
+    with open(testdata2, 'rt') as fp:
+        ss = sourmash.load_one_signature(testdata2, ksize=31)
+        assert ss.minhash.track_abundance == True
+
+    sbtname = 'foo'
+
+    c.run_sourmash('index', '-k', '31', sbtname, testdata2)
+
+    for kk in sourmash.load_file_as_signatures(c.output(sbtname)):
+        assert kk.minhash.track_abundance == False
+
+
 def test_do_sourmash_index_single():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
