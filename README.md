@@ -2,6 +2,8 @@
 
 Quickly search, compare, and analyze genomic and metagenomic data sets.
 
+New branch
+
 [![Documentation](https://readthedocs.org/projects/sourmash/badge/?version=latest)](http://sourmash.readthedocs.io/en/latest/)
 [![Build Status](https://github.com/dib-lab/sourmash/workflows/Python%20tests/badge.svg)](https://github.com/dib-lab/sourmash/actions/)
 [![Bioconda install](https://img.shields.io/conda/dn/bioconda/sourmash.svg?style=flag&label=Bioconda)](https://anaconda.org/bioconda/sourmash)
