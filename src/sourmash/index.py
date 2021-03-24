@@ -2,6 +2,7 @@
 
 from abc import abstractmethod, ABC
 from collections import namedtuple
+import os
 
 
 class Index(ABC):
@@ -202,6 +203,47 @@ class MultiIndex(Index):
     @classmethod
     def load(self, *args):
         raise NotImplementedError
+
+    @classmethod
+    def load_from_directory(cls, dirname, traverse_yield_all):
+        from .sourmash_args import traverse_find_sigs
+        if not os.path.isdir(dirname):
+            raise ValueError(f"'{dirname}' must be a directory")
+
+        index_list = []
+        source_list = []
+        for thisfile in traverse_find_sigs([dirname], traverse_yield_all):
+            try:
+                idx = LinearIndex.load(thisfile)
+                index_list.append(idx)
+                source_list.append(thisfile)
+            except (IOError, sourmash.exceptions.SourmashError):
+                if traverse_yield_all:
+                    continue
+                else:
+                    raise
+
+        db = None
+        if index_list:
+            db = cls(index_list, source_list)
+
+        return db
+
+    @classmethod
+    def load_from_file_list(cls, filename):
+        idx_list = []
+        src_list = []
+
+        file_list = load_file_list_of_signatures(filename)
+        for fname in file_list:
+            idx = load_file_as_index(fname)
+            src = fname
+
+            idx_list.append(idx)
+            src_list.append(src)
+
+        db = MultiIndex(idx_list, src_list)
+        return db
 
     def save(self, *args):
         raise NotImplementedError

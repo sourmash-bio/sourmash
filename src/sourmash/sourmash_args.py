@@ -73,6 +73,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
         sl = list(sl)
     except (OSError, ValueError):
         error("Cannot open file '{}'", filename)
+        raise
         sys.exit(-1)
 
     if len(sl) and select_md5:
@@ -342,6 +343,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     loaded = False
     dbtype = None
 
+    print('XXX', filename)
+
     # special case stdin
     if not loaded and filename == '-':
         db = LinearIndex.load(sys.stdin)
@@ -349,30 +352,20 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         loaded = True
 
     # load signatures from directory, using MultiIndex to preserve source.
-    if not loaded and os.path.isdir(filename):
-        index_list = []
-        source_list = []
-        for thisfile in traverse_find_sigs([filename], traverse_yield_all):
-            try:
-                idx = LinearIndex.load(thisfile)
-                index_list.append(idx)
-                source_list.append(thisfile)
-            except (IOError, sourmash.exceptions.SourmashError):
-                if traverse_yield_all:
-                    continue
-                else:
-                    raise
-
-        if index_list:
-            loaded=True
-            db = MultiIndex(index_list, source_list)
+    if not loaded:
+        try:
+            db = MultiIndex.load_from_directory(filename, traverse_yield_all)
             dbtype = DatabaseType.SIGLIST
+            loaded = True
+        except Exception as exc:
+            import traceback
+            traceback.print_exc()
+            pass
 
     # load signatures from single signature file
     if not loaded:
         try:
-            with open(filename, 'rt') as fp:
-                db = LinearIndex.load(filename)
+            db = LinearIndex.load(filename)
             dbtype = DatabaseType.SIGLIST
             loaded = True
         except Exception as exc:
@@ -382,18 +375,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # use MultiIndex to preserve source filenames.
     if not loaded:
         try:
-            idx_list = []
-            src_list = []
-
-            file_list = load_file_list_of_signatures(filename)
-            for fname in file_list:
-                idx = load_file_as_index(fname)
-                src = fname
-
-                idx_list.append(idx)
-                src_list.append(src)
-
-            db = MultiIndex(idx_list, src_list)
+            db = MultiIndex.load_from_file_list(filename)
             dbtype = DatabaseType.SIGLIST
             loaded = True
         except Exception as exc:
