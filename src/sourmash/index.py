@@ -226,11 +226,15 @@ class MultiIndex(Index):
         db = None
         if index_list:
             db = cls(index_list, source_list)
+        else:
+            raise ValueError(f"no signatures to load under directory '{dirname}'")
 
         return db
 
     @classmethod
     def load_from_file_list(cls, filename):
+        from .sourmash_args import (load_file_list_of_signatures,
+                                    load_file_as_index)
         idx_list = []
         src_list = []
 

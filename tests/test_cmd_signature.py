@@ -778,6 +778,9 @@ def test_sig_cat_filelist_with_dbs(c):
     c.run_sourmash('sig', 'cat', filelist,
                    '-o', 'out.sig')
 
+    print(c.last_result.out)
+    print(c.last_result.err)
+
     # stdout should be same signatures
     out = c.output('out.sig')
 

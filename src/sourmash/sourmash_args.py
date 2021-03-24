@@ -343,7 +343,8 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     loaded = False
     dbtype = None
 
-    print('XXX', filename)
+    # @CTB add debug/more informative error messages if we're going to
+    # catch all exceptions. Or, standardize on ValueError or something.
 
     # special case stdin
     if not loaded and filename == '-':
@@ -358,8 +359,6 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             dbtype = DatabaseType.SIGLIST
             loaded = True
         except Exception as exc:
-            import traceback
-            traceback.print_exc()
             pass
 
     # load signatures from single signature file
@@ -416,6 +415,9 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 
     if not loaded:
         raise OSError(f"Error while reading signatures from '{filename}'.")
+
+    if loaded:
+        assert db
 
     return db, dbtype
 
