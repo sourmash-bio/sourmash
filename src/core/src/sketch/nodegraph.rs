@@ -1,6 +1,7 @@
-use std::fs::File;
 use std::io;
 use std::path::Path;
+use std::slice;
+use std::{fs::File, io::BufWriter};
 
 use bitmagic::BVector;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -169,7 +170,8 @@ impl Nodegraph {
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         // TODO: if it ends with gz, open a compressed file
         // might use get_output here?
-        self.save_to_writer(&mut File::create(path)?)?;
+        let fp = File::create(path)?;
+        self.save_to_writer(&mut BufWriter::new(fp))?;
         Ok(())
     }
 
@@ -177,8 +179,15 @@ impl Nodegraph {
     where
         W: io::Write,
     {
+        self.write_v5(wtr)
+    }
+
+    fn write_v5<W>(&self, wtr: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
         wtr.write_all(b"OXLI")?;
-        wtr.write_u8(99)?; // version
+        wtr.write_u8(5)?; // version
         wtr.write_u8(2)?; // ht_type
         wtr.write_u32::<LittleEndian>(self.ksize as u32)?; // ksize
         wtr.write_u8(self.bs.len() as u8)?; // n_tables
@@ -196,6 +205,54 @@ impl Nodegraph {
         Ok(())
     }
 
+    pub(crate) fn write_v4<W>(&self, wtr: &mut W) -> Result<(), Error>
+    where
+        W: io::Write,
+    {
+        use fixedbitset::FixedBitSet;
+
+        wtr.write_all(b"OXLI")?;
+        wtr.write_u8(4)?; // version
+        wtr.write_u8(2)?; // ht_type
+        wtr.write_u32::<LittleEndian>(self.ksize as u32)?; // ksize
+        wtr.write_u8(self.bs.len() as u8)?; // n_tables
+        wtr.write_u64::<LittleEndian>(self.occupied_bins as u64)?; // n_occupied
+        for count in &self.bs {
+            let tablesize = count.len();
+            wtr.write_u64::<LittleEndian>(tablesize as u64)?;
+
+            let byte_size = tablesize / 8 + 1;
+            let (div, rem) = (byte_size / 4, byte_size % 4);
+
+            let mut fbs = FixedBitSet::with_capacity(tablesize);
+            fbs.extend(count.ones());
+
+            // Once this issue and PR are solved, this is a one liner:
+            // https://github.com/BurntSushi/byteorder/issues/155
+            // https://github.com/BurntSushi/byteorder/pull/166
+            //wtr.write_u32_from::<LittleEndian>(&count.as_slice()[..div])?;
+            let slice = &fbs.as_slice()[..div];
+            let buf = unsafe {
+                use std::mem::size_of;
+
+                let len = size_of::<u32>() * slice.len();
+                slice::from_raw_parts(slice.as_ptr() as *const u8, len)
+            };
+
+            wtr.write_all(&buf)?;
+            // Replace when byteorder PR is released
+
+            if rem != 0 {
+                let mut cursor = [0u8; 4];
+                LittleEndian::write_u32(&mut cursor, fbs.as_slice()[div]);
+                for item in cursor.iter().take(rem) {
+                    wtr.write_u8(*item)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn from_reader<R>(rdr: R) -> Result<Nodegraph, Error>
     where
         R: io::Read,
@@ -208,7 +265,7 @@ impl Nodegraph {
         let version = rdr.read_u8()?;
         match version {
             4 => Self::read_v4(rdr),
-            99 => Self::read_v99(rdr),
+            5 => Self::read_v5(rdr),
             _ => todo!("throw error, version not supported"),
         }
     }
@@ -262,7 +319,7 @@ impl Nodegraph {
         })
     }
 
-    fn read_v99<R>(mut rdr: R) -> Result<Nodegraph, Error>
+    fn read_v5<R>(mut rdr: R) -> Result<Nodegraph, Error>
     where
         R: io::Read,
     {
