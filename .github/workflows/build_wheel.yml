@@ -55,24 +55,13 @@ jobs:
         with:
           platforms: all
 
-      - name: Install stable toolchain
-        if: runner.os != 'Linux'
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.2.2
         env:
           CIBW_BUILD: "cp39-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_ppc64le *-musllinux_s390x"
           CIBW_SKIP: "*-win32 *-manylinux_i686"
-          CIBW_BEFORE_BUILD_LINUX: |
-            source .ci/install_cargo.sh
-            #yum install centos-release-scl-rh -y
-            #yum install devtoolset-7-toolchain -y
+          CIBW_BEFORE_BUILD: 'source .ci/install_cargo.sh'
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: ${{ matrix.macos_target }}
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
