@@ -6,6 +6,7 @@ import os
 import argparse
 import itertools
 from enum import Enum
+import traceback
 
 import screed
 
@@ -14,7 +15,7 @@ from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
 from . import signature
-from .logging import notify, error
+from .logging import notify, error, debug
 
 from .index import LinearIndex, MultiIndex
 from . import signature as sig
@@ -73,7 +74,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
         sl = list(sl)
     except (OSError, ValueError):
         error("Cannot open file '{}'", filename)
-        raise
+        raise # @CTB testme?
         sys.exit(-1)
 
     if len(sl) and select_md5:
@@ -333,6 +334,68 @@ class DatabaseType(Enum):
     LCA = 3
 
 
+def _load_stdin(filename, **kwargs):
+    db = None
+    if filename == '-':
+        db = LinearIndex.load(sys.stdin)
+
+    return (db, DatabaseType.SIGLIST)
+
+
+def _multiindex_load_from_file_list(filename, **kwargs):
+    try:
+        db = MultiIndex.load_from_file_list(filename)
+    except UnicodeDecodeError as exc:
+        raise ValueError(exc)
+
+    return (db, DatabaseType.SIGLIST)
+
+
+def _multiindex_load_from_directory(filename, **kwargs):
+    traverse_yield_all = kwargs['traverse_yield_all']
+    db = MultiIndex.load_from_directory(filename, traverse_yield_all)
+
+    return (db, DatabaseType.SIGLIST)
+
+def _load_sigfile(filename, **kwargs):
+    try:
+        db = LinearIndex.load(filename)
+    except sourmash.exceptions.SerdeError as exc:
+        raise ValueError(exc)
+    except FileNotFoundError:
+        raise ValueError(f"Error while reading signatures from '{filename}'")
+    except Exception as exc:
+        raise ValueError(f"Error while reading signatures from '{filename}'")
+        #raise ValueError(exc)   # load_signature line 255 raises general exc @CTB
+    return (db, DatabaseType.SIGLIST)
+
+
+def _load_sbt(filename, **kwargs):
+    cache_size = kwargs.get('cache_size')
+
+    try:
+        db = load_sbt_index(filename, cache_size=cache_size)
+    except FileNotFoundError as exc:
+        raise ValueError(exc)
+
+    return (db, DatabaseType.SBT)
+
+
+def _load_revindex(filename, **kwargs):
+    db, _, _ = load_single_database(filename)
+    return (db, DatabaseType.LCA)
+
+
+_loader_functions = [
+    ("load from stdin", _load_stdin),
+    ("load from directory", _multiindex_load_from_directory),
+    ("load from sig file", _load_sigfile),
+    ("load from file list", _multiindex_load_from_file_list),
+    ("load SBT", _load_sbt),
+    ("load revindex", _load_revindex),
+    ]
+
+
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
@@ -346,55 +409,23 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # @CTB add debug/more informative error messages if we're going to
     # catch all exceptions. Or, standardize on ValueError or something.
 
-    # special case stdin
-    if not loaded and filename == '-':
-        db = LinearIndex.load(sys.stdin)
-        dbtype = DatabaseType.SIGLIST
-        loaded = True
-
-    # load signatures from directory, using MultiIndex to preserve source.
-    if not loaded:
+    for (desc, load_fn) in _loader_functions:
+        #print(f"trying loader fn {desc} for {filename}", file=sys.stderr)
         try:
-            db = MultiIndex.load_from_directory(filename, traverse_yield_all)
-            dbtype = DatabaseType.SIGLIST
-            loaded = True
+            db, dbtype = load_fn(filename,
+                                 traverse_yield_all=traverse_yield_all,
+                                 cache_size=cache_size)
+        except ValueError as exc:
+            #print(f"FAIL load {desc}", file=sys.stderr)
+            pass
         except Exception as exc:
-            pass
+            #print(f"FAIL load {desc}", file=sys.stderr)
+            #print(traceback.format_exc(), file=sys.stderr)
+            raise
 
-    # load signatures from single signature file
-    if not loaded:
-        try:
-            db = LinearIndex.load(filename)
-            dbtype = DatabaseType.SIGLIST
+        if db:
             loaded = True
-        except Exception as exc:
-            pass
-
-    # try load signatures from single file (list of signature paths)
-    # use MultiIndex to preserve source filenames.
-    if not loaded:
-        try:
-            db = MultiIndex.load_from_file_list(filename)
-            dbtype = DatabaseType.SIGLIST
-            loaded = True
-        except Exception as exc:
-            pass
-
-    if not loaded:                    # try load as SBT
-        try:
-            db = load_sbt_index(filename, cache_size=cache_size)
-            loaded = True
-            dbtype = DatabaseType.SBT
-        except:
-            pass
-
-    if not loaded:                    # try load as LCA
-        try:
-            db, _, _ = load_single_database(filename)
-            loaded = True
-            dbtype = DatabaseType.LCA
-        except:
-            pass
+            break
 
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
     # so we can provide a better error message to users.
