@@ -23,7 +23,7 @@ parallel = ["rayon"]
 
 [dependencies]
 az = "1.0.0"
-bitmagic = "0.1.2"
+bitmagic = { version = "0.2.0", git = "https://github.com/luizirber/bitmagic-rs", branch = "cross_testing" }
 bytecount = "0.6.0"
 byteorder = "1.4.3"
 cfg-if = "1.0"
