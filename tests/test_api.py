@@ -20,9 +20,9 @@ def test_sourmash_signature_api(c):
 
 @utils.in_tempdir
 def test_load_index_0_no_file(c):
-    with pytest.raises(Exception) as exc: #  @CTB fix exception type
+    with pytest.raises(ValueError) as exc: #  @CTB fix exception type
         idx = sourmash.load_file_as_index(c.output('does-not-exist'))
-    assert 'Error ' in str(exc.value) #  @CTB fixme
+    assert 'Error while reading signatures from ' in str(exc.value)
 
 
 def test_load_index_1():
