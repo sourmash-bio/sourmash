@@ -8,4 +8,4 @@
   major version number increment.
 - [ ] Was a spellchecker run on the source code and documentation after
   changes were made?
-- [ ] If it is your first contribution, make sure to create your [ORCID](https://orcid.org/register) id.
+- [ ] please note your ORCID in the comments. If you don't have one, you can register for one [here].(https://orcid.org/register)
