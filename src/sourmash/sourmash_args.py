@@ -25,7 +25,6 @@ from .lca import LCA_Database
 import sourmash
 
 DEFAULT_LOAD_K = 31
-DEFAULT_N = 500
 
 
 def get_moltype(sig, require=False):
@@ -84,8 +83,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             if sig_md5.startswith(select_md5.lower()):
                 # make sure we pick only one --
                 if found_sig is not None:
-                    error("Error! Multiple signatures start with md5 '{}'",
-                          select_md5)
+                    error(f"Error! Multiple signatures start with md5 '{select_md5}'")
                     error("Please use a longer --md5 selector.")
                     sys.exit(-1)
                 else:
@@ -98,16 +96,16 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
         if len(ksizes) == 1:
             ksize = ksizes.pop()
             sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
-            notify('select query k={} automatically.', ksize)
+            notify(f'select query k={ksize} automatically.')
         elif DEFAULT_LOAD_K in ksizes:
             sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
-            notify('selecting default query k={}.', DEFAULT_LOAD_K)
+            notify(f'selecting default query k={DEFAULT_LOAD_K}.')
     elif ksize:
-        notify('selecting specified query k={}', ksize)
+        notify(f'selecting specified query k={ksize}')
 
     if len(sl) != 1:
-        error('When loading query from "{}"', filename)
-        error('{} signatures matching ksize and molecule type;', len(sl))
+        error(f"When loading query from '{filename}'", filename)
+        error(f'{len(sl)} signatures matching ksize and molecule type;')
         error('need exactly one. Specify --ksize or --dna, --rna, or --protein.')
         sys.exit(-1)
 
@@ -190,11 +188,9 @@ def _check_signatures_are_compatible(query, subject):
        error("signature {} and {} are incompatible - cannot compare.",
              query, subject)
        if query.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 query, subject)
+           error(f"{query} was calculated with --scaled, {subject} was not.")
        if subject.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 subject, query)
+           error(f"{subject} was calculated with --scaled, {query} was not.")
        return 0
 
     return 1
@@ -208,15 +204,14 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     query_mh = query.minhash
 
     if tree_mh.ksize != query_mh.ksize:
-        error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
-        error('this is different from query ksize of {}.', query_mh.ksize)
+        error(f"ksize on tree '{treename}' is {tree_mh.ksize};")
+        error(f"this is different from query ksize of {query_mh.ksize}.")
         return 0
 
     # is one scaled, and the other not? cannot do search.
     if (tree_mh.scaled and not query_mh.scaled) or \
        (query_mh.scaled and not tree_mh.scaled):
-        error("for tree '{}', tree and query are incompatible for search.",
-              treename)
+        error(f"for tree '{treename}', tree and query are incompatible for search.")
         if tree_mh.scaled:
             error("tree was calculated with scaled, query was not.")
         else:
@@ -226,9 +221,8 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
     # are the scaled values incompatible? cannot downsample tree for similarity
     if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
       is_similarity_query:
-        error("for tree '{}', scaled value is smaller than query.", treename)
-        error("tree scaled: {}; query scaled: {}. Cannot do similarity search.",
-              tree_mh.scaled, query_mh.scaled)
+        error(f"for tree '{treename}', scaled value is smaller than query.")
+        error(f"tree scaled: {tree_mh.scaled}; query scaled: {query_mh.scaled}. Cannot do similarity search.")
         return 0
 
     return 1
@@ -237,8 +231,8 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 def check_lca_db_is_compatible(filename, db, query):
     query_mh = query.minhash
     if db.ksize != query_mh.ksize:
-        error("ksize on db '{}' is {};", filename, db.ksize)
-        error('this is different from query ksize of {}.', query_mh.ksize)
+        error(f"ksize on db '{filename}' is {db.ksize};")
+        error(f"this is different from query ksize of {query_mh.ksize}.")
         return 0
 
     return 1
@@ -275,7 +269,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 sys.exit(-1)
 
             databases.append(db)
-            notify('loaded SBT {}', filename, end='\r')
+            notify(f'loaded SBT {filename}', end='\r')
             n_databases += 1
 
         # LCA
@@ -283,7 +277,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             if not check_lca_db_is_compatible(filename, db, query):
                 sys.exit(-1)
 
-            notify('loaded LCA {}', filename, end='\r')
+            notify('loaded LCA {filename}', end='\r')
             n_databases += 1
 
             databases.append(db)
@@ -306,19 +300,18 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # unknown!?
         else:
-            raise Exception("unknown dbtype {}".format(dbtype))
+            raise ValueError("unknown dbtype {dbtype}")
 
         # END for loop
 
 
     notify(' '*79, end='\r')
     if n_signatures and n_databases:
-        notify('loaded {} signatures and {} databases total.', n_signatures, 
-                                                               n_databases)
+        notify(f'loaded {n_signatures} signatures and {n_databases} databases total.')
     elif n_signatures:
-        notify('loaded {} signatures.', n_signatures)
+        notify(f'loaded {n_signatures} signatures.')
     elif n_databases:
-        notify('loaded {} databases.', n_databases)
+        notify(f'loaded {n_databases} databases.')
     else:
         notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
@@ -430,10 +423,6 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         except ValueError as exc:
             #print(f"FAIL load {desc}", file=sys.stderr)
             pass
-        except Exception as exc:
-            #print(f"FAIL load {desc}", file=sys.stderr)
-            #print(traceback.format_exc(), file=sys.stderr)
-            raise
 
         if db:
             loaded = True
@@ -454,12 +443,12 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             pass
 
         if successful_screed_load:
-            raise OSError("Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(filename))
+            raise ValueError(f"Error while reading signatures from '{filename}' - got sequences instead! Is this a FASTA/FASTQ file?")
 
     if not loaded:
-        raise OSError(f"Error while reading signatures from '{filename}'.")
+        raise ValueError(f"Error while reading signatures from '{filename}'.")
 
-    if loaded:
+    if loaded:                  # this is a bit redundant but safe > sorry
         assert db
 
     return db, dbtype

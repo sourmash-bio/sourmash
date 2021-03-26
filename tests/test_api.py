@@ -53,7 +53,9 @@ def test_load_fasta_as_signature():
     # try loading a fasta file - should fail with informative exception
     testfile = utils.get_test_data('short.fa')
 
-    with pytest.raises(OSError) as e:
+    with pytest.raises(ValueError) as exc:
         idx = sourmash.load_file_as_index(testfile)
 
-    assert "Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(testfile) in str(e)
+    print(exc.value)
+
+    assert f"Error while reading signatures from '{testfile}' - got sequences instead! Is this a FASTA/FASTQ file?" in str(exc.value)
