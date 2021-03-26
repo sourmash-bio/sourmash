@@ -245,6 +245,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     Check for compatibility with query.
 
     This is basically a user-focused wrapping of _load_databases.
+
+    @CTB this can be refactored into a more generic function with 'filter'.
     """
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
@@ -262,7 +264,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify(str(e))
             sys.exit(-1)
 
-        # are we collecting signatures from a directory/path?
+        # are we collecting signatures from an SBT?
         if dbtype == DatabaseType.SBT:
             if not check_tree_is_compatible(filename, db, query,
                                             is_similarity_query):
@@ -272,7 +274,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify(f'loaded SBT {filename}', end='\r')
             n_databases += 1
 
-        # LCA
+        # or an LCA?
         elif dbtype == DatabaseType.LCA:
             if not check_lca_db_is_compatible(filename, db, query):
                 sys.exit(-1)
@@ -282,7 +284,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
             databases.append(db)
 
-        # signature file
+        # or a mixed collection of signatures?
         elif dbtype == DatabaseType.SIGLIST:
             db = db.select(moltype=query_moltype, ksize=query_ksize)
             siglist = db.signatures()
@@ -300,7 +302,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # unknown!?
         else:
-            raise ValueError("unknown dbtype {dbtype}")
+            raise ValueError(f"unknown dbtype {dbtype}") # @CTB test?
 
         # END for loop
 
