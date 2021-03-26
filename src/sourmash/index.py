@@ -206,6 +206,7 @@ class MultiIndex(Index):
 
     @classmethod
     def load_from_directory(cls, dirname, traverse_yield_all):
+        "Create a MultiIndex from all files under a directory."
         from .sourmash_args import traverse_find_sigs
         if not os.path.isdir(dirname):
             raise ValueError(f"'{dirname}' must be a directory")
@@ -233,6 +234,7 @@ class MultiIndex(Index):
 
     @classmethod
     def load_from_file_list(cls, filename):
+        "Create a MultiIndex from all files listed in a text file."
         from .sourmash_args import (load_file_list_of_signatures,
                                     load_file_as_index)
         idx_list = []
