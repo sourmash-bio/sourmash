@@ -367,7 +367,7 @@ def _load_sigfile(filename, **kwargs):
         raise ValueError(f"Error while reading signatures from '{filename}'")
     except Exception as exc:
         raise ValueError(f"Error while reading signatures from '{filename}'")
-        #raise ValueError(exc)   # load_signature line 255 raises general exc @CTB
+        #raise ValueError(exc)   # load_signature line 255 raises general exc @CTB fixme
     return (db, DatabaseType.SIGLIST)
 
 
@@ -413,17 +413,14 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     loaded = False
     dbtype = None
 
-    # @CTB add debug/more informative error messages if we're going to
-    # catch all exceptions. Or, standardize on ValueError or something.
-
+    # iterate through loader functions, trying them all. Catch ValueError
+    # but nothing else.
     for (desc, load_fn) in _loader_functions:
-        #print(f"trying loader fn {desc} for {filename}", file=sys.stderr)
         try:
             db, dbtype = load_fn(filename,
                                  traverse_yield_all=traverse_yield_all,
                                  cache_size=cache_size)
         except ValueError as exc:
-            #print(f"FAIL load {desc}", file=sys.stderr)
             pass
 
         if db:
