@@ -1811,6 +1811,36 @@ def test_search_metagenome_traverse():
         assert '13 matches; showing first 3:' in out
 
 
+def test_search_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
+    with utils.TempDirectory() as location:
+        testdata_dir = utils.get_test_data('gather')
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        out_csv = os.path.join(location, 'out.csv')
+
+        cmd = f'search {query_sig} {testdata_dir} -k 21 -o {out_csv}'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        with open(out_csv, 'rt') as fp:
+            prefix_len = len(testdata_dir)
+            r = csv.DictReader(fp)
+            for row in r:
+                filename = row['filename']
+                assert filename.startswith(testdata_dir)
+                # should have full path to file sig was loaded from
+                assert len(filename) > prefix_len
+
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+        assert '13 matches; showing first 3:' in out
+
+
 @utils.in_thisdir
 def test_search_incompatible(c):
     num_sig = utils.get_test_data('num/47.fa.sig')
@@ -3518,6 +3548,49 @@ def test_gather_metagenome_traverse():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
+def test_gather_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
+    with utils.TempDirectory() as location:
+        # set up a directory $location/gather that contains
+        # everything in the 'tests/test-data/gather' directory
+        # *except* the query sequence, which is 'combined.sig'.
+        testdata_dir = utils.get_test_data('gather')
+        copy_testdata = os.path.join(location, 'somesigs')
+        shutil.copytree(testdata_dir, copy_testdata)
+        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        out_csv = os.path.join(location, 'out.csv')
+
+        # now, feed in the new directory --
+        cmd = f'gather {query_sig} {copy_testdata} -k 21 --threshold-bp=0'
+        cmd += f' -o {out_csv}'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        with open(out_csv, 'rt') as fp:
+            prefix_len = len(copy_testdata)
+            r = csv.DictReader(fp)
+            for row in r:
+                filename = row['filename']
+                assert filename.startswith(copy_testdata)
+                # should have full path to file sig was loaded from
+                assert len(filename) > prefix_len
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                    'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
 @utils.in_tempdir
 def test_gather_traverse_incompatible(c):
     searchdir = c.output('searchme')
@@ -3736,7 +3809,7 @@ def test_gather_error_no_sigs_traverse(c):
 
     err = c.last_result.err
     print(err)
-    assert '** ERROR: no signatures or databases loaded?' in err
+    assert f"Error while reading signatures from '{emptydir}'" in err
     assert not 'found 0 matches total;' in err
 
 

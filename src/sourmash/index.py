@@ -126,6 +126,7 @@ class Index(ABC):
         ""
 
 class LinearIndex(Index):
+    "An Index for a collection of signatures. Can load from a .sig file."
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
         if _signatures:
@@ -155,11 +156,97 @@ class LinearIndex(Index):
         return lidx
 
     def select(self, ksize=None, moltype=None):
-        def select_sigs(siglist, ksize, moltype):
-            for ss in siglist:
-                if (ksize is None or ss.minhash.ksize == ksize) and \
-                   (moltype is None or ss.minhash.moltype == moltype):
-                   yield ss
+        def select_sigs(ss, ksize=ksize, moltype=moltype):
+            if (ksize is None or ss.minhash.ksize == ksize) and \
+               (moltype is None or ss.minhash.moltype == moltype):
+               return True
 
-        siglist=select_sigs(self._signatures, ksize, moltype)
+        return self.filter(select_sigs)
+
+    def filter(self, filter_fn):
+        siglist = []
+        for ss in self._signatures:
+            if filter_fn(ss):
+                siglist.append(ss)
+
         return LinearIndex(siglist, self.filename)
+
+
+class MultiIndex(Index):
+    """An Index class that wraps other Index classes.
+
+    The MultiIndex constructor takes two arguments: a list of Index
+    objects, and a matching list of sources (filenames, etc.)  If the
+    source is not None, then it will be used to override the 'filename'
+    in the triple that is returned by search and gather.
+
+    One specific use for this is when loading signatures from a directory;
+    MultiIndex will properly record which files provided which signatures.
+    """
+    def __init__(self, index_list, source_list):
+        self.index_list = list(index_list)
+        self.source_list = list(source_list)
+        assert len(index_list) == len(source_list)
+
+    def signatures(self):
+        for idx in self.index_list:
+            for ss in idx.signatures():
+                yield ss
+
+    def __len__(self):
+        return sum([ len(idx) for idx in self.index_list ])
+
+    def insert(self, *args):
+        raise NotImplementedError
+
+    @classmethod
+    def load(self, *args):
+        raise NotImplementedError
+
+    def save(self, *args):
+        raise NotImplementedError
+
+    def select(self, ksize=None, moltype=None):
+        new_idx_list = []
+        new_src_list = []
+        for idx, src in zip(self.index_list, self.source_list):
+            idx = idx.select(ksize=ksize, moltype=moltype)
+            new_idx_list.append(idx)
+            new_src_list.append(src)
+
+        return MultiIndex(new_idx_list, new_src_list)
+
+    def filter(self, filter_fn):
+        new_idx_list = []
+        new_src_list = []
+        for idx, src in zip(self.index_list, self.source_list):
+            idx = idx.filter(filter_fn)
+            new_idx_list.append(idx)
+            new_src_list.append(src)
+
+        return MultiIndex(new_idx_list, new_src_list)
+
+    def search(self, query, *args, **kwargs):
+        # do the actual search:
+        matches = []
+        for idx, src in zip(self.index_list, self.source_list):
+            for (score, ss, filename) in idx.search(query, *args, **kwargs):
+                best_src = src or filename # override if src provided
+                matches.append((score, ss, best_src))
+                
+        # sort!
+        matches.sort(key=lambda x: -x[0])
+        return matches
+
+    def gather(self, query, *args, **kwargs):
+        "Return the match with the best Jaccard containment in the Index."
+        # actually do search!
+        results = []
+        for idx, src in zip(self.index_list, self.source_list):
+            for (score, ss, filename) in idx.gather(query, *args, **kwargs):
+                best_src = src or filename # override if src provided
+                results.append((score, ss, best_src))
+            
+        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+
+        return results
