@@ -376,7 +376,7 @@ impl Signature {
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Vec<Signature>, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
-        Ok(Signature::from_reader(&mut reader)?)
+        Signature::from_reader(&mut reader)
     }
 
     pub fn from_reader<R>(rdr: R) -> Result<Vec<Signature>, Error>
