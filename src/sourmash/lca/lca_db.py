@@ -1,5 +1,5 @@
 "LCA database class and utilities."
-
+import os
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
@@ -186,6 +186,9 @@ class LCA_Database(Index):
     def load(cls, db_name):
         "Load LCA_Database from a JSON file."
         from .lca_utils import taxlist, LineagePair
+
+        if not os.path.isfile(db_name):
+            raise ValueError(f"'{db_name}' is not a file and cannot be loaded as an LCA database")
 
         xopen = open
         if db_name.endswith('.gz'):

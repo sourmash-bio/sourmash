@@ -259,11 +259,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     n_databases = 0
     databases = []
     for filename in filenames:
-        notify('loading from {}...', filename, end='\r')
+        notify(f'loading from {filename}...', end='\r')
 
         try:
             db, dbtype = _load_database(filename, False, cache_size=cache_size)
         except IOError as e:
+            raise
             notify(str(e))
             sys.exit(-1)
 
@@ -335,6 +336,7 @@ class DatabaseType(Enum):
 
 
 def _load_stdin(filename, **kwargs):
+    "Load collection from .sig file streamed in via stdin"
     db = None
     if filename == '-':
         db = LinearIndex.load(sys.stdin)
@@ -343,6 +345,7 @@ def _load_stdin(filename, **kwargs):
 
 
 def _multiindex_load_from_file_list(filename, **kwargs):
+    "Load collection from a list of signature/database files"
     try:
         db = MultiIndex.load_from_file_list(filename)
     except UnicodeDecodeError as exc:
@@ -352,12 +355,15 @@ def _multiindex_load_from_file_list(filename, **kwargs):
 
 
 def _multiindex_load_from_directory(filename, **kwargs):
+    "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
     db = MultiIndex.load_from_directory(filename, traverse_yield_all)
 
     return (db, DatabaseType.SIGLIST)
 
+
 def _load_sigfile(filename, **kwargs):
+    "Load collection from a signature JSON file"
     try:
         db = LinearIndex.load(filename)
     except sourmash.exceptions.SerdeError as exc:
@@ -371,6 +377,7 @@ def _load_sigfile(filename, **kwargs):
 
 
 def _load_sbt(filename, **kwargs):
+    "Load collection from an SBT."
     cache_size = kwargs.get('cache_size')
 
     try:
@@ -382,10 +389,15 @@ def _load_sbt(filename, **kwargs):
 
 
 def _load_revindex(filename, **kwargs):
-    db, _, _ = load_single_database(filename)
+    "Load collection from an LCA database/reverse index."
+    try:
+        db, _, _ = load_single_database(filename)
+    except FileNotFoundError as exc:
+        raise ValueError(exc)
     return (db, DatabaseType.LCA)
 
 
+# all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
     ("load from directory", _multiindex_load_from_directory),
@@ -505,10 +517,13 @@ def load_file_list_of_signatures(filename):
     try:
         with open(filename, 'rt') as fp:
             file_list = [ x.rstrip('\r\n') for x in fp ]
+
+        if not os.path.exists(file_list[0]):
+            raise ValueError("first element of list-of-files does not exist")
     except OSError:
-        raise ValueError("cannot open file '{}'".format(filename))
+        raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
-        raise ValueError("cannot parse file '{}' as list of filenames".format(filename))
+        raise ValueError(f"cannot parse file '{filename}' as list of filenames")
 
     return file_list
 

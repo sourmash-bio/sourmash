@@ -73,7 +73,7 @@ def cat(args):
     siglist = []
     for sigfile in args.signatures:
         this_siglist = []
-        n_loaded = 0
+        n_loaded = 0            # @CTB testme.
         try:
             loader = sourmash_args.load_file_as_signatures(sigfile,
                                                            progress=progress)

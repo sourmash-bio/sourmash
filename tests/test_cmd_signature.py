@@ -625,6 +625,9 @@ def test_sig_rename_3_file_dne(c):
     with pytest.raises(ValueError) as e:
         c.run_sourmash('sig', 'rename', 'no-such-sig', 'fiz bar')
 
+    print('out', (c.last_result.out,))
+    print('err', (c.last_result.err,))
+
     assert "Error while reading signatures from 'no-such-sig'" in c.last_result.err
 
 
