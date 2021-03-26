@@ -279,7 +279,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             if not check_lca_db_is_compatible(filename, db, query):
                 sys.exit(-1)
 
-            notify('loaded LCA {filename}', end='\r')
+            notify(f'loaded LCA {filename}', end='\r')
             n_databases += 1
 
             databases.append(db)
