@@ -246,7 +246,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
     This is basically a user-focused wrapping of _load_databases.
 
-    @CTB this can be refactored into a more generic function with 'filter'.
+    CTB: this can be refactored into a more generic function with 'filter'.
     """
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
@@ -361,13 +361,11 @@ def _load_sigfile(filename, **kwargs):
     "Load collection from a signature JSON file"
     try:
         db = LinearIndex.load(filename)
-    except sourmash.exceptions.SerdeError as exc:
+    except sourmash.exceptions.SourmashError as exc:
         raise ValueError(exc)
     except FileNotFoundError:
         raise ValueError(f"Error while reading signatures from '{filename}'")
-    except Exception as exc:
-        raise ValueError(f"Error while reading signatures from '{filename}'")
-        #raise ValueError(exc)   # load_signature line 255 raises general exc @CTB fixme
+
     return (db, DatabaseType.SIGLIST)
 
 
