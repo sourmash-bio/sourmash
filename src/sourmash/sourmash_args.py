@@ -72,8 +72,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
                                      select_moltype=select_moltype)
         sl = list(sl)
     except (OSError, ValueError):
-        error("Cannot open file '{}'", filename)
-        raise # @CTB testme?
+        error(f"Cannot open query file '{filename}'")
         sys.exit(-1)
 
     if len(sl) and select_md5:
