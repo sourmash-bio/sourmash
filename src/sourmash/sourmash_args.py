@@ -302,7 +302,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # unknown!?
         else:
-            raise ValueError(f"unknown dbtype {dbtype}") # @CTB test?
+            raise ValueError(f"unknown dbtype {dbtype}") # CTB check me.
 
         # END for loop
 
@@ -417,11 +417,13 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # but nothing else.
     for (desc, load_fn) in _loader_functions:
         try:
+            debug(f"_load_databases: trying loader fn {desc}")
             db, dbtype = load_fn(filename,
                                  traverse_yield_all=traverse_yield_all,
                                  cache_size=cache_size)
         except ValueError as exc:
-            pass
+            debug(f"_load_databases: FAIL on fn {desc}.")
+            debug(traceback.format_exc())
 
         if db:
             loaded = True
