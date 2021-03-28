@@ -11,6 +11,7 @@ import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import LinearIndex, MultiIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
+from sourmash import sourmash_args
 
 import sourmash_tst_utils as utils
 
@@ -624,9 +625,8 @@ def test_multi_index_load_from_path_3_sig_gz(c):
 @utils.in_tempdir
 def test_multi_index_load_from_path_3_check_traverse_fn(c):
     # test the actual traverse function... eventually this test can be
-    # removed, probably?
-    from sourmash import sourmash_args
-
+    # removed, probably, as we consolidate functionality and test MultiIndex
+    # better.
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 6, files
@@ -639,3 +639,40 @@ def test_multi_index_load_from_path_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_path(dirname, force=True)
+
+
+def test_multi_index_load_from_file_list_no_exist():
+    dirname = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_file_list(dirname)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_file_list_1(c):
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname]))
+    assert len(files) == 6, files
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print("\n".join(files), file=fp)
+    mi = MultiIndex.load_from_file_list(file_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_file_list_2(c):
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname], True))
+    assert len(files) == 14, files
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print("\n".join(files), file=fp)
+
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_file_list(file_list)
