@@ -535,13 +535,6 @@ def categorize(args):
     # load search database
     tree = load_sbt_index(args.sbt_name)
 
-    # load query filenames
-    # @CTB replace with MultiIndex?
-    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    inp_files = inp_files - already_names
-
-    notify('found {} files to query', len(inp_files))
-
     # utility function to load & select relevant signatures.
     def _yield_all_sigs(queries, ksize, moltype):
         for filename in queries:
@@ -557,6 +550,10 @@ def categorize(args):
         csv_w = csv.writer(csv_fp)
 
     for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+        # skip if we've already done signatures from this file.
+        if loc in already_names:
+            continue
+
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
                query.minhash.ksize, query.minhash.moltype)
 
