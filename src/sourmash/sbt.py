@@ -189,7 +189,7 @@ class SBT(Index):
         for k in self.leaves():
             yield k.data
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, num=0, scaled=0):
         first_sig = next(iter(self.signatures()))
 
         ok = True
@@ -197,6 +197,11 @@ class SBT(Index):
             ok = False
         if moltype is not None and first_sig.minhash.moltype != moltype:
             ok = False
+
+        if num and not (num and first_sig.minhash.num):
+            raise ValueError(f"cannot search SBT: num={num}, {first_sig.minhash.num}")
+        if scaled and not (scaled and first_sig.minhash.scaled):
+            raise ValueError(f"cannot search SBT: scaled={scaled}, {first_sig.minhash.scaled}")
 
         if ok:
             return self

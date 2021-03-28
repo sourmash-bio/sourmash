@@ -160,8 +160,12 @@ class LinearIndex(Index):
 
     def select(self, **kwargs):
         def select_sigs(ss):
-            # eliminate things from kwargs with no value
-            kw = { k : v for (k, v) in kwargs.items() if v is not None }
+            # eliminate things from kwargs with no or zero
+            kw = { k : v for (k, v) in kwargs.items() if v }
+            print(kw, kwargs)
+            if not kw:
+                return True
+
             if 'ksize' in kw and kw['ksize'] != ss.minhash.ksize:
                 return False
             if 'moltype' in kw and kw['moltype'] != ss.minhash.moltype:

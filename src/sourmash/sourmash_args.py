@@ -223,10 +223,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify(str(e))
             sys.exit(-1)
 
-        #db = db.select(moltype=query_moltype, ksize=query_ksize)
-        #databases.append(db)
+        db = db.select(moltype=query_moltype,
+                       ksize=query_ksize,
+                       num=query.minhash.num,
+                       scaled=query.minhash.scaled)
+        databases.append(db)
 
-        if 1:
+        if 0:
             # are we collecting signatures from an SBT?
             if dbtype == DatabaseType.SBT:
                 if not check_tree_is_compatible(filename, db, query,
@@ -276,7 +279,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         notify(f'loaded {n_signatures} signatures.')
     elif n_databases:
         notify(f'loaded {n_databases} databases.')
-    elif 0:
+
+
+    if not databases:
         notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 

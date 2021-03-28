@@ -169,8 +169,14 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield v
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, num=0, scaled=0):
         "Selector interface - make sure this database matches requirements."
+        if num:
+            raise ValueError("cannot use num MinHashes on LCA database")
+
+        if scaled < self.scaled:
+            raise ValueError(f"cannot use scaled={scaled} on this database ({self.scaled})")
+
         ok = True
         if ksize is not None and self.ksize != ksize:
             ok = False
