@@ -219,8 +219,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         try:
             db, dbtype = _load_database(filename, False, cache_size=cache_size)
-        except IOError as e:
-            notify(str(e))      # @CTB test me
+        except Exception as e:
+            notify(str(e))
             sys.exit(-1)
 
         # are we collecting signatures from an SBT?
