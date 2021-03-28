@@ -394,6 +394,18 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_dir():
+    filename1 = utils.get_test_data('lca')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+
+def test_databases_load_fail_on_not_exist():
+    filename1 = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
