@@ -220,8 +220,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         try:
             db, dbtype = _load_database(filename, False, cache_size=cache_size)
         except IOError as e:
-            raise
-            notify(str(e))
+            notify(str(e))      # @CTB test me
             sys.exit(-1)
 
         # are we collecting signatures from an SBT?
@@ -304,7 +303,7 @@ def _multiindex_load_from_file_list(filename, **kwargs):
     try:
         db = MultiIndex.load_from_file_list(filename)
     except UnicodeDecodeError as exc:
-        raise ValueError(exc)
+        raise ValueError(exc)   # @CTB test me
 
     return (db, DatabaseType.SIGLIST)
 
@@ -323,7 +322,7 @@ def _load_sigfile(filename, **kwargs):
         db = LinearIndex.load(filename)
     except sourmash.exceptions.SourmashError as exc:
         raise ValueError(exc)
-    except FileNotFoundError:
+    except FileNotFoundError: # @CTB test me
         raise ValueError(f"Error while reading signatures from '{filename}'")
 
     return (db, DatabaseType.SIGLIST)
@@ -343,10 +342,7 @@ def _load_sbt(filename, **kwargs):
 
 def _load_revindex(filename, **kwargs):
     "Load collection from an LCA database/reverse index."
-    try:
-        db, _, _ = load_single_database(filename)
-    except FileNotFoundError as exc:
-        raise ValueError(exc)
+    db, _, _ = load_single_database(filename)
     return (db, DatabaseType.LCA)
 
 
@@ -393,7 +389,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         successful_screed_load = False
         it = None
         try:
-            # CTB: could be kind of time consuming for big record, but at the
+            # CTB: could be kind of time consuming for a big record, but at the
             # moment screed doesn't expose format detection cleanly.
             with screed.open(filename) as it:
                 record = next(iter(it))
