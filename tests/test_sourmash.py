@@ -4238,8 +4238,7 @@ def test_sbt_categorize_already_done_traverse():
 
 
 def test_sbt_categorize_multiple_ksizes_moltypes():
-    # 'categorize' should fail when there are multiple ksizes or moltypes
-    # present
+    # 'categorize' works fine with multiple moltypes/ksizes
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
         testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -4255,10 +4254,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
 
         args = ['categorize', 'zzz', '.']
         status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-
-        assert status != 0
-        assert 'multiple k-mer sizes/molecule types present' in err
+                                           in_directory=location)
 
 
 @utils.in_tempdir

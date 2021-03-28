@@ -519,6 +519,8 @@ def search(args):
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
+    from .index import MultiIndex
+
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -540,8 +542,13 @@ def categorize(args):
 
     notify('found {} files to query', len(inp_files))
 
-    loader = sourmash_args.LoadSingleSignatures(inp_files,
-                                                args.ksize, moltype)
+    # utility function to load & select relevant signatures.
+    def _yield_all_sigs(queries, ksize, moltype):
+        for filename in queries:
+            mi = MultiIndex.load_from_path(filename, False)
+            mi = mi.select(ksize=ksize, moltype=moltype)
+            for ss, loc in mi.signatures_with_location():
+                yield ss, loc
 
     csv_w = None
     csv_fp = None
@@ -549,9 +556,9 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    for queryfile, query, query_moltype, query_ksize in loader:
+    for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query_ksize, query_moltype)
+               query.minhash.ksize, query.minhash.moltype)
 
         results = []
         search_fn = SearchMinHashesFindBest().search
@@ -576,13 +583,8 @@ def categorize(args):
             notify('for {}, no match found', query)
 
         if csv_w:
-            csv_w.writerow([queryfile, query, best_hit_query_name,
+            csv_w.writerow([loc, query, best_hit_query_name,
                            best_hit_sim])
-
-    if loader.skipped_ignore:
-        notify('skipped/ignore: {}', loader.skipped_ignore)
-    if loader.skipped_nosig:
-        notify('skipped/nosig: {}', loader.skipped_nosig)
 
     if csv_fp:
         csv_fp.close()
