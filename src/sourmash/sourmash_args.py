@@ -223,45 +223,48 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             notify(str(e))
             sys.exit(-1)
 
-        # are we collecting signatures from an SBT?
-        if dbtype == DatabaseType.SBT:
-            if not check_tree_is_compatible(filename, db, query,
-                                            is_similarity_query):
-                sys.exit(-1)
+        #db = db.select(moltype=query_moltype, ksize=query_ksize)
+        #databases.append(db)
 
-            databases.append(db)
-            notify(f'loaded SBT {filename}', end='\r')
-            n_databases += 1
+        if 1:
+            # are we collecting signatures from an SBT?
+            if dbtype == DatabaseType.SBT:
+                if not check_tree_is_compatible(filename, db, query,
+                                                is_similarity_query):
+                    sys.exit(-1)
 
-        # or an LCA?
-        elif dbtype == DatabaseType.LCA:
-            if not check_lca_db_is_compatible(filename, db, query):
-                sys.exit(-1)
+                databases.append(db)
+                notify(f'loaded SBT {filename}', end='\r')
+                n_databases += 1
 
-            notify(f'loaded LCA {filename}', end='\r')
-            n_databases += 1
+            # or an LCA?
+            elif dbtype == DatabaseType.LCA:
+                if not check_lca_db_is_compatible(filename, db, query):
+                    sys.exit(-1)
 
-            databases.append(db)
+                notify(f'loaded LCA {filename}', end='\r')
+                n_databases += 1
 
-        # or a mixed collection of signatures?
-        elif dbtype == DatabaseType.SIGLIST:
-            db = db.select(moltype=query_moltype, ksize=query_ksize)
-            siglist = db.signatures()
-            filter_fn = lambda s: _check_signatures_are_compatible(query, s)
-            db = db.filter(filter_fn)
+                databases.append(db)
 
-            if not db:
-                notify(f"no compatible signatures found in '{filename}'")
-                sys.exit(-1)
+            # or a mixed collection of signatures?
+            elif dbtype == DatabaseType.SIGLIST:
+                db = db.select(moltype=query_moltype, ksize=query_ksize)
+                filter_fn = lambda s: _check_signatures_are_compatible(query, s)
+                db = db.filter(filter_fn)
 
-            databases.append(db)
+                if not db:
+                    notify(f"no compatible signatures found in '{filename}'")
+                    sys.exit(-1)
 
-            notify(f'loaded {len(db)} signatures from {filename}', end='\r')
-            n_signatures += len(db)
+                databases.append(db)
 
-        # unknown!?
-        else:
-            raise ValueError(f"unknown dbtype {dbtype}") # CTB check me.
+                notify(f'loaded {len(db)} signatures from {filename}', end='\r')
+                n_signatures += len(db)
+
+            # unknown!?
+            else:
+                raise ValueError(f"unknown dbtype {dbtype}") # CTB check me.
 
         # END for loop
 
@@ -273,7 +276,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         notify(f'loaded {n_signatures} signatures.')
     elif n_databases:
         notify(f'loaded {n_databases} databases.')
-    else:
+    elif 0:
         notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 

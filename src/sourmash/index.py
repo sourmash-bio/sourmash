@@ -124,7 +124,8 @@ class Index(ABC):
         return results
 
     @abstractmethod
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, scaled=None, num=None,
+               abund=None):
         ""
 
 class LinearIndex(Index):
@@ -157,11 +158,22 @@ class LinearIndex(Index):
         lidx = LinearIndex(si, filename=location)
         return lidx
 
-    def select(self, ksize=None, moltype=None):
-        def select_sigs(ss, ksize=ksize, moltype=moltype):
-            if (ksize is None or ss.minhash.ksize == ksize) and \
-               (moltype is None or ss.minhash.moltype == moltype):
-               return True
+    def select(self, **kwargs):
+        def select_sigs(ss):
+            # eliminate things from kwargs with no value
+            kw = { k : v for (k, v) in kwargs.items() if v is not None }
+            if 'ksize' in kw and kw['ksize'] != ss.minhash.ksize:
+                return False
+            if 'moltype' in kw and kw['moltype'] != ss.minhash.moltype:
+                return False
+            if 'scaled' in kw:
+                if ss.minhash.num or kw['scaled'] != ss.minhash.scaled:
+                    return False
+            if 'num' in kw:
+                if ss.minhash.scaled or kw['num'] != ss.minhash.num:
+                    return False
+
+            return True
 
         return self.filter(select_sigs)
 
@@ -260,11 +272,11 @@ class MultiIndex(Index):
     def save(self, *args):
         raise NotImplementedError
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, **kwargs):
         new_idx_list = []
         new_src_list = []
         for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.select(ksize=ksize, moltype=moltype)
+            idx = idx.select(**kwargs)
             new_idx_list.append(idx)
             new_src_list.append(src)
 
