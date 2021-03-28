@@ -1,6 +1,11 @@
+"""
+Tests for Index classes and subclasses.
+"""
+import pytest
 import glob
 import os
 import zipfile
+import shutil
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
@@ -502,3 +507,135 @@ def test_multi_index_signatures():
     assert ss2 in siglist
     assert ss47 in siglist
     assert ss63 in siglist
+
+
+def test_multi_index_load_from_directory():
+    dirname = utils.get_test_data('prot/protein')
+    mi = MultiIndex.load_from_directory(dirname, force=False)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 2
+
+
+def test_multi_index_load_from_directory_2():
+    # only load .sig files, currently; not the databases under that directory.
+    dirname = utils.get_test_data('prot')
+    mi = MultiIndex.load_from_directory(dirname, force=False)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_directory_3(c):
+    # check that force works ok on a directory
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.sig")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    with pytest.raises(sourmash.exceptions.SourmashError):
+        mi = MultiIndex.load_from_directory(c.location, force=False)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_directory_3_yield_all_true(c):
+    # check that force works ok on a directory w/force=True
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.something")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_directory(c.location, force=True)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
+    # check that force works ok on subdirectories
+    dirname = utils.get_test_data('prot')
+
+    target_dir = c.output("some_subdir")
+    os.mkdir(target_dir)
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = os.path.join(target_dir, f"file{count}.something")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_directory(c.location, force=True)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_directory_3_sig_gz(c):
+    # check that we find .sig.gz files, too
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            if not name.endswith('.sig'): # skip non .sig things
+                continue
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.sig.gz")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_directory(c.location, force=False)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_directory_3_check_traverse_fn(c):
+    # test the actual traverse function... eventually this test can be
+    # removed, probably?
+    from sourmash import sourmash_args
+
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname]))
+    assert len(files) == 6, files
+
+    files = list(sourmash_args.traverse_find_sigs([dirname], True))
+    assert len(files) == 14, files
+
+
+def test_multi_index_load_from_directory_no_exist():
+    dirname = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_directory(dirname, force=True)

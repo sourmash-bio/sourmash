@@ -1,5 +1,6 @@
 "An Abstract Base Class for collections of signatures."
 
+import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple
 import os
@@ -205,7 +206,7 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load_from_directory(cls, dirname, traverse_yield_all):
+    def load_from_directory(cls, dirname, force=False):
         "Create a MultiIndex from all files under a directory."
         from .sourmash_args import traverse_find_sigs
         if not os.path.isdir(dirname):
@@ -213,16 +214,17 @@ class MultiIndex(Index):
 
         index_list = []
         source_list = []
-        for thisfile in traverse_find_sigs([dirname], traverse_yield_all):
+        for thisfile in traverse_find_sigs([dirname],
+                                           yield_all_files=force):
             try:
                 idx = LinearIndex.load(thisfile)
                 index_list.append(idx)
                 source_list.append(thisfile)
             except (IOError, sourmash.exceptions.SourmashError):
-                if traverse_yield_all:
-                    continue
+                if force:
+                    continue    # ignore error
                 else:
-                    raise
+                    raise       # contine past error!
 
         db = None
         if index_list:

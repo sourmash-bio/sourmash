@@ -152,32 +152,34 @@ class LoadSingleSignatures(object):
                 yield filename, query, query_moltype, query_ksize
 
 
+def _check_suffix(filename, endings):
+    for ending in endings:
+        if filename.endswith(ending):
+            return True
+    return False
+
+
 def traverse_find_sigs(filenames, yield_all_files=False):
+    """Find all .sig and .sig.gz files in & beneath 'filenames'.
+
+    By default, this function returns files with .sig and .sig.gz extensions.
+    If 'yield_all_files' is True, this will return _all_ files
+    (but not directories).
+    """
     endings = ('.sig', '.sig.gz')
     for filename in filenames:
+        # check for files in filenames:
         if os.path.isfile(filename):
-            yield_me = False
-            if yield_all_files:
-                yield_me = True
-                continue
-            else:
-                for ending in endings:
-                    if filename.endswith(ending):
-                        yield_me = True
-                        break
-
-            if yield_me:
+            if yield_all_files or _check_suffix(filename, endings):
                 yield filename
-                continue
 
-        # filename is a directory --
-        dirname = filename
-
-        for root, dirs, files in os.walk(dirname):
-            for name in files:
-                if name.endswith('.sig') or yield_all_files:
+        # filename is a directory -- traverse beneath!
+        elif os.path.isdir(filename):
+            for root, dirs, files in os.walk(filename):
+                for name in files:
                     fullname = os.path.join(root, name)
-                    yield fullname
+                    if yield_all_files or _check_suffix(fullname, endings):
+                        yield fullname
 
 
 def _check_signatures_are_compatible(query, subject):
