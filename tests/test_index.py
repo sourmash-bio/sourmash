@@ -509,18 +509,18 @@ def test_multi_index_signatures():
     assert ss63 in siglist
 
 
-def test_multi_index_load_from_directory():
+def test_multi_index_load_from_path():
     dirname = utils.get_test_data('prot/protein')
-    mi = MultiIndex.load_from_directory(dirname, force=False)
+    mi = MultiIndex.load_from_path(dirname, force=False)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 2
 
 
-def test_multi_index_load_from_directory_2():
+def test_multi_index_load_from_path_2():
     # only load .sig files, currently; not the databases under that directory.
     dirname = utils.get_test_data('prot')
-    mi = MultiIndex.load_from_directory(dirname, force=False)
+    mi = MultiIndex.load_from_path(dirname, force=False)
 
     print(mi.index_list)
     print(mi.source_list)
@@ -530,7 +530,7 @@ def test_multi_index_load_from_directory_2():
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_directory_3(c):
+def test_multi_index_load_from_path_3(c):
     # check that force works ok on a directory
     dirname = utils.get_test_data('prot')
 
@@ -544,11 +544,11 @@ def test_multi_index_load_from_directory_3(c):
             count += 1
 
     with pytest.raises(sourmash.exceptions.SourmashError):
-        mi = MultiIndex.load_from_directory(c.location, force=False)
+        mi = MultiIndex.load_from_path(c.location, force=False)
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_directory_3_yield_all_true(c):
+def test_multi_index_load_from_path_3_yield_all_true(c):
     # check that force works ok on a directory w/force=True
     dirname = utils.get_test_data('prot')
 
@@ -561,7 +561,7 @@ def test_multi_index_load_from_directory_3_yield_all_true(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_directory(c.location, force=True)
+    mi = MultiIndex.load_from_path(c.location, force=True)
 
     print(mi.index_list)
     print(mi.source_list)
@@ -571,7 +571,7 @@ def test_multi_index_load_from_directory_3_yield_all_true(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
+def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
     # check that force works ok on subdirectories
     dirname = utils.get_test_data('prot')
 
@@ -587,7 +587,7 @@ def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_directory(c.location, force=True)
+    mi = MultiIndex.load_from_path(c.location, force=True)
 
     print(mi.index_list)
     print(mi.source_list)
@@ -597,7 +597,7 @@ def test_multi_index_load_from_directory_3_yield_all_true_subdir(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_directory_3_sig_gz(c):
+def test_multi_index_load_from_path_3_sig_gz(c):
     # check that we find .sig.gz files, too
     dirname = utils.get_test_data('prot')
 
@@ -612,7 +612,7 @@ def test_multi_index_load_from_directory_3_sig_gz(c):
             shutil.copyfile(fullname, copyto)
             count += 1
 
-    mi = MultiIndex.load_from_directory(c.location, force=False)
+    mi = MultiIndex.load_from_path(c.location, force=False)
 
     print(mi.index_list)
     print(mi.source_list)
@@ -622,7 +622,7 @@ def test_multi_index_load_from_directory_3_sig_gz(c):
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_directory_3_check_traverse_fn(c):
+def test_multi_index_load_from_path_3_check_traverse_fn(c):
     # test the actual traverse function... eventually this test can be
     # removed, probably?
     from sourmash import sourmash_args
@@ -635,7 +635,7 @@ def test_multi_index_load_from_directory_3_check_traverse_fn(c):
     assert len(files) == 14, files
 
 
-def test_multi_index_load_from_directory_no_exist():
+def test_multi_index_load_from_path_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_directory(dirname, force=True)
+        mi = MultiIndex.load_from_path(dirname, force=True)

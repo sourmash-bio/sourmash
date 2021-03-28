@@ -195,6 +195,11 @@ class MultiIndex(Index):
             for ss in idx.signatures():
                 yield ss
 
+    def signatures_with_location(self):
+        for idx, loc in zip(self.index_list, self.source_list):
+            for ss in idx.signatures():
+                yield ss, loc
+
     def __len__(self):
         return sum([ len(idx) for idx in self.index_list ])
 
@@ -206,16 +211,15 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     @classmethod
-    def load_from_directory(cls, dirname, force=False):
-        "Create a MultiIndex from all files under a directory."
+    def load_from_path(cls, pathname, force=False):
+        "Create a MultiIndex from a path (filename or directory)."
         from .sourmash_args import traverse_find_sigs
-        if not os.path.isdir(dirname):
-            raise ValueError(f"'{dirname}' must be a directory")
+        if not os.path.exists(pathname):
+            raise ValueError(f"'{pathname}' must be a directory")
 
         index_list = []
         source_list = []
-        for thisfile in traverse_find_sigs([dirname],
-                                           yield_all_files=force):
+        for thisfile in traverse_find_sigs([pathname], yield_all_files=force):
             try:
                 idx = LinearIndex.load(thisfile)
                 index_list.append(idx)
@@ -230,7 +234,7 @@ class MultiIndex(Index):
         if index_list:
             db = cls(index_list, source_list)
         else:
-            raise ValueError(f"no signatures to load under directory '{dirname}'")
+            raise ValueError(f"no signatures to load under directory '{pathname}'")
 
         return db
 

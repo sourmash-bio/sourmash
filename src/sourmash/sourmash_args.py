@@ -350,10 +350,10 @@ def _multiindex_load_from_file_list(filename, **kwargs):
     return (db, DatabaseType.SIGLIST)
 
 
-def _multiindex_load_from_directory(filename, **kwargs):
+def _multiindex_load_from_path(filename, **kwargs):
     "Load collection from a directory."
     traverse_yield_all = kwargs['traverse_yield_all']
-    db = MultiIndex.load_from_directory(filename, traverse_yield_all)
+    db = MultiIndex.load_from_path(filename, traverse_yield_all)
 
     return (db, DatabaseType.SIGLIST)
 
@@ -394,7 +394,7 @@ def _load_revindex(filename, **kwargs):
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
-    ("load from directory", _multiindex_load_from_directory),
+    ("load from directory", _multiindex_load_from_path),
     ("load from sig file", _load_sigfile),
     ("load from file list", _multiindex_load_from_file_list),
     ("load SBT", _load_sbt),
