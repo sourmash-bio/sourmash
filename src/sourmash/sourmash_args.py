@@ -300,10 +300,7 @@ def _load_stdin(filename, **kwargs):
 
 def _multiindex_load_from_file_list(filename, **kwargs):
     "Load collection from a list of signature/database files"
-    try:
-        db = MultiIndex.load_from_file_list(filename)
-    except UnicodeDecodeError as exc:
-        raise ValueError(exc)   # @CTB test me
+    db = MultiIndex.load_from_file_list(filename)
 
     return (db, DatabaseType.SIGLIST)
 
@@ -322,8 +319,6 @@ def _load_sigfile(filename, **kwargs):
         db = LinearIndex.load(filename)
     except sourmash.exceptions.SourmashError as exc:
         raise ValueError(exc)
-    except FileNotFoundError: # @CTB test me
-        raise ValueError(f"Error while reading signatures from '{filename}'")
 
     return (db, DatabaseType.SIGLIST)
 
