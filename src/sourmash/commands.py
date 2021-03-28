@@ -534,6 +534,7 @@ def categorize(args):
     tree = load_sbt_index(args.sbt_name)
 
     # load query filenames
+    # @CTB replace with MultiIndex?
     inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
     inp_files = inp_files - already_names
 

@@ -67,6 +67,8 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     filenames = sourmash_args.traverse_find_sigs(filenames)
     filenames = list(filenames)
 
+    # @CTB replace with MultiIndex?
+
     total_n = len(filenames)
 
     for query_filename in filenames:
