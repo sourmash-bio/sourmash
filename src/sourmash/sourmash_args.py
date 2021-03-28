@@ -111,47 +111,6 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     return sl[0]
 
 
-class LoadSingleSignatures(object):
-    def __init__(self, filelist,  ksize=None, select_moltype=None,
-                 ignore_files=set()):
-        self.filelist = filelist
-        self.ksize = ksize
-        self.select_moltype = select_moltype
-        self.ignore_files = ignore_files
-
-        self.skipped_ignore = 0
-        self.skipped_nosig = 0
-        self.ksizes = set()
-        self.moltypes = set()
-
-    def __iter__(self):
-        for filename in self.filelist:
-            if filename in self.ignore_files:
-                self.skipped_ignore += 1
-                continue
-
-            sl = signature.load_signatures(filename,
-                                           ksize=self.ksize,
-                                           select_moltype=self.select_moltype)
-            sl = list(sl)
-            if len(sl) == 0:
-                self.skipped_nosig += 1
-                continue
-
-            for query in sl:
-                query_moltype = get_moltype(query)
-                query_ksize = query.minhash.ksize
-
-                self.ksizes.add(query_ksize)
-                self.moltypes.add(query_moltype)
-
-            if len(self.ksizes) > 1 or len(self.moltypes) > 1:
-                raise ValueError('multiple k-mer sizes/molecule types present')
-
-            for query in sl:
-                yield filename, query, query_moltype, query_ksize
-
-
 def _check_suffix(filename, endings):
     for ending in endings:
         if filename.endswith(ending):
