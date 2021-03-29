@@ -198,10 +198,17 @@ class SBT(Index):
         if moltype is not None and first_sig.minhash.moltype != moltype:
             ok = False
 
-        if num and not (num and first_sig.minhash.num):
-            raise ValueError(f"cannot search SBT: num={num}, {first_sig.minhash.num}")
-        if scaled and not (scaled and first_sig.minhash.scaled):
-            raise ValueError(f"cannot search SBT: scaled={scaled}, {first_sig.minhash.scaled}")
+        if num:
+            if not (num and first_sig.minhash.num):
+                raise ValueError(f"cannot search SBT: num={num}, {first_sig.minhash.num}")
+            if num == first_sig.minhash.num:
+                raise ValueError(f"num mismatch for SBT: num={num}, {first_sig.minhash.num}")
+
+        if scaled:
+            if not (scaled and first_sig.minhash.scaled):
+                raise ValueError(f"cannot search SBT: scaled={scaled}, {first_sig.minhash.scaled}")
+            if scaled > first_sig.minhash.scaled:
+                raise ValueError(f"scaled mismatch: {scaled}, {first_sig.minhash.scaled}")
 
         if ok:
             return self
