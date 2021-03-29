@@ -15,7 +15,7 @@ from sourmash.lca.lca_db import load_single_database
 import sourmash.exceptions
 
 from . import signature
-from .logging import notify, error, debug
+from .logging import notify, error, debug_literal
 
 from .index import LinearIndex, MultiIndex
 from . import signature as sig
@@ -378,13 +378,13 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     # but nothing else.
     for (desc, load_fn) in _loader_functions:
         try:
-            debug(f"_load_databases: trying loader fn {desc}")
+            debug_literal(f"_load_databases: trying loader fn {desc}")
             db, dbtype = load_fn(filename,
                                  traverse_yield_all=traverse_yield_all,
                                  cache_size=cache_size)
         except ValueError as exc:
-            debug(f"_load_databases: FAIL on fn {desc}.")
-            debug(traceback.format_exc())
+            debug_literal(f"_load_databases: FAIL on fn {desc}.")
+            debug_literal(traceback.format_exc())
 
         if db:
             loaded = True
