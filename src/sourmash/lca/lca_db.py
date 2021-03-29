@@ -174,7 +174,7 @@ class LCA_Database(Index):
         if num:
             raise ValueError("cannot use num MinHashes on LCA database")
 
-        if scaled < self.scaled:
+        if scaled > self.scaled:
             raise ValueError(f"cannot use scaled={scaled} on this database ({self.scaled})")
 
         ok = True
