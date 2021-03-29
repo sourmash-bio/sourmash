@@ -188,6 +188,9 @@ class LinearIndex(Index):
             if filter_fn(ss):
                 siglist.append(ss)
 
+        if not siglist:
+            raise ValueError("no signatures match")
+
         return LinearIndex(siglist, self.filename)
 
 
