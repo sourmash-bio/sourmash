@@ -177,16 +177,12 @@ class LCA_Database(Index):
         if scaled > self.scaled:
             raise ValueError(f"cannot use scaled={scaled} on this database ({self.scaled})")
 
-        ok = True
         if ksize is not None and self.ksize != ksize:
-            ok = False
+            raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
-            ok = False
+            raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
 
-        if ok:
-            return self
-
-        raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
+        return self
 
     @classmethod
     def load(cls, db_name):

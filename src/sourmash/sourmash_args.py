@@ -228,10 +228,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                            ksize=query_ksize,
                            num=query.minhash.num,
                            scaled=query.minhash.scaled)
-        except ValueError:
-            raise
-            notify(f"cannot use {filename} for this query")
-            continue
+        except ValueError as exc:
+            notify(f"ERROR: cannot use '{filename}' for this query.")
+            notify(str(exc))
+            sys.exit(-1)
 
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
