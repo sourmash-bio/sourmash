@@ -162,8 +162,8 @@ class LinearIndex(Index):
         def select_sigs(ss):
             # eliminate things from kwargs with no or zero
             kw = { k : v for (k, v) in kwargs.items() if v }
-            import sys
-            print(kw, kwargs, file=sys.stderr)
+            #import sys # @CTB remove
+            #print(kw, kwargs, file=sys.stderr)
             if not kw:
                 return True
 
