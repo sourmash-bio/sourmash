@@ -201,7 +201,7 @@ class SBT(Index):
         if num:
             if not (num and first_sig.minhash.num):
                 raise ValueError(f"cannot search SBT: num={num}, {first_sig.minhash.num}")
-            if num == first_sig.minhash.num:
+            if num != first_sig.minhash.num:
                 raise ValueError(f"num mismatch for SBT: num={num}, {first_sig.minhash.num}")
 
         if scaled:

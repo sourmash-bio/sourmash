@@ -228,10 +228,16 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                            ksize=query_ksize,
                            num=query.minhash.num,
                            scaled=query.minhash.scaled)
-            databases.append(db)
         except ValueError:
+            raise
             notify(f"cannot use {filename} for this query")
             continue
+
+        if not db:
+            notify(f"no compatible signatures found in '{filename}'")
+            sys.exit(-1)
+
+        databases.append(db)
 
         if 0:
             # are we collecting signatures from an SBT?

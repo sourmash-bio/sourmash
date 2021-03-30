@@ -1857,6 +1857,8 @@ def test_search_incompatible(c):
 
 @utils.in_tempdir
 def test_search_traverse_incompatible(c):
+    # build a directory with some signatures in it, search for compatible
+    # signatures.
     searchdir = c.output('searchme')
     os.mkdir(searchdir)
 
@@ -1866,10 +1868,7 @@ def test_search_traverse_incompatible(c):
     shutil.copyfile(scaled_sig, c.output('searchme/scaled.sig'))
 
     c.run_sourmash("search", scaled_sig, c.output('searchme'))
-    print(c.last_result.out)
-    print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -3604,8 +3603,7 @@ def test_gather_traverse_incompatible(c):
     c.run_sourmash("gather", scaled_sig, c.output('searchme'))
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
 
 
 def test_gather_metagenome_output_unassigned():
