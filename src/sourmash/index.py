@@ -179,7 +179,7 @@ class LinearIndex(Index):
                     return False
 
             if 'scaled' in kw:
-                if ss.minhash.num or kw['scaled'] != ss.minhash.scaled:
+                if ss.minhash.num:
                     return False
             if 'num' in kw:
                 if ss.minhash.scaled or kw['num'] != ss.minhash.num:

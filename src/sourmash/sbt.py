@@ -192,35 +192,32 @@ class SBT(Index):
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False):
         first_sig = next(iter(self.signatures()))
+        db_mh = first_sig.minhash
 
-        ok = True
-        if ksize is not None and first_sig.minhash.ksize != ksize:
-            ok = False
-        if moltype is not None and first_sig.minhash.moltype != moltype:
-            ok = False
+        if ksize is not None and db_mh.ksize != ksize:
+            raise ValueError(f"search ksize {ksize} is different from database ksize {db_mh.ksize}")
+        if moltype is not None and db_mh.moltype != moltype:
+            raise ValueError(f"search moltype {moltype} is different from database moltype {db_mh.moltype}")
 
         if containment:
             if not scaled:
                 raise ValueError("'containment' requires 'scaled' in SBT.select'")
-            if not first_sig.minhash.scaled:
+            if not db_mh.scaled:
                 raise ValueError("cannot search this SBT for containment; signatures are not calculated with scaled")
 
         if num:
-            if not (num and first_sig.minhash.num):
-                raise ValueError(f"cannot search SBT: num={num}, {first_sig.minhash.num}")
-            if num != first_sig.minhash.num:
-                raise ValueError(f"num mismatch for SBT: num={num}, {first_sig.minhash.num}")
+            if not db_mh.num:
+                raise ValueError(f"this database was created with 'scaled' MinHash sketches, not 'num'")
+            if num != db_mh.num:
+                raise ValueError(f"num mismatch for SBT: num={num}, {db_mh.num}")
 
         if scaled:
-            if not (scaled and first_sig.minhash.scaled):
-                raise ValueError(f"cannot search SBT: scaled={scaled}, {first_sig.minhash.scaled}")
-            if scaled > first_sig.minhash.scaled and not containment:
-                raise ValueError(f"scaled mismatch: {scaled}, {first_sig.minhash.scaled}")
+            if not db_mh.scaled:
+                raise ValueError(f"this database was created with 'num' MinHash sketches, not 'scaled'")
+            if scaled > db_mh.scaled and not containment:
+                raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
 
-        if ok:
-            return self
-
-        raise ValueError("cannot select SBT on ksize {} / moltype {}".format(ksize, moltype))
+        return self
 
     def new_node_pos(self, node):
         if not self._nodes:
