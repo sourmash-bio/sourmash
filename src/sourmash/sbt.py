@@ -192,7 +192,10 @@ class SBT(Index):
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False):
-        "Make sure this database matches requirements."
+        """Make sure this database matches the requested requirements.
+
+        Will always raise ValueError if a requirement cannot be met.
+        """
         # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
         db_mh = first_sig.minhash

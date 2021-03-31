@@ -173,7 +173,10 @@ class LCA_Database(Index):
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False):
-        "Selector interface - make sure this database matches requirements."
+        """Make sure this database matches the requested requirements.
+
+        Will always raise ValueError if a requirement cannot be met.
+        """
         if num:
             raise ValueError("cannot use 'num' MinHashes to search LCA database")
 

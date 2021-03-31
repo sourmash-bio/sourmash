@@ -128,11 +128,26 @@ class Index(ABC):
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
                abund=None, containment=None):
-        ""
+        """Return Index containing only signatures that match requirements.
+
+        Current arguments can be any or all of:
+        * ksize
+        * moltype
+        * scaled
+        * num
+        * containment
+
+        'select' will raise ValueError if the requirements are incompatible
+        with the Index subclass.
+
+        'select' may return an empty object or None if no matches can be
+        found.
+        """
 
 
 def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
                      containment=False):
+    "Check that the given signature matches the specificed requirements."
     # ksize match?
     if ksize and ksize != ss.minhash.ksize:
         return False
@@ -192,7 +207,10 @@ class LinearIndex(Index):
         return lidx
 
     def select(self, **kwargs):
-        "Select signatures that match the given requirements. @CTB doc."
+        """Return new LinearIndex containing only signatures that match req's.
+
+        Does not raise ValueError, but may return an empty Index.
+        """
         # eliminate things from kwargs with None or zero value
         kw = { k : v for (k, v) in kwargs.items() if v }
 
@@ -202,9 +220,6 @@ class LinearIndex(Index):
                 siglist.append(ss)
 
         return LinearIndex(siglist, self.filename)
-
-    def filter(self, filter_fn): # @CTB may not be necessary any more
-        siglist = []
 
 
 class MultiIndex(Index):
