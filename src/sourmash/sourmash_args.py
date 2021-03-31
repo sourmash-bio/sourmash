@@ -149,15 +149,12 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
     This is basically a user-focused wrapping of _load_databases.
     """
-    query_ksize = query.minhash.ksize
-    query_moltype = get_moltype(query)
+    query_mh = query.minhash
 
     containment = True
     if is_similarity_query:
         containment = False
 
-    n_signatures = 0
-    n_databases = 0
     databases = []
     for filename in filenames:
         notify(f'loading from {filename}...', end='\r')
@@ -169,10 +166,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             sys.exit(-1)
 
         try:
-            db = db.select(moltype=query_moltype,
-                           ksize=query_ksize,
-                           num=query.minhash.num,
-                           scaled=query.minhash.scaled,
+            db = db.select(moltype=query_mh.moltype,
+                           ksize=query_mh.ksize,
+                           num=query_mh.num,
+                           scaled=query_mh.scaled,
                            containment=containment)
         except ValueError as exc:
             # incompatible collection specified!
@@ -187,14 +184,21 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         databases.append(db)
 
+    # calc num loaded info.
+    n_signatures = 0
+    n_databases = 0
+    for db in databases:
+        if db.is_database:
+            n_databases += 1
+        else:
+            n_signatures += len(db)
 
     notify(' '*79, end='\r')
-    # @CTB update below messages.
     if n_signatures and n_databases:
         notify(f'loaded {n_signatures} signatures and {n_databases} databases total.')
-    elif n_signatures:
+    elif n_signatures and not n_databases:
         notify(f'loaded {n_signatures} signatures.')
-    elif n_databases:
+    elif n_databases and not n_signatures:
         notify(f'loaded {n_databases} databases.')
 
     if databases:

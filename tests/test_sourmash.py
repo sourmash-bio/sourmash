@@ -3780,7 +3780,7 @@ def test_gather_query_downsample():
         print(out)
         print(err)
 
-        # assert 'loaded 12 signatures' in err @CTB
+        assert 'loaded 12 signatures' in err
         assert all(('4.9 Mbp      100.0%  100.0%' in out,
                     'NC_003197.2' in out))
 

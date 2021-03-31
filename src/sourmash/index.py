@@ -7,6 +7,8 @@ import os
 
 
 class Index(ABC):
+    is_database = False
+
     @abstractmethod
     def signatures(self):
         "Return an iterator over all signatures in the Index object."

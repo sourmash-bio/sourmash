@@ -171,6 +171,7 @@ class SBT(Index):
     We use two dicts to store the tree structure: One for the internal nodes,
     and another for the leaves (datasets).
     """
+    is_database = True
 
     def __init__(self, factory, *, d=2, storage=None, cache_size=None):
         self.factory = factory
