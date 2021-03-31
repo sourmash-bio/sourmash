@@ -141,63 +141,6 @@ def traverse_find_sigs(filenames, yield_all_files=False):
                         yield fullname
 
 
-def _check_signatures_are_compatible(query, subject):
-    # is one scaled, and the other not? cannot do search
-    if query.minhash.scaled and not subject.minhash.scaled or \
-       not query.minhash.scaled and subject.minhash.scaled:
-       error("signature {} and {} are incompatible - cannot compare.",
-             query, subject)
-       if query.minhash.scaled:
-           error(f"{query} was calculated with --scaled, {subject} was not.")
-       if subject.minhash.scaled:
-           error(f"{subject} was calculated with --scaled, {query} was not.")
-       return 0
-
-    return 1
-
-
-def check_tree_is_compatible(treename, tree, query, is_similarity_query):
-    # get a minhash from the tree
-    leaf = next(iter(tree.leaves()))
-    tree_mh = leaf.data.minhash
-
-    query_mh = query.minhash
-
-    if tree_mh.ksize != query_mh.ksize:
-        error(f"ksize on tree '{treename}' is {tree_mh.ksize};")
-        error(f"this is different from query ksize of {query_mh.ksize}.")
-        return 0
-
-    # is one scaled, and the other not? cannot do search.
-    if (tree_mh.scaled and not query_mh.scaled) or \
-       (query_mh.scaled and not tree_mh.scaled):
-        error(f"for tree '{treename}', tree and query are incompatible for search.")
-        if tree_mh.scaled:
-            error("tree was calculated with scaled, query was not.")
-        else:
-            error("query was calculated with scaled, tree was not.")
-        return 0
-
-    # are the scaled values incompatible? cannot downsample tree for similarity
-    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
-      is_similarity_query:
-        error(f"for tree '{treename}', scaled value is smaller than query.")
-        error(f"tree scaled: {tree_mh.scaled}; query scaled: {query_mh.scaled}. Cannot do similarity search.")
-        return 0
-
-    return 1
-
-
-def check_lca_db_is_compatible(filename, db, query):
-    query_mh = query.minhash
-    if db.ksize != query_mh.ksize:
-        error(f"ksize on db '{filename}' is {db.ksize};")
-        error(f"this is different from query ksize of {query_mh.ksize}.")
-        return 0
-
-    return 1
-
-
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
     """
     Load one or more SBTs, LCAs, and/or signatures.
@@ -205,8 +148,6 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     Check for compatibility with query.
 
     This is basically a user-focused wrapping of _load_databases.
-
-    CTB: this can be refactored into a more generic function with 'filter'.
     """
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
@@ -222,8 +163,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         notify(f'loading from {filename}...', end='\r')
 
         try:
-            db, dbtype = _load_database(filename, False, cache_size=cache_size)
-        except Exception as e:
+            db = _load_database(filename, False, cache_size=cache_size)
+        except Exception as e:  # @CTB too broad an exception clause!?
             notify(str(e))
             sys.exit(-1)
 
@@ -234,60 +175,21 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                            scaled=query.minhash.scaled,
                            containment=containment)
         except ValueError as exc:
+            # incompatible collection specified!
             notify(f"ERROR: cannot use '{filename}' for this query.")
             notify(str(exc))
             sys.exit(-1)
 
+        # 'select' returns nothing => all signatures filtered out. fail!
         if not db:
             notify(f"no compatible signatures found in '{filename}'")
             sys.exit(-1)
 
         databases.append(db)
 
-        if 0:
-            # are we collecting signatures from an SBT?
-            if dbtype == DatabaseType.SBT:
-                if not check_tree_is_compatible(filename, db, query,
-                                                is_similarity_query):
-                    sys.exit(-1)
-
-                databases.append(db)
-                notify(f'loaded SBT {filename}', end='\r')
-                n_databases += 1
-
-            # or an LCA?
-            elif dbtype == DatabaseType.LCA:
-                if not check_lca_db_is_compatible(filename, db, query):
-                    sys.exit(-1)
-
-                notify(f'loaded LCA {filename}', end='\r')
-                n_databases += 1
-
-                databases.append(db)
-
-            # or a mixed collection of signatures?
-            elif dbtype == DatabaseType.SIGLIST:
-                db = db.select(moltype=query_moltype, ksize=query_ksize)
-                filter_fn = lambda s: _check_signatures_are_compatible(query, s)
-                db = db.filter(filter_fn)
-
-                if not db:
-                    notify(f"no compatible signatures found in '{filename}'")
-                    sys.exit(-1)
-
-                databases.append(db)
-
-                notify(f'loaded {len(db)} signatures from {filename}', end='\r')
-                n_signatures += len(db)
-
-            # unknown!?
-            else:
-                raise ValueError(f"unknown dbtype {dbtype}") # CTB check me.
-
-        # END for loop
-
 
     notify(' '*79, end='\r')
+    # @CTB update below messages.
     if n_signatures and n_databases:
         notify(f'loaded {n_signatures} signatures and {n_databases} databases total.')
     elif n_signatures:
@@ -295,21 +197,13 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     elif n_databases:
         notify(f'loaded {n_databases} databases.')
 
-
-    if not databases:
+    if databases:
+        print('')
+    else:
         notify('** ERROR: no signatures or databases loaded?')
         sys.exit(-1)
 
-    if databases:
-        print('')
-
     return databases
-
-
-class DatabaseType(Enum):
-    SIGLIST = 1
-    SBT = 2
-    LCA = 3
 
 
 def _load_stdin(filename, **kwargs):
@@ -318,14 +212,14 @@ def _load_stdin(filename, **kwargs):
     if filename == '-':
         db = LinearIndex.load(sys.stdin)
 
-    return (db, DatabaseType.SIGLIST)
+    return db
 
 
 def _multiindex_load_from_file_list(filename, **kwargs):
     "Load collection from a list of signature/database files"
     db = MultiIndex.load_from_file_list(filename)
 
-    return (db, DatabaseType.SIGLIST)
+    return db
 
 
 def _multiindex_load_from_path(filename, **kwargs):
@@ -333,7 +227,7 @@ def _multiindex_load_from_path(filename, **kwargs):
     traverse_yield_all = kwargs['traverse_yield_all']
     db = MultiIndex.load_from_path(filename, traverse_yield_all)
 
-    return (db, DatabaseType.SIGLIST)
+    return db
 
 
 def _load_sigfile(filename, **kwargs):
@@ -343,7 +237,7 @@ def _load_sigfile(filename, **kwargs):
     except sourmash.exceptions.SourmashError as exc:
         raise ValueError(exc)
 
-    return (db, DatabaseType.SIGLIST)
+    return db
 
 
 def _load_sbt(filename, **kwargs):
@@ -355,13 +249,13 @@ def _load_sbt(filename, **kwargs):
     except FileNotFoundError as exc:
         raise ValueError(exc)
 
-    return (db, DatabaseType.SBT)
+    return db
 
 
 def _load_revindex(filename, **kwargs):
     "Load collection from an LCA database/reverse index."
     db, _, _ = load_single_database(filename)
-    return (db, DatabaseType.LCA)
+    return db
 
 
 # all loader functions, in order.
@@ -378,21 +272,20 @@ _loader_functions = [
 def _load_database(filename, traverse_yield_all, *, cache_size=None):
     """Load file as a database - list of signatures, LCA, SBT, etc.
 
-    Return (db, dbtype), where dbtype is a DatabaseType enum.
+    Return Index object.
 
     This is an internal function used by other functions in sourmash_args.
     """
     loaded = False
-    dbtype = None
 
     # iterate through loader functions, trying them all. Catch ValueError
     # but nothing else.
     for (desc, load_fn) in _loader_functions:
         try:
             debug_literal(f"_load_databases: trying loader fn {desc}")
-            db, dbtype = load_fn(filename,
-                                 traverse_yield_all=traverse_yield_all,
-                                 cache_size=cache_size)
+            db = load_fn(filename,
+                         traverse_yield_all=traverse_yield_all,
+                         cache_size=cache_size)
         except ValueError as exc:
             debug_literal(f"_load_databases: FAIL on fn {desc}.")
             debug_literal(traceback.format_exc())
@@ -424,7 +317,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     if loaded:                  # this is a bit redundant but safe > sorry
         assert db
 
-    return db, dbtype
+    return db
 
 
 def load_file_as_index(filename, yield_all_files=False):
@@ -440,8 +333,7 @@ def load_file_as_index(filename, yield_all_files=False):
     this directory into an Index object. If yield_all_files=True, will
     attempt to load all files.
     """
-    db, dbtype = _load_database(filename, yield_all_files)
-    return db
+    return _load_database(filename, yield_all_files)
 
 
 def load_file_as_signatures(filename, select_moltype=None, ksize=None,
@@ -464,7 +356,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     if progress:
         progress.notify(filename)
 
-    db, dbtype = _load_database(filename, yield_all_files)
+    db = _load_database(filename, yield_all_files)
     db = db.select(moltype=select_moltype, ksize=ksize)
     loader = db.signatures()
 

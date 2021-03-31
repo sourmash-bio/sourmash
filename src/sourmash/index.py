@@ -128,6 +128,37 @@ class Index(ABC):
                abund=None, containment=None):
         ""
 
+
+def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
+                     containment=False):
+    # ksize match?
+    if ksize and ksize != ss.minhash.ksize:
+        return False
+
+    # moltype match?
+    if moltype and moltype != ss.minhash.moltype:
+        return False
+
+    # containment requires scaled; similarity does not.
+    if containment:
+        if not scaled:
+            raise ValueError("'containment' requires 'scaled' in Index.select'")
+        if not ss.minhash.scaled:
+            return False
+
+    # 'scaled' and 'num' are incompatible
+    if scaled:
+        if ss.minhash.num:
+            return False
+    if num:
+        # note, here we check if 'num' is identical; this can be
+        # changed later.
+        if ss.minhash.scaled or num != ss.minhash.num:
+            return False
+
+    return True
+
+
 class LinearIndex(Index):
     "An Index for a collection of signatures. Can load from a .sig file."
     def __init__(self, _signatures=None, filename=None):
@@ -159,50 +190,19 @@ class LinearIndex(Index):
         return lidx
 
     def select(self, **kwargs):
-        def select_sigs(ss):
-            # eliminate things from kwargs with no or zero
-            kw = { k : v for (k, v) in kwargs.items() if v }
+        "Select signatures that match the given requirements. @CTB doc."
+        # eliminate things from kwargs with None or zero value
+        kw = { k : v for (k, v) in kwargs.items() if v }
 
-            # nothing to select on? we're all good.
-            if not kw:
-                return True
-
-            # ksize match?
-            if 'ksize' in kw and kw['ksize'] != ss.minhash.ksize:
-                return False
-
-            # moltype match?
-            if 'moltype' in kw and kw['moltype'] != ss.minhash.moltype:
-                return False
-
-            # containment requires scaled; similarity does not.
-            if 'containment' in kw:
-                if not 'scaled' in kw:
-                    raise ValueError("'containment' requires 'scaled' in Index.select'")
-                if not ss.minhash.scaled:
-                    return False
-
-            # 'scaled' and 'num' are incompatible
-            if 'scaled' in kw:
-                if ss.minhash.num:
-                    return False
-            if 'num' in kw:
-                # note, here we check if 'num' is identical; this can be
-                # changed later.
-                if ss.minhash.scaled or kw['num'] != ss.minhash.num:
-                    return False
-
-            return True
-
-        return self.filter(select_sigs)
-
-    def filter(self, filter_fn): # @CTB may not be necessary any more
         siglist = []
         for ss in self._signatures:
-            if filter_fn(ss):
+            if select_signature(ss, **kwargs):
                 siglist.append(ss)
 
         return LinearIndex(siglist, self.filename)
+
+    def filter(self, filter_fn): # @CTB may not be necessary any more
+        siglist = []
 
 
 class MultiIndex(Index):
