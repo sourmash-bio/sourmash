@@ -161,7 +161,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         try:
             db = _load_database(filename, False, cache_size=cache_size)
-        except Exception as e:  # @CTB too broad an exception clause!?
+        except ValueError as e:
+            # cannot load database!
             notify(str(e))
             sys.exit(-1)
 
