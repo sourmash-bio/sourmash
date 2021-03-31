@@ -162,26 +162,33 @@ class LinearIndex(Index):
         def select_sigs(ss):
             # eliminate things from kwargs with no or zero
             kw = { k : v for (k, v) in kwargs.items() if v }
-            #import sys # @CTB remove
-            #print(kw, kwargs, file=sys.stderr)
+
+            # nothing to select on? we're all good.
             if not kw:
                 return True
 
+            # ksize match?
             if 'ksize' in kw and kw['ksize'] != ss.minhash.ksize:
                 return False
+
+            # moltype match?
             if 'moltype' in kw and kw['moltype'] != ss.minhash.moltype:
                 return False
 
+            # containment requires scaled; similarity does not.
             if 'containment' in kw:
                 if not 'scaled' in kw:
                     raise ValueError("'containment' requires 'scaled' in Index.select'")
                 if not ss.minhash.scaled:
                     return False
 
+            # 'scaled' and 'num' are incompatible
             if 'scaled' in kw:
                 if ss.minhash.num:
                     return False
             if 'num' in kw:
+                # note, here we check if 'num' is identical; this can be
+                # changed later.
                 if ss.minhash.scaled or kw['num'] != ss.minhash.num:
                     return False
 
@@ -189,7 +196,7 @@ class LinearIndex(Index):
 
         return self.filter(select_sigs)
 
-    def filter(self, filter_fn):
+    def filter(self, filter_fn): # @CTB may not be necessary any more
         siglist = []
         for ss in self._signatures:
             if filter_fn(ss):
@@ -285,6 +292,7 @@ class MultiIndex(Index):
         raise NotImplementedError
 
     def select(self, **kwargs):
+        "Run 'select' on all indices within this MultiIndex."
         new_idx_list = []
         new_src_list = []
         for idx, src in zip(self.index_list, self.source_list):

@@ -173,10 +173,10 @@ class LCA_Database(Index):
                containment=False):
         "Selector interface - make sure this database matches requirements."
         if num:
-            raise ValueError("cannot use num MinHashes on LCA database")
+            raise ValueError("cannot use 'num' MinHashes to search LCA database")
 
         if scaled > self.scaled and not containment:
-            raise ValueError(f"cannot use scaled={scaled} on this database ({self.scaled})")
+            raise ValueError(f"cannot use scaled={scaled} on this database (scaled={self.scaled})")
 
         if ksize is not None and self.ksize != ksize:
             raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")

@@ -191,20 +191,27 @@ class SBT(Index):
 
     def select(self, ksize=None, moltype=None, num=0, scaled=0,
                containment=False):
+        "Make sure this database matches requirements."
+        # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
         db_mh = first_sig.minhash
 
+        # check ksize.
         if ksize is not None and db_mh.ksize != ksize:
             raise ValueError(f"search ksize {ksize} is different from database ksize {db_mh.ksize}")
+
+        # check moltype.
         if moltype is not None and db_mh.moltype != moltype:
             raise ValueError(f"search moltype {moltype} is different from database moltype {db_mh.moltype}")
 
+        # containment requires 'scaled'.
         if containment:
             if not scaled:
                 raise ValueError("'containment' requires 'scaled' in SBT.select'")
             if not db_mh.scaled:
                 raise ValueError("cannot search this SBT for containment; signatures are not calculated with scaled")
 
+        # 'num' and 'scaled' do not mix.
         if num:
             if not db_mh.num:
                 raise ValueError(f"this database was created with 'scaled' MinHash sketches, not 'num'")
@@ -214,6 +221,8 @@ class SBT(Index):
         if scaled:
             if not db_mh.scaled:
                 raise ValueError(f"this database was created with 'num' MinHash sketches, not 'scaled'")
+
+            # we can downsample SBTs for containment operations.
             if scaled > db_mh.scaled and not containment:
                 raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
 
