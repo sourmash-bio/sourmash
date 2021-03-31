@@ -195,6 +195,19 @@ class SBT(Index):
         """Make sure this database matches the requested requirements.
 
         Will always raise ValueError if a requirement cannot be met.
+
+        The only tricky bit here is around downsampling: if the scaled
+        value being requested is higher than the signatures in the
+        SBT, we can use the SBT for containment but not for
+        similarity. This is because:
+
+        * if we are doing containment searches, the intermediate nodes
+          can still be used for calculating containment of signatures
+          with higher scaled values. This is because only hashes that match
+          in the higher range are used for containment scores.
+        * however, for similarity, _all_ hashes are used, and we cannot
+          implicitly downsample or necessarily estimate similarity if
+          the scaled values differ.
         """
         # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))

@@ -175,6 +175,11 @@ class LCA_Database(Index):
                containment=False):
         """Make sure this database matches the requested requirements.
 
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details, and _find_signatures for
+        implementation.
+
         Will always raise ValueError if a requirement cannot be met.
         """
         if num:
@@ -475,12 +480,16 @@ class LCA_Database(Index):
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
         searches (containment=False) will not be returned in sorted order.
+
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details.
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that containment cannot be calculated w/o matching scaled.
+            # note that similarity cannot be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         query_mins = set(minhash.hashes)
