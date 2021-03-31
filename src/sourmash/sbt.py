@@ -189,7 +189,8 @@ class SBT(Index):
         for k in self.leaves():
             yield k.data
 
-    def select(self, ksize=None, moltype=None, num=0, scaled=0):
+    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+               containment=False):
         first_sig = next(iter(self.signatures()))
 
         ok = True
@@ -197,6 +198,12 @@ class SBT(Index):
             ok = False
         if moltype is not None and first_sig.minhash.moltype != moltype:
             ok = False
+
+        if containment:
+            if not scaled:
+                raise ValueError("'containment' requires 'scaled' in SBT.select'")
+            if not first_sig.minhash.scaled:
+                raise ValueError("cannot search this SBT for containment; signatures are not calculated with scaled")
 
         if num:
             if not (num and first_sig.minhash.num):
@@ -207,7 +214,7 @@ class SBT(Index):
         if scaled:
             if not (scaled and first_sig.minhash.scaled):
                 raise ValueError(f"cannot search SBT: scaled={scaled}, {first_sig.minhash.scaled}")
-            if scaled > first_sig.minhash.scaled:
+            if scaled > first_sig.minhash.scaled and not containment:
                 raise ValueError(f"scaled mismatch: {scaled}, {first_sig.minhash.scaled}")
 
         if ok:

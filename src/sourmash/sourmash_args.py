@@ -211,6 +211,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     query_ksize = query.minhash.ksize
     query_moltype = get_moltype(query)
 
+    containment = True
+    if is_similarity_query:
+        containment = False
+
     n_signatures = 0
     n_databases = 0
     databases = []
@@ -227,7 +231,8 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             db = db.select(moltype=query_moltype,
                            ksize=query_ksize,
                            num=query.minhash.num,
-                           scaled=query.minhash.scaled)
+                           scaled=query.minhash.scaled,
+                           containment=containment)
         except ValueError as exc:
             notify(f"ERROR: cannot use '{filename}' for this query.")
             notify(str(exc))

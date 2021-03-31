@@ -125,7 +125,7 @@ class Index(ABC):
 
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
-               abund=None):
+               abund=None, containment=None):
         ""
 
 class LinearIndex(Index):
@@ -171,6 +171,13 @@ class LinearIndex(Index):
                 return False
             if 'moltype' in kw and kw['moltype'] != ss.minhash.moltype:
                 return False
+
+            if 'containment' in kw:
+                if not 'scaled' in kw:
+                    raise ValueError("'containment' requires 'scaled' in Index.select'")
+                if not ss.minhash.scaled:
+                    return False
+
             if 'scaled' in kw:
                 if ss.minhash.num or kw['scaled'] != ss.minhash.scaled:
                     return False
