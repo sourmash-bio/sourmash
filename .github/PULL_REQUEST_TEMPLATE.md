@@ -1,6 +1,6 @@
 Please replace this text with:
 
-* a brief decription of your changes in this PR
+* a brief description of your changes in this PR
 * which issues this fixes in the issue tracker, if any ("Fixes #XXX")
 * which issues this PR is related to, if any ("Ref #XXX")
 
