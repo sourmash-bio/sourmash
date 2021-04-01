@@ -4,7 +4,7 @@ import zipfile
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import LinearIndex
+from sourmash.index import LinearIndex, MultiIndex
 from sourmash.sbt import SBT, GraphFactory, Leaf
 
 import sourmash_tst_utils as utils
@@ -477,3 +477,112 @@ def test_zip_dayhoff_command_search_combined(c):
     c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
     assert 'found 1 matches total' in c.last_result.out
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+def test_multi_index_search():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+    assert sr[0][2] == 'A'      # source override
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[0][2] == sig47    # source was set to None, so no override
+    assert sr[1][1] == ss63
+    assert sr[1][2] == 'C'      # source override
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[0][2] == 'C'      # source override
+    assert sr[1][1] == ss47
+    assert sr[1][2] == sig47    # source was set to None, so no override
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[0][2] == 'C'      # source override
+
+
+def test_multi_index_gather():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][2] == 'A'
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 2
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+    assert matches[0][2] == sig47     # no source override
+    assert round(matches[1][0], 2) == 0.49
+    assert matches[1][1] == ss63
+    assert matches[1][2] == 'C'       # source override
+
+
+def test_multi_index_signatures():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    siglist = list(lidx.signatures())
+    assert len(siglist) == 3
+    assert ss2 in siglist
+    assert ss47 in siglist
+    assert ss63 in siglist

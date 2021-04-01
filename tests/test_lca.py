@@ -952,6 +952,33 @@ def test_single_classify_to_output():
         assert 'loaded 1 LCA databases' in err
 
 
+def test_single_classify_to_output_no_name():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        ss = sourmash.load_one_signature(input_sig, ksize=31)
+
+        outsig_filename = os.path.join(location, 'q.sig')
+        with open(outsig_filename, 'wt') as fp:
+            # remove name from signature here --
+            new_sig = sourmash.SourmashSignature(ss.minhash, filename='xyz')
+            sourmash.save_signatures([new_sig], fp)
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', outsig_filename,
+               '-o', os.path.join(location, 'outfile.txt')]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        print((outdata,))
+        assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 LCA databases' in err
+
+
 def test_single_classify_empty():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/both.lca.json')

@@ -164,6 +164,10 @@ def _execute_sketch(args, signatures_factory):
     "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
 
+    if not args.filenames:
+        error('error: no input filenames provided! nothing to do - exiting.')
+        sys.exit(-1)
+
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
         sys.exit(-1)
