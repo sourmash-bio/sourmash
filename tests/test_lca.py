@@ -1908,8 +1908,8 @@ def test_incompat_lca_db_ksize_2(c):
     err = c.last_result.err
     print(err)
 
-    assert "ksize on db 'test.lca.json' is 25;" in err
-    assert 'this is different from query ksize of 31.' in err
+    assert "ERROR: cannot use 'test.lca.json' for this query." in err
+    assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 @utils.in_tempdir

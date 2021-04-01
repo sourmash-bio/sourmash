@@ -55,6 +55,8 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
+    is_database = True
+
     def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
@@ -169,18 +171,29 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield v
 
-    def select(self, ksize=None, moltype=None):
-        "Selector interface - make sure this database matches requirements."
-        ok = True
+    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+               containment=False):
+        """Make sure this database matches the requested requirements.
+
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details, and _find_signatures for
+        implementation.
+
+        Will always raise ValueError if a requirement cannot be met.
+        """
+        if num:
+            raise ValueError("cannot use 'num' MinHashes to search LCA database")
+
+        if scaled > self.scaled and not containment:
+            raise ValueError(f"cannot use scaled={scaled} on this database (scaled={self.scaled})")
+
         if ksize is not None and self.ksize != ksize:
-            ok = False
+            raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
-            ok = False
+            raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
 
-        if ok:
-            return self
-
-        raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
+        return self
 
     @classmethod
     def load(cls, db_name):
@@ -467,12 +480,16 @@ class LCA_Database(Index):
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
         searches (containment=False) will not be returned in sorted order.
+
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details.
         """
         # make sure we're looking at the same scaled value as database
         if self.scaled > minhash.scaled:
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that containment cannot be calculated w/o matching scaled.
+            # note that similarity cannot be calculated w/o matching scaled.
             raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
 
         query_mins = set(minhash.hashes)

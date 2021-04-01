@@ -7,6 +7,8 @@ import os
 
 
 class Index(ABC):
+    is_database = False
+
     @abstractmethod
     def signatures(self):
         "Return an iterator over all signatures in the Index object."
@@ -124,8 +126,55 @@ class Index(ABC):
         return results
 
     @abstractmethod
-    def select(self, ksize=None, moltype=None):
-        ""
+    def select(self, ksize=None, moltype=None, scaled=None, num=None,
+               abund=None, containment=None):
+        """Return Index containing only signatures that match requirements.
+
+        Current arguments can be any or all of:
+        * ksize
+        * moltype
+        * scaled
+        * num
+        * containment
+
+        'select' will raise ValueError if the requirements are incompatible
+        with the Index subclass.
+
+        'select' may return an empty object or None if no matches can be
+        found.
+        """
+
+
+def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
+                     containment=False):
+    "Check that the given signature matches the specificed requirements."
+    # ksize match?
+    if ksize and ksize != ss.minhash.ksize:
+        return False
+
+    # moltype match?
+    if moltype and moltype != ss.minhash.moltype:
+        return False
+
+    # containment requires scaled; similarity does not.
+    if containment:
+        if not scaled:
+            raise ValueError("'containment' requires 'scaled' in Index.select'")
+        if not ss.minhash.scaled:
+            return False
+
+    # 'scaled' and 'num' are incompatible
+    if scaled:
+        if ss.minhash.num:
+            return False
+    if num:
+        # note, here we check if 'num' is identical; this can be
+        # changed later.
+        if ss.minhash.scaled or num != ss.minhash.num:
+            return False
+
+    return True
+
 
 class LinearIndex(Index):
     "An Index for a collection of signatures. Can load from a .sig file."
@@ -157,18 +206,17 @@ class LinearIndex(Index):
         lidx = LinearIndex(si, filename=location)
         return lidx
 
-    def select(self, ksize=None, moltype=None):
-        def select_sigs(ss, ksize=ksize, moltype=moltype):
-            if (ksize is None or ss.minhash.ksize == ksize) and \
-               (moltype is None or ss.minhash.moltype == moltype):
-               return True
+    def select(self, **kwargs):
+        """Return new LinearIndex containing only signatures that match req's.
 
-        return self.filter(select_sigs)
+        Does not raise ValueError, but may return an empty Index.
+        """
+        # eliminate things from kwargs with None or zero value
+        kw = { k : v for (k, v) in kwargs.items() if v }
 
-    def filter(self, filter_fn):
         siglist = []
         for ss in self._signatures:
-            if filter_fn(ss):
+            if select_signature(ss, **kwargs):
                 siglist.append(ss)
 
         return LinearIndex(siglist, self.filename)
@@ -260,11 +308,12 @@ class MultiIndex(Index):
     def save(self, *args):
         raise NotImplementedError
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, **kwargs):
+        "Run 'select' on all indices within this MultiIndex."
         new_idx_list = []
         new_src_list = []
         for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.select(ksize=ksize, moltype=moltype)
+            idx = idx.select(**kwargs)
             new_idx_list.append(idx)
             new_src_list.append(src)
 

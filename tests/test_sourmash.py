@@ -1851,12 +1851,14 @@ def test_search_incompatible(c):
     assert c.last_result.status != 0
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+
+    assert "no compatible signatures found in " in c.last_result.err
 
 
 @utils.in_tempdir
 def test_search_traverse_incompatible(c):
+    # build a directory with some signatures in it, search for compatible
+    # signatures.
     searchdir = c.output('searchme')
     os.mkdir(searchdir)
 
@@ -1866,10 +1868,7 @@ def test_search_traverse_incompatible(c):
     shutil.copyfile(scaled_sig, c.output('searchme/scaled.sig'))
 
     c.run_sourmash("search", scaled_sig, c.output('searchme'))
-    print(c.last_result.out)
-    print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -1896,8 +1895,11 @@ def test_search_metagenome_downsample():
                                            in_directory=location, fail_ok=True)
         assert status == -1
 
-        assert "for tree 'gcf_all', scaled value is smaller than query." in err
-        assert 'tree scaled: 10000; query scaled: 100000. Cannot do similarity search.' in err
+        print(out)
+        print(err)
+
+        assert "ERROR: cannot use 'gcf_all' for this query." in err
+        assert "search scaled value 100000 is less than database scaled value of 10000" in err
 
 
 def test_search_metagenome_downsample_containment():
@@ -2055,7 +2057,11 @@ def test_do_sourmash_sbt_search_wrong_ksize():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'this is different from' in err
+        print(out)
+        print(err)
+
+        assert "ERROR: cannot use 'zzz' for this query." in err
+        assert "search ksize 51 is different from database ksize 31" in err
 
 
 def test_do_sourmash_sbt_search_multiple():
@@ -2170,7 +2176,10 @@ def test_do_sourmash_sbt_search_downsample_2():
                                             '--threshold=0.01'],
                                            in_directory=location, fail_ok=True)
         assert status == -1
-        assert 'Cannot do similarity search.' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use 'foo' for this query." in err
+        assert "search scaled value 100000 is less than database scaled value of 2000" in err
 
 
 def test_do_sourmash_index_single():
@@ -2465,7 +2474,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_1():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'tree and query are incompatible for search' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use '" in err
+        assert "this database was created with 'num' MinHash sketches, not 'scaled'" in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_2():
@@ -2497,7 +2509,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_2():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'tree and query are incompatible for search' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use '" in err
+        assert "this database was created with 'scaled' MinHash sketches, not 'num'" in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_3():
@@ -2522,7 +2537,9 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'incompatible - cannot compare' in err
+        print(out)
+        print(err)
+        assert "no compatible signatures found in " in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_4():
@@ -2547,7 +2564,9 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4():
                                            ['search', sig_loc2, sig_loc],
                                            fail_ok=True)
         assert status == -1
-        assert 'incompatible - cannot compare' in err
+        print(out)
+        print(err)
+        assert "no compatible signatures found in " in err
 
 
 def test_do_sourmash_check_search_vs_actual_similarity():
@@ -3604,8 +3623,7 @@ def test_gather_traverse_incompatible(c):
     c.run_sourmash("gather", scaled_sig, c.output('searchme'))
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
 
 
 def test_gather_metagenome_output_unassigned():
@@ -3750,6 +3768,7 @@ def test_gather_query_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
+        print(testdata_sigs)
 
         query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
