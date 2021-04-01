@@ -171,6 +171,7 @@ class SBT(Index):
     We use two dicts to store the tree structure: One for the internal nodes,
     and another for the leaves (datasets).
     """
+    is_database = True
 
     def __init__(self, factory, *, d=2, storage=None, cache_size=None):
         self.factory = factory
@@ -189,19 +190,60 @@ class SBT(Index):
         for k in self.leaves():
             yield k.data
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+               containment=False):
+        """Make sure this database matches the requested requirements.
+
+        Will always raise ValueError if a requirement cannot be met.
+
+        The only tricky bit here is around downsampling: if the scaled
+        value being requested is higher than the signatures in the
+        SBT, we can use the SBT for containment but not for
+        similarity. This is because:
+
+        * if we are doing containment searches, the intermediate nodes
+          can still be used for calculating containment of signatures
+          with higher scaled values. This is because only hashes that match
+          in the higher range are used for containment scores.
+        * however, for similarity, _all_ hashes are used, and we cannot
+          implicitly downsample or necessarily estimate similarity if
+          the scaled values differ.
+        """
+        # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
+        db_mh = first_sig.minhash
 
-        ok = True
-        if ksize is not None and first_sig.minhash.ksize != ksize:
-            ok = False
-        if moltype is not None and first_sig.minhash.moltype != moltype:
-            ok = False
+        # check ksize.
+        if ksize is not None and db_mh.ksize != ksize:
+            raise ValueError(f"search ksize {ksize} is different from database ksize {db_mh.ksize}")
 
-        if ok:
-            return self
+        # check moltype.
+        if moltype is not None and db_mh.moltype != moltype:
+            raise ValueError(f"search moltype {moltype} is different from database moltype {db_mh.moltype}")
 
-        raise ValueError("cannot select SBT on ksize {} / moltype {}".format(ksize, moltype))
+        # containment requires 'scaled'.
+        if containment:
+            if not scaled:
+                raise ValueError("'containment' requires 'scaled' in SBT.select'")
+            if not db_mh.scaled:
+                raise ValueError("cannot search this SBT for containment; signatures are not calculated with scaled")
+
+        # 'num' and 'scaled' do not mix.
+        if num:
+            if not db_mh.num:
+                raise ValueError(f"this database was created with 'scaled' MinHash sketches, not 'num'")
+            if num != db_mh.num:
+                raise ValueError(f"num mismatch for SBT: num={num}, {db_mh.num}")
+
+        if scaled:
+            if not db_mh.scaled:
+                raise ValueError(f"this database was created with 'num' MinHash sketches, not 'scaled'")
+
+            # we can downsample SBTs for containment operations.
+            if scaled > db_mh.scaled and not containment:
+                raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
+
+        return self
 
     def new_node_pos(self, node):
         if not self._nodes:

@@ -394,6 +394,18 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_dir():
+    filename1 = utils.get_test_data('lca')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+
+def test_databases_load_fail_on_not_exist():
+    filename1 = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
@@ -1896,8 +1908,8 @@ def test_incompat_lca_db_ksize_2(c):
     err = c.last_result.err
     print(err)
 
-    assert "ksize on db 'test.lca.json' is 25;" in err
-    assert 'this is different from query ksize of 31.' in err
+    assert "ERROR: cannot use 'test.lca.json' for this query." in err
+    assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 @utils.in_tempdir
