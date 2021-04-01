@@ -716,7 +716,7 @@ def test_multi_index_load_from_path_3_check_traverse_fn(c):
     assert len(files) == 6, files
 
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 14, files
+    assert len(files) == 18, files
 
 
 def test_multi_index_load_from_path_no_exist():
@@ -751,7 +751,7 @@ def test_multi_index_load_from_file_list_1(c):
 def test_multi_index_load_from_file_list_2(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
-    assert len(files) == 14, files
+    assert len(files) == 18, files
 
     file_list = c.output('filelist.txt')
 
