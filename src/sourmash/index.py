@@ -229,11 +229,12 @@ class ZipFileLinearIndex(Index):
 
     Does not support `insert` or `save`.
     """
-    def __init__(self, zf, select_ksize=None, select_moltype=None,
+    is_database = True
+
+    def __init__(self, zf, selection_dict=None,
                  traverse_yield_all=False):
         self.zf = zf
-        self.ksize = select_ksize
-        self.moltype = select_moltype
+        self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
     @property
@@ -261,15 +262,19 @@ class ZipFileLinearIndex(Index):
                 fp = self.zf.open(zipinfo)
 
                 # now load all the signatures and select on ksize/moltype:
+                selection_dict = self.selection_dict
                 for ss in load_signatures(fp):
-                    if (self.ksize is None or ss.minhash.ksize == self.ksize) and \
-                       (self.moltype is None or ss.minhash.moltype == self.moltype):
+                    if selection_dict:
+                        if select_signature(ss, **self.selection_dict):
+                            yield ss
+                    else:
                         yield ss
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, **kwargs):
         "Select signatures in zip file based on ksize/moltype."
-        return ZipFileLinearIndex(self.zf, ksize, moltype,
-                                  self.traverse_yield_all)
+        return ZipFileLinearIndex(self.zf,
+                                  selection_dict=kwargs,
+                                  traverse_yield_all=self.traverse_yield_all)
 
 
 class MultiIndex(Index):
