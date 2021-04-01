@@ -310,17 +310,6 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             loaded = True
             break
 
-    if not loaded:                    # try load as ZipFileLinearIndex
-        if filename.endswith('.zip'):
-            try:
-                db = ZipFileLinearIndex.load(filename,
-                                             traverse_yield_all=traverse_yield_all)
-                loaded = True
-                dbtype = DatabaseType.ZIPFILE
-            except:
-                raise
-                pass
-
     # check to see if it's a FASTA/FASTQ record (i.e. screed loadable)
     # so we can provide a better error message to users.
     if not loaded:
