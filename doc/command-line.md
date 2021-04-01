@@ -593,9 +593,7 @@ signature license: CC0
 ### `sourmash signature split` - split signatures into individual files
 
 Split each signature in the input file(s) into individual files, with
-standardized names.  **Note:** unlike the rest of the sourmash sig
-commands, `split` can load signatures from LCA and SBT databases as
-well.
+standardized names.
 
 For example,
 ```
