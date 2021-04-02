@@ -287,14 +287,14 @@ class MultiIndex(Index):
         return db
 
     @classmethod
-    def load_from_file_list(cls, filename):
+    def load_from_pathlist(cls, filename):
         "Create a MultiIndex from all files listed in a text file."
-        from .sourmash_args import (load_file_list_of_signatures,
+        from .sourmash_args import (load_pathlist_from_file,
                                     load_file_as_index)
         idx_list = []
         src_list = []
 
-        file_list = load_file_list_of_signatures(filename)
+        file_list = load_pathlist_from_file(filename)
         for fname in file_list:
             idx = load_file_as_index(fname)
             src = fname
