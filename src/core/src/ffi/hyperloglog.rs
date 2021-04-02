@@ -154,7 +154,7 @@ unsafe fn hll_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mut Sour
         slice::from_raw_parts(ptr as *mut u8, insize)
     };
 
-    let hll = HyperLogLog::from_reader(&mut &buf[..])?;
+    let hll = HyperLogLog::from_reader(buf)?;
 
     Ok(SourmashHyperLogLog::from_rust(hll))
 }
