@@ -220,9 +220,9 @@ def _load_stdin(filename, **kwargs):
     return db
 
 
-def _multiindex_load_from_file_list(filename, **kwargs):
+def _multiindex_load_from_pathlist(filename, **kwargs):
     "Load collection from a list of signature/database files"
-    db = MultiIndex.load_from_file_list(filename)
+    db = MultiIndex.load_from_pathlist(filename)
 
     return db
 
@@ -268,7 +268,7 @@ _loader_functions = [
     ("load from stdin", _load_stdin),
     ("load from directory", _multiindex_load_from_path),
     ("load from sig file", _load_sigfile),
-    ("load from file list", _multiindex_load_from_file_list),
+    ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
     ]
@@ -371,7 +371,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
         return loader
 
 
-def load_file_list_of_signatures(filename):
+def load_pathlist_from_file(filename):
     "Load a list-of-files text file."
     try:
         with open(filename, 'rt') as fp:
