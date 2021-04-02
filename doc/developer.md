@@ -64,11 +64,17 @@ tox -e dev
 . .tox/dev/bin/activate
 ```
 
-Finally, ou can also explicitly install all the Python dependencies for sourmash by running
+Finally, you can also explicitly install all the Python dependencies for sourmash by running
 ```
 pip install -r requirements.txt
 ```
 (but they are already installed in the virtualenv created with `tox -e dev`).
+
+## Updating your developer environment
+
+To update rust to the latest version, use [`rustup update`].
+
+To update your Python dependencies to the latest required for sourmash, you can run [`pip install -r requirements.txt`].
 
 ## Running tests and checks
 
