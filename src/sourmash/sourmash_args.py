@@ -385,7 +385,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             idx_list = []
             src_list = []
 
-            file_list = load_file_list_of_signatures(filename)
+            file_list = load_pathlist_from_file(filename)
             for fname in file_list:
                 idx = load_file_as_index(fname)
                 src = fname
@@ -485,7 +485,7 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
         return loader
 
 
-def load_file_list_of_signatures(filename):
+def load_pathlist_from_file(filename):
     "Load a list-of-files text file."
     try:
         with open(filename, 'rt') as fp:
