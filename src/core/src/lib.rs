@@ -16,6 +16,9 @@
 //! routines can use the NCBI taxonomy but do not depend on it in any way.
 //! Documentation and further examples for each module can be found in the module descriptions below.
 
+// TODO: remove this line and update all the appropriate type names for 1.0
+#![allow(clippy::upper_case_acronyms)]
+
 pub mod errors;
 pub use errors::SourmashError as Error;
 
