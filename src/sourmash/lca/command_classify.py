@@ -101,7 +101,7 @@ def classify(args):
     notify('finding query signatures...')
     inp_files = list(args.query)
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     if not check_files_exist(*inp_files):

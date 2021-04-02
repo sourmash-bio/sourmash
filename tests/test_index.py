@@ -725,14 +725,14 @@ def test_multi_index_load_from_path_no_exist():
         mi = MultiIndex.load_from_path(dirname, force=True)
 
 
-def test_multi_index_load_from_file_list_no_exist():
+def test_multi_index_load_from_pathlist_no_exist():
     dirname = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_file_list(dirname)
+        mi = MultiIndex.load_from_pathlist(dirname)
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_file_list_1(c):
+def test_multi_index_load_from_pathlist_1(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname]))
     assert len(files) == 6, files
@@ -741,14 +741,14 @@ def test_multi_index_load_from_file_list_1(c):
 
     with open(file_list, 'wt') as fp:
         print("\n".join(files), file=fp)
-    mi = MultiIndex.load_from_file_list(file_list)
+    mi = MultiIndex.load_from_pathlist(file_list)
 
     sigs = list(mi.signatures())
     assert len(sigs) == 6
 
 
 @utils.in_tempdir
-def test_multi_index_load_from_file_list_2(c):
+def test_multi_index_load_from_pathlist_2(c):
     dirname = utils.get_test_data('prot')
     files = list(sourmash_args.traverse_find_sigs([dirname], True))
     assert len(files) == 18, files
@@ -759,4 +759,4 @@ def test_multi_index_load_from_file_list_2(c):
         print("\n".join(files), file=fp)
 
     with pytest.raises(ValueError):
-        mi = MultiIndex.load_from_file_list(file_list)
+        mi = MultiIndex.load_from_pathlist(file_list)
