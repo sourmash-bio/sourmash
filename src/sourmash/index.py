@@ -276,7 +276,7 @@ class MultiIndex(Index):
                 if force:
                     continue    # ignore error
                 else:
-                    raise       # contine past error!
+                    raise       # continue past error!
 
         db = None
         if index_list:
