@@ -72,9 +72,9 @@ pip install -r requirements.txt
 
 ## Updating your developer environment
 
-To update rust to the latest version, use [`rustup update`].
+To update rust to the latest version, use `rustup update`.
 
-To update your Python dependencies to the latest required for sourmash, you can run [`pip install -r requirements.txt`].
+To update your Python dependencies to the latest required for sourmash, you can run `pip install -r requirements.txt`.
 
 ## Running tests and checks
 
