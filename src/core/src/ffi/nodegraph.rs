@@ -184,7 +184,7 @@ unsafe fn nodegraph_from_buffer(ptr: *const c_char, insize: usize) -> Result<*mu
         slice::from_raw_parts(ptr as *mut u8, insize)
     };
 
-    let ng = Nodegraph::from_reader(&mut &buf[..])?;
+    let ng = Nodegraph::from_reader(buf)?;
 
     Ok(SourmashNodegraph::from_rust(ng))
 }

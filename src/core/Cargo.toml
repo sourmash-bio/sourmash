@@ -60,7 +60,8 @@ wasm-opt = false # https://github.com/rustwasm/wasm-pack/issues/886
 [dev-dependencies]
 assert_matches = "1.3.0"
 criterion = "0.3.2"
-needletail = { version = "0.4.0", default-features = false }
+# Upgrade to 0.4.1 requires rust 1.42
+needletail = { version = "=0.4.0", default-features = false }
 predicates = "1.0.4"
 proptest = { version = "1.0.0", default-features = false, features = ["std"]}  # Upgrade to 0.10 requires rust 1.39
 rand = "0.8.2"
