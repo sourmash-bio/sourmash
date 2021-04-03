@@ -237,6 +237,9 @@ class ZipFileLinearIndex(Index):
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
 
+    def __len__(self):
+        return len(list(self.signatures()))
+
     @property
     def location(self):
         return self.zf.filename

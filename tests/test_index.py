@@ -492,6 +492,7 @@ def test_zipfile_API_signatures():
     zipidx = ZipFileLinearIndex.load(zipfile_db)
     siglist = list(zipidx.signatures())
     assert len(siglist) == 7
+    assert len(zipidx) == 7
 
 
 def test_zipfile_API_signatures_traverse_yield_all():
@@ -501,8 +502,9 @@ def test_zipfile_API_signatures_traverse_yield_all():
     zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
     siglist = list(zipidx.signatures())
     assert len(siglist) == 8
+    assert len(zipidx) == 8
 
-    # confirm that there are 9 files in there total, incl build.sh and dirs
+    # confirm that there are 12 files in there total, incl build.sh and dirs
     zf = zipidx.zf
     allfiles = [ zi.filename for zi in zf.infolist() ]
     print(allfiles)
@@ -517,6 +519,7 @@ def test_zipfile_API_signatures_traverse_yield_all_select():
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
     assert len(siglist) == 2
+    assert len(zipidx) == 2
 
 
 def test_zipfile_API_signatures_select():
@@ -527,6 +530,7 @@ def test_zipfile_API_signatures_select():
     zipidx = zipidx.select(moltype='DNA')
     siglist = list(zipidx.signatures())
     assert len(siglist) == 1
+    assert len(zipidx) == 1
 
 
 def test_zipfile_API_save():
@@ -873,3 +877,17 @@ def test_multi_index_load_from_pathlist_2(c):
 
     with pytest.raises(ValueError):
         mi = MultiIndex.load_from_pathlist(file_list)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_pathlist_3_zipfile(c):
+    # can we load zipfiles in a pathlist? yes please.
+    zipfile = utils.get_test_data('prot/all.zip')
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print(zipfile, file=fp)
+
+    mi = MultiIndex.load_from_pathlist(file_list)
+    assert len(mi) == 7
