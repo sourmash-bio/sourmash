@@ -842,7 +842,7 @@ scaled values will be made compatible.
 ### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
-signatures. sourmash supports storing and loading signatures from JSON
+signatures. `sourmash` supports storing and loading signatures from JSON
 files, directories, lists of files, Zip files, and indexed databases.
 These can all be used interchangeably for sourmash operations.
 
