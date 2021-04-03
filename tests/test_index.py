@@ -556,6 +556,48 @@ def test_zipfile_API_location():
     assert zipidx.location == zipfile_db
 
 
+def test_zipfile_load_file_as_signatures():
+    from types import GeneratorType
+
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    sigs = sourmash_args.load_file_as_signatures(zipfile_db)
+
+    # it's fine if this needs to change, but for now I want to make
+    # sure that this is generator.
+    assert isinstance(sigs, GeneratorType)
+
+    sigs = list(sigs)
+    assert len(sigs) == 7
+
+
+def test_zipfile_load_file_as_signatures_traverse_yield_all():
+    from types import GeneratorType
+
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    sigs = sourmash_args.load_file_as_signatures(zipfile_db,
+                                                 yield_all_files=True)
+
+    # it's fine if this needs to change, but for now I want to make
+    # sure that this is generator.
+    assert isinstance(sigs, GeneratorType)
+
+    sigs = list(sigs)
+    assert len(sigs) == 8
+
+
+@utils.in_tempdir
+def test_zipfile_load_database_fail_if_not_zip(c):
+    # fail _load_database if not .zip
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    badname = c.output('xyz.nada')
+    shutil.copyfile(zipfile_db, badname)
+
+    with pytest.raises(ValueError) as exc:
+        sigs = sourmash_args.load_file_as_signatures(badname)
+
+    assert 'Error while reading signatures from' in str(exc.value)
+
+
 def test_multi_index_search():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
