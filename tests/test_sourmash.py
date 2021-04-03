@@ -716,7 +716,7 @@ def test_search_query_sig_does_not_exist(c):
 
     print(c.last_result.status, c.last_result.out, c.last_result.err)
     assert c.last_result.status == -1
-    assert "Cannot open file 'short2.fa.sig'" in c.last_result.err
+    assert "Cannot open query file 'short2.fa.sig'" in c.last_result.err
     assert len(c.last_result.err.split('\n\r')) < 5
 
 
@@ -1812,6 +1812,36 @@ def test_search_metagenome_traverse():
         assert '13 matches; showing first 3:' in out
 
 
+def test_search_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
+    with utils.TempDirectory() as location:
+        testdata_dir = utils.get_test_data('gather')
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        out_csv = os.path.join(location, 'out.csv')
+
+        cmd = f'search {query_sig} {testdata_dir} -k 21 -o {out_csv}'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        with open(out_csv, 'rt') as fp:
+            prefix_len = len(testdata_dir)
+            r = csv.DictReader(fp)
+            for row in r:
+                filename = row['filename']
+                assert filename.startswith(testdata_dir)
+                # should have full path to file sig was loaded from
+                assert len(filename) > prefix_len
+
+        assert ' 33.2%       NC_003198.1 Salmonella enterica subsp. enterica serovar T...' in out
+        assert '13 matches; showing first 3:' in out
+
+
 @utils.in_thisdir
 def test_search_incompatible(c):
     num_sig = utils.get_test_data('num/47.fa.sig')
@@ -1822,12 +1852,14 @@ def test_search_incompatible(c):
     assert c.last_result.status != 0
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+
+    assert "no compatible signatures found in " in c.last_result.err
 
 
 @utils.in_tempdir
 def test_search_traverse_incompatible(c):
+    # build a directory with some signatures in it, search for compatible
+    # signatures.
     searchdir = c.output('searchme')
     os.mkdir(searchdir)
 
@@ -1837,10 +1869,7 @@ def test_search_traverse_incompatible(c):
     shutil.copyfile(scaled_sig, c.output('searchme/scaled.sig'))
 
     c.run_sourmash("search", scaled_sig, c.output('searchme'))
-    print(c.last_result.out)
-    print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert '100.0%       NC_009665.1 Shewanella baltica OS185, complete genome' in c.last_result.out
 
 
 # explanation: you cannot downsample a scaled SBT to match a scaled
@@ -1867,8 +1896,11 @@ def test_search_metagenome_downsample():
                                            in_directory=location, fail_ok=True)
         assert status == -1
 
-        assert "for tree 'gcf_all', scaled value is smaller than query." in err
-        assert 'tree scaled: 10000; query scaled: 100000. Cannot do similarity search.' in err
+        print(out)
+        print(err)
+
+        assert "ERROR: cannot use 'gcf_all' for this query." in err
+        assert "search scaled value 100000 is less than database scaled value of 10000" in err
 
 
 def test_search_metagenome_downsample_containment():
@@ -2026,7 +2058,11 @@ def test_do_sourmash_sbt_search_wrong_ksize():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'this is different from' in err
+        print(out)
+        print(err)
+
+        assert "ERROR: cannot use 'zzz' for this query." in err
+        assert "search ksize 51 is different from database ksize 31" in err
 
 
 def test_do_sourmash_sbt_search_multiple():
@@ -2141,7 +2177,10 @@ def test_do_sourmash_sbt_search_downsample_2():
                                             '--threshold=0.01'],
                                            in_directory=location, fail_ok=True)
         assert status == -1
-        assert 'Cannot do similarity search.' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use 'foo' for this query." in err
+        assert "search scaled value 100000 is less than database scaled value of 2000" in err
 
 
 @utils.in_tempdir
@@ -2453,7 +2492,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_1():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'tree and query are incompatible for search' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use '" in err
+        assert "this database was created with 'num' MinHash sketches, not 'scaled'" in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_2():
@@ -2485,7 +2527,10 @@ def test_do_sourmash_sbt_search_scaled_vs_num_2():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'tree and query are incompatible for search' in err
+        print(out)
+        print(err)
+        assert "ERROR: cannot use '" in err
+        assert "this database was created with 'scaled' MinHash sketches, not 'num'" in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_3():
@@ -2510,7 +2555,9 @@ def test_do_sourmash_sbt_search_scaled_vs_num_3():
                                            fail_ok=True)
 
         assert status == -1
-        assert 'incompatible - cannot compare' in err
+        print(out)
+        print(err)
+        assert "no compatible signatures found in " in err
 
 
 def test_do_sourmash_sbt_search_scaled_vs_num_4():
@@ -2535,7 +2582,9 @@ def test_do_sourmash_sbt_search_scaled_vs_num_4():
                                            ['search', sig_loc2, sig_loc],
                                            fail_ok=True)
         assert status == -1
-        assert 'incompatible - cannot compare' in err
+        print(out)
+        print(err)
+        assert "no compatible signatures found in " in err
 
 
 def test_do_sourmash_check_search_vs_actual_similarity():
@@ -3536,6 +3585,49 @@ def test_gather_metagenome_traverse():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
+def test_gather_metagenome_traverse_check_csv():
+    # this test confirms that the CSV 'filename' output for signatures loaded
+    # via directory traversal properly contains the actual path to the
+    # signature file from which the signature was loaded.
+    with utils.TempDirectory() as location:
+        # set up a directory $location/gather that contains
+        # everything in the 'tests/test-data/gather' directory
+        # *except* the query sequence, which is 'combined.sig'.
+        testdata_dir = utils.get_test_data('gather')
+        copy_testdata = os.path.join(location, 'somesigs')
+        shutil.copytree(testdata_dir, copy_testdata)
+        os.unlink(os.path.join(copy_testdata, 'combined.sig'))
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+        out_csv = os.path.join(location, 'out.csv')
+
+        # now, feed in the new directory --
+        cmd = f'gather {query_sig} {copy_testdata} -k 21 --threshold-bp=0'
+        cmd += f' -o {out_csv}'
+        status, out, err = utils.runscript('sourmash', cmd.split(' '),
+                                           in_directory=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        with open(out_csv, 'rt') as fp:
+            prefix_len = len(copy_testdata)
+            r = csv.DictReader(fp)
+            for row in r:
+                filename = row['filename']
+                assert filename.startswith(copy_testdata)
+                # should have full path to file sig was loaded from
+                assert len(filename) > prefix_len
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+        assert all(('4.9 Mbp       33.2%  100.0%' in out,
+                    'NC_003198.1 Salmonella enterica subsp...' in out))
+        assert all(('4.7 Mbp        0.5%    1.5%' in out,
+                    'NC_011294.1 Salmonella enterica subsp...' in out))
+
+
 @utils.in_tempdir
 def test_gather_traverse_incompatible(c):
     searchdir = c.output('searchme')
@@ -3549,8 +3641,7 @@ def test_gather_traverse_incompatible(c):
     c.run_sourmash("gather", scaled_sig, c.output('searchme'))
     print(c.last_result.out)
     print(c.last_result.err)
-    assert 'incompatible - cannot compare.' in c.last_result.err
-    assert 'was calculated with --scaled,' in c.last_result.err
+    assert "5.2 Mbp      100.0%  100.0%    NC_009665.1 Shewanella baltica OS185,..." in c.last_result.out
 
 
 def test_gather_metagenome_output_unassigned():
@@ -3695,6 +3786,7 @@ def test_gather_query_downsample():
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
+        print(testdata_sigs)
 
         query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
@@ -3754,7 +3846,7 @@ def test_gather_error_no_sigs_traverse(c):
 
     err = c.last_result.err
     print(err)
-    assert '** ERROR: no signatures or databases loaded?' in err
+    assert f"Error while reading signatures from '{emptydir}'" in err
     assert not 'found 0 matches total;' in err
 
 
@@ -4184,8 +4276,7 @@ def test_sbt_categorize_already_done_traverse():
 
 
 def test_sbt_categorize_multiple_ksizes_moltypes():
-    # 'categorize' should fail when there are multiple ksizes or moltypes
-    # present
+    # 'categorize' works fine with multiple moltypes/ksizes
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('genome-s10.fa.gz.sig')
         testdata2 = utils.get_test_data('genome-s11.fa.gz.sig')
@@ -4201,10 +4292,7 @@ def test_sbt_categorize_multiple_ksizes_moltypes():
 
         args = ['categorize', 'zzz', '.']
         status, out, err = utils.runscript('sourmash', args,
-                                           in_directory=location, fail_ok=True)
-
-        assert status != 0
-        assert 'multiple k-mer sizes/molecule types present' in err
+                                           in_directory=location)
 
 
 @utils.in_tempdir

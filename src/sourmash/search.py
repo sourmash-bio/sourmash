@@ -166,8 +166,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
         if not best_match:          # no matches at all for this cutoff!
-            notify('found less than {} in common. => exiting',
-                   format_bp(threshold_bp))
+            notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
             break
 
         # subtract found hashes from search hashes, construct new search

@@ -252,7 +252,7 @@ def load_signatures(
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
         if do_raise:
-            raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
+            raise ValueError("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
 
     size = ffi.new("uintptr_t *")

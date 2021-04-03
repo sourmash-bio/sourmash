@@ -33,7 +33,7 @@ def compare(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
@@ -353,7 +353,7 @@ def index(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     if not inp_files:
@@ -532,6 +532,8 @@ def search(args):
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
+    from .index import MultiIndex
+
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -546,14 +548,13 @@ def categorize(args):
     # load search database
     db = sourmash_args.load_file_as_index(args.database)
 
-    # load query filenames
-    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    inp_files = inp_files - already_names
-
-    notify('found {} files to query', len(inp_files))
-
-    loader = sourmash_args.LoadSingleSignatures(inp_files,
-                                                args.ksize, moltype)
+    # utility function to load & select relevant signatures.
+    def _yield_all_sigs(queries, ksize, moltype):
+        for filename in queries:
+            mi = MultiIndex.load_from_path(filename, False)
+            mi = mi.select(ksize=ksize, moltype=moltype)
+            for ss, loc in mi.signatures_with_location():
+                yield ss, loc
 
     csv_w = None
     csv_fp = None
@@ -562,9 +563,13 @@ def categorize(args):
         csv_w = csv.writer(csv_fp)
 
     search_obj = get_search_obj(False, False, False, args.threshold)
-    for queryfile, query, query_moltype, query_ksize in loader:
+    for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+        # skip if we've already done signatures from this file.
+        if loc in already_names:
+            continue
+
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query_ksize, query_moltype)
+               query.minhash.ksize, query.minhash.moltype)
 
         if args.ignore_abundance:
             # @CTB note this changes md5 of query
@@ -595,13 +600,8 @@ def categorize(args):
             notify('for {}, no match found', query)
 
         if csv_w:
-            csv_w.writerow([queryfile, query, best_hit_query_name,
+            csv_w.writerow([loc, query, best_hit_query_name,
                            best_hit_sim])
-
-    if loader.skipped_ignore:
-        notify('skipped/ignore: {}', loader.skipped_ignore)
-    if loader.skipped_nosig:
-        notify('skipped/nosig: {}', loader.skipped_nosig)
 
     if csv_fp:
         csv_fp.close()
@@ -759,7 +759,7 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     # need a query to get ksize, moltype for db loading
