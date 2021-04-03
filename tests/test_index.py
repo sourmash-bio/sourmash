@@ -485,6 +485,19 @@ def test_zipfile_dayhoff_command_search_combined(c):
     assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
 
 
+@utils.in_thisdir
+def test_zipfile_dayhoff_command_search_protein(c):
+    # test command-line search/gather of protein sigs in zipfile
+    # with dayhoff query
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+
+    assert 'no compatible signatures found in ' in c.last_result.err
+
+
 def test_zipfile_API_signatures():
     # return all of the .sig and .sig.gz files in all.zip
     zipfile_db = utils.get_test_data('prot/all.zip')
