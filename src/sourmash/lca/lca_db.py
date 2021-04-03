@@ -433,15 +433,15 @@ class LCA_Database(Index):
             return a.downsample(scaled=max_scaled), \
                 b.downsample(scaled=max_scaled)
 
-        # @CTB checkme
-        if self.scaled > minhash.scaled:
-            minhash = minhash.downsample(scaled=self.scaled)
-        elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that similarity cannot be calculated w/o matching scaled.
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
-
         query_mh = query.minhash
         query_hashes = set(query_mh.hashes)
+
+        # @CTB checkme
+        if self.scaled > query_mh.scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
+        elif self.scaled < query_mh.scaled and not ignore_scaled:
+            # note that similarity cannot be calculated w/o matching scaled.
+            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, query_mh.scaled))
 
         # collect matching hashes for the query:
         c = Counter()
