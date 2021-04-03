@@ -821,8 +821,7 @@ def test_sbt_protein_search_no_threshold(c):
 
 @utils.in_thisdir
 def test_sbt_protein_command_search(c):
-    # test command-line search/gather of LCA database with protein sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with protein sigs
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.sbt.zip')
 
@@ -869,8 +868,7 @@ def test_sbt_hp_command_index(c):
 
 @utils.in_thisdir
 def test_sbt_hp_command_search(c):
-    # test command-line search/gather of LCA database with hp sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with hp sigs
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/hp.sbt.zip')
 
@@ -917,8 +915,7 @@ def test_sbt_dayhoff_command_index(c):
 
 @utils.in_thisdir
 def test_sbt_dayhoff_command_search(c):
-    # test command-line search/gather of LCA database with dayhoff sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with dayhoff sigs
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/dayhoff.sbt.zip')
 

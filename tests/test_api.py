@@ -49,6 +49,22 @@ def test_load_index_3():
     assert len(sigs) == 2
 
 
+def test_load_index_4():
+    testfile = utils.get_test_data('prot/all.zip')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 7
+
+
+def test_load_index_4_b():
+    testfile = utils.get_test_data('prot/protein.zip')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 2
+
+
 def test_load_fasta_as_signature():
     # try loading a fasta file - should fail with informative exception
     testfile = utils.get_test_data('short.fa')

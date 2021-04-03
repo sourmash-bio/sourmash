@@ -1421,6 +1421,27 @@ signature: GCA_001593935
         assert line.strip() in out
 
 
+@utils.in_tempdir
+def test_sig_describe_1_zipfile(c):
+    # get basic info on multiple signatures in a zipfile
+    sigs = utils.get_test_data('prot/all.zip')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+k=19 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 @utils.in_thisdir
 def test_sig_describe_stdin(c):
     sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
