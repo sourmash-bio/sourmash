@@ -842,7 +842,9 @@ scaled values will be made compatible.
 ### Storing (and searching) signatures
   
 Backing up a little, there are many ways to store and search
-signatures.
+signatures. sourmash supports storing and loading signatures from JSON
+files, directories, lists of files, Zip files, and indexed databases.
+These can all be used interchangeably for sourmash operations.
 
 The simplest is one signature in a single JSON file. You can also put
 many signatures in a single JSON file, either by building them that
@@ -851,7 +853,29 @@ commands. Searching or comparing these files involves loading them
 sequentially and iterating across all of the signatures - which can be
 slow, especially for many (100s or 1000s) of signatures.
 
-Indexed databases can make searching signatures a lot faster. SBT
+### Zip files
+
+All of the `sourmash` commands support loading collections of
+signatures from zip files.  You can create a compressed collection of
+signatures using `zip -r collection.zip *.sig` and then specify
+`collections.zip` on the command line.
+
+### Loading all signatures under a directory
+
+All of the `sourmash` commands support loading signatures from
+beneath directories; provide the paths on the command line.
+
+#### Passing in lists of files
+
+Most sourmash commands will also take `--from-file` or
+`--query-from-file`, which will take a path to a text file containing
+a list of file paths. This can be useful for situations where you want
+to specify thousands of queries, or a subset of signatures produced by
+some other command.
+
+#### Indexed databases
+
+Indexed databases can make searching signatures much faster. SBT
 databases are low memory and disk-intensive databases that allow for
 fast searches using a tree structure, while LCA databases are higher
 memory and (after a potentially significant load time) are quite fast.
@@ -868,19 +892,6 @@ signature type is incompatible with the other signatures, sourmash
 will complain. In contrast, signature files can
 contain many different types of signatures, and compatible ones will
 be discovered automatically.
-
-### Passing in lists of files
-
-Various sourmash commands will also take `--from-file` or
-`--query-from-file`, which will take a path to a text file containing
-a list of file paths. This can be useful for situations where you want
-to specify thousands of queries, or a subset of signatures produced by
-some other command.
-
-### Loading all signatures under a directory
-
-All of the `sourmash` commands support loading signatures from
-beneath directories; provide the paths on the command line.
 
 ### Combining search databases on the command line
 
@@ -902,9 +913,9 @@ been useful. :)
 
 ### Using stdin
 
-Most commands will take stdin via the usual UNIX convention, `-`.
-Moreover, `sourmash sketch` and the `sourmash sig` commands will
-output to stdout.  So, for example,
+Most commands will take signature JSON data via stdin using the usual
+UNIX convention, `-`.  Moreover, `sourmash sketch` and the `sourmash
+sig` commands will output to stdout.  So, for example,
 
 `sourmash sketch ... -o - | sourmash sig describe -` will describe the
 signatures that were just created.
