@@ -226,6 +226,27 @@ def test_multiple_moltypes():
 ### command line tests
 
 
+@utils.in_thisdir
+def test_do_sourmash_sketchdna_empty(c):
+    with pytest.raises(ValueError):
+        c.run_sourmash('sketch', 'dna')
+    assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
+
+
+@utils.in_thisdir
+def test_do_sourmash_sketchprotein_empty(c):
+    with pytest.raises(ValueError):
+        c.run_sourmash('sketch', 'protein')
+    assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
+
+
+@utils.in_thisdir
+def test_do_sourmash_sketchtranslate_empty(c):
+    with pytest.raises(ValueError):
+        c.run_sourmash('sketch', 'translate')
+    assert 'error: no input filenames provided! nothing to do - exiting.' in c.last_result.err
+
+
 def test_do_sourmash_sketchdna():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
