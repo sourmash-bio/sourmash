@@ -319,7 +319,7 @@ class LinearIndex(Index):
         self._signatures = []
         if _signatures:
             self._signatures = list(_signatures)
-        self.location = filename
+        self.filename = filename
 
     @property
     def location(self):
