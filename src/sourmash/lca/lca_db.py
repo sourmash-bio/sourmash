@@ -8,7 +8,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index, get_search_obj, get_gather_obj
+from sourmash.index import Index
 
 
 def cached_property(fun):

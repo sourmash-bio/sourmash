@@ -14,8 +14,6 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .index import get_search_obj
-
 from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
 
 DEFAULT_N = 500
@@ -533,6 +531,7 @@ def search(args):
 def categorize(args):
     "Use a database to find the best match to many signatures."
     from .index import MultiIndex
+    from .search import make_jaccard_search_query
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -562,7 +561,7 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    search_obj = get_search_obj(False, False, False, args.threshold)
+    search_obj = make_jaccard_search_query(False, False, False, args.threshold)
     for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
         # skip if we've already done signatures from this file.
         if loc in already_names:

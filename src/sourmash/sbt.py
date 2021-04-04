@@ -57,7 +57,7 @@ from cachetools import Cache
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index, get_search_obj, get_gather_obj
+from .index import Index
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 

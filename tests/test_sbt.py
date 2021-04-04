@@ -12,7 +12,7 @@ from sourmash.sbt import SBT, GraphFactory, Leaf, Node
 from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
-from sourmash.index import get_search_obj
+from sourmash.search import make_jaccard_search_query
 
 import sourmash_tst_utils as utils
 
@@ -164,9 +164,9 @@ def test_tree_old_load(old_version):
     # note: earlier versions of this test did containment on
     # the num MinHash in `to_search`, which doesn't work properly.
     # (See test_sbt_no_containment_on_num for test). So, to
-    # fix the test for the new get_search_obj API, we had to adjust
+    # fix the test for the new search API, we had to adjust
     # the threshold.
-    search_obj = get_search_obj(False, False, False, 0.05)
+    search_obj = make_jaccard_search_query(False, False, False, 0.05)
     results_old = {str(s) for s in tree_old.find(search_obj, to_search)}
     results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
 
@@ -196,7 +196,7 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
@@ -207,7 +207,7 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
@@ -227,7 +227,7 @@ def test_search_minhashes():
     to_search = next(iter(tree.leaves()))
 
     # this fails if 'search_obj' is calc containment and not similarity.
-    search_obj = get_search_obj(False, False, False, 0.08)
+    search_obj = make_jaccard_search_query(False, False, False, 0.08)
     results = tree.find(search_obj, to_search.data)
     for (match, score) in results:
         assert to_search.data.jaccard(match) >= 0.08
@@ -257,7 +257,7 @@ def test_binary_nary_tree():
     print('*' * 60)
     print("{}:".format(to_search.metadata))
     for d, tree in trees.items():
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         results[d] = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*results[2], sep='\n')
 
@@ -292,7 +292,7 @@ def test_sbt_combine(n_children):
     assert t1_leaves == t_leaves
 
     to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     t1_result = {str(s) for s in tree_1.find(search_obj, to_search)}
     tree_result = {str(s) for s in tree.find(search_obj, to_search)}
     assert t1_result == tree_result
@@ -326,7 +326,7 @@ def test_sbt_fsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
@@ -336,7 +336,7 @@ def test_sbt_fsstorage():
         tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
@@ -360,7 +360,7 @@ def test_sbt_zipstorage(tmpdir):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
@@ -374,7 +374,7 @@ def test_sbt_zipstorage(tmpdir):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
@@ -397,7 +397,7 @@ def test_sbt_ipfsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
@@ -414,7 +414,7 @@ def test_sbt_ipfsstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            search_obj = get_search_obj(False, False, False, 0.1)
+            search_obj = make_jaccard_search_query(False, False, False, 0.1)
             new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
@@ -436,7 +436,7 @@ def test_sbt_redisstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        search_obj = get_search_obj(False, False, False, 0.1)
+        search_obj = make_jaccard_search_query(False, False, False, 0.1)
         old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
@@ -453,7 +453,7 @@ def test_sbt_redisstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            search_obj = get_search_obj(False, False, False, 0.1)
+            search_obj = make_jaccard_search_query(False, False, False, 0.1)
             new_result = {str(s) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
@@ -480,7 +480,7 @@ def test_save_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     old_result = {str(s) for s in tree.find(search_obj, to_search)}
     new_result = {str(s) for s in new_tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
@@ -502,7 +502,7 @@ def test_load_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     new_result = {str(s) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
@@ -524,7 +524,7 @@ def test_load_zip_uncompressed(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     new_result = {str(s) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
@@ -540,7 +540,7 @@ def test_tree_repair():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     results_repair = {str(s) for s in tree_repair.find(search_obj, to_search)}
     results_cur = {str(s) for s in tree_cur.find(search_obj, to_search)}
 
@@ -581,7 +581,7 @@ def test_save_sparseness(n_children):
     print('*' * 60)
     print("{}:".format(to_search.metadata))
 
-    search_obj = get_search_obj(False, False, False, 0.1)
+    search_obj = make_jaccard_search_query(False, False, False, 0.1)
     old_result = {str(s) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
@@ -953,9 +953,9 @@ def test_sbt_node_cache():
     # note: earlier versions of this test did containment on
     # the num MinHash in `to_search`, which doesn't work properly.
     # (See test_sbt_no_containment_on_num for test). So, to
-    # fix the test for the new get_search_obj API, we had to adjust
+    # fix the test for the new search API, we had to adjust
     # the threshold.
-    search_obj = get_search_obj(False, False, False, 0.05)
+    search_obj = make_jaccard_search_query(False, False, False, 0.05)
     results = list(tree.find(search_obj, to_search))
     assert len(results) == 4
 
@@ -971,7 +971,7 @@ def test_sbt_no_containment_on_num():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    search_obj = get_search_obj(True, False, False, 0.05)
+    search_obj = make_jaccard_search_query(True, False, False, 0.05)
     with pytest.raises(TypeError) as exc:
         results = list(tree.find(search_obj, to_search))
 

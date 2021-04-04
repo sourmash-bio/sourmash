@@ -1,116 +1,12 @@
 "An Abstract Base Class for collections of signatures."
 
+import os
 import sourmash
 from abc import abstractmethod, ABC
-from enum import Enum
 from collections import namedtuple
 import zipfile
-import os
 
-
-class SearchType(Enum):
-    JACCARD = 1
-    CONTAINMENT = 2
-    MAX_CONTAINMENT = 3
-    #ANGULAR_SIMILARITY = 4
-
-
-def get_search_obj(do_containment, do_max_containment, best_only, threshold):
-    if do_containment and do_max_containment:
-        raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
-
-    # configure search - containment? ignore abundance? best only?
-    search_cls = IndexSearch
-    if best_only:
-        search_cls = IndexSearchBestOnly
-
-    if do_containment:
-        search_obj = search_cls(SearchType.CONTAINMENT, threshold)
-    elif do_max_containment:
-        search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
-    else:
-        search_obj = search_cls(SearchType.JACCARD, threshold)
-
-    return search_obj
-
-
-def get_gather_obj(query_mh, threshold_bp):
-    scaled = query_mh.scaled
-    if not scaled: raise TypeError #  @CTB
-
-    # are we setting a threshold?
-    threshold=0
-    if threshold_bp:
-        # if we have a threshold_bp of N, then that amounts to N/scaled
-        # hashes:
-        n_threshold_hashes = threshold_bp / scaled
-
-        # that then requires the following containment:
-        threshold = n_threshold_hashes / len(query_mh)
-
-        # is it too high to ever match? if so, exit.
-        if threshold > 1.0:
-            return None
-
-    search_obj = IndexSearch(SearchType.CONTAINMENT, threshold=threshold)
-
-    return search_obj
-
-class IndexSearch:
-    def __init__(self, search_type, threshold=None):
-        score_fn = None
-        require_scaled = False
-
-        if search_type == SearchType.JACCARD:
-            score_fn = self.score_jaccard
-        elif search_type == SearchType.CONTAINMENT:
-            score_fn = self.score_containment
-            require_scaled = True
-        elif search_type == SearchType.MAX_CONTAINMENT:
-            score_fn = self.score_max_containment
-            require_scaled = True
-        self.score_fn = score_fn
-        self.require_scaled = require_scaled # @CTB
-
-        if threshold is None:
-            threshold = 0
-        self.threshold = float(threshold)
-
-    def check_is_compatible(self, sig):
-        if self.require_scaled:
-            if not sig.minhash.scaled:
-                raise TypeError("this search requires a scaled signature")
-        if sig.minhash.track_abundance:
-            raise TypeError("this search cannot be done with an abund signature")
-
-    def passes(self, score):
-        if score and score >= self.threshold:
-            return True
-        return False
-
-    def collect(self, score):
-        pass
-
-    def score_jaccard(self, query_size, shared_size, subject_size, total_size):
-        return shared_size / total_size
-
-    def score_containment(self, query_size, shared_size, subject_size,
-                          total_size):
-        if query_size == 0:
-            return 0
-        return shared_size / query_size
-
-    def score_max_containment(self, query_size, shared_size, subject_size,
-                              total_size):
-        min_denom = min(query_size, subject_size)
-        if min_denom == 0:
-            return 0
-        return shared_size / min_denom
-
-
-class IndexSearchBestOnly(IndexSearch):
-    def collect(self, score):
-        self.threshold = max(self.threshold, score)
+from .search import make_jaccard_search_query, make_gather_query
 
 
 class Index(ABC):
@@ -223,10 +119,10 @@ class Index(ABC):
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        search_obj = get_search_obj(do_containment,
-                                    do_max_containment,
-                                    best_only,
-                                    threshold)
+        search_obj = make_jaccard_search_query(do_containment,
+                                               do_max_containment,
+                                               best_only,
+                                               threshold)
 
         # do the actual search:
         matches = []
@@ -248,7 +144,7 @@ class Index(ABC):
             raise ValueError('gather requires scaled signatures')
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        search_obj = get_gather_obj(query.minhash, threshold_bp)
+        search_obj = make_gather_query(query.minhash, threshold_bp)
         if not search_obj:
             return []
 
