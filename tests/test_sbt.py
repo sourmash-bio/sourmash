@@ -148,7 +148,8 @@ def test_longer_search(n_children):
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
+#@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
+@pytest.mark.parametrize("old_version", ["v3", "v4", "v5"])
 def test_tree_old_load(old_version):
     tree_old = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
                        leaf_loader=SigLeaf.load)
