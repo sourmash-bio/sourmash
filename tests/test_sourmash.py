@@ -1532,7 +1532,12 @@ def test_search_containment_s10_sbt_best_only():
                                             '--containment', '--best-only'],
                                            in_directory=location, fail_ok=True)
 
-        assert status != 0
+        print(out)
+        print(err)
+
+        assert '100.0%       ' in out # there are at least two perfect matches!
+
+        assert status == 0
 
 
 def test_search_containment_s10_sbt_empty():
@@ -1572,9 +1577,14 @@ def test_search_max_containment_s10_sbt_best_only():
         q2 = utils.get_test_data('scaled/all.sbt.zip')
         status, out, err = utils.runscript('sourmash',
                                            ['search', q1, q2,
-                                            '--max-containment', '--best-only'],
+                                            '--max-containment',
+                                            '--best-only'],
                                            in_directory=location, fail_ok=True)
-        assert status != 0
+
+        print(out)
+        print(err)
+
+        assert status == 0
 
 
 def test_search_max_containment_s10_sbt_empty():
