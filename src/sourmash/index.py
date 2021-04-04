@@ -268,6 +268,9 @@ class ZipFileLinearIndex(Index):
 
                 # now load all the signatures and select on ksize/moltype:
                 selection_dict = self.selection_dict
+
+                # note: if 'fp' doesn't contain a valid JSON signature,
+                # load_signatures will silently fail & yield nothing.
                 for ss in load_signatures(fp):
                     if selection_dict:
                         if select_signature(ss, **self.selection_dict):
