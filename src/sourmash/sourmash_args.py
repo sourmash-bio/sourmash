@@ -17,7 +17,7 @@ import sourmash.exceptions
 from . import signature
 from .logging import notify, error, debug_literal
 
-from .index import LinearIndex, MultiIndex
+from .index import (LinearIndex, ZipFileLinearIndex, MultiIndex)
 from . import signature as sig
 from .sbt import SBT
 from .sbtmh import SigLeaf
@@ -143,7 +143,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
 def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None):
     """
-    Load one or more SBTs, LCAs, and/or signatures.
+    Load one or more SBTs, LCAs, and/or collections of signatures.
 
     Check for compatibility with query.
 
@@ -251,7 +251,7 @@ def _load_sbt(filename, **kwargs):
 
     try:
         db = load_sbt_index(filename, cache_size=cache_size)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, TypeError) as exc:
         raise ValueError(exc)
 
     return db
@@ -263,6 +263,16 @@ def _load_revindex(filename, **kwargs):
     return db
 
 
+def _load_zipfile(filename, **kwargs):
+    "Load collection from a .zip file."
+    db = None
+    if filename.endswith('.zip'):
+        traverse_yield_all = kwargs['traverse_yield_all']
+        db = ZipFileLinearIndex.load(filename,
+                                     traverse_yield_all=traverse_yield_all)
+    return db
+
+
 # all loader functions, in order.
 _loader_functions = [
     ("load from stdin", _load_stdin),
@@ -271,6 +281,7 @@ _loader_functions = [
     ("load from file list", _multiindex_load_from_pathlist),
     ("load SBT", _load_sbt),
     ("load revindex", _load_revindex),
+    ("load collection from zipfile", _load_zipfile),
     ]
 
 
@@ -328,8 +339,10 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 def load_file_as_index(filename, yield_all_files=False):
     """Load 'filename' as a database; generic database loader.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    the appropriate objects.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return the appropriate objects. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return an Index object containing those signatures.
@@ -346,8 +359,10 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
                             progress=None):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
-    If 'filename' contains an SBT or LCA indexed database, will return
-    a signatures() generator.
+    If 'filename' contains an SBT or LCA indexed database, or a regular
+    Zip file, will return a signatures() generator. If a Zip file and
+    yield_all_files=True, will try to load all files within zip, not just
+    .sig files.
 
     If 'filename' is a JSON file containing one or more signatures, will
     return a list of those signatures.

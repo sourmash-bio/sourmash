@@ -4,6 +4,7 @@ import sourmash
 from abc import abstractmethod, ABC
 from enum import Enum
 from collections import namedtuple
+import zipfile
 import os
 
 
@@ -253,6 +254,7 @@ class Index(ABC):
 
         # actually do search!
         results = []
+
         for subj, score in self.find(search_obj, query):
             results.append((score, subj, self.location))
 
@@ -317,7 +319,7 @@ class LinearIndex(Index):
         self._signatures = []
         if _signatures:
             self._signatures = list(_signatures)
-        self.filename = filename
+        self.location = filename
 
     @property
     def location(self):
@@ -358,7 +360,69 @@ class LinearIndex(Index):
             if select_signature(ss, **kwargs):
                 siglist.append(ss)
 
-        return LinearIndex(siglist, self.filename)
+        return LinearIndex(siglist, self.location)
+
+
+class ZipFileLinearIndex(Index):
+    """\
+    A read-only collection of signatures in a zip file.
+
+    Does not support `insert` or `save`.
+    """
+    is_database = True
+
+    def __init__(self, zf, selection_dict=None,
+                 traverse_yield_all=False):
+        self.zf = zf
+        self.selection_dict = selection_dict
+        self.traverse_yield_all = traverse_yield_all
+
+    def __len__(self):
+        return len(list(self.signatures()))
+
+    @property
+    def location(self):
+        return self.zf.filename
+
+    def insert(self, signature):
+        raise NotImplementedError
+
+    def save(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, location, traverse_yield_all=False):
+        "Class method to load a zipfile."
+        zf = zipfile.ZipFile(location, 'r')
+        return cls(zf, traverse_yield_all=traverse_yield_all)
+
+    def signatures(self):
+        "Load all signatures in the zip file."
+        from .signature import load_signatures
+        for zipinfo in self.zf.infolist():
+            # should we load this file? if it ends in .sig OR we are forcing:
+            if zipinfo.filename.endswith('.sig') or \
+               zipinfo.filename.endswith('.sig.gz') or \
+               self.traverse_yield_all:
+                fp = self.zf.open(zipinfo)
+
+                # now load all the signatures and select on ksize/moltype:
+                selection_dict = self.selection_dict
+
+                # note: if 'fp' doesn't contain a valid JSON signature,
+                # load_signatures will silently fail & yield nothing.
+                for ss in load_signatures(fp):
+                    if selection_dict:
+                        if select_signature(ss, **self.selection_dict):
+                            yield ss
+                    else:
+                        yield ss
+
+    def select(self, **kwargs):
+        "Select signatures in zip file based on ksize/moltype/etc."
+        return ZipFileLinearIndex(self.zf,
+                                  selection_dict=kwargs,
+                                  traverse_yield_all=self.traverse_yield_all)
 
 
 class MultiIndex(Index):

@@ -711,9 +711,7 @@ class SBT(Index):
 
             if storage:
                 sbts = storage.list_sbts()
-                if len(sbts) != 1:
-                    print("no SBT, or too many SBTs!")
-                else:
+                if len(sbts) == 1:
                     tree_data = storage.load(sbts[0])
 
                 tempfile = NamedTemporaryFile()
