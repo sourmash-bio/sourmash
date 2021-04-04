@@ -427,7 +427,7 @@ class LCA_Database(Index):
         search_fn.check_is_compatible(query)
 
         # make sure we're looking at the same scaled value as database
-        # @CTB we probably don't need to do this for query every time.
+        # @CTB we don't need to do this for query every time!
         def downsample(a, b):
             max_scaled = max(a.scaled, b.scaled)
             return a.downsample(scaled=max_scaled), \
@@ -435,13 +435,6 @@ class LCA_Database(Index):
 
         query_mh = query.minhash
         query_hashes = set(query_mh.hashes)
-
-        # @CTB checkme
-        if self.scaled > query_mh.scaled:
-            query_mh = query_mh.downsample(scaled=self.scaled)
-        elif self.scaled < query_mh.scaled and not ignore_scaled:
-            # note that similarity cannot be calculated w/o matching scaled.
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, query_mh.scaled))
 
         # collect matching hashes for the query:
         c = Counter()
@@ -468,9 +461,6 @@ class LCA_Database(Index):
             subj_size = len(smh)
             shared_size = qmh.count_common(smh)
             total_size = len(qmh + smh)
-
-            # @CTB:
-            # score = count / (len(query_mins) + match_size - count)
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
