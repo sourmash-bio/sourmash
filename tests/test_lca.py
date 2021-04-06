@@ -399,9 +399,9 @@ def test_databases_load_fail_on_dir():
     with pytest.raises(ValueError) as exc:
         dblist, ksize, scaled = lca_utils.load_databases([filename1])
 
-    err = filename1.err
+    err = str(exc.value)
     print(err)
-    assert f"Error while loading '{filename1}' as an LCA database" in err
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
     assert not 'found 0 matches total;' in err
 
 
@@ -410,9 +410,9 @@ def test_databases_load_fail_on_not_exist():
     with pytest.raises(ValueError) as exc:
         dblist, ksize, scaled = lca_utils.load_databases([filename1])
 
-    err = filename1.err
+    err = str(exc.value)
     print(err)
-    assert f"Error while loading '{filename1}'" in err
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
     assert not 'found 0 matches total;' in err
 
 def test_db_repr():
