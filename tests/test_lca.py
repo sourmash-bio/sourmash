@@ -399,12 +399,21 @@ def test_databases_load_fail_on_dir():
     with pytest.raises(ValueError) as exc:
         dblist, ksize, scaled = lca_utils.load_databases([filename1])
 
+    err = filename1.err
+    print(err)
+    assert f"Error while loading '{filename1}' as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
 
 def test_databases_load_fail_on_not_exist():
     filename1 = utils.get_test_data('does-not-exist')
     with pytest.raises(ValueError) as exc:
         dblist, ksize, scaled = lca_utils.load_databases([filename1])
 
+    err = filename1.err
+    print(err)
+    assert f"Error while loading '{filename1}'" in err
+    assert not 'found 0 matches total;' in err
 
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
