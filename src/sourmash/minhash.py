@@ -463,7 +463,6 @@ class MinHash(RustObject):
                 else:
                     max_hash=0
             else:
-                # @CTB testme
                 raise ValueError("scaled != 0 - cannot downsample a scaled MinHash this way")
         elif scaled is not None:
             if self.num:
