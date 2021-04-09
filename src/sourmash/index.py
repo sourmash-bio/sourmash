@@ -56,21 +56,24 @@ class Index(ABC):
             query_scaled = query_mh.scaled
 
             def prepare_subject(subj_mh):
+                assert subj_mh.scaled
                 if subj_mh.track_abundance:
                     subj_mh = subj_mh.flatten()
 
                 # downsample subject to highest scaled
                 subj_scaled = subj_mh.scaled
                 if subj_scaled < query_scaled:
-                    return subj_mh.downsample(query_scaled)
+                    return subj_mh.downsample(scaled=query_scaled)
                 else:
                     return subj_mh
 
             def prepare_query(query_mh, subj_mh):
+                assert subj_mh.scaled
+
                 # downsample query to highest scaled
                 subj_scaled = subj_mh.scaled
                 if subj_scaled > query_scaled:
-                    return query_mh.downsample(subj_scaled)
+                    return query_mh.downsample(scaled=subj_scaled)
                 else:
                     return query_mh
 
@@ -78,6 +81,7 @@ class Index(ABC):
             query_num = query_mh.num
 
             def prepare_subject(subj_mh):
+                assert subj_mh.num
                 # downsample subject to smallest num
                 subj_num = subj_mh.num
                 if subj_num > query_num:
@@ -86,6 +90,7 @@ class Index(ABC):
                     return subj_mh
 
             def prepare_query(query_mh, subj_mh):
+                assert subj_mh.num
                 # downsample query to smallest num
                 subj_num = subj_mh.num
                 if subj_num < query_num:
@@ -96,13 +101,11 @@ class Index(ABC):
         # now, do the search!
         for subj in self.signatures():
             subj_mh = prepare_subject(subj.minhash)
-            # note: we run prepare_query here on the original query.
+            # note: we run prepare_query here on the original query minhash.
             query_mh = prepare_query(query.minhash, subj_mh)
 
             # generic definition of union and intersection that respects
             # both num and scaled:
-            print('XY', query_mh.scaled, subj_mh.scaled)
-            print('XZ', query_mh.num, subj_mh.num)
             merged = query_mh + subj_mh
             intersect = set(query_mh.hashes) & set(subj_mh.hashes)
             intersect &= set(merged.hashes)
