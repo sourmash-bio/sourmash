@@ -271,3 +271,17 @@ def test_scaled_on_real_data_2():
     mh2 = mh2.downsample(scaled=100000)
     assert round(mh1.similarity(mh2), 2) == 0.01
     assert round(mh2.similarity(mh1), 2) == 0.01
+
+
+def test_downsample_scaled_with_num():
+    from sourmash.signature import load_signatures
+
+    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    a = utils.get_test_data(afile)
+    sig1 = list(load_signatures(a))[0]
+    mh1 = sig1.minhash
+
+    with pytest.raises(ValueError) as exc:
+        mh = mh1.downsample(num=500)
+
+    assert 'cannot downsample a scaled MinHash this way' in str(exc.value)
