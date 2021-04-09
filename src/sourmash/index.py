@@ -127,7 +127,7 @@ class Index(ABC):
 
             if search_fn.passes(score):
                 # note: here we yield the original signature, not the
-                # downsampled minhash.
+                # downsampled minhash. @CTB test this.
                 search_fn.collect(score)
                 yield subj, score
 
