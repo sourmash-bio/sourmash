@@ -2,6 +2,7 @@
 """
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
+@CTB update docstring
 To try it out, do::
 
     factory = GraphFactory(ksize, tablesizes, n_tables)
@@ -385,32 +386,48 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, query, *args, **kwargs):
-        # @CTB unload_data
+        # @CTB support unload_data...
         from .sbtmh import SigLeaf
 
         search_fn.check_is_compatible(query)
 
         query_mh = query.minhash
 
-        # figure out downsampling
+        # figure out downsampling using the first leaf in the tree --
         a_leaf = next(iter(self.leaves()))
-
         tree_scaled = a_leaf.data.minhash.scaled
+
+        # scaled?
         if tree_scaled:
             assert query_mh.scaled
+
+            # pick the larger scaled of the query & node
             scaled = max(query_mh.scaled, tree_scaled)
             if query_mh.scaled < tree_scaled:
                 query_mh = query_mh.downsample(scaled=tree_scaled)
 
-            def downsample_node(node_mh):
-                return node_mh.downsample(scaled=scaled)
+            # provide function to downsample leaf_node as well
+            if scaled == tree_scaled:
+                downsample_node = lambda x: x
+            else:
+                def downsample_node(node_mh):
+                    return node_mh.downsample(scaled=scaled)
         else:
             assert query_mh.num
+
+            # pick the smaller num of the query & node
             min_num = min(query_mh.num, a_leaf.data.minhash.num)
+
+            # downsample query once:
             if query_mh.num > min_num:
                 query_mh = query_mh.downsample(num=min_num)
-            def downsample_node(node_mh):
-                return node_mh.downsample(num=min_num)
+
+            # provide function to downsample leaf nodes.
+            if min_num == a_leaf.data.minhash.num:
+                downsample_node = lambda x: x
+            else:
+                def downsample_node(node_mh):
+                    return node_mh.downsample(num=min_num)
 
         query_size = len(query_mh)
 
@@ -423,18 +440,21 @@ class SBT(Index):
         def node_search(node, *args, **kwargs):
             is_leaf = False
 
+            # leaf node? downsample so we can do signature comparison.
             if isinstance(node, SigLeaf):
-                smh = downsample_node(node.data.minhash)
-                subj_size = len(smh)
+                subj_mh = downsample_node(node.data.minhash)
+                subj_size = len(subj_mh)
 
-                # @CTB clean up
-                assert not smh.track_abundance
-                merged = smh + query_mh
-                intersect = set(query_mh.hashes) & set(smh.hashes) & set(merged.hashes)
+                assert not subj_mh.track_abundance
+                merged = subj_mh + query_mh
+                intersect = set(query_mh.hashes) & set(subj_mh.hashes)
+                intersect &= set(merged.hashes)
+
                 shared_size = len(intersect)
                 total_size = len(merged)
                 is_leaf = True
-            else:  # Node or Leaf, Nodegraph by minhash comparison
+            else:  # Node / Nodegraph by minhash comparison
+                # no downsampling needed --
                 shared_size = node.data.matches(query_mh)
                 subj_size = node.metadata.get('min_n_below', -1)
                 total_size = subj_size # approximate; do not collect
