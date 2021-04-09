@@ -428,12 +428,17 @@ class LCA_Database(Index):
 
         # make sure we're looking at the same scaled value as database
         # @CTB we don't need to do this for query every time!
-        def downsample(a, b):
-            max_scaled = max(a.scaled, b.scaled)
-            return a.downsample(scaled=max_scaled), \
-                b.downsample(scaled=max_scaled)
-
+        query_scaled = query.minhash.scaled
         query_mh = query.minhash
+        query_scaled = query_mh.scaled
+        if self.scaled > query_scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
+            query_scaled = query_mh.scaled
+            prepare_subject = lambda x: x # identity
+        else:
+            def prepare_subject(subj_mh):
+                return subj_mh.downsample(scaled=query_scaled)
+
         query_hashes = set(query_mh.hashes)
 
         # collect matching hashes for the query:
@@ -453,14 +458,13 @@ class LCA_Database(Index):
             # this piecemeal by iterating across all the hashes, instead.
 
             subj = self._signatures[idx]
-            subj_mh = subj.minhash
+            subj_mh = prepare_subject(subj.minhash)
 
             # all numbers calculated after downsampling --
-            qmh, smh = downsample(query_mh, subj_mh)
-            query_size = len(qmh)
-            subj_size = len(smh)
-            shared_size = qmh.count_common(smh)
-            total_size = len(qmh + smh)
+            query_size = len(query_mh)
+            subj_size = len(subj_mh)
+            shared_size = query_mh.count_common(subj_mh)
+            total_size = len(query_mh + subj_mh)
 
             score = search_fn.score_fn(query_size, shared_size, subj_size,
                                        total_size)
