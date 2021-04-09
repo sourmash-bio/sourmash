@@ -42,38 +42,84 @@ class Index(ABC):
 
         Returns a list.
         """
+        # first: is this query compatible with this search?
         search_fn.check_is_compatible(query)
+
+        # ok! continue!
+
+        # this set of signatures may be heterogenous in scaled/num values;
+        # define some processing functions to downsample appropriately.
         query_mh = query.minhash
-
+        assert not query_mh.track_abundance
         if query_mh.scaled:
-            def downsample(a, b):
-                max_scaled = max(a.scaled, b.scaled)
-                return a.downsample(scaled=max_scaled), \
-                    b.downsample(scaled=max_scaled)
+            # make query and subject compatible w/scaled.
+            query_scaled = query_mh.scaled
+
+            def prepare_subject(subj_mh):
+                if subj_mh.track_abundance:
+                    subj_mh = subj_mh.flatten()
+
+                # downsample subject to highest scaled
+                subj_scaled = subj_mh.scaled
+                if subj_scaled < query_scaled:
+                    return subj_mh.downsample(query_scaled)
+                else:
+                    return subj_mh
+
+            def prepare_query(query_mh, subj_mh):
+                # downsample query to highest scaled
+                subj_scaled = subj_mh.scaled
+                if subj_scaled > query_scaled:
+                    return query_mh.downsample(subj_scaled)
+                else:
+                    return query_mh
+
         else:                   # num
-            def downsample(a, b):
-                min_num = min(a.num, b.num)
-                return a.downsample(num=min_num), b.downsample(num=min_num)
+            query_num = query_mh.num
 
+            def prepare_subject(subj_mh):
+                # downsample subject to smallest num
+                subj_num = subj_mh.num
+                if subj_num > query_num:
+                    return subj_mh.downsample(num=query_num)
+                else:
+                    return subj_mh
+
+            def prepare_query(query_mh, subj_mh):
+                # downsample query to smallest num
+                subj_num = subj_mh.num
+                if subj_num < query_num:
+                    return query_mh.downsample(num=subj_num)
+                else:
+                    return query_mh
+
+        # now, do the search!
         for subj in self.signatures():
-            subj_mh = subj.minhash
-            if subj_mh.track_abundance:
-                subj_mh = subj_mh.flatten()
-            qmh, subj_mh = downsample(query_mh, subj_mh)
-            query_size = len(qmh)
-            subj_size = len(subj_mh)
+            subj_mh = prepare_subject(subj.minhash)
+            # note: we run prepare_query here on the original query.
+            query_mh = prepare_query(query.minhash, subj_mh)
 
-            # respects num
-            merged = qmh + subj_mh
-            intersect = set(qmh.hashes) & set(subj_mh.hashes) & set(merged.hashes)
+            # generic definition of union and intersection that respects
+            # both num and scaled:
+            print('XY', query_mh.scaled, subj_mh.scaled)
+            print('XZ', query_mh.num, subj_mh.num)
+            merged = query_mh + subj_mh
+            intersect = set(query_mh.hashes) & set(subj_mh.hashes)
+            intersect &= set(merged.hashes)
+
             shared_size = len(intersect)
             total_size = len(merged)
+            query_size = len(query_mh)
+            subj_size = len(subj_mh)
 
             score = search_fn.score_fn(query_size,
                                        shared_size,
                                        subj_size,
                                        total_size)
+
             if search_fn.passes(score):
+                # note: here we yield the original signature, not the
+                # downsampled minhash.
                 search_fn.collect(score)
                 yield subj, score
 

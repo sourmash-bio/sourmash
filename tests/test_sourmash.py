@@ -760,6 +760,7 @@ def test_search(c):
 
 
 def test_search_ignore_abundance():
+    # note: uses num signatures.
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
