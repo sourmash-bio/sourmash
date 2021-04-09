@@ -82,6 +82,9 @@ class Index(ABC):
 
             def prepare_subject(subj_mh):
                 assert subj_mh.num
+                if subj_mh.track_abundance:
+                    subj_mh = subj_mh.flatten()
+
                 # downsample subject to smallest num
                 subj_num = subj_mh.num
                 if subj_num > query_num:
@@ -106,6 +109,8 @@ class Index(ABC):
 
             # generic definition of union and intersection that respects
             # both num and scaled:
+            assert not query_mh.track_abundance
+            assert not subj_mh.track_abundance
             merged = query_mh + subj_mh
             intersect = set(query_mh.hashes) & set(subj_mh.hashes)
             intersect &= set(merged.hashes)
