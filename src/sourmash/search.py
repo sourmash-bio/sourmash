@@ -49,9 +49,15 @@ def make_gather_query(query_mh, threshold_bp):
     if not scaled:
         raise TypeError("query signature must be calculated with scaled")
 
+    if not query_mh:
+        return None
+
     # are we setting a threshold?
     threshold = 0
     if threshold_bp:
+        if threshold_bp < 0:
+            raise TypeError("threshold_bp must be non-negative")
+
         # if we have a threshold_bp of N, then that amounts to N/scaled
         # hashes:
         n_threshold_hashes = threshold_bp / scaled

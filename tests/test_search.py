@@ -1,8 +1,11 @@
 "Tests for search.py code."
+
+# @CTB todo: test search protocol with mock class
+
 import pytest
 
 from sourmash import search, SourmashSignature, MinHash
-from sourmash.search import make_jaccard_search_query
+from sourmash.search import make_jaccard_search_query, make_gather_query
 
 def test_make_jaccard_search_query():
     search_obj = make_jaccard_search_query(threshold=0)
@@ -121,3 +124,69 @@ def test_collect_best_only():
     search_obj = make_jaccard_search_query(threshold=0, best_only=True)
     search_obj.collect(1.0)
     assert search_obj.threshold == 1.0
+
+
+def test_make_gather_query():
+    # test basic make_gather_query call
+    mh = MinHash(n=0, ksize=31, scaled=1000)
+
+    for i in range(100):
+        mh.add_hash(i)
+
+    search_obj = make_gather_query(mh, 5e4)
+
+    assert search_obj.score_fn == search_obj.score_containment
+    assert search_obj.require_scaled
+    assert search_obj.threshold == 0.5
+
+
+def test_make_gather_query_no_threshold():
+    # test basic make_gather_query call
+    mh = MinHash(n=0, ksize=31, scaled=1000)
+
+    for i in range(100):
+        mh.add_hash(i)
+
+    search_obj = make_gather_query(mh, None)
+
+    assert search_obj.score_fn == search_obj.score_containment
+    assert search_obj.require_scaled
+    assert search_obj.threshold == 0
+
+
+def test_make_gather_query_num_minhash():
+    # will fail on non-scaled minhash
+    mh = MinHash(n=500, ksize=31)
+
+    for i in range(100):
+        mh.add_hash(i)
+
+    with pytest.raises(TypeError) as exc:
+        search_obj = make_gather_query(mh, 5e4)
+
+    assert str(exc.value) == "query signature must be calculated with scaled"
+
+
+def test_make_gather_query_empty_minhash():
+    # will fail on non-scaled minhash
+    mh = MinHash(n=0, ksize=31, scaled=1000)
+
+    for i in range(100):
+        mh.add_hash(i)
+
+    with pytest.raises(TypeError) as exc:
+        search_obj = make_gather_query(mh, -1)
+
+    assert str(exc.value) == "threshold_bp must be non-negative"
+
+
+def test_make_gather_query_high_threshold():
+    # will fail on non-scaled minhash
+    mh = MinHash(n=0, ksize=31, scaled=1000)
+
+    for i in range(100):
+        mh.add_hash(i)
+
+    # effective threshold > 1; no object returned
+    search_obj = make_gather_query(mh, 200000)
+    assert search_obj == None
