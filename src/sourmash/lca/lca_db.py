@@ -427,8 +427,6 @@ class LCA_Database(Index):
         search_fn.check_is_compatible(query)
 
         # make sure we're looking at the same scaled value as database
-        # @CTB we don't need to do this for query every time!
-        query_scaled = query.minhash.scaled
         query_mh = query.minhash
         query_scaled = query_mh.scaled
         if self.scaled > query_scaled:
@@ -436,13 +434,11 @@ class LCA_Database(Index):
             query_scaled = query_mh.scaled
             prepare_subject = lambda x: x # identity
         else:
-            def prepare_subject(subj_mh):
-                return subj_mh.downsample(scaled=query_scaled)
-
-        query_hashes = set(query_mh.hashes)
+            prepare_subject = lambda subj: subj.downsample(scaled=query_scaled)
 
         # collect matching hashes for the query:
         c = Counter()
+        query_hashes = set(query_mh.hashes)
         for hashval in query_hashes:
             idx_list = self.hashval_to_idx.get(hashval, [])
             for idx in idx_list:
