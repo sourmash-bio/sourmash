@@ -64,7 +64,7 @@ def test_simple_index(n_children):
     linear.insert(leaf4_sig)
     linear.insert(leaf5_sig)
 
-    search_fn = make_jaccard_search_query(True, False, False, 0.0)
+    search_fn = make_jaccard_search_query(do_containment=True)
 
     kmers = ["AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA"]
     for kmer in kmers:

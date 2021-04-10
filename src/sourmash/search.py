@@ -17,8 +17,11 @@ class SearchType(Enum):
     MAX_CONTAINMENT = 3
 
 
-def make_jaccard_search_query(do_containment, do_max_containment, best_only,
-                              threshold):
+def make_jaccard_search_query(*,
+                              do_containment=False,
+                              do_max_containment=False,
+                              best_only=False,
+                              threshold=None):
     """\
     Make a "flat" search object for Jaccard search & containment.
     """
@@ -83,7 +86,7 @@ class JaccardSearch:
             score_fn = self.score_max_containment
             require_scaled = True
         self.score_fn = score_fn
-        self.require_scaled = require_scaled # @CTB
+        self.require_scaled = require_scaled
 
         if threshold is None:
             threshold = 0

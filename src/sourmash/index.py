@@ -177,10 +177,10 @@ class Index(ABC):
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        search_obj = make_jaccard_search_query(do_containment,
-                                               do_max_containment,
-                                               best_only,
-                                               threshold)
+        search_obj = make_jaccard_search_query(do_containment=do_containment,
+                                               do_max_containment=do_max_containment,
+                                               best_only=best_only,
+                                               threshold=threshold)
 
         # do the actual search:
         matches = []

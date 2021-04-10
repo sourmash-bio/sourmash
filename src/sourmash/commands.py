@@ -561,7 +561,7 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    search_obj = make_jaccard_search_query(False, False, False, args.threshold)
+    search_obj = make_jaccard_search_query(threshold=args.threshold)
     for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
         # skip if we've already done signatures from this file.
         if loc in already_names:
