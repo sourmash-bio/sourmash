@@ -109,3 +109,15 @@ def test_score_jaccard_max_containment_zero_query_size():
     search_obj = make_jaccard_search_query(do_containment=True)
 
     assert search_obj.score_fn(0, 100, None, None) == 0
+
+
+def test_collect():
+    search_obj = make_jaccard_search_query(threshold=0)
+    search_obj.collect(1.0)
+    assert search_obj.threshold == 0
+
+
+def test_collect_best_only():
+    search_obj = make_jaccard_search_query(threshold=0, best_only=True)
+    search_obj.collect(1.0)
+    assert search_obj.threshold == 1.0
