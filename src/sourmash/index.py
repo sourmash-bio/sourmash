@@ -138,18 +138,19 @@ class Index(ABC):
 
         Results will be sorted by similarity, highest to lowest.
         """
-        assert query.minhash.track_abundance
+        if not query.minhash.track_abundance:
+            raise TypeError("'search_abund' requires query signature with abundance information")
 
         # check arguments
         if threshold is None:
-            assert 0
-            raise TypeError("'search' requires 'threshold'") # @CTB test
+            raise TypeError("'search_abund' requires 'threshold'")
         threshold = float(threshold)
 
         # do the actual search:
         matches = []
         for subj in self.signatures():
-            assert subj.minhash.track_abundance
+            if not subj.minhash.track_abundance:
+                raise TypeError("'search_abund' requires subject signatures with abundance information")
             score = query.similarity(subj)
             if score >= threshold:
                 matches.append(IndexSearchResult(score, subj, self.location))

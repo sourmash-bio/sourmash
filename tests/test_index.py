@@ -250,6 +250,78 @@ def test_index_search_query_num_is_lower():
     assert results[0].signature == ss
 
 
+def test_linear_index_search_abund():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_requires_threshold():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=None))
+
+    assert "'search_abund' requires 'threshold'" in str(exc.value)
+
+
+def test_linear_index_search_abund_query_flat():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=0))
+
+    assert "'search_abund' requires query signature with abundance information" in str(exc.value)
+
+
+def test_linear_index_search_abund_subj_flat():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=0))
+
+    assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
+
+
 def test_linear_index_save():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
