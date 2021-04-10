@@ -8,6 +8,8 @@ import zipfile
 
 from .search import make_jaccard_search_query, make_gather_query
 
+# generic return tuple for Index.search and Index.gather
+IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
     is_database = False
@@ -88,7 +90,8 @@ class Index(ABC):
                 # downsample subject to smallest num
                 subj_num = subj_mh.num
                 if subj_num > query_num:
-                    return subj_mh.downsample(num=query_num)
+                    assert 0
+                    return subj_mh.downsample(num=query_num) # @CTB test
                 else:
                     return subj_mh
 
@@ -97,7 +100,8 @@ class Index(ABC):
                 # downsample query to smallest num
                 subj_num = subj_mh.num
                 if subj_num < query_num:
-                    return query_mh.downsample(num=subj_num)
+                    assert 0
+                    return query_mh.downsample(num=subj_num) # @CTB test
                 else:
                     return query_mh
 
@@ -127,11 +131,11 @@ class Index(ABC):
 
             if search_fn.passes(score):
                 # note: here we yield the original signature, not the
-                # downsampled minhash. @CTB test this.
+                # downsampled minhash.
                 search_fn.collect(score)
                 yield subj, score
 
-    def search_abund(self, query, threshold=None, **kwargs):
+    def search_abund(self, query, *, threshold=None, **kwargs):
         """Return set of matches with angular similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -140,7 +144,8 @@ class Index(ABC):
 
         # check arguments
         if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
+            assert 0
+            raise TypeError("'search' requires 'threshold'") # @CTB test
         threshold = float(threshold)
 
         # do the actual search:
@@ -149,13 +154,13 @@ class Index(ABC):
             assert subj.minhash.track_abundance
             score = query.similarity(subj)
             if score >= threshold:
-                matches.append((score, subj, self.location))
+                matches.append(IndexSearchResult(score, subj, self.location))
 
         # sort!
-        matches.sort(key=lambda x: -x[0])
+        matches.sort(key=lambda x: -x.score)
         return matches
 
-    def search(self, query, threshold=None,
+    def search(self, query, *, threshold=None,
                do_containment=False, do_max_containment=False,
                best_only=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
@@ -182,13 +187,13 @@ class Index(ABC):
         matches = []
 
         for subj, score in self.find(search_obj, query):
-            matches.append((score, subj, self.location))
+            matches.append(IndexSearchResult(score, subj, self.location))
 
         # sort!
-        matches.sort(key=lambda x: -x[0])
+        matches.sort(key=lambda x: -x.score)
         return matches
 
-    def gather(self, query, *args, **kwargs):
+    def gather(self, query, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
         if not query.minhash:             # empty query? quit.
             return []
@@ -206,9 +211,10 @@ class Index(ABC):
         results = []
 
         for subj, score in self.find(search_obj, query):
-            results.append((score, subj, self.location))
+            results.append(IndexSearchResult(score, subj, self.location))
 
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+        results.sort(reverse=True,
+                     key=lambda x: (x.score, x.signature.md5sum()))
 
         return results[:1]
 
@@ -483,26 +489,34 @@ class MultiIndex(Index):
         return MultiIndex(new_idx_list, new_src_list)
 
     def search(self, query, *args, **kwargs):
+        """Return the match with the best Jaccard similarity in the Index.
+
+        Note: this overrides the location of the match if needed.
+        """
         # do the actual search:
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.search(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
-                matches.append((score, ss, best_src))
+                matches.append(IndexSearchResult(score, ss, best_src))
                 
         # sort!
-        matches.sort(key=lambda x: -x[0])
+        matches.sort(key=lambda x: -x.score)
         return matches
 
     def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the Index."
+        """Return the match with the best Jaccard containment in the Index.
+
+        Note: this overrides the location of the match if needed.
+        """
         # actually do search!
         results = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.gather(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
-                results.append((score, ss, best_src))
+                results.append(IndexSearchResult(score, ss, best_src))
             
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+        results.sort(reverse=True,
+                     key=lambda x: (x.score, x.signature.md5sum()))
 
         return results
