@@ -150,6 +150,63 @@ def test_linear_index_gather():
     assert matches[0][1] == ss47
 
 
+def test_linear_index_search_subj_has_abundance():
+    # check that signatures in the index are flattened appropriately.
+    queryfile = utils.get_test_data('47.fa.sig')
+    subjfile = utils.get_test_data('track_abund/47.fa.sig')
+
+    qs = sourmash.load_one_signature(queryfile)
+    ss = sourmash.load_one_signature(subjfile)
+
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # note: search returns _original_ signature, not flattened
+    assert results[0].signature == ss
+
+
+def test_linear_index_gather_subj_has_abundance():
+    # check that signatures in the index are flattened appropriately.
+    queryfile = utils.get_test_data('47.fa.sig')
+    subjfile = utils.get_test_data('track_abund/47.fa.sig')
+
+    qs = sourmash.load_one_signature(queryfile)
+    ss = sourmash.load_one_signature(subjfile)
+
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    results = list(linear.gather(qs, threshold=0))
+    assert len(results) == 1
+
+    # note: gather returns _original_ signature, not flattened
+    assert results[0].signature == ss
+
+
+def test_index_search_subj_scaled_is_lower():
+    # check that subject sequences are appropriately downsampled
+    sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
+    ss = sourmash.load_one_signature(sigfile)
+
+    # double check :)
+    assert ss.minhash.scaled == 100
+
+    # build a new query that has a scaled of 1000
+    qs = SourmashSignature(ss.minhash.downsample(scaled=1000))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # original signature (not downsampled) is returned
+    assert results[0].signature == ss
+
+
 def test_linear_index_save():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
