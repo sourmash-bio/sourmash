@@ -186,7 +186,7 @@ def test_linear_index_gather_subj_has_abundance():
 
 
 def test_index_search_subj_scaled_is_lower():
-    # check that subject sequences are appropriately downsampled
+    # check that subject sketches are appropriately downsampled
     sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
     ss = sourmash.load_one_signature(sigfile)
 
@@ -204,6 +204,49 @@ def test_index_search_subj_scaled_is_lower():
     results = list(linear.search(qs, threshold=0))
     assert len(results) == 1
     # original signature (not downsampled) is returned
+    assert results[0].signature == ss
+
+
+def test_index_search_subj_num_is_lower():
+    # check that subject sketches are appropriately downsampled
+    sigfile = utils.get_test_data('num/47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile, ksize=31)
+
+    # double check :)
+    assert ss.minhash.num == 500
+
+    # build a new query that has a num of 250
+    qs = SourmashSignature(ss.minhash.downsample(num=250))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # original signature (not downsampled) is returned
+    assert results[0].signature == ss
+
+
+def test_index_search_query_num_is_lower():
+    # check that query sketches are appropriately downsampled
+    sigfile = utils.get_test_data('num/47.fa.sig')
+    qs = sourmash.load_one_signature(sigfile, ksize=31)
+
+    # double check :)
+    assert qs.minhash.num == 500
+
+    # build a new subject that has a num of 250
+    ss = SourmashSignature(qs.minhash.downsample(num=250))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
     assert results[0].signature == ss
 
 

@@ -90,8 +90,7 @@ class Index(ABC):
                 # downsample subject to smallest num
                 subj_num = subj_mh.num
                 if subj_num > query_num:
-                    assert 0
-                    return subj_mh.downsample(num=query_num) # @CTB test
+                    return subj_mh.downsample(num=query_num)
                 else:
                     return subj_mh
 
@@ -100,8 +99,7 @@ class Index(ABC):
                 # downsample query to smallest num
                 subj_num = subj_mh.num
                 if subj_num < query_num:
-                    assert 0
-                    return query_mh.downsample(num=subj_num) # @CTB test
+                    return query_mh.downsample(num=subj_num)
                 else:
                     return query_mh
 
