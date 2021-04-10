@@ -450,16 +450,20 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    def downsample(self, num=None, scaled=None):
+    def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.
         """
         if num is None and scaled is None:
             raise ValueError('must specify either num or scaled to downsample')
         elif num is not None:
-            if self.num and self.num < num:
-                raise ValueError("new sample num is higher than current sample num")
-            max_hash=0
+            if self.num:
+                if self.num < num:
+                    raise ValueError("new sample num is higher than current sample num")
+                else:
+                    max_hash=0
+            else:
+                raise ValueError("scaled != 0 - cannot downsample a scaled MinHash this way")
         elif scaled is not None:
             if self.num:
                 raise ValueError("num != 0 - cannot downsample a standard MinHash")
