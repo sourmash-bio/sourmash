@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+import copy
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -16,7 +17,6 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
 
-DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 from .command_compute import compute
@@ -546,6 +546,8 @@ def categorize(args):
 
     # load search database
     db = sourmash_args.load_file_as_index(args.database)
+    if args.ksize or moltype:
+        db = db.select(ksize=args.ksize, moltype=moltype)
 
     # utility function to load & select relevant signatures.
     def _yield_all_sigs(queries, ksize, moltype):
@@ -562,32 +564,28 @@ def categorize(args):
         csv_w = csv.writer(csv_fp)
 
     search_obj = make_jaccard_search_query(threshold=args.threshold)
-    for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+    for orig_query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
         # skip if we've already done signatures from this file.
         if loc in already_names:
             continue
 
-        notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query.minhash.ksize, query.minhash.moltype)
+        notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
+               orig_query.minhash.ksize, orig_query.minhash.moltype)
 
         if args.ignore_abundance:
-            # @CTB note this changes md5 of query
+            query = copy.copy(orig_query)
             query.minhash = query.minhash.flatten()
         else:
-            # queries with abundances is not tested, apparently. @CTB.
+            # @CTB note: query with abund is not tested anywhere.
+            query = orig_query
             assert not query.minhash.track_abundance
 
         results = []
-        # @CTB note - not properly ignoring abundance just yet
         for match, score in db.find(search_obj, query):
             if match.md5sum() != query.md5sum(): # ignore self.
-                similarity = query.similarity(
-                    match, ignore_abundance=args.ignore_abundance)
-                assert similarity == score
-                results.append((similarity, match))
+                assert query.similarity(match) == score
+                results.append((score, match))
 
-        best_hit_sim = 0.0
-        best_hit_query_name = ""
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
@@ -595,12 +593,11 @@ def categorize(args):
                                                best_hit_sim,
                                                best_hit_query)
             best_hit_query_name = best_hit_query.name
+            if csv_w:
+                csv_w.writerow([loc, query, best_hit_query_name,
+                               best_hit_sim])
         else:
             notify('for {}, no match found', query)
-
-        if csv_w:
-            csv_w.writerow([loc, query, best_hit_query_name,
-                           best_hit_sim])
 
     if csv_fp:
         csv_fp.close()
@@ -878,7 +875,7 @@ def multigather(args):
 
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
                     e.add_many(next_query.minhash.hashes)
-                    # @CTB: note, multigather does not save abundances
+                    # CTB: note, multigather does not save abundances
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
             n += 1
 
