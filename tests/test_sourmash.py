@@ -4159,6 +4159,7 @@ def test_sbt_categorize():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
+        # categorize all of the ones that were copied to 'location'
         args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
