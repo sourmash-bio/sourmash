@@ -445,6 +445,8 @@ class SBT(Index):
                 subj_mh = downsample_node(node.data.minhash)
                 subj_size = len(subj_mh)
 
+                subj_mh = subj_mh.flatten()
+
                 assert not subj_mh.track_abundance
                 merged = subj_mh + query_mh
                 intersect = set(query_mh.hashes) & set(subj_mh.hashes)
