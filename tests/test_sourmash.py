@@ -4192,19 +4192,18 @@ def test_sbt_categorize_ignore_abundance():
                                               in_directory=location)
 
         # --- Categorize without ignoring abundance ---
-        if 0:
-            args = ['categorize', 'thebestdatabase',
-                    '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
-            status3, out3, err3 = utils.runscript('sourmash', args,
-                                                  in_directory=location)
+        args = ['categorize', 'thebestdatabase',
+                '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+        status3, out3, err3 = utils.runscript('sourmash', args,
+                                              in_directory=location)
 
-            print(out3)
-            print(err3)
+        print(out3)
+        print(err3)
 
-            assert 'for 1-1, found: 0.44 1-1' in err3
+        assert 'for 1-1, found: 0.44 1-1' in err3
 
-            out_csv3 = open(os.path.join(location, 'out3.csv')).read()
-            assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
+        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
 
         # --- Now categorize with ignored abundance ---
         args = ['categorize', '--ignore-abundance',

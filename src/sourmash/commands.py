@@ -576,9 +576,12 @@ def categorize(args):
             query = copy.copy(orig_query)
             query.minhash = query.minhash.flatten()
         else:
-            # @CTB note: query with abund is not tested anywhere.
+            if orig_query.minhash.track_abundance:
+                notify("ERROR: this search cannot be done on signatures calculated with abundance.")
+                notify("ERROR: please specify --ignore-abundance.")
+                sys.exit(-1)
+
             query = orig_query
-            assert not query.minhash.track_abundance
 
         results = []
         for match, score in db.find(search_obj, query):
