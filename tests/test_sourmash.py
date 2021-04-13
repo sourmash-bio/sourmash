@@ -4177,9 +4177,9 @@ def test_sbt_categorize():
         assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
-def test_sbt_categorize_ignore_abundance():
+def test_sbt_categorize_ignore_abundance_1():
+    # --- Categorize without ignoring abundance ---
     with utils.TempDirectory() as location:
-
         query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
         against_list = ['reads-s10-s11']
         against_list = ['gather-abund/' + i + '.sig'
@@ -4191,21 +4191,36 @@ def test_sbt_categorize_ignore_abundance():
         status2, out2, err2 = utils.runscript('sourmash', args,
                                               in_directory=location)
 
-        # --- Categorize without ignoring abundance ---
         args = ['categorize', 'thebestdatabase',
                 '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+
         status3, out3, err3 = utils.runscript('sourmash', args,
-                                              in_directory=location)
+                                              in_directory=location,
+                                              fail_ok=True)
+
+        assert status3 != 0
 
         print(out3)
         print(err3)
 
-        assert 'for 1-1, found: 0.88 1-1' in err3
+        assert "ERROR: this search cannot be done on signatures calculated with abundance." in err3
+        assert "ERROR: please specify --ignore-abundance." in err3
 
-        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
-        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv3
 
-        # --- Now categorize with ignored abundance ---
+def test_sbt_categorize_ignore_abundance_2():
+    # --- Now categorize with ignored abundance ---
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['reads-s10-s11']
+        against_list = ['gather-abund/' + i + '.sig'
+                        for i in against_list]
+        against_list = [utils.get_test_data(i) for i in against_list]
+
+        # omit 3
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+        status2, out2, err2 = utils.runscript('sourmash', args,
+                                              in_directory=location)
+
         args = ['categorize', '--ignore-abundance',
                 '--ksize', '21', '--dna', '--csv', 'out4.csv',
                 'thebestdatabase', query]

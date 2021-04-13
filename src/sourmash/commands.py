@@ -572,11 +572,11 @@ def categorize(args):
         notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
                orig_query.minhash.ksize, orig_query.minhash.moltype)
 
-        if args.ignore_abundance or 1:
+        if args.ignore_abundance:
             query = copy.copy(orig_query)
             query.minhash = query.minhash.flatten()
         else:
-            if orig_query.minhash.track_abundance and 0:
+            if orig_query.minhash.track_abundance:
                 notify("ERROR: this search cannot be done on signatures calculated with abundance.")
                 notify("ERROR: please specify --ignore-abundance.")
                 sys.exit(-1)
@@ -586,9 +586,6 @@ def categorize(args):
         results = []
         for match, score in db.find(search_obj, query):
             if match.md5sum() != query.md5sum(): # ignore self.
-                #assert query.similarity(match) == score
-                print('XXX', orig_query.minhash.track_abundance,
-                      match.minhash.track_abundance)
                 results.append((orig_query.similarity(match), match))
 
         if results:
