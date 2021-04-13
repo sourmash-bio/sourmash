@@ -4200,10 +4200,10 @@ def test_sbt_categorize_ignore_abundance():
         print(out3)
         print(err3)
 
-        assert 'for 1-1, found: 0.44 1-1' in err3
+        assert 'for 1-1, found: 0.88 1-1' in err3
 
         out_csv3 = open(os.path.join(location, 'out3.csv')).read()
-        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
+        assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv3
 
         # --- Now categorize with ignored abundance ---
         args = ['categorize', '--ignore-abundance',
