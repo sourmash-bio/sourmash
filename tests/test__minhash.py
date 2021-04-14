@@ -324,7 +324,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample(scaled=100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
+    assert 'cannot downsample a num MinHash using scaled' in str(excinfo.value)
 
 
 def test_scaled_num_both(track_abundance):
