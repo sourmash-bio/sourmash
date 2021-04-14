@@ -185,7 +185,7 @@ class Index(ABC):
         # do the actual search:
         matches = []
 
-        for subj, score in self.find(search_obj, query):
+        for subj, score in self.find(search_obj, query, **kwargs):
             matches.append(IndexSearchResult(score, subj, self.location))
 
         # sort!
@@ -209,7 +209,7 @@ class Index(ABC):
         # actually do search!
         results = []
 
-        for subj, score in self.find(search_obj, query):
+        for subj, score in self.find(search_obj, query, **kwargs):
             results.append(IndexSearchResult(score, subj, self.location))
 
         results.sort(reverse=True,
