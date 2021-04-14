@@ -412,7 +412,7 @@ class LCA_Database(Index):
         debug('=> {} signatures!', len(sigd))
         return sigd
 
-    def find(self, search_fn, query):
+    def find(self, search_fn, query, **kwargs):
         """
         Do a Jaccard similarity or containment search, yield results.
 
