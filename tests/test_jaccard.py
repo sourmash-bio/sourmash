@@ -284,4 +284,4 @@ def test_downsample_scaled_with_num():
     with pytest.raises(ValueError) as exc:
         mh = mh1.downsample(num=500)
 
-    assert 'cannot downsample a scaled MinHash this way' in str(exc.value)
+    assert 'cannot downsample a scaled MinHash using num' in str(exc.value)
