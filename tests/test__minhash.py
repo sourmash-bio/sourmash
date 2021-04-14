@@ -1594,6 +1594,19 @@ def test_is_molecule_type_4(track_abundance):
     assert mh.dayhoff
 
 
+def test_addition_num_incompatible():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(20, 21)
+
+    mh1.add_hash(0)
+    mh2.add_hash(1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1 + mh2
+
+    assert "incompatible num values: self=10 other=20" in str(exc.value)
+
+
 def test_addition_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
