@@ -564,8 +564,8 @@ class MinHash(RustObject):
             raise TypeError("can only add MinHash objects to MinHash objects!")
 
         if self.num and other.num:
-            # @CTB test
-            assert self.num == other.num
+            if self.num != other.num:
+                raise TypeError(f"incompatible num values: self={self.num} other={other.num}")
 
         new_obj = self.__copy__()
         new_obj += other
