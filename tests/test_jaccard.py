@@ -22,7 +22,7 @@ def test_jaccard_1(track_abundance):
         E2.add_hash(i)
 
     # here the union is [1, 2, 3, 4, 5]
-    # and the intesection is [1, 2, 3, 4] => 4/5.
+    # and the intersection is [1, 2, 3, 4] => 4/5.
 
     assert round(E1.jaccard(E2), 2) == round(4 / 5.0, 2)
     assert round(E2.jaccard(E1), 2) == round(4 / 5.0, 2)
@@ -284,4 +284,4 @@ def test_downsample_scaled_with_num():
     with pytest.raises(ValueError) as exc:
         mh = mh1.downsample(num=500)
 
-    assert 'cannot downsample a scaled MinHash this way' in str(exc.value)
+    assert 'cannot downsample a scaled MinHash using num' in str(exc.value)
