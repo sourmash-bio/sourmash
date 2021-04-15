@@ -3,4 +3,4 @@
 # use path fixing to properly report code coverage on source code
 # per https://docs.codecov.io/docs/fixing-paths
 fixes:
-- "::src/"
+- "sourmash::src/sourmash"
