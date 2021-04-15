@@ -6,6 +6,8 @@ import pytest
 
 from sourmash import search, SourmashSignature, MinHash
 from sourmash.search import make_jaccard_search_query, make_gather_query
+from sourmash.index import LinearIndex
+
 
 def test_make_jaccard_search_query():
     search_obj = make_jaccard_search_query(threshold=0)
@@ -190,3 +192,44 @@ def test_make_gather_query_high_threshold():
     # effective threshold > 1; no object returned
     search_obj = make_gather_query(mh, 200000)
     assert search_obj == None
+
+
+class FakeIndex(LinearIndex):
+    _signatures = []
+    filename = "something_or_other"
+
+    def __init__(self, validator_fn):
+        self.validator = validator_fn
+
+    def find(self, search_fn, query, *args, **kwargs):
+        if self.validator:
+            self.validator(search_fn, query, args, kwargs)
+        else:
+            assert 0, "what are we even doing here?"
+        return []
+
+
+def test_index_search_passthru():
+    # check that kwargs are passed through from 'search' to 'find'
+    query = None
+
+    def validate_kwarg_passthru(search_fn, query, args, kwargs):
+        assert "this_kw_arg" in kwargs
+        assert kwargs["this_kw_arg"] == 5
+
+    idx = FakeIndex(validate_kwarg_passthru)
+
+    idx.search(query, threshold=0.0, this_kw_arg=5)
+
+
+def test_index_gather_passthru():
+    # check that kwargs are passed through from 'gather' to 'find'
+    query = None
+
+    def validate_kwarg_passthru(search_fn, query, args, kwargs):
+        assert "this_kw_arg" in kwargs
+        assert kwargs["this_kw_arg"] == 5
+
+    idx = FakeIndex(validate_kwarg_passthru)
+
+    idx.search(query, threshold=0.0, this_kw_arg=5)
