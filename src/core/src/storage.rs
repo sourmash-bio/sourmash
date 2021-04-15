@@ -241,3 +241,28 @@ impl<'a> ZipStorage<'a> {
         })
     }
 }
+
+#[derive(Default)]
+pub struct MemStorage {
+    storage: Mutex<HashMap<String, Vec<u8>>>,
+}
+
+impl MemStorage {}
+
+impl Storage for MemStorage {
+    fn save(&self, path: &str, content: &[u8]) -> Result<String, Error> {
+        let mut lock = self.storage.lock().unwrap();
+        lock.insert(path.into(), content.into());
+        Ok(path.into())
+    }
+
+    fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
+        let lock = self.storage.lock().unwrap();
+        let v = lock.get(path).ok_or(ReadDataError::LoadError)?;
+        Ok(v.clone())
+    }
+
+    fn args(&self) -> StorageArgs {
+        unimplemented!()
+    }
+}
