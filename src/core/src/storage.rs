@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
@@ -7,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use typed_builder::TypedBuilder;
 
+use crate::errors::ReadDataError;
 use crate::Error;
 
 /// An abstraction for any place where we can store data.
