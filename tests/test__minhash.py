@@ -324,7 +324,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample(scaled=100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
+    assert 'cannot downsample a num MinHash using scaled' in str(excinfo.value)
 
 
 def test_scaled_num_both(track_abundance):
@@ -1592,6 +1592,19 @@ def test_is_molecule_type_4(track_abundance):
     assert not mh.is_protein
     assert not mh.hp
     assert mh.dayhoff
+
+
+def test_addition_num_incompatible():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(20, 21)
+
+    mh1.add_hash(0)
+    mh2.add_hash(1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1 + mh2
+
+    assert "incompatible num values: self=10 other=20" in str(exc.value)
 
 
 def test_addition_abund():

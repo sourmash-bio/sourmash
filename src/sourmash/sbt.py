@@ -2,6 +2,7 @@
 """
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
 
+@CTB update docstring
 To try it out, do::
 
     factory = GraphFactory(ksize, tablesizes, n_tables)
@@ -58,6 +59,7 @@ from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
 from .index import Index
+
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
 STORAGES = {
@@ -185,6 +187,10 @@ class SBT(Index):
             cache_size = sys.maxsize
         self._nodescache = _NodesCache(maxsize=cache_size)
         self._location = None
+
+    @property
+    def location(self):
+        return self._location
 
     def signatures(self):
         for k in self.leaves():
@@ -327,7 +333,7 @@ class SBT(Index):
             node.update(self._nodes[p.pos])
             p = self.parent(p.pos)
 
-    def find(self, search_fn, *args, **kwargs):
+    def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
         unload_data = kwargs.get("unload_data", False)
@@ -379,125 +385,98 @@ class SBT(Index):
 
         return matches
 
-    def search(self, query, threshold=None,
-               ignore_abundance=False, do_containment=False,
-               do_max_containment=False, best_only=False,
-               unload_data=False, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
+    def find(self, search_fn, query, *args, **kwargs):
+        "@CTB add docstring."
+        from .sbtmh import SigLeaf
 
-        Results will be sorted by similarity, highest to lowest.
+        search_fn.check_is_compatible(query)
 
-        Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
-          * best_only: default False. If True, allow optimizations that
-            may. May discard matches better than threshold, but first match
-            is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-        """
-        from .sbtmh import (search_minhashes, search_minhashes_containment,
-                            search_minhashes_max_containment)
-        from .sbtmh import SearchMinHashesFindBest
-        from .signature import SourmashSignature
+        query_mh = query.minhash
 
-        if threshold is None:
-            raise TypeError("'search' requires 'threshold'")
-        threshold = float(threshold)
+        # figure out downsampling using the first leaf in the tree --
+        a_leaf = next(iter(self.leaves()))
+        tree_scaled = a_leaf.data.minhash.scaled
 
-        if do_containment and do_max_containment:
-            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
+        # scaled?
+        if tree_scaled:
+            assert query_mh.scaled
 
-        # figure out scaled value of tree, downsample query if needed.
-        leaf = next(iter(self.leaves()))
-        tree_mh = leaf.data.minhash
+            # pick the larger scaled of the query & node
+            scaled = max(query_mh.scaled, tree_scaled)
+            if query_mh.scaled < tree_scaled:
+                query_mh = query_mh.downsample(scaled=tree_scaled)
 
-        tree_query = query
-        if tree_mh.scaled and query.minhash.scaled and \
-          tree_mh.scaled > query.minhash.scaled:
-            resampled_query_mh = tree_query.minhash
-            resampled_query_mh = resampled_query_mh.downsample(scaled=tree_mh.scaled)
-            tree_query = SourmashSignature(resampled_query_mh)
+            # provide function to downsample leaf_node as well
+            if scaled == tree_scaled:
+                downsample_node = lambda x: x
+            else:
+                def downsample_node(node_mh):
+                    return node_mh.downsample(scaled=scaled)
+        else:
+            assert query_mh.num
 
-        # define both search function and post-search calculation function
-        search_fn = search_minhashes
-        query_match = lambda x: tree_query.similarity(
-            x, downsample=False, ignore_abundance=ignore_abundance)
-        if do_containment:
-            search_fn = search_minhashes_containment
-            query_match = lambda x: tree_query.contained_by(x, downsample=True)
-        elif do_max_containment:
-            search_fn = search_minhashes_max_containment
-            query_match = lambda x: tree_query.max_containment(x,
-                                                               downsample=True)
+            # pick the smaller num of the query & node
+            min_num = min(query_mh.num, a_leaf.data.minhash.num)
 
-        if best_only:            # this needs to be reset for each SBT
-            if do_containment or do_max_containment:
-                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
-            search_fn = SearchMinHashesFindBest().search
+            # downsample query once:
+            if query_mh.num > min_num:
+                query_mh = query_mh.downsample(num=min_num)
 
-        # now, search!
-        results = []
+            # provide function to downsample leaf nodes.
+            if min_num == a_leaf.data.minhash.num:
+                downsample_node = lambda x: x
+            else:
+                def downsample_node(node_mh):
+                    return node_mh.downsample(num=min_num)
 
-        # here, self.find is used only to find candidate nodes;
-        for leaf in self.find(search_fn, tree_query, threshold,
-                              unload_data=unload_data):
-            # the actual calculation of node match is done here:
-            similarity = query_match(leaf.data)
+        query_size = len(query_mh)
 
-            # tree search should always/only return matches above threshold
-            assert similarity >= threshold
+        # store scores here so we don't need to recalculate
+        results = {}
 
-            results.append((similarity, leaf.data, self._location))
+        # construct a function to pass into ._find_nodes; this function
+        # will be used to prune tree searches based on internal node scores,
+        # in addition to finding leaf nodes.
+        def node_search(node, *args, **kwargs):
+            is_leaf = False
 
-        return results
-        
+            # leaf node? downsample so we can do signature comparison.
+            if isinstance(node, SigLeaf):
+                subj_mh = downsample_node(node.data.minhash)
+                subj_size = len(subj_mh)
 
-    def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the database."
-        from .sbtmh import GatherMinHashes
+                subj_mh = subj_mh.flatten()
 
-        if not query.minhash:             # empty query? quit.
-            return []
+                assert not subj_mh.track_abundance
+                merged = subj_mh + query_mh
+                intersect = set(query_mh.hashes) & set(subj_mh.hashes)
+                intersect &= set(merged.hashes)
 
-        # use a tree search function that keeps track of its best match.
-        search_fn = GatherMinHashes().search
+                shared_size = len(intersect)
+                total_size = len(merged)
+                is_leaf = True
+            else:  # Node / Nodegraph by minhash comparison
+                # no downsampling needed --
+                shared_size = node.data.matches(query_mh)
+                subj_size = node.metadata.get('min_n_below', -1)
+                total_size = subj_size # approximate; do not collect
 
-        unload_data = kwargs.get('unload_data', False)
+            # calculate score (exact, if leaf; approximate, if not)
+            score = search_fn.score_fn(query_size,
+                                       shared_size,
+                                       subj_size,
+                                       total_size)
 
-        leaf = next(iter(self.leaves()))
-        tree_mh = leaf.data.minhash
-        scaled = tree_mh.scaled
+            if search_fn.passes(score):
+                if is_leaf:     # terminal node? keep.
+                    results[node.data] = score
+                    search_fn.collect(score)
+                return True
+            return False
 
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = 0.0
-
-        # are we setting a threshold?
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = threshold_bp / scaled
-
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / len(query.minhash)
-
-            # is it too high to ever match? if so, exit.
-            if threshold > 1.0:
-                return []
-
-        # actually do search!
-        results = []
-
-        for leaf in self.find(search_fn, query, threshold,
-                              unload_data=unload_data):
-            leaf_mh = leaf.data.minhash
-            containment = query.minhash.contained_by(leaf_mh, True)
-
-            assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, self._location))
-
-        results.sort(key=lambda x: -x[0])
-
-        return results
+        # & execute!
+        for n in self._find_nodes(node_search, *args, **kwargs):
+            yield n.data, results[n.data]
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).
@@ -754,9 +733,7 @@ class SBT(Index):
 
             if storage:
                 sbts = storage.list_sbts()
-                if len(sbts) != 1:
-                    print("no SBT, or too many SBTs!")
-                else:
+                if len(sbts) == 1:
                     tree_data = storage.load(sbts[0])
 
                 tempfile = NamedTemporaryFile()
