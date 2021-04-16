@@ -72,6 +72,23 @@ def test_sourmash_info_verbose():
     assert "loaded from path" in err
 
 
+def test_load_pathlist_from_file_does_not_exist():
+    from sourmash.sourmash_args import load_pathlist_from_file
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file("")
+        assert "cannot open file ''" in e.message
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_empty(c):
+    from sourmash.sourmash_args import load_pathlist_from_file
+    file_list = c.output("file_list")
+    with open(file_list, "w") as fp:
+        fp.write("")
+    with pytest.raises(IndexError) as e:
+        load_pathlist_from_file(file_list)
+        assert "list index out of range" in e.message
+
+
 @utils.in_tempdir
 def test_do_serial_compare(c):
     # try doing a compare serial
