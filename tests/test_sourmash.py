@@ -4235,9 +4235,6 @@ def test_sbt_categorize_ignore_abundance_2():
         out_csv4 = open(os.path.join(location, 'out4.csv')).read()
         assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
 
-        # Make sure ignoring abundance produces a different output!
-        assert err3 != err4
-
 
 def test_sbt_categorize_already_done():
     with utils.TempDirectory() as location:
