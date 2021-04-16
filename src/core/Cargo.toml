@@ -23,7 +23,6 @@ parallel = ["rayon"]
 
 [dependencies]
 az = "1.0.0"
-bitmagic = { version = "0.2.0", git = "https://github.com/luizirber/bitmagic-rs", branch = "cross_testing" }
 bytecount = "0.6.0"
 byteorder = "1.4.3"
 cfg-if = "1.0"
@@ -89,3 +88,4 @@ wasm-bindgen-test = "0.3.0"
 
 ### These crates don't compile on wasm
 [target.'cfg(not(all(target_arch = "wasm32", target_vendor="unknown")))'.dependencies]
+bitmagic = "0.2.0"

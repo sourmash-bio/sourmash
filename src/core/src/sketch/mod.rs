@@ -1,6 +1,7 @@
 pub mod hyperloglog;
 pub mod minhash;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod nodegraph;
 
 use serde::{Deserialize, Serialize};

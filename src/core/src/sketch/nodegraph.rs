@@ -240,7 +240,7 @@ impl Nodegraph {
                 slice::from_raw_parts(slice.as_ptr() as *const u8, len)
             };
 
-            wtr.write_all(&buf)?;
+            wtr.write_all(buf)?;
             // Replace when byteorder PR is released
 
             if rem != 0 {
@@ -516,7 +516,6 @@ mod test {
         assert_eq!(ng.unique_kmers(), 1);
     }
 
-    #[ignore]
     #[test]
     fn containment() {
         let mut ng1: Nodegraph = Nodegraph::new(&[31], 3);
@@ -535,6 +534,7 @@ mod test {
         assert_eq!(ng2.unique_kmers(), 20);
     }
 
+    #[ignore]
     #[test]
     fn load_save_nodegraph() {
         let mut datadir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
