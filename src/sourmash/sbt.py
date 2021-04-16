@@ -386,7 +386,7 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, query, *args, **kwargs):
-        # @CTB support unload_data...
+        "@CTB add docstring."
         from .sbtmh import SigLeaf
 
         search_fn.check_is_compatible(query)

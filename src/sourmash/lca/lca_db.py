@@ -416,6 +416,7 @@ class LCA_Database(Index):
         """
         Do a Jaccard similarity or containment search, yield results.
 
+        @CTB update docstring.
         This is essentially a fast implementation of find that collects all
         the signatures with overlapping hash values. Note that similarity
         searches (containment=False) will not be returned in sorted order.
