@@ -647,6 +647,24 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    # @CTB experimental! w00t fun!
+    if args.prefetch:
+        notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
+        from .index import LinearIndex, CounterGatherIndex
+        #prefetch_idx = LinearIndex()
+        prefetch_idx = CounterGatherIndex(query)
+
+        scaled = query.minhash.scaled
+
+        prefetch_query = copy.copy(query)
+        prefetch_query.minhash = prefetch_query.minhash.flatten()
+
+        for db in databases:
+            for match in db.prefetch(prefetch_query, args.threshold_bp, scaled):
+                prefetch_idx.insert(match.signature)
+
+        databases = [ prefetch_idx ]
+
     found = []
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
@@ -1025,12 +1043,14 @@ def prefetch(args):
                query_mh.scaled, int(args.scaled))
         query_mh = query_mh.downsample(scaled=args.scaled)
 
+    scaled = query_mh.scaled
+
     # empty?
     if not len(query_mh):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    notify(f"all sketches will be downsampled to {query_mh.scaled}")
+    notify(f"all sketches will be downsampled to {scaled}")
 
     noident_mh = copy.copy(query_mh)
 
@@ -1052,13 +1072,10 @@ def prefetch(args):
     n = 0
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
-        # @CTB use _load_databases? or is this fine? want to use .signatures
-        # explicitly / support lazy loading.
-        db = sourmash_args.load_file_as_signatures(dbfilename, ksize=ksize,
-                                                   select_moltype=moltype)
+        db = sourmash_args.load_file_as_index(dbfilename)
+        db = db.select(ksize=ksize, moltype=moltype)
 
-        for result in prefetch_database(query, query_mh, db,
-                                        args.threshold_bp):
+        for result in prefetch_database(query, db, args.threshold_bp, scaled):
             match = result.match
             keep.append(match)
             noident_mh.remove_many(match.minhash.hashes)
