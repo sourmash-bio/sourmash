@@ -391,11 +391,15 @@ class CounterGatherIndex(Index):
     def __init__(self, query):
         self.query = query
         self.siglist = []
+        self.locations = []
         self.counter = Counter()
 
-    def insert(self, ss):
+    def insert(self, ss, location=None):
         i = len(self.siglist)
         self.siglist.append(ss)
+        self.locations.append(location)
+
+        # upon insertion, count overlap with the specific query.
         self.counter[i] = self.query.minhash.count_common(ss.minhash, True)
 
     def gather(self, query, *args, **kwargs):
@@ -439,10 +443,11 @@ class CounterGatherIndex(Index):
                 return []
 
             match = siglist[dataset_id]
+            location = self.locations[dataset_id]
             del counter[dataset_id]
             cont = query.minhash.contained_by(match.minhash, True)
             if cont and cont >= threshold:
-                results.append((cont, match, getattr(self, "filename", None)))
+                results.append(IndexSearchResult(cont, match, location))
             intersect_mh = query.minhash.copy_and_clear()
             hashes = set(query.minhash.hashes).intersection(match.minhash.hashes)
             intersect_mh.add_many(hashes)
@@ -461,6 +466,9 @@ class CounterGatherIndex(Index):
         return results
 
     def signatures(self):
+        raise NotImplementedError
+
+    def signatures_with_location(self):
         raise NotImplementedError
 
     @classmethod

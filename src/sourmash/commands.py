@@ -661,7 +661,7 @@ def gather(args):
 
         for db in databases:
             for match in db.prefetch(prefetch_query, args.threshold_bp, scaled):
-                prefetch_idx.insert(match.signature)
+                prefetch_idx.insert(match.signature, location=match.location)
 
         databases = [ prefetch_idx ]
 
