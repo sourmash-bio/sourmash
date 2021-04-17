@@ -80,13 +80,19 @@ def _max_jaccard_underneath_internal_node(node, query):
     if len(mh) == 0:
         return 0.0
 
-    # count the maximum number of hash matches beneath this node
-    matches = node.data.matches(mh)
+    if mh.track_abundance:
+        # In this case we need to use the lower bound for angular similarity
+        raise NotImplementedError("Abundance search on indices is a work in progress")
+    else:
+        # In this case we are working with similarity/containment:
+        # J(A, B) = |A intersection B| / |A union B|
+        # If we use only |A| as denominator, it is the containment
+        # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
 
-    # J(A, B) = |A intersection B| / |A union B|
-    # If we use only |A| as denominator, it is the containment
-    # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
-    max_score = float(matches) / len(mh)
+        # count the maximum number of hash matches beneath this node
+        matches = node.data.matches(mh)
+
+        max_score = float(matches) / len(mh)
 
     return max_score
 
