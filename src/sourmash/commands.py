@@ -651,7 +651,6 @@ def gather(args):
     if args.prefetch:
         notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
         from .index import LinearIndex, CounterGatherIndex
-        #prefetch_idx = LinearIndex()
         prefetch_idx = CounterGatherIndex(query)
 
         scaled = query.minhash.scaled

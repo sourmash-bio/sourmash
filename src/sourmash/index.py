@@ -471,6 +471,9 @@ class CounterGatherIndex(Index):
     def signatures_with_location(self):
         raise NotImplementedError
 
+    def prefetch(self, *args, **kwargs):
+        raise NotImplementedError
+
     @classmethod
     def load(self, *args):
         raise NotImplementedError
@@ -528,7 +531,7 @@ class MultiIndex(Index):
     def load_from_path(cls, pathname, force=False):
         "Create a MultiIndex from a path (filename or directory)."
         from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname):
+        if not os.path.exists(pathname): # @CTB change to isdir
             raise ValueError(f"'{pathname}' must be a directory")
 
         index_list = []
@@ -611,7 +614,7 @@ class MultiIndex(Index):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def gather(self, query, *args, **kwargs):
+    def prefetch(self, query, *args, **kwargs):
         """Return the match with the best Jaccard containment in the Index.
 
         Note: this overrides the location of the match if needed.
@@ -621,9 +624,8 @@ class MultiIndex(Index):
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.gather(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
-                results.append(IndexSearchResult(score, ss, best_src))
+                yield IndexSearchResult(score, ss, best_src)
             
-        results.sort(reverse=True,
-                     key=lambda x: (x.score, x.signature.md5sum()))
-
         return results
+
+    # note: 'gather' is inherited from Index base class, and uses prefetch.

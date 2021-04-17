@@ -58,7 +58,10 @@ def subparser(subparsers):
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
     subparser.add_argument(
-        '--prefetch', action='store_false'
+        '--prefetch', dest="prefetch", action='store_true',
+    )
+    subparser.add_argument(
+        '--no-prefetch', dest="prefetch", action='store_false',
     )
 
 
