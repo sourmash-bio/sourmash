@@ -946,9 +946,9 @@ def test_sbt_min_n_below_removal(c):
     sigfile1 = utils.get_test_data('min_n_below/HSMA33OT.fastq.gz.sig')
     db = utils.get_test_data('min_n_below/index.sbt.zip')
 
-    c.run_sourmash('search', sigfile1, db, '--threshold', '0.1', '-k', '51')
-    assert '17 matches;' in c.last_result.out
+    c.run_sourmash('search', sigfile1, db, '--threshold', '0.085', '-k', '51')
+    assert '10 matches;' in c.last_result.out
 
     c.run_sourmash('gather', sigfile1, db, '-k', '51')
     assert 'found 8 matches total' in c.last_result.out
-    assert 'the recovered matches hit 28.0% of the query' in c.last_result.out
+    assert 'the recovered matches hit 15.1% of the query' in c.last_result.out
