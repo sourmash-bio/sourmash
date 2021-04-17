@@ -81,8 +81,8 @@ def _max_jaccard_underneath_internal_node(node, query):
         return 0.0
 
     if mh.track_abundance:
-        # In this case we need to use the lower bound for angular similarity
-        raise NotImplementedError("Abundance search on indices is a work in progress")
+        # In this case we need to use the upper bound for angular similarity
+        max_score = node.data.angular_similarity_upper_bound(mh)
     else:
         # In this case we are working with similarity/containment:
         # J(A, B) = |A intersection B| / |A union B|
