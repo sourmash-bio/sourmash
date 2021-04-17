@@ -326,7 +326,7 @@ class MultiIndex(Index):
         "Create a MultiIndex from a path (filename or directory)."
         from .sourmash_args import traverse_find_sigs
         if not os.path.exists(pathname):
-            raise ValueError(f"'{pathname}' must be a directory")
+            raise ValueError(f"'{pathname}' must exist")
 
         index_list = []
         source_list = []
@@ -345,7 +345,7 @@ class MultiIndex(Index):
         if index_list:
             db = cls(index_list, source_list)
         else:
-            raise ValueError(f"no signatures to load under directory '{pathname}'")
+            raise ValueError(f"no signatures to load from path '{pathname}'")
 
         return db
 
