@@ -868,13 +868,10 @@ def test_multi_index_gather():
     assert matches[0][2] == 'A'
 
     matches = lidx.gather(ss47)
-    assert len(matches) == 2
+    assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][1] == ss47
     assert matches[0][2] == sig47     # no source override
-    assert round(matches[1][0], 2) == 0.49
-    assert matches[1][1] == ss63
-    assert matches[1][2] == 'C'       # source override
 
 
 def test_multi_index_signatures():
