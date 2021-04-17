@@ -3040,14 +3040,21 @@ def test_gather_file_output():
 
 @utils.in_tempdir
 def test_gather_f_match_orig(c):
+    prefetch_gather = False
+
     import copy
 
     testdata_combined = utils.get_test_data('gather/combined.sig')
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
-    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv',
+    do_prefetch = "--prefetch" if prefetch_gather else '--no-prefetch'
+
+    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv', do_prefetch,
                    *testdata_sigs)
+
+    print(c.last_result.out)
+    print(c.last_result.err)
 
     combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
     remaining_mh = copy.copy(combined_sig.minhash)
@@ -3066,6 +3073,7 @@ def test_gather_f_match_orig(c):
             # double check -- should match 'search --containment'.
             # (this is kind of useless for a 1.0 contained_by, I guess)
             filename = row['filename']
+            print('XXX', (filename,))
             match = sourmash.load_one_signature(filename, ksize=21)
             assert match.contained_by(combined_sig) == 1.0
 
