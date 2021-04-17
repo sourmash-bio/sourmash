@@ -1,6 +1,6 @@
 "Tests for search.py code."
 
-# @CTB todo: test search protocol with mock class
+# CTB TODO: test search protocol with mock class?
 
 import pytest
 

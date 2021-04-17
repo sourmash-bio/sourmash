@@ -386,7 +386,15 @@ class SBT(Index):
         return matches
 
     def find(self, search_fn, query, *args, **kwargs):
-        "@CTB add docstring."
+        """
+        Do a Jaccard similarity or containment search, yield results.
+
+        Here 'search_fn' should be an instance of 'JaccardSearch'.
+
+        Queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details.
+        """
         from .sbtmh import SigLeaf
 
         search_fn.check_is_compatible(query)
