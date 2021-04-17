@@ -648,7 +648,7 @@ def gather(args):
         sys.exit(-1)
 
     # @CTB experimental! w00t fun!
-    if args.prefetch:
+    if args.prefetch or 1:
         notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
         from .index import LinearIndex, CounterGatherIndex
         prefetch_idx = CounterGatherIndex(query)
