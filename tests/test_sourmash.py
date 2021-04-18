@@ -3073,7 +3073,6 @@ def test_gather_f_match_orig(c):
             # double check -- should match 'search --containment'.
             # (this is kind of useless for a 1.0 contained_by, I guess)
             filename = row['filename']
-            print('XXX', (filename,))
             match = sourmash.load_one_signature(filename, ksize=21)
             assert match.contained_by(combined_sig) == 1.0
 
