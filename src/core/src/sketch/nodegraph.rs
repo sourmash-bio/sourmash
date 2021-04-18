@@ -174,8 +174,8 @@ impl Nodegraph {
         for (hash, abund) in other_abunds {
             if self.get(hash) == 1 {
                 // TODO: which one overestimate less?
-                // a_sq += abund * abund;
-                a_sq += 1;
+                a_sq += abund * abund;
+                //a_sq += 1;
 
                 prod += abund * abund;
             }
