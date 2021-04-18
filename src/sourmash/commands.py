@@ -686,16 +686,16 @@ def gather(args):
             break
 
 
-    # basic reporting
-    print_results('\nfound {} matches total;', len(found))
+    # basic reporting:
+    print_results(f'\nfound {len(found)} matches total;')
     if args.num_results and len(found) == args.num_results:
-        print_results('(truncated gather because --num-results={})',
-                      args.num_results)
+        print_results(f'(truncated gather because --num-results={args.num_results})')
 
-    print_results('the recovered matches hit {:.1f}% of the query',
-           (1 - weighted_missed) * 100)
+    p_covered = (1 - weighted_missed) * 100
+    print_results(f'the recovered matches hit {p_covered:.1f}% of the query')
     print_results('')
 
+    # save CSV?
     if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
@@ -711,19 +711,21 @@ def gather(args):
                 del d['match']                 # actual signature not in CSV.
                 w.writerow(d)
 
+    # save matching signatures?
     if found and args.save_matches:
-        notify('saving all matches to "{}"', args.save_matches)
+        notify(f"saving all matches to '{args.save_matches}'")
         with FileOutput(args.save_matches, 'wt') as fp:
             sig.save_signatures([ r.match for r in found ], fp)
 
+    # save unassigned hashes?
     if args.output_unassigned:
         if not len(next_query.minhash):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
-            notify('saving unassigned hashes to "{}"', args.output_unassigned)
+            notify(f"saving unassigned hashes to '{args.output_unassigned}'")
 
             if is_abundance:
-                # reinflate abundances
+                # next_query is flattened; reinflate abundances
                 hashes = set(next_query.minhash.hashes)
                 orig_abunds = orig_query_mh.hashes
                 abunds = { h: orig_abunds[h] for h in hashes }
@@ -736,6 +738,7 @@ def gather(args):
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ next_query ], fp)
+    # DONE w/gather function.
 
 
 def multigather(args):
