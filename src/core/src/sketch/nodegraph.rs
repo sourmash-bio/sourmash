@@ -364,7 +364,7 @@ impl Comparable<Nodegraph> for Nodegraph {
             .zip(&other.bs)
             .map(|(bs, bs_other)| bs.intersection(bs_other).count())
             .sum();
-        let size: usize = self.bs.iter().map(|bs| bs.len()).sum();
+        let size: usize = self.bs.iter().map(|bs| bs.ones().count()).sum();
         result as f64 / size as f64
     }
 }

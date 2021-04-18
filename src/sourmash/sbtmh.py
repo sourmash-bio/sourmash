@@ -89,11 +89,6 @@ def _max_jaccard_underneath_internal_node(node, query):
         # J(A, B) = |A intersection B| / |A union B|
         # If we use only |A| as denominator, it is the containment
         # Because |A| <= |A union B|, it is also an upper bound on the max jaccard
-
-        # count the maximum number of hash matches beneath this node
-        #matches = node.data.matches(mh)
-        #max_score = float(matches) / len(mh)
-
         max_score = query_bf.containment(node.data)
 
     return max_score
@@ -151,7 +146,6 @@ def search_minhashes_containment(node, sig, threshold, results=None, downsample=
     else:  # Node or Leaf, Nodegraph by minhash comparison
         bf = _get_bf(node, sig)
         matches = bf.containment(node.data) * len(mh)
-        #matches = node.data.matches(mh)
 
     if len(mh) and float(matches) / len(mh) >= threshold:
         return 1
@@ -166,14 +160,14 @@ def search_minhashes_max_containment(node, sig, threshold, results=None,
 
     if isinstance(node, SigLeaf):
         node_mh = node.data.minhash
+
         matches = node_mh.count_common(mh, downsample)
         node_size = len(node_mh)
     else:  # Node or Leaf, Nodegraph by minhash comparison
-        bf = _get_bf(node, sig)
-        matches = bf.containment(node.data) * len(mh)
         node_size = len(mh) # FIXME
 
-        #matches = node.data.matches(mh)
+        bf = _get_bf(node, sig)
+        matches = bf.containment(node.data) * len(mh)
 
     denom = min((len(mh), node_size))
 
@@ -199,7 +193,6 @@ class GatherMinHashes(object):
         else:  # Nodegraph by minhash comparison
             bf = _get_bf(node, query)
             matches = bf.containment(node.data) * len(mh)
-            #matches = node.data.matches(mh)
 
         if not matches:
             return 0
