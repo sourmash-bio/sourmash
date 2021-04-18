@@ -370,11 +370,11 @@ impl Comparable<Nodegraph> for Nodegraph {
 }
 
 impl Comparable<KmerMinHash> for Nodegraph {
-    fn similarity(&self, other: &KmerMinHash) -> f64 {
+    fn similarity(&self, _other: &KmerMinHash) -> f64 {
         unimplemented!()
     }
 
-    fn containment(&self, other: &KmerMinHash) -> f64 {
+    fn containment(&self, _other: &KmerMinHash) -> f64 {
         /*
           let result: usize = other.mins().iter().map(|h| self.get(*h)).sum();
           result as f64 / self.size() as f64
