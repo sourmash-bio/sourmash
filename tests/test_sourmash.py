@@ -4166,8 +4166,21 @@ def test_gather_output_unassigned_with_abundance(c):
 
     assert os.path.exists(c.output('unassigned.sig'))
 
-    ss = sourmash.load_one_signature(c.output('unassigned.sig'))
-    assert ss.minhash.track_abundance
+    nomatch = sourmash.load_one_signature(c.output('unassigned.sig'))
+    assert nomatch.minhash.track_abundance
+
+    query_ss = sourmash.load_one_signature(query)
+    against_ss = sourmash.load_one_signature(against)
+
+    # unassigned should have nothing that is in the database
+    nomatch_mh = nomatch.minhash
+    for hashval in against_ss.minhash.hashes:
+        assert hashval not in nomatch_mh.hashes
+
+    # unassigned should have abundances from original query, if not in database
+    for hashval, abund in query_ss.minhash.hashes.items():
+        if hashval not in against_ss.minhash.hashes:
+            assert nomatch_mh.hashes[hashval] == abund
 
 
 def test_sbt_categorize():
