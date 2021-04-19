@@ -1,7 +1,6 @@
 name: "Dev env instructions"
 on:
   pull_request:
-    branches: [latest]
   push:
     branches: [latest]
 jobs:

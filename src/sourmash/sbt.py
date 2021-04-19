@@ -754,9 +754,7 @@ class SBT(Index):
 
             if storage:
                 sbts = storage.list_sbts()
-                if len(sbts) != 1:
-                    print("no SBT, or too many SBTs!")
-                else:
+                if len(sbts) == 1:
                     tree_data = storage.load(sbts[0])
 
                 tempfile = NamedTemporaryFile()
@@ -827,6 +825,7 @@ class SBT(Index):
             raise ValueError("Empty tree!")
 
         sbt_nodes = {}
+        sbt_leaves = {}
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
         ksize, tablesize, ntables = extract_nodegraph_info(sample_bf)[:3]
@@ -841,13 +840,14 @@ class SBT(Index):
             if 'internal' in jnode['name']:
                 jnode['factory'] = factory
                 sbt_node = Node.load(jnode, storage)
+                sbt_nodes[i] = sbt_node
             else:
                 sbt_node = leaf_loader(jnode, storage)
-
-            sbt_nodes[i] = sbt_node
+                sbt_leaves[i] = sbt_node
 
         tree = SBT(factory, cache_size=cache_size)
         tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
 
         return tree
 
