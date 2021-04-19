@@ -1016,20 +1016,19 @@ def prefetch(args):
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
-    n = 0
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
         # @CTB use _load_databases? or is this fine? want to use .signatures
         # explicitly / support lazy loading.
-        db = sourmash_args.load_file_as_signatures(dbfilename, ksize=ksize,
-                                                   select_moltype=moltype)
+        db = sourmash_args.load_file_as_index(dbfilename)
+        db = db.select(ksize=ksize, moltype=moltype)
+        db = db.signatures() # @CTB remove.
 
         for result in prefetch_database(query, query_mh, db,
                                         args.threshold_bp):
             match = result.match
             keep.append(match)
             noident_mh.remove_many(match.minhash.hashes)
-            n += 1
 
             if csvout_fp:
                 d = dict(result._asdict())
@@ -1037,11 +1036,11 @@ def prefetch(args):
                 del d['query']
                 csvout_w.writerow(d)
 
-            if n % 10 == 0:
-                notify(f"total of {n} searched, {len(keep)} matching signatures.",
+            if len(keep) % 10 == 0:
+                notify(f"total of {len(keep)} matching signatures.",
                        end="\r")
 
-    notify(f"total of {n} searched, {len(keep)} matching signatures.")
+    notify(f"total of {len(keep)} matching signatures.")
 
     if csvout_fp:
         notify(f"saved {len(keep)} matches to CSV file '{args.output}'")
