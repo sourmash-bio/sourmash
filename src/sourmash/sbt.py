@@ -428,6 +428,8 @@ class SBT(Index):
                 # no downsampling needed --
                 shared_size = node.data.matches(query_mh)
                 subj_size = node.metadata.get('min_n_below', -1)
+                if subj_size == -1:
+                    raise ValueError("ERROR: no min_n_below on this tree, cannot search.")
                 total_size = subj_size # approximate; do not collect
 
             # calculate score (exact, if leaf; approximate, if not)
