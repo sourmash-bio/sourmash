@@ -352,9 +352,9 @@ unsafe fn kmerminhash_intersection(ptr: *mut SourmashKmerMinHash, other: *const 
     let this_mh = SourmashKmerMinHash::as_rust_mut(ptr);
     let other_mh = SourmashKmerMinHash::as_rust(other);
 
-    // let new_mh = KmerMinHash::new(this_mh.scaled(), this_mh.ksize() as u32, this_mh.hash_function(), this_mh.seed(), this_mh.track_abundance(), this_mh.num());
-
-    this_mh.intersection(other_mh)?;
+    let isect = this_mh.intersection(other_mh)?;
+    this_mh.clear();
+    this_mh.add_many(&isect.0)?;
 
     Ok(())
 }
