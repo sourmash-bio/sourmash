@@ -450,6 +450,13 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
+    def intersection_and_union_size(self, other):
+        print(self, other)
+        mh_union = self + other
+        mh_intersection = mh_union.intersection(self).intersection(other)
+
+        return len(mh_intersection), len(mh_union)
+
     def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.

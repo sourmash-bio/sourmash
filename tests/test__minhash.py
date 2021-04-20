@@ -1751,6 +1751,7 @@ def test_intersection_6_full_num():
         assert k in mh1.hashes
         assert k in mh2.hashes
 
+    assert mh1.intersection_and_union_size(mh2) == (10, 20)
 
 def test_intersection_7_full_scaled():
     # intersection of two scaled objects is correct
@@ -1776,6 +1777,8 @@ def test_intersection_7_full_scaled():
     for k in mh3.hashes:
         assert k in mh1.hashes
         assert k in mh2.hashes
+
+    assert mh1.intersection_and_union_size(mh2) == (50, 150)
 
 
 def test_merge_abund():
