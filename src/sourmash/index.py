@@ -114,8 +114,7 @@ class Index(ABC):
             assert not query_mh.track_abundance
             assert not subj_mh.track_abundance
             merged = query_mh + subj_mh
-            intersect = set(query_mh.hashes) & set(subj_mh.hashes)
-            intersect &= set(merged.hashes)
+            intersect = query_mh.intersection(subj_mh).intersection(merged)
 
             shared_size = len(intersect)
             total_size = len(merged)

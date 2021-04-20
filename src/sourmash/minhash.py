@@ -589,6 +589,26 @@ class MinHash(RustObject):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
+    def intersection(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only intersect MinHash objects")
+        if self.track_abundance or other.track_abundance:
+            raise TypeError("can only intersect flat MinHash objects")
+        if not self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr()):
+            raise TypeError("cannot intersect incompatible MinHash objects")
+
+        self_h = set(self.hashes)
+        other_h = set(other.hashes)
+
+        isect = self_h & other_h
+
+        a = MinHash(
+            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+            False, self.seed, self._max_hash
+        )
+        a.add_many(isect)
+        return a
+
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
         ``values[hash] = abund``

@@ -1664,6 +1664,36 @@ def test_iaddition_noabund():
     assert hashcounts[0] == 1
 
 
+def test_intersection_1_num():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(10, 21)
+
+    mh1.add_hash(0)
+    mh1.add_hash(1)
+    mh2.add_hash(0)
+    mh2.add_hash(2)
+
+    mh3 = mh1.intersection(mh2)
+    print(set(mh3.hashes))
+    assert len(mh3) == 1
+    assert 0 in mh3.hashes
+
+
+def test_intersection_2_scaled():
+    mh1 = MinHash(0, 21, scaled=1)
+    mh2 = MinHash(0, 21, scaled=1)
+
+    mh1.add_hash(0)
+    mh1.add_hash(1)
+    mh2.add_hash(0)
+    mh2.add_hash(2)
+
+    mh3 = mh1.intersection(mh2)
+    print(set(mh3.hashes))
+    assert len(mh3) == 1
+    assert 0 in mh3.hashes
+
+
 def test_merge_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
