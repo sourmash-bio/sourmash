@@ -1694,6 +1694,38 @@ def test_intersection_2_scaled():
     assert 0 in mh3.hashes
 
 
+def test_intersection_3_abundance_error():
+    # cannot intersect abundance MinHash
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1.intersection(mh2)
+
+    assert str(exc.value) == "can only intersect flat MinHash objects"
+
+
+def test_intersection_4_incompatible_ksize():
+    # cannot intersect incompatible ksize etc
+    mh1 = MinHash(500, 21)
+    mh2 = MinHash(500, 31)
+
+    with pytest.raises(ValueError) as exc:
+        mh3 = mh1.intersection(mh2)
+
+    assert str(exc.value) == "different ksizes cannot be compared"
+
+
+def test_intersection_5_incompatible():
+    # cannot intersect with non-MinHash objects
+    mh1 = MinHash(0, 21, scaled=1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1.intersection(set())
+
+    assert str(exc.value) == "can only intersect MinHash objects"
+
+
 def test_merge_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
