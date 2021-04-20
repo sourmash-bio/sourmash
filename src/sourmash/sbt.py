@@ -418,8 +418,7 @@ class SBT(Index):
 
                 assert not subj_mh.track_abundance
                 merged = subj_mh + query_mh
-                intersect = set(query_mh.hashes) & set(subj_mh.hashes)
-                intersect &= set(merged.hashes)
+                intersect = merged.intersection(query_mh).intersection(subj_mh)
 
                 shared_size = len(intersect)
                 total_size = len(merged)
