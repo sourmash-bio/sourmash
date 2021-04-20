@@ -451,25 +451,34 @@ impl KmerMinHash {
             while self_value.is_some() {
                 let value = self_value.unwrap();
                 match other_value {
+                    // no other value?
                     None => {
-                        merged.push(*value);
-                        merged.extend(self_iter);
+                        merged.push(*value); // add this value
+                        merged.extend(self_iter); // what does this do!?
                         if let Some(sai) = self_abunds_iter {
-                            merged_abunds.extend(sai);
+                            merged_abunds.extend(sai); // add abundance.
+                        } else {
+                            assert!(false);
                         }
                         break;
                     }
+                    // other hash is less than this one?
                     Some(x) if x < value => {
-                        merged.push(*x);
-                        other_value = other_iter.next();
+                        merged.push(*x); // add other hash
+                        other_value = other_iter.next(); // advance other iter
 
                         if let Some(ref mut oai) = other_abunds_iter {
                             if let Some(v) = oai.next() {
                                 merged_abunds.push(*v)
+                            } else {
+                                assert!(false);
                             }
+                        } else {
+                            // assert!(false);
+                            merged_abunds.push(1);
                         }
                     }
-                    Some(x) if x == value => {
+                    Some(x) if x == value => { // add them together!
                         merged.push(*x);
                         other_value = other_iter.next();
                         self_value = self_iter.next();
@@ -480,7 +489,11 @@ impl KmerMinHash {
                                     if let Some(s) = sai.next() {
                                         merged_abunds.push(*v + *s)
                                     }
+                                } else {
+                                    assert!(false);
                                 }
+                            } else {
+                                assert!(false);
                             }
                         }
                     }
@@ -491,20 +504,31 @@ impl KmerMinHash {
                         if let Some(ref mut sai) = self_abunds_iter {
                             if let Some(v) = sai.next() {
                                 merged_abunds.push(*v)
+                            } else {
+                                assert!(false);
                             }
+                        } else {
+                            // CTB: this is not tested by any of the python tests
+                            merged_abunds.push(1);
                         }
                     }
                     Some(_) => {}
                 }
             }
+            // anything left? if so, push.
             if let Some(value) = other_value {
                 merged.push(*value);
+
+                if let Some(oai) = other_abunds_iter {
+                    merged_abunds.extend(oai);
+                } else {
+                    merged_abunds.push(1);
+                }
             }
             merged.extend(other_iter);
-            if let Some(oai) = other_abunds_iter {
-                merged_abunds.extend(oai);
-            }
         }
+
+        assert!(merged.len() == merged_abunds.len());
 
         if merged.len() < (self.num as usize) || (self.num as usize) == 0 {
             self.mins = merged;
