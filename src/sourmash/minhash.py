@@ -606,7 +606,8 @@ class MinHash(RustObject):
             self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
             False, self.seed, self._max_hash
         )
-        a.add_many(isect)
+        a.merge(self)
+        a._methodcall(lib.kmerminhash_intersection, other._get_objptr())
         return a
 
     def set_abundances(self, values, clear=True):

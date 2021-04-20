@@ -347,6 +347,19 @@ unsafe fn kmerminhash_merge(ptr: *mut SourmashKmerMinHash, other: *const Sourmas
 }
 }
 
+ffi_fn! {
+unsafe fn kmerminhash_intersection(ptr: *mut SourmashKmerMinHash, other: *const SourmashKmerMinHash) ->  Result<()> {
+    let this_mh = SourmashKmerMinHash::as_rust_mut(ptr);
+    let other_mh = SourmashKmerMinHash::as_rust(other);
+
+    // let new_mh = KmerMinHash::new(this_mh.scaled(), this_mh.ksize() as u32, this_mh.hash_function(), this_mh.seed(), this_mh.track_abundance(), this_mh.num());
+
+    this_mh.intersection(other_mh)?;
+
+    Ok(())
+}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn kmerminhash_is_compatible(
     ptr: *const SourmashKmerMinHash,
@@ -376,7 +389,7 @@ unsafe fn kmerminhash_count_common(ptr: *const SourmashKmerMinHash, other: *cons
 }
 
 ffi_fn! {
-unsafe fn kmerminhash_intersection(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash)
+unsafe fn kmerminhash_intersection_size(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash)
     -> Result<u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);
     let other_mh = SourmashKmerMinHash::as_rust(other);
