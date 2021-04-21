@@ -93,13 +93,13 @@ of large metagenomic samples.
 # Statement of Need
 
 Large collections of genomes, transcriptomes, and raw sequencing data
-are readily available in biology, and we need lightweight
-computational methods for searching and summarizing both public and
-private collections. sourmash provides a flexible set of programmatic
-functionality for this purpose, together with a robust and well-tested
-command-line interface. It has been used in over 70 publications (based
-on citations of the [@Brown2016]) and it continues to expand in
-functionality.
+sets are readily available in biology, and the field needs lightweight
+computational methods for searching and summarizing the content of
+both public and private collections. sourmash provides a flexible set
+of programmatic functionality for this purpose, together with a robust
+and well-tested command-line interface. It has been used in over 70
+publications (based on citations of the [@Brown2016]) and it continues
+to expand in functionality.
 
 # Acknowledgements
 
