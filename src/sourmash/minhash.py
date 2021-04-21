@@ -451,7 +451,7 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
     def intersection_and_union_size(self, other):
-        print(self, other)
+        "Calculate intersection and union sizes between `self` and `other`."
         mh_union = self + other
         mh_intersection = mh_union.intersection(self).intersection(other)
 
