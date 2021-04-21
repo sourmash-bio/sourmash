@@ -468,8 +468,8 @@ class LCA_Database(Index):
             # up with a protocol by which the JaccardSearch object can
             # signal that it is done, or something.
             if search_fn.passes(score):
-                search_fn.collect(score, subj)
-                yield subj, score
+                if search_fn.collect(score, subj):
+                    yield subj, score
 
     @cached_property
     def lid_to_idx(self):

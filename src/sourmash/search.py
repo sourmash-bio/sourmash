@@ -119,7 +119,7 @@ class JaccardSearch:
 
     def collect(self, score, match_sig):
         "This is a potential match."
-        pass
+        return True
 
     def score_jaccard(self, query_size, shared_size, subject_size, total_size):
         "Calculate Jaccard similarity."
@@ -146,6 +146,7 @@ class JaccardSearchBestOnly(JaccardSearch):
     def collect(self, score, match):
         "Raise the threshold to the best match found so far."
         self.threshold = max(self.threshold, score)
+        return True
 
 
 # generic SearchResult tuple.
