@@ -452,10 +452,15 @@ class MinHash(RustObject):
 
     def intersection_and_union_size(self, other):
         "Calculate intersection and union sizes between `self` and `other`."
-        mh_union = self + other
-        mh_intersection = mh_union.intersection(self).intersection(other)
+        if not isinstance(other, MinHash):
+            raise TypeError("Must be a MinHash!")
 
-        return len(mh_intersection), len(mh_union)
+        usize = ffi.new("uint64_t *")
+        common = self._methodcall(lib.kmerminhash_intersection_union_size,
+                                  other._get_objptr(), usize)
+
+        usize = ffi.unpack(usize, 1)[0]
+        return common, usize
 
     def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
@@ -604,13 +609,8 @@ class MinHash(RustObject):
         if self.track_abundance or other.track_abundance:
             raise TypeError("can only intersect flat MinHash objects")
 
-        a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self._max_hash
-        )
-        a.merge(self)
-        a._methodcall(lib.kmerminhash_intersection, other._get_objptr())
-        return a
+        ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
+        return MinHash._from_objptr(ptr)
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where
