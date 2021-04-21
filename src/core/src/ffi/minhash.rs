@@ -377,14 +377,31 @@ unsafe fn kmerminhash_count_common(ptr: *const SourmashKmerMinHash, other: *cons
 
 ffi_fn! {
 unsafe fn kmerminhash_intersection(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash)
+    -> Result<*mut SourmashKmerMinHash> {
+    let mh = SourmashKmerMinHash::as_rust(ptr);
+    let other_mh = SourmashKmerMinHash::as_rust(other);
+
+    let isect = mh.intersection(other_mh)?;
+    let mut new_mh = mh.clone();
+    new_mh.clear();
+    new_mh.add_many(&isect.0)?;
+
+    Ok(SourmashKmerMinHash::from_rust(new_mh))
+}
+}
+
+ffi_fn! {
+unsafe fn kmerminhash_intersection_union_size(ptr: *const SourmashKmerMinHash, other: *const SourmashKmerMinHash, union_size: *mut u64)
     -> Result<u64> {
     let mh = SourmashKmerMinHash::as_rust(ptr);
     let other_mh = SourmashKmerMinHash::as_rust(other);
 
-    if let Ok((_, size)) = mh.intersection_size(other_mh) {
-        return Ok(size);
+    if let Ok((common, union_s)) = mh.intersection_size(other_mh) {
+        *union_size = union_s;
+        return Ok(common);
     }
 
+    *union_size = 0;
     Ok(0)
 }
 }
