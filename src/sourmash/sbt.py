@@ -1,45 +1,6 @@
 #!/usr/bin/env python
 """
 An implementation of sequence bloom trees, Solomon & Kingsford, 2015.
-
-@CTB update docstring
-To try it out, do::
-
-    factory = GraphFactory(ksize, tablesizes, n_tables)
-    root = Node(factory)
-
-    graph1 = factory()
-    # ... add stuff to graph1 ...
-    leaf1 = Leaf("a", graph1)
-    root.insert(leaf1)
-
-For example, ::
-
-    # filenames: list of fa/fq files
-    # ksize: k-mer size
-    # tablesizes: Bloom filter table sizes
-    # n_tables: Number of tables
-
-    factory = GraphFactory(ksize, tablesizes, n_tables)
-    root = Node(factory)
-
-    for filename in filenames:
-        graph = factory()
-        graph.consume_fasta(filename)
-        leaf = Leaf(filename, graph)
-        root.insert(leaf)
-
-then define a search function, ::
-
-    def kmers(k, seq):
-        for start in range(len(seq) - k + 1):
-            yield seq[start:start + k]
-
-    def search_transcript(node, seq, threshold):
-        presence = [ node.data.get(kmer) for kmer in kmers(ksize, seq) ]
-        if sum(presence) >= int(threshold * len(seq)):
-            return 1
-        return 0
 """
 
 
@@ -467,6 +428,8 @@ class SBT(Index):
                 # no downsampling needed --
                 shared_size = node.data.matches(query_mh)
                 subj_size = node.metadata.get('min_n_below', -1)
+                if subj_size == -1:
+                    raise ValueError("ERROR: no min_n_below on this tree, cannot search.")
                 total_size = subj_size # approximate; do not collect
 
             # calculate score (exact, if leaf; approximate, if not)

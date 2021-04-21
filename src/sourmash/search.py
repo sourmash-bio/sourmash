@@ -69,7 +69,7 @@ def make_gather_query(query_mh, threshold_bp):
         if threshold > 1.0:
             return None
 
-    search_obj = JaccardSearch(SearchType.CONTAINMENT, threshold=threshold)
+    search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT, threshold=threshold)
 
     return search_obj
 

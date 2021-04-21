@@ -4136,7 +4136,6 @@ def test_gather_abund_10_1_ignore_abundance(c):
     # * approximately 50% of s10 and s11 matching (first column)
     # * approximately 100% of the high coverage genome being matched,
     #       with only 80% of the low coverage genome
-    # no abundance-weighted information is provided here. @CTB check?
 
     assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
     assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
