@@ -507,15 +507,17 @@ class MinHash(RustObject):
         return a
 
     def flatten(self):
-        """Return a new MinHash with track_abundance=False."""
-        # create new object:
-        a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self._max_hash
-        )
-        a.add_many(self)
+        """If track_abundance=True, return a new flattened MinHash."""
+        if self.track_abundance:
+            # create new object:
+            a = MinHash(
+                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+                False, self.seed, self._max_hash
+            )
+            a.add_many(self)
 
-        return a
+            return a
+        return self
 
     def jaccard(self, other, downsample=False):
         "Calculate Jaccard similarity of two MinHash objects."
