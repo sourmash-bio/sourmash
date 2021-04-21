@@ -171,6 +171,7 @@ class SBT(Index):
     We use two dicts to store the tree structure: One for the internal nodes,
     and another for the leaves (datasets).
     """
+    is_database = True
 
     def __init__(self, factory, *, d=2, storage=None, cache_size=None):
         self.factory = factory
@@ -183,24 +184,66 @@ class SBT(Index):
         if cache_size is None:
             cache_size = sys.maxsize
         self._nodescache = _NodesCache(maxsize=cache_size)
+        self._location = None
 
     def signatures(self):
         for k in self.leaves():
             yield k.data
 
-    def select(self, ksize=None, moltype=None):
+    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+               containment=False):
+        """Make sure this database matches the requested requirements.
+
+        Will always raise ValueError if a requirement cannot be met.
+
+        The only tricky bit here is around downsampling: if the scaled
+        value being requested is higher than the signatures in the
+        SBT, we can use the SBT for containment but not for
+        similarity. This is because:
+
+        * if we are doing containment searches, the intermediate nodes
+          can still be used for calculating containment of signatures
+          with higher scaled values. This is because only hashes that match
+          in the higher range are used for containment scores.
+        * however, for similarity, _all_ hashes are used, and we cannot
+          implicitly downsample or necessarily estimate similarity if
+          the scaled values differ.
+        """
+        # pull out a signature from this collection -
         first_sig = next(iter(self.signatures()))
+        db_mh = first_sig.minhash
 
-        ok = True
-        if ksize is not None and first_sig.minhash.ksize != ksize:
-            ok = False
-        if moltype is not None and first_sig.minhash.moltype != moltype:
-            ok = False
+        # check ksize.
+        if ksize is not None and db_mh.ksize != ksize:
+            raise ValueError(f"search ksize {ksize} is different from database ksize {db_mh.ksize}")
 
-        if ok:
-            return self
+        # check moltype.
+        if moltype is not None and db_mh.moltype != moltype:
+            raise ValueError(f"search moltype {moltype} is different from database moltype {db_mh.moltype}")
 
-        raise ValueError("cannot select SBT on ksize {} / moltype {}".format(ksize, moltype))
+        # containment requires 'scaled'.
+        if containment:
+            if not scaled:
+                raise ValueError("'containment' requires 'scaled' in SBT.select'")
+            if not db_mh.scaled:
+                raise ValueError("cannot search this SBT for containment; signatures are not calculated with scaled")
+
+        # 'num' and 'scaled' do not mix.
+        if num:
+            if not db_mh.num:
+                raise ValueError(f"this database was created with 'scaled' MinHash sketches, not 'num'")
+            if num != db_mh.num:
+                raise ValueError(f"num mismatch for SBT: num={num}, {db_mh.num}")
+
+        if scaled:
+            if not db_mh.scaled:
+                raise ValueError(f"this database was created with 'num' MinHash sketches, not 'scaled'")
+
+            # we can downsample SBTs for containment operations.
+            if scaled > db_mh.scaled and not containment:
+                raise ValueError(f"search scaled value {scaled} is less than database scaled value of {db_mh.scaled}")
+
+        return self
 
     def new_node_pos(self, node):
         if not self._nodes:
@@ -336,7 +379,10 @@ class SBT(Index):
 
         return matches
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, threshold=None,
+               ignore_abundance=False, do_containment=False,
+               do_max_containment=False, best_only=False,
+               unload_data=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -349,15 +395,17 @@ class SBT(Index):
           * ignore_abundance: default False. If True, and query signature
             and database support k-mer abundances, ignore those abundances.
         """
-        from .sbtmh import search_minhashes, search_minhashes_containment
+        from .sbtmh import (search_minhashes, search_minhashes_containment,
+                            search_minhashes_max_containment)
         from .sbtmh import SearchMinHashesFindBest
         from .signature import SourmashSignature
 
-        threshold = kwargs['threshold']
-        ignore_abundance = kwargs.get('ignore_abundance', False)
-        do_containment = kwargs.get('do_containment', False)
-        best_only = kwargs.get('best_only', False)
-        unload_data = kwargs.get('unload_data', False)
+        if threshold is None:
+            raise TypeError("'search' requires 'threshold'")
+        threshold = float(threshold)
+
+        if do_containment and do_max_containment:
+            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
 
         # figure out scaled value of tree, downsample query if needed.
         leaf = next(iter(self.leaves()))
@@ -377,19 +425,29 @@ class SBT(Index):
         if do_containment:
             search_fn = search_minhashes_containment
             query_match = lambda x: tree_query.contained_by(x, downsample=True)
+        elif do_max_containment:
+            search_fn = search_minhashes_max_containment
+            query_match = lambda x: tree_query.max_containment(x,
+                                                               downsample=True)
 
         if best_only:            # this needs to be reset for each SBT
+            if do_containment or do_max_containment:
+                raise TypeError("'best_only' is incompatible with 'do_containment' and 'do_max_containment'")
             search_fn = SearchMinHashesFindBest().search
 
         # now, search!
         results = []
-        for leaf in self.find(search_fn, tree_query, threshold, unload_data=unload_data):
+
+        # here, self.find is used only to find candidate nodes;
+        for leaf in self.find(search_fn, tree_query, threshold,
+                              unload_data=unload_data):
+            # the actual calculation of node match is done here:
             similarity = query_match(leaf.data)
 
             # tree search should always/only return matches above threshold
             assert similarity >= threshold
 
-            results.append((similarity, leaf.data, None))
+            results.append((similarity, leaf.data, self._location))
 
         return results
         
@@ -435,7 +493,7 @@ class SBT(Index):
             containment = query.minhash.contained_by(leaf_mh, True)
 
             assert containment >= threshold, "containment {} not below threshold {}".format(containment, threshold)
-            results.append((containment, leaf.data, None))
+            results.append((containment, leaf.data, self._location))
 
         results.sort(key=lambda x: -x[0])
 
@@ -696,9 +754,7 @@ class SBT(Index):
 
             if storage:
                 sbts = storage.list_sbts()
-                if len(sbts) != 1:
-                    print("no SBT, or too many SBTs!")
-                else:
+                if len(sbts) == 1:
                     tree_data = storage.load(sbts[0])
 
                 tempfile = NamedTemporaryFile()
@@ -758,7 +814,9 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**jnodes['storage']['args'])
 
-        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
+        obj = loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
+        obj._location = location
+        return obj
 
     @staticmethod
     def _load_v1(jnodes, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
@@ -767,6 +825,7 @@ class SBT(Index):
             raise ValueError("Empty tree!")
 
         sbt_nodes = {}
+        sbt_leaves = {}
 
         sample_bf = os.path.join(dirname, jnodes[0]['filename'])
         ksize, tablesize, ntables = extract_nodegraph_info(sample_bf)[:3]
@@ -781,13 +840,14 @@ class SBT(Index):
             if 'internal' in jnode['name']:
                 jnode['factory'] = factory
                 sbt_node = Node.load(jnode, storage)
+                sbt_nodes[i] = sbt_node
             else:
                 sbt_node = leaf_loader(jnode, storage)
-
-            sbt_nodes[i] = sbt_node
+                sbt_leaves[i] = sbt_node
 
         tree = SBT(factory, cache_size=cache_size)
         tree._nodes = sbt_nodes
+        tree._leaves = sbt_leaves
 
         return tree
 

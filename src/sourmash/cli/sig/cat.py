@@ -1,7 +1,5 @@
 """concatenate signature files"""
 
-import csv
-
 import sourmash
 from sourmash.logging import notify, print_results, error
 

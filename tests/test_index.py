@@ -1,11 +1,17 @@
+"""
+Tests for Index classes and subclasses.
+"""
+import pytest
 import glob
 import os
 import zipfile
+import shutil
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import LinearIndex
+from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex)
 from sourmash.sbt import SBT, GraphFactory, Leaf
+from sourmash import sourmash_args
 
 import sourmash_tst_utils as utils
 
@@ -190,7 +196,7 @@ def test_linear_index_load():
 
     x = {ss2, ss47, ss63}
     assert set(linear.signatures()) == x, linear.signatures
-    assert linear.filename == filename
+    assert linear.location == filename
 
 
 def test_linear_index_save_load():
@@ -380,7 +386,7 @@ def test_index_same_md5sum_fsstorage(c):
 
 
 @utils.in_tempdir
-def test_index_same_md5sum_zipstorage(c):
+def test_index_same_md5sum_sbt_zipstorage(c):
     testdata1 = utils.get_test_data('img/2706795855.sig')
     testdata2 = utils.get_test_data('img/638277004.sig')
 
@@ -393,3 +399,508 @@ def test_index_same_md5sum_zipstorage(c):
     # should have 3 files, 1 internal and two sigs. We check for 4 because the
     # directory also shows in namelist()
     assert len([f for f in zout.namelist() if f.startswith(".sbt.zzz/")]) == 4
+
+
+@utils.in_thisdir
+def test_zipfile_protein_command_search(c):
+    # test command-line search/gather of zipfile with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_hp_command_search(c):
+    # test command-line search/gather of zipfile with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/hp.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_dayhoff_command_search(c):
+    # test command-line search/gather of zipfile with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/dayhoff.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_protein_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with protein sigs
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out)
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_hp_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with hp sigs
+    sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_dayhoff_command_search_combined(c):
+    # test command-line search/gather of combined zipfile with dayhoff sigs
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/all.zip')
+
+    c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+    assert '2 matches:' in c.last_result.out
+
+    c.run_sourmash('gather', sigfile1, db_out, '--threshold', '0.0')
+    assert 'found 1 matches total' in c.last_result.out
+    assert 'the recovered matches hit 100.0% of the query' in c.last_result.out
+
+
+@utils.in_thisdir
+def test_zipfile_dayhoff_command_search_protein(c):
+    # test command-line search/gather of protein sigs in zipfile
+    # with dayhoff query
+    sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    db_out = utils.get_test_data('prot/protein.zip')
+
+    with pytest.raises(ValueError) as exc:
+        c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
+
+    assert 'no compatible signatures found in ' in c.last_result.err
+
+
+def test_zipfile_API_signatures():
+    # return all of the .sig and .sig.gz files in all.zip
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 7
+    assert len(zipidx) == 7
+
+
+def test_zipfile_API_signatures_traverse_yield_all():
+    # include dna-sig.noext, but not build.sh (cannot be loaded as signature)
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 8
+    assert len(zipidx) == 8
+
+    # confirm that there are 12 files in there total, incl build.sh and dirs
+    zf = zipidx.zf
+    allfiles = [ zi.filename for zi in zf.infolist() ]
+    print(allfiles)
+    assert len(allfiles) == 12
+
+
+def test_zipfile_API_signatures_traverse_yield_all_select():
+    # include dna-sig.noext
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db, traverse_yield_all=True)
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 2
+    assert len(zipidx) == 2
+
+
+def test_zipfile_API_signatures_select():
+    # include dna-sig.noext
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db)
+    zipidx = zipidx.select(moltype='DNA')
+    siglist = list(zipidx.signatures())
+    assert len(siglist) == 1
+    assert len(zipidx) == 1
+
+
+def test_zipfile_API_save():
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db)
+
+    with pytest.raises(NotImplementedError):
+        zipidx.save('xxx')
+
+
+def test_zipfile_API_insert():
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db)
+
+    with pytest.raises(NotImplementedError):
+        # at some point probably want to change this to a real signature :)
+        zipidx.insert(None)
+
+
+def test_zipfile_API_location():
+    zipfile_db = utils.get_test_data('prot/all.zip')
+
+    zipidx = ZipFileLinearIndex.load(zipfile_db)
+
+    assert zipidx.location == zipfile_db
+
+
+def test_zipfile_load_file_as_signatures():
+    from types import GeneratorType
+
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    sigs = sourmash_args.load_file_as_signatures(zipfile_db)
+
+    # it's fine if this needs to change, but for now I want to make
+    # sure that this is generator.
+    assert isinstance(sigs, GeneratorType)
+
+    sigs = list(sigs)
+    assert len(sigs) == 7
+
+
+def test_zipfile_load_file_as_signatures_traverse_yield_all():
+    from types import GeneratorType
+
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    sigs = sourmash_args.load_file_as_signatures(zipfile_db,
+                                                 yield_all_files=True)
+
+    # it's fine if this needs to change, but for now I want to make
+    # sure that this is generator.
+    assert isinstance(sigs, GeneratorType)
+
+    sigs = list(sigs)
+    assert len(sigs) == 8
+
+
+@utils.in_tempdir
+def test_zipfile_load_database_fail_if_not_zip(c):
+    # fail _load_database if not .zip
+    zipfile_db = utils.get_test_data('prot/all.zip')
+    badname = c.output('xyz.nada')
+    shutil.copyfile(zipfile_db, badname)
+
+    with pytest.raises(ValueError) as exc:
+        sigs = sourmash_args.load_file_as_signatures(badname)
+
+    assert 'Error while reading signatures from' in str(exc.value)
+
+
+def test_multi_index_search():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    # now, search for sig2
+    sr = lidx.search(ss2, threshold=1.0)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    assert sr[0][1] == ss2
+    assert sr[0][2] == 'A'      # source override
+
+    # search for sig47 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss47, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss47
+    assert sr[0][2] == sig47    # source was set to None, so no override
+    assert sr[1][1] == ss63
+    assert sr[1][2] == 'C'      # source override
+
+    # search for sig63 with lower threshold; search order not guaranteed.
+    sr = lidx.search(ss63, threshold=0.1)
+    print([s[1].name for s in sr])
+    assert len(sr) == 2
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[0][2] == 'C'      # source override
+    assert sr[1][1] == ss47
+    assert sr[1][2] == sig47    # source was set to None, so no override
+
+    # search for sig63 with high threshold => 1 match
+    sr = lidx.search(ss63, threshold=0.8)
+    print([s[1].name for s in sr])
+    assert len(sr) == 1
+    sr.sort(key=lambda x: -x[0])
+    assert sr[0][1] == ss63
+    assert sr[0][2] == 'C'      # source override
+
+
+def test_multi_index_gather():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    matches = lidx.gather(ss2)
+    assert len(matches) == 1
+    assert matches[0][0] == 1.0
+    assert matches[0][2] == 'A'
+
+    matches = lidx.gather(ss47)
+    assert len(matches) == 2
+    assert matches[0][0] == 1.0
+    assert matches[0][1] == ss47
+    assert matches[0][2] == sig47     # no source override
+    assert round(matches[1][0], 2) == 0.49
+    assert matches[1][1] == ss63
+    assert matches[1][2] == 'C'       # source override
+
+
+def test_multi_index_signatures():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx1 = LinearIndex.load(sig2)
+    lidx2 = LinearIndex.load(sig47)
+    lidx3 = LinearIndex.load(sig63)
+
+    # create MultiIindex with source location override
+    lidx = MultiIndex([lidx1, lidx2, lidx3], ['A', None, 'C'])
+    lidx = lidx.select(ksize=31)
+
+    siglist = list(lidx.signatures())
+    assert len(siglist) == 3
+    assert ss2 in siglist
+    assert ss47 in siglist
+    assert ss63 in siglist
+
+
+def test_multi_index_load_from_path():
+    dirname = utils.get_test_data('prot/protein')
+    mi = MultiIndex.load_from_path(dirname, force=False)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 2
+
+
+def test_multi_index_load_from_path_2():
+    # only load .sig files, currently; not the databases under that directory.
+    dirname = utils.get_test_data('prot')
+    mi = MultiIndex.load_from_path(dirname, force=False)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 7
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_path_3(c):
+    # check that force works ok on a directory
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.sig")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    with pytest.raises(sourmash.exceptions.SourmashError):
+        mi = MultiIndex.load_from_path(c.location, force=False)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_path_3_yield_all_true(c):
+    # check that force works ok on a directory w/force=True
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.something")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_path(c.location, force=True)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 8
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_path_3_yield_all_true_subdir(c):
+    # check that force works ok on subdirectories
+    dirname = utils.get_test_data('prot')
+
+    target_dir = c.output("some_subdir")
+    os.mkdir(target_dir)
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = os.path.join(target_dir, f"file{count}.something")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_path(c.location, force=True)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 8
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_path_3_sig_gz(c):
+    # check that we find .sig.gz files, too
+    dirname = utils.get_test_data('prot')
+
+    count = 0
+    for root, dirs, files in os.walk(dirname):
+        for name in files:
+            if not name.endswith('.sig'): # skip non .sig things
+                continue
+            print(f"at {name}")
+            fullname = os.path.join(root, name)
+            copyto = c.output(f"file{count}.sig.gz")
+            shutil.copyfile(fullname, copyto)
+            count += 1
+
+    mi = MultiIndex.load_from_path(c.location, force=False)
+
+    print(mi.index_list)
+    print(mi.source_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 6
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_path_3_check_traverse_fn(c):
+    # test the actual traverse function... eventually this test can be
+    # removed, probably, as we consolidate functionality and test MultiIndex
+    # better.
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname]))
+    assert len(files) == 7, files
+
+    files = list(sourmash_args.traverse_find_sigs([dirname], True))
+    assert len(files) == 20, files
+
+
+def test_multi_index_load_from_path_no_exist():
+    dirname = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_path(dirname, force=True)
+
+
+def test_multi_index_load_from_pathlist_no_exist():
+    dirname = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_pathlist(dirname)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_pathlist_1(c):
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname]))
+    assert len(files) == 7, files
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print("\n".join(files), file=fp)
+    mi = MultiIndex.load_from_pathlist(file_list)
+
+    sigs = list(mi.signatures())
+    assert len(sigs) == 7
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_pathlist_2(c):
+    dirname = utils.get_test_data('prot')
+    files = list(sourmash_args.traverse_find_sigs([dirname], True))
+    assert len(files) == 20, files
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print("\n".join(files), file=fp)
+
+    with pytest.raises(ValueError):
+        mi = MultiIndex.load_from_pathlist(file_list)
+
+
+@utils.in_tempdir
+def test_multi_index_load_from_pathlist_3_zipfile(c):
+    # can we load zipfiles in a pathlist? yes please.
+    zipfile = utils.get_test_data('prot/all.zip')
+
+    file_list = c.output('filelist.txt')
+
+    with open(file_list, 'wt') as fp:
+        print(zipfile, file=fp)
+
+    mi = MultiIndex.load_from_pathlist(file_list)
+    assert len(mi) == 7

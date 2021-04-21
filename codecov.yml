@@ -1,0 +1,6 @@
+# config file for codecov, https://app.codecov.io/gh/dib-lab/sourmash/
+
+# use path fixing to properly report code coverage on source code
+# per https://docs.codecov.io/docs/fixing-paths
+fixes:
+- "sourmash::src/sourmash"

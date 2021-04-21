@@ -794,12 +794,34 @@ def test_sbt_protein_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
+
+
+@utils.in_tempdir
+def test_sbt_protein_search_no_threshold(c):
+    # test the '.search' method on SBTs w/no threshold
+    sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+    sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
+
+    db_out = c.output('protein.sbt.zip')
+
+    c.run_sourmash('index', db_out, sigfile1, sigfile2,
+                   '--scaled', '100', '-k', '19', '--protein')
+
+    db2 = load_sbt_index(db_out)
+
+    sig1 = sourmash.load_one_signature(sigfile1)
+
+    # and search, gather
+    with pytest.raises(TypeError) as exc:
+        results = db2.search(sig1)
+    assert "'search' requires 'threshold'" in str(exc)
 
 
 @utils.in_thisdir
 def test_sbt_protein_command_search(c):
-    # test command-line search/gather of LCA database with protein sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with protein sigs
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/protein.sbt.zip')
 
@@ -840,12 +862,13 @@ def test_sbt_hp_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
 
 
 @utils.in_thisdir
 def test_sbt_hp_command_search(c):
-    # test command-line search/gather of LCA database with hp sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with hp sigs
     sigfile1 = utils.get_test_data('prot/hp/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/hp.sbt.zip')
 
@@ -886,12 +909,13 @@ def test_sbt_dayhoff_command_index(c):
 
     results = db2.gather(sig2)
     assert results[0][0] == 1.0
+    assert results[0][2] == db2._location
+    assert results[0][2] == db_out
 
 
 @utils.in_thisdir
 def test_sbt_dayhoff_command_search(c):
-    # test command-line search/gather of LCA database with dayhoff sigs
-    # (LCA database created as above)
+    # test command-line search/gather of SBT database with dayhoff sigs
     sigfile1 = utils.get_test_data('prot/dayhoff/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     db_out = utils.get_test_data('prot/dayhoff.sbt.zip')
 

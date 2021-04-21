@@ -93,12 +93,42 @@ def test_div_zero(track_abundance):
 
 def test_div_zero_contained(track_abundance):
     # verify that empty MHs do not yield divide by zero errors for contained_by
-    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
     mh2 = mh.copy_and_clear()
 
     mh.add_sequence('ATGC')
     assert mh.contained_by(mh2) == 0
     assert mh2.contained_by(mh) == 0
+
+
+def test_contained_requires_scaled(track_abundance):
+    # test that contained_by requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.contained_by(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.contained_by(mh2)
+
+
+def test_contained_requires_scaled_2(track_abundance):
+    # test that max_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.max_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.max_containment(mh2)
 
 
 def test_bytes_dna(track_abundance):
@@ -294,7 +324,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample(scaled=100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
+    assert 'cannot downsample a num MinHash using scaled' in str(excinfo.value)
 
 
 def test_scaled_num_both(track_abundance):
@@ -539,12 +569,12 @@ def test_mh_copy(track_abundance):
 def test_mh_len(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
-    assert len(a) == 20
+    assert len(a) == 0
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     assert len(a) == 20
 
 
-def test_mh_len(track_abundance):
+def test_mh_len_2(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -1564,6 +1594,19 @@ def test_is_molecule_type_4(track_abundance):
     assert mh.dayhoff
 
 
+def test_addition_num_incompatible():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(20, 21)
+
+    mh1.add_hash(0)
+    mh2.add_hash(1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1 + mh2
+
+    assert "incompatible num values: self=10 other=20" in str(exc.value)
+
+
 def test_addition_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
@@ -1653,3 +1696,41 @@ def test_merge_noabund():
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 1
+
+
+def test_max_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.max_containment(mh2) == 1/2
+    assert mh2.max_containment(mh1) == 1/2
+
+
+def test_max_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.max_containment(mh2) == 0
+    assert mh2.max_containment(mh1) == 0
+
+
+def test_max_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.max_containment(mh2) == 1
+    assert mh2.max_containment(mh1) == 1

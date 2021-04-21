@@ -394,6 +394,27 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_dir():
+    filename1 = utils.get_test_data('lca')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
+
+def test_databases_load_fail_on_not_exist():
+    filename1 = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
@@ -948,6 +969,33 @@ def test_single_classify_to_output():
 
         outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 LCA databases' in err
+
+
+def test_single_classify_to_output_no_name():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        ss = sourmash.load_one_signature(input_sig, ksize=31)
+
+        outsig_filename = os.path.join(location, 'q.sig')
+        with open(outsig_filename, 'wt') as fp:
+            # remove name from signature here --
+            new_sig = sourmash.SourmashSignature(ss.minhash, filename='xyz')
+            sourmash.save_signatures([new_sig], fp)
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', outsig_filename,
+               '-o', os.path.join(location, 'outfile.txt')]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        print((outdata,))
+        assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -1869,8 +1917,8 @@ def test_incompat_lca_db_ksize_2(c):
     err = c.last_result.err
     print(err)
 
-    assert "ksize on db 'test.lca.json' is 25;" in err
-    assert 'this is different from query ksize of 31.' in err
+    assert "ERROR: cannot use 'test.lca.json' for this query." in err
+    assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 @utils.in_tempdir

@@ -154,15 +154,19 @@ class _signatures_for_sketch_factory(object):
 
 def _add_from_file_to_filenames(args):
     "Add filenames from --from-file to args.filenames"
-    from .sourmash_args import load_file_list_of_signatures
+    from .sourmash_args import load_pathlist_from_file
     if args.from_file:
-        file_list = load_file_list_of_signatures(args.from_file)
+        file_list = load_pathlist_from_file(args.from_file)
         args.filenames.extend(file_list)
 
 
 def _execute_sketch(args, signatures_factory):
     "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
+
+    if not args.filenames:
+        error('error: no input filenames provided! nothing to do - exiting.')
+        sys.exit(-1)
 
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')

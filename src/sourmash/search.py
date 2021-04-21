@@ -8,7 +8,7 @@ from .minhash import _get_max_hash_for_scaled
 
 # generic SearchResult.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name')
+                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
 
 
 def format_bp(bp):
@@ -25,32 +25,32 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance, unload_data=False):
+def search_databases(query, databases, **kwargs):
     results = []
     found_md5 = set()
-    for (obj, filename, filetype) in databases:
-        search_iter = obj.search(query, threshold=threshold,
-                                 do_containment=do_containment,
-                                 ignore_abundance=ignore_abundance,
-                                 best_only=best_only,
-                                 unload_data=unload_data)
-        for (similarity, match, filename) in search_iter:
+    for db in databases:
+        search_iter = db.search(query, **kwargs)
+        for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
-                results.append((similarity, match, filename))
+                results.append((score, match, filename))
                 found_md5.add(md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])
 
     x = []
-    for (similarity, match, filename) in results:
-        x.append(SearchResult(similarity=similarity,
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name))
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
     return x
 
 ###
@@ -84,8 +84,8 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
+    for db in dblist:
+        for cont, match, fname in db.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
@@ -94,9 +94,7 @@ def _find_best(dblist, query, threshold_bp):
                 # update best match.
                 best_cont = cont
                 best_match = match
-
-                # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename
+                best_filename = fname
 
     if not best_match:
         return None, None, None
@@ -135,8 +133,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
         if not best_match:          # no matches at all for this cutoff!
-            notify('found less than {} in common. => exiting',
-                   format_bp(threshold_bp))
+            notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
             break
 
         # subtract found hashes from search hashes, construct new search

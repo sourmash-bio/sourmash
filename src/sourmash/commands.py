@@ -7,7 +7,8 @@ import os.path
 import sys
 
 import screed
-from .compare import compare_all_pairs, compare_serial_containment
+from .compare import (compare_all_pairs, compare_serial_containment,
+                      compare_serial_max_containment)
 from . import MinHash
 from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
@@ -15,7 +16,7 @@ from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
 from .sbtmh import SearchMinHashesFindBest, SigLeaf
 
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput
+from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
 
 DEFAULT_N = 500
 WATERMARK_SIZE = 10000
@@ -32,7 +33,7 @@ def compare(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     progress = sourmash_args.SignatureLoadingProgress()
@@ -91,16 +92,24 @@ def compare(args):
         error('cannot mix scaled signatures with bounded signatures')
         sys.exit(-1)
 
+    is_containment = False
+    if args.containment or args.max_containment:
+        is_containment = True
+
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     # complain if --containment and not is_scaled
-    if args.containment and not is_scaled:
-        error('must use scaled signatures with --containment option')
+    if is_containment and not is_scaled:
+        error('must use scaled signatures with --containment and --max-containment')
         sys.exit(-1)
 
     # notify about implicit --ignore-abundance:
-    if args.containment:
+    if is_containment:
         track_abundances = any(( s.minhash.track_abundance for s in siglist ))
         if track_abundances:
-            notify('NOTE: --containment means signature abundances are flattened.')
+            notify('NOTE: --containment and --max-containment ignore signature abundances.')
 
     # if using --scaled, downsample appropriately
     printed_scaled_msg = False
@@ -127,6 +136,8 @@ def compare(args):
     labeltext = [str(item) for item in siglist]
     if args.containment:
         similarity = compare_serial_containment(siglist)
+    elif args.max_containment:
+        similarity = compare_serial_max_containment(siglist)
     else:
         similarity = compare_all_pairs(siglist, args.ignore_abundance,
                                        n_jobs=args.processes)
@@ -153,7 +164,7 @@ def compare(args):
 
     # output CSV?
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(labeltext)
 
@@ -263,7 +274,7 @@ def plot(args):
 
     # write out re-ordered matrix and labels
     if args.csv:
-        with FileOutput(args.csv, 'wt') as csv_fp:
+        with FileOutputCSV(args.csv) as csv_fp:
             w = csv.writer(csv_fp)
             w.writerow(rlabels)
 
@@ -278,7 +289,7 @@ def plot(args):
 def import_csv(args):
     "Import a CSV file full of signatures/hashes."
 
-    with open(args.mash_csvfile, 'r') as fp:
+    with open(args.mash_csvfile, newline='') as fp:
         reader = csv.reader(fp)
         siglist = []
         for row in reader:
@@ -342,7 +353,7 @@ def index(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     if not inp_files:
@@ -437,8 +448,14 @@ def search(args):
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
     # set up the search databases
+    is_containment = args.containment or args.max_containment
+    if is_containment:
+        if args.containment and args.max_containment:
+            notify("ERROR: cannot specify both --containment and --max-containment!")
+            sys.exit(-1)
+
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
-                                                not args.containment)
+                                                not is_containment)
 
     # forcibly ignore abundances if query has no abundances
     if not query.minhash.track_abundance:
@@ -450,8 +467,11 @@ def search(args):
 
     # do the actual search
     results = search_databases(query, databases,
-                               args.threshold, args.containment,
-                               args.best_only, args.ignore_abundance,
+                               threshold=args.threshold,
+                               do_containment=args.containment,
+                               do_max_containment=args.max_containment,
+                               best_only=args.best_only,
+                               ignore_abundance=args.ignore_abundance,
                                unload_data=True)
 
     n_matches = len(results)
@@ -477,15 +497,17 @@ def search(args):
         notify("** reporting only one match because --best-only was set")
 
     if args.output:
-        fieldnames = ['similarity', 'name', 'filename', 'md5']
+        fieldnames = ['similarity', 'name', 'filename', 'md5',
+                      'query_filename', 'query_name', 'query_md5']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
 
             w.writeheader()
             for sr in results:
                 d = dict(sr._asdict())
                 del d['match']
+                del d['query']
                 w.writerow(d)
 
     # save matching signatures upon request
@@ -497,13 +519,15 @@ def search(args):
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
+    from .index import MultiIndex
+
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
 
     # eliminate names we've already categorized
     already_names = set()
     if args.load_csv:
-        with open(args.load_csv, 'rt') as fp:
+        with open(args.load_csv, newline='') as fp:
             r = csv.reader(fp)
             for row in r:
                 already_names.add(row[0])
@@ -511,24 +535,27 @@ def categorize(args):
     # load search database
     tree = load_sbt_index(args.sbt_name)
 
-    # load query filenames
-    inp_files = set(sourmash_args.traverse_find_sigs(args.queries))
-    inp_files = inp_files - already_names
-
-    notify('found {} files to query', len(inp_files))
-
-    loader = sourmash_args.LoadSingleSignatures(inp_files,
-                                                args.ksize, moltype)
+    # utility function to load & select relevant signatures.
+    def _yield_all_sigs(queries, ksize, moltype):
+        for filename in queries:
+            mi = MultiIndex.load_from_path(filename, False)
+            mi = mi.select(ksize=ksize, moltype=moltype)
+            for ss, loc in mi.signatures_with_location():
+                yield ss, loc
 
     csv_w = None
     csv_fp = None
     if args.csv:
-        csv_fp = open(args.csv, 'wt')
+        csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    for queryfile, query, query_moltype, query_ksize in loader:
+    for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+        # skip if we've already done signatures from this file.
+        if loc in already_names:
+            continue
+
         notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query_ksize, query_moltype)
+               query.minhash.ksize, query.minhash.moltype)
 
         results = []
         search_fn = SearchMinHashesFindBest().search
@@ -553,13 +580,8 @@ def categorize(args):
             notify('for {}, no match found', query)
 
         if csv_w:
-            csv_w.writerow([queryfile, query, best_hit_query_name,
+            csv_w.writerow([loc, query, best_hit_query_name,
                            best_hit_sim])
-
-    if loader.skipped_ignore:
-        notify('skipped/ignore: {}', loader.skipped_ignore)
-    if loader.skipped_nosig:
-        notify('skipped/nosig: {}', loader.skipped_nosig)
 
     if csv_fp:
         csv_fp.close()
@@ -661,7 +683,7 @@ def gather(args):
                       'filename', 'md5', 'f_match_orig', 'unique_intersect_bp',
                       'gather_result_rank', 'remaining_bp']
 
-        with FileOutput(args.output, 'wt') as fp:
+        with FileOutputCSV(args.output) as fp:
             w = csv.DictWriter(fp, fieldnames=fieldnames)
             w.writeheader()
             for result in found:
@@ -703,7 +725,7 @@ def multigather(args):
     args.db = [item for sublist in args.db for item in sublist]
     inp_files = [item for sublist in args.query for item in sublist]
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     # need a query to get ksize, moltype for db loading
@@ -797,7 +819,7 @@ def multigather(args):
                           'filename', 'md5', 'f_match_orig',
                           'unique_intersect_bp', 'gather_result_rank',
                           'remaining_bp']
-            with open(output_csv, 'wt') as fp:
+            with FileOutputCSV(output_csv) as fp:
                 w = csv.DictWriter(fp, fieldnames=fieldnames)
                 w.writeheader()
                 for result in found:

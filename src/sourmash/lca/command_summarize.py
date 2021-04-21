@@ -10,6 +10,7 @@ from .. import sourmash_args
 from ..logging import notify, error, print_results, set_quiet, debug
 from . import lca_utils
 from .lca_utils import check_files_exist
+from sourmash.index import MultiIndex
 
 
 DEFAULT_THRESHOLD=5
@@ -61,20 +62,15 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
     total_count = 0
     n = 0
 
-    # in order to get the right reporting out of this function, we need
-    # to do our own traversal to expand the list of filenames, as opposed
-    # to using load_file_as_signatures(...)
-    filenames = sourmash_args.traverse_find_sigs(filenames)
-    filenames = list(filenames)
-
     total_n = len(filenames)
-
-    for query_filename in filenames:
+    for filename in filenames:
         n += 1
-        for query_sig in sourmash_args.load_file_as_signatures(query_filename,
-                                                               ksize=ksize):
+        mi = MultiIndex.load_from_path(filename)
+        mi = mi.select(ksize=ksize)
+
+        for query_sig, query_filename in mi.signatures_with_location():
             notify(u'\r\033[K', end=u'')
-            notify('... loading {} (file {} of {})', query_sig, n,
+            notify(f'... loading {query_sig} (file {n} of {total_n})',
                    total_n, end='\r')
             total_count += 1
 
@@ -87,7 +83,7 @@ def load_singletons_and_count(filenames, ksize, scaled, ignore_abundance):
             yield query_filename, query_sig, hashvals
 
     notify(u'\r\033[K', end=u'')
-    notify('loaded {} signatures from {} files total.', total_count, n)
+    notify(f'loaded {total_count} signatures from {n} files total.')
 
 
 def count_signature(sig, scaled, hashvals):
@@ -181,7 +177,7 @@ def summarize_main(args):
     inp_files = args.query
 
     if args.query_from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.query_from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.query_from_file)
         inp_files.extend(more_files)
 
     if not inp_files:
@@ -195,7 +191,7 @@ def summarize_main(args):
     csv_fp = None
     write_header = True
     if args.output:
-        csv_fp = open(args.output, 'wt')
+        csv_fp = open(args.output, 'w', newline='')
 
     try:
         for filename, sig, hashvals in \

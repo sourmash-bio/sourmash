@@ -20,7 +20,7 @@ def test_sourmash_signature_api(c):
 
 @utils.in_tempdir
 def test_load_index_0_no_file(c):
-    with pytest.raises(OSError) as exc:
+    with pytest.raises(ValueError) as exc:
         idx = sourmash.load_file_as_index(c.output('does-not-exist'))
     assert 'Error while reading signatures from ' in str(exc.value)
 
@@ -49,11 +49,40 @@ def test_load_index_3():
     assert len(sigs) == 2
 
 
+def test_load_index_4():
+    testfile = utils.get_test_data('prot/all.zip')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 7
+
+
+def test_load_index_4_b():
+    testfile = utils.get_test_data('prot/protein.zip')
+    idx = sourmash.load_file_as_index(testfile)
+
+    sigs = list(idx.signatures())
+    assert len(sigs) == 2
+
+
 def test_load_fasta_as_signature():
     # try loading a fasta file - should fail with informative exception
     testfile = utils.get_test_data('short.fa')
 
-    with pytest.raises(OSError) as e:
+    with pytest.raises(ValueError) as exc:
         idx = sourmash.load_file_as_index(testfile)
 
-    assert "Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(testfile) in str(e)
+    print(exc.value)
+
+    assert f"Error while reading signatures from '{testfile}' - got sequences instead! Is this a FASTA/FASTQ file?" in str(exc.value)
+
+
+def test_load_and_search_sbt_api():
+    treefile = utils.get_test_data('prot/protein.sbt.zip')
+    queryfile = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    tree = sourmash.load_sbt_index(treefile)
+    query = sourmash.load_one_signature(queryfile)
+
+    results = list(sourmash.search_sbt_index(tree, query, 0))
+    assert len(results) == 2
