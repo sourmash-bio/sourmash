@@ -1014,7 +1014,7 @@ def prefetch(args):
 
     # load databases from files, too.
     if args.db_from_file:
-        more_db = sourmash_args.load_file_list_fo_signatures(args.db_from_file)
+        more_db = sourmash_args.load_pathlist_from_file(args.db_from_file)
         args.databases.extend(more_db)
 
     if not args.databases:
@@ -1045,8 +1045,7 @@ def prefetch(args):
     # downsample if requested
     query_mh = query.minhash
     if args.scaled:
-        notify('downsampling query from scaled={} to {}',
-               query_mh.scaled, int(args.scaled))
+        notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
 
     scaled = query_mh.scaled
@@ -1101,7 +1100,7 @@ def prefetch(args):
                     csvout_w.writerow(d)
 
                 if len(keep) % 10 == 0:
-                    notify(f"total of {len(keep)} matching signatures.",
+                    notify(f"total of {len(keep)} matching signatures so far.",
                            end="\r")
         except ValueError as exc:
             notify("ERROR in prefetch_databases:")
