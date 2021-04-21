@@ -130,7 +130,7 @@ class Index(ABC):
             if search_fn.passes(score):
                 # note: here we yield the original signature, not the
                 # downsampled minhash.
-                search_fn.collect(score)
+                search_fn.collect(score, subj)
                 yield subj, score
 
     def search_abund(self, query, *, threshold=None, **kwargs):

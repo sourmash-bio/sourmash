@@ -441,7 +441,7 @@ class SBT(Index):
             if search_fn.passes(score):
                 if is_leaf:     # terminal node? keep.
                     results[node.data] = score
-                    search_fn.collect(score)
+                    search_fn.collect(score, node.data)
                 return True
             return False
 

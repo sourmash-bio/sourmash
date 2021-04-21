@@ -69,7 +69,8 @@ def make_gather_query(query_mh, threshold_bp):
         if threshold > 1.0:
             return None
 
-    search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT, threshold=threshold)
+    search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
+                                       threshold=threshold)
 
     return search_obj
 
@@ -116,8 +117,8 @@ class JaccardSearch:
             return True
         return False
 
-    def collect(self, score):
-        "Is this a potential match?"
+    def collect(self, score, match_sig):
+        "This is a potential match."
         pass
 
     def score_jaccard(self, query_size, shared_size, subject_size, total_size):
@@ -142,7 +143,7 @@ class JaccardSearch:
 
 class JaccardSearchBestOnly(JaccardSearch):
     "A subclass of JaccardSearch that implements best-only."
-    def collect(self, score):
+    def collect(self, score, match):
         "Raise the threshold to the best match found so far."
         self.threshold = max(self.threshold, score)
 
