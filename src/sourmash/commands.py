@@ -1009,7 +1009,7 @@ def migrate(args):
 
 
 def prefetch(args):
-    "@CTB"
+    "Output the 'raw' results of a containment/overlap search."
     from .search import prefetch_database
 
     # load databases from files, too.
@@ -1018,8 +1018,12 @@ def prefetch(args):
         args.databases.extend(more_db)
 
     if not args.databases:
-        notify("ERROR: no signatures to search!?")
+        notify("ERROR: no databases or signatures to search!?")
         return -1
+
+    if not (args.save_unmatched_hashes or args.save_matching_hashes or
+            args.save_matches or args.output):
+        notify("WARNING: no output(s) specified! Nothing will be saved from this prefetch!")
 
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
@@ -1052,7 +1056,7 @@ def prefetch(args):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    notify(f"all sketches will be downsampled to {scaled}")
+    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
 
     noident_mh = copy.copy(query_mh)
 
@@ -1071,29 +1075,47 @@ def prefetch(args):
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
-    n = 0
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
+
+        # @CTB use _load_databases? or is this fine? want to use .signatures
+        # explicitly / support lazy loading.
         db = sourmash_args.load_file_as_index(dbfilename)
-        db = db.select(ksize=ksize, moltype=moltype)
+        db = db.select(ksize=ksize, moltype=moltype,
+                       containment=True, scaled=True)
 
-        for result in prefetch_database(query, db, args.threshold_bp, scaled):
-            match = result.match
-            keep.append(match)
-            noident_mh.remove_many(match.minhash.hashes)
-            n += 1
+        try:
+            for result in prefetch_database(query, db, args.threshold_bp,
+                                            query.minhash.scaled):
+                match = result.match
+                keep.append(match)
 
-            if csvout_fp:
-                d = dict(result._asdict())
-                del d['match']                 # actual signatures not in CSV.
-                del d['query']
-                csvout_w.writerow(d)
+                # track remaining "untouched" hashes.
+                noident_mh.remove_many(match.minhash.hashes)
 
-            if n % 10 == 0:
-                notify(f"total of {n} searched, {len(keep)} matching signatures.",
-                       end="\r")
+                # output matches as we go
+                if csvout_fp:
+                    d = dict(result._asdict())
+                    del d['match']                 # actual signatures not in CSV.
+                    del d['query']
+                    csvout_w.writerow(d)
 
-    notify(f"total of {n} searched, {len(keep)} matching signatures.")
+                if len(keep) % 10 == 0:
+                    notify(f"total of {len(keep)} matching signatures.",
+                           end="\r")
+        except ValueError as exc:
+            notify("ERROR in prefetch_databases:")
+            notify(str(exc))
+            sys.exit(-1)
+
+        # flush csvout so that things get saved progressively
+        if csvout_fp:
+            csvout_fp.flush()
+
+        # delete db explicitly ('cause why not)
+        del db
+
+    notify(f"total of {len(keep)} matching signatures.")
 
     if csvout_fp:
         notify(f"saved {len(keep)} matches to CSV file '{args.output}'")

@@ -414,10 +414,12 @@ def prefetch_database(query, database, threshold_bp, scaled):
     query_hashes = set(query_mh.hashes)
 
     # iterate over all signatures in database, find matches
-    for match in database.prefetch(query, threshold_bp, query_mh.scaled):
+
+    for result in database.prefetch(query, threshold_bp, query_mh.scaled):
         # base intersections etc on downsampled
         # NOTE TO SELF @CTB: match should be unmodified (not downsampled)
         # for output.
+        match = result.signature
         db_mh = match.minhash.downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
