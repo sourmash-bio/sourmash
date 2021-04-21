@@ -241,7 +241,12 @@ def prefetch_database(query, query_mh, database, threshold_bp):
 
     # iterate over all signatures in database, find matches
     # NOTE: this is intentionally a linear search that is not using 'find'!
+    # @CTB: reimplement once #1392 is merged!
+
+    did_search = False
     for ss in database:
+        did_search = True
+
         # downsample the database minhash explicitly here, so that we know
         # that 'common' is calculated at the query scaled.
         db_mh = ss.minhash.downsample(scaled=query_mh.scaled)
@@ -282,3 +287,6 @@ def prefetch_database(query, query_mh, database, threshold_bp):
         )
 
         yield result
+
+    if not did_search:          # empty database?
+        raise ValueError("no signatures to search")
