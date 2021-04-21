@@ -196,9 +196,11 @@ class Index(ABC):
         "Return all matches with minimum overlap."
         query_mh = query.minhash
 
-        # iterate across all signatuers
         if not query_mh:        # empty query? quit.
-            return []
+            raise ValueError("empty query; nothing to search")
+
+        if not self:        # empty query? quit.
+            raise ValueError("no signatures to search")
 
         scaled = query.minhash.scaled
         if not scaled:
@@ -207,7 +209,7 @@ class Index(ABC):
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         search_obj = make_gather_query(query.minhash, threshold_bp)
         if not search_obj:
-            return []
+            raise ValueError("cannot do this search")
 
         for subj, score in self.find(search_obj, query, **kwargs):
             yield IndexSearchResult(score, subj, self.location)
