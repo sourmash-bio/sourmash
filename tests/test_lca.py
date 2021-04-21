@@ -1448,7 +1448,7 @@ def test_single_summarize_query_from_file():
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
         input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
 
-        cmd = ['lca', 'summarize', '--db', db1, '--query-from-file', input_sig]
+        cmd = ['lca', 'summarize', '--db', db1, '--query-from-file', 'test.txt']
         status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
