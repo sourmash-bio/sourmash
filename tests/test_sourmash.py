@@ -90,6 +90,57 @@ def test_load_pathlist_from_file_empty(c):
 
 
 @utils.in_tempdir
+def test_load_pathlist_from_file_badly_formatted(c):
+    from sourmash.sourmash_args import load_pathlist_from_file
+    file_list = c.output("file_list")
+
+    with open(file_list, "w") as fp:
+        fp.write("{'a':1}")
+
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+        assert "first element of list-of-files does not exist" in e.message
+    
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_badly_formatted_2(c):
+    from sourmash.sourmash_args import load_pathlist_from_file
+    file_list = c.output("file_list")
+    
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    newdir = c.output('newdir')
+    os.mkdir(newdir)
+    new_file = os.path.join(newdir, 'sig1')
+    shutil.copyfile(sig1, new_file)
+
+    with open(file_list, "w") as fp:
+        fp.write(new_file + "\n")
+        fp.write("{'a':1}")
+    
+    sigs = load_pathlist_from_file(file_list)
+    assert len(sigs) == 1
+
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_duplicate(c):
+    from sourmash.sourmash_args import load_pathlist_from_file
+    file_list = c.output("file_list")
+
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    newdir = c.output('newdir')
+    os.mkdir(newdir)
+    new_file = os.path.join(newdir, 'sig1')
+    shutil.copyfile(sig1, new_file)
+
+    with open(file_list, "w") as fp:
+        fp.write(new_file + "\n")
+        fp.write(new_file + "\n")
+    
+    sigs = load_pathlist_from_file(file_list)
+    assert len(sigs) == 1
+
+
+@utils.in_tempdir
 def test_do_serial_compare(c):
     # try doing a compare serial
     import numpy
