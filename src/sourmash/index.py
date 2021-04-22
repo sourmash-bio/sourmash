@@ -109,16 +109,11 @@ class Index(ABC):
             # note: we run prepare_query here on the original query minhash.
             query_mh = prepare_query(query.minhash, subj_mh)
 
-            # generic definition of union and intersection that respects
-            # both num and scaled:
             assert not query_mh.track_abundance
             assert not subj_mh.track_abundance
-            merged = query_mh + subj_mh
-            intersect = set(query_mh.hashes) & set(subj_mh.hashes)
-            intersect &= set(merged.hashes)
 
-            shared_size = len(intersect)
-            total_size = len(merged)
+            shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
+
             query_size = len(query_mh)
             subj_size = len(subj_mh)
 
@@ -218,8 +213,11 @@ class Index(ABC):
         "Return the match with the best Jaccard containment in the Index."
 
         results = []
-        for result in self.prefetch(query, *args, **kwargs):
-            results.append(result)
+        try:
+            for result in self.prefetch(query, *args, **kwargs):
+                results.append(result)
+        except ValueError:
+            pass
 
         results.sort(reverse=True,
                      key=lambda x: (x.score, x.signature.md5sum()))
