@@ -43,7 +43,7 @@ def make_jaccard_search_query(*,
     return search_obj
 
 
-def make_gather_query(query_mh, threshold_bp):
+def make_gather_query(query_mh, threshold_bp, *, best_only=True):
     "Make a search object for gather."
     scaled = query_mh.scaled
     if not scaled:
@@ -69,7 +69,12 @@ def make_gather_query(query_mh, threshold_bp):
         if threshold > 1.0:
             return None
 
-    search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT, threshold=threshold)
+    if best_only:
+        search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
+                                           threshold=threshold)
+    else:
+        search_obj = JaccardSearch(SearchType.CONTAINMENT,
+                                   threshold=threshold)
 
     return search_obj
 
@@ -317,6 +322,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled
         if not match_scaled:
+            #assert 0 # @CTB
             error('Best match in gather is not scaled.')
             error('Please prepare gather databases with --scaled')
             raise Exception
