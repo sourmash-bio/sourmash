@@ -1097,7 +1097,9 @@ class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
     # a collect function that _ignores_ things in the ignore_list
     def collect(self, score, match):
         for q in self.ignore_list:
+            print('ZZZ', match, match.similarity(q))
             if match.similarity(q) == 1.0:
+                print('yes, found.')
                 return False
         return True
 

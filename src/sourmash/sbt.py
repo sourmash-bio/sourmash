@@ -411,19 +411,15 @@ class SBT(Index):
 
             # leaf node? downsample so we can do signature comparison.
             if isinstance(node, SigLeaf):
+                is_leaf = True
+
                 subj_mh = downsample_node(node.data.minhash)
                 subj_size = len(subj_mh)
-
                 subj_mh = subj_mh.flatten()
 
                 assert not subj_mh.track_abundance
-                merged = subj_mh + query_mh
-                intersect = set(query_mh.hashes) & set(subj_mh.hashes)
-                intersect &= set(merged.hashes)
 
-                shared_size = len(intersect)
-                total_size = len(merged)
-                is_leaf = True
+                shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
             else:  # Node / Nodegraph by minhash comparison
                 # no downsampling needed --
                 shared_size = node.data.matches(query_mh)
