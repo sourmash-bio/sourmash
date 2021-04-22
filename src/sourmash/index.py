@@ -392,6 +392,7 @@ class ZipFileLinearIndex(Index):
 class CounterGatherIndex(Index):
     def __init__(self, query):
         self.query = query
+        self.scaled = query.minhash.scaled
         self.siglist = []
         self.locations = []
         self.counter = Counter()
@@ -402,6 +403,7 @@ class CounterGatherIndex(Index):
         self.locations.append(location)
 
         # upon insertion, count & track overlap with the specific query.
+        self.scaled = max(self.scaled, ss.minhash.scaled)
         self.counter[i] = self.query.minhash.count_common(ss.minhash, True)
 
     def gather(self, query, *args, **kwargs):
@@ -415,6 +417,14 @@ class CounterGatherIndex(Index):
         scaled = query.minhash.scaled
         if not scaled:
             raise ValueError('gather requires scaled signatures')
+
+        if scaled == self.scaled:
+            query_mh = query.minhash
+        elif scaled < self.scaled:
+            query_mh = query.minhash.downsample(scaled=self.scaled)
+            scaled = self.scaled
+        else: # query scaled > self.scaled, should never happen
+            assert 0
 
         # empty? nothing to search.
         counter = self.counter
@@ -433,7 +443,7 @@ class CounterGatherIndex(Index):
             n_threshold_hashes = float(threshold_bp) / scaled
 
             # that then requires the following containment:
-            threshold = n_threshold_hashes / len(query.minhash)
+            threshold = n_threshold_hashes / len(query_mh)
 
             # is it too high to ever match? if so, exit.
             if threshold > 1.0:
@@ -460,14 +470,14 @@ class CounterGatherIndex(Index):
         del counter[dataset_id]
 
         # pull containment
-        cont = query.minhash.contained_by(match.minhash,
-                                          downsample=True)
+        cont = query_mh.contained_by(match.minhash, downsample=True)
         result = None
         if cont and cont >= threshold:
             result = IndexSearchResult(cont, match, location)
 
         # calculate intersection of this "best match" with query, for removal.
-        intersect_mh = query.minhash.intersection(match.minhash)
+        match_mh = match.minhash.downsample(scaled=scaled)
+        intersect_mh = query_mh.intersection(match_mh)
 
         # Prepare counter for finding the next match by decrementing
         # all hashes found in the current match in other datasets;
