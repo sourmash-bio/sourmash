@@ -116,14 +116,20 @@ class JaccardSearch:
             raise TypeError("this search cannot be done with an abund signature")
 
     def passes(self, score):
-        "Return True if this score meets or exceeds the threshold."
+        """Return True if this score meets or exceeds the threshold.
+
+        Note: this can be used whenever a score or estimate is available
+        (e.g. internal nodes on an SBT). `collect(...)`, below, decides
+        whether a particular signature should be collected, and/or can
+        update the threshold (used for BestOnly behavior).
+        """
         if score and score >= self.threshold:
             return True
         return False
 
-    def collect(self, score):
-        "Is this a potential match?"
-        pass
+    def collect(self, score, match_sig):
+        "Return True if this match should be collected."
+        return True
 
     def score_jaccard(self, query_size, shared_size, subject_size, total_size):
         "Calculate Jaccard similarity."
@@ -147,9 +153,10 @@ class JaccardSearch:
 
 class JaccardSearchBestOnly(JaccardSearch):
     "A subclass of JaccardSearch that implements best-only."
-    def collect(self, score):
+    def collect(self, score, match):
         "Raise the threshold to the best match found so far."
         self.threshold = max(self.threshold, score)
+        return True
 
 
 # generic SearchResult tuple.
