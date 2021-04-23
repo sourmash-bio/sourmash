@@ -436,9 +436,12 @@ class SBT(Index):
 
             if search_fn.passes(score):
                 if is_leaf:     # terminal node? keep.
-                    results[node.data] = score
-                    search_fn.collect(score)
-                return True
+                    if search_fn.collect(score, node.data):
+                        results[node.data] = score
+                        return True
+                else:           # it's a good internal node, keep.
+                    return True
+
             return False
 
         # & execute!
