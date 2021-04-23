@@ -107,7 +107,7 @@ def search_sbt_index(*args, **kwargs):
     This function has been deprecated as of 3.5.1; please use
     'idx = load_file_as_index(...); idx.search(query, threshold=...)' instead.
     """
-    return load_sbt_index_private(*args, **kwargs)
+    return search_sbt_index_private(*args, **kwargs)
 
 from .sbtmh import create_sbt_index
 from . import lca

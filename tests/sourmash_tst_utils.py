@@ -109,6 +109,8 @@ def runscript(scriptname, args, **kwargs):
             status = _runscript(scriptname)
         except SystemExit as err:
             status = err.code
+            if status == None:
+                status = 0
         except:  # pylint: disable=bare-except
             traceback.print_exc(file=sys.stderr)
             status = -1
