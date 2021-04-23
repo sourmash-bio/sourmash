@@ -171,8 +171,7 @@ def test_prefetch_no_num_subj(c):
     print(c.last_result.err)
 
     assert c.last_result.status != 0
-    assert "ERROR in prefetch_databases:" in c.last_result.err
-    assert "no signatures to search" in c.last_result.err
+    assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
 
 
 @utils.in_tempdir

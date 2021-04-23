@@ -1074,7 +1074,7 @@ def prefetch(args):
     # find those with any kind of containment.
     keep = []
     noident_mh = copy.copy(query_mh)
-
+    did_a_search = False
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1083,6 +1083,10 @@ def prefetch(args):
         db = sourmash_args.load_file_as_index(dbfilename)
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
+
+        if not db:
+            notify(f"...no compatible signatures in '{dbfilename}'; skipping")
+            continue
 
         try:
             for result in prefetch_database(query, db, args.threshold_bp,
@@ -1107,6 +1111,9 @@ def prefetch(args):
             notify("ERROR in prefetch_databases:")
             notify(str(exc))
             sys.exit(-1)
+            # @CTB should we continue? or only continue if -f?
+
+        did_a_search = True
 
         # flush csvout so that things get saved progressively
         if csvout_fp:
@@ -1114,6 +1121,10 @@ def prefetch(args):
 
         # delete db explicitly ('cause why not)
         del db
+
+    if not did_a_search:
+        notify("ERROR in prefetch: no compatible signatures in any databases?!")
+        sys.exit(-1)
 
     notify(f"total of {len(keep)} matching signatures.")
 
