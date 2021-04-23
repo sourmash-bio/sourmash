@@ -671,7 +671,9 @@ def gather(args):
     new_max_hash = query.minhash._max_hash
     next_query = query
 
-    for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+    gather_iter = gather_databases(query, databases, args.threshold_bp,
+                                   args.ignore_abundance)
+    for result, weighted_missed, new_max_hash, next_query in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -1042,23 +1044,20 @@ def prefetch(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    # downsample if requested
+    # downsample if/as requested
     query_mh = query.minhash
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
-
     scaled = query_mh.scaled
+    notify(f"all sketches will be downsampled to scaled={scaled}")
 
     # empty?
     if not len(query_mh):
         error('no query hashes!? exiting.')
         sys.exit(-1)
 
-    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
-
-    noident_mh = copy.copy(query_mh)
-
+    # set up CSV output, write headers, etc.
     csvout_fp = None
     csvout_w = None
     if args.output:
@@ -1074,6 +1073,8 @@ def prefetch(args):
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
+    noident_mh = copy.copy(query_mh)
+
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1085,7 +1086,7 @@ def prefetch(args):
 
         try:
             for result in prefetch_database(query, db, args.threshold_bp,
-                                            query.minhash.scaled):
+                                            scaled):
                 match = result.match
                 keep.append(match)
 

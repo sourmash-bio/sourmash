@@ -191,21 +191,12 @@ class Index(ABC):
         "Return all matches with minimum overlap."
         query_mh = query.minhash
 
-        if not query_mh:        # empty query? quit.
-            raise ValueError("empty query; nothing to search")
-
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
-
-        scaled = query.minhash.scaled
-        if not scaled:
-            raise ValueError('prefetch requires scaled signatures')
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
         search_fn = make_gather_query(query.minhash, threshold_bp,
                                       best_only=False)
-        if not search_fn:
-            raise ValueError("cannot do this search")
 
         for subj, score in self.find(search_fn, query, **kwargs):
             yield IndexSearchResult(score, subj, self.location)
@@ -214,11 +205,8 @@ class Index(ABC):
         "Return the match with the best Jaccard containment in the Index."
 
         results = []
-        try:
-            for result in self.prefetch(query, *args, **kwargs):
-                results.append(result)
-        except ValueError:
-            pass
+        for result in self.prefetch(query, *args, **kwargs):
+            results.append(result)
 
         # sort results by best score.
         results.sort(reverse=True,
@@ -651,6 +639,9 @@ class MultiIndex(Index):
         # actually do search!
         results = []
         for idx, src in zip(self.index_list, self.source_list):
+            if not idx:
+                continue
+
             for (score, ss, filename) in idx.gather(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
                 yield IndexSearchResult(score, ss, best_src)

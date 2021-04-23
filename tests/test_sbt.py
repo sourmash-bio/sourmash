@@ -675,7 +675,8 @@ def test_sbt_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not tree.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -689,8 +690,8 @@ def test_sbt_gather_threshold_1():
     assert name is None
 
     # check with a threshold -> should be no results.
-    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -707,8 +708,8 @@ def test_sbt_gather_threshold_1():
 
     # check with a too-high threshold -> should be no results.
     print('len mh', len(new_mh))
-    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_sbt_gather_threshold_5():

@@ -45,12 +45,12 @@ def make_jaccard_search_query(*,
 
 def make_gather_query(query_mh, threshold_bp, *, best_only=True):
     "Make a search object for gather."
+    if not query_mh:
+        raise ValueError("query is empty!?")
+
     scaled = query_mh.scaled
     if not scaled:
         raise TypeError("query signature must be calculated with scaled")
-
-    if not query_mh:
-        return None
 
     # are we setting a threshold?
     threshold = 0
@@ -67,7 +67,7 @@ def make_gather_query(query_mh, threshold_bp, *, best_only=True):
 
         # is it too high to ever match? if so, exit.
         if threshold > 1.0:
-            return None
+            raise ValueError("requested threshold_bp is unattainable with this query")
 
     if best_only:
         search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
@@ -328,11 +328,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
 
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled
-        if not match_scaled:
-            #assert 0 # @CTB
-            error('Best match in gather is not scaled.')
-            error('Please prepare gather databases with --scaled')
-            raise Exception
+        assert match_scaled
 
         # pick the highest scaled / lowest resolution
         cmp_scaled = max(cmp_scaled, match_scaled)
@@ -429,9 +425,7 @@ def prefetch_database(query, database, threshold_bp, scaled):
     # iterate over all signatures in database, find matches
 
     for result in database.prefetch(query, threshold_bp, query_mh.scaled):
-        # base intersections etc on downsampled
-        # NOTE TO SELF @CTB: match should be unmodified (not downsampled)
-        # for output.
+        # base intersections on downsampled minhashes
         match = result.signature
         db_mh = match.minhash.downsample(scaled=scaled)
 

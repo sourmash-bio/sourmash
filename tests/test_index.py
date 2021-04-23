@@ -423,7 +423,8 @@ def test_linear_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not linear.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        linear.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -437,8 +438,8 @@ def test_linear_gather_threshold_1():
     assert name is None
 
     # check with a threshold -> should be no results.
-    results = linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -454,8 +455,8 @@ def test_linear_gather_threshold_1():
     assert name is None
 
     # check with a too-high threshold -> should be no results.
-    results = linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        linear.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_linear_gather_threshold_5():
