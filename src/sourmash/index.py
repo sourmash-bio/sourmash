@@ -432,7 +432,6 @@ class CounterGatherIndex(Index):
         if not (counter and siglist):
             return []
 
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
         threshold = 0.0
         n_threshold_hashes = 0
 
