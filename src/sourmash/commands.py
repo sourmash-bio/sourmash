@@ -1044,8 +1044,13 @@ def prefetch(args):
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
-    # downsample if/as requested
+    # if with track_abund, flatten me
+    orig_query = query
     query_mh = query.minhash
+    if query_mh.track_abundance:
+        query_mh = query_mh.flatten()
+
+    # downsample if/as requested
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
@@ -1056,6 +1061,8 @@ def prefetch(args):
     if not len(query_mh):
         error('no query hashes!? exiting.')
         sys.exit(-1)
+
+    query.minhash = query_mh
 
     # set up CSV output, write headers, etc.
     csvout_fp = None
