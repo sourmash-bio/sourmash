@@ -280,6 +280,9 @@ class LinearIndex(Index):
     def signatures(self):
         return iter(self._signatures)
 
+    def __bool__(self):
+        return bool(self._signatures)
+
     def __len__(self):
         return len(self._signatures)
 
@@ -328,6 +331,9 @@ class ZipFileLinearIndex(Index):
         self.zf = zf
         self.selection_dict = selection_dict
         self.traverse_yield_all = traverse_yield_all
+
+    def __bool__(self):
+        return bool(self.zf)
 
     def __len__(self):
         return len(list(self.signatures()))
@@ -464,7 +470,8 @@ class CounterGatherIndex(Index):
             result = IndexSearchResult(cont, match, location)
 
         # calculate intersection of this "best match" with query, for removal.
-        match_mh = match.minhash.downsample(scaled=scaled)
+        # @CTB note flatten
+        match_mh = match.minhash.downsample(scaled=scaled).flatten()
         intersect_mh = query_mh.intersection(match_mh)
 
         # Prepare counter for finding the next match by decrementing

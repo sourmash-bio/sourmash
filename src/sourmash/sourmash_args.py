@@ -306,7 +306,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             debug_literal(f"_load_databases: FAIL on fn {desc}.")
             debug_literal(traceback.format_exc())
 
-        if db:
+        if db is not None:
             loaded = True
             break
 

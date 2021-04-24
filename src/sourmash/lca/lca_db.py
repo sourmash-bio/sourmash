@@ -212,6 +212,10 @@ class LCA_Database(Index):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
+            if fp.read(1) != '{':
+                raise ValueError(f"'{db_name}' is not an LCA database file.")
+            fp.seek(0)
+
             load_d = {}
             try:
                 load_d = json.load(fp)
