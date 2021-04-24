@@ -187,25 +187,26 @@ class Index(ABC):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def prefetch(self, query, *args, **kwargs):
+    def prefetch(self, query, threshold_bp, scaled, **kwargs):
         "Return all matches with minimum overlap."
         query_mh = query.minhash
 
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
 
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
         search_fn = make_gather_query(query.minhash, threshold_bp,
                                       best_only=False)
 
         for subj, score in self.find(search_fn, query, **kwargs):
             yield IndexSearchResult(score, subj, self.location)
 
-    def gather(self, query, *args, **kwargs):
+    def gather(self, query, threshold_bp=None, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
 
         results = []
-        for result in self.prefetch(query, *args, **kwargs):
+        for result in self.prefetch(query, threshold_bp,
+                                    scaled=query.minhash.scaled,
+                                    **kwargs):
             results.append(result)
 
         # sort results by best score.

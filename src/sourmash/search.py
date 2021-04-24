@@ -422,6 +422,8 @@ def prefetch_database(query, database, threshold_bp, scaled):
     threshold = threshold_bp / scaled
     query_hashes = set(query_mh.hashes)
 
+    print('ZAA', threshold_bp, scaled, threshold)
+
     # iterate over all signatures in database, find matches
 
     for result in database.prefetch(query, threshold_bp, query_mh.scaled):
@@ -432,7 +434,9 @@ def prefetch_database(query, database, threshold_bp, scaled):
         # calculate db match intersection with query hashes:
         match_hashes = set(db_mh.hashes)
         intersect_hashes = query_hashes.intersection(match_hashes)
-        assert len(intersect_hashes) >= threshold
+        assert len(intersect_hashes) >= threshold, (len(intersect_hashes),
+                                                        threshold,
+                                                    scaled, threshold_bp)
 
         f_query_match = db_mh.contained_by(query_mh)
         f_match_query = query_mh.contained_by(db_mh)
