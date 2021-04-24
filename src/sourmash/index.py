@@ -401,7 +401,7 @@ class CounterGatherIndex(Index):
         self.scaled = max(self.scaled, ss.minhash.scaled)
         self.counter[i] = self.query.minhash.count_common(ss.minhash, True)
 
-    def gather(self, query, *args, **kwargs):
+    def gather(self, query, threshold_bp=0, **kwargs):
         "Perform compositional analysis of the query using the gather algorithm"
         # CTB: switch over to JaccardSearch objects?
 
@@ -639,7 +639,7 @@ class MultiIndex(Index):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def prefetch(self, query, *args, **kwargs):
+    def prefetch(self, query, threshold_bp, scaled, **kwargs):
         """Return the match with the best Jaccard containment in the Index.
 
         Note: this overrides the location of the match if needed.
@@ -650,7 +650,8 @@ class MultiIndex(Index):
             if not idx:
                 continue
 
-            for (score, ss, filename) in idx.gather(query, *args, **kwargs):
+            for (score, ss, filename) in idx.prefetch(query, threshold_bp,
+                                                      scaled, **kwargs):
                 best_src = src or filename # override if src provided
                 yield IndexSearchResult(score, ss, best_src)
             
