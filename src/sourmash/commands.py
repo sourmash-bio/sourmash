@@ -1025,7 +1025,7 @@ def prefetch(args):
 
     if not args.databases:
         notify("ERROR: no databases or signatures to search!?")
-        return -1
+        sys.exit(-1)
 
     if not (args.save_unmatched_hashes or args.save_matching_hashes or
             args.save_matches or args.output):
