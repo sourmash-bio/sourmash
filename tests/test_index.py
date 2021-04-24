@@ -674,6 +674,9 @@ def test_zipfile_dayhoff_command_search_protein(c):
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('search', sigfile1, db_out, '--threshold', '0.0')
 
+    print(c.last_result.out)
+    print(c.last_result.err)
+
     assert 'no compatible signatures found in ' in c.last_result.err
 
 

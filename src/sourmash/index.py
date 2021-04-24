@@ -334,7 +334,12 @@ class ZipFileLinearIndex(Index):
         self.traverse_yield_all = traverse_yield_all
 
     def __bool__(self):
-        return bool(self.zf)
+        try:
+            first_sig = next(iter(self.signatures()))
+        except StopIteration:
+            return False
+
+        return True
 
     def __len__(self):
         return len(list(self.signatures()))
@@ -640,10 +645,7 @@ class MultiIndex(Index):
         return matches
 
     def prefetch(self, query, threshold_bp, scaled, **kwargs):
-        """Return the match with the best Jaccard containment in the Index.
-
-        Note: this overrides the location of the match if needed.
-        """
+        "Return all matches with specified overlap."
         # actually do search!
         results = []
         for idx, src in zip(self.index_list, self.source_list):

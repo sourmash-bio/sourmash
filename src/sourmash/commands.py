@@ -631,10 +631,6 @@ def gather(args):
                query.minhash.scaled, int(args.scaled))
         query.minhash = query.minhash.downsample(scaled=args.scaled)
 
-    # flatten if needed @CTB do we need this here?
-    if query.minhash.track_abundance:
-        query.minhash = query.minhash.flatten()
-
     # empty?
     if not len(query.minhash):
         error('no query hashes!? exiting.')
