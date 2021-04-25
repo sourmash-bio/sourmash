@@ -653,8 +653,6 @@ def gather(args):
         from .index import LinearIndex, CounterGatherIndex
         prefetch_idx = CounterGatherIndex(query)
 
-        scaled = query.minhash.scaled
-
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
