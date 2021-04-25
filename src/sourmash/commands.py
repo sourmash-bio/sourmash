@@ -659,7 +659,7 @@ def gather(args):
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
         for db in databases:
-            for match in db.prefetch(prefetch_query, args.threshold_bp, scaled):
+            for match in db.prefetch(prefetch_query, args.threshold_bp):
                 prefetch_idx.insert(match.signature, location=match.location)
 
         databases = [ prefetch_idx ]
@@ -1039,13 +1039,12 @@ def prefetch(args):
                                              query.minhash.ksize,
                                              sourmash_args.get_moltype(query))
 
-    # verify signature was computed right.
+    # verify signature was computed with scaled.
     if not query.minhash.scaled:
         error('query signature needs to be created with --scaled')
         sys.exit(-1)
 
     # if with track_abund, flatten me
-    orig_query = query
     query_mh = query.minhash
     if query_mh.track_abundance:
         query_mh = query_mh.flatten()
@@ -1054,8 +1053,7 @@ def prefetch(args):
     if args.scaled:
         notify(f'downsampling query from scaled={query_mh.scaled} to {int(args.scaled)}')
         query_mh = query_mh.downsample(scaled=args.scaled)
-    scaled = query_mh.scaled
-    notify(f"all sketches will be downsampled to scaled={scaled}")
+    notify(f"all sketches will be downsampled to scaled={query_mh.scaled}")
 
     # empty?
     if not len(query_mh):
@@ -1096,9 +1094,9 @@ def prefetch(args):
             continue
 
         try:
-            for result in prefetch_database(query, db, args.threshold_bp,
-                                            scaled):
+            for result in prefetch_database(query, db, args.threshold_bp):
                 match = result.match
+                # @CTB TODO: don't keep all matches in memory.
                 keep.append(match)
 
                 # track remaining "untouched" hashes.

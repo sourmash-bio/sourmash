@@ -33,14 +33,14 @@ class Index(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
+    def load(cls, location, leaf_loader=None, storage=None,
+             print_version_warning=True):
         """ """
 
-    def find(self, search_fn, query, *args, **kwargs):
+    def find(self, search_fn, query, **kwargs):
         """Use search_fn to find matching signatures in the index.
 
-        search_fn(other_sig, *args) should return a boolean that indicates
-        whether other_sig is a match.
+        search_fn follows the protocol in JaccardSearch objects.
 
         Returns a list.
         """
@@ -187,9 +187,10 @@ class Index(ABC):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def prefetch(self, query, threshold_bp, scaled, **kwargs):
+    def prefetch(self, query, threshold_bp, **kwargs):
         "Return all matches with minimum overlap."
         query_mh = query.minhash
+        scaled = query_mh.scaled
 
         if not self:            # empty database? quit.
             raise ValueError("no signatures to search")
@@ -204,9 +205,7 @@ class Index(ABC):
         "Return the match with the best Jaccard containment in the Index."
 
         results = []
-        for result in self.prefetch(query, threshold_bp,
-                                    scaled=query.minhash.scaled,
-                                    **kwargs):
+        for result in self.prefetch(query, threshold_bp, **kwargs):
             results.append(result)
 
         # sort results by best score.
@@ -334,6 +333,7 @@ class ZipFileLinearIndex(Index):
         self.traverse_yield_all = traverse_yield_all
 
     def __bool__(self):
+        # @CTB write test to make sure this doesn't call __len__
         try:
             first_sig = next(iter(self.signatures()))
         except StopIteration:
@@ -514,10 +514,10 @@ class CounterGatherIndex(Index):
         raise NotImplementedError
 
     def search(self, query, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
     def select(self, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
 
 class MultiIndex(Index):
@@ -627,7 +627,7 @@ class MultiIndex(Index):
 
         return MultiIndex(new_idx_list, new_src_list)
 
-    def search(self, query, *args, **kwargs):
+    def search(self, query, **kwargs):
         """Return the match with the best Jaccard similarity in the Index.
 
         Note: this overrides the location of the match if needed.
@@ -635,7 +635,7 @@ class MultiIndex(Index):
         # do the actual search:
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
-            for (score, ss, filename) in idx.search(query, *args, **kwargs):
+            for (score, ss, filename) in idx.search(query, **kwargs):
                 best_src = src or filename # override if src provided
                 matches.append(IndexSearchResult(score, ss, best_src))
                 
@@ -643,7 +643,7 @@ class MultiIndex(Index):
         matches.sort(key=lambda x: -x.score)
         return matches
 
-    def prefetch(self, query, threshold_bp, scaled, **kwargs):
+    def prefetch(self, query, threshold_bp, **kwargs):
         "Return all matches with specified overlap."
         # actually do search!
         results = []
@@ -652,7 +652,7 @@ class MultiIndex(Index):
                 continue
 
             for (score, ss, filename) in idx.prefetch(query, threshold_bp,
-                                                      scaled, **kwargs):
+                                                      **kwargs):
                 best_src = src or filename # override if src provided
                 yield IndexSearchResult(score, ss, best_src)
             

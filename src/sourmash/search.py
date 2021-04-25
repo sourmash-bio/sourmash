@@ -414,29 +414,25 @@ PrefetchResult = namedtuple('PrefetchResult',
                             'intersect_bp, jaccard, max_containment, f_query_match, f_match_query, match, match_filename, match_name, match_md5, match_bp, query, query_filename, query_name, query_md5, query_bp')
 
 
-def prefetch_database(query, database, threshold_bp, scaled):
+def prefetch_database(query, database, threshold_bp):
     """
     Find all matches to `query_mh` >= `threshold_bp` in `database`.
     """
-    query_mh = query.minhash.downsample(scaled=scaled)
+    query_mh = query.minhash
+    scaled = query_mh.scaled
     threshold = threshold_bp / scaled
     query_hashes = set(query_mh.hashes)
 
-    print('ZAA', threshold_bp, scaled, threshold)
-
     # iterate over all signatures in database, find matches
 
-    for result in database.prefetch(query, threshold_bp, query_mh.scaled):
+    for result in database.prefetch(query, threshold_bp):
         # base intersections on downsampled minhashes
         match = result.signature
         db_mh = match.minhash.downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
-        match_hashes = set(db_mh.hashes)
-        intersect_hashes = query_hashes.intersection(match_hashes)
-        assert len(intersect_hashes) >= threshold, (len(intersect_hashes),
-                                                        threshold,
-                                                    scaled, threshold_bp)
+        intersect_mh = query_mh.intersection(db_mh)
+        assert len(intersect_mh) >= threshold
 
         f_query_match = db_mh.contained_by(query_mh)
         f_match_query = query_mh.contained_by(db_mh)
@@ -444,7 +440,7 @@ def prefetch_database(query, database, threshold_bp, scaled):
 
         # build a result namedtuple
         result = PrefetchResult(
-            intersect_bp=len(intersect_hashes) * scaled,
+            intersect_bp=len(intersect_mh) * scaled,
             query_bp = len(query_mh) * scaled,
             match_bp = len(db_mh) * scaled,
             jaccard=db_mh.jaccard(query_mh),
