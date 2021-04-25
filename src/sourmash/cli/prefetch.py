@@ -13,7 +13,11 @@ def subparser(subparsers):
     subparser.add_argument(
         "--db-from-file",
         default=None,
-        help="load list of subject signatures from this file"
+        help="list of paths containing signatures to search"
+    )
+    subparser.add_argument(
+        "--linear", action='store_true',
+        help="force linear traversal of indexes to minimize loading time and memory use"
     )
     subparser.add_argument(
         '-q', '--quiet', action='store_true',

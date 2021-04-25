@@ -318,6 +318,48 @@ class LinearIndex(Index):
         return LinearIndex(siglist, self.location)
 
 
+class LazyLinearIndex(Index):
+    "An Index for lazy linear search of another database."
+    def __init__(self, db):
+        self.db = db
+
+    @property
+    def location(self):
+        return self.db.location
+
+    def signatures(self):
+        for ss in self.db.signatures():
+            yield ss
+
+    def __bool__(self):
+        try:
+            first_sig = next(iter(self.signatures()))
+            return True
+        except StopIteration:
+            return False
+
+    def __len__(self):
+        raise NotImplementedError
+
+    def insert(self, node):
+        raise NotImplementedError
+
+    def save(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, path):
+        raise NotImplementedError
+
+    def select(self, **kwargs):
+        """Return new object yielding only signatures that match req's.
+
+        Does not raise ValueError, but may return an empty Index.
+        """
+        db = self.db.select(**kwargs)
+        return LazyLinearIndex(db)
+
+
 class ZipFileLinearIndex(Index):
     """\
     A read-only collection of signatures in a zip file.

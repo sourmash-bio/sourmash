@@ -1011,6 +1011,7 @@ def migrate(args):
 def prefetch(args):
     "Output the 'raw' results of a containment/overlap search."
     from .search import prefetch_database
+    from .index import LazyLinearIndex
 
     # load databases from files, too.
     if args.db_from_file:
@@ -1081,9 +1082,9 @@ def prefetch(args):
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
-        # @CTB use _load_databases? or is this fine? want to use .signatures
-        # explicitly / support lazy loading.
         db = sourmash_args.load_file_as_index(dbfilename)
+        if args.linear or 1:
+            db = LazyLinearIndex(db)
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
 
