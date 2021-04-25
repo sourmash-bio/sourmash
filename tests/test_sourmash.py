@@ -4247,22 +4247,7 @@ def test_sbt_categorize_ignore_abundance_1():
         assert "ERROR: please specify --ignore-abundance." in err3
 
 
-def test_sbt_categorize_ignore_abundance_2():
-    # --- Now categorize with ignored abundance ---
-    with utils.TempDirectory() as location:
-        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
-        against_list = ['reads-s10-s11']
-        against_list = ['gather-abund/' + i + '.sig'
-                        for i in against_list]
-        against_list = [utils.get_test_data(i) for i in against_list]
-
-        # omit 3
-        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
-        status2, out2, err2 = utils.runscript('sourmash', args,
-                                              in_directory=location)
-
-
-def test_sbt_categorize_ignore_abundance_2():
+def test_sbt_categorize_ignore_abundance_3():
     # --- Now categorize with ignored abundance ---
     with utils.TempDirectory() as location:
         query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')

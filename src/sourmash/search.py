@@ -421,7 +421,6 @@ def prefetch_database(query, database, threshold_bp):
     query_mh = query.minhash
     scaled = query_mh.scaled
     threshold = threshold_bp / scaled
-    query_hashes = set(query_mh.hashes)
 
     # iterate over all signatures in database, find matches
 
