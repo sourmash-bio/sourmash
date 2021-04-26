@@ -33,7 +33,7 @@ def subparser(subparsers):
     subparser.add_argument(
         '--save-matches', metavar='FILE',
         help='save all matched signatures from the databases to the '
-        'specified file'
+        'specified file or directory'
     )
     subparser.add_argument(
         '--threshold-bp', metavar='REAL', type=float, default=5e4,

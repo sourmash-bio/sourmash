@@ -1026,6 +1026,7 @@ def prefetch(args):
             args.save_matches or args.output):
         notify("WARNING: no output(s) specified! Nothing will be saved from this prefetch!")
 
+    # figure out what k-mer size and molecule type we're looking for here
     ksize = args.ksize
     moltype = sourmash_args.calculate_moltype(args)
 
@@ -1074,11 +1075,26 @@ def prefetch(args):
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()
 
+    # save matches to a directory?
+    matches_outdir = None
+    if args.save_matches and args.save_matches.endswith('/'):
+        matches_outdir = args.save_matches
+        try:
+            os.mkdir(matches_outdir)
+        except FileExistsError:
+            pass
+        except:
+            notify("ERROR: cannot create --save-matches directory '{}'",
+                   args.save_matches)
+            sys.exit(-1)
+        notify("saving all matching database signatures to files under '{}'",
+               matches_outdir)
+
     # iterate over signatures in db one at a time, for each db;
     # find those with any kind of containment.
     keep = []
     noident_mh = copy.copy(query_mh)
-    did_a_search = False
+    did_a_search = False        # track whether we did _any_ search at all!
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
 
@@ -1107,6 +1123,12 @@ def prefetch(args):
                     del d['match']                 # actual signatures not in CSV.
                     del d['query']
                     csvout_w.writerow(d)
+
+                if matches_outdir:
+                    md5 = result.match_md5
+                    outname = os.path.join(matches_outdir, f"{md5}.sig")
+                    with open(outname, "wt") as fp:
+                        sig.save_signatures([match], fp)
 
                 if len(keep) % 10 == 0:
                     notify(f"total of {len(keep)} matching signatures so far.",
@@ -1141,7 +1163,7 @@ def prefetch(args):
     notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
 
-    if args.save_matches:
+    if args.save_matches and not matches_outdir:
         notify("saving all matching database signatures to '{}'", args.save_matches)
         with sourmash_args.FileOutput(args.save_matches, "wt") as fp:
             sig.save_signatures(keep, fp)
