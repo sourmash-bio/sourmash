@@ -427,7 +427,7 @@ def prefetch_database(query, database, threshold_bp):
     for result in database.prefetch(query, threshold_bp):
         # base intersections on downsampled minhashes
         match = result.signature
-        db_mh = match.minhash.downsample(scaled=scaled)
+        db_mh = match.minhash.flatten().downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
         intersect_mh = query_mh.intersection(db_mh)
