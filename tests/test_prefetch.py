@@ -133,6 +133,34 @@ def test_prefetch_matches(c):
 
 
 @utils.in_tempdir
+def test_prefetch_matches_to_dir(c):
+    # test a basic prefetch, with --save-matches to a directory
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    ss63 = sourmash.load_one_signature(sig63)
+    ss47 = sourmash.load_one_signature(sig47)
+
+    matches_out = c.output('matches_dir/')
+
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   '--save-matches', matches_out)
+    print(c.last_result.status)
+    print(c.last_result.out)
+    print(c.last_result.err)
+
+    assert c.last_result.status == 0
+    assert os.path.exists(matches_out)
+
+    sigs = sourmash.load_file_as_signatures(matches_out)
+
+    match_sigs = list(sigs)
+    assert ss63 in match_sigs
+    assert ss47 in match_sigs
+    assert len(match_sigs) == 2
+
+
+@utils.in_tempdir
 def test_prefetch_matching_hashes(c):
     # test a basic prefetch, with --save-matches
     sig2 = utils.get_test_data('2.fa.sig')
