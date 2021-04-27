@@ -551,11 +551,13 @@ class SigFileSaveType(Enum):
     NO_OUTPUT = 5
 
 
-class SaveMatchingSignatures:
+class SaveSignaturesToLocation:
     # @CTB filename or fp?
     # @CTB stdout?
     # @CTB context manager?
     # @CTB use elsewhere?
+    # @CTB provide repr/str
+    # @CTB some of this functioanlity is getting close to Index.save
     def __init__(self, filename, force_type=None):
         save_type = None
         if not force_type:
@@ -577,6 +579,12 @@ class SaveMatchingSignatures:
         self.count = 0
 
         self.open()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
     def open(self):
         if self.save_type == SigFileSaveType.NO_OUTPUT:
