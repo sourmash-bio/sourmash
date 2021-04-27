@@ -558,6 +558,7 @@ class SaveSignaturesToLocation:
     # @CTB use elsewhere?
     # @CTB provide repr/str
     # @CTB some of this functioanlity is getting close to Index.save
+    # @CTB lca json, sbt.zip?
     def __init__(self, filename, force_type=None):
         save_type = None
         if not force_type:
