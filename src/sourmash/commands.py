@@ -1121,12 +1121,11 @@ def prefetch(args):
                     notify(f"total of {matches_out.count} matching signatures so far.",
                            end="\r")
         except ValueError as exc:
+            raise
             notify("ERROR in prefetch_databases:")
             notify(str(exc))
             sys.exit(-1)
             # @CTB should we continue? or only continue if -f?
-        finally:
-            matches_out.close()
 
         did_a_search = True
 
@@ -1142,6 +1141,7 @@ def prefetch(args):
         sys.exit(-1)
 
     notify(f"total of {matches_out.count} matching signatures.")
+    matches_out.close()
 
     if csvout_fp:
         notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
