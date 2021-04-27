@@ -151,6 +151,7 @@ def test_prefetch_matches_to_dir(c):
 
     assert c.last_result.status == 0
     assert os.path.exists(matches_out)
+    assert os.path.isdir(matches_out)
 
     sigs = sourmash.load_file_as_signatures(matches_out)
 

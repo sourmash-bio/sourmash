@@ -6,6 +6,7 @@ import os
 import os.path
 import sys
 import copy
+import gzip
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -1075,24 +1076,15 @@ def prefetch(args):
         csvout_w = csv.DictWriter(csvout_fp, fieldnames=fieldnames)
         csvout_w.writeheader()
 
-    # save matches to a directory?
-    matches_outdir = None
-    if args.save_matches and args.save_matches.endswith('/'):
-        matches_outdir = args.save_matches
-        try:
-            os.mkdir(matches_outdir)
-        except FileExistsError:
-            pass
-        except:
-            notify("ERROR: cannot create --save-matches directory '{}'",
-                   args.save_matches)
-            sys.exit(-1)
-        notify("saving all matching database signatures to files under '{}'",
-               matches_outdir)
+    # track & maybe save matches progressively
+    from .sourmash_args import SaveMatchingSignatures
+    matches_out = SaveMatchingSignatures(args.save_matches)
+    if args.save_matches:
+        notify("saving all matching database signatures to '{}'",
+               args.save_matches)
 
     # iterate over signatures in db one at a time, for each db;
-    # find those with any kind of containment.
-    keep = []
+    # find those with sufficient overlap
     noident_mh = copy.copy(query_mh)
     did_a_search = False        # track whether we did _any_ search at all!
     for dbfilename in args.databases:
@@ -1111,33 +1103,30 @@ def prefetch(args):
         try:
             for result in prefetch_database(query, db, args.threshold_bp):
                 match = result.match
-                # @CTB TODO: don't keep all matches in memory.
-                keep.append(match)
 
                 # track remaining "untouched" hashes.
                 noident_mh.remove_many(match.minhash.hashes)
 
-                # output matches as we go
+                # output match info as we go
                 if csvout_fp:
                     d = dict(result._asdict())
                     del d['match']                 # actual signatures not in CSV.
                     del d['query']
                     csvout_w.writerow(d)
 
-                if matches_outdir:
-                    md5 = result.match_md5
-                    outname = os.path.join(matches_outdir, f"{md5}.sig")
-                    with open(outname, "wt") as fp:
-                        sig.save_signatures([match], fp)
+                # output match signatures as we go (maybe)
+                matches_out.add(match)
 
-                if len(keep) % 10 == 0:
-                    notify(f"total of {len(keep)} matching signatures so far.",
+                if matches_out.count % 10 == 0:
+                    notify(f"total of {matches_out.count} matching signatures so far.",
                            end="\r")
         except ValueError as exc:
             notify("ERROR in prefetch_databases:")
             notify(str(exc))
             sys.exit(-1)
             # @CTB should we continue? or only continue if -f?
+        finally:
+            matches_out.close()
 
         did_a_search = True
 
@@ -1152,21 +1141,16 @@ def prefetch(args):
         notify("ERROR in prefetch: no compatible signatures in any databases?!")
         sys.exit(-1)
 
-    notify(f"total of {len(keep)} matching signatures.")
+    notify(f"total of {matches_out.count} matching signatures.")
 
     if csvout_fp:
-        notify(f"saved {len(keep)} matches to CSV file '{args.output}'")
+        notify(f"saved {matches_out.count} matches to CSV file '{args.output}'")
         csvout_fp.close()
 
     matched_query_mh = copy.copy(query_mh)
     matched_query_mh.remove_many(noident_mh.hashes)
     notify(f"of {len(query_mh)} distinct query hashes, {len(matched_query_mh)} were found in matches above threshold.")
     notify(f"a total of {len(noident_mh)} query hashes remain unmatched.")
-
-    if args.save_matches and not matches_outdir:
-        notify("saving all matching database signatures to '{}'", args.save_matches)
-        with sourmash_args.FileOutput(args.save_matches, "wt") as fp:
-            sig.save_signatures(keep, fp)
 
     if args.save_matching_hashes:
         filename = args.save_matching_hashes

@@ -7,6 +7,8 @@ import argparse
 import itertools
 from enum import Enum
 import traceback
+import gzip
+import zipfile
 
 import screed
 
@@ -535,3 +537,104 @@ class SignatureLoadingProgress(object):
             self.n_sig += n_this
 
         self.short_notify("loaded {} sigs from '{}'", n_this, filename)
+
+
+#
+# enum and class for saving signatures progressively
+#
+
+class SigFileSaveType(Enum):
+    SIGFILE = 1
+    SIGFILE_GZ = 2
+    DIRECTORY = 3
+    ZIPFILE = 4
+    NO_OUTPUT = 5
+
+
+class SaveMatchingSignatures:
+    # @CTB filename or fp?
+    # @CTB stdout?
+    # @CTB context manager?
+    # @CTB use elsewhere?
+    def __init__(self, filename, force_type=None):
+        save_type = None
+        if not force_type:
+            if filename is None:
+                save_type = SigFileSaveType.NO_OUTPUT
+            elif filename.endswith('/'):
+                save_type = SigFileSaveType.DIRECTORY
+            elif filename.endswith('.gz'):
+                save_type = SigFileSaveType.SIGFILE_GZ
+            elif filename.endswith('.zip'):
+                save_type = SigFileSaveType.ZIPFILE
+            else:
+                save_type = SigFileSaveType.SIGFILE
+        else:
+            save_type = force_type
+
+        self.filename = filename
+        self.save_type = save_type
+        self.count = 0
+
+        self.open()
+
+    def open(self):
+        if self.save_type == SigFileSaveType.NO_OUTPUT:
+            pass
+        elif self.save_type == SigFileSaveType.DIRECTORY:
+            try:
+                os.mkdir(self.filename)
+            except FileExistsError:
+                pass
+            except:
+                notify("ERROR: cannot create signature output directory '{}'",
+                       self.filename)
+                sys.exit(-1)
+        elif self.save_type == SigFileSaveType.SIGFILE:
+            self.keep = []
+        elif self.save_type == SigFileSaveType.SIGFILE_GZ:
+            self.keep = []
+        elif self.save_type == SigFileSaveType.ZIPFILE:
+            self.zf = zipfile.ZipFile(self.filename, 'w',
+                                      zipfile.ZIP_DEFLATED,
+                                      compresslevel=9)
+        else:
+            assert 0
+
+    def close(self):
+        if self.save_type == SigFileSaveType.NO_OUTPUT:
+            pass
+        elif self.save_type == SigFileSaveType.DIRECTORY:
+            pass
+        elif self.save_type == SigFileSaveType.SIGFILE:
+            with open(self.filename, "wt") as fp:
+                sourmash.save_signatures(self.keep, fp)
+        elif self.save_type == SigFileSaveType.SIGFILE_GZ:
+            with gzip.open(self.filename, "wt") as fp:
+                sourmash.save_signatures(self.keep, fp)
+        elif self.save_type == SigFileSaveType.ZIPFILE:
+            self.zf.close()
+        else:
+            assert 0
+
+    def add(self, ss):
+        if self.save_type == SigFileSaveType.NO_OUTPUT:
+            pass
+        elif self.save_type == SigFileSaveType.DIRECTORY:
+            md5 = ss.md5sum()[:8]
+            outname = os.path.join(self.filename, f"{md5}.sig.gz")
+            with gzip.open(outname, "wt") as fp:
+                sig.save_signatures([ss], fp)
+        elif self.save_type == SigFileSaveType.SIGFILE:
+            self.keep.append(ss)
+        elif self.save_type == SigFileSaveType.SIGFILE_GZ:
+            self.keep.append(ss)
+        elif self.save_type == SigFileSaveType.ZIPFILE:
+            md5 = ss.md5sum()[:8]
+            outname = f"signatures/{md5}.sig.gz"
+            json_str = sourmash.save_signatures([ss])
+            self.zf.writestr(outname, json_str)
+        else:
+            assert 0
+
+        self.count += 1
