@@ -4116,12 +4116,11 @@ def test_gather_abund_10_1_ignore_abundance(c):
         some_results = False
         for row in r:
             some_results = True
-            assert row['average_abund'] is ''
-            assert row['median_abund'] is ''
-            assert row['std_abund'] is ''
+            assert row['average_abund'] == ''
+            assert row['median_abund'] == ''
+            assert row['std_abund'] == ''
 
         assert some_results
-            
 
 
 @utils.in_tempdir
