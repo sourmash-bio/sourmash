@@ -859,7 +859,7 @@ def test_gather_query_db_md5_ambiguous(c):
     assert "Error! Multiple signatures start with md5 '1'" in err
 
 
-def test_gather_lca_db(runtmp, track_abundance):
+def test_gather_lca_db(runtmp):
     # can we do a 'sourmash gather' on an LCA database?
     query = utils.get_test_data('47+63.fa.sig')
     lca_db = utils.get_test_data('lca/47+63.lca.json')
