@@ -5,6 +5,7 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
+import copy
 
 from .search import make_jaccard_search_query, make_gather_query
 
@@ -431,42 +432,50 @@ class ZipFileLinearIndex(Index):
                                   traverse_yield_all=self.traverse_yield_all)
 
 
-class CounterGatherIndex(Index):
-    def __init__(self, query):
-        self.query = query
-        self.scaled = query.minhash.scaled
+class QuerySpecific_GatherCounter:
+    def __init__(self, query_mh):
+        if not query_mh.scaled:
+            raise ValueError('gather requires scaled signatures')
+
+        # track query
+        self.query_mh = copy.copy(query_mh)
+        self.scaled = query_mh.scaled
+
+        # track matching signatures & their locations
         self.siglist = []
         self.locations = []
+
+        # ...and overlaps with query
         self.counter = Counter()
 
-    def insert(self, ss, location=None):
+    def add(self, ss, location=None):
         i = len(self.siglist)
         self.siglist.append(ss)
         self.locations.append(location)
 
         # upon insertion, count & track overlap with the specific query.
         self.scaled = max(self.scaled, ss.minhash.scaled)
-        self.counter[i] = self.query.minhash.count_common(ss.minhash, True)
+        self.counter[i] = self.query_mh.count_common(ss.minhash, True)
 
-    def gather(self, query, threshold_bp=0, **kwargs):
+    def __iter__(self):
+        return self
+
+    def next(self, scaled, threshold_bp=0, **kwargs):
         "Perform compositional analysis of the query using the gather algorithm"
-        # CTB: switch over to JaccardSearch objects?
-
-        if not query.minhash:             # empty query? quit.
+        query_mh = self.query_mh
+        if not query_mh:             # empty query? quit.
             return []
 
         # bad query?
-        scaled = query.minhash.scaled
-        if not scaled:
-            raise ValueError('gather requires scaled signatures')
-
         if scaled == self.scaled:
-            query_mh = query.minhash
+            pass
         elif scaled < self.scaled:
-            query_mh = query.minhash.downsample(scaled=self.scaled)
+            query_mh = query_mh.downsample(scaled=self.scaled)
             scaled = self.scaled
         else: # query scaled > self.scaled, should never happen
             assert 0
+
+        self.query_mh = query_mh
 
         # empty? nothing to search.
         counter = self.counter
@@ -535,6 +544,17 @@ class CounterGatherIndex(Index):
         if result:
             return [result]
         return []
+
+
+class CounterGatherIndex(Index):
+    def __init__(self, query):
+        self.counter = QuerySpecific_GatherCounter(query.minhash)
+
+    def insert(self, ss, location=None):
+        self.counter.add(ss, location)
+
+    def gather(self, query, threshold_bp=0):
+        return self.counter.next(query.minhash.scaled, threshold_bp)
 
     def signatures(self):
         raise NotImplementedError
