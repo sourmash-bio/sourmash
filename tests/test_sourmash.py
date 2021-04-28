@@ -859,15 +859,14 @@ def test_gather_query_db_md5_ambiguous(c):
     assert "Error! Multiple signatures start with md5 '1'" in err
 
 
-@utils.in_tempdir
-def test_gather_lca_db(c):
+def test_gather_lca_db(runtmp, track_abundance):
     # can we do a 'sourmash gather' on an LCA database?
     query = utils.get_test_data('47+63.fa.sig')
     lca_db = utils.get_test_data('lca/47+63.lca.json')
 
-    c.run_sourmash('gather', query, lca_db)
-    print(c)
-    assert 'NC_009665.1 Shewanella baltica OS185' in str(c.last_result.out)
+    runtmp.sourmash('gather', query, lca_db)
+    print(runtmp)
+    assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
 
 
 @utils.in_tempdir
@@ -1443,19 +1442,18 @@ def test_search_containment_s10():
         assert '16.7%' in out
 
 
-@utils.in_thisdir
-def test_search_containment_s10_no_max(c):
+def test_search_containment_s10_no_max(run):
     # check --containment for s10/s10-small
     q1 = utils.get_test_data('scaled/genome-s10.fa.gz.sig')
     q2 = utils.get_test_data('scaled/genome-s10-small.fa.gz.sig')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('search', q1, q2, '--containment',
+        run.run_sourmash('search', q1, q2, '--containment',
                        '--max-containment')
 
-    print(c.last_result.out)
-    print(c.last_result.err)
-    assert "ERROR: cannot specify both --containment and --max-containment!" in c.last_result.err
+    print(run.last_result.out)
+    print(run.last_result.err)
+    assert "ERROR: cannot specify both --containment and --max-containment!" in run.last_result.err
 
 
 def test_search_max_containment_s10_pairwise():
