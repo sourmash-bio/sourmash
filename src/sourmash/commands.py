@@ -1083,6 +1083,7 @@ def prefetch(args):
 
     # track & maybe save matches progressively
     matches_out = SaveSignaturesToLocation(args.save_matches)
+    matches_out.open()
     if args.save_matches:
         notify("saving all matching database signatures to '{}'",
                args.save_matches)
