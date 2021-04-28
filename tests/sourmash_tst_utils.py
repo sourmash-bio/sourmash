@@ -13,8 +13,6 @@ import traceback
 from io import open  # pylint: disable=redefined-builtin
 from io import StringIO
 
-import decorator
-
 
 SIG_FILES = [os.path.join('demo', f) for f in (
   "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
@@ -224,13 +222,13 @@ class RunnerContext(object):
 
 
 def in_tempdir(fn):
-    def wrapper(func, *args, **kwargs):
+    def wrapper(*args, **kwargs):
         with TempDirectory() as location:
             ctxt = RunnerContext(location)
             newargs = [ctxt] + list(args)
-            return func(*newargs, **kwargs)
+            return fn(*newargs, **kwargs)
 
-    return decorator.decorator(wrapper, fn)
+    return wrapper
 
 
 def in_thisdir(fn):
