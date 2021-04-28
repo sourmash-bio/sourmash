@@ -829,8 +829,7 @@ def test_search_lca_db(c):
     assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
 
 
-@utils.in_thisdir
-def test_search_query_db_md5(c):
+def test_search_query_db_md5(runtmp, linear_gather, prefetch_gather):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
@@ -838,8 +837,7 @@ def test_search_query_db_md5(c):
     assert '100.0%       GCA_001593925' in str(c)
 
 
-@utils.in_thisdir
-def test_gather_query_db_md5(c):
+def test_gather_query_db_md5(runtmp, ):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
     c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
@@ -3036,10 +3034,7 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
-@utils.in_tempdir
-def test_gather_f_match_orig(c):
-    prefetch_gather = False
-
+def test_gather_f_match_orig(runtmp, prefetch_gather, linear_gather):
     import copy
 
     testdata_combined = utils.get_test_data('gather/combined.sig')
@@ -3047,12 +3042,13 @@ def test_gather_f_match_orig(c):
     testdata_sigs = glob.glob(testdata_glob)
 
     do_prefetch = "--prefetch" if prefetch_gather else '--no-prefetch'
+    do_linear = "--linear" if linear_gather else '--no-linear'
 
-    c.run_sourmash('gather', testdata_combined, '-o', 'out.csv', do_prefetch,
-                   *testdata_sigs)
+    runtmp.sourmash('gather', testdata_combined, '-o', 'out.csv',
+                    *testdata_sigs, do_prefetch, do_linear)
 
-    print(c.last_result.out)
-    print(c.last_result.err)
+    print(runtmp.last_result.out)
+    print(runtmp.last_result.err)
 
     combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
     remaining_mh = copy.copy(combined_sig.minhash)
@@ -3060,7 +3056,7 @@ def test_gather_f_match_orig(c):
     def approx_equal(a, b, n=5):
         return round(a, n) == round(b, n)
 
-    with open(c.output('out.csv'), 'rt') as fp:
+    with open(runtmp.output('out.csv'), 'rt') as fp:
         r = csv.DictReader(fp)
         for n, row in enumerate(r):
             print(n, row['f_match'], row['f_match_orig'])

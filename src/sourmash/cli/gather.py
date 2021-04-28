@@ -63,6 +63,12 @@ def subparser(subparsers):
     subparser.add_argument(
         '--no-prefetch', dest="prefetch", action='store_false',
     )
+    subparser.add_argument(
+        '--linear', dest="linear", action='store_true',
+    )
+    subparser.add_argument(
+        '--no-linear', dest="linear", action='store_false',
+    )
 
 
 def main(args):
