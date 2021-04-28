@@ -550,6 +550,7 @@ class SignatureLoadingProgress(object):
 # @CTB lca json, sbt.zip?
 
 class _BaseSaveSignaturesToLocation:
+    "Base signature saving class. Track location (if any) and count."
     def __init__(self, location):
         self.location = location
         self.count = 0
@@ -567,17 +568,11 @@ class _BaseSaveSignaturesToLocation:
 
 class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     "Do not save signatures."
-    def __init__(self, location):
-        super().__init__(location)
-    
     def open(self):
         pass
 
     def close(self):
         pass
-
-    def add(self, ss):
-        super().add(ss)
 
 
 class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
@@ -604,6 +599,7 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
         outname = os.path.join(self.location, f"{md5}.sig.gz")
         with gzip.open(outname, "wb") as fp:
             sig.save_signatures([ss], fp, compression=1)
+
 
 class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
     "Save signatures within a directory, using md5sum names."
@@ -665,6 +661,8 @@ _save_classes = {
 
 
 def SaveSignaturesToLocation(filename, *, force_type=None):
+    """Create and return an appropriate object for progressive saving of
+    signatures."""
     save_type = None
     if not force_type:
         if filename is None:
