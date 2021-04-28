@@ -438,7 +438,7 @@ class QuerySpecific_GatherCounter:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        self.query_mh = copy.copy(query_mh)
+        self.query_mh = copy.copy(query_mh).flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
@@ -474,8 +474,6 @@ class QuerySpecific_GatherCounter:
             scaled = self.scaled
         else: # query scaled > self.scaled, should never happen
             assert 0
-
-        self.query_mh = query_mh
 
         # empty? nothing to search.
         counter = self.counter
@@ -540,6 +538,9 @@ class QuerySpecific_GatherCounter:
             counter[dataset_id] -= intersect_count
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
+
+        query_mh.remove_many(intersect_mh.hashes)
+        self.query_mh = query_mh
 
         if result:
             return [result]
