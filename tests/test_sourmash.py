@@ -832,17 +832,17 @@ def test_search_lca_db(c):
 def test_search_query_db_md5(runtmp, linear_gather, prefetch_gather):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
-    c.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
+    runtmp.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
 
-    assert '100.0%       GCA_001593925' in str(c)
+    assert '100.0%       GCA_001593925' in str(runtmp)
 
 
-def test_gather_query_db_md5(runtmp, ):
+def test_gather_query_db_md5(runtmp):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
-    c.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
+    runtmp.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
 
-    assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(c)
+    assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(runtmp)
 
 
 @utils.in_thisdir
@@ -4140,12 +4140,11 @@ def test_gather_abund_10_1_ignore_abundance(c):
         some_results = False
         for row in r:
             some_results = True
-            assert row['average_abund'] is ''
-            assert row['median_abund'] is ''
-            assert row['std_abund'] is ''
+            assert row['average_abund'] == ''
+            assert row['median_abund'] == ''
+            assert row['std_abund'] == ''
 
         assert some_results
-            
 
 
 @utils.in_tempdir
