@@ -215,6 +215,15 @@ class Index(ABC):
 
         return results[:1]
 
+    def counter_gather(self, query, threshold_bp, **kwargs):
+        prefetch_query = copy.copy(query)
+        prefetch_query.minhash = prefetch_query.minhash.flatten()
+
+        counter = CounterGather(prefetch_query.minhash)
+        for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
+            counter.add(result.signature, result.location)
+        return counter
+
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
                abund=None, containment=None):
