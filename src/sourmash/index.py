@@ -433,6 +433,10 @@ class ZipFileLinearIndex(Index):
 
 
 class CounterGather:
+    """
+    Track and summarize matches for efficient 'gather' protocol.  This
+    could be used downstream of prefetch (for example).
+    """
     def __init__(self, query_mh):
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
@@ -463,13 +467,15 @@ class CounterGather:
 
         # upon insertion, count & track overlap with the specific query.
         self.counter[i] = self.orig_query_mh.count_common(ss.minhash, True)
+        assert self.counter[i]
 
     def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
         if scaled > self.scaled:
             self.scaled = scaled
 
     def calc_threshold(self, threshold_bp, scaled, query_size):
-        # @CTB can be outside this class
+        # CTB: this code doesn't need to be in this class.
         threshold = 0.0
         n_threshold_hashes = 0
 
@@ -484,7 +490,7 @@ class CounterGather:
         return threshold, n_threshold_hashes
 
     def peek(self, cur_query_mh, scaled, threshold_bp=0, **kwargs):
-        "Get next potential result."
+        "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
 
         # empty? nothing to search.
@@ -503,7 +509,7 @@ class CounterGather:
             return []
 
         assert cur_query_mh.contained_by(self.orig_query_mh,
-                                     downsample=True) == 1
+                                         downsample=True) == 1
 
         # are we setting a threshold?
         threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
@@ -529,20 +535,21 @@ class CounterGather:
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
 
         retval = []
-        if cont and cont >= threshold:
-            # calculate intersection of this "best match" with query
-            # for removal.
+        if cont:
+            assert cont >= threshold
 
-            # @CTB: note flatten
+            # calculate intersection of this "best match" with query.
             match_mh = match.minhash.downsample(scaled=scaled).flatten()
             intersect_mh = cur_query_mh.intersection(match_mh)
             location = self.locations[dataset_id]
+
+            # build result & return intersection
             retval = [IndexSearchResult(cont, match, location), intersect_mh]
 
         return retval
 
     def consume(self, intersect_mh):
-        "Remove the given hashes."
+        "Remove the given hashes from this counter."
         siglist = self.siglist
         counter = self.counter
 
@@ -552,7 +559,7 @@ class CounterGather:
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
         for (dataset_id, _) in most_common:
-            # @CTB: we may want to downsample remaining_mh here...
+            # CTB: note, remaining_mh may not be at correct scaled.
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
@@ -560,21 +567,9 @@ class CounterGather:
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
 
-    def gather(self, query, threshold_bp=0):
-        result = self.peek(query.minhash, query.minhash.scaled,
-                                   threshold_bp)
-        if result:
-            (sr, intersect_mh) = result
-            self.consume(intersect_mh)
-            
-            query.minhash.remove_many(intersect_mh.hashes) #  @CTB
-
-            return [sr]
-        return []
-
 
 class MultiCounterGather:
-    "Mimic gather, sort of."
+    "Choose the best result across multiple CounterGather objects"
     def __init__(self, counters):
         self.counters = counters
 
@@ -583,7 +578,8 @@ class MultiCounterGather:
 
         best_result = None
         best_intersect_mh = None
-        
+
+        # find the best score across multiple counters, without consuming
         for counter in self.counters:
             result = counter.peek(query.minhash, query.minhash.scaled,
                                   threshold_bp)
@@ -595,10 +591,11 @@ class MultiCounterGather:
                     best_intersect_mh = intersect_mh
 
         if best_result:
+            # remove the best result from each counter
             for counter in self.counters:
                 counter.consume(best_intersect_mh)
-            
-        #query.minhash.remove_many(intersect_mh.hashes)
+
+            # and done!
             return [best_result]
         return []
 
