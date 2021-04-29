@@ -560,6 +560,19 @@ class QuerySpecific_GatherCounter:
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
 
+    def next(self, query, threshold_bp=0):
+        result = self.peek(query.minhash, query.minhash.scaled,
+                                   threshold_bp)
+        if result:
+            (sr, intersect_mh) = result
+            self.consume(intersect_mh)
+            
+            query.minhash.remove_many(intersect_mh.hashes) #  @CTB
+
+            return [sr]
+        return []
+                
+
 
 class CounterGatherIndex(Index):
     def __init__(self, query):
@@ -569,16 +582,7 @@ class CounterGatherIndex(Index):
         self.counter.add(ss, location)
 
     def gather(self, query, threshold_bp=0):
-        result = self.counter.peek(query.minhash, query.minhash.scaled,
-                                   threshold_bp)
-        if result:
-            (sr, intersect_mh) = result
-            self.counter.consume(intersect_mh)
-            
-            query.minhash.remove_many(intersect_mh.hashes) #  @CTB
-
-            return [sr]
-        return []
+        return self.counter.next(query, threshold_bp)
         
     def signatures(self):
         raise NotImplementedError
