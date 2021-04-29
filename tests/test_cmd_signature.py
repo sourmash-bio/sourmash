@@ -90,6 +90,46 @@ def test_sig_merge_1_multisig(c):
     assert actual_merge_sig.minhash == test_merge_sig.minhash
 
 
+####### add name test
+
+@utils.in_tempdir
+def test_sig_merge_1_name(c):
+    # check name arg
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig2and63 = utils.get_test_data('2+63.fa.sig')
+    c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31', '--name', assignedSigName )
+    
+    ### this feels illegal, or at least dangerous; but dont know of a better way to name sig2and36
+    c.run_sourmash('sig', 'merge', sig2and63, '--dna', '-k', '31', '--name', assignedSigName )
+
+    # stdout should be new signature
+    out = c.last_result.out
+
+    test_merge_sig = sourmash.load_one_signature(sig2and63)
+    actual_merge_sig = sourmash.load_one_signature(out)
+    
+    ### should probably just compare the name class (?), can I use "test_merge_sig.minhash.name"? 
+    print(test_merge_sig.minhash)
+    print(actual_merge_sig.minhash)
+
+    print(out)
+
+    assert actual_merge_sig.minhash == test_merge_sig.minhash
+
+
+@utils.in_tempdir
+def test_sig_merge_1_ksize_moltype_fail(c):
+    # check ksize, moltype args
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+    sig2and63 = utils.get_test_data('2+63.fa.sig')
+
+    with pytest.raises(ValueError):
+        c.run_sourmash('sig', 'merge', sig2, sig63)
+#######
+
+
 @utils.in_tempdir
 def test_sig_merge_1_ksize_moltype(c):
     # check ksize, moltype args
