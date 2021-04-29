@@ -1,0 +1,27 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "13:00"
+  open-pull-requests-limit: 10
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "13:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: fixedbitset
+    versions:
+    - 0.4.0
+  - dependency-name: needletail
+    versions:
+    - 0.4.1
+  - dependency-name: typed-builder
+    versions:
+    - 0.9.0
+  - dependency-name: backtrace
+    versions:
+    - 0.3.56
