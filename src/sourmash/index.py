@@ -432,7 +432,7 @@ class ZipFileLinearIndex(Index):
                                   traverse_yield_all=self.traverse_yield_all)
 
 
-class QuerySpecific_GatherCounter:
+class CounterGather:
     def __init__(self, query_mh):
         if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
@@ -560,7 +560,7 @@ class QuerySpecific_GatherCounter:
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
 
-    def next(self, query, threshold_bp=0):
+    def gather(self, query, threshold_bp=0):
         result = self.peek(query.minhash, query.minhash.scaled,
                                    threshold_bp)
         if result:
@@ -571,43 +571,36 @@ class QuerySpecific_GatherCounter:
 
             return [sr]
         return []
-                
 
 
-class CounterGatherIndex(Index):
-    def __init__(self, query):
-        self.counter = QuerySpecific_GatherCounter(query.minhash)
+class MultiCounterGather:
+    "Mimic gather, sort of."
+    def __init__(self, counters):
+        self.counters = counters
 
-    def insert(self, ss, location=None):
-        self.counter.add(ss, location)
+    def gather(self, query, threshold_bp):
+        results = []
 
-    def gather(self, query, threshold_bp=0):
-        return self.counter.next(query, threshold_bp)
+        best_result = None
+        best_intersect_mh = None
         
-    def signatures(self):
-        raise NotImplementedError
+        for counter in self.counters:
+            result = counter.peek(query.minhash, query.minhash.scaled,
+                                  threshold_bp)
+            if result:
+                (sr, intersect_mh) = result
 
-    def signatures_with_location(self):
-        raise NotImplementedError
+                if best_result is None or sr.score > best_result.score:
+                    best_result = sr
+                    best_intersect_mh = intersect_mh
 
-    def prefetch(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def load(self, *args):
-        raise NotImplementedError
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def find(self, search_fn, *args, **kwargs):
-        raise NotImplementedError
-
-    def search(self, query, *args, **kwargs):
-        raise NotImplementedError
-
-    def select(self, *args, **kwargs):
-        raise NotImplementedError
+        if best_result:
+            for counter in self.counters:
+                counter.consume(best_intersect_mh)
+            
+        #query.minhash.remove_many(intersect_mh.hashes)
+            return [best_result]
+        return []
 
 
 class MultiIndex(Index):

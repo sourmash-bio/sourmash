@@ -655,17 +655,20 @@ def gather(args):
     # @CTB experimental! w00t fun!
     if args.prefetch or 1:
         notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
-        from .index import LinearIndex, CounterGatherIndex
-        prefetch_idx = CounterGatherIndex(query)
+        from .index import LinearIndex, CounterGather, MultiCounterGather
 
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
+        counters = []
         for db in databases:
+            counter = CounterGather(query.minhash)
             for match in db.prefetch(prefetch_query, args.threshold_bp):
-                prefetch_idx.insert(match.signature, location=match.location)
+                counter.add(match.signature, match.location)
 
-        databases = [ prefetch_idx ]
+            counters.append(counter)
+        #databases = counters
+        databases = [ MultiCounterGather(counters) ]
 
     found = []
     weighted_missed = 1
