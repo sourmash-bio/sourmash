@@ -563,9 +563,10 @@ class CounterGather:
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
-            counter[dataset_id] -= intersect_count
-            if counter[dataset_id] == 0:
-                del counter[dataset_id]
+            if intersect_count:
+                counter[dataset_id] -= intersect_count
+                if counter[dataset_id] == 0:
+                    del counter[dataset_id]
 
 
 class MultiCounterGather:
