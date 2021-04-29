@@ -469,6 +469,7 @@ class QuerySpecific_GatherCounter:
             self.scaled = scaled
 
     def calc_threshold(self, threshold_bp, scaled, query_size):
+        # @CTB can be outside this class
         threshold = 0.0
         n_threshold_hashes = 0
 
@@ -482,35 +483,17 @@ class QuerySpecific_GatherCounter:
 
         return threshold, n_threshold_hashes
 
-    def update_counters(self, most_common, intersect_mh):
-        siglist = self.siglist
-        counter = self.counter
-
-        # Prepare counter for finding the next match by decrementing
-        # all hashes found in the current match in other datasets;
-        # remove empty datasets from counter, too.
-        for (dataset_id, _) in most_common:
-            remaining_mh = siglist[dataset_id].minhash
-            intersect_count = intersect_mh.count_common(remaining_mh,
-                                                        downsample=True)
-            counter[dataset_id] -= intersect_count
-            if counter[dataset_id] == 0:
-                del counter[dataset_id]
-
-    def consume(self, intersect_mh):
-        counter = self.counter
-        most_common = counter.most_common()
-        self.update_counters(most_common, intersect_mh)
-
     def peek(self, cur_query_mh, scaled, threshold_bp=0, **kwargs):
-        "Iterate through results."
+        "Get next potential result."
         self.query_started = 1
 
         # empty? nothing to search.
         counter = self.counter
         siglist = self.siglist
-        if not (counter and siglist):
+        if not counter:
             return []
+
+        assert siglist
 
         self.downsample(scaled)
         scaled = self.scaled
@@ -541,7 +524,6 @@ class QuerySpecific_GatherCounter:
 
         # pull match and location.
         match = siglist[dataset_id]
-        location = self.locations[dataset_id]
 
         # calculate containment
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
@@ -551,12 +533,33 @@ class QuerySpecific_GatherCounter:
             # calculate intersection of this "best match" with query
             # for removal.
 
-            # @CTB note flatten
+            # @CTB: note flatten
             match_mh = match.minhash.downsample(scaled=scaled).flatten()
             intersect_mh = cur_query_mh.intersection(match_mh)
+            location = self.locations[dataset_id]
             retval = [IndexSearchResult(cont, match, location), intersect_mh]
 
         return retval
+
+    def consume(self, intersect_mh):
+        "Remove the given hashes."
+        siglist = self.siglist
+        counter = self.counter
+
+        most_common = counter.most_common()
+
+        # Prepare counter for finding the next match by decrementing
+        # all hashes found in the current match in other datasets;
+        # remove empty datasets from counter, too.
+        for (dataset_id, _) in most_common:
+            # @CTB: we may want to downsample remaining_mh here...
+            remaining_mh = siglist[dataset_id].minhash
+            intersect_count = intersect_mh.count_common(remaining_mh,
+                                                        downsample=True)
+            counter[dataset_id] -= intersect_count
+            if counter[dataset_id] == 0:
+                del counter[dataset_id]
+
 
 class CounterGatherIndex(Index):
     def __init__(self, query):
