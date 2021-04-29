@@ -438,7 +438,7 @@ class QuerySpecific_GatherCounter:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        self.query_mh = copy.copy(query_mh).flatten()
+        self.orig_query_mh = copy.copy(query_mh).flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
@@ -462,11 +462,10 @@ class QuerySpecific_GatherCounter:
         self.downsample(ss.minhash.scaled)
 
         # upon insertion, count & track overlap with the specific query.
-        self.counter[i] = self.query_mh.count_common(ss.minhash, True)
+        self.counter[i] = self.orig_query_mh.count_common(ss.minhash, True)
 
     def downsample(self, scaled):
         if scaled > self.scaled:
-            self.query_mh = self.query_mh.downsample(scaled=scaled)
             self.scaled = scaled
 
     def calc_threshold(self, threshold_bp, scaled, query_size):
@@ -498,7 +497,7 @@ class QuerySpecific_GatherCounter:
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
 
-    def next(self, scaled, threshold_bp=0, **kwargs):
+    def next(self, query_mh, scaled, threshold_bp=0, **kwargs):
         "Iterate through results."
         self.query_started = 1
 
@@ -510,10 +509,13 @@ class QuerySpecific_GatherCounter:
 
         self.downsample(scaled)
         scaled = self.scaled
+        query_mh = query_mh.downsample(scaled=scaled)
 
-        query_mh = self.query_mh
         if not query_mh:             # empty query? quit.
             return []
+
+        assert query_mh.contained_by(self.orig_query_mh,
+                                     downsample=True) == 1
 
         # are we setting a threshold?
         threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
@@ -567,7 +569,7 @@ class CounterGatherIndex(Index):
         self.counter.add(ss, location)
 
     def gather(self, query, threshold_bp=0):
-        return self.counter.next(query.minhash.scaled, threshold_bp)
+        return self.counter.next(query.minhash, query.minhash.scaled, threshold_bp)
 
     def signatures(self):
         raise NotImplementedError
