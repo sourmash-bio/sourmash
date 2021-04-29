@@ -746,6 +746,7 @@ def test_search_second_subject_sig_does_not_exist(c):
     assert c.last_result.status == -1
     assert "Error while reading signatures from 'short2.fa.sig'." in c.last_result.err
 
+
 @utils.in_tempdir
 def test_search(c):
     testdata1 = utils.get_test_data('short.fa')
@@ -759,6 +760,7 @@ def test_search(c):
 
 
 def test_search_ignore_abundance():
+    # note: uses num signatures.
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -1531,7 +1533,12 @@ def test_search_containment_s10_sbt_best_only():
                                             '--containment', '--best-only'],
                                            in_directory=location, fail_ok=True)
 
-        assert status != 0
+        print(out)
+        print(err)
+
+        assert '100.0%       ' in out # there are at least two perfect matches!
+
+        assert status == 0
 
 
 def test_search_containment_s10_sbt_empty():
@@ -1571,9 +1578,14 @@ def test_search_max_containment_s10_sbt_best_only():
         q2 = utils.get_test_data('scaled/all.sbt.zip')
         status, out, err = utils.runscript('sourmash',
                                            ['search', q1, q2,
-                                            '--max-containment', '--best-only'],
+                                            '--max-containment',
+                                            '--best-only'],
                                            in_directory=location, fail_ok=True)
-        assert status != 0
+
+        print(out)
+        print(err)
+
+        assert status == 0
 
 
 def test_search_max_containment_s10_sbt_empty():
@@ -2180,6 +2192,23 @@ def test_do_sourmash_sbt_search_downsample_2():
         print(err)
         assert "ERROR: cannot use 'foo' for this query." in err
         assert "search scaled value 100000 is less than database scaled value of 2000" in err
+
+
+@utils.in_tempdir
+def test_do_sourmash_index_abund(c):
+    # 'sourmash index' should flatten signatures w/track_abund.
+    testdata2 = utils.get_test_data('lca-root/TOBG_MED-875.fna.gz.sig')
+
+    with open(testdata2, 'rt') as fp:
+        ss = sourmash.load_one_signature(testdata2, ksize=31)
+        assert ss.minhash.track_abundance == True
+
+    sbtname = 'foo'
+
+    c.run_sourmash('index', '-k', '31', sbtname, testdata2)
+
+    for kk in sourmash.load_file_as_signatures(c.output(sbtname)):
+        assert kk.minhash.track_abundance == False
 
 
 def test_do_sourmash_index_single():
@@ -4079,7 +4108,6 @@ def test_gather_abund_10_1_ignore_abundance(c):
     # * approximately 50% of s10 and s11 matching (first column)
     # * approximately 100% of the high coverage genome being matched,
     #       with only 80% of the low coverage genome
-    # no abundance-weighted information is provided here. @CTB check?
 
     assert all(('57.2%  100.0%', 'tests/test-data/genome-s10.fa.gz' in out))
     assert all(('42.8%   80.0%', 'tests/test-data/genome-s11.fa.gz' in out))
@@ -4108,8 +4136,21 @@ def test_gather_output_unassigned_with_abundance(c):
 
     assert os.path.exists(c.output('unassigned.sig'))
 
-    ss = sourmash.load_one_signature(c.output('unassigned.sig'))
-    assert ss.minhash.track_abundance
+    nomatch = sourmash.load_one_signature(c.output('unassigned.sig'))
+    assert nomatch.minhash.track_abundance
+
+    query_ss = sourmash.load_one_signature(query)
+    against_ss = sourmash.load_one_signature(against)
+
+    # unassigned should have nothing that is in the database
+    nomatch_mh = nomatch.minhash
+    for hashval in against_ss.minhash.hashes:
+        assert hashval not in nomatch_mh.hashes
+
+    # unassigned should have abundances from original query, if not in database
+    for hashval, abund in query_ss.minhash.hashes.items():
+        if hashval not in against_ss.minhash.hashes:
+            assert nomatch_mh.hashes[hashval] == abund
 
 
 def test_sbt_categorize():
@@ -4130,6 +4171,7 @@ def test_sbt_categorize():
         status, out, err = utils.runscript('sourmash', args,
                                            in_directory=location)
 
+        # categorize all of the ones that were copied to 'location'
         args = ['categorize', 'zzz', '.',
                 '--ksize', '21', '--dna', '--csv', 'out.csv']
         status, out, err = utils.runscript('sourmash', args,
@@ -4147,9 +4189,9 @@ def test_sbt_categorize():
         assert './4.sig,genome-s10+s11,genome-s10,0.504' in out_csv
 
 
-def test_sbt_categorize_ignore_abundance():
+def test_sbt_categorize_ignore_abundance_1():
+    # --- Categorize without ignoring abundance ---
     with utils.TempDirectory() as location:
-
         query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
         against_list = ['reads-s10-s11']
         against_list = ['gather-abund/' + i + '.sig'
@@ -4161,21 +4203,36 @@ def test_sbt_categorize_ignore_abundance():
         status2, out2, err2 = utils.runscript('sourmash', args,
                                               in_directory=location)
 
-        # --- Categorize without ignoring abundance ---
         args = ['categorize', 'thebestdatabase',
                 '--ksize', '21', '--dna', '--csv', 'out3.csv', query]
+
         status3, out3, err3 = utils.runscript('sourmash', args,
-                                              in_directory=location)
+                                              in_directory=location,
+                                              fail_ok=True)
+
+        assert status3 != 0
 
         print(out3)
         print(err3)
 
-        assert 'for 1-1, found: 0.44 1-1' in err3
+        assert "ERROR: this search cannot be done on signatures calculated with abundance." in err3
+        assert "ERROR: please specify --ignore-abundance." in err3
 
-        out_csv3 = open(os.path.join(location, 'out3.csv')).read()
-        assert 'reads-s10x10-s11.sig,1-1,1-1,0.4398' in out_csv3
 
-        # --- Now categorize with ignored abundance ---
+def test_sbt_categorize_ignore_abundance_2():
+    # --- Now categorize with ignored abundance ---
+    with utils.TempDirectory() as location:
+        query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
+        against_list = ['reads-s10-s11']
+        against_list = ['gather-abund/' + i + '.sig'
+                        for i in against_list]
+        against_list = [utils.get_test_data(i) for i in against_list]
+
+        # omit 3
+        args = ['index', '--dna', '-k', '21', 'thebestdatabase'] + against_list
+        status2, out2, err2 = utils.runscript('sourmash', args,
+                                              in_directory=location)
+
         args = ['categorize', '--ignore-abundance',
                 '--ksize', '21', '--dna', '--csv', 'out4.csv',
                 'thebestdatabase', query]
@@ -4189,9 +4246,6 @@ def test_sbt_categorize_ignore_abundance():
 
         out_csv4 = open(os.path.join(location, 'out4.csv')).read()
         assert 'reads-s10x10-s11.sig,1-1,1-1,0.87699' in out_csv4
-
-        # Make sure ignoring abundance produces a different output!
-        assert err3 != err4
 
 
 def test_sbt_categorize_already_done():

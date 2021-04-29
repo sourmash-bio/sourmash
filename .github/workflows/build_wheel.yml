@@ -5,7 +5,6 @@ on:
     branches: [latest]
     tags: v*
   pull_request:
-    branches: [latest]
   schedule:
     - cron: "0 0 * * *" # daily
 
