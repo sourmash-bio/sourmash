@@ -520,6 +520,7 @@ class CounterGather:
         counter = self.counter
         siglist = self.siglist
         if not counter:
+            print('nada')
             return []
 
         assert siglist
@@ -541,6 +542,7 @@ class CounterGather:
 
         # is it too high to ever match? if so, exit.
         if threshold > 1.0:
+            print('threshold:', threshold)
             return []
 
         # Find the best match -
@@ -549,6 +551,7 @@ class CounterGather:
 
         # below threshold? no match!
         if match_size < n_threshold_hashes:
+            print('match size:', match_size, n_threshold_hashes)
             return []
 
         # pull match and location.
@@ -558,6 +561,7 @@ class CounterGather:
         cont = cur_query_mh.contained_by(match.minhash, downsample=True)
 
         retval = []
+        print('xxx cont', cont)
         if cont:
             assert cont >= threshold
 
@@ -587,6 +591,7 @@ class CounterGather:
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
             if intersect_count:
+                print('removing zzz', dataset_id, intersect_count)
                 counter[dataset_id] -= intersect_count
                 if counter[dataset_id] == 0:
                     del counter[dataset_id]
