@@ -497,7 +497,12 @@ class QuerySpecific_GatherCounter:
             if counter[dataset_id] == 0:
                 del counter[dataset_id]
 
-    def next(self, query_mh, scaled, threshold_bp=0, **kwargs):
+    def consume(self, intersect_mh):
+        counter = self.counter
+        most_common = counter.most_common()
+        self.update_counters(most_common, intersect_mh)
+
+    def peek(self, cur_query_mh, scaled, threshold_bp=0, **kwargs):
         "Iterate through results."
         self.query_started = 1
 
@@ -509,18 +514,18 @@ class QuerySpecific_GatherCounter:
 
         self.downsample(scaled)
         scaled = self.scaled
-        query_mh = query_mh.downsample(scaled=scaled)
+        cur_query_mh = cur_query_mh.downsample(scaled=scaled)
 
-        if not query_mh:             # empty query? quit.
+        if not cur_query_mh:             # empty query? quit.
             return []
 
-        assert query_mh.contained_by(self.orig_query_mh,
+        assert cur_query_mh.contained_by(self.orig_query_mh,
                                      downsample=True) == 1
 
         # are we setting a threshold?
         threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
                                                             scaled,
-                                                            len(query_mh))
+                                                            len(cur_query_mh))
 
         # is it too high to ever match? if so, exit.
         if threshold > 1.0:
@@ -528,7 +533,7 @@ class QuerySpecific_GatherCounter:
 
         # Find the best match -
         most_common = counter.most_common()
-        dataset_id, match_size = most_common.pop(0)
+        dataset_id, match_size = most_common[0]
 
         # below threshold? no match!
         if match_size < n_threshold_hashes:
@@ -538,26 +543,18 @@ class QuerySpecific_GatherCounter:
         match = siglist[dataset_id]
         location = self.locations[dataset_id]
 
-        # remove from counter for next round of gather
-        del counter[dataset_id]
-
         # calculate containment
-        cont = query_mh.contained_by(match.minhash, downsample=True)
+        cont = cur_query_mh.contained_by(match.minhash, downsample=True)
 
         retval = []
         if cont and cont >= threshold:
-            retval = [IndexSearchResult(cont, match, location)]
-
             # calculate intersection of this "best match" with query
             # for removal.
 
             # @CTB note flatten
             match_mh = match.minhash.downsample(scaled=scaled).flatten()
-            intersect_mh = query_mh.intersection(match_mh)
-            query_mh.remove_many(intersect_mh.hashes)
-
-            # update all counters, etc.
-            self.update_counters(most_common, intersect_mh)
+            intersect_mh = cur_query_mh.intersection(match_mh)
+            retval = [IndexSearchResult(cont, match, location), intersect_mh]
 
         return retval
 
@@ -569,8 +566,17 @@ class CounterGatherIndex(Index):
         self.counter.add(ss, location)
 
     def gather(self, query, threshold_bp=0):
-        return self.counter.next(query.minhash, query.minhash.scaled, threshold_bp)
+        result = self.counter.peek(query.minhash, query.minhash.scaled,
+                                   threshold_bp)
+        if result:
+            (sr, intersect_mh) = result
+            self.counter.consume(intersect_mh)
+            
+            query.minhash.remove_many(intersect_mh.hashes) #  @CTB
 
+            return [sr]
+        return []
+        
     def signatures(self):
         raise NotImplementedError
 
