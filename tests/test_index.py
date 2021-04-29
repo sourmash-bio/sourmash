@@ -14,6 +14,7 @@ from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex,
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
+from sourmash.search import JaccardSearch, SearchType
 
 import sourmash_tst_utils as utils
 
@@ -1081,3 +1082,128 @@ def test_multi_index_load_from_pathlist_3_zipfile(c):
 
     mi = MultiIndex.load_from_pathlist(file_list)
     assert len(mi) == 7
+
+##
+## test a slightly outre version of JaccardSearch - this is a test of the
+## JaccardSearch 'collect' protocol, in particular...
+##
+
+class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
+    "A class that ignores certain results, but still does all the pruning."
+    def __init__(self, ignore_list):
+        super().__init__(SearchType.JACCARD, threshold=0.1)
+        self.ignore_list = ignore_list
+
+    # a collect function that _ignores_ things in the ignore_list
+    def collect(self, score, match):
+        print('in collect; current threshold:', self.threshold)
+        for q in self.ignore_list:
+            print('ZZZ', match, match.similarity(q))
+            if match.similarity(q) == 1.0:
+                print('yes, found.')
+                return False
+
+        # update threshold if not perfect match, which could help prune.
+        self.threshold = score
+        return True
+
+
+def test_linear_index_gather_ignore():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    lidx = LinearIndex([ss2, ss47, ss63])
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(lidx.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_lca_index_gather_ignore():
+    from sourmash.lca import LCA_Database
+
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    db = LCA_Database(ksize=31, scaled=1000)
+    db.insert(ss2)
+    db.insert(ss47)
+    db.insert(ss63)
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(db.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_sbt_index_gather_ignore():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    factory = GraphFactory(5, 100, 3)
+    db = SBT(factory, d=2)
+
+    db.insert(ss2)
+    db.insert(ss47)
+    db.insert(ss63)
+
+    # ...now search with something that should ignore sig47, the exact match.
+    print(f'\n** trying to ignore {ss47}')
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(db.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print('is found?', ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
