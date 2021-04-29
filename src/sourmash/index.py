@@ -216,12 +216,24 @@ class Index(ABC):
         return results[:1]
 
     def counter_gather(self, query, threshold_bp, **kwargs):
+        """Returns an object that permits 'gather' on top of the
+        current contents of this Index.
+
+        The default implementation uses `prefetch` underneath, and returns
+        the results in a `CounterGather` object. However, alternate
+        implementations need only return an object that meets the
+        public `CounterGather` interface, of course.
+        """
+        # build a flat query
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
+        # find all matches and construct a CounterGather object.
         counter = CounterGather(prefetch_query.minhash)
         for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
             counter.add(result.signature, result.location)
+
+        # tada!
         return counter
 
     @abstractmethod
@@ -445,6 +457,8 @@ class CounterGather:
     """
     Track and summarize matches for efficient 'gather' protocol.  This
     could be used downstream of prefetch (for example).
+
+    The public interface is `peek(...)` and `consume(...)` only.
     """
     def __init__(self, query_mh):
         if not query_mh.scaled:
