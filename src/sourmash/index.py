@@ -517,9 +517,10 @@ class CounterGather:
 
         return threshold, n_threshold_hashes
 
-    def peek(self, cur_query_mh, scaled, threshold_bp=0):
+    def peek(self, cur_query_mh, threshold_bp=0):
         "Get next 'gather' result for this database, w/o changing counters."
         self.query_started = 1
+        scaled = cur_query_mh.scaled
 
         # empty? nothing to search.
         counter = self.counter

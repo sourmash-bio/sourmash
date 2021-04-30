@@ -1219,7 +1219,7 @@ def _consume_all(query_mh, counter, threshold_bp=0):
 
     last_intersect_size = None
     while 1:
-        result = counter.peek(query_mh, query_mh.scaled, threshold_bp)
+        result = counter.peek(query_mh, threshold_bp)
         if not result:
             break
 
@@ -1588,7 +1588,7 @@ def test_counter_gather_add_after_peek():
     counter = CounterGather(query_ss.minhash)
     counter.add(query_ss, 'somewhere over the rainbow')
 
-    counter.peek(query_ss.minhash, query_ss.minhash.scaled)
+    counter.peek(query_ss.minhash)
 
     with pytest.raises(ValueError):
         counter.add(query_ss, "try again")
@@ -1636,7 +1636,7 @@ def test_counter_gather_empty_initial_query():
     counter = CounterGather(query_ss.minhash)
     counter.add(match_ss_1, require_overlap=False)
 
-    assert counter.peek(query_ss.minhash, query_ss.minhash.scaled) == []
+    assert counter.peek(query_ss.minhash) == []
 
 
 def test_counter_gather_empty_cur_query():
@@ -1667,7 +1667,7 @@ def test_counter_gather_bad_cur_query():
     cur_query_mh = query_ss.minhash.copy_and_clear()
     cur_query_mh.add_many(range(20, 30))
     with pytest.raises(ValueError):
-        counter.peek(cur_query_mh, cur_query_mh.scaled)
+        counter.peek(cur_query_mh)
 
 
 def test_counter_gather_add_no_overlap():
@@ -1685,7 +1685,7 @@ def test_counter_gather_add_no_overlap():
     with pytest.raises(ValueError):
         counter.add(match_ss_1)
 
-    assert counter.peek(query_ss.minhash, query_ss.minhash.scaled) == []
+    assert counter.peek(query_ss.minhash) == []
 
 
 def test_counter_gather_big_threshold():
@@ -1704,8 +1704,7 @@ def test_counter_gather_big_threshold():
 
     # impossible threshold:
     threshold_bp=30*query_ss.minhash.scaled
-    results = counter.peek(query_ss.minhash, query_ss.minhash.scaled,
-                           threshold_bp=threshold_bp)
+    results = counter.peek(query_ss.minhash, threshold_bp=threshold_bp)
     assert results == []
 
 
@@ -1717,4 +1716,4 @@ def test_counter_gather_empty_counter():
     # empty counter!
     counter = CounterGather(query_ss.minhash)
 
-    assert counter.peek(query_ss.minhash, query_ss.minhash.scaled) == []
+    assert counter.peek(query_ss.minhash) == []
