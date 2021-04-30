@@ -84,9 +84,9 @@ def test_load_pathlist_from_file_empty(c):
     file_list = c.output("file_list")
     with open(file_list, "w") as fp:
         fp.write("")
-    # with pytest.raises(IndexError) as e:
-    load_pathlist_from_file(file_list)
-        # assert "list index out of range" in e.message
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+        assert "list-of-files is empty" in e.message
 
 
 @utils.in_tempdir
@@ -97,9 +97,9 @@ def test_load_pathlist_from_file_badly_formatted(c):
     with open(file_list, "w") as fp:
         fp.write("{'a':1}")
 
-    # with pytest.raises(ValueError) as e:
-    load_pathlist_from_file(file_list)
-        # assert "first element of list-of-files does not exist" in e.message
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+        assert "list-of-files contains a badly formatted file" in e.message
     
 
 @utils.in_tempdir
@@ -116,9 +116,10 @@ def test_load_pathlist_from_file_badly_formatted_2(c):
     with open(file_list, "w") as fp:
         fp.write(new_file + "\n")
         fp.write("{'a':1}")
-    
-    sigs = load_pathlist_from_file(file_list)
-    assert len(sigs) == 1
+
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+        assert "list-of-files contains a badly formatted file" in e.message
 
 
 @utils.in_tempdir
