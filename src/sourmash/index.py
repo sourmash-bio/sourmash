@@ -465,8 +465,7 @@ class CounterGather:
             raise ValueError('gather requires scaled signatures')
 
         # track query
-        #CTBself.orig_query_mh = copy.copy(query_mh).flatten()
-        self.orig_query_mh = copy.copy(query_mh)
+        self.orig_query_mh = copy.copy(query_mh).flatten()
         self.scaled = query_mh.scaled
 
         # track matching signatures & their locations
@@ -494,7 +493,6 @@ class CounterGather:
             self.locations.append(location)
 
             # note: scaled will be max of all matches.
-            #CTBself.downsample(ss.minhash.scaled)
             self.downsample(ss.minhash.scaled)
         elif require_overlap:
             raise ValueError("no overlap between query and signature!?")
@@ -591,7 +589,7 @@ class CounterGather:
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
         for (dataset_id, _) in most_common:
-            # CTB: note, remaining_mh may not be at correct scaled.
+            # CTB: note, remaining_mh may not be at correct scaled here.
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)

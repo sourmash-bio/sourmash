@@ -1363,6 +1363,162 @@ def test_counter_gather_1_c_with_threshold():
         assert size == exp_size
 
 
+def test_counter_gather_1_d_diff_scaled():
+    # test as above, but with different scaled.
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
+    match_mh_2.add_many(range(7, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
+    match_mh_3.add_many(range(13, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    counter.add(match_ss_1)
+    counter.add(match_ss_2)
+    counter.add(match_ss_3)
+
+    results = _consume_all(query_ss.minhash, counter)
+
+    expected = (['match1', 10],
+                ['match2', 5],
+                ['match3', 2],)
+    assert len(results) == len(expected), results
+
+    for (sr, size), (exp_name, exp_size) in zip(results, expected):
+        sr_name = sr.signature.name.split()[0]
+
+        assert sr_name == exp_name
+        assert size == exp_size
+
+
+def test_counter_gather_1_d_diff_scaled_query():
+    # test as above, but with different scaled for QUERY.
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+
+    match_mh_1 = query_mh.copy_and_clear().downsample(scaled=10)
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear().downsample(scaled=20)
+    match_mh_2.add_many(range(7, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear().downsample(scaled=30)
+    match_mh_3.add_many(range(13, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    # downsample query now -
+    query_ss = SourmashSignature(query_mh.downsample(scaled=100), name='query')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    counter.add(match_ss_1)
+    counter.add(match_ss_2)
+    counter.add(match_ss_3)
+
+    results = _consume_all(query_ss.minhash, counter)
+
+    expected = (['match1', 10],
+                ['match2', 5],
+                ['match3', 2],)
+    assert len(results) == len(expected), results
+
+    for (sr, size), (exp_name, exp_size) in zip(results, expected):
+        sr_name = sr.signature.name.split()[0]
+
+        assert sr_name == exp_name
+        assert size == exp_size
+
+
+def test_counter_gather_1_e_abund_query():
+    # test as above, but abund query
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear().flatten()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear().flatten()
+    match_mh_2.add_many(range(7, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear().flatten()
+    match_mh_3.add_many(range(13, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    counter.add(match_ss_1)
+    counter.add(match_ss_2)
+    counter.add(match_ss_3)
+
+    # must flatten before peek!
+    results = _consume_all(query_ss.minhash.flatten(), counter)
+
+    expected = (['match1', 10],
+                ['match2', 5],
+                ['match3', 2],)
+    assert len(results) == len(expected), results
+
+    for (sr, size), (exp_name, exp_size) in zip(results, expected):
+        sr_name = sr.signature.name.split()[0]
+
+        assert sr_name == exp_name
+        assert size == exp_size
+
+
+def test_counter_gather_1_f_abund_match():
+    # test as above, but abund query
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1, track_abundance=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh.flatten(), name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(7, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear()
+    match_mh_3.add_many(range(13, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    counter.add(match_ss_1)
+    counter.add(match_ss_2)
+    counter.add(match_ss_3)
+
+    # must flatten before peek!
+    results = _consume_all(query_ss.minhash.flatten(), counter)
+
+    expected = (['match1', 10],
+                ['match2', 5],
+                ['match3', 2],)
+    assert len(results) == len(expected), results
+
+    for (sr, size), (exp_name, exp_size) in zip(results, expected):
+        sr_name = sr.signature.name.split()[0]
+
+        assert sr_name == exp_name
+        assert size == exp_size
+
+
 def test_counter_gather_2():
     # check basic set of gather results on semi-real data,
     # generated via CounterGather
