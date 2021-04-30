@@ -392,13 +392,18 @@ def load_pathlist_from_file(filename):
         with open(filename, 'rt') as fp:
             file_list = [ x.rstrip('\r\n') for x in fp ]
         if len(file_list) == 0:
-            raise ValueError("list-of-files is empty")
-        cnt = 0
+            raise ValueError("pathlist is empty")
+        badFormat = 0
+        duplicate = []
         for i in range(len(file_list)):
             if not os.path.exists(file_list[i]):
-                cnt = cnt + 1
-        if cnt > 0:
-            raise ValueError("list-of-files contains a badly formatted file")
+                badFormat = badFormat + 1
+            if file_list[i] not in duplicate:
+                duplicate.append(file_list[i])
+        if badFormat > 0:
+            raise ValueError("pathlist contains a badly formatted file")
+        if len(duplicate) != len(file_list):
+            raise ValueError("pathlist contains a duplicate file")
 
     except IOError:
         raise ValueError(f"file '{filename}' does not exist")    
