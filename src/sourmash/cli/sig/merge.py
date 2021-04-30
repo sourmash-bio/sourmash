@@ -20,6 +20,10 @@ def subparser(subparsers):
         '--flatten', action='store_true',
         help='remove abundances from all signatures'
     )
+    subparser.add_argument(
+        '--name',
+        help='rename merged signature'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 

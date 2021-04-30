@@ -91,6 +91,25 @@ def test_sig_merge_1_multisig(c):
 
 
 @utils.in_tempdir
+def test_sig_merge_1_name(c):
+    # check name arg
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    assignedSigName = 'SIG_NAME'
+    outsig = c.output('merged2and63.sig')
+
+    c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31', '-o', "merged2and63.sig", '--name', assignedSigName )
+    
+    test_merge_sig = sourmash.load_one_signature(outsig)
+
+    print("outsig", outsig)
+    print("xx_test_merge_sig.name", test_merge_sig.name)
+
+    assert assignedSigName == test_merge_sig.name
+
+
+@utils.in_tempdir
 def test_sig_merge_1_ksize_moltype(c):
     # check ksize, moltype args
     sig2 = utils.get_test_data('2.fa.sig')
