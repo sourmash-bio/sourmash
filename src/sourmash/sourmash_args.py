@@ -391,14 +391,24 @@ def load_pathlist_from_file(filename):
     try:
         with open(filename, 'rt') as fp:
             file_list = [ x.rstrip('\r\n') for x in fp ]
+        if not os.path.exists(file_list):
+            raise ValueError("list-of-files does not exist")
+        if os.path.getsize(file_list[0]) == 0:
+            raise ValueError("list-of-files is empty")
+            cnt = 0
+        for i in file_list:
+            if not os.path.exists(file_list):
+                cnt = cnt + 1
+        if cnt > 0:
+            raise ValueError("list-of-files contains a badly formatted file")
 
-        if not os.path.exists(file_list[0]):
-            raise ValueError("first element of list-of-files does not exist")
+    except IOError:
+        raise ValueError(f"file '{filename}' does not exist")    
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
         raise ValueError(f"cannot parse file '{filename}' as list of filenames")
-
+    
     return file_list
 
 
