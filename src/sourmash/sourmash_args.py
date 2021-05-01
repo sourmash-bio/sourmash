@@ -7,6 +7,8 @@ import argparse
 import itertools
 from enum import Enum
 import traceback
+import gzip
+import zipfile
 
 import screed
 
@@ -535,3 +537,149 @@ class SignatureLoadingProgress(object):
             self.n_sig += n_this
 
         self.short_notify("loaded {} sigs from '{}'", n_this, filename)
+
+
+#
+# enum and classes for saving signatures progressively
+#
+
+# @CTB filename or fp?
+# @CTB stdout?
+# @CTB provide repr/str
+# @CTB some of this functioanlity is getting close to Index.save
+# @CTB lca json, sbt.zip?
+
+class _BaseSaveSignaturesToLocation:
+    "Base signature saving class. Track location (if any) and count."
+    def __init__(self, location):
+        self.location = location
+        self.count = 0
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def add(self, ss):
+        self.count += 1
+
+
+class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
+    "Do not save signatures."
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+
+class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        
+    def close(self):
+        pass
+
+    def open(self):
+        try:
+            os.mkdir(self.location)
+        except FileExistsError:
+            pass
+        except:
+            notify("ERROR: cannot create signature output directory '{}'",
+                   self.location)
+            sys.exit(-1)
+
+    def add(self, ss):
+        super().add(ss)
+        md5 = ss.md5sum()
+        outname = os.path.join(self.location, f"{md5}.sig.gz")
+        with gzip.open(outname, "wb") as fp:
+            sig.save_signatures([ss], fp, compression=1)
+
+
+class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
+    "Save signatures within a directory, using md5sum names."
+    def __init__(self, location):
+        super().__init__(location)
+        self.keep = []
+        self.compress = 0
+        if self.location.endswith('.gz'):
+            self.compress = 1
+
+    def open(self):
+        pass
+
+    def close(self):
+        with open(self.location, "wb") as fp:
+            sourmash.save_signatures(self.keep, fp, compression=self.compress)
+
+    def add(self, ss):
+        super().add(ss)
+        self.keep.append(ss)
+
+
+class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
+    "Save compressed signatures in an uncompressed Zip file."
+    def __init__(self, location):
+        super().__init__(location)
+        self.zf = None
+        
+    def close(self):
+        self.zf.close()
+
+    def open(self):
+        self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
+
+    def add(self, ss):
+        super().add(ss)
+        assert self.zf
+
+        md5 = ss.md5sum()
+        outname = f"signatures/{md5}.sig.gz"
+        json_str = sourmash.save_signatures([ss], compression=1)
+        self.zf.writestr(outname, json_str)
+
+
+class SigFileSaveType(Enum):
+    SIGFILE = 1
+    SIGFILE_GZ = 2
+    DIRECTORY = 3
+    ZIPFILE = 4
+    NO_OUTPUT = 5
+
+_save_classes = {
+    SigFileSaveType.SIGFILE: SaveSignatures_SigFile,
+    SigFileSaveType.SIGFILE_GZ: SaveSignatures_SigFile,
+    SigFileSaveType.DIRECTORY: SaveSignatures_Directory,
+    SigFileSaveType.ZIPFILE: SaveSignatures_ZipFile,
+    SigFileSaveType.NO_OUTPUT: SaveSignatures_NoOutput
+}
+
+
+def SaveSignaturesToLocation(filename, *, force_type=None):
+    """Create and return an appropriate object for progressive saving of
+    signatures."""
+    save_type = None
+    if not force_type:
+        if filename is None:
+            save_type = SigFileSaveType.NO_OUTPUT
+        elif filename.endswith('/'):
+            save_type = SigFileSaveType.DIRECTORY
+        elif filename.endswith('.gz'):
+            save_type = SigFileSaveType.SIGFILE_GZ
+        elif filename.endswith('.zip'):
+            save_type = SigFileSaveType.ZIPFILE
+        else:
+            save_type = SigFileSaveType.SIGFILE
+    else:
+        save_type = force_type
+
+    cls = _save_classes.get(save_type)
+    if cls is None:
+        raise Exception("invalid save type; this should never happen!?")
+
+    return cls(filename)
