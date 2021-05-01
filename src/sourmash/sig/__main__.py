@@ -382,7 +382,7 @@ def merge(args):
         error("no signatures to merge!?")
         sys.exit(-1)
 
-    merged_sigobj = sourmash.SourmashSignature(mh)
+    merged_sigobj = sourmash.SourmashSignature(mh, name=args.name)
 
     with FileOutput(args.output, 'wt') as fp:
         sourmash.save_signatures([merged_sigobj], fp=fp)
