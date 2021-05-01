@@ -76,7 +76,7 @@ def test_load_pathlist_from_file_does_not_exist():
     from sourmash.sourmash_args import load_pathlist_from_file
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file("")
-        assert "file '' does not exist" in e.message
+        assert 0                # this does not fail; why?
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_empty(c):
