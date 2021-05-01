@@ -363,10 +363,11 @@ across all leaf nodes in the tree.
 
 ### Caveats and comments
 
-`sourmash prefetch` provides no guarantee on output order.
-
-`sourmash prefetch` can be run individually on multiple databases, and then
-combined 
+`sourmash prefetch` provides no guarantees on output order. It runs in
+"streaming mode" on its inputs, in that each input file is loaded,
+searched, and then unloaded.  And `sourmash prefetch` can be run
+separately on multiple databases, after which the results can be
+searched in combination with `search`, `gather`, `compare`, etc.
 
 A motivating use case for `sourmash prefetch` is to run it on multiple
 large databases with a metagenome query using `--threshold-bp=0`,
