@@ -6,6 +6,7 @@ import glob
 import os
 import zipfile
 import shutil
+import copy
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
@@ -1717,3 +1718,88 @@ def test_counter_gather_empty_counter():
     counter = CounterGather(query_ss.minhash)
 
     assert counter.peek(query_ss.minhash) == []
+
+
+def test_counter_gather_3_test_consume():
+    # open-box testing of consume(...)
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh_1 = query_mh.copy_and_clear()
+    match_mh_1.add_many(range(0, 10))
+    match_ss_1 = SourmashSignature(match_mh_1, name='match1')
+
+    match_mh_2 = query_mh.copy_and_clear()
+    match_mh_2.add_many(range(7, 15))
+    match_ss_2 = SourmashSignature(match_mh_2, name='match2')
+
+    match_mh_3 = query_mh.copy_and_clear()
+    match_mh_3.add_many(range(13, 17))
+    match_ss_3 = SourmashSignature(match_mh_3, name='match3')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    counter.add(match_ss_1, 'loc a')
+    counter.add(match_ss_2, 'loc b')
+    counter.add(match_ss_3, 'loc c')
+
+    ### ok, dig into actual counts...
+    import pprint
+    pprint.pprint(counter.counter)
+    pprint.pprint(counter.siglist)
+    pprint.pprint(counter.locations)
+
+    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    assert counter.locations == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.items()) == [(0, 10), (1, 8), (2, 4)]
+
+    ## round 1
+
+    cur_query = copy.copy(query_ss.minhash)
+    (sr, intersect_mh) = counter.peek(cur_query)
+    assert sr.signature == match_ss_1
+    assert len(intersect_mh) == 10
+    assert cur_query == query_ss.minhash
+
+    counter.consume(intersect_mh)
+    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    assert counter.locations == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.items()) == [(1, 5), (2, 4)]
+
+    ### round 2
+
+    cur_query.remove_many(intersect_mh.hashes)
+    (sr, intersect_mh) = counter.peek(cur_query)
+    assert sr.signature == match_ss_2
+    assert len(intersect_mh) == 5
+    assert cur_query != query_ss.minhash
+
+    counter.consume(intersect_mh)
+    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    assert counter.locations == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.items()) == [(2, 2)]
+
+    ## round 3
+
+    cur_query.remove_many(intersect_mh.hashes)
+    (sr, intersect_mh) = counter.peek(cur_query)
+    assert sr.signature == match_ss_3
+    assert len(intersect_mh) == 2
+    assert cur_query != query_ss.minhash
+
+    counter.consume(intersect_mh)
+    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    assert counter.locations == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.items()) == []
+
+    ## round 4 - nothing left!
+
+    cur_query.remove_many(intersect_mh.hashes)
+    results = counter.peek(cur_query)
+    assert not results
+
+    counter.consume(intersect_mh)
+    assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
+    assert counter.locations == ['loc a', 'loc b', 'loc c']
+    assert list(counter.counter.items()) == []
