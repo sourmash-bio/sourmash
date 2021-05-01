@@ -1640,6 +1640,16 @@ def test_counter_gather_empty_initial_query():
     assert counter.peek(query_ss.minhash) == []
 
 
+def test_counter_gather_num_query():
+    # check num query
+    query_mh = sourmash.MinHash(n=500, ksize=31)
+    query_mh.add_many(range(0, 10))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    with pytest.raises(ValueError):
+        counter = CounterGather(query_ss.minhash)
+
+
 def test_counter_gather_empty_cur_query():
     # test empty cur query
     query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
@@ -1653,6 +1663,22 @@ def test_counter_gather_empty_cur_query():
     cur_query_mh = query_ss.minhash.copy_and_clear()
     results = _consume_all(cur_query_mh, counter)
     assert results == []
+
+
+def test_counter_gather_add_num_matchy():
+    # test add num query
+    query_mh = sourmash.MinHash(n=0, ksize=31, scaled=1)
+    query_mh.add_many(range(0, 20))
+    query_ss = SourmashSignature(query_mh, name='query')
+
+    match_mh = sourmash.MinHash(n=500, ksize=31)
+    match_mh.add_many(range(0, 20))
+    match_ss = SourmashSignature(match_mh, name='query')
+
+    # load up the counter
+    counter = CounterGather(query_ss.minhash)
+    with pytest.raises(ValueError):
+        counter.add(match_ss, 'somewhere over the rainbow')
 
 
 def test_counter_gather_bad_cur_query():
