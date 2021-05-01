@@ -392,7 +392,7 @@ def load_pathlist_from_file(filename):
         with open(filename, 'rt') as fp:
             file_list = [ x.rstrip('\r\n') for x in fp ]
         if len(file_list) == 0:
-            raise ValueError("pathlist is empty")
+            raise ValueError("random error message!!!")
         badFormat = 0
         duplicate = []
         for i in range(len(file_list)):
