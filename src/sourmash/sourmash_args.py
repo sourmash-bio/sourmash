@@ -425,16 +425,18 @@ class FileOutput(object):
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt', newline=None):
+    def __init__(self, filename, mode='wt', *, newline=None, encoding='utf-8'):
         self.filename = filename
         self.mode = mode
         self.fp = None
         self.newline = newline
+        self.encoding = encoding
 
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, self.mode, newline=self.newline)
+        self.fp = open(self.filename, self.mode, newline=self.newline,
+                       encoding=self.encoding)
         return self.fp
 
     def __enter__(self):
@@ -630,7 +632,16 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
         if self.location == '-':
             sourmash.save_signatures(self.keep, sys.stdout)
         else:
-            with open(self.location, "wb") as fp:
+            # text mode? encode in utf-8
+            mode = "w"
+            encoding = 'utf-8'
+
+            # compressed? bytes & binary.
+            if self.compress:
+                encoding = None
+                mode = "wb"
+
+            with open(self.location, mode, encoding=encoding) as fp:
                 sourmash.save_signatures(self.keep, fp,
                                          compression=self.compress)
 
