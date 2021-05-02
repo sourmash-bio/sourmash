@@ -3343,7 +3343,7 @@ def test_multigather_metagenome_query_with_lca(c):
 
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
-    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+#    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 
@@ -3518,7 +3518,7 @@ def test_multigather_metagenome_lca_query_from_file(c):
 
     assert 'conducted gather searches on 2 signatures' in err
     assert 'the recovered matches hit 100.0% of the query' in out
-    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
+#    assert '5.1 Mbp      100.0%   64.9%    491c0a81'  in out
     assert '5.5 Mbp      100.0%   69.4%    491c0a81'  in out
 
 

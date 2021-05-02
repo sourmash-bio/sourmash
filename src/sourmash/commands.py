@@ -655,17 +655,14 @@ def gather(args):
     # @CTB experimental! w00t fun!
     if args.prefetch or 1:
         notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
-        from .index import LinearIndex, CounterGatherIndex
-        prefetch_idx = CounterGatherIndex(query)
 
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()
 
+        counters = []
         for db in databases:
-            for match in db.prefetch(prefetch_query, args.threshold_bp):
-                prefetch_idx.insert(match.signature, location=match.location)
-
-        databases = [ prefetch_idx ]
+            counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            counters.append(counter)
 
     found = []
     weighted_missed = 1
@@ -674,7 +671,7 @@ def gather(args):
     new_max_hash = query.minhash._max_hash
     next_query = query
 
-    gather_iter = gather_databases(query, databases, args.threshold_bp,
+    gather_iter = gather_databases(query, counters, args.threshold_bp,
                                    args.ignore_abundance)
     for result, weighted_missed, new_max_hash, next_query in gather_iter:
         if not len(found):                # first result? print header.
@@ -821,10 +818,20 @@ def multigather(args):
                 error('no query hashes!? skipping to next..')
                 continue
 
+            notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
+            counters = []
+            prefetch_query = copy.copy(query)
+            prefetch_query.minhash = prefetch_query.minhash.flatten()
+
+            counters = []
+            for db in databases:
+                counter = db.counter_gather(prefetch_query, args.threshold_bp)
+                counters.append(counter)
+
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
-            for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
+            for result, weighted_missed, new_max_hash, next_query in gather_databases(query, counters, args.threshold_bp, args.ignore_abundance):
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
