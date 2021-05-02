@@ -543,8 +543,6 @@ class SignatureLoadingProgress(object):
 # enum and classes for saving signatures progressively
 #
 
-# @CTB stdout?
-# @CTB provide repr/str
 # @CTB lca json, sbt.zip?
 
 class _BaseSaveSignaturesToLocation:
@@ -555,6 +553,9 @@ class _BaseSaveSignaturesToLocation:
 
     def __repr__(self):
         raise NotImplementedError
+
+    def __len__(self):
+        return self.count
 
     def __enter__(self):
         "provide context manager functionality"
