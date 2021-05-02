@@ -543,10 +543,8 @@ class SignatureLoadingProgress(object):
 # enum and classes for saving signatures progressively
 #
 
-# @CTB filename or fp?
 # @CTB stdout?
 # @CTB provide repr/str
-# @CTB some of this functioanlity is getting close to Index.save
 # @CTB lca json, sbt.zip?
 
 class _BaseSaveSignaturesToLocation:
@@ -556,10 +554,12 @@ class _BaseSaveSignaturesToLocation:
         self.count = 0
 
     def __enter__(self):
+        "provide context manager functionality"
         self.open()
         return self
 
     def __exit__(self, type, value, traceback):
+        "provide context manager functionality"
         self.close()
 
     def add(self, ss):
@@ -635,8 +635,8 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
 
     def add(self, ss):
-        super().add(ss)
         assert self.zf
+        super().add(ss)
 
         md5 = ss.md5sum()
         outname = f"signatures/{md5}.sig.gz"
