@@ -526,7 +526,6 @@ def search(args):
     if args.save_matches:
         notify('saving all matched signatures to "{}"', args.save_matches)
 
-        assert 0
         with SaveSignaturesToLocation(args.save_matches) as save_sig:
             for sr in results:
                 save_sig.add(sr.match)
