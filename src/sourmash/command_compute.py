@@ -9,7 +9,7 @@ import screed
 import time
 
 from . import sourmash_args
-from .signature import SourmashSignature, save_signatures
+from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .utils import RustObject
 from ._lowlevel import ffi, lib
@@ -268,8 +268,9 @@ def set_sig_name(sigs, filename, name=None):
 
 def save_siglist(siglist, sigfile_name):
     # save!
-    with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
-        save_signatures(siglist, fp)
+    with sourmash_args.SaveSignaturesToLocation(sigfile_name) as save_sig:
+        for ss in siglist:
+            save_sig.add(ss)
     notify('saved signature(s) to {}. Note: signature license is CC0.',
            sigfile_name)
 
