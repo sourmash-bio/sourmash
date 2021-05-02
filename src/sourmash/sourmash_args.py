@@ -545,8 +545,6 @@ class SignatureLoadingProgress(object):
 # enum and classes for saving signatures progressively
 #
 
-# @CTB lca json, sbt.zip?
-
 class _BaseSaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
     def __init__(self, location):
