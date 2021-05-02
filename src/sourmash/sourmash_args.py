@@ -553,6 +553,9 @@ class _BaseSaveSignaturesToLocation:
         self.location = location
         self.count = 0
 
+    def __repr__(self):
+        raise NotImplementedError
+
     def __enter__(self):
         "provide context manager functionality"
         self.open()
@@ -568,6 +571,9 @@ class _BaseSaveSignaturesToLocation:
 
 class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     "Do not save signatures."
+    def __repr__(self):
+        return 'SaveSignatures_NoOutput()'
+
     def open(self):
         pass
 
@@ -580,6 +586,9 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         
+    def __repr__(self):
+        return f"SaveSignatures_Directory('{self.location}')"
+
     def close(self):
         pass
 
@@ -610,12 +619,19 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
         if self.location.endswith('.gz'):
             self.compress = 1
 
+    def __repr__(self):
+        return f"SaveSignatures_SigFile('{self.location}')"
+
     def open(self):
         pass
 
     def close(self):
-        with open(self.location, "wb") as fp:
-            sourmash.save_signatures(self.keep, fp, compression=self.compress)
+        if self.location == '-':
+            sourmash.save_signatures(self.keep, sys.stdout)
+        else:
+            with open(self.location, "wb") as fp:
+                sourmash.save_signatures(self.keep, fp,
+                                         compression=self.compress)
 
     def add(self, ss):
         super().add(ss)
@@ -628,6 +644,9 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         super().__init__(location)
         self.zf = None
         
+    def __repr__(self):
+        return f"SaveSignatures_ZipFile('{self.location}')"
+
     def close(self):
         self.zf.close()
 
@@ -674,6 +693,7 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
         else:
+            # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE
     else:
         save_type = force_type
