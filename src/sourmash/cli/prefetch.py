@@ -32,7 +32,7 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '--save-matches', metavar='FILE',
-        help='save all matched signatures from the databases to the '
+        help='save all matching signatures from the databases to the '
         'specified file or directory'
     )
     subparser.add_argument(
