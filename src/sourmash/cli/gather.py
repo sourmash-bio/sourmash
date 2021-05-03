@@ -62,11 +62,22 @@ def subparser(subparsers):
     )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
+
+    # advanced parameters
     subparser.add_argument(
         '--linear', dest="linear", action='store_true',
+        help="force a low-memory but maybe slower database search",
     )
     subparser.add_argument(
         '--no-linear', dest="linear", action='store_false',
+    )
+    subparser.add_argument(
+        '--no-prefetch', dest="prefetch", action='store_false',
+        help="do not use prefetch before gather; see documentation",
+    )
+    subparser.add_argument(
+        '--prefetch', dest="linear", action='store_true',
+        help="use prefetch before gather; see documentation",
     )
 
 
