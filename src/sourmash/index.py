@@ -5,6 +5,7 @@ import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
+import copy
 
 from .search import make_jaccard_search_query, make_gather_query
 
@@ -213,6 +214,27 @@ class Index(ABC):
                      key=lambda x: (x.score, x.signature.md5sum()))
 
         return results[:1]
+
+    def counter_gather(self, query, threshold_bp, **kwargs):
+        """Returns an object that permits 'gather' on top of the
+        current contents of this Index.
+
+        The default implementation uses `prefetch` underneath, and returns
+        the results in a `CounterGather` object. However, alternate
+        implementations need only return an object that meets the
+        public `CounterGather` interface, of course.
+        """
+        # build a flat query
+        prefetch_query = copy.copy(query)
+        prefetch_query.minhash = prefetch_query.minhash.flatten()
+
+        # find all matches and construct a CounterGather object.
+        counter = CounterGather(prefetch_query.minhash)
+        for result in self.prefetch(prefetch_query, threshold_bp, **kwargs):
+            counter.add(result.signature, result.location)
+
+        # tada!
+        return counter
 
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
@@ -431,135 +453,151 @@ class ZipFileLinearIndex(Index):
                                   traverse_yield_all=self.traverse_yield_all)
 
 
-class CounterGatherIndex(Index):
-    def __init__(self, query):
-        self.query = query
-        self.scaled = query.minhash.scaled
-        self.siglist = []
-        self.locations = []
-        self.counter = Counter()
+class CounterGather:
+    """
+    Track and summarize matches for efficient 'gather' protocol.  This
+    could be used downstream of prefetch (for example).
 
-    def insert(self, ss, location=None):
-        i = len(self.siglist)
-        self.siglist.append(ss)
-        self.locations.append(location)
-
-        # upon insertion, count & track overlap with the specific query.
-        self.scaled = max(self.scaled, ss.minhash.scaled)
-        self.counter[i] = self.query.minhash.count_common(ss.minhash, True)
-
-    def gather(self, query, threshold_bp=0, **kwargs):
-        "Perform compositional analysis of the query using the gather algorithm"
-        # CTB: switch over to JaccardSearch objects?
-
-        if not query.minhash:             # empty query? quit.
-            return []
-
-        # bad query?
-        scaled = query.minhash.scaled
-        if not scaled:
+    The public interface is `peek(...)` and `consume(...)` only.
+    """
+    def __init__(self, query_mh):
+        if not query_mh.scaled:
             raise ValueError('gather requires scaled signatures')
 
-        if scaled == self.scaled:
-            query_mh = query.minhash
-        elif scaled < self.scaled:
-            query_mh = query.minhash.downsample(scaled=self.scaled)
-            scaled = self.scaled
-        else: # query scaled > self.scaled, should never happen
-            assert 0
+        # track query
+        self.orig_query_mh = copy.copy(query_mh).flatten()
+        self.scaled = query_mh.scaled
 
-        # empty? nothing to search.
-        counter = self.counter
-        siglist = self.siglist
-        if not (counter and siglist):
-            return []
+        # track matching signatures & their locations
+        self.siglist = []
+        self.locations = []
 
+        # ...and overlaps with query
+        self.counter = Counter()
+
+        # cannot add matches once query has started.
+        self.query_started = 0
+
+    def add(self, ss, location=None, require_overlap=True):
+        "Add this signature in as a potential match."
+        if self.query_started:
+            raise ValueError("cannot add more signatures to counter after peek/consume")
+
+        # upon insertion, count & track overlap with the specific query.
+        overlap = self.orig_query_mh.count_common(ss.minhash, True)
+        if overlap:
+            i = len(self.siglist)
+
+            self.counter[i] = overlap
+            self.siglist.append(ss)
+            self.locations.append(location)
+
+            # note: scaled will be max of all matches.
+            self.downsample(ss.minhash.scaled)
+        elif require_overlap:
+            raise ValueError("no overlap between query and signature!?")
+
+    def downsample(self, scaled):
+        "Track highest scaled across all possible matches."
+        if scaled > self.scaled:
+            self.scaled = scaled
+
+    def calc_threshold(self, threshold_bp, scaled, query_size):
+        # CTB: this code doesn't need to be in this class.
         threshold = 0.0
         n_threshold_hashes = 0
 
-        # are we setting a threshold?
         if threshold_bp:
             # if we have a threshold_bp of N, then that amounts to N/scaled
             # hashes:
             n_threshold_hashes = float(threshold_bp) / scaled
 
             # that then requires the following containment:
-            threshold = n_threshold_hashes / len(query_mh)
+            threshold = n_threshold_hashes / query_size
 
-            # is it too high to ever match? if so, exit.
-            if threshold > 1.0:
-                return []
+        return threshold, n_threshold_hashes
 
-        # Decompose query into matching signatures using a greedy approach
-        # (gather)
-        match_size = n_threshold_hashes
+    def peek(self, cur_query_mh, threshold_bp=0):
+        "Get next 'gather' result for this database, w/o changing counters."
+        self.query_started = 1
+        scaled = cur_query_mh.scaled
 
-        most_common = counter.most_common()
-        dataset_id, size = most_common.pop(0)
-
-        # fail threshold!
-        if size < n_threshold_hashes:
+        # empty? nothing to search.
+        counter = self.counter
+        if not counter:
             return []
 
-        match_size = size
+        siglist = self.siglist
+        assert siglist
+
+        self.downsample(scaled)
+        scaled = self.scaled
+        cur_query_mh = cur_query_mh.downsample(scaled=scaled)
+
+        if not cur_query_mh:             # empty query? quit.
+            return []
+
+        if cur_query_mh.contained_by(self.orig_query_mh, downsample=True) < 1:
+            raise ValueError("current query not a subset of original query")
+
+        # are we setting a threshold?
+        threshold, n_threshold_hashes = self.calc_threshold(threshold_bp,
+                                                            scaled,
+                                                            len(cur_query_mh))
+        # is it too high to ever match? if so, exit.
+        if threshold > 1.0:
+            return []
+
+        # Find the best match -
+        most_common = counter.most_common()
+        dataset_id, match_size = most_common[0]
+
+        # below threshold? no match!
+        if match_size < n_threshold_hashes:
+            return []
+
+        ## at this point, we must have a legitimate match above threshold!
 
         # pull match and location.
         match = siglist[dataset_id]
+
+        # calculate containment
+        cont = cur_query_mh.contained_by(match.minhash, downsample=True)
+        assert cont
+        assert cont >= threshold
+
+        # calculate intersection of this "best match" with query.
+        match_mh = match.minhash.downsample(scaled=scaled).flatten()
+        intersect_mh = cur_query_mh.intersection(match_mh)
         location = self.locations[dataset_id]
 
-        # remove from counter for next round of gather
-        del counter[dataset_id]
+        # build result & return intersection
+        return (IndexSearchResult(cont, match, location), intersect_mh)
 
-        # pull containment
-        cont = query_mh.contained_by(match.minhash, downsample=True)
-        result = None
-        if cont and cont >= threshold:
-            result = IndexSearchResult(cont, match, location)
+    def consume(self, intersect_mh):
+        "Remove the given hashes from this counter."
+        self.query_started = 1
 
-        # calculate intersection of this "best match" with query, for removal.
-        # @CTB note flatten
-        match_mh = match.minhash.downsample(scaled=scaled).flatten()
-        intersect_mh = query_mh.intersection(match_mh)
+        if not intersect_mh:
+            return
+
+        siglist = self.siglist
+        counter = self.counter
+
+        most_common = counter.most_common()
 
         # Prepare counter for finding the next match by decrementing
         # all hashes found in the current match in other datasets;
         # remove empty datasets from counter, too.
         for (dataset_id, _) in most_common:
-            remaining_sig = siglist[dataset_id]
-            intersect_count = remaining_sig.minhash.count_common(intersect_mh,
-                                                               downsample=True)
-            counter[dataset_id] -= intersect_count
-            if counter[dataset_id] == 0:
-                del counter[dataset_id]
-
-        if result:
-            return [result]
-        return []
-
-    def signatures(self):
-        raise NotImplementedError
-
-    def signatures_with_location(self):
-        raise NotImplementedError
-
-    def prefetch(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def load(self, *args):
-        raise NotImplementedError
-
-    def save(self, *args):
-        raise NotImplementedError
-
-    def find(self, search_fn, *args, **kwargs):
-        raise NotImplementedError
-
-    def search(self, query, *args, **kwargs):
-        raise NotImplementedError
-
-    def select(self, *args, **kwargs):
-        raise NotImplementedError
+            # CTB: note, remaining_mh may not be at correct scaled here.
+            remaining_mh = siglist[dataset_id].minhash
+            intersect_count = intersect_mh.count_common(remaining_mh,
+                                                        downsample=True)
+            if intersect_count:
+                counter[dataset_id] -= intersect_count
+                if counter[dataset_id] == 0:
+                    del counter[dataset_id]
 
 
 class MultiIndex(Index):
