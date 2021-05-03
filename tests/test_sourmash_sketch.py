@@ -374,8 +374,8 @@ def test_do_sourmash_sketchdna_output_zipfile():
         assert os.path.exists(outfile)
         assert not out # stdout should be empty
 
-        # @CTB do more testing here once panic is fixed!
-        assert 0
+        sigs = list(sourmash.load_file_as_signatures(outfile))
+        assert len(sigs) == 3
 
 
 def test_do_sourmash_sketchdna_output_stdout_valid():
