@@ -829,7 +829,7 @@ def test_search_lca_db(c):
     assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
 
 
-def test_search_query_db_md5(runtmp, linear_gather):
+def test_search_query_db_md5(runtmp):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
     runtmp.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
@@ -3864,7 +3864,9 @@ def test_gather_query_downsample_explicit():
                     'NC_003197.2' in out))
 
 
-def test_gather_save_matches():
+def test_gather_save_matches(linear_gather):
+    do_linear = "--linear" if linear_gather else '--no-linear'
+
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -3884,6 +3886,7 @@ def test_gather_save_matches():
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21',
                                             '--save-matches', 'save.sigs',
+                                            do_linear,
                                             '--threshold-bp', '0'],
                                            in_directory=location)
 
@@ -3895,7 +3898,9 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
-def test_gather_save_matches_and_save_prefetch():
+def test_gather_save_matches_and_save_prefetch(linear_gather):
+    do_linear = "--linear" if linear_gather else '--no-linear'
+
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -3916,6 +3921,7 @@ def test_gather_save_matches_and_save_prefetch():
                                             '-k', '21',
                                             '--save-matches', 'save.sigs',
                                             '--save-prefetch', 'save2.sigs',
+                                            do_linear,
                                             '--threshold-bp', '0'],
                                            in_directory=location)
 
