@@ -652,16 +652,15 @@ def gather(args):
         sys.exit(-1)
 
     # @CTB experimental! w00t fun!
-    if args.prefetch or 1:
-        notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
+    notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
 
-        prefetch_query = copy.copy(query)
-        prefetch_query.minhash = prefetch_query.minhash.flatten()
+    prefetch_query = copy.copy(query)
+    prefetch_query.minhash = prefetch_query.minhash.flatten()
 
-        counters = []
-        for db in databases:
-            counter = db.counter_gather(prefetch_query, args.threshold_bp)
-            counters.append(counter)
+    counters = []
+    for db in databases:
+        counter = db.counter_gather(prefetch_query, args.threshold_bp)
+        counters.append(counter)
 
     found = []
     weighted_missed = 1

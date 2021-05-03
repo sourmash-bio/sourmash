@@ -829,7 +829,7 @@ def test_search_lca_db(c):
     assert 'NC_009665.1 Shewanella baltica OS185, complete genome' in str(c)
 
 
-def test_search_query_db_md5(runtmp, linear_gather, prefetch_gather):
+def test_search_query_db_md5(runtmp, linear_gather):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
     runtmp.run_sourmash('search', db, db, '--md5', '16869d2c8a1')
@@ -3063,18 +3063,17 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
-def test_gather_f_match_orig(runtmp, prefetch_gather, linear_gather):
+def test_gather_f_match_orig(runtmp, linear_gather):
     import copy
 
     testdata_combined = utils.get_test_data('gather/combined.sig')
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
-    do_prefetch = "--prefetch" if prefetch_gather else '--no-prefetch'
     do_linear = "--linear" if linear_gather else '--no-linear'
 
     runtmp.sourmash('gather', testdata_combined, '-o', 'out.csv',
-                    *testdata_sigs, do_prefetch, do_linear)
+                    *testdata_sigs, do_linear)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
