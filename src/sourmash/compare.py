@@ -127,6 +127,8 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
     memmap_similarities, filename = to_memmap(similarities)
     notify("Initialized memmapped similarities matrix")
 
+    # To avoid sharing siglist via pickle declaring a function inside function
+
     def get_similarities_at_index(index):
         """Returns similarities of all the combinations of signature at index in
         the siglist with the rest of the indices starting at index + 1. Doesn't
