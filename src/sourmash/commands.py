@@ -651,20 +651,23 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    notify(f"Starting prefetch sweep across databases.")
-    prefetch_query = copy.copy(query)
-    prefetch_query.minhash = prefetch_query.minhash.flatten()
-    save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
-    save_prefetch.open()
+    if 0 and args.prefetch:           # note: on by default
+        notify(f"Starting prefetch sweep across databases.")
+        prefetch_query = copy.copy(query)
+        prefetch_query.minhash = prefetch_query.minhash.flatten()
+        save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
+        save_prefetch.open()
 
-    counters = []
-    for db in databases:
-        counter = db.counter_gather(prefetch_query, args.threshold_bp)
-        save_prefetch.add_many(counter.siglist)
-        counters.append(counter)
+        counters = []
+        for db in databases:
+            counter = db.counter_gather(prefetch_query, args.threshold_bp)
+            save_prefetch.add_many(counter.siglist)
+            counters.append(counter)
 
-    notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
-    save_prefetch.close()
+            notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+            save_prefetch.close()
+    else:
+        counters = databases
 
     ## ok! now do gather -
 
@@ -1107,8 +1110,11 @@ def prefetch(args):
         notify(f"loading signatures from '{dbfilename}'")
 
         db = sourmash_args.load_file_as_index(dbfilename)
-        if args.linear or 1:
+
+        # force linear traversal?
+        if args.linear:
             db = LazyLinearIndex(db)
+
         db = db.select(ksize=ksize, moltype=moltype,
                        containment=True, scaled=True)
 

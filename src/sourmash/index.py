@@ -215,6 +215,26 @@ class Index(ABC):
 
         return results[:1]
 
+    def peek(self, query_mh, threshold_bp=0):
+        "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
+        from sourmash import SourmashSignature
+        query_ss = SourmashSignature(query_mh)
+        result = self.gather(query_ss, threshold_bp=threshold_bp)
+        if not result:
+            return []
+        sr = result[0]
+        match_mh = sr.signature.minhash
+        scaled = max(query_mh.scaled, match_mh.scaled)
+        match_mh = match_mh.downsample(scaled=scaled)
+        query_mh = query_mh.downsample(scaled=scaled)
+        intersect_mh = match_mh.intersection(query_mh)
+
+        return [sr, intersect_mh]
+
+    def consume(self, intersect_mh):
+        "Mimic CounterGather.consume on top of Index. Yes, this is backwards."
+        pass
+
     def counter_gather(self, query, threshold_bp, **kwargs):
         """Returns an object that permits 'gather' on top of the
         current contents of this Index.
