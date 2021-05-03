@@ -3895,6 +3895,47 @@ def test_gather_save_matches():
         assert os.path.exists(os.path.join(location, 'save.sigs'))
 
 
+def test_gather_save_matches_and_save_prefetch():
+    with utils.TempDirectory() as location:
+        testdata_glob = utils.get_test_data('gather/GCF*.sig')
+        testdata_sigs = glob.glob(testdata_glob)
+
+        query_sig = utils.get_test_data('gather/combined.sig')
+
+        cmd = ['index', 'gcf_all']
+        cmd.extend(testdata_sigs)
+        cmd.extend(['-k', '21'])
+
+        status, out, err = utils.runscript('sourmash', cmd,
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'gcf_all.sbt.zip'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather', query_sig, 'gcf_all',
+                                            '-k', '21',
+                                            '--save-matches', 'save.sigs',
+                                            '--save-prefetch', 'save2.sigs',
+                                            '--threshold-bp', '0'],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert 'found 12 matches total' in out
+        assert 'the recovered matches hit 100.0% of the query' in out
+
+        matches_save = os.path.join(location, 'save.sigs')
+        prefetch_save = os.path.join(location, 'save2.sigs')
+        assert os.path.exists(matches_save)
+        assert os.path.exists(prefetch_save)
+
+        matches = list(sourmash.load_file_as_signatures(matches_save))
+        prefetch = list(sourmash.load_file_as_signatures(prefetch_save))
+
+        assert set(matches) == set(prefetch)
+
+
 @utils.in_tempdir
 def test_gather_error_no_sigs_traverse(c):
     # test gather applied to a directory

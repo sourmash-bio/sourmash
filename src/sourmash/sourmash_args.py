@@ -569,6 +569,10 @@ class _BaseSaveSignaturesToLocation:
     def add(self, ss):
         self.count += 1
 
+    def add_many(self, sslist):
+        for ss in sslist:
+            self.add(ss)
+
 
 class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     "Do not save signatures."

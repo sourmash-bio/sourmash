@@ -651,16 +651,22 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    # @CTB experimental! w00t fun!
-    notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
-
+    notify(f"Starting prefetch sweep across databases.")
     prefetch_query = copy.copy(query)
     prefetch_query.minhash = prefetch_query.minhash.flatten()
+    save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
+    save_prefetch.open()
 
     counters = []
     for db in databases:
         counter = db.counter_gather(prefetch_query, args.threshold_bp)
+        save_prefetch.add_many(counter.siglist)
         counters.append(counter)
+
+    notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+    save_prefetch.close()
+
+    ## ok! now do gather -
 
     found = []
     weighted_missed = 1
