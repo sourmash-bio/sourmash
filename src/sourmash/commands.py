@@ -651,7 +651,7 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
-    if args.prefetch:           # note: on by default
+    if args.prefetch:           # note: on by default!
         notify(f"Starting prefetch sweep across databases.")
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()

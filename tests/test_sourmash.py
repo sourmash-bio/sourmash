@@ -837,44 +837,46 @@ def test_search_query_db_md5(runtmp):
     assert '100.0%       GCA_001593925' in str(runtmp)
 
 
-def test_gather_query_db_md5(runtmp):
+def test_gather_query_db_md5(runtmp, linear_gather, prefetch_gather):
     # pull a search query out of a database with an md5sum
     db = utils.get_test_data('prot/protein.sbt.zip')
-    runtmp.run_sourmash('gather', db, db, '--md5', '16869d2c8a1')
+    runtmp.run_sourmash('gather', db, db, '--md5', '16869d2c8a1',
+                        linear_gather, prefetch_gather)
 
     assert '340.9 kbp    100.0%  100.0%    GCA_001593925' in str(runtmp)
 
 
-@utils.in_thisdir
-def test_gather_query_db_md5_ambiguous(c):
+def test_gather_query_db_md5_ambiguous(runtmp, linear_gather, prefetch_gather):
+    c = runtmp
     # what if we give an ambiguous md5 prefix?
     db = utils.get_test_data('prot/protein.sbt.zip')
 
     with pytest.raises(ValueError) as exc:
-        c.run_sourmash('gather', db, db, '--md5', '1')
+        c.run_sourmash('gather', db, db, '--md5', '1', linear_gather,
+                       prefetch_gather)
 
     err = c.last_result.err
     assert "Error! Multiple signatures start with md5 '1'" in err
 
 
-def test_gather_lca_db(runtmp):
+def test_gather_lca_db(runtmp, linear_gather, prefetch_gather):
     # can we do a 'sourmash gather' on an LCA database?
     query = utils.get_test_data('47+63.fa.sig')
     lca_db = utils.get_test_data('lca/47+63.lca.json')
 
-    runtmp.sourmash('gather', query, lca_db)
+    runtmp.sourmash('gather', query, lca_db, linear_gather, prefetch_gather)
     print(runtmp)
     assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
 
 
-@utils.in_tempdir
-def test_gather_csv_output_filename_bug(c):
+def test_gather_csv_output_filename_bug(runtmp):
     # check a bug where the database filename in the output CSV was incorrect
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     lca_db_1 = utils.get_test_data('lca/delmont-1.lca.json')
     lca_db_2 = utils.get_test_data('lca/delmont-2.lca.json')
 
-    c.run_sourmash('gather', query, lca_db_1, lca_db_2, '-o', 'out.csv')
+    c.run_sourmash('gather', query, lca_db_1, lca_db_2, '-o', 'out.csv',
+                   linear_gather, prefetch_gather)
     with open(c.output('out.csv'), 'rt') as fp:
         r = csv.DictReader(fp)
         row = next(r)
@@ -2860,7 +2862,7 @@ def test_compare_with_abundance_3():
         assert '70.5%' in out
 
 
-def test_gather():
+def test_gather(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -2886,7 +2888,8 @@ def test_gather():
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
                                             'query.fa.sig', 'zzz', '-o',
-                                            'foo.csv', '--threshold-bp=1'],
+                                            'foo.csv', '--threshold-bp=1',
+                                            linear_gather, prefetch_gather],
                                            in_directory=location)
 
         print(out)
@@ -2895,7 +2898,7 @@ def test_gather():
         assert '0.9 kbp      100.0%  100.0%' in out
 
 
-def test_gather_csv():
+def test_gather_csv(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -2921,7 +2924,8 @@ def test_gather_csv():
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
                                             'query.fa.sig', 'zzz', '-o',
-                                            'foo.csv', '--threshold-bp=1'],
+                                            'foo.csv', '--threshold-bp=1',
+                                            linear_gather, prefetch_gather],
                                            in_directory=location)
 
         print(out)
@@ -2945,7 +2949,7 @@ def test_gather_csv():
             assert row['gather_result_rank'] == '0'
 
 
-def test_gather_multiple_sbts():
+def test_gather_multiple_sbts(prefetch_gather, linear_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -2980,7 +2984,8 @@ def test_gather_multiple_sbts():
                                            ['gather',
                                             'query.fa.sig', 'zzz', 'zzz2',
                                             '-o', 'foo.csv',
-                                            '--threshold-bp=1'],
+                                            '--threshold-bp=1',
+                                            linear_gather, prefetch_gather],
                                            in_directory=location)
 
         print(out)
@@ -2989,7 +2994,7 @@ def test_gather_multiple_sbts():
         assert '0.9 kbp      100.0%  100.0%' in out
 
 
-def test_gather_sbt_and_sigs():
+def test_gather_sbt_and_sigs(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -3015,6 +3020,7 @@ def test_gather_sbt_and_sigs():
                                            ['gather',
                                             'query.fa.sig', 'zzz', 'short2.fa.sig',
                                             '-o', 'foo.csv',
+                                            linear_gather, prefetch_gather,
                                             '--threshold-bp=1'],
                                            in_directory=location)
 
@@ -3024,7 +3030,7 @@ def test_gather_sbt_and_sigs():
         assert '0.9 kbp      100.0%  100.0%' in out
 
 
-def test_gather_file_output():
+def test_gather_file_output(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -3051,6 +3057,7 @@ def test_gather_file_output():
                                            ['gather',
                                             'query.fa.sig', 'zzz',
                                             '--threshold-bp=500',
+                                            linear_gather, prefetch_gather,
                                             '-o', 'foo.out'],
                                            in_directory=location)
 
@@ -3063,17 +3070,15 @@ def test_gather_file_output():
             assert '910,1.0,1.0' in output
 
 
-def test_gather_f_match_orig(runtmp, linear_gather):
+def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
     import copy
 
     testdata_combined = utils.get_test_data('gather/combined.sig')
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
-    do_linear = "--linear" if linear_gather else '--no-linear'
-
     runtmp.sourmash('gather', testdata_combined, '-o', 'out.csv',
-                    *testdata_sigs, do_linear)
+                    *testdata_sigs, linear_gather, prefetch_gather)
 
     print(runtmp.last_result.out)
     print(runtmp.last_result.err)
@@ -3595,7 +3600,7 @@ def test_multigather_metagenome_query_from_file_with_addl_query(c):
     assert 'the recovered matches hit 100.0% of the query' in out
 
 
-def test_gather_metagenome_traverse():
+def test_gather_metagenome_traverse(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         # set up a directory $location/gather that contains
         # everything in the 'tests/test-data/gather' directory
@@ -3608,8 +3613,9 @@ def test_gather_metagenome_traverse():
         query_sig = utils.get_test_data('gather/combined.sig')
 
         # now, feed in the new directory --
-        cmd = 'gather {} {} -k 21 --threshold-bp=0'
-        cmd = cmd.format(query_sig, copy_testdata)
+        cmd = 'gather {} {} -k 21 --threshold-bp=0 {} {}'
+        cmd = cmd.format(query_sig, copy_testdata, linear_gather,
+                         prefetch_gather)
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -3625,7 +3631,7 @@ def test_gather_metagenome_traverse():
                     'NC_011294.1 Salmonella enterica subsp...' in out))
 
 
-def test_gather_metagenome_traverse_check_csv():
+def test_gather_metagenome_traverse_check_csv(linear_gather, prefetch_gather):
     # this test confirms that the CSV 'filename' output for signatures loaded
     # via directory traversal properly contains the actual path to the
     # signature file from which the signature was loaded.
@@ -3643,7 +3649,7 @@ def test_gather_metagenome_traverse_check_csv():
 
         # now, feed in the new directory --
         cmd = f'gather {query_sig} {copy_testdata} -k 21 --threshold-bp=0'
-        cmd += f' -o {out_csv}'
+        cmd += f' -o {out_csv} {linear_gather} {prefetch_gather}'
         status, out, err = utils.runscript('sourmash', cmd.split(' '),
                                            in_directory=location)
 
@@ -3748,14 +3754,16 @@ def test_gather_metagenome_output_unassigned_none():
         assert 'no unassigned hashes to save with --output-unassigned!' in err
 
 
-@utils.in_tempdir
-def test_gather_metagenome_output_unassigned_nomatches(c):
+def test_gather_metagenome_output_unassigned_nomatches(runtmp, prefetch_gather, linear_gather):
+    c = runtmp
+
     # test --output-unassigned when there are no matches
     query_sig = utils.get_test_data('2.fa.sig')
     against_sig = utils.get_test_data('47.fa.sig')
 
     c.run_sourmash('gather', query_sig, against_sig,
-                   '--output-unassigned', 'foo.sig')
+                   '--output-unassigned', 'foo.sig', linear_gather,
+                   prefetch_gather)
 
     print(c.last_result.out)
     assert 'found 0 matches total;' in c.last_result.out
@@ -3766,14 +3774,16 @@ def test_gather_metagenome_output_unassigned_nomatches(c):
     assert x.minhash == y.minhash
 
 
-@utils.in_tempdir
-def test_gather_metagenome_output_unassigned_nomatches_protein(c):
+def test_gather_metagenome_output_unassigned_nomatches_protein(runtmp, linear_gather, prefetch_gather):
+    c = runtmp
+
     # test --output-unassigned with protein signatures
     query_sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     against_sig = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
 
     c.run_sourmash('gather', query_sig, against_sig,
-                   '--output-unassigned', 'foo.sig')
+                   '--output-unassigned', 'foo.sig', linear_gather,
+                   prefetch_gather)
 
     print(c.last_result.out)
     assert 'found 0 matches total;' in c.last_result.out
@@ -3788,7 +3798,7 @@ def test_gather_metagenome_output_unassigned_nomatches_protein(c):
     assert y.minhash.moltype == "protein"
 
 
-def test_gather_metagenome_downsample():
+def test_gather_metagenome_downsample(prefetch_gather, linear_gather):
     # downsample w/scaled of 100,000
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -3808,6 +3818,7 @@ def test_gather_metagenome_downsample():
         status, out, err = utils.runscript('sourmash',
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21', '--scaled', '100000',
+                                            prefetch_gather, linear_gather,
                                             '--threshold-bp', '50000'],
                                            in_directory=location)
 
@@ -3822,7 +3833,7 @@ def test_gather_metagenome_downsample():
                     '4.1 Mbp        4.4%   17.1%' in out))
 
 
-def test_gather_query_downsample():
+def test_gather_query_downsample(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -3832,6 +3843,7 @@ def test_gather_query_downsample():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', '-k', '31',
+                                            linear_gather, prefetch_gather,
                                             query_sig] + testdata_sigs,
                                            in_directory=location)
 
@@ -3843,7 +3855,7 @@ def test_gather_query_downsample():
                     'NC_003197.2' in out))
 
 
-def test_gather_query_downsample_explicit():
+def test_gather_query_downsample_explicit(linear_gather, prefetch_gather):
     # do an explicit downsampling to fix `test_gather_query_downsample`
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
@@ -3852,7 +3864,9 @@ def test_gather_query_downsample_explicit():
         query_sig = utils.get_test_data('GCF_000006945.2-s500.sig')
 
         status, out, err = utils.runscript('sourmash',
-                                           ['gather', '-k', '31', '--scaled', '10000',
+                                           ['gather', '-k', '31',
+                                            '--scaled', '10000',
+                                            linear_gather, prefetch_gather,
                                             query_sig] + testdata_sigs,
                                            in_directory=location)
 
@@ -3864,9 +3878,7 @@ def test_gather_query_downsample_explicit():
                     'NC_003197.2' in out))
 
 
-def test_gather_save_matches(linear_gather):
-    do_linear = "--linear" if linear_gather else '--no-linear'
-
+def test_gather_save_matches(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -3886,7 +3898,7 @@ def test_gather_save_matches(linear_gather):
                                            ['gather', query_sig, 'gcf_all',
                                             '-k', '21',
                                             '--save-matches', 'save.sigs',
-                                            do_linear,
+                                            linear_gather, prefetch_gather,
                                             '--threshold-bp', '0'],
                                            in_directory=location)
 
@@ -3899,8 +3911,6 @@ def test_gather_save_matches(linear_gather):
 
 
 def test_gather_save_matches_and_save_prefetch(linear_gather):
-    do_linear = "--linear" if linear_gather else '--no-linear'
-
     with utils.TempDirectory() as location:
         testdata_glob = utils.get_test_data('gather/GCF*.sig')
         testdata_sigs = glob.glob(testdata_glob)
@@ -3921,7 +3931,7 @@ def test_gather_save_matches_and_save_prefetch(linear_gather):
                                             '-k', '21',
                                             '--save-matches', 'save.sigs',
                                             '--save-prefetch', 'save2.sigs',
-                                            do_linear,
+                                            linear_gather,
                                             '--threshold-bp', '0'],
                                            in_directory=location)
 
@@ -3958,7 +3968,7 @@ def test_gather_error_no_sigs_traverse(c):
     assert not 'found 0 matches total;' in err
 
 
-def test_gather_error_no_cardinality_query():
+def test_gather_error_no_cardinality_query(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -3982,14 +3992,15 @@ def test_gather_error_no_cardinality_query():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather',
-                                            'short3.fa.sig', 'zzz'],
+                                            'short3.fa.sig', 'zzz',
+                                            linear_gather, prefetch_gather],
                                            in_directory=location,
                                            fail_ok=True)
         assert status == -1
         assert "query signature needs to be created with --scaled" in err
 
 
-def test_gather_deduce_ksize():
+def test_gather_deduce_ksize(prefetch_gather, linear_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -4014,6 +4025,7 @@ def test_gather_deduce_ksize():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', 'query.fa.sig', 'zzz',
+                                            prefetch_gather, linear_gather,
                                             '--threshold-bp=1'],
                                            in_directory=location)
 
@@ -4023,7 +4035,7 @@ def test_gather_deduce_ksize():
         assert '0.9 kbp      100.0%  100.0%' in out
 
 
-def test_gather_deduce_moltype():
+def test_gather_deduce_moltype(linear_gather, prefetch_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
         testdata2 = utils.get_test_data('short2.fa')
@@ -4050,6 +4062,7 @@ def test_gather_deduce_moltype():
 
         status, out, err = utils.runscript('sourmash',
                                            ['gather', 'query.fa.sig', 'zzz',
+                                            linear_gather, prefetch_gather,
                                             '--threshold-bp=1'],
                                            in_directory=location)
 
@@ -4059,8 +4072,8 @@ def test_gather_deduce_moltype():
         assert '1.9 kbp      100.0%  100.0%' in out
 
 
-@utils.in_thisdir
-def test_gather_abund_1_1(c):
+def test_gather_abund_1_1(runtmp, linear_gather, prefetch_gather):
+    c = runtmp
     #
     # make r1.fa with 2x coverage of genome s10
     # make r2.fa with 10x coverage of genome s10.
@@ -4083,7 +4096,8 @@ def test_gather_abund_1_1(c):
                     for i in against_list]
     against_list = [utils.get_test_data(i) for i in against_list]
 
-    status, out, err = c.run_sourmash('gather', query, *against_list)
+    status, out, err = c.run_sourmash('gather', query, *against_list,
+                                      linear_gather, prefetch_gather)
 
     print(out)
     print(err)
@@ -4100,8 +4114,8 @@ def test_gather_abund_1_1(c):
     assert 'genome-s12.fa.gz' not in out
 
 
-@utils.in_tempdir
-def test_gather_abund_10_1(c):
+def test_gather_abund_10_1(runtmp, prefetch_gather, linear_gather):
+    c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
@@ -4116,7 +4130,8 @@ def test_gather_abund_10_1(c):
     against_list = [utils.get_test_data(i) for i in against_list]
 
     status, out, err = c.run_sourmash('gather', query, '-o', 'xxx.csv',
-                                      *against_list)
+                                      *against_list, linear_gather,
+                                      prefetch_gather)
 
     print(out)
     print(err)
@@ -4176,8 +4191,8 @@ def test_gather_abund_10_1(c):
     assert total_bp_analyzed == total_query_bp
 
 
-@utils.in_tempdir
-def test_gather_abund_10_1_ignore_abundance(c):
+def test_gather_abund_10_1_ignore_abundance(runtmp, linear_gather, prefetch_gather):
+    c = runtmp
     # see comments in test_gather_abund_1_1, above.
     # nullgraph/make-reads.py -S 1 -r 200 -C 2 tests/test-data/genome-s10.fa.gz > r1.fa
     # nullgraph/make-reads.py -S 1 -r 200 -C 20 tests/test-data/genome-s10.fa.gz > r2.fa
@@ -4194,6 +4209,7 @@ def test_gather_abund_10_1_ignore_abundance(c):
     status, out, err = c.run_sourmash('gather', query,
                                       '--ignore-abundance',
                                       *against_list,
+                                      linear_gather, prefetch_gather,
                                       '-o', c.output('results.csv'))
 
 
@@ -4222,13 +4238,13 @@ def test_gather_abund_10_1_ignore_abundance(c):
         assert some_results
 
 
-@utils.in_tempdir
-def test_gather_output_unassigned_with_abundance(c):
+def test_gather_output_unassigned_with_abundance(runtmp, prefetch_gather, linear_gather):
+    c = runtmp
     query = utils.get_test_data('gather-abund/reads-s10x10-s11.sig')
     against = utils.get_test_data('gather-abund/genome-s10.fa.gz.sig')
 
     c.run_sourmash('gather', query, against, '--output-unassigned',
-                   c.output('unassigned.sig'))
+                   c.output('unassigned.sig'), linear_gather, prefetch_gather)
 
     assert os.path.exists(c.output('unassigned.sig'))
 

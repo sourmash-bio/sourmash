@@ -40,8 +40,13 @@ def n_children(request):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=["--linear", "--no-linear"])
 def linear_gather(request):
+    return request.param
+
+
+@pytest.fixture(params=["--prefetch", "--no-prefetch"])
+def prefetch_gather(request):
     return request.param
 
 
