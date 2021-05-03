@@ -16,8 +16,8 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
-from .sourmash_args import SaveSignaturesToLocation
+from .sourmash_args import (DEFAULT_LOAD_K, FileOutput, FileOutputCSV,
+                            SaveSignaturesToLocation)
 
 WATERMARK_SIZE = 10000
 
@@ -527,7 +527,6 @@ def search(args):
     if args.save_matches:
         notify('saving all matched signatures to "{}"', args.save_matches)
 
-        assert 0
         with SaveSignaturesToLocation(args.save_matches) as save_sig:
             for sr in results:
                 save_sig.add(sr.match)

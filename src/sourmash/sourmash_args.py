@@ -425,16 +425,18 @@ class FileOutput(object):
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt', newline=None):
+    def __init__(self, filename, mode='wt', *, newline=None, encoding='utf-8'):
         self.filename = filename
         self.mode = mode
         self.fp = None
         self.newline = newline
+        self.encoding = encoding
 
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, self.mode, newline=self.newline)
+        self.fp = open(self.filename, self.mode, newline=self.newline,
+                       encoding=self.encoding)
         return self.fp
 
     def __enter__(self):
@@ -543,23 +545,25 @@ class SignatureLoadingProgress(object):
 # enum and classes for saving signatures progressively
 #
 
-# @CTB filename or fp?
-# @CTB stdout?
-# @CTB provide repr/str
-# @CTB some of this functioanlity is getting close to Index.save
-# @CTB lca json, sbt.zip?
-
 class _BaseSaveSignaturesToLocation:
     "Base signature saving class. Track location (if any) and count."
     def __init__(self, location):
         self.location = location
         self.count = 0
 
+    def __repr__(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        return self.count
+
     def __enter__(self):
+        "provide context manager functionality"
         self.open()
         return self
 
     def __exit__(self, type, value, traceback):
+        "provide context manager functionality"
         self.close()
 
     def add(self, ss):
@@ -568,6 +572,9 @@ class _BaseSaveSignaturesToLocation:
 
 class SaveSignatures_NoOutput(_BaseSaveSignaturesToLocation):
     "Do not save signatures."
+    def __repr__(self):
+        return 'SaveSignatures_NoOutput()'
+
     def open(self):
         pass
 
@@ -580,6 +587,9 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     def __init__(self, location):
         super().__init__(location)
         
+    def __repr__(self):
+        return f"SaveSignatures_Directory('{self.location}')"
+
     def close(self):
         pass
 
@@ -610,12 +620,28 @@ class SaveSignatures_SigFile(_BaseSaveSignaturesToLocation):
         if self.location.endswith('.gz'):
             self.compress = 1
 
+    def __repr__(self):
+        return f"SaveSignatures_SigFile('{self.location}')"
+
     def open(self):
         pass
 
     def close(self):
-        with open(self.location, "wb") as fp:
-            sourmash.save_signatures(self.keep, fp, compression=self.compress)
+        if self.location == '-':
+            sourmash.save_signatures(self.keep, sys.stdout)
+        else:
+            # text mode? encode in utf-8
+            mode = "w"
+            encoding = 'utf-8'
+
+            # compressed? bytes & binary.
+            if self.compress:
+                encoding = None
+                mode = "wb"
+
+            with open(self.location, mode, encoding=encoding) as fp:
+                sourmash.save_signatures(self.keep, fp,
+                                         compression=self.compress)
 
     def add(self, ss):
         super().add(ss)
@@ -628,6 +654,9 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         super().__init__(location)
         self.zf = None
         
+    def __repr__(self):
+        return f"SaveSignatures_ZipFile('{self.location}')"
+
     def close(self):
         self.zf.close()
 
@@ -635,8 +664,8 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
 
     def add(self, ss):
-        super().add(ss)
         assert self.zf
+        super().add(ss)
 
         md5 = ss.md5sum()
         outname = f"signatures/{md5}.sig.gz"
@@ -674,6 +703,7 @@ def SaveSignaturesToLocation(filename, *, force_type=None):
         elif filename.endswith('.zip'):
             save_type = SigFileSaveType.ZIPFILE
         else:
+            # default to SIGFILE intentionally!
             save_type = SigFileSaveType.SIGFILE
     else:
         save_type = force_type
