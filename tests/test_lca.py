@@ -394,6 +394,16 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
 def test_databases_load_fail_on_dir():
     filename1 = utils.get_test_data('lca')
     with pytest.raises(ValueError) as exc:
