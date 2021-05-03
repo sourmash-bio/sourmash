@@ -869,7 +869,9 @@ def test_gather_lca_db(runtmp, linear_gather, prefetch_gather):
     assert 'NC_009665.1 Shewanella baltica OS185' in str(runtmp.last_result.out)
 
 
-def test_gather_csv_output_filename_bug(runtmp):
+def test_gather_csv_output_filename_bug(runtmp, linear_gather, prefetch_gather):
+    c = runtmp
+
     # check a bug where the database filename in the output CSV was incorrect
     query = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
     lca_db_1 = utils.get_test_data('lca/delmont-1.lca.json')
