@@ -218,10 +218,20 @@ class Index(ABC):
     def peek(self, query_mh, threshold_bp=0):
         "Mimic CounterGather.peek() on top of Index. Yes, this is backwards."
         from sourmash import SourmashSignature
+
+        # build a signature to use with self.gather...
         query_ss = SourmashSignature(query_mh)
-        result = self.gather(query_ss, threshold_bp=threshold_bp)
+
+        # run query!
+        try:
+            result = self.gather(query_ss, threshold_bp=threshold_bp)
+        except ValueError:
+            result = None
+
         if not result:
             return []
+
+        # if matches, calculate intersection & return.
         sr = result[0]
         match_mh = sr.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
