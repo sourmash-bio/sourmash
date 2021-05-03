@@ -296,6 +296,29 @@ genomes with no (or incomplete) taxonomic information.  Use `sourmash
 lca summarize` to classify a metagenome using a collection of genomes
 with taxonomic information.
 
+### Alternative search mode for low-memory (but slow) search: `--linear`
+
+By default, `sourmash gather` uses all information available for
+faster search. In particular, for SBTs, `prefetch` will prune the search
+tree.  This can be slow and/or memory intensive for very large databases,
+and `--linear` asks `sourmash prefetch` to instead use a linear search
+across all leaf nodes in the tree.
+
+The results are the same whether `--no-linear` or `--linear` is
+used.
+
+### Alternative search mode: `--no-prefetch`
+
+By default, `sourmash gather` does a "prefetch" to find *all* candidate
+signatures across all databases, before removing overlaps between the
+candidates. In rare circumstances, depending on the databases and parameters
+used, this may be slower or more memory intensive than doing iterative
+overlap removal. Prefetch behavior can be turned off with `--no-prefetch`.
+
+The results are the same whether `--prefetch` or `--no-prefetch` is
+used.  This option can be used with or without `--linear` (although
+`--no-prefetch --linear` will generally be MUCH slower).
+
 ### `sourmash index` - build an SBT index of signatures
 
 The `sourmash index` command creates a Zipped SBT database
