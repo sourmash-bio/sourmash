@@ -16,7 +16,8 @@ def subparser(subparsers):
         help='print debugging output'
     )
     subparser.add_argument(
-        '-o', '--output', metavar='FILE', help='output to this file',
+        '-o', '--output', metavar='FILE', 
+        help='output renamed signature to this file (default stdout)',
         default='-'
     )
     add_ksize_arg(subparser, 31)
