@@ -30,7 +30,7 @@ def test_save_signatures_api_none():
 
 
 def test_save_signatures_to_location_1_sig(runtmp):
-    # save to sigfile
+    # save to sigfile.sig
     sig2 = utils.get_test_data('2.fa.sig')
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data('47.fa.sig')
