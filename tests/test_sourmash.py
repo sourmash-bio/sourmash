@@ -76,7 +76,7 @@ def test_load_pathlist_from_file_does_not_exist():
     from sourmash.sourmash_args import load_pathlist_from_file
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file("")
-        assert "file '' does not exist" in e.message
+    assert "file '' does not exist" in str(e.value)
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_empty(c):
@@ -86,7 +86,7 @@ def test_load_pathlist_from_file_empty(c):
         fp.write("")
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-        assert "pathlist is empty" in e.message
+    assert "pathlist is empty" in str(e.value)
 
 
 @utils.in_tempdir
@@ -99,7 +99,7 @@ def test_load_pathlist_from_file_badly_formatted(c):
 
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-        assert "pathlist contains a badly formatted file" in e.message
+    assert "pathlist contains a badly formatted file" in str(e.value)
     
 
 @utils.in_tempdir
@@ -119,7 +119,7 @@ def test_load_pathlist_from_file_badly_formatted_2(c):
 
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-        assert "pathlist contains a badly formatted file" in e.message
+    assert "pathlist contains a badly formatted file" in str(e.value)
 
 
 @utils.in_tempdir
@@ -139,7 +139,7 @@ def test_load_pathlist_from_file_duplicate(c):
 
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-        assert "pathlist contains a duplicate file" in e.message
+    assert "pathlist contains a duplicate file" in str(e.value)
 
 
 @utils.in_tempdir
