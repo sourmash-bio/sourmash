@@ -49,7 +49,7 @@ def test_save_signatures_to_location_1_sig(runtmp):
 
 
 def test_save_signatures_to_location_1_stdout():
-    # save to sigfile
+    # save to stdout
     sig2 = utils.get_test_data('2.fa.sig')
     ss2 = sourmash.load_one_signature(sig2, ksize=31)
     sig47 = utils.get_test_data('47.fa.sig')
