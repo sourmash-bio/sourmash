@@ -886,7 +886,7 @@ This behavior is triggered by the requested output filename --
 * to save to JSON signature files, use `.sig`; `-` will send JSON to stdout.
 * to save to gzipped JSON signature files, use `.sig.gz`;
 * to save to a Zip file collection, use `.zip`;
-* to save to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
+* to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
 
 All of these save formats can be loaded by sourmash commands, too.
 
