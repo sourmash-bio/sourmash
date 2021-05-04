@@ -11,7 +11,8 @@ import copy
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
 from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex,
-                            make_jaccard_search_query, CounterGather)
+                            make_jaccard_search_query, CounterGather,
+                            LazyLinearIndex)
 from sourmash.sbt import SBT, GraphFactory, Leaf
 from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
@@ -1829,3 +1830,67 @@ def test_counter_gather_3_test_consume():
     assert counter.siglist == [ match_ss_1, match_ss_2, match_ss_3 ]
     assert counter.locations == ['loc a', 'loc b', 'loc c']
     assert list(counter.counter.items()) == []
+
+
+def test_lazy_index_1():
+    # test some basic features of LazyLinearIndex
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    lazy = LazyLinearIndex(lidx)
+    lazy2 = lazy.select(ksize=31)
+    assert len(list(lazy2.signatures())) == 3
+
+    results = lazy2.search(ss2, threshold=1.0)
+    assert len(results) == 1
+    assert results[0].signature == ss2
+
+
+def test_lazy_index_2():
+    # test laziness by adding a signature that raises an exception when
+    # touched.
+
+    class FakeSignature:
+        @property
+        def minhash(self):
+            raise Exception("don't touch me!")
+
+    lidx = LinearIndex()
+    lidx.insert(FakeSignature())
+
+    lazy = LazyLinearIndex(lidx)
+    lazy2 = lazy.select(ksize=31)
+
+    sig_iter = lazy2.signatures()
+    with pytest.raises(Exception) as e:
+        list(sig_iter)
+
+    assert str(e.value) == "don't touch me!"
+
+
+def test_lazy_index_3():
+    # make sure that you can't do multiple _incompatible_ selects.
+    class FakeSignature:
+        @property
+        def minhash(self):
+            raise Exception("don't touch me!")
+
+    lidx = LinearIndex()
+    lidx.insert(FakeSignature())
+
+    lazy = LazyLinearIndex(lidx)
+    lazy2 = lazy.select(ksize=31)
+    with pytest.raises(ValueError) as e:
+        lazy3 = lazy2.select(ksize=21)
+
+    assert str(e.value) == "cannot select on two different values for ksize"

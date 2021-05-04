@@ -372,15 +372,17 @@ class LinearIndex(Index):
 
 class LazyLinearIndex(Index):
     "An Index for lazy linear search of another database."
-    def __init__(self, db):
+    def __init__(self, db, selection_dict={}):
         self.db = db
+        self.selection_dict = dict(selection_dict)
 
     @property
     def location(self):
         return self.db.location
 
     def signatures(self):
-        for ss in self.db.signatures():
+        db = self.db.select(**self.selection_dict)
+        for ss in db.signatures():
             yield ss
 
     def __bool__(self):
@@ -408,8 +410,14 @@ class LazyLinearIndex(Index):
 
         Does not raise ValueError, but may return an empty Index.
         """
-        db = self.db.select(**kwargs)
-        return LazyLinearIndex(db)
+        selection_dict = dict(self.selection_dict)
+        for k, v in kwargs.items():
+            if k in selection_dict:
+                if selection_dict[k] != v:
+                    raise ValueError(f"cannot select on two different values for {k}")
+            selection_dict[k] = v
+
+        return LazyLinearIndex(self.db, selection_dict)
 
 
 class ZipFileLinearIndex(Index):
