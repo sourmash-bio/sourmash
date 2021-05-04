@@ -888,7 +888,10 @@ This behavior is triggered by the requested output filename --
 * to save to a Zip file collection, use `.zip`;
 * to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
 
+If none of these file extensions is detected, output will be written in the JSON `.sig` format, either to the provided output filename or to stdout.
+
 All of these save formats can be loaded by sourmash commands, too.
+
 
 ### Loading all signatures under a directory
 
