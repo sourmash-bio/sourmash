@@ -478,7 +478,7 @@ class LCA_Database(Index):
             # signal that it is done, or something.
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
-                    yield subj, score
+                    yield subj, score, self.location
 
     @cached_property
     def lid_to_idx(self):

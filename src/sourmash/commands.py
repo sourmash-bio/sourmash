@@ -587,7 +587,7 @@ def categorize(args):
             query = orig_query
 
         results = []
-        for match, score in db.find(search_obj, query):
+        for match, score, loc in db.find(search_obj, query):
             if match.md5sum() != query.md5sum(): # ignore self.
                 results.append((orig_query.similarity(match), match))
 

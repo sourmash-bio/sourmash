@@ -231,7 +231,7 @@ def test_search_minhashes():
     # this fails if 'search_obj' is calc containment and not similarity.
     search_obj = make_jaccard_search_query(threshold=0.08)
     results = tree.find(search_obj, to_search.data)
-    for (match, score) in results:
+    for (match, score, loc) in results:
         assert to_search.data.jaccard(match) >= 0.08
 
     print(results)

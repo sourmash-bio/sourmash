@@ -127,7 +127,7 @@ class Index(ABC):
                 # note: here we yield the original signature, not the
                 # downsampled minhash.
                 if search_fn.collect(score, subj):
-                    yield subj, score
+                    yield subj, score, self.location
 
     def search_abund(self, query, *, threshold=None, **kwargs):
         """Return set of matches with angular similarity above 'threshold'.
@@ -181,8 +181,8 @@ class Index(ABC):
         # do the actual search:
         matches = []
 
-        for subj, score in self.find(search_obj, query, **kwargs):
-            matches.append(IndexSearchResult(score, subj, self.location))
+        for subj, score, loc in self.find(search_obj, query, **kwargs):
+            matches.append(IndexSearchResult(score, subj, loc))
 
         # sort!
         matches.sort(key=lambda x: -x.score)
@@ -199,8 +199,8 @@ class Index(ABC):
         search_fn = make_gather_query(query.minhash, threshold_bp,
                                       best_only=False)
 
-        for subj, score in self.find(search_fn, query, **kwargs):
-            yield IndexSearchResult(score, subj, self.location)
+        for subj, score, loc in self.find(search_fn, query, **kwargs):
+            yield IndexSearchResult(score, subj, loc)
 
     def gather(self, query, threshold_bp=None, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
