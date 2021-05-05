@@ -1979,3 +1979,26 @@ def test_lazy_index_3():
         lazy3 = lazy2.select(ksize=21)
 
     assert str(e.value) == "cannot select on two different values for ksize"
+
+
+def test_lazy_index_4_bool():
+    # test some basic features of LazyLinearIndex
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+
+    # test bool false/true
+    lidx = LinearIndex()
+    lazy = LazyLinearIndex(lidx)
+    assert not lazy
+
+    lidx.insert(ss2)
+    assert lazy
+
+
+def test_lazy_index_5_len():
+    # test some basic features of LazyLinearIndex
+    lidx = LinearIndex()
+    lazy = LazyLinearIndex(lidx)
+
+    with pytest.raises(NotImplementedError):
+        len(lazy)
