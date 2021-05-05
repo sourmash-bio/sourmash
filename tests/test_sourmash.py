@@ -2015,10 +2015,7 @@ def test_search_metagenome_downsample_containment():
 def test_search_metagenome_downsample_index(c):
     # does same search as search_metagenome_downsample_containment but
     # rescales during indexing
-    #
-    # for now, this test should fail; we need to clean up some internal
-    # stuff before we can properly implement this!
-    #
+
     testdata_glob = utils.get_test_data('gather/GCF*.sig')
     testdata_sigs = glob.glob(testdata_glob)
 
@@ -2039,6 +2036,38 @@ def test_search_metagenome_downsample_index(c):
     assert ' 29.7%       NC_003197.2 Salmonella enterica subsp. enterica serovar T...' in str(
         c)
     assert '12 matches; showing first 3:' in str(c)
+
+
+def test_search_metagenome_downsample_save_matches(runtmp):
+    c = runtmp
+
+    # does same search as search_metagenome_downsample_containment but
+    # rescales during indexing
+
+    testdata_glob = utils.get_test_data('gather/GCF*.sig')
+    testdata_sigs = glob.glob(testdata_glob)
+
+    query_sig = utils.get_test_data('gather/combined.sig')
+
+    output_matches = runtmp.output('out.zip')
+
+    # downscale during indexing, rather than during search.
+    c.run_sourmash('index', 'gcf_all', *testdata_sigs, '-k', '21',
+                   '--scaled', '100000')
+
+    assert os.path.exists(c.output('gcf_all.sbt.zip'))
+
+    c.run_sourmash('search', query_sig, 'gcf_all', '-k', '21',
+                   '--containment', '--save-matches', output_matches)
+    print(c)
+
+    # is a zip file
+    with zipfile.ZipFile(output_matches, "r") as zf:
+        assert list(zf.infolist())
+
+    # ...with 12 signatures:
+    saved = list(sourmash.load_file_as_signatures(output_matches))
+    assert len(saved) == 12
 
 
 def test_mash_csv_to_sig():
