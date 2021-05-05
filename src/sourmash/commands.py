@@ -1121,32 +1121,25 @@ def prefetch(args):
             notify(f"...no compatible signatures in '{dbfilename}'; skipping")
             continue
 
-        try:
-            for result in prefetch_database(query, db, args.threshold_bp):
-                match = result.match
+        for result in prefetch_database(query, db, args.threshold_bp):
+            match = result.match
 
-                # track remaining "untouched" hashes.
-                noident_mh.remove_many(match.minhash.hashes)
+            # track remaining "untouched" hashes.
+            noident_mh.remove_many(match.minhash.hashes)
 
-                # output match info as we go
-                if csvout_fp:
-                    d = dict(result._asdict())
-                    del d['match']                 # actual signatures not in CSV.
-                    del d['query']
-                    csvout_w.writerow(d)
+            # output match info as we go
+            if csvout_fp:
+                d = dict(result._asdict())
+                del d['match']                 # actual signatures not in CSV.
+                del d['query']
+                csvout_w.writerow(d)
 
-                # output match signatures as we go (maybe)
-                matches_out.add(match)
+            # output match signatures as we go (maybe)
+            matches_out.add(match)
 
-                if matches_out.count % 10 == 0:
-                    notify(f"total of {matches_out.count} matching signatures so far.",
-                           end="\r")
-        except ValueError as exc:
-            raise
-            notify("ERROR in prefetch_databases:")
-            notify(str(exc))
-            sys.exit(-1)
-            # @CTB should we continue? or only continue if -f?
+            if matches_out.count % 10 == 0:
+                notify(f"total of {matches_out.count} matching signatures so far.",
+                       end="\r")
 
         did_a_search = True
 
