@@ -76,7 +76,7 @@ def subparser(subparsers):
         help="do not use prefetch before gather; see documentation",
     )
     subparser.add_argument(
-        '--prefetch', dest="linear", action='store_true',
+        '--prefetch', dest="prefetch", action='store_true',
         help="use prefetch before gather; see documentation",
     )
 

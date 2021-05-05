@@ -371,14 +371,16 @@ class LinearIndex(Index):
 
 
 class LazyLinearIndex(Index):
-    "An Index for lazy linear search of another database."
+    """An Index for lazy linear search of another database.
+
+    The defining feature of this class is that 'find' is inherited
+    from the base Index class, which does a linear search with
+    signatures().
+    """
+
     def __init__(self, db, selection_dict={}):
         self.db = db
         self.selection_dict = dict(selection_dict)
-
-    @property
-    def location(self):
-        return self.db.location
 
     def signatures(self):
         db = self.db.select(**self.selection_dict)
@@ -768,6 +770,7 @@ class MultiIndex(Index):
         "Return all matches with specified overlap."
         # actually do search!
         results = []
+
         for idx, src in zip(self.index_list, self.source_list):
             if not idx:
                 continue
@@ -778,5 +781,3 @@ class MultiIndex(Index):
                 yield IndexSearchResult(score, ss, best_src)
             
         return results
-
-    # note: 'gather' is inherited from Index base class, and uses prefetch.
