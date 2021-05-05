@@ -606,7 +606,17 @@ class SaveSignatures_Directory(_BaseSaveSignaturesToLocation):
     def add(self, ss):
         super().add(ss)
         md5 = ss.md5sum()
+
+        # don't overwrite even if duplicate md5sum
         outname = os.path.join(self.location, f"{md5}.sig.gz")
+        if os.path.exists(outname):
+            i = 0
+            while 1:
+                outname = os.path.join(self.location, f"{md5}_{i}.sig.gz")
+                if not os.path.exists(outname):
+                    break
+                i += 1
+
         with gzip.open(outname, "wb") as fp:
             sig.save_signatures([ss], fp, compression=1)
 
@@ -663,12 +673,29 @@ class SaveSignatures_ZipFile(_BaseSaveSignaturesToLocation):
     def open(self):
         self.zf = zipfile.ZipFile(self.location, 'w', zipfile.ZIP_STORED)
 
+    def _exists(self, name):
+        try:
+            self.zf.getinfo(name)
+            return True
+        except KeyError:
+            return False
+
     def add(self, ss):
         assert self.zf
         super().add(ss)
 
         md5 = ss.md5sum()
         outname = f"signatures/{md5}.sig.gz"
+
+        # don't overwrite even if duplicate md5sum.
+        if self._exists(outname):
+            i = 0
+            while 1:
+                outname = os.path.join(self.location, f"{md5}_{i}.sig.gz")
+                if not self._exists(outname):
+                    break
+                i += 1
+
         json_str = sourmash.save_signatures([ss], compression=1)
         self.zf.writestr(outname, json_str)
 
