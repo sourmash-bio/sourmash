@@ -134,6 +134,31 @@ def test_save_signatures_to_location_1_zip(runtmp):
     assert len(saved) == 2
 
 
+def test_save_signatures_to_location_1_zip_dup(runtmp):
+    # save to sigfile.zip
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    outloc = runtmp.output('foo.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss2)
+        save_sig.add(ss47)
+        save_sig.add(ss2)
+        save_sig.add(ss47)
+
+    # can we open as a .zip file?
+    with zipfile.ZipFile(outloc, "r") as zf:
+        assert list(zf.infolist())
+
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    assert ss2 in saved
+    assert ss47 in saved
+    assert len(saved) == 4
+
+
 def test_save_signatures_to_location_1_dirout(runtmp):
     # save to sigout/ (directory)
     sig2 = utils.get_test_data('2.fa.sig')
@@ -153,3 +178,26 @@ def test_save_signatures_to_location_1_dirout(runtmp):
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 2
+
+
+def test_save_signatures_to_location_1_dirout_duplicate(runtmp):
+    # save to sigout/ (directory)
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    sig47 = utils.get_test_data('47.fa.sig')
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+
+    outloc = runtmp.output('sigout/')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        print(save_sig)
+        save_sig.add(ss2)
+        save_sig.add(ss47)
+        save_sig.add(ss2)
+        save_sig.add(ss47)
+
+    assert os.path.isdir(outloc)
+
+    saved = list(sourmash.load_file_as_signatures(outloc))
+    assert ss2 in saved
+    assert ss47 in saved
+    assert len(saved) == 4
