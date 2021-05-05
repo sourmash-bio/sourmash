@@ -777,6 +777,32 @@ def test_zipfile_API_signatures():
     assert len(zipidx) == 7
 
 
+def test_zipfile_bool():
+    # make sure that zipfile __bool__ doesn't traverse all the signatures
+    # by relying on __len__!
+
+    # create fake class that overrides everything useful except for bool -
+    class FakeZipFileLinearIndex(ZipFileLinearIndex):
+        def __init__(self):
+            pass
+
+        def signatures(self):
+            yield 'a'
+            raise Exception("don't touch me!")
+
+        def __len__(self):
+            raise Exception("don't call len!")
+
+    # 'bool' should not touch __len__ or a second signature
+    zf = FakeZipFileLinearIndex()
+    assert bool(zf)
+
+    # __len__ should raise an exception
+    with pytest.raises(Exception) as exc:
+        len(zf)
+    assert "don't call len!" in str(exc.value)
+
+
 def test_zipfile_API_signatures_traverse_yield_all():
     # include dna-sig.noext, but not build.sh (cannot be loaded as signature)
     zipfile_db = utils.get_test_data('prot/all.zip')

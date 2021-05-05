@@ -435,7 +435,7 @@ class ZipFileLinearIndex(Index):
         self.traverse_yield_all = traverse_yield_all
 
     def __bool__(self):
-        # @CTB write test to make sure this doesn't call __len__
+        "Are there any matching signatures in this zipfile? Avoid calling len."
         try:
             first_sig = next(iter(self.signatures()))
         except StopIteration:
@@ -444,7 +444,10 @@ class ZipFileLinearIndex(Index):
         return True
 
     def __len__(self):
-        return len(list(self.signatures()))
+        n = 0
+        for _ in self.signatures:
+            n += 1
+        return n
 
     @property
     def location(self):
