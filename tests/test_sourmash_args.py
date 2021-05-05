@@ -103,6 +103,7 @@ def test_save_signatures_to_location_1_sig_gz(runtmp):
 
     # can we open as a .gz file?
     with gzip.open(outloc, "r") as fp:
+        print(save_sig)
         fp.read()
 
     saved = list(sourmash.load_file_as_signatures(outloc))
