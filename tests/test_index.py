@@ -128,6 +128,91 @@ def test_linear_index_search():
     assert sr[0][1] == ss63
 
 
+def test_linear_index_prefetch():
+    # prefetch does basic things right:
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss2)
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    # search for ss2
+    results = []
+    for result in lidx.prefetch(ss2, threshold_bp=0):
+        results.append(result)
+
+    assert len(results) == 1
+    assert results[0].signature == ss2
+
+    # search for ss47 - expect two results
+    results = []
+    for result in lidx.prefetch(ss47, threshold_bp=0):
+        results.append(result)
+
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_prefetch_empty():
+    # check that an exception is raised upon for an empty database
+    sig2 = utils.get_test_data('2.fa.sig')
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+
+    lidx = LinearIndex()
+
+    # since this is a generator, we need to actually ask for a value to
+    # get exception raised.
+    g = lidx.prefetch(ss2, threshold_bp=0)
+    with pytest.raises(ValueError) as e:
+        next(g)
+
+    assert "no signatures to search" in str(e.value)
+
+
+def test_linear_index_prefetch_lazy():
+    # make sure that prefetch doesn't touch values 'til requested.
+    class FakeSignature:
+        @property
+        def minhash(self):
+            raise Exception("don't touch me!")
+
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+    fake = FakeSignature()
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+    lidx.insert(fake)
+
+    g = lidx.prefetch(ss47, threshold_bp=0)
+
+    # first value:
+    sr = next(g)
+    assert sr.signature == ss47
+
+    # second value:
+    sr = next(g)
+    assert sr.signature == ss63
+
+    # third value: raises exception!
+    with pytest.raises(Exception) as e:
+        next(g)
+
+    assert "don't touch me!" in str(e.value)
+
+
 def test_linear_index_gather():
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
