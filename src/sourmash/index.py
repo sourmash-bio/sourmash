@@ -445,7 +445,7 @@ class ZipFileLinearIndex(Index):
 
     def __len__(self):
         n = 0
-        for _ in self.signatures:
+        for _ in self.signatures():
             n += 1
         return n
 
