@@ -78,6 +78,7 @@ def test_load_pathlist_from_file_does_not_exist():
         load_pathlist_from_file("")
     assert "file '' does not exist" in str(e.value)
 
+
 @utils.in_tempdir
 def test_load_pathlist_from_file_empty(c):
     from sourmash.sourmash_args import load_pathlist_from_file
