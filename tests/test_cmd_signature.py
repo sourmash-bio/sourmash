@@ -1593,3 +1593,7 @@ def test_import_mash_csv_to_sig():
         print(status, out, err)
         assert '1 matches:' in out
         assert '100.0%       short.fa' in out
+
+# adding new test for cat function in n-loaded
+def test_cat_n-load():
+
