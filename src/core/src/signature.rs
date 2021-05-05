@@ -364,8 +364,14 @@ impl Signature {
                     if mh.check_compatible(template).is_ok() {
                         return Some(sk);
                     }
-                } else {
-                    unimplemented!()
+                }
+            }
+        } else if let Sketch::HyperLogLog(template) = sketch {
+            for sk in &self.signatures {
+                if let Sketch::HyperLogLog(mh) = sk {
+                    if mh.check_compatible(template).is_ok() {
+                        return Some(sk);
+                    }
                 }
             }
         } else {
