@@ -20,6 +20,10 @@ def subparser(subparsers):
         help="force linear traversal of indexes to minimize loading time and memory use"
     )
     subparser.add_argument(
+        '--no-linear', dest="linear", action='store_false',
+    )
+
+    subparser.add_argument(
         '-q', '--quiet', action='store_true',
         help='suppress non-error output'
     )

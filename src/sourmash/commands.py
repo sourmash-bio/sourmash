@@ -6,7 +6,6 @@ import os
 import os.path
 import sys
 import copy
-import gzip
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -16,12 +15,12 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sourmash_args import (DEFAULT_LOAD_K, FileOutput, FileOutputCSV,
+from .sourmash_args import (FileOutput, FileOutputCSV,
                             SaveSignaturesToLocation)
+from .search import prefetch_database
+from .index import LazyLinearIndex
 
 WATERMARK_SIZE = 10000
-
-from .command_compute import compute
 
 
 def compare(args):
@@ -651,8 +650,11 @@ def gather(args):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    if args.linear:             # force linear traversal?
+        databases = [ LazyLinearIndex(db) for db in databases ]
+
     if args.prefetch:           # note: on by default!
-        notify(f"Starting prefetch sweep across databases.")
+        notify("Starting prefetch sweep across databases.")
         prefetch_query = copy.copy(query)
         prefetch_query.minhash = prefetch_query.minhash.flatten()
         save_prefetch = SaveSignaturesToLocation(args.save_prefetch)
@@ -825,7 +827,6 @@ def multigather(args):
                 error('no query hashes!? skipping to next..')
                 continue
 
-            notify(f"Using EXPERIMENTAL feature: prefetch enabled!")
             counters = []
             prefetch_query = copy.copy(query)
             prefetch_query.minhash = prefetch_query.minhash.flatten()
@@ -1030,8 +1031,6 @@ def migrate(args):
 
 def prefetch(args):
     "Output the 'raw' results of a containment/overlap search."
-    from .search import prefetch_database
-    from .index import LazyLinearIndex
 
     # load databases from files, too.
     if args.db_from_file:

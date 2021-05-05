@@ -9,14 +9,16 @@ import sourmash_tst_utils as utils
 import sourmash
 
 
-@utils.in_tempdir
-def test_prefetch_basic(c):
+def test_prefetch_basic(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47)
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -33,14 +35,16 @@ def test_prefetch_basic(c):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_query_abund(c):
+def test_prefetch_query_abund(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch w/abund query
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
-    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47)
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -57,14 +61,16 @@ def test_prefetch_query_abund(c):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_subj_abund(c):
+def test_prefetch_subj_abund(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch w/abund signature.
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
-    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47)
+    c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
+                   linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -81,8 +87,9 @@ def test_prefetch_subj_abund(c):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_csv_out(c):
+def test_prefetch_csv_out(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with CSV output
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -91,7 +98,7 @@ def test_prefetch_csv_out(c):
     csvout = c.output('out.csv')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '-o', csvout)
+                   '-o', csvout, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -106,8 +113,9 @@ def test_prefetch_csv_out(c):
             assert int(row['intersect_bp']) == expected
 
 
-@utils.in_tempdir
-def test_prefetch_matches(c):
+def test_prefetch_matches(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with --save-matches
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -116,7 +124,7 @@ def test_prefetch_matches(c):
     matches_out = c.output('matches.sig')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '--save-matches', matches_out)
+                   '--save-matches', matches_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -132,8 +140,9 @@ def test_prefetch_matches(c):
         assert match == ss
 
 
-@utils.in_tempdir
-def test_prefetch_matches_to_dir(c):
+def test_prefetch_matches_to_dir(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with --save-matches to a directory
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -144,7 +153,7 @@ def test_prefetch_matches_to_dir(c):
     matches_out = c.output('matches_dir/')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '--save-matches', matches_out)
+                   '--save-matches', matches_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -161,8 +170,9 @@ def test_prefetch_matches_to_dir(c):
     assert len(match_sigs) == 2
 
 
-@utils.in_tempdir
-def test_prefetch_matches_to_sig_gz(c):
+def test_prefetch_matches_to_sig_gz(runtmp, linear_gather):
+    c = runtmp
+
     import gzip
 
     # test a basic prefetch, with --save-matches to a sig.gz file
@@ -175,7 +185,7 @@ def test_prefetch_matches_to_sig_gz(c):
     matches_out = c.output('matches.sig.gz')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '--save-matches', matches_out)
+                   '--save-matches', matches_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -196,8 +206,9 @@ def test_prefetch_matches_to_sig_gz(c):
     assert len(match_sigs) == 2
 
 
-@utils.in_tempdir
-def test_prefetch_matches_to_zip(c):
+def test_prefetch_matches_to_zip(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with --save-matches to a zipfile
     import zipfile
 
@@ -210,7 +221,7 @@ def test_prefetch_matches_to_zip(c):
     matches_out = c.output('matches.zip')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '--save-matches', matches_out)
+                   '--save-matches', matches_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -232,8 +243,9 @@ def test_prefetch_matches_to_zip(c):
     assert len(match_sigs) == 2
 
 
-@utils.in_tempdir
-def test_prefetch_matching_hashes(c):
+def test_prefetch_matching_hashes(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with --save-matches
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -242,7 +254,7 @@ def test_prefetch_matching_hashes(c):
     matches_out = c.output('matches.sig')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63,
-                   '--save-matching-hashes', matches_out)
+                   '--save-matching-hashes', matches_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -261,8 +273,9 @@ def test_prefetch_matching_hashes(c):
     assert ss.minhash == intersect
 
 
-@utils.in_tempdir
-def test_prefetch_nomatch_hashes(c):
+def test_prefetch_nomatch_hashes(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch, with --save-matches
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -271,7 +284,7 @@ def test_prefetch_nomatch_hashes(c):
     nomatch_out = c.output('unmatched_hashes.sig')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2,
-                   '--save-unmatched-hashes', nomatch_out)
+                   '--save-unmatched-hashes', nomatch_out, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -289,14 +302,16 @@ def test_prefetch_nomatch_hashes(c):
     assert ss.minhash == remain
 
 
-@utils.in_tempdir
-def test_prefetch_no_num_query(c):
+def test_prefetch_no_num_query(runtmp, linear_gather):
+    c = runtmp
+
     # can't do prefetch with num signatures for query
     sig47 = utils.get_test_data('num/47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
     with pytest.raises(ValueError):
-        c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig47)
+        c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig47,
+                       linear_gather)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -305,14 +320,15 @@ def test_prefetch_no_num_query(c):
     assert c.last_result.status != 0
 
 
-@utils.in_tempdir
-def test_prefetch_no_num_subj(c):
+def test_prefetch_no_num_subj(runtmp, linear_gather):
+    c = runtmp
+
     # can't do prefetch with num signatures for query; no matches!
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('num/63.fa.sig')
 
     with pytest.raises(ValueError):
-        c.run_sourmash('prefetch', '-k', '31', sig47, sig63)
+        c.run_sourmash('prefetch', '-k', '31', sig47, sig63, linear_gather)
 
     print(c.last_result.status)
     print(c.last_result.out)
@@ -322,8 +338,9 @@ def test_prefetch_no_num_subj(c):
     assert "ERROR in prefetch: no compatible signatures in any databases?!" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_db_fromfile(c):
+def test_prefetch_db_fromfile(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -336,7 +353,7 @@ def test_prefetch_db_fromfile(c):
         print(sig2, file=fp)
         print(sig47, file=fp)
 
-    c.run_sourmash('prefetch', '-k', '31', sig47,
+    c.run_sourmash('prefetch', '-k', '31', sig47, linear_gather,
                    '--db-from-file', from_file)
     print(c.last_result.status)
     print(c.last_result.out)
@@ -354,13 +371,14 @@ def test_prefetch_db_fromfile(c):
     assert "a total of 0 query hashes remain unmatched." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_no_db(c):
+def test_prefetch_no_db(runtmp, linear_gather):
+    c = runtmp
+
     # test a basic prefetch with no databases/signatures
     sig47 = utils.get_test_data('47.fa.sig')
 
     with pytest.raises(ValueError):
-        c.run_sourmash('prefetch', '-k', '31', sig47)
+        c.run_sourmash('prefetch', '-k', '31', sig47, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -369,15 +387,16 @@ def test_prefetch_no_db(c):
     assert "ERROR: no databases or signatures to search!?" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_downsample_scaled(c):
+def test_prefetch_downsample_scaled(runtmp, linear_gather):
+    c = runtmp
+
     # test --scaled
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
 
     c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                   '--scaled', '1e5')
+                   '--scaled', '1e5', linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -386,8 +405,9 @@ def test_prefetch_downsample_scaled(c):
     assert "downsampling query from scaled=1000 to 10000" in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_empty(c):
+def test_prefetch_empty(runtmp, linear_gather):
+    c = runtmp
+
     # test --scaled
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -395,7 +415,7 @@ def test_prefetch_empty(c):
 
     with pytest.raises(ValueError):
         c.run_sourmash('prefetch', '-k', '31', sig47, sig63, sig2, sig47,
-                       '--scaled', '1e9')
+                       '--scaled', '1e9', linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
@@ -404,8 +424,9 @@ def test_prefetch_empty(c):
     assert "no query hashes!? exiting." in c.last_result.err
 
 
-@utils.in_tempdir
-def test_prefetch_basic_many_sigs(c):
+def test_prefetch_basic_many_sigs(runtmp, linear_gather):
+    c = runtmp
+
     # test what happens with many (and duplicate) signatures
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
@@ -413,7 +434,7 @@ def test_prefetch_basic_many_sigs(c):
 
     manysigs = [sig63, sig2, sig47] * 5
 
-    c.run_sourmash('prefetch', '-k', '31', sig47, *manysigs)
+    c.run_sourmash('prefetch', '-k', '31', sig47, *manysigs, linear_gather)
     print(c.last_result.status)
     print(c.last_result.out)
     print(c.last_result.err)
