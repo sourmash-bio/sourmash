@@ -396,7 +396,9 @@ A motivating use case for `sourmash prefetch` is to run it on multiple
 large databases with a metagenome query using `--threshold-bp=0`,
 `--save-matching-hashes matching_hashes.sig`, and `--save-matches
 db-matches.sig`, and then run `sourmash gather matching-hashes.sig
-db-matches.sig`.
+db-matches.sig`. 
+
+This combination of commands ensures that the more time- and memory-intensive `gather`, step is run only on the smallest possible number of signatures without affecting the results.
 
 ## `sourmash lca` subcommands for taxonomic classification
 
