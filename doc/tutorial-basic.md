@@ -207,11 +207,10 @@ which will produce files named `ecoli_cmp.matrix.pdf` and
 Here's a PNG version:
 
 ![E. coli comparison plot](_static/ecoli_cmp.matrix.png)
-<details>
- <summary>How do I dropdown?</>
-  <br>
- This is how you dropdown.
- </details>
+
+```{dropdown} :fa:`eye,mr-1` Bottom-left panel
+Hidden content This is where you add information
+```
 
 ## What's in my metagenome?
 
