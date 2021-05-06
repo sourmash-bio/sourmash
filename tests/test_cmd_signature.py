@@ -1593,22 +1593,22 @@ def test_import_mash_csv_to_sig(runtmp):
     testdata1 = runtmp.get_test_data('short.fa.msh.dump')
     testdata2 = runtmp.get_test_data('short.fa')
 
-    status, out, err = runtmp.runscript('sourmash', ['sig', 'import',
+    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash', ['sig', 'import',
                                                     '--csv',
                                                     testdata1,
                                                     '-o', 'xxx.sig'],
                                        in_directory=location)
 
-    status, out, err = runtmp.runscript('sourmash',
+    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash',
                                        ['compute', '-k', '31',
                                         '-n', '970', testdata2],
                                        in_directory=location)
 
-    status, out, err = runtmp.runscript('sourmash',
+    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash',
                                        ['search', '-k', '31',
                                         'short.fa.sig', 'xxx.sig'],
                                        in_directory=location)
-    print(status, out, err)
-    assert '1 matches:' in out
-    assert '100.0%       short.fa' in out
-        assert '1 matches:' in out
+    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    assert '1 matches:' in runtmp.last_result.out
+    assert '100.0%       short.fa' in runtmp.last_result.out
+    assert '1 matches:' in runtmp.last_result.out
