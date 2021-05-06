@@ -82,7 +82,7 @@ MinHash sketches provide a lightweight way to store "signatures" of
 large DNA or RNA sequence collections, and then compare or search them
 using a Jaccard index [@Ondov:2015].  MinHash sketches can be used
 to identify samples, find similar samples, identify data sets with
-shared sequences, and build phylogenetic trees
+shared sequences, and build phylogenetic trees.
 
 Since sourmash v1 was released in 2016 [@Brown:2016], sourmash has expanded
 to support new database types and many more command line functions.
