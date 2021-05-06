@@ -1238,7 +1238,7 @@ def test_linear_index_gather_ignore():
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
 
     results = list(lidx.find(search_fn, ss47))
-    results = [ ss for (ss, score, loc) in results ]
+    results = [ sr.signature for sr in results ]
 
     def is_found(ss, xx):
         for q in xx:
@@ -1273,7 +1273,7 @@ def test_lca_index_gather_ignore():
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
 
     results = list(db.find(search_fn, ss47))
-    results = [ ss for (ss, score, loc) in results ]
+    results = [ sr.signature for sr in results ]
 
     def is_found(ss, xx):
         for q in xx:
@@ -1309,7 +1309,7 @@ def test_sbt_index_gather_ignore():
     search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
 
     results = list(db.find(search_fn, ss47))
-    results = [ ss for (ss, score, loc) in results ]
+    results = [ sr.signature for sr in results ]
 
     def is_found(ss, xx):
         for q in xx:
