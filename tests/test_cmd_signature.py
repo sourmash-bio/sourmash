@@ -1595,5 +1595,10 @@ def test_import_mash_csv_to_sig():
         assert '100.0%       short.fa' in out
 
 # adding new test for cat function in n-loaded
-def test_cat_n-load():
+@utils.in_tempdir
+def test_cat_n_load(c):
+
+    c.run_sourmash('sig', 'cat' , c.output(""))
+
+
 
