@@ -392,28 +392,22 @@ def load_pathlist_from_file(filename):
     "Load a list-of-files text file."
     try:
         with open(filename, 'rt') as fp:
-            file_list = [ x.rstrip('\r\n') for x in fp ]
-        if len(file_list) == 0:
+            temp_file_list = [ x.rstrip('\r\n') for x in fp ]
+        file_list = set(temp_file_list)
+        if not file_list:
             raise ValueError("pathlist is empty")
         badFormat = False
-        duplicate = set()
         for checkfile in file_list:
             if not os.path.exists(checkfile):
                 badFormat = True
-            if checkfile not in duplicate:
-                duplicate.add(checkfile)
         if badFormat:
             raise ValueError("pathlist contains a badly formatted file")
-        if len(duplicate) != len(file_list):
-            raise ValueError("pathlist contains a duplicate file")
-
     except IOError:
         raise ValueError(f"file '{filename}' does not exist")    
     except OSError:
         raise ValueError(f"cannot open file '{filename}'")
     except UnicodeDecodeError:
         raise ValueError(f"cannot parse file '{filename}' as list of filenames")
-    
     return file_list
 
 

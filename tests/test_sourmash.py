@@ -26,6 +26,7 @@ except ImportError:
 
 from sourmash import signature
 from sourmash import VERSION
+from sourmash.sourmash_args import load_pathlist_from_file
 
 
 def test_run_sourmash():
@@ -81,7 +82,6 @@ def test_load_pathlist_from_file_does_not_exist():
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_empty(c):
-    from sourmash.sourmash_args import load_pathlist_from_file
     file_list = c.output("file_list")
     with open(file_list, "w") as fp:
         fp.write("")
@@ -92,12 +92,9 @@ def test_load_pathlist_from_file_empty(c):
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_badly_formatted(c):
-    from sourmash.sourmash_args import load_pathlist_from_file
     file_list = c.output("file_list")
-
     with open(file_list, "w") as fp:
         fp.write("{'a':1}")
-
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
     assert "pathlist contains a badly formatted file" in str(e.value)
@@ -105,7 +102,6 @@ def test_load_pathlist_from_file_badly_formatted(c):
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_badly_formatted_2(c):
-    from sourmash.sourmash_args import load_pathlist_from_file
     file_list = c.output("file_list")
     
     sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
@@ -113,11 +109,9 @@ def test_load_pathlist_from_file_badly_formatted_2(c):
     os.mkdir(newdir)
     new_file = os.path.join(newdir, 'sig1')
     shutil.copyfile(sig1, new_file)
-
     with open(file_list, "w") as fp:
         fp.write(new_file + "\n")
         fp.write("{'a':1}")
-
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
     assert "pathlist contains a badly formatted file" in str(e.value)
@@ -125,22 +119,14 @@ def test_load_pathlist_from_file_badly_formatted_2(c):
 
 @utils.in_tempdir
 def test_load_pathlist_from_file_duplicate(c):
-    from sourmash.sourmash_args import load_pathlist_from_file
     file_list = c.output("file_list")
-
     sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
-    newdir = c.output('newdir')
-    os.mkdir(newdir)
-    new_file = os.path.join(newdir, 'sig1')
-    shutil.copyfile(sig1, new_file)
-
     with open(file_list, "w") as fp:
-        fp.write(new_file + "\n")
-        fp.write(new_file + "\n")
-
-    with pytest.raises(ValueError) as e:
-        load_pathlist_from_file(file_list)
-    assert "pathlist contains a duplicate file" in str(e.value)
+        fp.write(sig1 + "\n")
+        fp.write(sig1 + "\n")
+    check = load_pathlist_from_file(file_list)
+    print (check)
+    assert len(check) == 1
 
 
 @utils.in_tempdir
@@ -269,7 +255,13 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', '', testdata1, testdata2)
+
+    # c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+
+    # ['compute', '-k', '21' '--singleton', '--protein', '--no-dna',testdata1]
+
+    # ['sketch', 'translate','-p', 'k=7,num=500','--singleton',testdata1]
 
     c.run_sourmash('compare', 'short.fa.sig',
                    'short2.fa.sig', '--csv', 'xxx', '-q')
