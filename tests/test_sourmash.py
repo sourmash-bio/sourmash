@@ -103,14 +103,9 @@ def test_load_pathlist_from_file_badly_formatted(c):
 @utils.in_tempdir
 def test_load_pathlist_from_file_badly_formatted_2(c):
     file_list = c.output("file_list")
-    
     sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
-    newdir = c.output('newdir')
-    os.mkdir(newdir)
-    new_file = os.path.join(newdir, 'sig1')
-    shutil.copyfile(sig1, new_file)
     with open(file_list, "w") as fp:
-        fp.write(new_file + "\n")
+        fp.write(sig1 + "\n")
         fp.write("{'a':1}")
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
@@ -255,13 +250,8 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('sketch', 'translate', '-p', '', testdata1, testdata2)
-
     # c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
-
-    # ['compute', '-k', '21' '--singleton', '--protein', '--no-dna',testdata1]
-
-    # ['sketch', 'translate','-p', 'k=7,num=500','--singleton',testdata1]
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig',
                    'short2.fa.sig', '--csv', 'xxx', '-q')
