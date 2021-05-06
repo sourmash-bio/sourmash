@@ -87,8 +87,8 @@ shared sequences, and build phylogenetic trees.
 Since sourmash v1 was released in 2016 [@Brown:2016], sourmash has expanded
 to support new database types and many more command line functions.
 In particular, sourmash now has robust support for both Jaccard similarity
-and containment calculations, which supports robust analysis and comparison
-of large metagenomic samples.
+and containment calculations, which enables analysis and comparison of data sets
+of different sizes, including large metagenomic samples.
 
 # Statement of Need
 
