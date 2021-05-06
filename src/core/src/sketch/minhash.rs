@@ -814,6 +814,7 @@ impl KmerMinHash {
         // in the Scaled MinHash, and `hash_size = p + q`
         let hash_size = (self.max_hash as f64).log2().ceil() as usize;
         let q = hash_size - p;
+        dbg!((hash_size, p, q));
 
         // Check if the counts are available
         if counts.is_none() {
@@ -827,9 +828,19 @@ impl KmerMinHash {
                 let value = hash >> p;
                 let index = (hash - (value << p)) as usize;
 
-                let leftmost = value.leading_zeros() + 1 - (p as u32);
+                let leftmost_b = hash.leading_zeros();
                 // remove the scaled effect
-                let leftmost = leftmost - (64 - hash_size as u32);
+                let leftmost = leftmost_b - (64 - hash_size as u32);
+
+                dbg!((
+                    p,
+                    q,
+                    format!("{:064b}", hash),
+                    index,
+                    leftmost,
+                    leftmost_b,
+                    size
+                ));
 
                 let old_value = registers[index];
                 registers[index] = old_value.max(leftmost as estimators::CounterType);
@@ -1650,5 +1661,70 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         new_mh.abunds = abunds;
 
         new_mh
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn check_hll_counter() {
+        // TODO: proptest with error_rate
+        // TODO: p is derived from error_rate
+        let error_rate = 0.01;
+        let p = 14;
+
+        // TODO: proptest with scaled
+        let scaled = 1000;
+        let max_hash = max_hash_for_scaled(scaled);
+
+        // TODO: ceil or floor?
+        let hash_size = (max_hash as f64).log2().ceil() as usize;
+
+        // TODO: q is derived from scaled
+        let q = 41;
+        assert_eq!(p + q, hash_size);
+
+        let mut new_mh = KmerMinHash::builder()
+            .num(0)
+            .ksize(21)
+            .max_hash(max_hash)
+            .build();
+
+        new_mh.add_hash(0b00000000_00000000_00000001_00000110_00100001_00101100_11010110_11100000);
+        assert_eq!(new_mh.cardinality_original(error_rate).unwrap(), 1);
+
+        assert!(new_mh.counts.lock().unwrap().is_some());
+        let counts_lock = new_mh.counts.lock().unwrap();
+        let counts = counts_lock.as_ref().unwrap();
+
+        assert_eq!(counts.len(), q + 2);
+        dbg!(counts);
+
+        // There is only one added hash, so counts[0] should be all possible
+        // registers (p ** 2), except for one
+        assert_eq!(counts[0], (1 << p) - 1);
+
+        // This hash has a 14 zeroes run when the scaled effect is discounted
+        //
+        // 63                                                                    00
+        // |                                                                     |
+        // 00000000_00000000_00000001_00000110_00100001_00101100_11010110_11100000
+        // due to scaled=1000, we only have 55 bits (instead of 64),
+        // with the 14 lower bits being the index (p=14 is an error rate of 1%)
+        // and the 41 upper bits being used for counting the number of leading zeros
+        //
+        // max hash for scaled=1000:
+        // 00000000_01000001_10001001_00110111_01001011_11000110_10100111_11110000
+        //           |                                                           |
+        //           54                                                          00
+        //           |                                                           |
+        // hash:     0000000_00000001_00000110_00100001_00101100_11010110_11100000
+        //           |----------------------q---------------------||------p------|
+
+        assert_eq!(counts[14], 1);
+
+        assert!(false);
     }
 }
