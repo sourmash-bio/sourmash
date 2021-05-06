@@ -18,11 +18,15 @@ specifically.
 We have [several tutorials](tutorials.md) available! Start with
 [Making signatures, comparing, and searching](tutorial-basic.md).
 
-The paper [Large-scale sequence comparisons with sourmash (Pierce et al., 2019)](https://f1000research.com/articles/8-1006)
-gives an overview of how sourmash works and what its major use cases are.
-Please also see the `mash` [software](http://mash.readthedocs.io/en/latest/) and
-[paper (Ondov et al., 2016)](http://dx.doi.org/10.1186/s13059-016-0997-x) for
-background information on how and why MinHash works.
+The sourmash software can be cited as
+[Brown & Irber, 2019](https://doi.org/10.12688/f1000research.19675.1). The
+paper
+[Large-scale sequence comparisons with sourmash (Pierce et al., 2019)](https://doi.org/10.12688/f1000research.19675.1)
+gives an overview of how sourmash works and what its major use cases
+are.  Please also see the `mash`
+[software](http://mash.readthedocs.io/en/latest/) and
+[paper (Ondov et al., 2016)](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x)
+for background information on how and why MinHash works.
 
 **Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/)!
 
