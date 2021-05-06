@@ -152,9 +152,21 @@ class _signatures_for_sketch_factory(object):
         return sigs
 
 
+def _add_from_file_to_filenames(args):
+    "Add filenames from --from-file to args.filenames"
+    from .sourmash_args import load_pathlist_from_file
+    if args.from_file:
+        file_list = load_pathlist_from_file(args.from_file)
+        args.filenames.extend(file_list)
+
+
 def _execute_sketch(args, signatures_factory):
     "Once configured, run 'sketch' the same way underneath."
     set_quiet(args.quiet)
+
+    if not args.filenames:
+        error('error: no input filenames provided! nothing to do - exiting.')
+        sys.exit(-1)
 
     if args.license != 'CC0':
         error('error: sourmash only supports CC0-licensed signatures. sorry!')
@@ -200,6 +212,7 @@ def dna(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -229,6 +242,7 @@ def protein(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)
 
 
@@ -258,4 +272,5 @@ def translate(args):
         error(f"Error creating signatures: {str(e)}")
         sys.exit(-1)
 
+    _add_from_file_to_filenames(args)
     _execute_sketch(args, signatures_factory)

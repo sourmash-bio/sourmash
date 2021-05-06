@@ -64,11 +64,17 @@ tox -e dev
 . .tox/dev/bin/activate
 ```
 
-Finally, ou can also explicitly install all the Python dependencies for sourmash by running
+Finally, you can also explicitly install all the Python dependencies for sourmash by running
 ```
 pip install -r requirements.txt
 ```
 (but they are already installed in the virtualenv created with `tox -e dev`).
+
+## Updating your developer environment
+
+To update rust to the latest version, use `rustup update`.
+
+To update your Python dependencies to the latest required for sourmash, you can run `pip install -r requirements.txt`.
 
 ## Running tests and checks
 
@@ -152,6 +158,7 @@ A short description of the high-level files and dirs in the sourmash repo:
 src/sourmash
 ├── cli/                | Command-line parsing, help messages and overall infrastucture
 ├── command_compute.py  | compute command implementation
+├── command_compute.py  | sketch command implementation
 ├── commands.py         | implementation for other CLI commands
 ├── compare.py          | Signature comparison functions
 ├── _compat.py          | Py2/3 compatibility functions

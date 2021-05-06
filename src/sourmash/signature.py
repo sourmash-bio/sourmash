@@ -146,6 +146,10 @@ class SourmashSignature(RustObject):
         "Compute containment by the other signature. Note: ignores abundance."
         return self.minhash.contained_by(other.minhash, downsample)
 
+    def max_containment(self, other, downsample=False):
+        "Compute max containment w/other signature. Note: ignores abundance."
+        return self.minhash.max_containment(other.minhash, downsample)
+
     def add_sequence(self, sequence, force=False):
         self._methodcall(lib.signature_add_sequence, to_bytes(sequence), force)
 
@@ -248,7 +252,7 @@ def load_signatures(
     input_type = _detect_input_type(data)
     if input_type == SigInput.UNKNOWN:
         if do_raise:
-            raise Exception("Error in parsing signature; quitting. Cannot open file or invalid signature")
+            raise ValueError("Error in parsing signature; quitting. Cannot open file or invalid signature")
         return
 
     size = ffi.new("uintptr_t *")

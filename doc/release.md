@@ -8,8 +8,7 @@ Michael Crusoe.
 The basic build environment needed below can be created as follows:
 
 ```
-conda create -y -n sourmash-rc python=3.7 pip cxx-compiler make \
-    htslib pysam twine
+conda create -y -n sourmash-rc python=3.8 pip cxx-compiler make twine tox tox-conda
 ```
 
 Then activate it with `conda activate sourmash-rc`.
@@ -65,7 +64,7 @@ cd testenv1
 source bin/activate
 git clone --depth 1 --branch v${new_version}${rc} https://github.com/dib-lab/sourmash.git
 cd sourmash
-python -m pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -r requirements.txt
 make test
 
@@ -74,7 +73,7 @@ make test
 cd ../../testenv2
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install -e git+https://github.com/dib-lab/sourmash.git@v${new_version}${rc}#egg=sourmash[test]
 cd src/sourmash
 make test
@@ -87,7 +86,7 @@ cp dist/sourmash*tar.gz ../../../testenv3/
 cd ../../../testenv3/
 deactivate
 source bin/activate
-python -m pip install -U setuptools pip wheel
+python -m pip install -U setuptools pip wheel setuptools_scm
 python -m pip install sourmash*tar.gz
 python -m pip install pytest
 tar xzf sourmash-${new_version}${rc}.tar.gz

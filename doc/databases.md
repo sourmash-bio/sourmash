@@ -1,5 +1,8 @@
 # Prepared search databases
 
+We provide several databases for download. Note that these databases can
+be used with both sourmash v3.5 and sourmash v4.0.
+
 ## RefSeq microbial genomes - SBT
 
 These database are formatted for use with `sourmash search` and

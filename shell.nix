@@ -1,17 +1,20 @@
 let
   sources = import ./nix/sources.nix;
+  rustPlatform = import ./nix/rust.nix { inherit sources; };
   pkgs = import sources.nixpkgs { overlays = [ (import sources.rust-overlay) ]; };
 in
   with pkgs;
 
   pkgs.mkShell {
     buildInputs = [
-      rust-bin.stable.latest.rust
+      rustPlatform.rust.cargo
       git
       stdenv.cc.cc.lib
       (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
       (python39.withPackages(ps: with ps; [ virtualenv setuptools ]))
       (python37.withPackages(ps: with ps; [ virtualenv setuptools ]))
+      wasmtime
+      wasm-pack
     ];
 
     shellHook = ''

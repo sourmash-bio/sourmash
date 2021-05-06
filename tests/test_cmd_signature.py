@@ -91,6 +91,25 @@ def test_sig_merge_1_multisig(c):
 
 
 @utils.in_tempdir
+def test_sig_merge_1_name(c):
+    # check name arg
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    assignedSigName = 'SIG_NAME'
+    outsig = c.output('merged2and63.sig')
+
+    c.run_sourmash('sig', 'merge', sig2, sig63, '--dna', '-k', '31', '-o', "merged2and63.sig", '--name', assignedSigName )
+    
+    test_merge_sig = sourmash.load_one_signature(outsig)
+
+    print("outsig", outsig)
+    print("xx_test_merge_sig.name", test_merge_sig.name)
+
+    assert assignedSigName == test_merge_sig.name
+
+
+@utils.in_tempdir
 def test_sig_merge_1_ksize_moltype(c):
     # check ksize, moltype args
     sig2 = utils.get_test_data('2.fa.sig')
@@ -1421,6 +1440,27 @@ signature: GCA_001593935
         assert line.strip() in out
 
 
+@utils.in_tempdir
+def test_sig_describe_1_zipfile(c):
+    # get basic info on multiple signatures in a zipfile
+    sigs = utils.get_test_data('prot/all.zip')
+    c.run_sourmash('sig', 'describe', sigs)
+
+    out = c.last_result.out
+    print(c.last_result)
+
+    expected_output = """\
+k=19 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=dayhoff num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=hp num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
+k=19 molecule=protein num=0 scaled=100 seed=42 track_abundance=0
+""".splitlines()
+    for line in expected_output:
+        assert line.strip() in out
+
+
 @utils.in_thisdir
 def test_sig_describe_stdin(c):
     sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
@@ -1430,6 +1470,35 @@ def test_sig_describe_stdin(c):
     c.run_sourmash('sig', 'describe', '-', stdin_data=data)
 
     assert 'signature: GCA_001593925' in c.last_result.out
+
+
+@utils.in_tempdir
+def test_sig_describe_empty(c):
+    sig = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
+
+    ss = sourmash.load_file_as_signatures(sig)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+
+    ss.name = ''
+    ss.filename = ''
+
+    outsig = c.output('xxx.sig')
+    with open(outsig, 'wt') as fp:
+        sourmash.save_signatures([ss], fp)
+
+    ss = sourmash.load_file_as_signatures(outsig)
+    ss = list(ss)
+    assert len(ss) == 1
+    ss = ss[0]
+    assert ss.name == ''
+    assert ss.filename == ''
+
+    c.run_sourmash('sig', 'describe', outsig)
+    print(c.last_result.out)
+    assert 'signature: ** no name **' in c.last_result.out
+    assert 'source file: ** no name **' in c.last_result.out
 
 
 @utils.in_tempdir

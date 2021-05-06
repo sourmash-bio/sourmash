@@ -35,3 +35,7 @@ Please ask questions and files issues
 
 Development happens on github at
 [dib-lab/sourmash](https://github.com/dib-lab/sourmash).
+
+## Minimum supported Rust version
+
+Currently the minimum supported Rust version is 1.42.0.

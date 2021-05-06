@@ -450,32 +450,55 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
-    def downsample(self, num=None, scaled=None):
+    def intersection_and_union_size(self, other):
+        "Calculate intersection and union sizes between `self` and `other`."
+        if not isinstance(other, MinHash):
+            raise TypeError("Must be a MinHash!")
+
+        usize = ffi.new("uint64_t *")
+        common = self._methodcall(lib.kmerminhash_intersection_union_size,
+                                  other._get_objptr(), usize)
+
+        usize = ffi.unpack(usize, 1)[0]
+        return common, usize
+
+    def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.
         """
+        # first, evaluate provided parameters --
+
+        # at least one must be specified!
         if num is None and scaled is None:
             raise ValueError('must specify either num or scaled to downsample')
-        elif num is not None:
-            if self.num and self.num < num:
-                raise ValueError("new sample num is higher than current sample num")
-            max_hash=0
-        elif scaled is not None:
-            if self.num:
-                raise ValueError("num != 0 - cannot downsample a standard MinHash")
-            old_scaled = self.scaled
-            if old_scaled > scaled:
-                raise ValueError(
-                    "new scaled {} is lower than current sample scaled {}".format(
-                        scaled, old_scaled
-                    )
-                )
 
+        # both cannot be specified
+        if num is not None and scaled is not None:
+            raise ValueError('cannot specify both num and scaled')
+
+        if num is not None:
+            # cannot downsample a scaled MinHash with num:
+            if self.scaled:
+                raise ValueError("cannot downsample a scaled MinHash using num")
+            # cannot upsample
+            if self.num < num:
+                raise ValueError("new sample num is higher than current sample num")
+
+            # acceptable num value? make sure to set max_hash to 0.
+            max_hash = 0
+            
+        elif scaled is not None:
+            # cannot downsample a num MinHash with scaled
+            if self.num:
+                raise ValueError("cannot downsample a num MinHash using scaled")
+            if self.scaled > scaled:
+                raise ValueError(f"new scaled {scaled} is lower than current sample scaled {self.scaled}")
+
+            # acceptable scaled value? reconfigure max_hash, keep num 0.
             max_hash = _get_max_hash_for_scaled(scaled)
             num = 0
-        ###
 
-        # create new object:
+        # end checks! create new object:
         a = MinHash(
             num, self.ksize, self.is_protein, self.dayhoff, self.hp,
             self.track_abundance, self.seed, max_hash
@@ -489,15 +512,17 @@ class MinHash(RustObject):
         return a
 
     def flatten(self):
-        """Return a new MinHash with track_abundance=False."""
-        # create new object:
-        a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self._max_hash
-        )
-        a.add_many(self)
+        """If track_abundance=True, return a new flattened MinHash."""
+        if self.track_abundance:
+            # create new object:
+            a = MinHash(
+                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+                False, self.seed, self._max_hash
+            )
+            a.add_many(self)
 
-        return a
+            return a
+        return self
 
     def jaccard(self, other, downsample=False):
         "Calculate Jaccard similarity of two MinHash objects."
@@ -536,14 +561,32 @@ class MinHash(RustObject):
         """\
         Calculate how much of self is contained by other.
         """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
         if not len(self):
             return 0.0
 
         return self.count_common(other, downsample) / len(self)
 
+    def max_containment(self, other, downsample=False):
+        """
+        Calculate maximum containment.
+        """
+        if not (self.scaled and other.scaled):
+            raise TypeError("can only calculate containment for scaled MinHashes")
+        min_denom = min((len(self), len(other)))
+        if not min_denom:
+            return 0.0
+
+        return self.count_common(other, downsample) / min_denom
+
     def __add__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
+
+        if self.num and other.num:
+            if self.num != other.num:
+                raise TypeError(f"incompatible num values: self={self.num} other={other.num}")
 
         new_obj = self.__copy__()
         new_obj += other
@@ -559,6 +602,15 @@ class MinHash(RustObject):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
+
+    def intersection(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only intersect MinHash objects")
+        if self.track_abundance or other.track_abundance:
+            raise TypeError("can only intersect flat MinHash objects")
+
+        ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
+        return MinHash._from_objptr(ptr)
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where

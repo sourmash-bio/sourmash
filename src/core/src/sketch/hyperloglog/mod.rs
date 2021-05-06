@@ -156,7 +156,7 @@ impl HyperLogLog {
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<HyperLogLog, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
-        Ok(HyperLogLog::from_reader(&mut reader)?)
+        HyperLogLog::from_reader(&mut reader)
     }
 }
 

@@ -1,5 +1,4 @@
 "Various utilities used by sourmash tests."
-
 import sys
 import os
 import tempfile
@@ -12,10 +11,7 @@ import pkg_resources
 from pkg_resources import Requirement, resource_filename, ResolutionError
 import traceback
 from io import open  # pylint: disable=redefined-builtin
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 
 SIG_FILES = [os.path.join('demo', f) for f in (
@@ -109,6 +105,8 @@ def runscript(scriptname, args, **kwargs):
             status = _runscript(scriptname)
         except SystemExit as err:
             status = err.code
+            if status == None:
+                status = 0
         except:  # pylint: disable=bare-except
             traceback.print_exc(file=sys.stderr)
             status = -1
@@ -191,6 +189,7 @@ class RunnerContext(object):
             raise ValueError(self)
 
         return self.last_result
+    sourmash = run_sourmash
 
     def run(self, scriptname, *args, **kwargs):
         "Run a script with the given arguments."

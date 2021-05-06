@@ -1,14 +1,163 @@
+"""
+Code for searching collections of signatures.
+"""
 from collections import namedtuple
 import sys
+import os
+from enum import Enum
 
 from .logging import notify, error
 from .signature import SourmashSignature
 from .minhash import _get_max_hash_for_scaled
 
 
-# generic SearchResult.
+class SearchType(Enum):
+    JACCARD = 1
+    CONTAINMENT = 2
+    MAX_CONTAINMENT = 3
+
+
+def make_jaccard_search_query(*,
+                              do_containment=False,
+                              do_max_containment=False,
+                              best_only=False,
+                              threshold=None):
+    """\
+    Make a "flat" search object for Jaccard search & containment.
+    """
+    if do_containment and do_max_containment:
+        raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
+
+    # configure search - containment? ignore abundance? best only?
+    search_cls = JaccardSearch
+    if best_only:
+        search_cls = JaccardSearchBestOnly
+
+    if do_containment:
+        search_obj = search_cls(SearchType.CONTAINMENT, threshold)
+    elif do_max_containment:
+        search_obj = search_cls(SearchType.MAX_CONTAINMENT, threshold)
+    else:
+        search_obj = search_cls(SearchType.JACCARD, threshold)
+
+    return search_obj
+
+
+def make_gather_query(query_mh, threshold_bp):
+    "Make a search object for gather."
+    scaled = query_mh.scaled
+    if not scaled:
+        raise TypeError("query signature must be calculated with scaled")
+
+    if not query_mh:
+        return None
+
+    # are we setting a threshold?
+    threshold = 0
+    if threshold_bp:
+        if threshold_bp < 0:
+            raise TypeError("threshold_bp must be non-negative")
+
+        # if we have a threshold_bp of N, then that amounts to N/scaled
+        # hashes:
+        n_threshold_hashes = threshold_bp / scaled
+
+        # that then requires the following containment:
+        threshold = n_threshold_hashes / len(query_mh)
+
+        # is it too high to ever match? if so, exit.
+        if threshold > 1.0:
+            return None
+
+    search_obj = JaccardSearchBestOnly(SearchType.CONTAINMENT,
+                                       threshold=threshold)
+
+    return search_obj
+
+
+class JaccardSearch:
+    """
+    A class used by Index classes for searching/gathering.
+    """
+    def __init__(self, search_type, threshold=None):
+        "Constructor. Takes type of search, and optional threshold."
+        score_fn = None
+        require_scaled = False
+
+        if search_type == SearchType.JACCARD:
+            score_fn = self.score_jaccard
+        elif search_type == SearchType.CONTAINMENT:
+            score_fn = self.score_containment
+            require_scaled = True
+        elif search_type == SearchType.MAX_CONTAINMENT:
+            score_fn = self.score_max_containment
+            require_scaled = True
+        self.score_fn = score_fn
+        self.require_scaled = require_scaled
+
+        if threshold is None:
+            threshold = 0
+        self.threshold = float(threshold)
+
+    def check_is_compatible(self, sig):
+        """
+        Is this query compatible with this type of search? Raise TypeError
+        if not.
+        """
+        if self.require_scaled:
+            if not sig.minhash.scaled:
+                raise TypeError("this search requires a scaled signature")
+
+        if sig.minhash.track_abundance:
+            raise TypeError("this search cannot be done with an abund signature")
+
+    def passes(self, score):
+        """Return True if this score meets or exceeds the threshold.
+
+        Note: this can be used whenever a score or estimate is available
+        (e.g. internal nodes on an SBT). `collect(...)`, below, decides
+        whether a particular signature should be collected, and/or can
+        update the threshold (used for BestOnly behavior).
+        """
+        if score and score >= self.threshold:
+            return True
+        return False
+
+    def collect(self, score, match_sig):
+        "Return True if this match should be collected."
+        return True
+
+    def score_jaccard(self, query_size, shared_size, subject_size, total_size):
+        "Calculate Jaccard similarity."
+        return shared_size / total_size
+
+    def score_containment(self, query_size, shared_size, subject_size,
+                          total_size):
+        "Calculate Jaccard containment."
+        if query_size == 0:
+            return 0
+        return shared_size / query_size
+
+    def score_max_containment(self, query_size, shared_size, subject_size,
+                              total_size):
+        "Calculate Jaccard max containment."
+        min_denom = min(query_size, subject_size)
+        if min_denom == 0:
+            return 0
+        return shared_size / min_denom
+
+
+class JaccardSearchBestOnly(JaccardSearch):
+    "A subclass of JaccardSearch that implements best-only."
+    def collect(self, score, match):
+        "Raise the threshold to the best match found so far."
+        self.threshold = max(self.threshold, score)
+        return True
+
+
+# generic SearchResult tuple.
 SearchResult = namedtuple('SearchResult',
-                          'similarity, match, md5, filename, name')
+                          'similarity, match, md5, filename, name, query, query_filename, query_name, query_md5')
 
 
 def format_bp(bp):
@@ -25,32 +174,63 @@ def format_bp(bp):
     return '???'
 
 
-def search_databases(query, databases, threshold, do_containment, best_only,
-                     ignore_abundance, unload_data=False):
+def search_databases_with_flat_query(query, databases, **kwargs):
     results = []
     found_md5 = set()
-    for (obj, filename, filetype) in databases:
-        search_iter = obj.search(query, threshold=threshold,
-                                 do_containment=do_containment,
-                                 ignore_abundance=ignore_abundance,
-                                 best_only=best_only,
-                                 unload_data=unload_data)
-        for (similarity, match, filename) in search_iter:
+
+    for db in databases:
+        search_iter = db.search(query, **kwargs)
+        for (score, match, filename) in search_iter:
             md5 = match.md5sum()
             if md5 not in found_md5:
-                results.append((similarity, match, filename))
+                results.append((score, match, filename))
                 found_md5.add(md5)
 
     # sort results on similarity (reverse)
     results.sort(key=lambda x: -x[0])
 
     x = []
-    for (similarity, match, filename) in results:
-        x.append(SearchResult(similarity=similarity,
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
                               match=match,
                               md5=match.md5sum(),
                               filename=filename,
-                              name=match.name))
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
+    return x
+
+
+def search_databases_with_abund_query(query, databases, **kwargs):
+    results = []
+    found_md5 = set()
+
+    for db in databases:
+        search_iter = db.search_abund(query, **kwargs)
+        for (score, match, filename) in search_iter:
+            md5 = match.md5sum()
+            if md5 not in found_md5:
+                results.append((score, match, filename))
+                found_md5.add(md5)
+
+    # sort results on similarity (reverse)
+    results.sort(key=lambda x: -x[0])
+
+    x = []
+    for (score, match, filename) in results:
+        x.append(SearchResult(similarity=score,
+                              match=match,
+                              md5=match.md5sum(),
+                              filename=filename,
+                              name=match.name,
+                              query=query,
+                              query_filename=query.filename,
+                              query_name=query.name,
+                              query_md5=query.md5sum()[:8]
+        ))
     return x
 
 ###
@@ -84,8 +264,8 @@ def _find_best(dblist, query, threshold_bp):
     threshold_bp = int(threshold_bp / query_scaled) * query_scaled
 
     # search across all databases
-    for (obj, filename, filetype) in dblist:
-        for cont, match, fname in obj.gather(query, threshold_bp=threshold_bp):
+    for db in dblist:
+        for cont, match, fname in db.gather(query, threshold_bp=threshold_bp):
             assert cont                   # all matches should be nonzero.
 
             # note, break ties based on name, to ensure consistent order.
@@ -94,9 +274,7 @@ def _find_best(dblist, query, threshold_bp):
                 # update best match.
                 best_cont = cont
                 best_match = match
-
-                # some objects may not have associated filename (e.g. SBTs)
-                best_filename = fname or filename
+                best_filename = fname
 
     if not best_match:
         return None, None, None
@@ -128,6 +306,8 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         import numpy as np
         orig_query_abunds = orig_query_mh.hashes
 
+    query.minhash = query.minhash.flatten()
+
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
     result_n = 0
     while query.minhash:
@@ -135,8 +315,7 @@ def gather_databases(query, databases, threshold_bp, ignore_abundance):
         best_cont, best_match, filename = _find_best(databases, query,
                                                      threshold_bp)
         if not best_match:          # no matches at all for this cutoff!
-            notify('found less than {} in common. => exiting',
-                   format_bp(threshold_bp))
+            notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
             break
 
         # subtract found hashes from search hashes, construct new search

@@ -100,7 +100,7 @@ compares genome or metagenome signatures, it's reporting Jaccard
 similarity *without* abundance.
 
 However, it is possible to take into account abundance information by
-computing signatures with `--track-abundance`. The abundance
+computing signatures with `-p abund`. The abundance
 information will be used if it's present in the signature, and it can
 be ignored with `--ignore-abundance` in any signature comparison.
 
@@ -117,7 +117,7 @@ containment queries against genome databases.  This will give you
 numbers that (approximately) match what you get from counting mapped
 reads.
 
-If you compute your input signatures with `--track-abundance`,
+If you create your input signatures with `-p abund`,
 `sourmash gather` will use that information
 to calculate an abundance-weighted result.  This will weight
 each match to a hash value by the multiplicity of the hash value in
@@ -153,9 +153,7 @@ for use in clustering.
 For more information on the value of this kind of comparison for
 metagenomics, please see the simka paper,
 [Multiple comparative metagenomics using multiset k-mer counting](https://peerj.com/articles/cs-94/),
-Benoit et al., 2016. Initial comparisons of metagenome similarity
-approximations computed with sourmash to the output of simka suggest a
-significant correlation.
+Benoit et al., 2016.
 
 **Implementation note:** Angular similarity searches cannot be done on
 SBT or LCA databases currently; you have to provide lists of signature
@@ -229,7 +227,7 @@ A few quick notes for the algorithmic folk out there --
   increase database size. (Although of course it may get a lot
   slower...)
 
-## Appendix B: sourmash gather and `--track-abundance`
+## Appendix B: sourmash gather and signatures with abundance information
 
 Below is a discussion of a synthetic set of test cases using three
 randomly generated (fake) genomes of the same size, with two even read

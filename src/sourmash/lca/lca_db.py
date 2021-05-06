@@ -1,5 +1,5 @@
 "LCA database class and utilities."
-
+import os
 import json
 import gzip
 from collections import OrderedDict, defaultdict, Counter
@@ -55,6 +55,8 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
+    is_database = True
+
     def __init__(self, ksize, scaled, moltype='DNA'):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
@@ -69,6 +71,10 @@ class LCA_Database(Index):
         self.lineage_to_lid = {}
         self.lid_to_lineage = {}
         self.hashval_to_idx = defaultdict(set)
+
+    @property
+    def location(self):
+        return self.filename
 
     def _invalidate_cache(self):
         if hasattr(self, '_cache'):
@@ -129,13 +135,11 @@ class LCA_Database(Index):
         except ValueError:
             raise ValueError("cannot downsample signature; is it a scaled signature?")
 
-        if ident is None:
-            ident = sig.name
-            if not ident:
-                ident = sig.filename
+        if not ident:
+            ident = str(sig)
 
         if ident in self.ident_to_name:
-            raise ValueError("signature {} is already in this LCA db.".format(ident))
+            raise ValueError("signature '{}' is already in this LCA db.".format(ident))
 
         # before adding, invalide any caching from @cached_property
         self._invalidate_cache()
@@ -171,29 +175,52 @@ class LCA_Database(Index):
         for v in self._signatures.values():
             yield v
 
-    def select(self, ksize=None, moltype=None):
-        "Selector interface - make sure this database matches requirements."
-        ok = True
+    def select(self, ksize=None, moltype=None, num=0, scaled=0,
+               containment=False):
+        """Make sure this database matches the requested requirements.
+
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details, and _find_signatures for
+        implementation.
+
+        Will always raise ValueError if a requirement cannot be met.
+        """
+        if num:
+            raise ValueError("cannot use 'num' MinHashes to search LCA database")
+
+        if scaled > self.scaled and not containment:
+            raise ValueError(f"cannot use scaled={scaled} on this database (scaled={self.scaled})")
+
         if ksize is not None and self.ksize != ksize:
-            ok = False
+            raise ValueError(f"ksize on this database is {self.ksize}; this is different from requested ksize of {ksize}")
         if moltype is not None and moltype != self.moltype:
-            ok = False
+            raise ValueError(f"moltype on this database is {self.moltype}; this is different from requested moltype of {moltype}")
 
-        if ok:
-            return self
-
-        raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
+        return self
 
     @classmethod
     def load(cls, db_name):
         "Load LCA_Database from a JSON file."
         from .lca_utils import taxlist, LineagePair
 
+        if not os.path.isfile(db_name):
+            raise ValueError(f"'{db_name}' is not a file and cannot be loaded as an LCA database")
+
         xopen = open
         if db_name.endswith('.gz'):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
+            try:
+                first_ch = fp.read(1)
+            except ValueError:
+                first_ch = 'X'
+            if first_ch[0] != '{':
+                raise ValueError(f"'{db_name}' is not an LCA database file.")
+
+            fp.seek(0)
+
             load_d = {}
             try:
                 load_d = json.load(fp)
@@ -302,68 +329,6 @@ class LCA_Database(Index):
             
             json.dump(save_d, fp)
 
-    def search(self, query, *args, **kwargs):
-        """Return set of matches with similarity above 'threshold'.
-
-        Results will be sorted by similarity, highest to lowest.
-
-        Optional arguments:
-          * do_containment: default False. If True, use Jaccard containment.
-          * best_only: default False. If True, allow optimizations that
-            may. May discard matches better than threshold, but first match
-            is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-
-        Note, the "best only" hint is ignored by LCA_Database
-        """
-        if not query.minhash:
-            return []
-
-        # check arguments
-        if 'threshold' not in kwargs:
-            raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
-        do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
-        mh = query.minhash
-        if ignore_abundance:
-            mh.track_abundance = False
-
-        # find all the matches, then sort & return.
-        results = []
-        for x in self._find_signatures(mh, threshold, do_containment):
-            (score, match, filename) = x
-            results.append((score, match, filename))
-
-        results.sort(key=lambda x: -x[0])
-        return results
-
-    def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the database."
-        if not query.minhash:
-            return []
-
-        results = []
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = threshold_bp / (len(query.minhash) * self.scaled)
-
-        # grab first match, if any, and return that; since _find_signatures
-        # is a generator, this will truncate further searches.
-        for x in self._find_signatures(query.minhash, threshold,
-                                       containment=True, ignore_scaled=True):
-            (score, match, filename) = x
-            if score:
-                results.append((score, match, filename))
-            break
-
-        return results
-
-    def find(self, search_fn, *args, **kwargs):
-        """Not implemented; 'find' cannot be implemented efficiently on
-        an LCA database."""
-        raise NotImplementedError
-
     def downsample_scaled(self, scaled):
         """
         Downsample to the provided scaled value, i.e. eliminate all hashes
@@ -456,27 +421,32 @@ class LCA_Database(Index):
         debug('=> {} signatures!', len(sigd))
         return sigd
 
-    def _find_signatures(self, minhash, threshold, containment=False,
-                       ignore_scaled=False):
+    def find(self, search_fn, query, **kwargs):
         """
         Do a Jaccard similarity or containment search, yield results.
 
-        This is essentially a fast implementation of find that collects all
-        the signatures with overlapping hash values. Note that similarity
-        searches (containment=False) will not be returned in sorted order.
-        """
-        # make sure we're looking at the same scaled value as database
-        if self.scaled > minhash.scaled:
-            minhash = minhash.downsample(scaled=self.scaled)
-        elif self.scaled < minhash.scaled and not ignore_scaled:
-            # note that containment can be calculated w/o matching scaled.
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+        Here 'search_fn' should be an instance of 'JaccardSearch'.
 
-        query_mins = set(minhash.hashes)
+        As with SBTs, queries with higher scaled values than the database
+        can still be used for containment search, but not for similarity
+        search. See SBT.select(...) for details.
+        """
+        search_fn.check_is_compatible(query)
+
+        # make sure we're looking at the same scaled value as database
+        query_mh = query.minhash
+        query_scaled = query_mh.scaled
+        if self.scaled > query_scaled:
+            query_mh = query_mh.downsample(scaled=self.scaled)
+            query_scaled = query_mh.scaled
+            prepare_subject = lambda x: x # identity
+        else:
+            prepare_subject = lambda subj: subj.downsample(scaled=query_scaled)
 
         # collect matching hashes for the query:
         c = Counter()
-        for hashval in query_mins:
+        query_hashes = set(query_mh.hashes)
+        for hashval in query_hashes:
             idx_list = self.hashval_to_idx.get(hashval, [])
             for idx in idx_list:
                 c[idx] += 1
@@ -489,22 +459,26 @@ class LCA_Database(Index):
             # minhashes, which is kinda memory intensive...!
             # NOTE: one future low-mem optimization could be to support doing
             # this piecemeal by iterating across all the hashes, instead.
-            match_sig = self._signatures[idx]
-            match_mh = match_sig.minhash
-            match_size = len(match_mh)
 
-            # calculate the containment or similarity
-            if containment:
-                score = count / len(query_mins)
-            else:
-                # query_mins is size of query signature
-                # match_size is size of match signature
-                # count is overlap
-                score = count / (len(query_mins) + match_size - count)
+            subj = self._signatures[idx]
+            subj_mh = prepare_subject(subj.minhash)
 
-            # ...and return.
-            if score >= threshold:
-                yield score, match_sig, self.filename
+            # all numbers calculated after downsampling --
+            query_size = len(query_mh)
+            subj_size = len(subj_mh)
+            shared_size = query_mh.count_common(subj_mh)
+            total_size = len(query_mh + subj_mh)
+
+            score = search_fn.score_fn(query_size, shared_size, subj_size,
+                                       total_size)
+
+            # note to self: even with JaccardSearchBestOnly, this will
+            # still iterate over & score all signatures. We should come
+            # up with a protocol by which the JaccardSearch object can
+            # signal that it is done, or something.
+            if search_fn.passes(score):
+                if search_fn.collect(score, subj):
+                    yield subj, score
 
     @cached_property
     def lid_to_idx(self):

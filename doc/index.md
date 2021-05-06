@@ -12,7 +12,8 @@ available databases](databases.md).
 
 sourmash also includes k-mer based taxonomic exploration and
 classification routines for genome and metagenome analysis. These
-routines can use the NCBI taxonomy but do not depend on it in any way.
+routines can use the NCBI and GTDB taxonomies but do not depend on them
+specifically.
 
 We have [several tutorials](tutorials.md) available! Start with
 [Making signatures, comparing, and searching](tutorial-basic.md).
@@ -24,6 +25,10 @@ Please also see the `mash` [software](http://mash.readthedocs.io/en/latest/) and
 background information on how and why MinHash works.
 
 **Questions? Thoughts?** Ask us on the [sourmash issue tracker](https://github.com/dib-lab/sourmash/issues/)!
+
+**Want to migrate to sourmash v4?** sourmash v4 is now available, and
+has a number of incompatibilites with v2 and v3. Please see 
+[our migration guide](support.md#migrating-from-sourmash-v3-x-to-sourmash-v4-x)!
 
 ----
 
@@ -98,7 +103,7 @@ sourmash has relatively small disk and memory requirements compared to
 many other software programs used for genome search and taxonomic
 classification.
 
-`sourmash search` and `sourmash gather` can be used to search all
+`sourmash search` and `sourmash gather` can be used to search 100k
 genbank microbial genomes ([using our prepared databases](databases.md)
 with about 20 GB of disk and in under 1 GB of RAM.
 Typically a search for a single genome takes about 30 seconds on a laptop.
@@ -134,7 +139,7 @@ versions!
 **sourmash cannot find matches across large evolutionary distances.**
 
 sourmash seems to work well to search and compare data sets for
-matches at the species and genus level, but does not have much
+nucleotide matches at the species and genus level, but does not have much
 sensitivity beyond that.  (It seems to be particularly good at
 strain-level analysis.)  You should use protein-based analyses
 to do searches across larger evolutionary distances.
@@ -151,9 +156,12 @@ to signature size when using 'scaled' signatures.
 The sourmash logo was designed by Stéfanie Fares Sabbag,
 with feedback from Clara Barcelos,
 Taylor Reiter and Luiz Irber.
+
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img
 alt="Creative Commons License" style="border-width:0"
-src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />The logo
+src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />
+
+The logo
 is licensed under a <a rel="license"
 href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons
 Attribution-ShareAlike 4.0 International License</a>.

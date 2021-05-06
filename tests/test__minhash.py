@@ -93,12 +93,42 @@ def test_div_zero(track_abundance):
 
 def test_div_zero_contained(track_abundance):
     # verify that empty MHs do not yield divide by zero errors for contained_by
-    mh = MinHash(1, 4, track_abundance=track_abundance)
+    mh = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
     mh2 = mh.copy_and_clear()
 
     mh.add_sequence('ATGC')
     assert mh.contained_by(mh2) == 0
     assert mh2.contained_by(mh) == 0
+
+
+def test_contained_requires_scaled(track_abundance):
+    # test that contained_by requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.contained_by(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.contained_by(mh2)
+
+
+def test_contained_requires_scaled_2(track_abundance):
+    # test that max_containment requires scaled signatures
+    mh1 = MinHash(1, 4, track_abundance=track_abundance)
+    mh2 = MinHash(0, 4, scaled=1, track_abundance=track_abundance)
+
+    mh1.add_sequence('ATGC')
+    mh2.add_sequence('ATGC')
+
+    with pytest.raises(TypeError):
+        mh2.max_containment(mh1)
+
+    with pytest.raises(TypeError):
+        mh1.max_containment(mh2)
 
 
 def test_bytes_dna(track_abundance):
@@ -294,7 +324,7 @@ def test_no_downsample_scaled_if_n(track_abundance):
     with pytest.raises(ValueError) as excinfo:
         mh.downsample(scaled=100000000)
 
-    assert 'cannot downsample a standard MinHash' in str(excinfo.value)
+    assert 'cannot downsample a num MinHash using scaled' in str(excinfo.value)
 
 
 def test_scaled_num_both(track_abundance):
@@ -539,12 +569,12 @@ def test_mh_copy(track_abundance):
 def test_mh_len(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
-    assert len(a) == 20
+    assert len(a) == 0
     a.add_sequence('TGCCGCCCAGCACCGGGTGACTAGGTTGAGCCATGATTAACCTGCAATGA')
     assert len(a) == 20
 
 
-def test_mh_len(track_abundance):
+def test_mh_len_2(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
     for i in range(0, 40, 2):
         a.add_hash(i)
@@ -1564,6 +1594,19 @@ def test_is_molecule_type_4(track_abundance):
     assert mh.dayhoff
 
 
+def test_addition_num_incompatible():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(20, 21)
+
+    mh1.add_hash(0)
+    mh2.add_hash(1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1 + mh2
+
+    assert "incompatible num values: self=10 other=20" in str(exc.value)
+
+
 def test_addition_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
@@ -1621,6 +1664,123 @@ def test_iaddition_noabund():
     assert hashcounts[0] == 1
 
 
+def test_intersection_1_num():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(10, 21)
+
+    mh1.add_hash(0)
+    mh1.add_hash(1)
+    mh2.add_hash(0)
+    mh2.add_hash(2)
+
+    mh3 = mh1.intersection(mh2)
+    print(set(mh3.hashes))
+    assert len(mh3) == 1
+    assert 0 in mh3.hashes
+
+
+def test_intersection_2_scaled():
+    mh1 = MinHash(0, 21, scaled=1)
+    mh2 = MinHash(0, 21, scaled=1)
+
+    mh1.add_hash(0)
+    mh1.add_hash(1)
+    mh2.add_hash(0)
+    mh2.add_hash(2)
+
+    mh3 = mh1.intersection(mh2)
+    print(set(mh3.hashes))
+    assert len(mh3) == 1
+    assert 0 in mh3.hashes
+
+
+def test_intersection_3_abundance_error():
+    # cannot intersect abundance MinHash
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=True)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=True)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1.intersection(mh2)
+
+    assert str(exc.value) == "can only intersect flat MinHash objects"
+
+
+def test_intersection_4_incompatible_ksize():
+    # cannot intersect incompatible ksize etc
+    mh1 = MinHash(500, 21)
+    mh2 = MinHash(500, 31)
+
+    with pytest.raises(ValueError) as exc:
+        mh3 = mh1.intersection(mh2)
+
+    assert str(exc.value) == "different ksizes cannot be compared"
+
+
+def test_intersection_5_incompatible():
+    # cannot intersect with non-MinHash objects
+    mh1 = MinHash(0, 21, scaled=1)
+
+    with pytest.raises(TypeError) as exc:
+        mh3 = mh1.intersection(set())
+
+    assert str(exc.value) == "can only intersect MinHash objects"
+
+
+def test_intersection_6_full_num():
+    # intersection of two "full" num objects is correct
+    mh1 = MinHash(20, 21)
+    mh2 = MinHash(20, 21)
+
+    for i in range(100):
+        mh1.add_hash(i)
+
+    for i in range(0, 100, 2):
+        mh2.add_hash(i)
+
+    # they are both full:
+    assert len(mh1) == 20
+    assert len(mh2) == 20
+
+    # intersection is symmetric:
+    mh3 = mh1.intersection(mh2)
+    mh4 = mh2.intersection(mh1)
+    assert mh3 == mh4
+
+    # everything in intersection is in both:
+    for k in mh3.hashes:
+        assert k in mh1.hashes
+        assert k in mh2.hashes
+
+    assert mh1.intersection_and_union_size(mh2) == (10, 20)
+
+def test_intersection_7_full_scaled():
+    # intersection of two scaled objects is correct
+    mh1 = MinHash(0, 21, scaled=100)
+    mh2 = MinHash(0, 21, scaled=100)
+
+    for i in range(100):
+        mh1.add_hash(i)
+
+    for i in range(0, 200, 2):
+        mh2.add_hash(i)
+
+    # they both have everything:
+    assert len(mh1) == 100
+    assert len(mh2) == 100
+
+    # intersection is symmetric:
+    mh3 = mh1.intersection(mh2)
+    mh4 = mh2.intersection(mh1)
+    assert mh3 == mh4
+
+    # everything in intersection is in both:
+    for k in mh3.hashes:
+        assert k in mh1.hashes
+        assert k in mh2.hashes
+
+    assert mh1.intersection_and_union_size(mh2) == (50, 150)
+
+
 def test_merge_abund():
     mh1 = MinHash(10, 21, track_abundance=True)
     mh2 = MinHash(10, 21, track_abundance=True)
@@ -1653,3 +1813,98 @@ def test_merge_noabund():
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 1
+
+
+def test_merge_full_num():
+    # merge/union of two "full" num objects is correct
+    mh1 = MinHash(20, 21)
+    mh2 = MinHash(20, 21)
+
+    for i in range(100):
+        mh1.add_hash(i)
+
+    for i in range(0, 100, 2):
+        mh2.add_hash(i)
+
+    # they are both full:
+    assert len(mh1) == 20
+    assert len(mh2) == 20
+
+    # add is symmetric:
+    mh3 = mh1 + mh2
+    mh4 = mh2 + mh1
+    assert mh3 == mh4
+
+    # merge is full
+    assert len(mh3) == 20
+
+    # everything in union is in at least one
+    for k in mh3.hashes:
+        assert k in mh1.hashes or k in mh2.hashes
+
+
+def test_merge_scaled():
+    # merge/union of two reasonably full scaled objects is correct
+    mh1 = MinHash(0, 21, scaled=100)
+    mh2 = MinHash(0, 21, scaled=100)
+
+    for i in range(100):
+        mh1.add_hash(i)
+
+    for i in range(0, 200, 2):
+        mh2.add_hash(i)
+
+    assert len(mh1) == 100
+    assert len(mh2) == 100
+
+    # add is symmetric:
+    mh3 = mh1 + mh2
+    mh4 = mh2 + mh1
+    assert mh3 == mh4
+
+    # merge contains all the things
+    assert len(mh3) == 150
+
+    # everything in either one is in union
+    for k in mh1.hashes:
+        assert k in mh3.hashes
+    for k in mh2.hashes:
+        assert k in mh3.hashes
+
+
+def test_max_containment():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 5))
+
+    assert mh1.contained_by(mh2) == 1/4
+    assert mh2.contained_by(mh1) == 1/2
+    assert mh1.max_containment(mh2) == 1/2
+    assert mh2.max_containment(mh1) == 1/2
+
+
+def test_max_containment_empty():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 0
+    assert mh2.contained_by(mh1) == 0
+    assert mh1.max_containment(mh2) == 0
+    assert mh2.max_containment(mh1) == 0
+
+
+def test_max_containment_equal():
+    mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
+    mh2 = MinHash(0, 21, scaled=1, track_abundance=False)
+
+    mh1.add_many((1, 2, 3, 4))
+    mh2.add_many((1, 2, 3, 4))
+
+    assert mh1.contained_by(mh2) == 1
+    assert mh2.contained_by(mh1) == 1
+    assert mh1.max_containment(mh2) == 1
+    assert mh2.max_containment(mh1) == 1

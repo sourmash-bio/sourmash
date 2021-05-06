@@ -69,6 +69,24 @@ def test_api_create_insert_bad_ksize():
         lca_db.insert(ss)
 
 
+def test_api_create_insert_bad_ident():
+    # can we insert a signature with no/empty ident?
+    ss1 = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'),
+                                      ksize=31)
+    ss2 = sourmash.load_one_signature(utils.get_test_data('63.fa.sig'),
+                                      ksize=31)
+    ss1.name = ''
+    ss1.filename = ''
+    ss2.name = ''
+    ss2.filename = ''
+
+    lca_db = sourmash.lca.LCA_Database(ksize=31, scaled=1000)
+    lca_db.insert(ss1)
+    lca_db.insert(ss2)
+    # SUCCESS!
+    # would fail, previously :)
+
+
 def test_api_create_insert_bad_scaled():
     # can we insert a scaled=1000 signature into a scaled=500 DB?
     # hopefully not.
@@ -376,6 +394,37 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
+def test_databases_load_fail_on_dir():
+    filename1 = utils.get_test_data('lca')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
+
+def test_databases_load_fail_on_not_exist():
+    filename1 = utils.get_test_data('does-not-exist')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not a file and cannot be loaded as an LCA database" in err
+    assert not 'found 0 matches total;' in err
+
 def test_db_repr():
     filename = utils.get_test_data('lca/delmont-1.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(filename)
@@ -411,17 +460,6 @@ def test_lca_index_select():
         db.select(moltype='protein')
 
 
-def test_lca_index_find_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.find(None)
-
-
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
@@ -440,8 +478,13 @@ def test_search_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    with pytest.raises(ValueError) as e:
-        results = db.search(sig, threshold=.01, ignore_abundance=True)
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    print(results)
+    assert results[0][0] == 1.0
+    match = results[0][1]
+
+    orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():
@@ -641,6 +684,29 @@ def test_basic_index_column_start():
         assert "** assuming column 'MAGs' is identifiers in spreadsheet" in err
         assert "** assuming column 'Domain' is superkingdom in spreadsheet" in err
         assert '1 identifiers used out of 1 distinct identifiers in spreadsheet.' in err
+
+
+@utils.in_tempdir
+def test_index_empty_sketch_name(c):
+    # create two signatures with empty 'name' attributes
+    cmd = ['sketch', 'dna', utils.get_test_data('genome-s12.fa.gz'),
+           utils.get_test_data('genome-s11.fa.gz')]
+    c.run_sourmash(*cmd)
+
+    sig1 = c.output('genome-s11.fa.gz.sig')
+    assert os.path.exists(sig1)
+    sig2 = c.output('genome-s12.fa.gz.sig')
+    assert os.path.exists(sig2)
+
+    # can we insert them both?
+    taxcsv = utils.get_test_data('lca/delmont-1.csv')
+    cmd = ['lca', 'index', taxcsv, 'zzz', sig1, sig2]
+    c.run_sourmash(*cmd)
+    assert os.path.exists(c.output('zzz.lca.json'))
+
+    print(c.last_result.out)
+    print(c.last_result.err)
+    assert 'WARNING: no lineage provided for 2 sig' in c.last_result.err
 
 
 def test_basic_index_and_classify_with_tsv_and_gz():
@@ -907,6 +973,33 @@ def test_single_classify_to_output():
 
         outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
+        assert 'classified 1 signatures total' in err
+        assert 'loaded 1 LCA databases' in err
+
+
+def test_single_classify_to_output_no_name():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        ss = sourmash.load_one_signature(input_sig, ksize=31)
+
+        outsig_filename = os.path.join(location, 'q.sig')
+        with open(outsig_filename, 'wt') as fp:
+            # remove name from signature here --
+            new_sig = sourmash.SourmashSignature(ss.minhash, filename='xyz')
+            sourmash.save_signatures([new_sig], fp)
+
+        cmd = ['lca', 'classify', '--db', db1, '--query', outsig_filename,
+               '-o', os.path.join(location, 'outfile.txt')]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        print((outdata,))
+        assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
 
@@ -1828,8 +1921,8 @@ def test_incompat_lca_db_ksize_2(c):
     err = c.last_result.err
     print(err)
 
-    assert "ksize on db 'test.lca.json' is 25;" in err
-    assert 'this is different from query ksize of 31.' in err
+    assert "ERROR: cannot use 'test.lca.json' for this query." in err
+    assert "ksize on this database is 25; this is different from requested ksize of 31"
 
 
 @utils.in_tempdir

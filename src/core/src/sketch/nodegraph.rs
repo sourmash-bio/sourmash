@@ -274,7 +274,7 @@ impl Nodegraph {
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Nodegraph, Error> {
         let mut reader = io::BufReader::new(File::open(path)?);
-        Ok(Nodegraph::from_reader(&mut reader)?)
+        Nodegraph::from_reader(&mut reader)
     }
 
     pub fn tablesizes(&self) -> Vec<u64> {

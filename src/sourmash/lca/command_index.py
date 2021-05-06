@@ -23,10 +23,8 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
     The 'assignments' dictionary that's returned maps identifiers to
     lineage tuples.
     """
-    mode = 'rt'
-
     # parse spreadsheet!
-    fp = open(filename, mode)
+    fp = open(filename, newline='')
     r = csv.reader(fp, delimiter=delimiter)
     row_headers = ['identifiers']
     row_headers += ['_skip_']*(start_column - 2)
@@ -170,7 +168,7 @@ def index(args):
 
     inp_files = list(args.signatures)
     if args.from_file:
-        more_files = sourmash_args.load_file_list_of_signatures(args.from_file)
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
         inp_files.extend(more_files)
 
     # track duplicates
@@ -183,7 +181,7 @@ def index(args):
     n = 0
     total_n = len(inp_files)
     record_duplicates = set()
-    record_no_lineage = set()
+    record_no_lineage = []
     record_remnants = set(assignments)
     record_used_lineages = set()
     record_used_idents = set()
@@ -207,7 +205,11 @@ def index(args):
             md5_to_name[sig.md5sum()] = str(sig)
 
             # parse identifier, potentially with splitting
-            ident = sig.name
+            if sig.name:
+                ident = sig.name
+            else:
+                ident = sig.filename
+
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
@@ -242,7 +244,7 @@ def index(args):
             # track lineage info - either no lineage, or this lineage used.
             else:
                 debug('WARNING: no lineage assignment for {}.', ident)
-                record_no_lineage.add(ident)
+                record_no_lineage.append(ident)
 
     # end main add signatures loop
 
