@@ -683,7 +683,7 @@ class MultiIndex(Index):
     def load_from_path(cls, pathname, force=False):
         "Create a MultiIndex from a path (filename or directory)."
         from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # @CTB change to isdir
+        if not os.path.exists(pathname): # CTB change to isdir
             raise ValueError(f"'{pathname}' must be a directory")
 
         index_list = []
