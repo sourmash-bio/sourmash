@@ -2028,3 +2028,23 @@ def test_lazy_index_5_len():
 
     with pytest.raises(NotImplementedError):
         len(lazy)
+
+
+def test_lazy_index_wraps_multiindex_location():
+    sigdir = utils.get_test_data('prot/protein/')
+    sigzip = utils.get_test_data('prot/protein.zip')
+    siglca = utils.get_test_data('prot/protein.lca.json.gz')
+    sigsbt = utils.get_test_data('prot/protein.sbt.zip')
+
+    db_paths = (sigdir, sigzip, siglca, sigsbt)
+    dbs = [ sourmash.load_file_as_index(db_path) for db_path in db_paths ]
+
+    mi = MultiIndex(dbs, db_paths)
+    lazy = LazyLinearIndex(mi)
+
+    mi2 = mi.select(moltype='protein')
+    lazy2 = lazy.select(moltype='protein')
+
+    for (ss_tup, ss_lazy_tup) in zip(mi2.signatures_with_location(),
+                                     lazy2.signatures_with_location()):
+        assert ss_tup == ss_lazy_tup

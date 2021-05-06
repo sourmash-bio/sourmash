@@ -149,7 +149,7 @@ class Index(ABC):
 
         # do the actual search:
         matches = []
-        for subj in self.signatures_with_location():
+        for subj, loc in self.signatures_with_location():
             if not subj.minhash.track_abundance:
                 raise TypeError("'search_abund' requires subject signatures with abundance information")
             score = query.similarity(subj)
@@ -752,16 +752,6 @@ class MultiIndex(Index):
 
         return MultiIndex(new_idx_list, new_src_list)
 
-    def filter(self, filter_fn):
-        new_idx_list = []
-        new_src_list = []
-        for idx, src in zip(self.index_list, self.source_list):
-            idx = idx.filter(filter_fn)
-            new_idx_list.append(idx)
-            new_src_list.append(src)
-
-        return MultiIndex(new_idx_list, new_src_list)
-
     def search(self, query, **kwargs):
         """Return the match with the best Jaccard similarity in the Index.
 
@@ -771,7 +761,8 @@ class MultiIndex(Index):
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
             for sr in idx.search(query, **kwargs):
-                sr.location = sr.location or filename
+                if src: # override 'sr.location' if 'src' specified'
+                    sr = IndexSearchResult(sr.score, sr.signature, src)
                 matches.append(sr)
                 
         # sort!
