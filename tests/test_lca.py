@@ -394,6 +394,16 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
 def test_databases_load_fail_on_dir():
     filename1 = utils.get_test_data('lca')
     with pytest.raises(ValueError) as exc:
@@ -450,17 +460,6 @@ def test_lca_index_select():
         db.select(moltype='protein')
 
 
-def test_lca_index_find_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.find(None)
-
-
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
@@ -479,8 +478,13 @@ def test_search_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    with pytest.raises(ValueError) as e:
-        results = db.search(sig, threshold=.01, ignore_abundance=True)
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    print(results)
+    assert results[0][0] == 1.0
+    match = results[0][1]
+
+    orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():

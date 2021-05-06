@@ -603,6 +603,7 @@ impl KmerMinHash {
     }
 
     // FIXME: intersection_size and count_common should be the same?
+    // (for scaled minhashes)
     pub fn intersection_size(&self, other: &KmerMinHash) -> Result<(u64, u64), Error> {
         self.check_compatible(other)?;
 

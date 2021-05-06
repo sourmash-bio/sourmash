@@ -450,6 +450,18 @@ class MinHash(RustObject):
             raise TypeError("Must be a MinHash!")
         return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
 
+    def intersection_and_union_size(self, other):
+        "Calculate intersection and union sizes between `self` and `other`."
+        if not isinstance(other, MinHash):
+            raise TypeError("Must be a MinHash!")
+
+        usize = ffi.new("uint64_t *")
+        common = self._methodcall(lib.kmerminhash_intersection_union_size,
+                                  other._get_objptr(), usize)
+
+        usize = ffi.unpack(usize, 1)[0]
+        return common, usize
+
     def downsample(self, *, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.
@@ -500,15 +512,17 @@ class MinHash(RustObject):
         return a
 
     def flatten(self):
-        """Return a new MinHash with track_abundance=False."""
-        # create new object:
-        a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self._max_hash
-        )
-        a.add_many(self)
+        """If track_abundance=True, return a new flattened MinHash."""
+        if self.track_abundance:
+            # create new object:
+            a = MinHash(
+                self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
+                False, self.seed, self._max_hash
+            )
+            a.add_many(self)
 
-        return a
+            return a
+        return self
 
     def jaccard(self, other, downsample=False):
         "Calculate Jaccard similarity of two MinHash objects."
@@ -588,6 +602,15 @@ class MinHash(RustObject):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
+
+    def intersection(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only intersect MinHash objects")
+        if self.track_abundance or other.track_abundance:
+            raise TypeError("can only intersect flat MinHash objects")
+
+        ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
+        return MinHash._from_objptr(ptr)
 
     def set_abundances(self, values, clear=True):
         """Set abundances for hashes from ``values``, where

@@ -1,14 +1,23 @@
 "An Abstract Base Class for collections of signatures."
 
+import os
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple
 import zipfile
-import os
 
+from .search import make_jaccard_search_query, make_gather_query
+
+# generic return tuple for Index.search and Index.gather
+IndexSearchResult = namedtuple('Result', 'score, signature, location')
 
 class Index(ABC):
     is_database = False
+
+    @property
+    def location(self):
+        "Return a resolvable location for this index, if possible."
+        return None
 
     @abstractmethod
     def signatures(self):
@@ -27,7 +36,7 @@ class Index(ABC):
     def load(cls, location, leaf_loader=None, storage=None, print_version_warning=True):
         """ """
 
-    def find(self, search_fn, *args, **kwargs):
+    def find(self, search_fn, query, *args, **kwargs):
         """Use search_fn to find matching signatures in the index.
 
         search_fn(other_sig, *args) should return a boolean that indicates
@@ -35,17 +44,119 @@ class Index(ABC):
 
         Returns a list.
         """
+        # first: is this query compatible with this search?
+        search_fn.check_is_compatible(query)
 
+        # ok! continue!
+
+        # this set of signatures may be heterogenous in scaled/num values;
+        # define some processing functions to downsample appropriately.
+        query_mh = query.minhash
+        assert not query_mh.track_abundance
+        if query_mh.scaled:
+            # make query and subject compatible w/scaled.
+            query_scaled = query_mh.scaled
+
+            def prepare_subject(subj_mh):
+                assert subj_mh.scaled
+                if subj_mh.track_abundance:
+                    subj_mh = subj_mh.flatten()
+
+                # downsample subject to highest scaled
+                subj_scaled = subj_mh.scaled
+                if subj_scaled < query_scaled:
+                    return subj_mh.downsample(scaled=query_scaled)
+                else:
+                    return subj_mh
+
+            def prepare_query(query_mh, subj_mh):
+                assert subj_mh.scaled
+
+                # downsample query to highest scaled
+                subj_scaled = subj_mh.scaled
+                if subj_scaled > query_scaled:
+                    return query_mh.downsample(scaled=subj_scaled)
+                else:
+                    return query_mh
+
+        else:                   # num
+            query_num = query_mh.num
+
+            def prepare_subject(subj_mh):
+                assert subj_mh.num
+                if subj_mh.track_abundance:
+                    subj_mh = subj_mh.flatten()
+
+                # downsample subject to smallest num
+                subj_num = subj_mh.num
+                if subj_num > query_num:
+                    return subj_mh.downsample(num=query_num)
+                else:
+                    return subj_mh
+
+            def prepare_query(query_mh, subj_mh):
+                assert subj_mh.num
+                # downsample query to smallest num
+                subj_num = subj_mh.num
+                if subj_num < query_num:
+                    return query_mh.downsample(num=subj_num)
+                else:
+                    return query_mh
+
+        # now, do the search!
+        for subj in self.signatures():
+            subj_mh = prepare_subject(subj.minhash)
+            # note: we run prepare_query here on the original query minhash.
+            query_mh = prepare_query(query.minhash, subj_mh)
+
+            assert not query_mh.track_abundance
+            assert not subj_mh.track_abundance
+
+            shared_size, total_size = query_mh.intersection_and_union_size(subj_mh)
+
+            query_size = len(query_mh)
+            subj_size = len(subj_mh)
+
+            score = search_fn.score_fn(query_size,
+                                       shared_size,
+                                       subj_size,
+                                       total_size)
+
+            if search_fn.passes(score):
+                # note: here we yield the original signature, not the
+                # downsampled minhash.
+                if search_fn.collect(score, subj):
+                    yield subj, score
+
+    def search_abund(self, query, *, threshold=None, **kwargs):
+        """Return set of matches with angular similarity above 'threshold'.
+
+        Results will be sorted by similarity, highest to lowest.
+        """
+        if not query.minhash.track_abundance:
+            raise TypeError("'search_abund' requires query signature with abundance information")
+
+        # check arguments
+        if threshold is None:
+            raise TypeError("'search_abund' requires 'threshold'")
+        threshold = float(threshold)
+
+        # do the actual search:
         matches = []
+        for subj in self.signatures():
+            if not subj.minhash.track_abundance:
+                raise TypeError("'search_abund' requires subject signatures with abundance information")
+            score = query.similarity(subj)
+            if score >= threshold:
+                matches.append(IndexSearchResult(score, subj, self.location))
 
-        for node in self.signatures():
-            if search_fn(node, *args):
-                matches.append(node)
+        # sort!
+        matches.sort(key=lambda x: -x.score)
         return matches
 
-    def search(self, query, threshold=None,
+    def search(self, query, *, threshold=None,
                do_containment=False, do_max_containment=False,
-               ignore_abundance=False, **kwargs):
+               best_only=False, **kwargs):
         """Return set of matches with similarity above 'threshold'.
 
         Results will be sorted by similarity, highest to lowest.
@@ -55,42 +166,28 @@ class Index(ABC):
           * best_only: default False. If True, allow optimizations that
             may. May discard matches better than threshold, but first match
             is guaranteed to be best.
-          * ignore_abundance: default False. If True, and query signature
-            and database support k-mer abundances, ignore those abundances.
-
-        Note, the "best only" hint is ignored by LinearIndex.
         """
-
         # check arguments
         if threshold is None:
             raise TypeError("'search' requires 'threshold'")
         threshold = float(threshold)
 
-        if do_containment and do_max_containment:
-            raise TypeError("'do_containment' and 'do_max_containment' cannot both be True")
-
-        # configure search - containment? ignore abundance?
-        if do_containment:
-            query_match = lambda x: query.contained_by(x, downsample=True)
-        elif do_max_containment:
-            query_match = lambda x: query.max_containment(x, downsample=True)
-        else:
-            query_match = lambda x: query.similarity(
-                x, downsample=True, ignore_abundance=ignore_abundance)
+        search_obj = make_jaccard_search_query(do_containment=do_containment,
+                                               do_max_containment=do_max_containment,
+                                               best_only=best_only,
+                                               threshold=threshold)
 
         # do the actual search:
         matches = []
 
-        for ss in self.signatures():
-            score = query_match(ss)
-            if score >= threshold:
-                matches.append((score, ss, self.location))
+        for subj, score in self.find(search_obj, query, **kwargs):
+            matches.append(IndexSearchResult(score, subj, self.location))
 
         # sort!
-        matches.sort(key=lambda x: -x[0])
+        matches.sort(key=lambda x: -x.score)
         return matches
 
-    def gather(self, query, *args, **kwargs):
+    def gather(self, query, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
         if not query.minhash:             # empty query? quit.
             return []
@@ -100,31 +197,20 @@ class Index(ABC):
             raise ValueError('gather requires scaled signatures')
 
         threshold_bp = kwargs.get('threshold_bp', 0.0)
-        threshold = 0.0
-
-        # are we setting a threshold?
-        if threshold_bp:
-            # if we have a threshold_bp of N, then that amounts to N/scaled
-            # hashes:
-            n_threshold_hashes = float(threshold_bp) / scaled
-
-            # that then requires the following containment:
-            threshold = n_threshold_hashes / len(query.minhash)
-
-            # is it too high to ever match? if so, exit.
-            if threshold > 1.0:
-                return []
+        search_obj = make_gather_query(query.minhash, threshold_bp)
+        if not search_obj:
+            return []
 
         # actually do search!
         results = []
-        for ss in self.signatures():
-            cont = query.minhash.contained_by(ss.minhash, True)
-            if cont and cont >= threshold:
-                results.append((cont, ss, self.location))
 
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+        for subj, score in self.find(search_obj, query, **kwargs):
+            results.append(IndexSearchResult(score, subj, self.location))
 
-        return results
+        results.sort(reverse=True,
+                     key=lambda x: (x.score, x.signature.md5sum()))
+
+        return results[:1]
 
     @abstractmethod
     def select(self, ksize=None, moltype=None, scaled=None, num=None,
@@ -183,7 +269,11 @@ class LinearIndex(Index):
         self._signatures = []
         if _signatures:
             self._signatures = list(_signatures)
-        self.location = filename
+        self.filename = filename
+
+    @property
+    def location(self):
+        return self.filename
 
     def signatures(self):
         return iter(self._signatures)
@@ -393,26 +483,34 @@ class MultiIndex(Index):
         return MultiIndex(new_idx_list, new_src_list)
 
     def search(self, query, *args, **kwargs):
+        """Return the match with the best Jaccard similarity in the Index.
+
+        Note: this overrides the location of the match if needed.
+        """
         # do the actual search:
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.search(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
-                matches.append((score, ss, best_src))
+                matches.append(IndexSearchResult(score, ss, best_src))
                 
         # sort!
-        matches.sort(key=lambda x: -x[0])
+        matches.sort(key=lambda x: -x.score)
         return matches
 
     def gather(self, query, *args, **kwargs):
-        "Return the match with the best Jaccard containment in the Index."
+        """Return the match with the best Jaccard containment in the Index.
+
+        Note: this overrides the location of the match if needed.
+        """
         # actually do search!
         results = []
         for idx, src in zip(self.index_list, self.source_list):
             for (score, ss, filename) in idx.gather(query, *args, **kwargs):
                 best_src = src or filename # override if src provided
-                results.append((score, ss, best_src))
+                results.append(IndexSearchResult(score, ss, best_src))
             
-        results.sort(reverse=True, key=lambda x: (x[0], x[1].md5sum()))
+        results.sort(reverse=True,
+                     key=lambda x: (x.score, x.signature.md5sum()))
 
         return results

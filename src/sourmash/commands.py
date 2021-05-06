@@ -5,6 +5,7 @@ import csv
 import os
 import os.path
 import sys
+import copy
 
 import screed
 from .compare import (compare_all_pairs, compare_serial_containment,
@@ -14,11 +15,9 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sbtmh import SearchMinHashesFindBest, SigLeaf
+from .sourmash_args import (DEFAULT_LOAD_K, FileOutput, FileOutputCSV,
+                            SaveSignaturesToLocation)
 
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
-
-DEFAULT_N = 500
 WATERMARK_SIZE = 10000
 
 from .command_compute import compute
@@ -385,6 +384,8 @@ def index(args):
 
             if args.scaled:
                 ss.minhash = ss.minhash.downsample(scaled=args.scaled)
+            if ss.minhash.track_abundance:
+                ss.minhash = ss.minhash.flatten()
             scaleds.add(ss.minhash.scaled)
 
             tree.insert(ss)
@@ -422,7 +423,8 @@ def index(args):
 
 
 def search(args):
-    from .search import search_databases
+    from .search import (search_databases_with_flat_query,
+                         search_databases_with_abund_query)
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -457,22 +459,32 @@ def search(args):
     databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
                                                 not is_containment)
 
-    # forcibly ignore abundances if query has no abundances
-    if not query.minhash.track_abundance:
-        args.ignore_abundance = True
-
     if not len(databases):
         error('Nothing found to search!')
         sys.exit(-1)
 
+    # forcibly ignore abundances if query has no abundances
+    if not query.minhash.track_abundance:
+        args.ignore_abundance = True
+    else:
+        if args.ignore_abundance:
+            query.minhash = query.minhash.flatten()
+
     # do the actual search
-    results = search_databases(query, databases,
-                               threshold=args.threshold,
-                               do_containment=args.containment,
-                               do_max_containment=args.max_containment,
-                               best_only=args.best_only,
-                               ignore_abundance=args.ignore_abundance,
-                               unload_data=True)
+    if query.minhash.track_abundance:
+        results = search_databases_with_abund_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
+    else:
+        results = search_databases_with_flat_query(query, databases,
+                                   threshold=args.threshold,
+                                   do_containment=args.containment,
+                                   do_max_containment=args.max_containment,
+                                   best_only=args.best_only,
+                                   unload_data=True)
 
     n_matches = len(results)
     if args.best_only:
@@ -513,13 +525,16 @@ def search(args):
     # save matching signatures upon request
     if args.save_matches:
         notify('saving all matched signatures to "{}"', args.save_matches)
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ sr.match for sr in results ], fp)
+
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in results:
+                save_sig.add(sr.match)
 
 
 def categorize(args):
     "Use a database to find the best match to many signatures."
     from .index import MultiIndex
+    from .search import make_jaccard_search_query
 
     set_quiet(args.quiet)
     moltype = sourmash_args.calculate_moltype(args)
@@ -533,7 +548,9 @@ def categorize(args):
                 already_names.add(row[0])
 
     # load search database
-    tree = load_sbt_index(args.sbt_name)
+    db = sourmash_args.load_file_as_index(args.database)
+    if args.ksize or moltype:
+        db = db.select(ksize=args.ksize, moltype=moltype)
 
     # utility function to load & select relevant signatures.
     def _yield_all_sigs(queries, ksize, moltype):
@@ -549,26 +566,31 @@ def categorize(args):
         csv_fp = open(args.csv, 'w', newline='')
         csv_w = csv.writer(csv_fp)
 
-    for query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
+    search_obj = make_jaccard_search_query(threshold=args.threshold)
+    for orig_query, loc in _yield_all_sigs(args.queries, args.ksize, moltype):
         # skip if we've already done signatures from this file.
         if loc in already_names:
             continue
 
-        notify('loaded query: {}... (k={}, {})', str(query)[:30],
-               query.minhash.ksize, query.minhash.moltype)
+        notify('loaded query: {}... (k={}, {})', str(orig_query)[:30],
+               orig_query.minhash.ksize, orig_query.minhash.moltype)
+
+        if args.ignore_abundance:
+            query = copy.copy(orig_query)
+            query.minhash = query.minhash.flatten()
+        else:
+            if orig_query.minhash.track_abundance:
+                notify("ERROR: this search cannot be done on signatures calculated with abundance.")
+                notify("ERROR: please specify --ignore-abundance.")
+                sys.exit(-1)
+
+            query = orig_query
 
         results = []
-        search_fn = SearchMinHashesFindBest().search
+        for match, score in db.find(search_obj, query):
+            if match.md5sum() != query.md5sum(): # ignore self.
+                results.append((orig_query.similarity(match), match))
 
-        # note, "ignore self" here may prevent using newer 'tree.search' fn.
-        for leaf in tree.find(search_fn, query, args.threshold):
-            if leaf.data.md5sum() != query.md5sum(): # ignore self.
-                similarity = query.similarity(
-                    leaf.data, ignore_abundance=args.ignore_abundance)
-                results.append((similarity, leaf.data))
-
-        best_hit_sim = 0.0
-        best_hit_query_name = ""
         if results:
             results.sort(key=lambda x: -x[0])   # reverse sort on similarity
             best_hit_sim, best_hit_query = results[0]
@@ -576,12 +598,11 @@ def categorize(args):
                                                best_hit_sim,
                                                best_hit_query)
             best_hit_query_name = best_hit_query.name
+            if csv_w:
+                csv_w.writerow([loc, query, best_hit_query_name,
+                               best_hit_sim])
         else:
             notify('for {}, no match found', query)
-
-        if csv_w:
-            csv_w.writerow([loc, query, best_hit_query_name,
-                           best_hit_sim])
 
     if csv_fp:
         csv_fp.close()
@@ -631,12 +652,14 @@ def gather(args):
 
     found = []
     weighted_missed = 1
+    is_abundance = query.minhash.track_abundance and not args.ignore_abundance
+    orig_query_mh = query.minhash
     new_max_hash = query.minhash._max_hash
     next_query = query
 
     for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
         if not len(found):                # first result? print header.
-            if query.minhash.track_abundance and not args.ignore_abundance:
+            if is_abundance:
                 print_results("")
                 print_results("overlap     p_query p_match avg_abund")
                 print_results("---------   ------- ------- ---------")
@@ -651,7 +674,7 @@ def gather(args):
         pct_genome = '{:.1f}%'.format(result.f_match*100)
         name = result.match._display_name(40)
 
-        if query.minhash.track_abundance and not args.ignore_abundance:
+        if is_abundance:
             average_abund ='{:.1f}'.format(result.average_abund)
             print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                       format_bp(result.intersect_bp), pct_query, pct_genome,
@@ -666,16 +689,16 @@ def gather(args):
             break
 
 
-    # basic reporting
-    print_results('\nfound {} matches total;', len(found))
+    # basic reporting:
+    print_results(f'\nfound {len(found)} matches total;')
     if args.num_results and len(found) == args.num_results:
-        print_results('(truncated gather because --num-results={})',
-                      args.num_results)
+        print_results(f'(truncated gather because --num-results={args.num_results})')
 
-    print_results('the recovered matches hit {:.1f}% of the query',
-           (1 - weighted_missed) * 100)
+    p_covered = (1 - weighted_missed) * 100
+    print_results(f'the recovered matches hit {p_covered:.1f}% of the query')
     print_results('')
 
+    # save CSV?
     if found and args.output:
         fieldnames = ['intersect_bp', 'f_orig_query', 'f_match',
                       'f_unique_to_query', 'f_unique_weighted',
@@ -691,19 +714,35 @@ def gather(args):
                 del d['match']                 # actual signature not in CSV.
                 w.writerow(d)
 
+    # save matching signatures?
     if found and args.save_matches:
-        notify('saving all matches to "{}"', args.save_matches)
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ r.match for r in found ], fp)
+        notify(f"saving all matches to '{args.save_matches}'")
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in found:
+                save_sig.add(sr.match)
 
+    # save unassigned hashes?
     if args.output_unassigned:
         if not len(next_query.minhash):
             notify('no unassigned hashes to save with --output-unassigned!')
         else:
-            notify('saving unassigned hashes to "{}"', args.output_unassigned)
+            notify(f"saving unassigned hashes to '{args.output_unassigned}'")
+
+            if is_abundance:
+                # next_query is flattened; reinflate abundances
+                hashes = set(next_query.minhash.hashes)
+                orig_abunds = orig_query_mh.hashes
+                abunds = { h: orig_abunds[h] for h in hashes }
+
+                abund_query_mh = orig_query_mh.copy_and_clear()
+                # orig_query might have been downsampled...
+                abund_query_mh.downsample(scaled=next_query.minhash.scaled)
+                abund_query_mh.set_abundances(abunds)
+                next_query.minhash = abund_query_mh
 
             with FileOutput(args.output_unassigned, 'wt') as fp:
                 sig.save_signatures([ next_query ], fp)
+    # DONE w/gather function.
 
 
 def multigather(args):
@@ -765,9 +804,10 @@ def multigather(args):
 
             found = []
             weighted_missed = 1
+            is_abundance = query.minhash.track_abundance and not args.ignore_abundance
             for result, weighted_missed, new_max_hash, next_query in gather_databases(query, databases, args.threshold_bp, args.ignore_abundance):
                 if not len(found):                # first result? print header.
-                    if query.minhash.track_abundance and not args.ignore_abundance:
+                    if is_abundance:
                         print_results("")
                         print_results("overlap     p_query p_match avg_abund")
                         print_results("---------   ------- ------- ---------")
@@ -782,7 +822,7 @@ def multigather(args):
                 pct_genome = '{:.1f}%'.format(result.f_match*100)
                 name = result.match._display_name(40)
 
-                if query.minhash.track_abundance and not args.ignore_abundance:
+                if is_abundance:
                     average_abund ='{:.1f}'.format(result.average_abund)
                     print_results('{:9}   {:>7} {:>7} {:>9}    {}',
                               format_bp(result.intersect_bp), pct_query, pct_genome,
@@ -844,6 +884,7 @@ def multigather(args):
 
                     e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
                     e.add_many(next_query.minhash.hashes)
+                    # CTB: note, multigather does not save abundances
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
             n += 1
 

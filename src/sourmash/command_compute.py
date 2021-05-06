@@ -9,7 +9,7 @@ import screed
 import time
 
 from . import sourmash_args
-from .signature import SourmashSignature, save_signatures
+from .signature import SourmashSignature
 from .logging import notify, error, set_quiet
 from .utils import RustObject
 from ._lowlevel import ffi, lib
@@ -267,9 +267,23 @@ def set_sig_name(sigs, filename, name=None):
 
 
 def save_siglist(siglist, sigfile_name):
+    import sourmash
+
     # save!
-    with sourmash_args.FileOutput(sigfile_name, 'w') as fp:
-        save_signatures(siglist, fp)
+    with sourmash_args.SaveSignaturesToLocation(sigfile_name) as save_sig:
+        for ss in siglist:
+            try:
+                save_sig.add(ss)
+            except sourmash.exceptions.Panic:
+                # this deals with a disconnect between the way Rust
+                # and Python handle signatures; Python expects one
+                # minhash (and hence one md5sum) per signature, while
+                # Rust supports multiple. For now, go through serializing
+                # and deserializing the signature! See issue #1167 for more.
+                json_str = sourmash.save_signatures([ss])
+                for ss in sourmash.load_signatures(json_str):
+                    save_sig.add(ss)
+
     notify('saved signature(s) to {}. Note: signature license is CC0.',
            sigfile_name)
 

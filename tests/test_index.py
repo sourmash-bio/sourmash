@@ -9,9 +9,12 @@ import shutil
 
 import sourmash
 from sourmash import load_one_signature, SourmashSignature
-from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex)
+from sourmash.index import (LinearIndex, MultiIndex, ZipFileLinearIndex,
+                            make_jaccard_search_query)
 from sourmash.sbt import SBT, GraphFactory, Leaf
+from sourmash.sbtmh import SigLeaf
 from sourmash import sourmash_args
+from sourmash.search import JaccardSearch, SearchType
 
 import sourmash_tst_utils as utils
 
@@ -20,58 +23,63 @@ def test_simple_index(n_children):
     factory = GraphFactory(5, 100, 3)
     root = SBT(factory, d=n_children)
 
-    leaf1 = Leaf("a", factory())
-    leaf1.data.count("AAAAA")
-    leaf1.data.count("AAAAT")
-    leaf1.data.count("AAAAC")
+    leaf1_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf1_mh.add_sequence("AAAAA")
+    leaf1_mh.add_sequence("AAAAT")
+    leaf1_mh.add_sequence("AAAAC")
+    leaf1_sig = SourmashSignature(leaf1_mh)
+    root.insert(leaf1_sig)
 
-    leaf2 = Leaf("b", factory())
-    leaf2.data.count("AAAAA")
-    leaf2.data.count("AAAAT")
-    leaf2.data.count("AAAAG")
+    leaf2_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf2_mh.add_sequence("AAAAA")
+    leaf2_mh.add_sequence("AAAAT")
+    leaf2_mh.add_sequence("AAAAG")
+    leaf2_sig = SourmashSignature(leaf2_mh)
+    root.insert(leaf2_sig)
+    
+    leaf3_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf3_mh.add_sequence("AAAAA")
+    leaf3_mh.add_sequence("AAAAT")
+    leaf3_mh.add_sequence("CAAAA")
+    leaf3_sig = SourmashSignature(leaf3_mh)
+    root.insert(leaf3_sig)
+    
+    leaf4_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf4_mh.add_sequence("AAAAA")
+    leaf4_mh.add_sequence("CAAAA")
+    leaf4_mh.add_sequence("GAAAA")
+    leaf4_sig = SourmashSignature(leaf4_mh)
+    root.insert(leaf4_sig)
+    
+    leaf5_mh = sourmash.MinHash(0, 5, scaled=1)
+    leaf5_mh.add_sequence("AAAAA")
+    leaf5_mh.add_sequence("AAAAT")
+    leaf5_mh.add_sequence("GAAAA")
+    leaf5_sig = SourmashSignature(leaf5_mh)
+    root.insert(leaf5_sig)
+    
+    linear = LinearIndex()
+    linear.insert(leaf1_sig)
+    linear.insert(leaf2_sig)
+    linear.insert(leaf3_sig)
+    linear.insert(leaf4_sig)
+    linear.insert(leaf5_sig)
 
-    leaf3 = Leaf("c", factory())
-    leaf3.data.count("AAAAA")
-    leaf3.data.count("AAAAT")
-    leaf3.data.count("CAAAA")
-
-    leaf4 = Leaf("d", factory())
-    leaf4.data.count("AAAAA")
-    leaf4.data.count("CAAAA")
-    leaf4.data.count("GAAAA")
-
-    leaf5 = Leaf("e", factory())
-    leaf5.data.count("AAAAA")
-    leaf5.data.count("AAAAT")
-    leaf5.data.count("GAAAA")
-
-    root.add_node(leaf1)
-    root.add_node(leaf2)
-    root.add_node(leaf3)
-    root.add_node(leaf4)
-    root.add_node(leaf5)
-
-    def search_kmer(obj, seq):
-        return obj.data.get(seq)
+    search_fn = make_jaccard_search_query(do_containment=True)
 
     kmers = ["AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA"]
-
-    linear = LinearIndex()
-    linear.insert(leaf1)
-    linear.insert(leaf2)
-    linear.insert(leaf3)
-    linear.insert(leaf4)
-    linear.insert(leaf5)
-
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == set(linear.find(search_kmer, kmer))
+        search_mh = sourmash.MinHash(0, 5, scaled=1)
+        search_mh.add_sequence(kmer)
+        search_sig = sourmash.SourmashSignature(search_mh)
 
-    print("-----")
-    print([x.metadata for x in root.find(search_kmer, "AAAAA")])
-    print([x.metadata for x in root.find(search_kmer, "AAAAT")])
-    print([x.metadata for x in root.find(search_kmer, "AAAAG")])
-    print([x.metadata for x in root.find(search_kmer, "CAAAA")])
-    print([x.metadata for x in root.find(search_kmer, "GAAAA")])
+        linear_found = linear.find(search_fn, search_sig)
+        linear_found = set(linear_found)
+
+        tree_found = set(root.find(search_fn, search_sig))
+        
+        assert tree_found
+        assert tree_found == set(linear_found)
 
 
 def test_linear_index_search():
@@ -138,11 +146,181 @@ def test_linear_index_gather():
     assert matches[0][1] == ss2
 
     matches = lidx.gather(ss47)
-    assert len(matches) == 2
+    assert len(matches) == 1
     assert matches[0][0] == 1.0
     assert matches[0][1] == ss47
-    assert round(matches[1][0], 2) == 0.49
-    assert matches[1][1] == ss63
+
+
+def test_linear_index_search_subj_has_abundance():
+    # check that signatures in the index are flattened appropriately.
+    queryfile = utils.get_test_data('47.fa.sig')
+    subjfile = utils.get_test_data('track_abund/47.fa.sig')
+
+    qs = sourmash.load_one_signature(queryfile)
+    ss = sourmash.load_one_signature(subjfile)
+
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # note: search returns _original_ signature, not flattened
+    assert results[0].signature == ss
+
+
+def test_linear_index_gather_subj_has_abundance():
+    # check that signatures in the index are flattened appropriately.
+    queryfile = utils.get_test_data('47.fa.sig')
+    subjfile = utils.get_test_data('track_abund/47.fa.sig')
+
+    qs = sourmash.load_one_signature(queryfile)
+    ss = sourmash.load_one_signature(subjfile)
+
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    results = list(linear.gather(qs, threshold=0))
+    assert len(results) == 1
+
+    # note: gather returns _original_ signature, not flattened
+    assert results[0].signature == ss
+
+
+def test_index_search_subj_scaled_is_lower():
+    # check that subject sketches are appropriately downsampled
+    sigfile = utils.get_test_data('scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz')
+    ss = sourmash.load_one_signature(sigfile)
+
+    # double check :)
+    assert ss.minhash.scaled == 100
+
+    # build a new query that has a scaled of 1000
+    qs = SourmashSignature(ss.minhash.downsample(scaled=1000))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # original signature (not downsampled) is returned
+    assert results[0].signature == ss
+
+
+def test_index_search_subj_num_is_lower():
+    # check that subject sketches are appropriately downsampled
+    sigfile = utils.get_test_data('num/47.fa.sig')
+    ss = sourmash.load_one_signature(sigfile, ksize=31)
+
+    # double check :)
+    assert ss.minhash.num == 500
+
+    # build a new query that has a num of 250
+    qs = SourmashSignature(ss.minhash.downsample(num=250))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    # original signature (not downsampled) is returned
+    assert results[0].signature == ss
+
+
+def test_index_search_query_num_is_lower():
+    # check that query sketches are appropriately downsampled
+    sigfile = utils.get_test_data('num/47.fa.sig')
+    qs = sourmash.load_one_signature(sigfile, ksize=31)
+
+    # double check :)
+    assert qs.minhash.num == 500
+
+    # build a new subject that has a num of 250
+    ss = SourmashSignature(qs.minhash.downsample(num=250))
+
+    # create Index to search
+    linear = LinearIndex()
+    linear.insert(ss)
+
+    # search!
+    results = list(linear.search(qs, threshold=0))
+    assert len(results) == 1
+    assert results[0].signature == ss
+
+
+def test_linear_index_search_abund():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    results = list(lidx.search_abund(ss47, threshold=0))
+    assert len(results) == 2
+    assert results[0].signature == ss47
+    assert results[1].signature == ss63
+
+
+def test_linear_index_search_abund_requires_threshold():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=None))
+
+    assert "'search_abund' requires 'threshold'" in str(exc.value)
+
+
+def test_linear_index_search_abund_query_flat():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=0))
+
+    assert "'search_abund' requires query signature with abundance information" in str(exc.value)
+
+
+def test_linear_index_search_abund_subj_flat():
+    # test Index.search_abund
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss47 = sourmash.load_one_signature(sig47)
+    ss63 = sourmash.load_one_signature(sig63)
+
+    lidx = LinearIndex()
+    lidx.insert(ss47)
+    lidx.insert(ss63)
+
+    with pytest.raises(TypeError) as exc:
+        results = list(lidx.search_abund(ss47, threshold=0))
+
+    assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
 
 
 def test_linear_index_save():
@@ -904,3 +1082,128 @@ def test_multi_index_load_from_pathlist_3_zipfile(c):
 
     mi = MultiIndex.load_from_pathlist(file_list)
     assert len(mi) == 7
+
+##
+## test a slightly outre version of JaccardSearch - this is a test of the
+## JaccardSearch 'collect' protocol, in particular...
+##
+
+class JaccardSearchBestOnly_ButIgnore(JaccardSearch):
+    "A class that ignores certain results, but still does all the pruning."
+    def __init__(self, ignore_list):
+        super().__init__(SearchType.JACCARD, threshold=0.1)
+        self.ignore_list = ignore_list
+
+    # a collect function that _ignores_ things in the ignore_list
+    def collect(self, score, match):
+        print('in collect; current threshold:', self.threshold)
+        for q in self.ignore_list:
+            print('ZZZ', match, match.similarity(q))
+            if match.similarity(q) == 1.0:
+                print('yes, found.')
+                return False
+
+        # update threshold if not perfect match, which could help prune.
+        self.threshold = score
+        return True
+
+
+def test_linear_index_gather_ignore():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    lidx = LinearIndex([ss2, ss47, ss63])
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(lidx.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_lca_index_gather_ignore():
+    from sourmash.lca import LCA_Database
+
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    db = LCA_Database(ksize=31, scaled=1000)
+    db.insert(ss2)
+    db.insert(ss47)
+    db.insert(ss63)
+
+    # ...now search with something that should ignore sig47, the exact match.
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(db.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print(ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
+
+
+def test_sbt_index_gather_ignore():
+    sig2 = utils.get_test_data('2.fa.sig')
+    sig47 = utils.get_test_data('47.fa.sig')
+    sig63 = utils.get_test_data('63.fa.sig')
+
+    ss2 = sourmash.load_one_signature(sig2, ksize=31)
+    ss47 = sourmash.load_one_signature(sig47, ksize=31)
+    ss63 = sourmash.load_one_signature(sig63, ksize=31)
+
+    # construct an index...
+    factory = GraphFactory(5, 100, 3)
+    db = SBT(factory, d=2)
+
+    db.insert(ss2)
+    db.insert(ss47)
+    db.insert(ss63)
+
+    # ...now search with something that should ignore sig47, the exact match.
+    print(f'\n** trying to ignore {ss47}')
+    search_fn = JaccardSearchBestOnly_ButIgnore([ss47])
+
+    results = list(db.find(search_fn, ss47))
+    results = [ ss for (ss, score) in results ]
+
+    def is_found(ss, xx):
+        for q in xx:
+            print('is found?', ss, ss.similarity(q))
+            if ss.similarity(q) == 1.0:
+                return True
+        return False
+
+    assert not is_found(ss47, results)
+    assert not is_found(ss2, results)
+    assert is_found(ss63, results)
