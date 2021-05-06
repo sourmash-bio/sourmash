@@ -58,7 +58,7 @@ species, while the third is from a completely different genus.
 To get a list of subcommands, run `sourmash` without any arguments.
 
 There are seven main subcommands: `sketch`, `compare`, `plot`,
-`search`, `gather`, `index`, and prefetch.  See
+`search`, `gather`, `index`, and `prefetch`.  See
 [the tutorial](tutorials.md) for a walkthrough of these commands.
 
 * `sketch` creates signatures.
