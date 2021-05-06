@@ -229,7 +229,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_sequence(seq, force),
             Sketch::LargeMinHash(ref mut mh) => mh.add_sequence(seq, force),
-            Sketch::HyperLogLog(_) => unimplemented!(),
+            Sketch::HyperLogLog(ref mut hll) => hll.add_sequence(seq, force),
         }
     }
 
@@ -237,7 +237,7 @@ impl SigsTrait for Sketch {
         match *self {
             Sketch::MinHash(ref mut mh) => mh.add_protein(seq),
             Sketch::LargeMinHash(ref mut mh) => mh.add_protein(seq),
-            Sketch::HyperLogLog(_) => unimplemented!(),
+            Sketch::HyperLogLog(ref mut hll) => hll.add_protein(seq),
         }
     }
 }
@@ -364,8 +364,14 @@ impl Signature {
                     if mh.check_compatible(template).is_ok() {
                         return Some(sk);
                     }
-                } else {
-                    unimplemented!()
+                }
+            }
+        } else if let Sketch::HyperLogLog(template) = sketch {
+            for sk in &self.signatures {
+                if let Sketch::HyperLogLog(mh) = sk {
+                    if mh.check_compatible(template).is_ok() {
+                        return Some(sk);
+                    }
                 }
             }
         } else {

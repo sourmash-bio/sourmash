@@ -14,6 +14,7 @@ use typed_builder::TypedBuilder;
 use crate::_hash_murmur;
 use crate::encodings::HashFunctions;
 use crate::signature::SigsTrait;
+use crate::sketch::hyperloglog::estimators;
 use crate::sketch::hyperloglog::HyperLogLog;
 use crate::Error;
 
@@ -58,6 +59,9 @@ pub struct KmerMinHash {
 
     #[builder(default)]
     md5sum: Mutex<Option<String>>,
+
+    #[builder(default)]
+    counts: Mutex<Option<Vec<u16>>>,
 }
 
 impl PartialEq for KmerMinHash {
@@ -78,6 +82,7 @@ impl Clone for KmerMinHash {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             md5sum: Mutex::new(Some(self.md5sum())),
+            counts: Mutex::new(None),
         }
     }
 }
@@ -93,6 +98,7 @@ impl Default for KmerMinHash {
             mins: Vec::with_capacity(1000),
             abunds: None,
             md5sum: Mutex::new(None),
+            counts: Mutex::new(None),
         }
     }
 }
@@ -176,6 +182,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             mins,
             abunds,
             hash_function,
+            counts: Mutex::new(None),
         })
     }
 }
@@ -215,6 +222,7 @@ impl KmerMinHash {
             mins,
             abunds,
             md5sum: Mutex::new(None),
+            counts: Mutex::new(None),
         }
     }
 
@@ -767,6 +775,10 @@ impl KmerMinHash {
     }
 
     pub fn as_hll(&self) -> HyperLogLog {
+        // TODO: is this an HLL for the original data (we can build this for
+        // scaled minhash,
+        // with a reduced p-q combination)
+        // or for the current data in the minhash?
         let mut hll = HyperLogLog::with_error_rate(0.01, self.ksize()).unwrap();
 
         for h in &self.mins {
@@ -774,6 +786,74 @@ impl KmerMinHash {
         }
 
         hll
+    }
+
+    /// Cardinality of the MinHash sketch (how many unique elements are present)
+    pub fn cardinality(&self) -> usize {
+        self.mins.len()
+    }
+
+    /// Cardinality of the original dataset;
+    /// how many unique elements were present in original data,
+    /// calculated from the Scaled MinHash sketch.
+    ///
+    /// This uses the Ertl estimators first derived for HyperLogLog sketches.
+    /// Since a Scaled MinHash sketch contains all the data necessary to use these
+    /// estimators with a smaller `p` and `q` values,
+    /// we generate the equivalent registers and use the estimators with the
+    /// reduced hash range.
+    pub fn cardinality_original(&self, error_rate: f64) -> Result<usize, Error> {
+        let mut counts = self.counts.lock().unwrap();
+
+        // TODO: throw an error if it is not a scaled minhash
+
+        let p = (1.04 / error_rate).powi(2).log2().ceil() as usize;
+
+        // The proper `q` for the Scaled MinHash is derived from the max_hash.
+        // The max_hash sets the bound for the largest hash size representable
+        // in the Scaled MinHash, and `hash_size = p + q`
+        let hash_size = (self.max_hash as f64).log2().ceil() as usize;
+        let q = hash_size - p;
+        dbg!((hash_size, p, q));
+
+        // Check if the counts are available
+        if counts.is_none() {
+            // They are not, let's calculate and update
+
+            // First, build the equivalent registers
+            let size = (1 as usize) << p;
+            let mut registers = vec![0; size];
+
+            for hash in &self.mins {
+                let value = hash >> p;
+                let index = (hash - (value << p)) as usize;
+
+                let leftmost_b = hash.leading_zeros();
+                // remove the scaled effect
+                let leftmost = leftmost_b - (64 - hash_size as u32);
+
+                dbg!((
+                    p,
+                    q,
+                    format!("{:064b}", hash),
+                    index,
+                    leftmost,
+                    leftmost_b,
+                    size
+                ));
+
+                let old_value = registers[index];
+                registers[index] = old_value.max(leftmost as estimators::CounterType);
+            }
+
+            *counts = Some(estimators::counts(&registers, q));
+        }
+
+        if counts.is_some() {
+            Ok(estimators::mle(counts.as_ref().unwrap(), p, q, 0.01) as usize)
+        } else {
+            unimplemented!("Return error")
+        }
     }
 }
 
@@ -1475,6 +1555,11 @@ impl KmerMinHashBTree {
                 .collect()
         }
     }
+
+    /// Cardinality of the MinHash sketch (how many unique elements are present)
+    pub fn cardinality(&self) -> usize {
+        self.mins.len()
+    }
 }
 
 impl SigsTrait for KmerMinHashBTree {
@@ -1576,5 +1661,70 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         new_mh.abunds = abunds;
 
         new_mh
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn check_hll_counter() {
+        // TODO: proptest with error_rate
+        // TODO: p is derived from error_rate
+        let error_rate = 0.01;
+        let p = 14;
+
+        // TODO: proptest with scaled
+        let scaled = 1000;
+        let max_hash = max_hash_for_scaled(scaled);
+
+        // TODO: ceil or floor?
+        let hash_size = (max_hash as f64).log2().ceil() as usize;
+
+        // TODO: q is derived from scaled
+        let q = 41;
+        assert_eq!(p + q, hash_size);
+
+        let mut new_mh = KmerMinHash::builder()
+            .num(0)
+            .ksize(21)
+            .max_hash(max_hash)
+            .build();
+
+        new_mh.add_hash(0b00000000_00000000_00000001_00000110_00100001_00101100_11010110_11100000);
+        assert_eq!(new_mh.cardinality_original(error_rate).unwrap(), 1);
+
+        assert!(new_mh.counts.lock().unwrap().is_some());
+        let counts_lock = new_mh.counts.lock().unwrap();
+        let counts = counts_lock.as_ref().unwrap();
+
+        assert_eq!(counts.len(), q + 2);
+        dbg!(counts);
+
+        // There is only one added hash, so counts[0] should be all possible
+        // registers (p ** 2), except for one
+        assert_eq!(counts[0], (1 << p) - 1);
+
+        // This hash has a 14 zeroes run when the scaled effect is discounted
+        //
+        // 63                                                                    00
+        // |                                                                     |
+        // 00000000_00000000_00000001_00000110_00100001_00101100_11010110_11100000
+        // due to scaled=1000, we only have 55 bits (instead of 64),
+        // with the 14 lower bits being the index (p=14 is an error rate of 1%)
+        // and the 41 upper bits being used for counting the number of leading zeros
+        //
+        // max hash for scaled=1000:
+        // 00000000_01000001_10001001_00110111_01001011_11000110_10100111_11110000
+        //           |                                                           |
+        //           54                                                          00
+        //           |                                                           |
+        // hash:     0000000_00000001_00000110_00100001_00101100_11010110_11100000
+        //           |----------------------q---------------------||------p------|
+
+        assert_eq!(counts[14], 1);
+
+        assert!(false);
     }
 }
