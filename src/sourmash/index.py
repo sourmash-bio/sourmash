@@ -24,6 +24,11 @@ class Index(ABC):
     def signatures(self):
         "Return an iterator over all signatures in the Index object."
 
+    def signatures_with_location(self):
+        "Return an iterator over tuples (signature, location) in the Index."
+        for ss in self.signatures():
+            yield ss, self.location
+
     @abstractmethod
     def insert(self, signature):
         """ """
@@ -105,7 +110,7 @@ class Index(ABC):
                     return query_mh
 
         # now, do the search!
-        for subj in self.signatures():
+        for subj, location in self.signatures_with_location():
             subj_mh = prepare_subject(subj.minhash)
             # note: we run prepare_query here on the original query minhash.
             query_mh = prepare_query(query.minhash, subj_mh)
@@ -127,7 +132,7 @@ class Index(ABC):
                 # note: here we yield the original signature, not the
                 # downsampled minhash.
                 if search_fn.collect(score, subj):
-                    yield IndexSearchResult(score, subj, self.location)
+                    yield IndexSearchResult(score, subj, location)
 
     def search_abund(self, query, *, threshold=None, **kwargs):
         """Return set of matches with angular similarity above 'threshold'.
@@ -144,7 +149,7 @@ class Index(ABC):
 
         # do the actual search:
         matches = []
-        for subj in self.signatures():
+        for subj in self.signatures_with_location():
             if not subj.minhash.track_abundance:
                 raise TypeError("'search_abund' requires subject signatures with abundance information")
             score = query.similarity(subj)
@@ -383,9 +388,16 @@ class LazyLinearIndex(Index):
         self.selection_dict = dict(selection_dict)
 
     def signatures(self):
+        "Return the selected signatures."
         db = self.db.select(**self.selection_dict)
         for ss in db.signatures():
             yield ss
+
+    def signatures_with_location(self):
+        "Return the selected signatures, with a location."
+        db = self.db.select(**self.selection_dict)
+        for tup in db.signatures_with_location():
+            yield tup
 
     def __bool__(self):
         try:
@@ -758,9 +770,9 @@ class MultiIndex(Index):
         # do the actual search:
         matches = []
         for idx, src in zip(self.index_list, self.source_list):
-            for (score, ss, filename) in idx.search(query, **kwargs):
-                best_src = src or filename # override if src provided
-                matches.append(IndexSearchResult(score, ss, best_src))
+            for sr in idx.search(query, **kwargs):
+                sr.location = sr.location or filename
+                matches.append(sr)
                 
         # sort!
         matches.sort(key=lambda x: -x.score)
