@@ -1969,38 +1969,6 @@ def test_search_metagenome_downsample_index(c):
     assert '12 matches; showing first 3:' in str(c)
 
 
-def test_search_metagenome_downsample_save_matches(runtmp):
-    c = runtmp
-
-    # does same search as search_metagenome_downsample_containment but
-    # rescales during indexing
-
-    testdata_glob = utils.get_test_data('gather/GCF*.sig')
-    testdata_sigs = glob.glob(testdata_glob)
-
-    query_sig = utils.get_test_data('gather/combined.sig')
-
-    output_matches = runtmp.output('out.zip')
-
-    # downscale during indexing, rather than during search.
-    c.run_sourmash('index', 'gcf_all', *testdata_sigs, '-k', '21',
-                   '--scaled', '100000')
-
-    assert os.path.exists(c.output('gcf_all.sbt.zip'))
-
-    c.run_sourmash('search', query_sig, 'gcf_all', '-k', '21',
-                   '--containment', '--save-matches', output_matches)
-    print(c)
-
-    # is a zip file
-    with zipfile.ZipFile(output_matches, "r") as zf:
-        assert list(zf.infolist())
-
-    # ...with 12 signatures:
-    saved = list(sourmash.load_file_as_signatures(output_matches))
-    assert len(saved) == 12
-
-
 def test_mash_csv_to_sig():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa.msh.dump')
@@ -2994,6 +2962,54 @@ def test_gather_multiple_sbts(prefetch_gather, linear_gather):
         print(err)
 
         assert '0.9 kbp      100.0%  100.0%' in out
+
+
+def test_gather_multiple_sbts_save_prefetch(linear_gather):
+    # test --save-prefetch with multiple databases
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata1, testdata2,
+                                            '--scaled', '10'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['compute', testdata2,
+                                            '--scaled', '10',
+                                            '-o', 'query.fa.sig'],
+                                           in_directory=location)
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz',
+                                            'short.fa.sig',
+                                           '-k', '31'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['index', 'zzz2',
+                                            'short2.fa.sig',
+                                             '-k', '31'],
+                                           in_directory=location)
+
+        assert os.path.exists(os.path.join(location, 'zzz.sbt.zip'))
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['gather',
+                                            'query.fa.sig', 'zzz', 'zzz2',
+                                            '-o', 'foo.csv',
+                                            '--save-prefetch', 'out.zip',
+                                            '--threshold-bp=1',
+                                            linear_gather],
+                                           in_directory=location)
+
+        print(out)
+        print(err)
+
+        assert '0.9 kbp      100.0%  100.0%' in out
+        assert os.path.exists(os.path.join(location, 'out.zip'))
 
 
 def test_gather_sbt_and_sigs(linear_gather, prefetch_gather):

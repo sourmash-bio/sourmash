@@ -667,8 +667,8 @@ def gather(args):
             save_prefetch.add_many(counter.siglist)
             counters.append(counter)
 
-            notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
-            save_prefetch.close()
+        notify(f"Found {len(save_prefetch)} signatures via prefetch; now doing gather.")
+        save_prefetch.close()
     else:
         counters = databases
 
