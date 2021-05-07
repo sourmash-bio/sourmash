@@ -13,6 +13,10 @@ in
       (python38.withPackages(ps: with ps; [ virtualenv tox setuptools ]))
       (python39.withPackages(ps: with ps; [ virtualenv setuptools ]))
       (python37.withPackages(ps: with ps; [ virtualenv setuptools ]))
+      py-spy
+      heaptrack
+      cargo-watch
+      cargo-limit
       wasmtime
       wasm-pack
     ];
