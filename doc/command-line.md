@@ -398,7 +398,9 @@ large databases with a metagenome query using `--threshold-bp=0`,
 db-matches.sig`, and then run `sourmash gather matching-hashes.sig
 db-matches.sig`. 
 
-This combination of commands ensures that the more time- and memory-intensive `gather`, step is run only on the smallest possible number of signatures without affecting the results.
+This combination of commands ensures that the more time- and
+memory-intensive `gather` step is run only on a small set of relevant
+signatures, rather than all the signatures in the database.
 
 ## `sourmash lca` subcommands for taxonomic classification
 

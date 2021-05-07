@@ -646,6 +646,11 @@ class CounterGather:
         # remove empty datasets from counter, too.
         for (dataset_id, _) in most_common:
             # CTB: note, remaining_mh may not be at correct scaled here.
+            # this means that counters that _should_ be empty might not
+            # _be_ empty in some situations.  This does not
+            # lead to incorrect results, merely potentially overfull
+            # 'counter' objects. The tradeoffs to fixing this would
+            # need to be examined! (This could be fixed in self.downsample().)
             remaining_mh = siglist[dataset_id].minhash
             intersect_count = intersect_mh.count_common(remaining_mh,
                                                         downsample=True)
@@ -695,7 +700,7 @@ class MultiIndex(Index):
     def load_from_path(cls, pathname, force=False):
         "Create a MultiIndex from a path (filename or directory)."
         from .sourmash_args import traverse_find_sigs
-        if not os.path.exists(pathname): # CTB change to isdir
+        if not os.path.exists(pathname): # CTB consider changing to isdir.
             raise ValueError(f"'{pathname}' must be a directory")
 
         index_list = []
