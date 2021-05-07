@@ -208,9 +208,29 @@ Here's a PNG version:
 
 ![E. coli comparison plot](_static/ecoli_cmp.matrix.png)
 
+````{panels}
+Content of the top-left panel
+
+---
+
+Content of the top-right panel
+
+{badge}`example,badge-primary`
+
+---
+
 ```{dropdown} :fa:`eye,mr-1` Bottom-left panel
-Hidden content This is where you add information
+Hidden content
 ```
+
+---
+
+```{link-button} https://example.com
+:text: Clickable Panel
+:classes: stretched-link
+```
+
+````
 
 ## What's in my metagenome?
 
