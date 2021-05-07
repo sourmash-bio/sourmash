@@ -2,11 +2,11 @@
 extern crate criterion;
 
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read};
+use std::io::BufReader;
 use std::path::PathBuf;
 
-use sourmash::signature::Signature;
-use sourmash::sketch::minhash::KmerMinHash;
+use sourmash::signature::{Signature, SigsTrait};
+use sourmash::sketch::minhash::{KmerMinHash, KmerMinHashBTree};
 use sourmash::sketch::Sketch;
 
 use criterion::Criterion;
@@ -46,6 +46,63 @@ fn intersection(c: &mut Criterion) {
     group.bench_function("intersection_size", |b| {
         b.iter(|| {
             mh.intersection_size(&mh2).unwrap();
+        });
+    });
+
+    let mut mh1 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2 = KmerMinHash::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    let mut mh1_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+    let mut mh2_btree = KmerMinHashBTree::builder()
+        .num(0)
+        .max_hash(1_000_000)
+        .ksize(21)
+        .build();
+
+    for i in 0..=1_000_000 {
+        if i % 2 == 0 {
+            mh1.add_hash(i);
+            mh1_btree.add_hash(i);
+        }
+        if i % 45 == 0 {
+            mh2.add_hash(i);
+            mh2_btree.add_hash(i);
+        }
+    }
+
+    group.bench_function("large intersection", |b| {
+        b.iter(|| {
+            mh1.intersection(&mh2).unwrap();
+        });
+    });
+
+    group.bench_function("large intersection_size", |b| {
+        b.iter(|| {
+            mh1.intersection_size(&mh2).unwrap();
+        });
+    });
+
+    group.bench_function("large intersection btree", |b| {
+        b.iter(|| {
+            mh1_btree.intersection(&mh2_btree).unwrap();
+        });
+    });
+
+    group.bench_function("large intersection_size btree", |b| {
+        b.iter(|| {
+            mh1_btree.intersection_size(&mh2_btree).unwrap();
         });
     });
 }
