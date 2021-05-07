@@ -1590,25 +1590,16 @@ def test_import_export_2(c):
 
 def test_import_mash_csv_to_sig(runtmp):
     # test copied over from 'sourmash import_csv'.
-    testdata1 = runtmp.get_test_data('short.fa.msh.dump')
-    testdata2 = runtmp.get_test_data('short.fa')
+    testdata1 = utils.get_test_data('short.fa.msh.dump')
+    testdata2 = utils.get_test_data('short.fa')
 
-    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash', ['sig', 'import',
-                                                    '--csv',
-                                                    testdata1,
-                                                    '-o', 'xxx.sig'],
-                                       in_directory=location)
+    runtmp.sourmash('sig', 'import', '--csv', testdata1, '-o', 'xxx.sig')
 
-    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash',
-                                       ['compute', '-k', '31',
-                                        '-n', '970', testdata2],
-                                       in_directory=location)
+    runtmp.sourmash('compute', '-k', '31', '-n', '970', testdata2)
 
-    runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err = runtmp.runscript('sourmash',
-                                       ['search', '-k', '31',
-                                        'short.fa.sig', 'xxx.sig'],
-                                       in_directory=location)
-    print(runtmp.last_result.status, runtmp.last_result.out, runtmp.last_result.err)
+    runtmp.sourmash('search', '-k', '31', 'short.fa.sig', 'xxx.sig')
+
+    print("RUNTEMP", runtmp)
+
     assert '1 matches:' in runtmp.last_result.out
     assert '100.0%       short.fa' in runtmp.last_result.out
-    assert '1 matches:' in runtmp.last_result.out
