@@ -216,8 +216,6 @@ Here's a PNG version:
 Hidden content
 ```
 
----
-
 
 ````
 
