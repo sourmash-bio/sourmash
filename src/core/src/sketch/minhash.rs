@@ -1437,11 +1437,9 @@ impl KmerMinHashBTree {
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
-        if let Some(abunds) = &self.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        }
+        self.abunds
+            .as_ref()
+            .map(|abunds| abunds.values().cloned().collect())
     }
 
     // create a downsampled copy of self
@@ -1541,11 +1539,9 @@ impl From<KmerMinHashBTree> for KmerMinHash {
         );
 
         let mins = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| abunds.values().cloned().collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
@@ -1566,11 +1562,9 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         );
 
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(mins.iter().cloned().zip(abunds.into_iter()).collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| mins.iter().cloned().zip(abunds.into_iter()).collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;

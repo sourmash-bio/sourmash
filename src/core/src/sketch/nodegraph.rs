@@ -418,7 +418,7 @@ mod test {
 
     #[test]
     fn load_compressed() {
-        let mut reader = BufReader::new(&COMPRESSED_RAW_DATA[..]);
+        let mut reader = BufReader::new(COMPRESSED_RAW_DATA);
 
         let ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
         assert_eq!(ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
@@ -468,7 +468,7 @@ mod test {
 
     #[test]
     fn binary_repr_load() {
-        let mut reader = BufReader::new(&RAW_DATA[..]);
+        let mut reader = BufReader::new(RAW_DATA);
         let khmer_ng: Nodegraph = Nodegraph::from_reader(&mut reader).expect("Loading error");
         assert_eq!(khmer_ng.tablesizes(), &[19, 17, 13, 11, 7, 5]);
         assert_eq!(khmer_ng.ksize(), 3);
