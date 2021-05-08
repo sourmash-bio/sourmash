@@ -649,9 +649,10 @@ class MinHash(RustObject):
     def mutable(self):
         return self
 
-    def immutable(self):
-        self.__class__ = FrozenMinHash
-        return self
+    def frozen(self):
+        new_mh = self.__copy__()
+        new_mh.__class__ = FrozenMinHash
+        return new_mh
 
 
 class FrozenMinHash(MinHash):
@@ -691,12 +692,12 @@ class FrozenMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        return MinHash.downsample(self, num=num, scaled=scaled).immutable()
+        return MinHash.downsample(self, num=num, scaled=scaled).frozen()
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        return MinHash.flatten(self).immutable()
+        return MinHash.flatten(self).frozen()
 
     def __iadd__(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
