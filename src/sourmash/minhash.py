@@ -646,6 +646,9 @@ class MinHash(RustObject):
         else:
             return 'DNA'
 
+    def mutable(self):
+        return self
+
 
 class ImmutableMinHash(MinHash):
     def add_sequence(self, *args, **kwargs):
@@ -697,9 +700,14 @@ class ImmutableMinHash(MinHash):
     def merge(self, *args, **kwargs):
         raise TypeError('ImmutableMinHash does not support modification')
 
-    def mutable_copy(self):
+    def mutable(self):
         mut = MinHash.__new__(MinHash)
-        state_tup = list(self.__getstate__())
-        state_tup[1] = state_tup[1] * 3
+        state_tup = self.__getstate__()
+
+        # is protein/hp/dayhoff?
+        if state_tup[2] or state_tup[3] or state_tup[4]:
+            state_tup = list(state_tup)
+            # adjust ksize.
+            state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut

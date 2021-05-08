@@ -1330,6 +1330,8 @@ def test_sbt_index_gather_ignore():
 def _consume_all(query_mh, counter, threshold_bp=0):
     results = []
 
+    query_mh = query_mh.mutable()
+
     last_intersect_size = None
     while 1:
         result = counter.peek(query_mh, threshold_bp)
