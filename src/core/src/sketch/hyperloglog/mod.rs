@@ -147,10 +147,10 @@ impl HyperLogLog {
         rdr.read_exact(&mut registers)?;
 
         Ok(HyperLogLog {
+            registers,
             p,
             q,
             ksize,
-            registers,
         })
     }
 

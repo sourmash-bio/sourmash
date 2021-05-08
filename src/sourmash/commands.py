@@ -15,7 +15,8 @@ from .sbtmh import load_sbt_index, create_sbt_index
 from . import signature as sig
 from . import sourmash_args
 from .logging import notify, error, print_results, set_quiet
-from .sourmash_args import DEFAULT_LOAD_K, FileOutput, FileOutputCSV
+from .sourmash_args import (DEFAULT_LOAD_K, FileOutput, FileOutputCSV,
+                            SaveSignaturesToLocation)
 
 WATERMARK_SIZE = 10000
 
@@ -524,8 +525,10 @@ def search(args):
     # save matching signatures upon request
     if args.save_matches:
         notify('saving all matched signatures to "{}"', args.save_matches)
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ sr.match for sr in results ], fp)
+
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in results:
+                save_sig.add(sr.match)
 
 
 def categorize(args):
@@ -714,8 +717,9 @@ def gather(args):
     # save matching signatures?
     if found and args.save_matches:
         notify(f"saving all matches to '{args.save_matches}'")
-        with FileOutput(args.save_matches, 'wt') as fp:
-            sig.save_signatures([ r.match for r in found ], fp)
+        with SaveSignaturesToLocation(args.save_matches) as save_sig:
+            for sr in found:
+                save_sig.add(sr.match)
 
     # save unassigned hashes?
     if args.output_unassigned:

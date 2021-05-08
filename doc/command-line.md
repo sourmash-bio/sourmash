@@ -620,6 +620,8 @@ with fields:
 
 If `--outdir` is specified, all of the signatures are placed in outdir.
 
+Note: `split` only saves files in the JSON `.sig` format.
+
 ### `sourmash signature merge` - merge two or more signatures into one
 
 Merge two (or more) signatures.
@@ -636,6 +638,9 @@ with `-p abund`, or not.  If they have `track_abundance` on,
 then the merged signature will have the sum of all abundances across
 the individual signatures.  The `--flatten` flag will override this
 behavior and allow merging of mixtures by removing all abundances.
+
+Note: `merge` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
 
 ### `sourmash signature rename` - rename a signature
 
@@ -666,6 +671,9 @@ will subtract all of the hashes in `file2.sig` and `file3.sig` from
 To use `subtract` on signatures calculated with
 `-p abund`, you must specify `--flatten`.
 
+Note: `subtract` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
+
 ### `sourmash signature intersect` - intersect two (or more) signatures
 
 Output the intersection of the hash values in multiple signature files.
@@ -681,6 +689,9 @@ will output the intersection of all the hashes in those three files to
 The `intersect` command flattens all signatures, i.e. the abundances
 in any signatures will be ignored and the output signature will have
 `track_abundance` turned off.
+
+Note: `intersect` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
 
 ### `sourmash signature downsample` - decrease the size of a signature
 
@@ -773,6 +784,9 @@ sourmash signature import filename.msh.json -o imported.sig
 ```
 will import the contents of `filename.msh.json` into `imported.sig`.
 
+Note: `import` only creates one output file, with one signature in it,
+in the JSON `.sig` format.
+
 ### `sourmash signature export` - export signatures to mash.
 
 Export signatures from sourmash format. Currently only supports
@@ -859,6 +873,25 @@ All of the `sourmash` commands support loading collections of
 signatures from zip files.  You can create a compressed collection of
 signatures using `zip -r collection.zip *.sig` and then specify
 `collections.zip` on the command line.
+
+### Saving signatures, more generally
+
+As of sourmash 4.1, most signature saving arguments (`--save-matches`
+for `search` and `gather`, `-o` for `sourmash sketch`, and most of the
+`sourmash signature` commands) support flexible saving of collections of
+signatures into JSON text, Zip files, and/or directories.
+
+This behavior is triggered by the requested output filename --
+
+* to save to JSON signature files, use `.sig`; `-` will send JSON to stdout.
+* to save to gzipped JSON signature files, use `.sig.gz`;
+* to save to a Zip file collection, use `.zip`;
+* to save signature files to a directory, use a name ending in `/`; the directory will be created if it doesn't exist;
+
+If none of these file extensions is detected, output will be written in the JSON `.sig` format, either to the provided output filename or to stdout.
+
+All of these save formats can be loaded by sourmash commands, too.
+
 
 ### Loading all signatures under a directory
 
