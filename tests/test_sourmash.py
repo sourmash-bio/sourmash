@@ -250,9 +250,7 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    # c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
-    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
-
+    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
     c.run_sourmash('compare', 'short.fa.sig',
                    'short2.fa.sig', '--csv', 'xxx', '-q')
     assert not c.last_result.out
@@ -289,7 +287,6 @@ def test_do_compare_output_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
     c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
-
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
     with open(c.output('xxx')) as fp:
