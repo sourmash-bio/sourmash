@@ -711,3 +711,26 @@ class ImmutableMinHash(MinHash):
             state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
+
+    def __setstate__(self, tup):
+        "support pickling via __getstate__/__setstate__"
+        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance,
+         max_hash, seed) = tup
+
+        self.__del__()
+
+        hash_function = (
+            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF if dayhoff else
+            lib.HASH_FUNCTIONS_MURMUR64_HP if hp else
+            lib.HASH_FUNCTIONS_MURMUR64_PROTEIN if is_protein else
+            lib.HASH_FUNCTIONS_MURMUR64_DNA
+        )
+
+        scaled = _get_scaled_for_max_hash(max_hash)
+        self._objptr = lib.kmerminhash_new(
+            scaled, ksize, hash_function, seed, track_abundance, n
+        )
+        if track_abundance:
+            MinHash.set_abundances(self, mins)
+        else:
+            MinHash.add_many(self, mins)

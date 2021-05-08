@@ -41,7 +41,6 @@ def test_compare_serial(siglist, ignore_abundance):
 
 
 def test_compare_parallel(siglist, ignore_abundance):
-    return
     similarities = compare_parallel(siglist, ignore_abundance, downsample=False, n_jobs=2)
 
     true_similarities = np.array(
@@ -57,7 +56,6 @@ def test_compare_parallel(siglist, ignore_abundance):
 
 
 def test_compare_all_pairs(siglist, ignore_abundance):
-    return 0
     similarities_parallel = compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=2)
     similarities_serial = compare_serial(siglist, ignore_abundance, downsample=False)
     np.testing.assert_array_equal(similarities_parallel, similarities_serial)

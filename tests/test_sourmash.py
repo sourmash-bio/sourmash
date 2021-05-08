@@ -104,7 +104,6 @@ def test_do_serial_compare(c):
 
 @utils.in_tempdir
 def test_do_compare_parallel(c):
-    return
     # try doing a compare parallel
     import numpy
     testsigs = utils.get_test_data('genome-s1*.sig')
