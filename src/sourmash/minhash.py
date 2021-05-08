@@ -645,3 +645,61 @@ class MinHash(RustObject):
             return 'hp'
         else:
             return 'DNA'
+
+
+class ImmutableMinHash(MinHash):
+    def add_sequence(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def add_kmer(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def add_many(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def remove_many(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def add_hash(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def add_hash_with_abundance(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def clear(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def remove_many(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def set_abundances(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def add_protein(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def downsample(self, *, num=None, scaled=None):
+        if scaled and self.scaled == scaled:
+            return self
+        if num and self.num == num:
+            return self
+
+        return MinHash.downsample(self, num=num, scaled=scaled)
+
+    def flatten(self):
+        if not self.track_abundance:
+            return self
+        return MinHash.flatten(self)
+
+    def __iadd__(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def merge(self, *args, **kwargs):
+        raise TypeError('ImmutableMinHash does not support modification')
+
+    def mutable_copy(self):
+        mut = MinHash.__new__(MinHash)
+        state_tup = list(self.__getstate__())
+        state_tup[1] = state_tup[1] * 3
+        mut.__setstate__(state_tup)
+        return mut
