@@ -650,40 +650,40 @@ class MinHash(RustObject):
         return self
 
     def immutable(self):
-        self.__class__ = ImmutableMinHash
+        self.__class__ = FrozenMinHash
         return self
 
 
-class ImmutableMinHash(MinHash):
+class FrozenMinHash(MinHash):
     def add_sequence(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def add_kmer(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def add_many(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def remove_many(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def add_hash(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def add_hash_with_abundance(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def clear(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def remove_many(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def set_abundances(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def add_protein(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def downsample(self, *, num=None, scaled=None):
         if scaled and self.scaled == scaled:
@@ -691,20 +691,18 @@ class ImmutableMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        # @CTB return ImmutableMinHash
         return MinHash.downsample(self, num=num, scaled=scaled).immutable()
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        # @CTB return ImmutableMinHash
         return MinHash.flatten(self).immutable()
 
     def __iadd__(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def merge(self, *args, **kwargs):
-        raise TypeError('ImmutableMinHash does not support modification')
+        raise TypeError('FrozenMinHash does not support modification')
 
     def mutable(self):
         mut = MinHash.__new__(MinHash)
