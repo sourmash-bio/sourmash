@@ -588,7 +588,7 @@ class MinHash(RustObject):
             if self.num != other.num:
                 raise TypeError(f"incompatible num values: self={self.num} other={other.num}")
 
-        new_obj = self.__copy__()
+        new_obj = self.mutable()
         new_obj += other
         return new_obj
 
@@ -649,6 +649,10 @@ class MinHash(RustObject):
     def mutable(self):
         return self
 
+    def immutable(self):
+        self.__class__ = ImmutableMinHash
+        return self
+
 
 class ImmutableMinHash(MinHash):
     def add_sequence(self, *args, **kwargs):
@@ -687,12 +691,14 @@ class ImmutableMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        return MinHash.downsample(self, num=num, scaled=scaled)
+        # @CTB return ImmutableMinHash
+        return MinHash.downsample(self, num=num, scaled=scaled).immutable()
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        return MinHash.flatten(self)
+        # @CTB return ImmutableMinHash
+        return MinHash.flatten(self).immutable()
 
     def __iadd__(self, *args, **kwargs):
         raise TypeError('ImmutableMinHash does not support modification')
@@ -734,3 +740,6 @@ class ImmutableMinHash(MinHash):
             MinHash.set_abundances(self, mins)
         else:
             MinHash.add_many(self, mins)
+
+    def __copy__(self):
+        return self
