@@ -579,27 +579,32 @@ impl KmerMinHash {
     pub fn intersection(&self, other: &KmerMinHash) -> Result<(Vec<u64>, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHash::new(
-            self.scaled(),
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
+        if self.num != 0 {
+            // Intersection for regular MinHash sketches
+            let mut combined_mh = KmerMinHash::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(&self)?;
+            combined_mh.merge(&other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
-        let common: Vec<u64> = it2.cloned().collect();
-        Ok((common, combined_mh.mins.len() as u64))
+            let common: Vec<u64> = it2.cloned().collect();
+            Ok((common, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     // FIXME: intersection_size and count_common should be the same?
@@ -607,26 +612,31 @@ impl KmerMinHash {
     pub fn intersection_size(&self, other: &KmerMinHash) -> Result<(u64, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHash::new(
-            self.scaled(),
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
+        if self.num != 0 {
+            // Intersection for regular MinHash sketches
+            let mut combined_mh = KmerMinHash::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(&self)?;
+            combined_mh.merge(&other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let it2 = Intersection::new(i1.iter(), combined_mh.mins.iter());
 
-        Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+            Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection_size(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     // calculate Jaccard similarity, ignoring abundance.
@@ -866,6 +876,56 @@ impl<T: Ord, I: Iterator<Item = T>> Iterator for Intersection<T, I> {
                 }
             }
         }
+    }
+}
+
+struct Union<T, I: Iterator<Item = T>> {
+    iter: Peekable<I>,
+    other: Peekable<I>,
+}
+
+impl<T: Ord, I: Iterator<Item = T>> Iterator for Union<T, I> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        let res = match (self.iter.peek(), self.other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => left_key.cmp(right_key),
+            (None, Some(_)) => {
+                return self.other.next();
+            }
+            (Some(_), None) => {
+                return self.iter.next();
+            }
+            _ => return None,
+        };
+
+        match res {
+            Ordering::Less => self.iter.next(),
+            Ordering::Greater => self.other.next(),
+            Ordering::Equal => {
+                self.other.next();
+                self.iter.next()
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Union;
+
+    #[test]
+    fn test_union() {
+        let v1 = [1u64, 2, 4, 10];
+        let v2 = [1u64, 3, 4, 9];
+
+        let union: Vec<u64> = Union {
+            iter: v1.iter().peekable(),
+            other: v2.iter().peekable(),
+        }
+        .cloned()
+        .collect();
+        assert_eq!(union, [1, 2, 3, 4, 9, 10]);
     }
 }
 
@@ -1301,54 +1361,63 @@ impl KmerMinHashBTree {
     pub fn intersection(&self, other: &KmerMinHashBTree) -> Result<(Vec<u64>, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHashBTree::new(
-            self.scaled(),
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
+        if self.num != 0 {
+            let mut combined_mh = KmerMinHashBTree::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(&self)?;
+            combined_mh.merge(&other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
-        let it2 = Intersection::new(i1.iter(), i2.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+            let it2 = Intersection::new(i1.iter(), i2.iter());
 
-        let common: Vec<u64> = it2.cloned().collect();
-        Ok((common, combined_mh.mins.len() as u64))
+            let common: Vec<u64> = it2.cloned().collect();
+            Ok((common, combined_mh.mins.len() as u64))
+        } else {
+            // Intersection for scaled MinHash sketches
+            Ok(intersection(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     pub fn intersection_size(&self, other: &KmerMinHashBTree) -> Result<(u64, u64), Error> {
         self.check_compatible(other)?;
 
-        let mut combined_mh = KmerMinHashBTree::new(
-            self.scaled(),
-            self.ksize,
-            self.hash_function,
-            self.seed,
-            self.abunds.is_some(),
-            self.num,
-        );
+        if self.num != 0 {
+            let mut combined_mh = KmerMinHashBTree::new(
+                self.scaled(),
+                self.ksize,
+                self.hash_function,
+                self.seed,
+                self.abunds.is_some(),
+                self.num,
+            );
 
-        combined_mh.merge(&self)?;
-        combined_mh.merge(&other)?;
+            combined_mh.merge(&self)?;
+            combined_mh.merge(&other)?;
 
-        let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
+            let it1 = Intersection::new(self.mins.iter(), other.mins.iter());
 
-        // TODO: there is probably a way to avoid this Vec here,
-        // and pass the it1 as left in it2.
-        let i1: Vec<u64> = it1.cloned().collect();
-        let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
-        let it2 = Intersection::new(i1.iter(), i2.iter());
+            // TODO: there is probably a way to avoid this Vec here,
+            // and pass the it1 as left in it2.
+            let i1: Vec<u64> = it1.cloned().collect();
+            let i2: Vec<u64> = combined_mh.mins.iter().cloned().collect();
+            let it2 = Intersection::new(i1.iter(), i2.iter());
 
-        Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+            Ok((it2.count() as u64, combined_mh.mins.len() as u64))
+        } else {
+            Ok(intersection_size(self.mins.iter(), other.mins.iter()))
+        }
     }
 
     // calculate Jaccard similarity, ignoring abundance.
@@ -1437,11 +1506,9 @@ impl KmerMinHashBTree {
     }
 
     pub fn abunds(&self) -> Option<Vec<u64>> {
-        if let Some(abunds) = &self.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        }
+        self.abunds
+            .as_ref()
+            .map(|abunds| abunds.values().cloned().collect())
     }
 
     // create a downsampled copy of self
@@ -1541,11 +1608,9 @@ impl From<KmerMinHashBTree> for KmerMinHash {
         );
 
         let mins = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(abunds.values().cloned().collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| abunds.values().cloned().collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
@@ -1566,15 +1631,101 @@ impl From<KmerMinHash> for KmerMinHashBTree {
         );
 
         let mins: BTreeSet<u64> = other.mins.into_iter().collect();
-        let abunds = if let Some(abunds) = other.abunds {
-            Some(mins.iter().cloned().zip(abunds.into_iter()).collect())
-        } else {
-            None
-        };
+        let abunds = other
+            .abunds
+            .map(|abunds| mins.iter().cloned().zip(abunds.into_iter()).collect());
 
         new_mh.mins = mins;
         new_mh.abunds = abunds;
 
         new_mh
     }
+}
+
+fn intersection<'a>(
+    me_iter: impl Iterator<Item = &'a u64>,
+    other_iter: impl Iterator<Item = &'a u64>,
+) -> (Vec<u64>, u64) {
+    let mut me = me_iter.peekable();
+    let mut other = other_iter.peekable();
+    let mut common: Vec<u64> = vec![];
+    let mut union_size = 0;
+
+    loop {
+        match (me.peek(), other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => {
+                let res = left_key.cmp(right_key);
+                match res {
+                    Ordering::Less => {
+                        me.next();
+                        union_size += 1;
+                    }
+                    Ordering::Greater => {
+                        other.next();
+                        union_size += 1;
+                    }
+                    Ordering::Equal => {
+                        other.next();
+                        common.push(***left_key);
+                        me.next();
+                        union_size += 1;
+                    }
+                };
+            }
+            (None, Some(_)) => {
+                other.next();
+                union_size += 1;
+            }
+            (Some(_), None) => {
+                me.next();
+                union_size += 1;
+            }
+            _ => break,
+        };
+    }
+    (common, union_size as u64)
+}
+
+fn intersection_size<'a>(
+    me_iter: impl Iterator<Item = &'a u64>,
+    other_iter: impl Iterator<Item = &'a u64>,
+) -> (u64, u64) {
+    let mut me = me_iter.peekable();
+    let mut other = other_iter.peekable();
+    let mut common = 0;
+    let mut union_size = 0;
+
+    loop {
+        match (me.peek(), other.peek()) {
+            (Some(ref left_key), Some(ref right_key)) => {
+                let res = left_key.cmp(right_key);
+                match res {
+                    Ordering::Less => {
+                        me.next();
+                        union_size += 1;
+                    }
+                    Ordering::Greater => {
+                        other.next();
+                        union_size += 1;
+                    }
+                    Ordering::Equal => {
+                        other.next();
+                        me.next();
+                        common += 1;
+                        union_size += 1;
+                    }
+                };
+            }
+            (None, Some(_)) => {
+                other.next();
+                union_size += 1;
+            }
+            (Some(_), None) => {
+                me.next();
+                union_size += 1;
+            }
+            _ => break,
+        };
+    }
+    (common as u64, union_size as u64)
 }
