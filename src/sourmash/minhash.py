@@ -647,9 +647,11 @@ class MinHash(RustObject):
             return 'DNA'
 
     def mutable(self):
+        "Return a copy of this MinHash that can be changed."
         return self.__copy__()
 
     def frozen(self):
+        "Return a frozen copy of this MinHash that cannot be changed."
         new_mh = self.__copy__()
         new_mh.__class__ = FrozenMinHash
         return new_mh
@@ -706,6 +708,7 @@ class FrozenMinHash(MinHash):
         raise TypeError('FrozenMinHash does not support modification')
 
     def mutable(self):
+        "Return a copy of this MinHash that can be changed."
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
 
@@ -716,6 +719,10 @@ class FrozenMinHash(MinHash):
             state_tup[1] = state_tup[1] * 3
         mut.__setstate__(state_tup)
         return mut
+
+    def frozen(self):
+        "Return a frozen copy of this MinHash that cannot be changed."
+        return self
 
     def __setstate__(self, tup):
         "support pickling via __getstate__/__setstate__"
