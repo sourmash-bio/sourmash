@@ -1912,12 +1912,12 @@ def test_max_containment_equal():
 
 
 def test_frozen_and_mutable_1(track_abundance):
-    # mutable minhashes -> mutable minhashes DO NOT create new copy, currently
+    # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
     mh2 = mh1.mutable()
 
     mh1.add_hash(10)
-    assert 10 in mh2.hashes     # current behavior - correct??
+    assert 10 not in mh2.hashes
 
 
 def test_frozen_and_mutable_2(track_abundance):

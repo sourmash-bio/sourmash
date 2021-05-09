@@ -647,7 +647,7 @@ class MinHash(RustObject):
             return 'DNA'
 
     def mutable(self):
-        return self
+        return self.__copy__()
 
     def frozen(self):
         new_mh = self.__copy__()
