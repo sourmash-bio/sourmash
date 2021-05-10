@@ -43,6 +43,9 @@ import sourmash
 from sourmash.minhash import (
     MinHash,
     FrozenMinHash,
+    NumMinHash,
+    ScaledMinHash,
+    MoleculeType,
     hash_murmur,
     _get_scaled_for_max_hash,
     _get_max_hash_for_scaled,
@@ -1945,3 +1948,39 @@ def test_frozen_and_mutable_3(track_abundance):
     mh3.add_hash(12)
     assert 12 not in mh2.hashes
     assert 12 not in mh1.hashes
+
+
+def test_newinit_basic_dna():
+    # verify that MHs of size 1 stay size 1, & act properly as bottom sketches.
+    mh = NumMinHash(num=1, ksize=4, moltype=MoleculeType.DNA)
+    assert mh.moltype == 'DNA'
+
+    mh.add_sequence('ATGC')
+    a = mh.hashes
+
+    mh.add_sequence('GCAT')             # this will not get added; hash > ATGC
+    b = mh.hashes
+
+    print(a, b)
+    assert list(a) == list(b)
+    assert len(b) == 1
+    assert list(a)[0] == list(b)[0] == 12415348535738636339
+
+
+def test_newinit_scaled(track_abundance):
+    # test basic behavior with scaled
+    scaled = _get_scaled_for_max_hash(35)
+    print('XX', scaled, _get_max_hash_for_scaled(scaled))
+    mh = ScaledMinHash(ksize=4, track_abundance=track_abundance, scaled=scaled,
+                       moltype=MoleculeType.DNA)
+    assert mh._max_hash == 35
+
+    mh.add_hash(10)
+    mh.add_hash(20)
+    mh.add_hash(30)
+
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    mh.add_hash(40)
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
+    mh.add_hash(36)
+    assert list(sorted(mh.hashes)) == [10, 20, 30]
