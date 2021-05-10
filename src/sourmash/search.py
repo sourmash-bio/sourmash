@@ -316,7 +316,6 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         # eliminate hashes under this new resolution.
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
-        new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
         query_mh = query.minhash.downsample(scaled=cmp_scaled)
         found_mh = best_match.minhash.downsample(scaled=cmp_scaled)
         orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
@@ -385,7 +384,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
                               remaining_bp=remaining_bp)
         result_n += 1
 
-        yield result, weighted_missed, new_max_hash, new_query
+        yield result, weighted_missed, new_query
 
         query = new_query
 
