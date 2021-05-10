@@ -376,8 +376,12 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        query = _subtract_and_downsample(set(found_mh.hashes), query, cmp_scaled)
-        remaining_bp = cmp_scaled * len(query.minhash)
+        new_query_mh = query.minhash.downsample(scaled=cmp_scaled)
+        new_query_mh.remove_many(set(found_mh.hashes))
+        new_query = SourmashSignature(new_query_mh)
+
+        #query = _subtract_and_downsample(set(found_mh.hashes), query, cmp_scaled)
+        remaining_bp = cmp_scaled * len(new_query_mh)
 
         # compute weighted_missed:
         query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
@@ -403,7 +407,9 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
                               remaining_bp=remaining_bp)
         result_n += 1
 
-        yield result, weighted_missed, new_max_hash, query
+        yield result, weighted_missed, new_max_hash, new_query
+
+        query = new_query
 
 
 ###
