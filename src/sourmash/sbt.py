@@ -297,7 +297,7 @@ class SBT(Index):
     def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
-        unload_data = kwargs.get("unload_data", False)
+        unload_data = kwargs.get("unload_data", True)
 
         # initialize search queue with top node of tree
         matches = []
