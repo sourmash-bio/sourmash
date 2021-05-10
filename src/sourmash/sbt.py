@@ -579,6 +579,7 @@ class SBT(Index):
             subdir = '.sbt.{}'.format(name)
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", b"")
+            storage.subdir = subdir
             index_filename = os.path.abspath(path)
         else:                             # path.endswith('.sbt.json')
             assert path.endswith('.sbt.json')
@@ -658,7 +659,7 @@ class SBT(Index):
             tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
             storage.save(save_path, tree_data)
-            storage.close()
+            storage.flush()
 
         elif kind == "FS":
             with open(index_filename, 'w') as fp:

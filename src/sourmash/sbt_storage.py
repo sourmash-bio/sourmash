@@ -178,12 +178,20 @@ class ZipStorage(Storage):
         return {'path': self.path}
 
     def close(self):
+        self.flush()
+        if self.zipfile is not None:
+            self.zipfile.close()
+            self.zipfile = None
+
+    def flush(self):
         # This is a bit complicated, but we have to deal with new data
         # (if the original zipfile is read-only) and possible duplicates.
 
         if self.bufferzip is None:
-            # The easy case: just close the zipfile, nothing else to do
+            # The easy case: close (to force flushing) and reopen the zipfile
             self.zipfile.close()
+            self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                           compression=zipfile.ZIP_STORED)
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -219,16 +227,20 @@ class ZipStorage(Storage):
                     final_file.close()
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
-
+                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                   compression=zipfile.ZIP_STORED)
                 elif new_data:
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    zf = zipfile.ZipFile(self.path, mode='a')
+                    zf = zipfile.ZipFile(self.path, mode='a',
+                                         compression=zipfile.ZIP_STORED)
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
+                    self.zipfile = zf
             # finally, close the buffer and release memory
             self.bufferzip.close()
+            self.bufferzip = None
 
     @staticmethod
     def can_open(location):
@@ -236,6 +248,9 @@ class ZipStorage(Storage):
 
     def list_sbts(self):
         return [f for f in self.zipfile.namelist() if f.endswith(".sbt.json")]
+
+    def __del__(self):
+        self.close()
 
 
 class IPFSStorage(Storage):
