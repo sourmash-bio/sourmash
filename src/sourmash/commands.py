@@ -1105,6 +1105,7 @@ def prefetch(args):
     # iterate over signatures in db one at a time, for each db;
     # find those with sufficient overlap
     noident_mh = query_mh.mutable()
+
     did_a_search = False        # track whether we did _any_ search at all!
     for dbfilename in args.databases:
         notify(f"loading signatures from '{dbfilename}'")
