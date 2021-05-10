@@ -178,8 +178,10 @@ class ZipStorage(Storage):
         return {'path': self.path}
 
     def close(self):
-        self.flush()
-        if self.zipfile is not None:
+        # TODO: this is not ideal; checking for zipfile.fp is looking at
+        # internal implementation details from CPython...
+        if self.zipfile is not None or self.bufferzip is not None:
+            self.flush()
             self.zipfile.close()
             self.zipfile = None
 
@@ -189,9 +191,10 @@ class ZipStorage(Storage):
 
         if self.bufferzip is None:
             # The easy case: close (to force flushing) and reopen the zipfile
-            self.zipfile.close()
-            self.zipfile = zipfile.ZipFile(self.path, mode='a',
-                                           compression=zipfile.ZIP_STORED)
+            if self.zipfile is not None:
+                self.zipfile.close()
+                self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                               compression=zipfile.ZIP_STORED)
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -208,7 +211,7 @@ class ZipStorage(Storage):
                     # bad news, need to create new file...
                     # create a temporary file to write the final version,
                     # which will be copied to the right place later.
-                    tempfile = NamedTemporaryFile()
+                    tempfile = NamedTemporaryFile(delete=False)
                     final_file = zipfile.ZipFile(tempfile, mode="w")
                     all_data = buffer_names.union(zf_names)
 
