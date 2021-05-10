@@ -245,15 +245,6 @@ GatherResult = namedtuple('GatherResult',
                           'intersect_bp, f_orig_query, f_match, f_unique_to_query, f_unique_weighted, average_abund, median_abund, std_abund, filename, name, md5, match, f_match_orig, unique_intersect_bp, gather_result_rank, remaining_bp')
 
 
-# build a new query object, subtracting found mins and downsampling
-def _subtract_and_downsample(to_remove, old_query, scaled=None):
-    mh = old_query.minhash
-    mh = mh.downsample(scaled=scaled)
-    mh.remove_many(to_remove)
-
-    return SourmashSignature(mh)
-
-
 def _find_best(counters, query, threshold_bp):
     """
     Search for the best containment, return precisely one match.
@@ -281,14 +272,6 @@ def _find_best(counters, query, threshold_bp):
         # and done!
         return best_result, best_intersect_mh
     return None, None
-
-
-def _filter_max_hash(values, max_hash):
-    results = set()
-    for v in values:
-        if v < max_hash:
-            results.add(v)
-    return results
 
 
 def gather_databases(query, counters, threshold_bp, ignore_abundance):
@@ -322,10 +305,6 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
 
         best_match = best_result.signature
         filename = best_result.location
-
-        # subtract found hashes from search hashes, construct new search
-        query_hashes = set(query.minhash.hashes)
-        found_hashes = set(best_match.minhash.hashes)
 
         # Is the best match computed with scaled? Die if not.
         match_scaled = best_match.minhash.scaled
@@ -380,7 +359,6 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         new_query_mh.remove_many(set(found_mh.hashes))
         new_query = SourmashSignature(new_query_mh)
 
-        #query = _subtract_and_downsample(set(found_mh.hashes), query, cmp_scaled)
         remaining_bp = cmp_scaled * len(new_query_mh)
 
         # compute weighted_missed:
