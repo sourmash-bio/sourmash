@@ -282,10 +282,9 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
     # track original query information for later usage.
     track_abundance = query.minhash.track_abundance and not ignore_abundance
     orig_query_mh = query.minhash
-    orig_query_hashes = set(orig_query_mh.hashes)
 
     # do we pay attention to abundances?
-    orig_query_abunds = { k: 1 for k in orig_query_hashes }
+    orig_query_abunds = { k: 1 for k in orig_query_mh.hashes }
     if track_abundance:
         import numpy as np
         orig_query_abunds = orig_query_mh.hashes
