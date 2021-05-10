@@ -279,8 +279,8 @@ def _find_best(counters, query, threshold_bp):
             counter.consume(best_intersect_mh)
 
         # and done!
-        return best_result
-    return None
+        return best_result, best_intersect_mh
+    return None, None
 
 
 def _filter_max_hash(values, max_hash):
@@ -314,7 +314,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
     result_n = 0
     while query.minhash:
         # find the best match!
-        best_result = _find_best(counters, query, threshold_bp)
+        best_result, intersect_mh = _find_best(counters, query, threshold_bp)
 
         if not best_result:          # no matches at all for this cutoff!
             notify(f'found less than {format_bp(threshold_bp)} in common. => exiting')
@@ -340,28 +340,20 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
         query_mh = query.minhash.downsample(scaled=cmp_scaled)
         found_mh = best_match.minhash.downsample(scaled=cmp_scaled)
-        #query_hashes = _filter_max_hash(query_hashes, new_max_hash)
-        #found_hashes = _filter_max_hash(found_hashes, new_max_hash)
         orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
-        #orig_query_hashes = _filter_max_hash(orig_query_hashes, new_max_hash)
         sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
         # calculate intersection with query hashes:
-        intersect_mh = query_mh.intersection(found_mh)
-        #intersect_hashes = query_hashes.intersection(found_hashes)
         unique_intersect_bp = cmp_scaled * len(intersect_mh)
         intersect_orig_mh = orig_query_mh.intersection(found_mh)
-        #intersect_orig_hashes = orig_query_hashes.intersection(found_hashes)
         intersect_bp = cmp_scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
         assert intersect_mh.contained_by(found_mh) == 1.0
-        #assert intersect_hashes.issubset(found_hashes)
         f_match = len(intersect_mh) / len(found_mh)
         f_orig_query = len(intersect_orig_mh) / len(orig_query_mh)
 
         # calculate fractions wrt second denominator - metagenome size
-        #assert intersect_hashes.issubset(orig_query_hashes)
         assert intersect_mh.contained_by(orig_query_mh) == 1.0
         f_unique_to_query = len(intersect_mh) / len(orig_query_mh)
 
