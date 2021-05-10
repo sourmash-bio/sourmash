@@ -307,6 +307,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         import numpy as np
         orig_query_abunds = orig_query_mh.hashes
 
+    orig_query_mh = orig_query_mh.flatten()
     query.minhash = query.minhash.flatten()
 
     cmp_scaled = query.minhash.scaled    # initialize with resolution of query
@@ -337,38 +338,45 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
         new_max_hash = _get_max_hash_for_scaled(cmp_scaled)
-        query_hashes = _filter_max_hash(query_hashes, new_max_hash)
-        found_hashes = _filter_max_hash(found_hashes, new_max_hash)
-        orig_query_hashes = _filter_max_hash(orig_query_hashes, new_max_hash)
-        sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_hashes))
+        query_mh = query.minhash.downsample(scaled=cmp_scaled)
+        found_mh = best_match.minhash.downsample(scaled=cmp_scaled)
+        #query_hashes = _filter_max_hash(query_hashes, new_max_hash)
+        #found_hashes = _filter_max_hash(found_hashes, new_max_hash)
+        orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
+        #orig_query_hashes = _filter_max_hash(orig_query_hashes, new_max_hash)
+        sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
         # calculate intersection with query hashes:
-        intersect_hashes = query_hashes.intersection(found_hashes)
-        unique_intersect_bp = cmp_scaled * len(intersect_hashes)
-        intersect_orig_hashes = orig_query_hashes.intersection(found_hashes)
-        intersect_bp = cmp_scaled * len(intersect_orig_hashes)
+        intersect_mh = query_mh.intersection(found_mh)
+        #intersect_hashes = query_hashes.intersection(found_hashes)
+        unique_intersect_bp = cmp_scaled * len(intersect_mh)
+        intersect_orig_mh = orig_query_mh.intersection(found_mh)
+        #intersect_orig_hashes = orig_query_hashes.intersection(found_hashes)
+        intersect_bp = cmp_scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
-        assert intersect_hashes.issubset(found_hashes)
-        f_match = len(intersect_hashes) / len(found_hashes)
-        f_orig_query = len(intersect_orig_hashes) / len(orig_query_hashes)
+        assert intersect_mh.contained_by(found_mh) == 1.0
+        #assert intersect_hashes.issubset(found_hashes)
+        f_match = len(intersect_mh) / len(found_mh)
+        f_orig_query = len(intersect_orig_mh) / len(orig_query_mh)
 
         # calculate fractions wrt second denominator - metagenome size
-        assert intersect_hashes.issubset(orig_query_hashes)
-        f_unique_to_query = len(intersect_hashes) / len(orig_query_hashes)
+        #assert intersect_hashes.issubset(orig_query_hashes)
+        assert intersect_mh.contained_by(orig_query_mh) == 1.0
+        f_unique_to_query = len(intersect_mh) / len(orig_query_mh)
 
         # calculate fraction of subject match with orig query
         f_match_orig = best_match.minhash.contained_by(orig_query_mh,
                                                        downsample=True)
 
         # calculate scores weighted by abundances
-        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_hashes))
+        f_unique_weighted = sum((orig_query_abunds[k] for k in intersect_mh.hashes ))
         f_unique_weighted /= sum_abunds
 
         # calculate stats on abundances, if desired.
         average_abund, median_abund, std_abund = None, None, None
         if track_abundance:
-            intersect_abunds = (orig_query_abunds[k] for k in intersect_hashes)
+            intersect_abunds = (orig_query_abunds[k] for k in intersect_mh.hashes )
             intersect_abunds = list(intersect_abunds)
 
             average_abund = np.mean(intersect_abunds)
@@ -376,11 +384,11 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
             std_abund = np.std(intersect_abunds)
 
         # construct a new query, subtracting hashes found in previous one.
-        query = _subtract_and_downsample(found_hashes, query, cmp_scaled)
-        remaining_bp = cmp_scaled * len(query.minhash.hashes)
+        query = _subtract_and_downsample(set(found_mh.hashes), query, cmp_scaled)
+        remaining_bp = cmp_scaled * len(query.minhash)
 
         # compute weighted_missed:
-        query_hashes -= set(found_hashes)
+        query_hashes = set(query_mh.hashes) - set(found_mh.hashes)
         weighted_missed = sum((orig_query_abunds[k] for k in query_hashes)) \
              / sum_abunds
 
