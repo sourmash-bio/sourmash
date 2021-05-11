@@ -181,11 +181,11 @@ class ZipStorage(Storage):
         # TODO: this is not ideal; checking for zipfile.fp is looking at
         # internal implementation details from CPython...
         if self.zipfile is not None or self.bufferzip is not None:
-            self.flush()
+            self.flush(keep_closed=True)
             self.zipfile.close()
             self.zipfile = None
 
-    def flush(self):
+    def flush(self, *, keep_closed=False):
         # This is a bit complicated, but we have to deal with new data
         # (if the original zipfile is read-only) and possible duplicates.
 
@@ -193,8 +193,9 @@ class ZipStorage(Storage):
             # The easy case: close (to force flushing) and reopen the zipfile
             if self.zipfile is not None:
                 self.zipfile.close()
-                self.zipfile = zipfile.ZipFile(self.path, mode='a',
-                                               compression=zipfile.ZIP_STORED)
+                if not keep_closed:
+                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                   compression=zipfile.ZIP_STORED)
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -230,14 +231,16 @@ class ZipStorage(Storage):
                     final_file.close()
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
-                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
-                                                   compression=zipfile.ZIP_STORED)
+                    if not keep_closed:
+                        self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                       compression=zipfile.ZIP_STORED)
                 elif new_data:
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    zf = zipfile.ZipFile(self.path, mode='a',
-                                         compression=zipfile.ZIP_STORED)
+                    if not keep_closed:
+                        zf = zipfile.ZipFile(self.path, mode='a',
+                                             compression=zipfile.ZIP_STORED)
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
                     self.zipfile = zf
