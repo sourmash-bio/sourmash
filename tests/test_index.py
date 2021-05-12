@@ -337,19 +337,18 @@ def test_linear_index_save(runtmp):
     linear.insert(ss47)
     linear.insert(ss63)
     
-    with runtmp as location:
-        filename = os.path.join(location, 'foo')
-        linear.save(filename)
+    filename = runtmp.output('foo')
+    linear.save(filename)
 
-        si = set(sourmash.load_file_as_signatures(filename))
+    si = set(sourmash.load_file_as_signatures(filename))
 
     x = {ss2, ss47, ss63}
 
     print(len(si))
     print(len(x))
 
-    print(si)
-    print(x)
+    print('si: ', si)
+    print('x: ', x)
 
     assert si == x, si
 
