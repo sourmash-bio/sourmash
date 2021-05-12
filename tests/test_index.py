@@ -323,7 +323,7 @@ def test_linear_index_search_abund_subj_flat():
     assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
 
 
-def test_linear_index_save():
+def test_linear_index_save(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -337,7 +337,7 @@ def test_linear_index_save():
     linear.insert(ss47)
     linear.insert(ss63)
     
-    with utils.TempDirectory() as location:
+    with runtmp as location:
         filename = os.path.join(location, 'foo')
         linear.save(filename)
 
