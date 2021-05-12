@@ -420,6 +420,8 @@ def index(args):
 
     notify('loaded {} sigs; saving SBT under "{}"', n, args.sbt_name)
     tree.save(args.sbt_name, sparseness=args.sparseness)
+    if tree.storage:
+        tree.storage.close()
 
 
 def search(args):
