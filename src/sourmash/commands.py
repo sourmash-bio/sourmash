@@ -680,12 +680,11 @@ def gather(args):
     weighted_missed = 1
     is_abundance = query.minhash.track_abundance and not args.ignore_abundance
     orig_query_mh = query.minhash
-    new_max_hash = query.minhash._max_hash
     next_query = query
 
     gather_iter = gather_databases(query, counters, args.threshold_bp,
                                    args.ignore_abundance)
-    for result, weighted_missed, new_max_hash, next_query in gather_iter:
+    for result, weighted_missed, next_query in gather_iter:
         if not len(found):                # first result? print header.
             if is_abundance:
                 print_results("")
@@ -842,7 +841,7 @@ def multigather(args):
             found = []
             weighted_missed = 1
             is_abundance = query.minhash.track_abundance and not args.ignore_abundance
-            for result, weighted_missed, new_max_hash, next_query in gather_databases(query, counters, args.threshold_bp, args.ignore_abundance):
+            for result, weighted_missed, next_query in gather_databases(query, counters, args.threshold_bp, args.ignore_abundance):
                 if not len(found):                # first result? print header.
                     if is_abundance:
                         print_results("")
@@ -919,7 +918,8 @@ def multigather(args):
                 else:
                     notify('saving unassigned hashes to "{}"', output_unassigned)
 
-                    e = MinHash(ksize=query.minhash.ksize, n=0, max_hash=new_max_hash)
+                    e = MinHash(ksize=query.minhash.ksize, n=0,
+                                scaled=next_query.minhash.scaled)
                     e.add_many(next_query.minhash.hashes)
                     # CTB: note, multigather does not save abundances
                     sig.save_signatures([ sig.SourmashSignature(e) ], fp)
