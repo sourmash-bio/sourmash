@@ -2919,6 +2919,15 @@ def test_gather_csv(linear_gather, prefetch_gather):
             assert row['gather_result_rank'] == '0'
 
 
+def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    runtmp.sourmash('gather', sig47, sig63)
+
+    assert '2.5 Mbp       49.2%   48.3%       1.0    NC_011663.1' in runtmp.last_result.out
+
+
 def test_gather_multiple_sbts(prefetch_gather, linear_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
