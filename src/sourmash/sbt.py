@@ -19,7 +19,7 @@ from cachetools import Cache
 from .exceptions import IndexNotSupported
 from .sbt_storage import FSStorage, IPFSStorage, RedisStorage, ZipStorage
 from .logging import error, notify, debug
-from .index import Index
+from .index import Index, IndexSearchResult
 
 from .nodegraph import Nodegraph, extract_nodegraph_info, calc_expected_collisions
 
@@ -297,7 +297,7 @@ class SBT(Index):
     def _find_nodes(self, search_fn, *args, **kwargs):
         "Search the tree using `search_fn`."
 
-        unload_data = kwargs.get("unload_data", False)
+        unload_data = kwargs.get("unload_data", True)
 
         # initialize search queue with top node of tree
         matches = []
@@ -346,7 +346,7 @@ class SBT(Index):
 
         return matches
 
-    def find(self, search_fn, query, *args, **kwargs):
+    def find(self, search_fn, query, **kwargs):
         """
         Do a Jaccard similarity or containment search, yield results.
 
@@ -445,8 +445,8 @@ class SBT(Index):
             return False
 
         # & execute!
-        for n in self._find_nodes(node_search, *args, **kwargs):
-            yield n.data, results[n.data]
+        for n in self._find_nodes(node_search, **kwargs):
+            yield IndexSearchResult(results[n.data], n.data, self.location)
 
     def _rebuild_node(self, pos=0):
         """Recursively rebuilds an internal node (if it is not present).
@@ -579,6 +579,7 @@ class SBT(Index):
             subdir = '.sbt.{}'.format(name)
             storage_args = FSStorage("", subdir).init_args()
             storage.save(subdir + "/", b"")
+            storage.subdir = subdir
             index_filename = os.path.abspath(path)
         else:                             # path.endswith('.sbt.json')
             assert path.endswith('.sbt.json')
@@ -658,7 +659,7 @@ class SBT(Index):
             tree_data = json.dumps(info).encode("utf-8")
             save_path = "{}.sbt.json".format(name)
             storage.save(save_path, tree_data)
-            storage.close()
+            storage.flush()
 
         elif kind == "FS":
             with open(index_filename, 'w') as fp:
