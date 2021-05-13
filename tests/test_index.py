@@ -375,7 +375,7 @@ def test_linear_index_load(runtmp):
     assert linear.location == filename
 
 
-def test_linear_index_save_load():
+def test_linear_index_save_load(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -388,11 +388,10 @@ def test_linear_index_save_load():
     linear.insert(ss2)
     linear.insert(ss47)
     linear.insert(ss63)
-    
-    with utils.TempDirectory() as location:
-        filename = os.path.join(location, 'foo')
-        linear.save(filename)
-        linear2 = LinearIndex.load(filename)
+
+    filename = runtmp.output('foo')
+    linear.save(filename)
+    linear2 = LinearIndex.load(filename)
         
     # now, search for sig2
     sr = linear2.search(ss2, threshold=1.0)
