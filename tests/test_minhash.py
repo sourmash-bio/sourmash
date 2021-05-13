@@ -1914,7 +1914,7 @@ def test_max_containment_equal():
 def test_frozen_and_mutable_1(track_abundance):
     # mutable minhashes -> mutable minhashes creates new copy
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
-    mh2 = mh1.mutable()
+    mh2 = mh1.to_mutable()
 
     mh1.add_hash(10)
     assert 10 not in mh2.hashes
@@ -1925,7 +1925,7 @@ def test_frozen_and_mutable_2(track_abundance):
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
     mh1.add_hash(10)
 
-    mh2 = mh1.frozen()
+    mh2 = mh1.to_frozen()
     assert 10 in mh2.hashes
     mh1.add_hash(11)
     assert 11 not in mh2.hashes
@@ -1936,12 +1936,12 @@ def test_frozen_and_mutable_3(track_abundance):
     mh1 = MinHash(0, 21, scaled=1, track_abundance=track_abundance)
     mh1.add_hash(10)
 
-    mh2 = mh1.frozen()
+    mh2 = mh1.to_frozen()
     assert 10 in mh2.hashes
     mh1.add_hash(11)
     assert 11 not in mh2.hashes
 
-    mh3 = mh2.mutable()
+    mh3 = mh2.to_mutable()
     mh3.add_hash(12)
     assert 12 not in mh2.hashes
     assert 12 not in mh1.hashes

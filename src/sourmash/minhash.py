@@ -588,7 +588,7 @@ class MinHash(RustObject):
             if self.num != other.num:
                 raise TypeError(f"incompatible num values: self={self.num} other={other.num}")
 
-        new_obj = self.mutable()
+        new_obj = self.to_mutable()
         new_obj += other
         return new_obj
 
@@ -646,11 +646,11 @@ class MinHash(RustObject):
         else:
             return 'DNA'
 
-    def mutable(self):
+    def to_mutable(self):
         "Return a copy of this MinHash that can be changed."
         return self.__copy__()
 
-    def frozen(self):
+    def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         new_mh = self.__copy__()
         new_mh.__class__ = FrozenMinHash
@@ -694,12 +694,12 @@ class FrozenMinHash(MinHash):
         if num and self.num == num:
             return self
 
-        return MinHash.downsample(self, num=num, scaled=scaled).frozen()
+        return MinHash.downsample(self, num=num, scaled=scaled).to_frozen()
 
     def flatten(self):
         if not self.track_abundance:
             return self
-        return MinHash.flatten(self).frozen()
+        return MinHash.flatten(self).to_frozen()
 
     def __iadd__(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
@@ -707,7 +707,7 @@ class FrozenMinHash(MinHash):
     def merge(self, *args, **kwargs):
         raise TypeError('FrozenMinHash does not support modification')
 
-    def mutable(self):
+    def to_mutable(self):
         "Return a copy of this MinHash that can be changed."
         mut = MinHash.__new__(MinHash)
         state_tup = self.__getstate__()
@@ -720,7 +720,7 @@ class FrozenMinHash(MinHash):
         mut.__setstate__(state_tup)
         return mut
 
-    def frozen(self):
+    def to_frozen(self):
         "Return a frozen copy of this MinHash that cannot be changed."
         return self
 
