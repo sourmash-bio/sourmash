@@ -394,6 +394,16 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
 def test_databases_load_fail_on_dir():
     filename1 = utils.get_test_data('lca')
     with pytest.raises(ValueError) as exc:
@@ -1968,7 +1978,8 @@ def test_lca_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not db.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -1982,8 +1993,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -1999,8 +2010,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a too-high threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_lca_gather_threshold_5():

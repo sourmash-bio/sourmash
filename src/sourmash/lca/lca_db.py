@@ -8,7 +8,7 @@ import functools
 import sourmash
 from sourmash.minhash import _get_max_hash_for_scaled
 from sourmash.logging import notify, error, debug
-from sourmash.index import Index
+from sourmash.index import Index, IndexSearchResult
 
 
 def cached_property(fun):
@@ -212,6 +212,15 @@ class LCA_Database(Index):
             xopen = gzip.open
 
         with xopen(db_name, 'rt') as fp:
+            try:
+                first_ch = fp.read(1)
+            except ValueError:
+                first_ch = 'X'
+            if first_ch[0] != '{':
+                raise ValueError(f"'{db_name}' is not an LCA database file.")
+
+            fp.seek(0)
+
             load_d = {}
             try:
                 load_d = json.load(fp)
@@ -469,7 +478,7 @@ class LCA_Database(Index):
             # signal that it is done, or something.
             if search_fn.passes(score):
                 if search_fn.collect(score, subj):
-                    yield subj, score
+                    yield IndexSearchResult(score, subj, self.location)
 
     @cached_property
     def lid_to_idx(self):
