@@ -316,7 +316,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
         # (CTB note: this means that if a high scaled/low res signature is
         # found early on, resolution will be low from then on.)
         query_mh = query.minhash.downsample(scaled=cmp_scaled)
-        found_mh = best_match.minhash.downsample(scaled=cmp_scaled)
+        found_mh = best_match.minhash.downsample(scaled=cmp_scaled).flatten()
         orig_query_mh = orig_query_mh.downsample(scaled=cmp_scaled)
         sum_abunds = sum(( orig_query_abunds[k] for k in orig_query_mh.hashes ))
 
