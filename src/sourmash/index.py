@@ -343,36 +343,41 @@ class LinearIndex(Index, RustObject):
         self._init_inner()
 
     def _init_inner(self):
-        if self._objptr != ffi.NULL:
-            # Already initialized
+        if self._objptr != ffi.NULL and not self.__signatures:
+            # Already initialized, nothing new to add
             return
 
-        if (
-            not self.__signatures
-            and self._objptr == ffi.NULL
-        ):
+        if (not self.__signatures and self._objptr == ffi.NULL):
             # no signatures provided, initializing empty LinearIndex
             self._objptr = lib.linearindex_new()
-        elif self.__signatures and self._objptr != ffi.NULL:
-            raise NotImplementedError("Need to update LinearIndex")
+            return
 
         attached_refs = weakref.WeakKeyDictionary()
 
         collected = []
-        if self.__signatures:
-            # pass SourmashSignature pointers to LinearIndex.
-            for sig in self.__signatures:
-                rv = sig._get_objptr()
-                attached_refs[rv] = (rv, sig)
-                collected.append(rv)
-            search_sigs_ptr = ffi.new("SourmashSignature*[]", collected)
+        # pass SourmashSignature pointers to LinearIndex.
+        for sig in self.__signatures:
+            rv = sig._get_objptr()
+            attached_refs[rv] = (rv, sig)
+            collected.append(rv)
+        search_sigs_ptr = ffi.new("SourmashSignature*[]", collected)
+        self.__signatures = []
 
+        if self._objptr != ffi.NULL:
+            # new signatures to add, insert to already initialized LinearIndex
+            self._methodcall(
+                lib.linearindex_insert_many,
+                search_sigs_ptr,
+                len(search_sigs_ptr)
+            )
+        else:
+            # Rust object was not initialized yet, so let's create it with the
+            # new sigs
             self._objptr = rustcall(
                 lib.linearindex_new_with_sigs,
                 search_sigs_ptr,
                 len(search_sigs_ptr),
             )
-            self.__signatures = []
 
     @property
     def location(self):

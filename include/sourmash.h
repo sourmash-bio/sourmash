@@ -254,6 +254,10 @@ bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
 void linearindex_free(SourmashLinearIndex *ptr);
 
+void linearindex_insert_many(SourmashLinearIndex *ptr,
+                             const SourmashSignature *const *search_sigs_ptr,
+                             uintptr_t insigs);
+
 uintptr_t linearindex_len(const SourmashLinearIndex *ptr);
 
 SourmashLinearIndex *linearindex_new(void);

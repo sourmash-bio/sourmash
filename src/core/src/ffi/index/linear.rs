@@ -27,23 +27,30 @@ unsafe fn linearindex_new_with_sigs(
         assert!(!search_sigs_ptr.is_null());
         slice::from_raw_parts(search_sigs_ptr, insigs)
             .iter()
-            .map(|sig| SourmashSignature::as_rust(*sig))
-            .cloned()
-            .map(|sig| {
-                SigStore::builder()
-                    .data(sig)
-                    .filename("")
-                    .name("")
-                    .metadata("")
-                    .storage(None)
-                    .build()
-            })
+            .map(|sig| SourmashSignature::as_rust(*sig).clone().into())
             .collect()
     };
 
     let linear_index = LinearIndex::builder().datasets(search_sigs).build();
 
     Ok(SourmashLinearIndex::from_rust(linear_index))
+}
+}
+
+ffi_fn! {
+unsafe fn linearindex_insert_many(
+    ptr: *mut SourmashLinearIndex,
+    search_sigs_ptr: *const *const SourmashSignature,
+    insigs: usize,
+) -> Result<()> {
+    let index = SourmashLinearIndex::as_rust_mut(ptr);
+
+    slice::from_raw_parts(search_sigs_ptr, insigs)
+        .iter()
+        .try_for_each(|sig| {
+            let s = SourmashSignature::as_rust(*sig).clone();
+            index.insert(s)
+        })
 }
 }
 
