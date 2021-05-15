@@ -603,6 +603,12 @@ class MinHash(RustObject):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
 
+## | = merge
+    def __or__(self, other):
+        if not isinstance(other, MinHash):
+            raise TypeError("can only add MinHash objects to MinHash objects!")
+        self._methodcall(lib.kmerminhash_merge, other._get_objptr())
+
     def intersection(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only intersect MinHash objects")
@@ -612,7 +618,7 @@ class MinHash(RustObject):
         ptr = self._methodcall(lib.kmerminhash_intersection, other._get_objptr())
         return MinHash._from_objptr(ptr)
 
-## intersection =  &
+## & = intersection
     def __and__(self, other):
         if not isinstance(other, MinHash):
             raise TypeError("can only intersect MinHash objects")

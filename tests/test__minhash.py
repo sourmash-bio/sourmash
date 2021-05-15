@@ -1678,19 +1678,11 @@ def test_intersection_1_num():
     assert len(mh3) == 1
     assert 0 in mh3.hashes
 
-def test_and_1_num():
-    mh1 = MinHash(10, 21)
-    mh2 = MinHash(10, 21)
-
-    mh1.add_hash(0)
-    mh1.add_hash(1)
-    mh2.add_hash(0)
-    mh2.add_hash(2)
-
-    mh3 = mh1 & mh2
-    print("added hashes:", set(mh3.hashes))
-    assert len(mh3) == 1
-    assert 0 in mh3.hashes
+    # test & operator
+    mh4 = mh1 & mh2
+    print("& INTERSECTION HASHES:", set(mh4.hashes))
+    assert len(mh4) == 1
+    assert 0 in mh4.hashes
 
 def test_intersection_2_scaled():
     mh1 = MinHash(0, 21, scaled=1)
