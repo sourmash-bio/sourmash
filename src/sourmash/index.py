@@ -351,7 +351,8 @@ class LinearIndex(Index, RustObject):
             not self.__signatures
             and self._objptr == ffi.NULL
         ):
-            raise ValueError("No signatures provided")
+            # no signatures provided, initializing empty LinearIndex
+            self._objptr = lib.linearindex_new()
         elif self.__signatures and self._objptr != ffi.NULL:
             raise NotImplementedError("Need to update LinearIndex")
 

@@ -256,6 +256,8 @@ void linearindex_free(SourmashLinearIndex *ptr);
 
 uintptr_t linearindex_len(const SourmashLinearIndex *ptr);
 
+SourmashLinearIndex *linearindex_new(void);
+
 SourmashLinearIndex *linearindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
                                                uintptr_t insigs);
 

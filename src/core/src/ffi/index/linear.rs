@@ -1,21 +1,21 @@
-use std::path::PathBuf;
 use std::slice;
 
 use crate::index::linear::LinearIndex;
 use crate::index::{Index, SigStore};
-use crate::signature::{Signature, SigsTrait};
-use crate::sketch::minhash::KmerMinHash;
-use crate::sketch::Sketch;
+use crate::signature::Signature;
 
-use crate::ffi::index::SourmashSearchResult;
-use crate::ffi::minhash::SourmashKmerMinHash;
 use crate::ffi::signature::SourmashSignature;
-use crate::ffi::utils::{ForeignObject, SourmashStr};
+use crate::ffi::utils::ForeignObject;
 
 pub struct SourmashLinearIndex;
 
 impl ForeignObject for SourmashLinearIndex {
     type RustObject = LinearIndex<Signature>;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn linearindex_new() -> *mut SourmashLinearIndex {
+    SourmashLinearIndex::from_rust(LinearIndex::builder().build())
 }
 
 ffi_fn! {
