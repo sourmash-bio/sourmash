@@ -1,13 +1,16 @@
 "An Abstract Base Class for collections of signatures."
 
 import os
+import weakref
 import sourmash
 from abc import abstractmethod, ABC
 from collections import namedtuple, Counter
 import zipfile
 import copy
 
+from .utils import RustObject, rustcall, decode_str, encode_str
 from .search import make_jaccard_search_query, make_gather_query
+from ._lowlevel import ffi, lib
 
 # generic return tuple for Index.search and Index.gather
 IndexSearchResult = namedtuple('Result', 'score, signature, location')
@@ -322,29 +325,84 @@ def select_signature(ss, ksize=None, moltype=None, scaled=0, num=0,
     return True
 
 
-class LinearIndex(Index):
+class LinearIndex(Index, RustObject):
     "An Index for a collection of signatures. Can load from a .sig file."
+
+    __dealloc_func__ = lib.linearindex_free
+
     def __init__(self, _signatures=None, filename=None):
-        self._signatures = []
-        if _signatures:
-            self._signatures = list(_signatures)
         self.filename = filename
+        self._objptr = ffi.NULL
+
+        self.__signatures = []
+        if not _signatures:
+            # delay initialization for when we have signatures
+            return
+
+        self.__signatures = _signatures
+        self._init_inner()
+
+    def _init_inner(self):
+        if self._objptr != ffi.NULL:
+            # Already initialized
+            return
+
+        if (
+            not self.__signatures
+            and self._objptr == ffi.NULL
+        ):
+            raise ValueError("No signatures provided")
+        elif self.__signatures and self._objptr != ffi.NULL:
+            raise NotImplementedError("Need to update LinearIndex")
+
+        attached_refs = weakref.WeakKeyDictionary()
+
+        collected = []
+        if self.__signatures:
+            # pass SourmashSignature pointers to LinearIndex.
+            for sig in self.__signatures:
+                rv = sig._get_objptr()
+                attached_refs[rv] = (rv, sig)
+                collected.append(rv)
+            search_sigs_ptr = ffi.new("SourmashSignature*[]", collected)
+
+            self._objptr = rustcall(
+                lib.linearindex_new_with_sigs,
+                search_sigs_ptr,
+                len(search_sigs_ptr),
+            )
+            self.__signatures = []
 
     @property
     def location(self):
         return self.filename
 
     def signatures(self):
-        return iter(self._signatures)
+        from sourmash import SourmashSignature
+
+        self._init_inner()
+
+        size = ffi.new("uintptr_t *")
+        sigs_ptr = self._methodcall(lib.linearindex_signatures, size)
+        size = size[0]
+
+        sigs = []
+        for i in range(size):
+            sig = SourmashSignature._from_objptr(sigs_ptr[i])
+            sigs.append(sig)
+
+        for sig in sigs:
+            yield sig
 
     def __bool__(self):
-        return bool(self._signatures)
+        return bool(len(self))
 
     def __len__(self):
-        return len(self._signatures)
+        self._init_inner()
+        return self._methodcall(lib.linearindex_len)
 
     def insert(self, node):
-        self._signatures.append(node)
+        self.__signatures.append(node)
 
     def save(self, path):
         from .signature import save_signatures
@@ -368,7 +426,7 @@ class LinearIndex(Index):
         kw = { k : v for (k, v) in kwargs.items() if v }
 
         siglist = []
-        for ss in self._signatures:
+        for ss in self.signatures():
             if select_signature(ss, **kwargs):
                 siglist.append(ss)
 

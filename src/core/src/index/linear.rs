@@ -30,7 +30,7 @@ struct LinearInfo<L> {
 impl<'a, L> Index<'a> for LinearIndex<L>
 where
     L: Clone + Comparable<L> + 'a,
-    SigStore<L>: From<L>,
+    SigStore<L>: From<L> + ReadData<L>,
 {
     type Item = L;
     //type SignatureIterator = std::slice::Iter<'a, Self::Item>;
@@ -58,15 +58,13 @@ where
     fn signatures(&self) -> Vec<Self::Item> {
         self.datasets
             .iter()
-            .map(|x| x.data.get().unwrap().clone())
+            .map(|x| (*x).data().unwrap())
+            .cloned()
             .collect()
     }
 
     fn signature_refs(&self) -> Vec<&Self::Item> {
-        self.datasets
-            .iter()
-            .map(|x| x.data.get().unwrap())
-            .collect()
+        self.datasets.iter().map(|x| (*x).data().unwrap()).collect()
     }
 
     /*
@@ -181,5 +179,9 @@ where
 
     pub fn storage(&self) -> Option<Rc<dyn Storage>> {
         self.storage.clone()
+    }
+
+    pub fn len(&self) -> usize {
+        self.datasets.len()
     }
 }

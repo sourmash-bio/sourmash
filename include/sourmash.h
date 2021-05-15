@@ -50,7 +50,11 @@ typedef struct SourmashHyperLogLog SourmashHyperLogLog;
 
 typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 
+typedef struct SourmashLinearIndex SourmashLinearIndex;
+
 typedef struct SourmashNodegraph SourmashNodegraph;
+
+typedef struct SourmashSearchResult SourmashSearchResult;
 
 typedef struct SourmashSignature SourmashSignature;
 
@@ -248,6 +252,15 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+void linearindex_free(SourmashLinearIndex *ptr);
+
+uintptr_t linearindex_len(const SourmashLinearIndex *ptr);
+
+SourmashLinearIndex *linearindex_new_with_sigs(const SourmashSignature *const *search_sigs_ptr,
+                                               uintptr_t insigs);
+
+SourmashSignature **linearindex_signatures(const SourmashLinearIndex *ptr, uintptr_t *size);
+
 void nodegraph_buffer_free(uint8_t *ptr, uintptr_t insize);
 
 bool nodegraph_count(SourmashNodegraph *ptr, uint64_t h);
@@ -291,6 +304,14 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
+
+void searchresult_free(SourmashSearchResult *ptr);
+
+double searchresult_score(const SourmashSearchResult *ptr);
+
+SourmashSignature *searchresult_signature(const SourmashSearchResult *ptr);
 
 void signature_add_protein(SourmashSignature *ptr, const char *sequence);
 
