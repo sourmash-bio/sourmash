@@ -354,6 +354,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
 
         # construct a new query, subtracting hashes found in previous one.
         new_query_mh = query.minhash.downsample(scaled=cmp_scaled)
+        new_query_mh = new_query_mh.to_mutable()
         new_query_mh.remove_many(set(found_mh.hashes))
         new_query = SourmashSignature(new_query_mh)
 
