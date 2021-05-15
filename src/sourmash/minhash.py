@@ -10,6 +10,7 @@ from ._lowlevel import ffi, lib
 from .utils import RustObject, rustcall, decode_str
 from .exceptions import SourmashError
 from deprecation import deprecated
+from enum import Enum
 
 # default MurmurHash seed
 MINHASH_DEFAULT_SEED = 42
@@ -202,6 +203,7 @@ class MinHash(RustObject):
         )
 
         if mins:
+            assert 0
             if track_abundance:
                 self.set_abundances(mins)
             else:
@@ -749,3 +751,54 @@ class FrozenMinHash(MinHash):
 
     def __copy__(self):
         return self
+
+
+class MoleculeType(Enum):
+    DNA = 1
+    PROTEIN = 2
+    DAYHOFF = 3
+    HP = 4
+
+
+# fill in protein, dayhoff, hp triple based on enum
+_moltype_enum_to_triple = {
+    MoleculeType.DNA: (0, 0, 0),
+    MoleculeType.PROTEIN: (1, 0, 0),
+    MoleculeType.DAYHOFF: (0, 1, 0),
+    MoleculeType.HP: (0, 0, 1)
+    }
+
+
+def NumMinHash(*, num=None, ksize=None, moltype=None,
+               seed=MINHASH_DEFAULT_SEED, hashes=None, track_abundance=False):
+    "Return a mutable 'num' MinHash object."
+    if num is None:
+        raise TypeError("NumMinHash constructor requires num")
+    if ksize is None:
+        raise TypeError("NumMinHash constructor requires ksize")
+    if moltype is None:
+        raise TypeError("NumMinHash constructor requires moltype")
+    if track_abundance:
+        raise TypeError("NumMinHash does not support hash abundances")
+
+    is_protein, dayhoff, hp = _moltype_enum_to_triple[moltype]
+
+    return MinHash(num, ksize, is_protein, dayhoff, hp, False,
+                   seed=seed, scaled=0, mins=hashes)
+
+
+def ScaledMinHash(*, scaled=None, ksize=None, moltype=None,
+                  seed=MINHASH_DEFAULT_SEED, hashes=None,
+                  track_abundance=False):
+    "Return a mutable 'scaled' MinHash object."
+    if scaled is None:
+        raise TypeError("ScaledMinHash constructor requires scaled")
+    if ksize is None:
+        raise TypeError("ScaledMinHash constructor requires ksize")
+    if moltype is None:
+        raise TypeError("ScaledMinHash constructor requires moltype")
+
+    is_protein, dayhoff, hp = _moltype_enum_to_triple[moltype]
+
+    return MinHash(0, ksize, is_protein, dayhoff, hp, track_abundance,
+                   seed=seed, scaled=scaled, mins=hashes)
