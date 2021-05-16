@@ -330,3 +330,5 @@ impl<L> From<DatasetInfo> for SigStore<L> {
         }
     }
 }
+
+pub struct SearchFn {}

@@ -423,6 +423,32 @@ class LinearIndex(Index, RustObject):
         lidx = LinearIndex(si, filename=location)
         return lidx
 
+    def find(self, search_fn, query, **kwargs):
+        """Use search_fn to find matching signatures in the index.
+
+        search_fn follows the protocol in JaccardSearch objects.
+
+        Returns a list.
+        """
+        size = ffi.new("uintptr_t *")
+        results_ptr = self._methodcall(
+            lib.linearindex_find,
+            search_fn._get_objptr(),
+            query._get_objptr(),
+        )
+
+        size = size[0]
+        if size == 0:
+            return []
+
+        results = []
+        for i in range(size):
+            match = SearchResult._from_objptr(results_ptr[i])
+            results.append(IndexSearchResult(match.score, match.signature, self.filename))
+
+        for sr in results:
+            yield sr
+
     def select(self, **kwargs):
         """Return new LinearIndex containing only signatures that match req's.
 
@@ -437,6 +463,26 @@ class LinearIndex(Index, RustObject):
                 siglist.append(ss)
 
         return LinearIndex(siglist, self.location)
+
+
+class SearchResult(RustObject):
+    __dealloc_func__ = lib.searchresult_free
+
+    @property
+    def score(self):
+        return self._methodcall(lib.searchresult_score)
+
+    @property
+    def signature(self):
+        sig_ptr = self._methodcall(lib.searchresult_signature)
+        return sourmash.SourmashSignature._from_objptr(sig_ptr)
+
+    @property
+    def filename(self):
+        result = decode_str(self._methodcall(lib.searchresult_filename))
+        if result == "":
+            return None
+        return result
 
 
 class LazyLinearIndex(Index):

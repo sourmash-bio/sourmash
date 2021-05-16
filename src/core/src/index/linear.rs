@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
-use crate::index::{Comparable, DatasetInfo, Index, SigStore};
+use crate::index::{Comparable, DatasetInfo, Index, SearchFn, SigStore};
+use crate::signature::Signature;
 use crate::Error;
 
 #[derive(TypedBuilder)]
@@ -183,5 +184,15 @@ where
 
     pub fn len(&self) -> usize {
         self.datasets.len()
+    }
+}
+
+impl LinearIndex<Signature> {
+    pub fn find_new(
+        &self,
+        search_fn: &SearchFn,
+        query: &Signature,
+    ) -> Result<Vec<(f64, Signature, String)>, Error> {
+        unimplemented!()
     }
 }
