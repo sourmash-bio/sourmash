@@ -2923,7 +2923,7 @@ def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
-    runtmp.sourmash('gather', sig47, sig63)
+    runtmp.sourmash('gather', sig47, sig63, linear_gather, prefetch_gather)
 
     assert '2.5 Mbp       49.2%   48.3%       1.0    NC_011663.1' in runtmp.last_result.out
 

@@ -240,7 +240,7 @@ class Index(ABC):
         sr = result[0]
         match_mh = sr.signature.minhash
         scaled = max(query_mh.scaled, match_mh.scaled)
-        match_mh = match_mh.downsample(scaled=scaled)
+        match_mh = match_mh.downsample(scaled=scaled).flatten()
         query_mh = query_mh.downsample(scaled=scaled)
         intersect_mh = match_mh.intersection(query_mh)
 
