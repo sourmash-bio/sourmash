@@ -2923,7 +2923,7 @@ def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
     sig47 = utils.get_test_data('track_abund/47.fa.sig')
     sig63 = utils.get_test_data('track_abund/63.fa.sig')
 
-    runtmp.sourmash('gather', sig47, sig63)
+    runtmp.sourmash('gather', sig47, sig63, linear_gather, prefetch_gather)
 
     assert '2.5 Mbp       49.2%   48.3%       1.0    NC_011663.1' in runtmp.last_result.out
 
@@ -3111,7 +3111,7 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.err)
 
     combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
-    remaining_mh = copy.copy(combined_sig.minhash)
+    remaining_mh = combined_sig.minhash.to_mutable()
 
     def approx_equal(a, b, n=5):
         return round(a, n) == round(b, n)
