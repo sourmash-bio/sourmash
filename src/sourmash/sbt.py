@@ -1120,12 +1120,14 @@ class SBT(Index):
                 yield p.pos
                 p = self.parent(p.pos)
 
-    def leaves(self, with_pos=False):
+    def leaves(self, with_pos=False, unload_data=True):
         for pos, data in self._leaves.items():
             if with_pos:
                 yield (pos, data)
             else:
                 yield data
+            if unload_data:
+                data.unload()
 
     def combine(self, other):
         larger, smaller = self, other
