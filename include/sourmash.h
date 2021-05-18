@@ -16,6 +16,13 @@ enum HashFunctions {
 };
 typedef uint32_t HashFunctions;
 
+enum SearchType {
+  SEARCH_TYPE_JACCARD = 1,
+  SEARCH_TYPE_CONTAINMENT = 2,
+  SEARCH_TYPE_MAX_CONTAINMENT = 3,
+};
+typedef uint32_t SearchType;
+
 enum SourmashErrorCode {
   SOURMASH_ERROR_CODE_NO_ERROR = 0,
   SOURMASH_ERROR_CODE_PANIC = 1,
@@ -53,6 +60,8 @@ typedef struct SourmashKmerMinHash SourmashKmerMinHash;
 typedef struct SourmashLinearIndex SourmashLinearIndex;
 
 typedef struct SourmashNodegraph SourmashNodegraph;
+
+typedef struct SourmashSearchFn SourmashSearchFn;
 
 typedef struct SourmashSearchResult SourmashSearchResult;
 
@@ -252,6 +261,11 @@ void kmerminhash_slice_free(uint64_t *ptr, uintptr_t insize);
 
 bool kmerminhash_track_abundance(const SourmashKmerMinHash *ptr);
 
+const SourmashSearchResult *const *linearindex_find(const SourmashLinearIndex *ptr,
+                                                    const SourmashSearchFn *search_fn_ptr,
+                                                    const SourmashSignature *sig_ptr,
+                                                    uintptr_t *size);
+
 void linearindex_free(SourmashLinearIndex *ptr);
 
 void linearindex_insert_many(SourmashLinearIndex *ptr,
@@ -310,6 +324,10 @@ void nodegraph_update_mh(SourmashNodegraph *ptr, const SourmashKmerMinHash *optr
 SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
                                          uintptr_t starting_size,
                                          uintptr_t n_tables);
+
+void searchfn_free(SourmashSearchFn *ptr);
+
+SourmashSearchFn *searchfn_new(SearchType search_type, double threshold);
 
 SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
 

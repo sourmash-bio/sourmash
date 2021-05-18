@@ -331,4 +331,40 @@ impl<L> From<DatasetInfo> for SigStore<L> {
     }
 }
 
-pub struct SearchFn {}
+#[repr(u32)]
+pub enum SearchType {
+    Jaccard = 1,
+    Containment = 2,
+    MaxContainment = 3,
+}
+
+pub struct JaccardSearch {
+    search_type: SearchType,
+    threshold: f64,
+    require_scaled: bool,
+}
+
+impl JaccardSearch {
+    pub fn new(search_type: SearchType) -> Self {
+        let require_scaled = match search_type {
+            SearchType::Containment | SearchType::MaxContainment => true,
+            SearchType::Jaccard => false,
+        };
+
+        JaccardSearch {
+            search_type,
+            require_scaled,
+            threshold: 0.,
+        }
+    }
+
+    pub fn with_threshold(search_type: SearchType, threshold: f64) -> Self {
+        let mut s = Self::new(search_type);
+        s.set_threshold(threshold);
+        s
+    }
+
+    pub fn set_threshold(&mut self, threshold: f64) {
+        self.threshold = threshold;
+    }
+}

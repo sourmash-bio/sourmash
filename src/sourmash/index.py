@@ -430,11 +430,14 @@ class LinearIndex(Index, RustObject):
 
         Returns a list.
         """
+        self._init_inner()
+
         size = ffi.new("uintptr_t *")
         results_ptr = self._methodcall(
             lib.linearindex_find,
-            search_fn._get_objptr(),
+            search_fn._as_rust(),
             query._get_objptr(),
+            size
         )
 
         size = size[0]

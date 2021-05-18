@@ -9,6 +9,8 @@ from enum import Enum
 from .logging import notify, error
 from .signature import SourmashSignature
 from .minhash import _get_max_hash_for_scaled
+from .utils import rustcall
+from ._lowlevel import ffi, lib
 
 
 class SearchType(Enum):
@@ -98,6 +100,7 @@ class JaccardSearch:
             require_scaled = True
         self.score_fn = score_fn
         self.require_scaled = require_scaled
+        self.search_type = search_type
 
         if threshold is None:
             threshold = 0
@@ -149,6 +152,21 @@ class JaccardSearch:
         if min_denom == 0:
             return 0
         return shared_size / min_denom
+
+    def _as_rust(self):
+        """
+        Return a compatible Rust search function.
+
+        The Rust function duplicates the implementation of this class, since
+        there is no good way to call back into Python code without involving a
+        lot of machinery.
+        """
+
+        return rustcall(
+            lib.searchfn_new,
+            self.search_type.value(),
+            self.threshold,
+        )
 
 
 class JaccardSearchBestOnly(JaccardSearch):

@@ -1,23 +1,18 @@
 use std::slice;
 
 use crate::index::linear::LinearIndex;
-use crate::index::{Index, SearchFn, SigStore};
+use crate::index::{Index, SigStore};
 use crate::signature::Signature;
 
 use crate::ffi::index::SourmashSearchResult;
+use crate::ffi::search::SourmashSearchFn;
 use crate::ffi::signature::SourmashSignature;
 use crate::ffi::utils::ForeignObject;
 
 pub struct SourmashLinearIndex;
 
-pub struct SourmashSearchFn;
-
 impl ForeignObject for SourmashLinearIndex {
     type RustObject = LinearIndex<Signature>;
-}
-
-impl ForeignObject for SourmashSearchFn {
-    type RustObject = SearchFn;
 }
 
 #[no_mangle]

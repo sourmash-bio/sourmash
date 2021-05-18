@@ -11,6 +11,7 @@ pub mod hyperloglog;
 pub mod index;
 pub mod minhash;
 pub mod nodegraph;
+pub mod search;
 pub mod signature;
 
 use std::ffi::CStr;

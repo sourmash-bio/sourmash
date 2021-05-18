@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
-use crate::index::{Comparable, DatasetInfo, Index, SearchFn, SigStore};
+use crate::index::{Comparable, DatasetInfo, Index, JaccardSearch, SigStore};
 use crate::signature::Signature;
 use crate::Error;
 
@@ -190,7 +190,7 @@ where
 impl LinearIndex<Signature> {
     pub fn find_new(
         &self,
-        search_fn: &SearchFn,
+        search_fn: &JaccardSearch,
         query: &Signature,
     ) -> Result<Vec<(f64, Signature, String)>, Error> {
         unimplemented!()
