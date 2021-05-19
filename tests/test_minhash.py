@@ -1797,6 +1797,9 @@ def test_merge_abund():
     ret = mh1.merge(mh2)
     assert ret is None
 
+    ret= mh1 | mh2
+    assert ret is None
+
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
     assert hashcounts[0] == 4
