@@ -1870,10 +1870,6 @@ def test_merge_scaled():
     mh4 = mh2 + mh1
     assert mh3 == mh4
 
-    # add is eqivalent to "|"
-    mh5 = mh1 | mh2
-    assert mh5 == mh3
-
     # merge contains all the things
     assert len(mh3) == 150
 
@@ -1883,6 +1879,14 @@ def test_merge_scaled():
     for k in mh2.hashes:
         assert k in mh3.hashes
 
+def test_or_equals_and():
+    mh1 = MinHash(0, 21, scaled=100)
+    mh2 = MinHash(0, 21, scaled=100)
+
+    # add is eqivalent to "|"
+    mh3 = mh1 + mh2
+    mh4 = mh1 | mh2
+    assert mh3 == mh4
 
 def test_max_containment():
     mh1 = MinHash(0, 21, scaled=1, track_abundance=False)
