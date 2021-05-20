@@ -1797,8 +1797,7 @@ def test_merge_abund():
     ret = mh1.merge(mh2)
     assert ret is None
 
-    ret= mh1 | mh2
-    assert ret is None
+    print("MH1 EQUALS ", mh1.hashes)
 
     hashcounts = mh1.hashes
     assert len(hashcounts) == 1
@@ -1870,6 +1869,10 @@ def test_merge_scaled():
     mh3 = mh1 + mh2
     mh4 = mh2 + mh1
     assert mh3 == mh4
+
+    # add is eqivalent to "|"
+    mh5 = mh1 | mh2
+    assert mh5 == mh3
 
     # merge contains all the things
     assert len(mh3) == 150

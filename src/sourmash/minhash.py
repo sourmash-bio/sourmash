@@ -591,6 +591,7 @@ class MinHash(RustObject):
         new_obj = self.to_mutable()
         new_obj += other
         return new_obj
+    __or__ = __add__
 
     def __iadd__(self, other):
         if not isinstance(other, MinHash):
@@ -602,7 +603,6 @@ class MinHash(RustObject):
         if not isinstance(other, MinHash):
             raise TypeError("can only add MinHash objects to MinHash objects!")
         self._methodcall(lib.kmerminhash_merge, other._get_objptr())
-    __or__ = merge
 
     def intersection(self, other):
         if not isinstance(other, MinHash):
