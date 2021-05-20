@@ -118,7 +118,7 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
         p = '{:.1f}%'.format(p)
 
         # if filename and sig:
-            # print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
+        print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
         # else:
             # print_results('{:5} {:>5}   {}'.format(p, count, lineage))
 
