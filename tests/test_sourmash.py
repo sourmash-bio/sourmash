@@ -198,7 +198,7 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    # c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+
     c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig',
@@ -236,10 +236,8 @@ def test_do_traverse_directory_compare_force(c):
 def test_do_compare_output_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
-    # In the lines below, 'rna' and 'dna' both pass the tests. How do we know which one is correct here?
-    # c.run_sourmash('sketch', 'rna', '-p', 'k=31,num=500', testdata1, testdata2)
-    # c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
+
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
     with open(c.output('xxx')) as fp:
