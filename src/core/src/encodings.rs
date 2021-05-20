@@ -10,6 +10,12 @@ use once_cell::sync::Lazy;
 
 use crate::Error;
 
+// To consider there: use a slab allocator for IdxTracker
+// https://twitter.com/tomaka17/status/1391052081272967170
+//   Pro-tip: you might be able to save a lot of hashmap lookups
+//   if you replace a `HashMap<K, V>` with a `HashMap<K, usize>`
+//   and a `Slab<V>`. This might be very useful if K is something
+//   heavy such as a `String`.
 pub type Color = u64;
 pub type Idx = u64;
 type IdxTracker = (vec_collections::VecSet<[Idx; 4]>, u64);
