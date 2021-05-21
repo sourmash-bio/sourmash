@@ -1527,6 +1527,32 @@ def test_single_summarize_to_output():
         assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
 
 
+
+def test_single_summarize_to_output_check_filename():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', os.path.join(in_dir, 'q.sig'),
+               '-o', os.path.join(location, 'output.txt')]
+        status, out, err = utils.runscript('sourmash', cmd, in_location=location)
+
+        print(cmd)
+        print(out)
+        print(err)
+
+        outdata = open(os.path.join(location, 'output.txt'), 'rt').read()
+
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5\n' in outdata
+        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii,,'+os.path.join(in_dir, 'q.sig')+',TARA_ASE_MAG_00031,5b438c6c858cdaf9e9b05a207fa3f9f0' in outdata
+
+
+
+
 def test_single_summarize_scaled():
     with utils.TempDirectory() as location:
         db1 = utils.get_test_data('lca/delmont-1.lca.json')
