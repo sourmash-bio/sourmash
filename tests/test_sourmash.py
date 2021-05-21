@@ -217,7 +217,8 @@ def test_do_serial_compare_with_from_file(c):
         for fn in testsigs:
             sigs.append(sourmash.load_one_signature(fn, ksize=21,
                                                     select_moltype='dna'))
-    assert (cmp_out == cmp_calc).all()
+
+    assert numpy.array_equal(numpy.sort(cmp_out.flat), numpy.sort(cmp_calc.flat))
 
 
 @utils.in_tempdir
