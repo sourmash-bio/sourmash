@@ -210,16 +210,24 @@ def index(args):
             else:
                 ident = sig.filename
 
+            orig_ident = ident
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
-                # ...and on period.
-                ident = ident.split('.')[0]
+
+                if not args.keep_identifier_versions:
+                    # ...and on period.
+                    ident = ident.split('.')[0]
 
             lineage = assignments.get(ident)
 
             # punt if no lineage and --require-taxonomy
             if lineage is None and args.require_taxonomy:
+                if args.fail_on_missing_taxonomy:
+                    notify(f"ERROR: no taxonomy found for identifier '{ident}'")
+                    if args.split_identifiers:
+                        notify(f"(Identifier extracted from name: '{orig_ident})')")
+                    sys.exit(-1)
                 debug('(skipping, because --require-taxonomy was specified)')
                 n_skipped += 1
                 continue
