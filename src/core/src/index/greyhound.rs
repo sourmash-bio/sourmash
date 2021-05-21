@@ -23,6 +23,8 @@ use crate::HashIntoType;
 type HashToColor = HashMap<HashIntoType, Color, BuildNoHashHasher<HashIntoType>>;
 type SigCounter = counter::Counter<Idx>;
 
+// Use rkyv for serialization?
+// https://davidkoloski.me/rkyv/
 #[derive(Serialize, Deserialize)]
 pub struct RevIndex {
     hash_to_color: HashToColor,
