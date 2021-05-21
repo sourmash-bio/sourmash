@@ -398,7 +398,7 @@ def load_pathlist_from_file(filename):
             raise ValueError("pathlist is empty")
         for checkfile in file_list:
             if not os.path.exists(checkfile):
-                raise ValueError(f"file '{checkfile}' listed inside the pathlist contains a badly formatted file")
+                raise ValueError(f"file '{checkfile}' inside the pathlist does not exist")
     except IOError:
         raise ValueError(f"pathlist file '{filename}' does not exist")    
     except OSError:

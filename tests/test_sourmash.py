@@ -97,7 +97,7 @@ def test_load_pathlist_from_file_badly_formatted(c):
         fp.write("{'a':1}")
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-    assert "pathlist contains a badly formatted file" in str(e.value)
+    assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
     
 
 @utils.in_tempdir
@@ -109,7 +109,7 @@ def test_load_pathlist_from_file_badly_formatted_2(c):
         fp.write("{'a':1}")
     with pytest.raises(ValueError) as e:
         load_pathlist_from_file(file_list)
-    assert "pathlist contains a badly formatted file" in str(e.value)
+    assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
 
 
 @utils.in_tempdir
