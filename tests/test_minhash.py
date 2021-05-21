@@ -1878,7 +1878,7 @@ def test_merge_scaled():
     for k in mh2.hashes:
         assert k in mh3.hashes
 
-def add_is_symmetric():
+def test_add_is_symmetric():
     mh1 = MinHash(0, 21, scaled=100)
     mh2 = MinHash(0, 21, scaled=100)
 
