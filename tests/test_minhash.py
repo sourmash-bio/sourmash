@@ -1679,11 +1679,14 @@ def test_intersection_1_num():
     assert len(mh3) == 1
     assert 0 in mh3.hashes
 
-    # test "&" operator
+def test_and_operator():
+    mh1 = MinHash(10, 21)
+    mh2 = MinHash(10, 21)
+
+    mh3 = mh1.intersection(mh2)
     mh4 = mh1 & mh2
     print("& INTERSECTION HASHES:", set(mh4.hashes))
-    assert len(mh4) == 1
-    assert 0 in mh4.hashes
+    assert mh3 == mh4
 
 def test_intersection_2_scaled():
     mh1 = MinHash(0, 21, scaled=1)
@@ -1865,12 +1868,8 @@ def test_merge_scaled():
     assert len(mh1) == 100
     assert len(mh2) == 100
 
-    # add is symmetric:
-    mh3 = mh1 + mh2
-    mh4 = mh2 + mh1
-    assert mh3 == mh4
-
     # merge contains all the things
+    mh3 = mh1 + mh2
     assert len(mh3) == 150
 
     # everything in either one is in union
@@ -1879,11 +1878,18 @@ def test_merge_scaled():
     for k in mh2.hashes:
         assert k in mh3.hashes
 
-def test_or_equals_and():
+def add_is_symmetric():
     mh1 = MinHash(0, 21, scaled=100)
     mh2 = MinHash(0, 21, scaled=100)
 
-    # add is eqivalent to "|"
+    mh3 = mh1 + mh2
+    mh4 = mh2 + mh1
+    assert mh3 == mh4
+
+def test_or_equals_add():
+    mh1 = MinHash(0, 21, scaled=100)
+    mh2 = MinHash(0, 21, scaled=100)
+
     mh3 = mh1 + mh2
     mh4 = mh1 | mh2
     assert mh3 == mh4
