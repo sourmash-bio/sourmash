@@ -124,11 +124,13 @@ def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
     w = csv.writer(csv_fp)
     if write_header:
         headers = ['count'] + list(lca_utils.taxlist())
+        headers += ['filename', 'sig_name', 'sig_md5']
         w.writerow(headers)
 
     for (lineage, count) in lineage_counts.items():
         debug('lineage:', lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
+        row += [filename, sig.name, sig.md5sum()]
         w.writerow(row)
 
 
