@@ -314,10 +314,10 @@ def test_do_compare_output_multiple_moltype(c):
 def test_do_compare_dayhoff(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata1)
     assert c.last_result.status == 0
 
-    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata2)
     assert c.last_result.status == 0
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
@@ -335,10 +335,10 @@ min similarity in matrix: 0.940'''.splitlines()
 def test_do_compare_hp(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata1)
     assert c.last_result.status == 0
 
-    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata2)
     assert c.last_result.status == 0
 
     c.run_sourmash('compare', 'short.fa.sig',
