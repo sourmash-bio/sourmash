@@ -178,12 +178,24 @@ class ZipStorage(Storage):
         return {'path': self.path}
 
     def close(self):
+        # TODO: this is not ideal; checking for zipfile.fp is looking at
+        # internal implementation details from CPython...
+        if self.zipfile is not None or self.bufferzip is not None:
+            self.flush(keep_closed=True)
+            self.zipfile.close()
+            self.zipfile = None
+
+    def flush(self, *, keep_closed=False):
         # This is a bit complicated, but we have to deal with new data
         # (if the original zipfile is read-only) and possible duplicates.
 
         if self.bufferzip is None:
-            # The easy case: just close the zipfile, nothing else to do
-            self.zipfile.close()
+            # The easy case: close (to force flushing) and reopen the zipfile
+            if self.zipfile is not None:
+                self.zipfile.close()
+                if not keep_closed:
+                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                   compression=zipfile.ZIP_STORED)
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -200,7 +212,7 @@ class ZipStorage(Storage):
                     # bad news, need to create new file...
                     # create a temporary file to write the final version,
                     # which will be copied to the right place later.
-                    tempfile = NamedTemporaryFile()
+                    tempfile = NamedTemporaryFile(delete=False)
                     final_file = zipfile.ZipFile(tempfile, mode="w")
                     all_data = buffer_names.union(zf_names)
 
@@ -219,16 +231,22 @@ class ZipStorage(Storage):
                     final_file.close()
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
-
+                    if not keep_closed:
+                        self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                       compression=zipfile.ZIP_STORED)
                 elif new_data:
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    zf = zipfile.ZipFile(self.path, mode='a')
+                    if not keep_closed:
+                        zf = zipfile.ZipFile(self.path, mode='a',
+                                             compression=zipfile.ZIP_STORED)
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
+                    self.zipfile = zf
             # finally, close the buffer and release memory
             self.bufferzip.close()
+            self.bufferzip = None
 
     @staticmethod
     def can_open(location):
@@ -236,6 +254,9 @@ class ZipStorage(Storage):
 
     def list_sbts(self):
         return [f for f in self.zipfile.namelist() if f.endswith(".sbt.json")]
+
+    def __del__(self):
+        self.close()
 
 
 class IPFSStorage(Storage):
