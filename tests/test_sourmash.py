@@ -260,16 +260,10 @@ def test_do_compare_output_csv(c):
 @utils.in_tempdir
 def test_do_compare_downsample(c):
     testdata1 = utils.get_test_data('short.fa')
-    # c.run_sourmash('compute', '--scaled', '200', '-k', '31', testdata1)
-    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=200', testdata1)
-
-    # c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
-
-    # c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
 
     testdata2 = utils.get_test_data('short2.fa')
-    # c.run_sourmash('compute', '--scaled', '100', '-k', '31', testdata2)
-    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=100', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=100', testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
@@ -286,8 +280,8 @@ def test_do_compare_downsample(c):
 def test_do_compare_output_multiple_k(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', testdata1)
-    c.run_sourmash('compute', '-k', '31', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
@@ -304,8 +298,8 @@ def test_do_compare_output_multiple_k(c):
 def test_do_compare_output_multiple_moltype(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
-    c.run_sourmash('compute', '-k', '63', '--no-dna', '--protein', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
