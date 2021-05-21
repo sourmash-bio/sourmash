@@ -1538,7 +1538,7 @@ def test_single_summarize_to_output_check_filename():
 
         cmd = ['lca', 'summarize', '--db', db1, '--query', os.path.join(in_dir, 'q.sig'),
                '-o', os.path.join(location, 'output.txt')]
-        status, out, err = utils.runscript('sourmash', cmd, in_location=location)
+        status, out, err = utils.runscript('sourmash', cmd)
 
         print(cmd)
         print(out)
