@@ -5,7 +5,7 @@ from sourmash.logging import notify, print_results, error
 
 
 def subparser(subparsers):
-    subparser = subparsers.add_parser('summarize')
+    subparser = subparsers.add_parser('classify')
     subparser.add_argument('gather_results', nargs='+')
     subparser.add_argument(
         '-q', '--quiet', action='store_true',
@@ -15,10 +15,10 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
-    tax_group = p.add_mutually_exclusive_group(required=False)
+    tax_group = subparser.add_mutually_exclusive_group(required=False)
     tax_group.add_argument(
         '-t', '--taxonomy', default='gtdb',
-        choices = ['gtdb', 'ncbi']
+        choices = ['gtdb', 'ncbi'],
         help='Use an included taxonomy (default gtdb)'
     )
     tax_group.add_argument(

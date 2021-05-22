@@ -37,6 +37,7 @@ from . import sig
 from . import sig as signature
 from . import sketch
 from . import storage
+from . import tax
 
 
 class SourmashParser(ArgumentParser):
@@ -92,6 +93,7 @@ class SourmashParser(ArgumentParser):
 
 def get_parser():
     module_descs = {
+        'tax': 'Summarize taxonomy information',
         'lca': 'Taxonomic operations',
         'sketch': 'Create signatures',
         'sig': 'Manipulate signature files',
