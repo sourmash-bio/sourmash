@@ -764,10 +764,28 @@ def test_sig_cat_2_out_inplace(c):
 def test_sig_cat_filelist(c):
     # cat using a file list as input
     sig47 = utils.get_test_data('47.fa.sig')
-    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
-    multisig = utils.get_test_data('47+63-multisig.sig')
+    # sig47list = list(load_signatures(sig47))
+    # print("sig47: ",sig47)
+    # print(type(sig47))
+    # print("length sig47: ",len(sig47list))
+    # print("\n")
 
-    filelist = c.output("filelist")
+    sig47abund = utils.get_test_data('track_abund/47.fa.sig')
+    # sig47abundlist = list(load_signatures(sig47abund))
+    # print("sig47abund: ",sig47abund)
+    # print(type(sig47abund))
+    # print("length sig47abund: ",len(sig47abundlist))
+    # print("\n")
+
+    multisig = utils.get_test_data('47+63-multisig.sig')
+    # multisiglist = list(load_signatures(multisig))
+    # print("multisig: ",multisig)
+    # print(type(multisig))
+    # print("length multisig: ",len(multisiglist))
+    # print("\n")
+
+    filelist = c.output("filelist")   
+
     with open(filelist, 'w') as f:
         f.write("\n".join((sig47, sig47abund, multisig)))
 
@@ -777,10 +795,29 @@ def test_sig_cat_filelist(c):
     # stdout should be same signatures
     out = c.output('out.sig')
 
+    # make this a list, not a set, because a set will collapse identical
+    # signatures. `sig cat` does not collapse identical signatures, although
+    # the pathlist function will ignore duplicate files.
     siglist = list(load_signatures(out))
-    print(len(siglist))
 
-    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377)]"""
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47))
+    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(load_signatures(multisig))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+    
+    # print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
+    # print("\n")
+    
+    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_011665.1 Shewanella baltica OS223 plasmid pS22303, complete sequence', 485c3377), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 57e2b22f), SourmashSignature('NC_011668.1 Shewanella baltica OS223 plasmid pS22302, complete sequence', 837bf2a7), SourmashSignature('NC_011664.1 Shewanella baltica OS223 plasmid pS22301, complete sequence', 87a9aec4), SourmashSignature('NC_009661.1 Shewanella baltica OS185 plasmid pS18501, complete sequence', bde81a41), SourmashSignature('NC_011663.1 Shewanella baltica OS223, complete genome', f033bbd8)]"""
 
 
 @utils.in_tempdir
@@ -802,8 +839,22 @@ def test_sig_cat_filelist_with_dbs(c):
 
     siglist = list(load_signatures(out))
     print(len(siglist))
+    # print("siglist: ",siglist)
+    # print("\n")
 
-    assert repr(siglist) == """[SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 6d6e87e1), SourmashSignature('', 60f7e23c), SourmashSignature('', 0107d767), SourmashSignature('', f71e7817), SourmashSignature('', f0c834bc), SourmashSignature('', 4e94e602), SourmashSignature('', b59473c9)]"""
+    # verify the number of signatures matches what we expect to see based
+    # on the input files
+    all_sigs = []
+    all_sigs += list(load_signatures(sig47))
+    all_sigs += list(load_signatures(sig47abund))
+    all_sigs += list(sourmash.load_file_as_signatures(sbt))
+
+    assert len(all_sigs) == len(siglist)
+
+    # sort the signatures by something deterministic and unique
+    siglist.sort(key = lambda x: x.md5sum())
+
+    assert repr(siglist) == """[SourmashSignature('', 0107d767), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('NC_009665.1 Shewanella baltica OS185, complete genome', 09a08691), SourmashSignature('', 4e94e602), SourmashSignature('', 60f7e23c), SourmashSignature('', 6d6e87e1), SourmashSignature('', b59473c9), SourmashSignature('', f0c834bc), SourmashSignature('', f71e7817)]"""
 
 
 @utils.in_tempdir

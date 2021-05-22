@@ -103,9 +103,6 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
     """\
     Output results in ~human-readable format.
     """
-    if filename or sig:                   # require both
-        if not filename and sig:
-            raise ValueError("must include both filename and sig arguments")
 
     for (lineage, count) in lineage_counts.items():
         if lineage:
@@ -117,31 +114,23 @@ def output_results(lineage_counts, total_counts, filename=None, sig=None):
         p = count / total_counts * 100.
         p = '{:.1f}%'.format(p)
 
-        if filename and sig:
-            print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
-        else:
-            print_results('{:5} {:>5}   {}'.format(p, count, lineage))
-
+        print_results('{:5} {:>5}   {}   {}:{} {}'.format(p, count, lineage, filename, sig.md5sum()[:8], sig))
 
 def output_csv(lineage_counts, csv_fp, filename, sig, write_header=True):
     """\
     Output results in CSV.
     """
-    if filename or sig:                   # require both
-        assert filename and sig
 
     w = csv.writer(csv_fp)
     if write_header:
         headers = ['count'] + list(lca_utils.taxlist())
-        if filename:
-            headers += ['filename', 'sig_name', 'sig_md5']
+        headers += ['filename', 'sig_name', 'sig_md5']
         w.writerow(headers)
 
     for (lineage, count) in lineage_counts.items():
         debug('lineage:', lineage)
         row = [count] + lca_utils.zip_lineage(lineage, truncate_empty=False)
-        if filename:
-            row += [filename, sig.name, sig.md5sum()]
+        row += [filename, sig.name, sig.md5sum()]
         w.writerow(row)
 
 

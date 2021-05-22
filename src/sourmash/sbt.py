@@ -577,7 +577,7 @@ class SBT(Index):
             backend = "FSStorage"
             name = os.path.basename(path[:-8])
             subdir = '.sbt.{}'.format(name)
-            storage_args = FSStorage("", subdir).init_args()
+            storage_args = FSStorage("", subdir, make_dirs=False).init_args()
             storage.save(subdir + "/", b"")
             storage.subdir = subdir
             index_filename = os.path.abspath(path)
