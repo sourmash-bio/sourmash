@@ -202,3 +202,12 @@ def test_save_signatures_to_location_1_dirout_duplicate(runtmp):
     assert ss2 in saved
     assert ss47 in saved
     assert len(saved) == 4
+
+
+def test_load_empty_zipfile(runtmp):
+    outloc = runtmp.output('empty.zip')
+    with sourmash_args.SaveSignaturesToLocation(outloc) as save_sig:
+        pass
+
+    sigiter = sourmash.load_file_as_signatures(outloc)
+    assert list(sigiter) == []
