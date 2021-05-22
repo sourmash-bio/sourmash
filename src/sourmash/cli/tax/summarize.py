@@ -15,11 +15,20 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
+    tax_group = p.add_mutually_exclusive_group(required=False)
+    tax_group.add_argument(
+        '-t', '--taxonomy', default='gtdb',
+        choices = ['gtdb', 'ncbi']
+        help='Use an included taxonomy (default gtdb)'
+    )
+    tax_group.add_argument(
+        '-u', '--user-taxonomy', metavar='FILE',
+        help='Instead, input your own taxonomy file (see docs for formatting instructions)'
+    )
     subparser.add_argument(
         '-r', '--rank',
-        help='Summarize metagenome gather results to this rank and above'
+        help='Summarize genome taxonomy at this rank and above'
     )
-
 
 def main(args):
     import sourmash
