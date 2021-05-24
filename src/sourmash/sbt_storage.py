@@ -37,13 +37,14 @@ class Storage(ABC):
 
 class FSStorage(Storage):
 
-    def __init__(self, location, subdir):
+    def __init__(self, location, subdir, make_dirs=True):
         self.location = location
         self.subdir = subdir
 
-        fullpath = os.path.join(location, subdir)
-        if not os.path.exists(fullpath):
-            os.makedirs(fullpath)
+        if make_dirs:
+            fullpath = os.path.join(location, subdir)
+            if not os.path.exists(fullpath):
+                os.makedirs(fullpath)
 
     def init_args(self):
         return {'path': self.subdir}

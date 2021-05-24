@@ -783,8 +783,9 @@ def test_gather_single_return(c):
     assert results[0][0] == 1.0
 
 
-@utils.in_tempdir
-def test_sbt_protein_command_index(c):
+def test_sbt_protein_command_index(runtmp):
+    c = runtmp
+
     # test command-line creation of SBT database with protein sigs
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
@@ -793,6 +794,9 @@ def test_sbt_protein_command_index(c):
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
                    '--scaled', '100', '-k', '19', '--protein')
+
+    # check to make sure .sbt.protein directory doesn't get created
+    assert not os.path.exists(c.output('.sbt.protein'))
 
     db2 = load_sbt_index(db_out)
 
