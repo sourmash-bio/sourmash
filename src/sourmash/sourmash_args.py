@@ -333,7 +333,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         raise ValueError(f"Error while reading signatures from '{filename}'.")
 
     if loaded:                  # this is a bit redundant but safe > sorry
-        assert db
+        assert db is not None
 
     return db
 
