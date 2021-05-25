@@ -5,7 +5,7 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 import sys
 import os
 import weakref
-import copy
+from sourmash.signature import SourmashSignature
 from enum import Enum
 
 from .logging import error
@@ -194,12 +194,12 @@ class SourmashSignature(RustObject):
         )
 
     def __copy__(self):
+        mh=self.minhash
         a = SourmashSignature(
-            mh=self.minhash,
-            self.name,
+            mh,
+            name=self.name,
             filename=self.filename,
         )
-        a.merge(self)
         return a
 
     copy = __copy__
