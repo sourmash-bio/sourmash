@@ -15,19 +15,25 @@ def subparser(subparsers):
         '-o', '--output', metavar='FILE', default='-',
         help='output signature to this file (default stdout)'
     )
-    tax_group = subparser.add_mutually_exclusive_group(required=False)
-    tax_group.add_argument(
-        '-t', '--taxonomy', default='gtdb',
-        choices = ['gtdb', 'ncbi'],
-        help='Use an included taxonomy (default gtdb)'
-    )
-    tax_group.add_argument(
-        '-u', '--user-taxonomy', metavar='FILE',
-        help='Instead, input your own taxonomy file (see docs for formatting instructions)'
+    subparser.add_argument(
+        '-t', '--taxonomy-csv',  metavar='FILE',
+        help='database lineages csv'
     )
     subparser.add_argument(
         '-r', '--rank',
         help='Summarize genome taxonomy at this rank and above'
+    )
+    subparser.add_argument(
+        '--split-identifiers', action='store_true',
+        help='split names in signatures on whitespace'
+    )
+    subparser.add_argument(
+        '--keep-identifier-versions', action='store_true',
+        help='do not remove accession versions'
+    )
+    subparser.add_argument(
+        '--fail-on-missing-taxonomy', action='store_true',
+        help='fail quickly if taxonomy is not available for an identifier',
     )
 
 def main(args):
