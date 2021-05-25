@@ -15,8 +15,10 @@ from .lca_db import LCA_Database
 from sourmash.sourmash_args import DEFAULT_LOAD_K
 
 
-def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
-                              use_headers=True, force=False):
+def load_taxonomy_assignments(filename, *, delimiter=',', start_column=2,
+                              use_headers=True, force=False,
+                              split_identifiers=False,
+                              keep_identifier_versions=False):
     """
     Load a taxonomy assignment spreadsheet into a dictionary.
 
@@ -64,6 +66,13 @@ def load_taxonomy_assignments(filename, delimiter=',', start_column=2,
 
             ident = lineage[0][1]
             lineage = lineage[1:]
+
+            # fold, spindle, and mutilate ident?
+            if split_identifiers:
+                ident = ident.split(' ')[0]
+
+                if not keep_identifier_versions:
+                    ident = ident.split('.')[0]
 
             # clean lineage of null names, replace with 'unassigned'
             lineage = [ (a, lca_utils.filter_null(b)) for (a,b) in lineage ]
@@ -157,7 +166,10 @@ def index(args):
                                                delimiter=delimiter,
                                                start_column=args.start_column,
                                                use_headers=not args.no_headers,
-                                               force=args.force)
+                                               force=args.force,
+                                               split_identifiers=args.split_identifiers,
+                                               keep_identifier_versions=args.keep_identifier_versions
+    )
 
     notify('{} distinct identities in spreadsheet out of {} rows.',
            len(assignments), num_rows)
@@ -210,16 +222,24 @@ def index(args):
             else:
                 ident = sig.filename
 
+            orig_ident = ident
             if args.split_identifiers: # hack for NCBI-style names, etc.
                 # split on space...
                 ident = ident.split(' ')[0]
-                # ...and on period.
-                ident = ident.split('.')[0]
+
+                if not args.keep_identifier_versions:
+                    # ...and on period.
+                    ident = ident.split('.')[0]
 
             lineage = assignments.get(ident)
 
             # punt if no lineage and --require-taxonomy
             if lineage is None and args.require_taxonomy:
+                if args.fail_on_missing_taxonomy:
+                    notify(f"ERROR: no taxonomy found for identifier '{ident}'")
+                    if args.split_identifiers:
+                        notify(f"(Identifier extracted from name: '{orig_ident})')")
+                    sys.exit(-1)
                 debug('(skipping, because --require-taxonomy was specified)')
                 n_skipped += 1
                 continue
