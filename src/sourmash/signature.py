@@ -5,6 +5,7 @@ Save and load MinHash sketches in a JSON format, along with some metadata.
 import sys
 import os
 import weakref
+import copy
 from enum import Enum
 
 from .logging import error
