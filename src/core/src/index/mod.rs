@@ -14,7 +14,9 @@ pub mod search;
 use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::Ordering;
 
+use atomic_float::AtomicF64;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
@@ -340,7 +342,7 @@ pub enum SearchType {
 
 pub struct JaccardSearch {
     search_type: SearchType,
-    threshold: f64,
+    threshold: AtomicF64,
     require_scaled: bool,
 }
 
@@ -354,17 +356,67 @@ impl JaccardSearch {
         JaccardSearch {
             search_type,
             require_scaled,
-            threshold: 0.,
+            threshold: AtomicF64::new(0.0),
         }
     }
 
     pub fn with_threshold(search_type: SearchType, threshold: f64) -> Self {
-        let mut s = Self::new(search_type);
+        let s = Self::new(search_type);
         s.set_threshold(threshold);
         s
     }
 
-    pub fn set_threshold(&mut self, threshold: f64) {
-        self.threshold = threshold;
+    pub fn set_threshold(&self, threshold: f64) {
+        self.threshold
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |_| Some(threshold))
+            .unwrap();
+    }
+
+    pub fn check_is_compatible(&self, sig: &Signature) -> Result<(), Error> {
+        // TODO: implement properly
+        Ok(())
+    }
+
+    pub fn score(
+        &self,
+        query_size: u64,
+        shared_size: u64,
+        subject_size: u64,
+        total_size: u64,
+    ) -> f64 {
+        let shared_size = shared_size as f64;
+        match self.search_type {
+            SearchType::Jaccard => shared_size / total_size as f64,
+            SearchType::Containment => {
+                if query_size == 0 {
+                    0.0
+                } else {
+                    shared_size / query_size as f64
+                }
+            }
+            SearchType::MaxContainment => {
+                let min_denom = query_size.min(subject_size);
+                if min_denom == 0 {
+                    0.0
+                } else {
+                    shared_size / min_denom as f64
+                }
+            }
+        }
+    }
+
+    /// Return True if this match should be collected.
+    pub fn collect(&self, score: f64, subj: &Signature) -> bool {
+        true
+    }
+
+    /// Return true if this score meets or exceeds the threshold.
+    ///
+    /// Note: this can be used whenever a score or estimate is available
+    /// (e.g. internal nodes on an SBT). `collect(...)`, below, decides
+    /// whether a particular signature should be collected, and/or can
+    /// update the threshold (used for BestOnly behavior).
+    pub fn passes(&self, score: f64) -> bool {
+        score > 0. && score >= self.threshold.load(Ordering::SeqCst)
     }
 }

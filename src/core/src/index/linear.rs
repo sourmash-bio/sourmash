@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -7,10 +8,13 @@ use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
-use crate::index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter};
 use crate::index::{Comparable, DatasetInfo, Index, JaccardSearch, SigStore};
 use crate::signature::Signature;
 use crate::Error;
+use crate::{
+    index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter},
+    sketch::Sketch,
+};
 
 #[derive(TypedBuilder)]
 pub struct LinearIndex<L> {
@@ -193,6 +197,47 @@ impl LinearIndex<Signature> {
         search_fn: &JaccardSearch,
         query: &Signature,
     ) -> Result<Vec<(f64, Signature, String)>, Error> {
-        unimplemented!()
+        search_fn.check_is_compatible(&query)?;
+
+        let query_mh;
+        if let Sketch::MinHash(mh) = &query.signatures[0] {
+            query_mh = mh;
+        } else {
+            unimplemented!()
+        }
+
+        // TODO: prepare_subject and prepare_query
+        let location: String = "TODO".into();
+
+        Ok(self
+            .datasets
+            .iter()
+            .filter_map(|subj| {
+                let subj_sig = subj.data().unwrap();
+                let subj_mh;
+                if let Sketch::MinHash(mh) = &subj_sig.signatures[0] {
+                    subj_mh = mh;
+                } else {
+                    unimplemented!()
+                }
+
+                let (shared_size, total_size) = query_mh.intersection_size(&subj_mh).unwrap();
+                let query_size = query.size();
+                let subj_size = subj.size();
+
+                let score: f64 = search_fn.score(
+                    query_size.try_into().unwrap(),
+                    shared_size,
+                    subj_size.try_into().unwrap(),
+                    total_size,
+                );
+
+                if search_fn.passes(score) && search_fn.collect(score, subj) {
+                    Some((score, subj_sig.clone(), location.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect())
     }
 }

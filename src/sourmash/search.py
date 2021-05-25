@@ -164,7 +164,7 @@ class JaccardSearch:
 
         return rustcall(
             lib.searchfn_new,
-            self.search_type.value(),
+            self.search_type.value,
             self.threshold,
         )
 
