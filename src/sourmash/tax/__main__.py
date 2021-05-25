@@ -45,11 +45,11 @@ def summarize(args):
     """
     set_quiet(args.quiet)
 
+    # load gather results and taxonomy assignments
     gather_results = load_gather_results(args.gather_results)
+    tax_assign, _ = load_taxonomy_assignments(args.taxonomy_csv, start_column=3)
 
-    # to do: implement and use load_taxonomy_info
-    tax_assign, _ = load_taxonomy_info(args.taxonomy_csv, start_column=3)
-
+    #is this in the load_taxonomy_assignments now?
     n_missed, ident_missed = find_missing_identites(gather_results, tax_assign)
     if n_missed:
         print(f'The following are missing from the taxonomy information: {",".join(ident_missed)}')
