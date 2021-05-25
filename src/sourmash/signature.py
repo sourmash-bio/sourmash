@@ -192,6 +192,16 @@ class SourmashSignature(RustObject):
             ),
         )
 
+    def __copy__(self):
+        a = SourmashSignature(
+            mh=self.minhash,
+            self.name,
+            filename=self.filename,
+        )
+        a.merge(self)
+        return a
+
+    copy = __copy__
 
 def _detect_input_type(data):
     """\
