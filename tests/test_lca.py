@@ -971,7 +971,8 @@ def test_single_classify_to_output():
         print(out)
         print(err)
 
-        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        with open(os.path.join(location, 'outfile.txt'), 'rt') as fp:
+            outdata = fp.read()
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
@@ -996,8 +997,8 @@ def test_single_classify_to_output_no_name():
         print(cmd)
         print(out)
         print(err)
-
-        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        with open(os.path.join(location, 'outfile.txt'), 'rt') as fp:
+            outdata = fp.read()
         print((outdata,))
         assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
@@ -1521,8 +1522,8 @@ def test_single_summarize_to_output():
         print(out)
         print(err)
 
-        outdata = open(os.path.join(location, 'output.txt'), 'rt').read()
-
+        with open(os.path.join(location, 'output.txt'), 'rt') as fp:
+            outdata = fp.read()
         assert 'loaded 1 signatures from 1 files total.' in err
         assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
 
