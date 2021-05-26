@@ -327,7 +327,7 @@ SourmashNodegraph *nodegraph_with_tables(uintptr_t ksize,
 
 void searchfn_free(SourmashSearchFn *ptr);
 
-SourmashSearchFn *searchfn_new(SearchType search_type, double threshold);
+SourmashSearchFn *searchfn_new(SearchType search_type, double threshold, bool best_only);
 
 SourmashStr searchresult_filename(const SourmashSearchResult *ptr);
 

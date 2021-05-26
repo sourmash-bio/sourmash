@@ -17,6 +17,9 @@ pub unsafe extern "C" fn searchfn_free(ptr: *mut SourmashSearchFn) {
 pub unsafe extern "C" fn searchfn_new(
     search_type: SearchType,
     threshold: f64,
+    best_only: bool,
 ) -> *mut SourmashSearchFn {
-    SourmashSearchFn::from_rust(JaccardSearch::with_threshold(search_type, threshold))
+    let mut func = JaccardSearch::with_threshold(search_type, threshold);
+    func.set_best_only(best_only);
+    SourmashSearchFn::from_rust(func)
 }

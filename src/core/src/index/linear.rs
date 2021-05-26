@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use crate::index::{Comparable, DatasetInfo, Index, JaccardSearch, SigStore};
-use crate::signature::Signature;
+use crate::signature::{Signature, SigsTrait};
 use crate::Error;
 use crate::{
     index::storage::{FSStorage, ReadData, Storage, StorageInfo, ToWriter},
@@ -221,9 +221,9 @@ impl LinearIndex<Signature> {
                     unimplemented!()
                 }
 
-                let (shared_size, total_size) = query_mh.intersection_size(&subj_mh).unwrap();
-                let query_size = query.size();
-                let subj_size = subj.size();
+                let (shared_size, total_size) = dbg!(query_mh.intersection_size(&subj_mh).unwrap());
+                let query_size = query_mh.size();
+                let subj_size = subj_mh.size();
 
                 let score: f64 = search_fn.score(
                     query_size.try_into().unwrap(),

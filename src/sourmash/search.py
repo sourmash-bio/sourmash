@@ -166,15 +166,34 @@ class JaccardSearch:
             lib.searchfn_new,
             self.search_type.value,
             self.threshold,
+            False
         )
 
 
 class JaccardSearchBestOnly(JaccardSearch):
     "A subclass of JaccardSearch that implements best-only."
+
     def collect(self, score, match):
         "Raise the threshold to the best match found so far."
         self.threshold = max(self.threshold, score)
         return True
+
+    def _as_rust(self):
+        """
+        Return a compatible Rust search function.
+
+        The Rust function duplicates the implementation of this class, since
+        there is no good way to call back into Python code without involving a
+        lot of machinery.
+        """
+
+        return rustcall(
+            lib.searchfn_new,
+            self.search_type.value,
+            self.threshold,
+            True
+        )
+
 
 
 # generic SearchResult tuple.

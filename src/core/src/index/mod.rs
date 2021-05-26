@@ -344,6 +344,7 @@ pub struct JaccardSearch {
     search_type: SearchType,
     threshold: AtomicF64,
     require_scaled: bool,
+    best_only: bool,
 }
 
 impl JaccardSearch {
@@ -355,8 +356,9 @@ impl JaccardSearch {
 
         JaccardSearch {
             search_type,
-            require_scaled,
             threshold: AtomicF64::new(0.0),
+            require_scaled,
+            best_only: false,
         }
     }
 
@@ -364,6 +366,10 @@ impl JaccardSearch {
         let s = Self::new(search_type);
         s.set_threshold(threshold);
         s
+    }
+
+    pub fn set_best_only(&mut self, best_only: bool) {
+        self.best_only = best_only;
     }
 
     pub fn set_threshold(&self, threshold: f64) {
@@ -407,6 +413,9 @@ impl JaccardSearch {
 
     /// Return True if this match should be collected.
     pub fn collect(&self, score: f64, subj: &Signature) -> bool {
+        if self.best_only {
+            self.threshold.fetch_max(score, Ordering::Relaxed);
+        }
         true
     }
 
