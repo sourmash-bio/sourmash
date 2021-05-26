@@ -39,4 +39,4 @@ def subparser(subparsers):
 
 def main(args):
     import sourmash
-    return sourmash.tax.__main__.summarize(args)
+    return sourmash.tax.__main__.classify(args)
