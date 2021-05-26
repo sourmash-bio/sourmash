@@ -26,6 +26,7 @@ except ImportError:
 
 from sourmash import signature
 from sourmash import VERSION
+from sourmash.sourmash_args import load_pathlist_from_file
 
 
 def test_run_sourmash():
@@ -70,6 +71,57 @@ def test_sourmash_info_verbose():
     assert "khmer version" in err
     assert "screed version" in err
     assert "loaded from path" in err
+
+
+def test_load_pathlist_from_file_does_not_exist():
+    from sourmash.sourmash_args import load_pathlist_from_file
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file("")
+    assert "file '' does not exist" in str(e.value)
+
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_empty(c):
+    file_list = c.output("file_list")
+    with open(file_list, "w") as fp:
+        fp.write("")
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+    assert "pathlist is empty" in str(e.value)
+
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_badly_formatted(c):
+    file_list = c.output("file_list")
+    with open(file_list, "w") as fp:
+        fp.write("{'a':1}")
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+    assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
+    
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_badly_formatted_2(c):
+    file_list = c.output("file_list")
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    with open(file_list, "w") as fp:
+        fp.write(sig1 + "\n")
+        fp.write("{'a':1}")
+    with pytest.raises(ValueError) as e:
+        load_pathlist_from_file(file_list)
+    assert "file '{'a':1}' inside the pathlist does not exist" in str(e.value)
+
+
+@utils.in_tempdir
+def test_load_pathlist_from_file_duplicate(c):
+    file_list = c.output("file_list")
+    sig1 = utils.get_test_data('compare/genome-s10.fa.gz.sig')
+    with open(file_list, "w") as fp:
+        fp.write(sig1 + "\n")
+        fp.write(sig1 + "\n")
+    check = load_pathlist_from_file(file_list)
+    print (check)
+    assert len(check) == 1
 
 
 @utils.in_tempdir
@@ -165,7 +217,8 @@ def test_do_serial_compare_with_from_file(c):
         for fn in testsigs:
             sigs.append(sourmash.load_one_signature(fn, ksize=21,
                                                     select_moltype='dna'))
-    assert (cmp_out == cmp_calc).all()
+
+    assert numpy.array_equal(numpy.sort(cmp_out.flat), numpy.sort(cmp_calc.flat))
 
 
 @utils.in_tempdir
@@ -198,7 +251,8 @@ def test_do_basic_compare_using_rna_arg(c):
 def test_do_compare_quiet(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
+
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata1, testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig',
                    'short2.fa.sig', '--csv', 'xxx', '-q')
@@ -235,8 +289,8 @@ def test_do_traverse_directory_compare_force(c):
 def test_do_compare_output_csv(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '31', testdata1, testdata2)
 
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,num=500', testdata1, testdata2)
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
     with open(c.output('xxx')) as fp:
@@ -259,10 +313,10 @@ def test_do_compare_output_csv(c):
 @utils.in_tempdir
 def test_do_compare_downsample(c):
     testdata1 = utils.get_test_data('short.fa')
-    c.run_sourmash('compute', '--scaled', '200', '-k', '31', testdata1)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=200', testdata1)
 
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '--scaled', '100', '-k', '31', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=31,scaled=100', testdata2)
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx')
 
@@ -279,8 +333,8 @@ def test_do_compare_downsample(c):
 def test_do_compare_output_multiple_k(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', testdata1)
-    c.run_sourmash('compute', '-k', '31', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=31,num=500', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
@@ -297,8 +351,8 @@ def test_do_compare_output_multiple_k(c):
 def test_do_compare_output_multiple_moltype(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--dna', testdata1)
-    c.run_sourmash('compute', '-k', '63', '--no-dna', '--protein', testdata2)
+    c.run_sourmash('sketch', 'dna', '-p', 'k=21,num=500', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', testdata2)
 
     with pytest.raises(ValueError) as exc:
         c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig', '--csv', 'xxx',
@@ -313,10 +367,10 @@ def test_do_compare_output_multiple_moltype(c):
 def test_do_compare_dayhoff(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata1)
     assert c.last_result.status == 0
 
-    c.run_sourmash('compute', '-k', '21', '--dayhoff', '--no-dna', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--dayhoff', testdata2)
     assert c.last_result.status == 0
 
     c.run_sourmash('compare', 'short.fa.sig', 'short2.fa.sig',
@@ -334,10 +388,10 @@ min similarity in matrix: 0.940'''.splitlines()
 def test_do_compare_hp(c):
     testdata1 = utils.get_test_data('short.fa')
     testdata2 = utils.get_test_data('short2.fa')
-    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata1)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata1)
     assert c.last_result.status == 0
 
-    c.run_sourmash('compute', '-k', '21', '--hp', '--no-dna', testdata2)
+    c.run_sourmash('sketch', 'translate', '-p', 'k=21,num=500', '--hp', testdata2)
     assert c.last_result.status == 0
 
     c.run_sourmash('compare', 'short.fa.sig',
@@ -2919,6 +2973,15 @@ def test_gather_csv(linear_gather, prefetch_gather):
             assert row['gather_result_rank'] == '0'
 
 
+def test_gather_abund_x_abund(runtmp, prefetch_gather, linear_gather):
+    sig47 = utils.get_test_data('track_abund/47.fa.sig')
+    sig63 = utils.get_test_data('track_abund/63.fa.sig')
+
+    runtmp.sourmash('gather', sig47, sig63, linear_gather, prefetch_gather)
+
+    assert '2.5 Mbp       49.2%   48.3%       1.0    NC_011663.1' in runtmp.last_result.out
+
+
 def test_gather_multiple_sbts(prefetch_gather, linear_gather):
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')
@@ -3102,7 +3165,7 @@ def test_gather_f_match_orig(runtmp, linear_gather, prefetch_gather):
     print(runtmp.last_result.err)
 
     combined_sig = sourmash.load_one_signature(testdata_combined, ksize=21)
-    remaining_mh = copy.copy(combined_sig.minhash)
+    remaining_mh = combined_sig.minhash.to_mutable()
 
     def approx_equal(a, b, n=5):
         return round(a, n) == round(b, n)

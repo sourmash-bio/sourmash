@@ -577,7 +577,7 @@ class SBT(Index):
             backend = "FSStorage"
             name = os.path.basename(path[:-8])
             subdir = '.sbt.{}'.format(name)
-            storage_args = FSStorage("", subdir).init_args()
+            storage_args = FSStorage("", subdir, make_dirs=False).init_args()
             storage.save(subdir + "/", b"")
             storage.subdir = subdir
             index_filename = os.path.abspath(path)
@@ -1120,12 +1120,14 @@ class SBT(Index):
                 yield p.pos
                 p = self.parent(p.pos)
 
-    def leaves(self, with_pos=False):
+    def leaves(self, with_pos=False, unload_data=True):
         for pos, data in self._leaves.items():
             if with_pos:
                 yield (pos, data)
             else:
                 yield data
+            if unload_data:
+                data.unload()
 
     def combine(self, other):
         larger, smaller = self, other

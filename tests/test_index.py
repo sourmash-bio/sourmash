@@ -410,7 +410,7 @@ def test_linear_index_search_abund_subj_flat():
     assert "'search_abund' requires subject signatures with abundance information" in str(exc.value)
 
 
-def test_linear_index_save():
+def test_linear_index_save(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -424,24 +424,23 @@ def test_linear_index_save():
     linear.insert(ss47)
     linear.insert(ss63)
     
-    with utils.TempDirectory() as location:
-        filename = os.path.join(location, 'foo')
-        linear.save(filename)
+    filename = runtmp.output('foo')
+    linear.save(filename)
 
-        si = set(sourmash.load_file_as_signatures(filename))
+    si = set(sourmash.load_file_as_signatures(filename))
 
     x = {ss2, ss47, ss63}
 
     print(len(si))
     print(len(x))
 
-    print(si)
-    print(x)
+    print('si: ', si)
+    print('x: ', x)
 
     assert si == x, si
 
 
-def test_linear_index_load():
+def test_linear_index_load(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -450,21 +449,20 @@ def test_linear_index_load():
     ss47 = sourmash.load_one_signature(sig47)
     ss63 = sourmash.load_one_signature(sig63)
 
-    with utils.TempDirectory() as location:
-        from sourmash import save_signatures
+    from sourmash import save_signatures
+    
+    filename = runtmp.output('foo')
+    with open(filename, 'wt') as fp:
+        sourmash.save_signatures([ss2, ss47, ss63], fp)
 
-        filename = os.path.join(location, 'foo')
-        with open(filename, 'wt') as fp:
-            sourmash.save_signatures([ss2, ss47, ss63], fp)
-
-        linear = LinearIndex.load(filename)
+    linear = LinearIndex.load(filename)
 
     x = {ss2, ss47, ss63}
     assert set(linear.signatures()) == x, linear.signatures
     assert linear.location == filename
 
 
-def test_linear_index_save_load():
+def test_linear_index_save_load(runtmp):
     sig2 = utils.get_test_data('2.fa.sig')
     sig47 = utils.get_test_data('47.fa.sig')
     sig63 = utils.get_test_data('63.fa.sig')
@@ -477,11 +475,10 @@ def test_linear_index_save_load():
     linear.insert(ss2)
     linear.insert(ss47)
     linear.insert(ss63)
-    
-    with utils.TempDirectory() as location:
-        filename = os.path.join(location, 'foo')
-        linear.save(filename)
-        linear2 = LinearIndex.load(filename)
+
+    filename = runtmp.output('foo')
+    linear.save(filename)
+    linear2 = LinearIndex.load(filename)
         
     # now, search for sig2
     sr = linear2.search(ss2, threshold=1.0)
@@ -1329,6 +1326,7 @@ def test_sbt_index_gather_ignore():
 
 def _consume_all(query_mh, counter, threshold_bp=0):
     results = []
+    query_mh = query_mh.to_mutable()
 
     last_intersect_size = None
     while 1:
@@ -1894,7 +1892,7 @@ def test_counter_gather_3_test_consume():
 
     ## round 1
 
-    cur_query = copy.copy(query_ss.minhash)
+    cur_query = query_ss.minhash.to_mutable()
     (sr, intersect_mh) = counter.peek(cur_query)
     assert sr.signature == match_ss_1
     assert len(intersect_mh) == 10
