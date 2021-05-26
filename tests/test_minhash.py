@@ -1680,12 +1680,21 @@ def test_intersection_1_num():
     assert 0 in mh3.hashes
 
 def test_and_operator():
-    mh1 = MinHash(10, 21)
-    mh2 = MinHash(10, 21)
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)
+    mh1.add_hash(6)  
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    mh2.add_hash(7)
+
+    print("\n \n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
 
     mh3 = mh1.intersection(mh2)
     mh4 = mh1 & mh2
-    print("& INTERSECTION HASHES:", set(mh4.hashes))
+
+    print("\n Intersection hashes (mh3): ", mh3.hashes, "\n '&' hashes: (mh4)", mh4.hashes)
+
+    assert mh3
     assert mh3 == mh4
 
 def test_intersection_2_scaled():
@@ -1887,6 +1896,8 @@ def test_add_is_symmetric():
     mh3 = mh1 + mh2
     mh4 = mh2 + mh1
     print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    #if mh3 != 0, then it is "true", so it passes
+    assert mh3
     assert mh3 == mh4
 
 
