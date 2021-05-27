@@ -25,6 +25,18 @@ def get_ident(ident):
     ident = ident.split('.')[0]
     return ident
 
+
+def ascending_taxlist(include_strain=True):
+    """
+    Provide an ordered list of taxonomic ranks: strain --> superkingdom
+    """
+    ascending_taxlist = ['species', 'genus', 'family', 'order',
+                         'class', 'phylum', 'superkingdom']
+    if include_strain:
+        ascending_taxlist = ['strain'] + ascending_taxlist
+    for k in ascending_taxlist:
+        yield k
+
 # load and aggregate all gather results
 def load_gather_results(gather_csvs):
     gather_results = []
@@ -42,7 +54,7 @@ def load_gather_results(gather_csvs):
 # this summarizes at a specific rank.
 # want to also have a flexible version that goes up a rank
 # if needed for good lca
-def summarize_gather_at(rank, tax_assign, gather_results):
+def summarize_gather_at(rank, tax_assign, gather_results, best_only=False):
     # collect!
     sum_uniq_weighted = defaultdict(float)
     for row in gather_results:
@@ -60,6 +72,8 @@ def summarize_gather_at(rank, tax_assign, gather_results):
 
     items = list(sum_uniq_weighted.items())
     items.sort(key = lambda x: -x[1])
+    if best_only:
+        return [items[0]]
     return items
 
 def find_missing_identities(gather_results, tax_assign):
