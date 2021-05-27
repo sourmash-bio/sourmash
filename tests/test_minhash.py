@@ -559,6 +559,14 @@ def test_similarity_1(track_abundance):
     assert round(b.similarity(b), 3) == 1.0
 
 
+def test_copy(track_abundance):
+    a = MinHash(20, 21, track_abundance=track_abundance)
+    a.add_hash(5)
+    a.add_hash(6)
+    b = a.copy()
+    assert a == b
+
+
 def test_mh_copy(track_abundance):
     a = MinHash(20, 10, track_abundance=track_abundance)
 
