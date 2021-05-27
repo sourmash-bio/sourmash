@@ -1900,13 +1900,16 @@ def test_add_is_symmetric():
     assert mh3
     assert mh3 == mh4
 
-
 def test_or_equals_add():
-    mh1 = MinHash(0, 21, scaled=100)
-    mh2 = MinHash(0, 21, scaled=100)
-
+    mh1 = MinHash(20, 21)
+    mh1.add_hash(5)  
+    mh2 = MinHash(20, 21)
+    mh2.add_hash(6)
+    print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
     mh3 = mh1 + mh2
     mh4 = mh1 | mh2
+    print("\n mh3 EQUALS ", mh3.hashes, "\n mh4 EQUALS", mh4.hashes)
+    assert mh3
     assert mh3 == mh4
 
 def test_max_containment():
