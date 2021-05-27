@@ -1682,7 +1682,7 @@ def test_intersection_1_num():
 def test_and_operator():
     mh1 = MinHash(20, 21)
     mh1.add_hash(5)
-    mh1.add_hash(6)  
+    mh1.add_hash(6)
     mh2 = MinHash(20, 21)
     mh2.add_hash(6)
     mh2.add_hash(7)
