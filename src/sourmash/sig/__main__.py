@@ -297,7 +297,7 @@ def overlap(args):
     hashes_1 = set(sig1.minhash.hashes)
     hashes_2 = set(sig2.minhash.hashes)
 
-    num_common = len(hashes_1.intersection(hashes_2))
+    num_common = len(hashes_1 & hashes_2)
     disjoint_1 = len(hashes_1 - hashes_2)
     disjoint_2 = len(hashes_2 - hashes_1)
     num_union = len(hashes_1.union(hashes_2))

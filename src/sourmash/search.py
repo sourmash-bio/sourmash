@@ -322,7 +322,7 @@ def gather_databases(query, counters, threshold_bp, ignore_abundance):
 
         # calculate intersection with query hashes:
         unique_intersect_bp = cmp_scaled * len(intersect_mh)
-        intersect_orig_mh = orig_query_mh.intersection(found_mh)
+        intersect_orig_mh = orig_query_mh & found_mh
         intersect_bp = cmp_scaled * len(intersect_orig_mh)
 
         # calculate fractions wrt first denominator - genome size
@@ -416,7 +416,7 @@ def prefetch_database(query, database, threshold_bp):
         db_mh = match.minhash.flatten().downsample(scaled=scaled)
 
         # calculate db match intersection with query hashes:
-        intersect_mh = query_mh.intersection(db_mh)
+        intersect_mh = query_mh & db_mh
         assert len(intersect_mh) >= threshold
 
         f_query_match = db_mh.contained_by(query_mh)
