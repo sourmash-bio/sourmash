@@ -357,6 +357,27 @@ def test_do_sourmash_sketchdna_output_valid_file():
                    for testdata in (testdata1, testdata2, testdata3))
 
 
+def test_do_sourmash_sketchdna_output_zipfile():
+    with utils.TempDirectory() as location:
+        testdata1 = utils.get_test_data('short.fa')
+        testdata2 = utils.get_test_data('short2.fa')
+        testdata3 = utils.get_test_data('short3.fa')
+
+        outfile = os.path.join(location, 'shorts.zip')
+
+        status, out, err = utils.runscript('sourmash',
+                                           ['sketch', 'dna', '-o', outfile,
+                                            testdata1,
+                                            testdata2, testdata3],
+                                           in_directory=location)
+
+        assert os.path.exists(outfile)
+        assert not out # stdout should be empty
+
+        sigs = list(sourmash.load_file_as_signatures(outfile))
+        assert len(sigs) == 3
+
+
 def test_do_sourmash_sketchdna_output_stdout_valid():
     with utils.TempDirectory() as location:
         testdata1 = utils.get_test_data('short.fa')

@@ -394,6 +394,16 @@ def test_databases():
     assert scaled == 10000
 
 
+def test_databases_load_fail_on_no_JSON():
+    filename1 = utils.get_test_data('prot/protein.zip')
+    with pytest.raises(ValueError) as exc:
+        dblist, ksize, scaled = lca_utils.load_databases([filename1])
+
+    err = str(exc.value)
+    print(err)
+    assert f"'{filename1}' is not an LCA database file." in err
+
+
 def test_databases_load_fail_on_dir():
     filename1 = utils.get_test_data('lca')
     with pytest.raises(ValueError) as exc:
@@ -450,17 +460,6 @@ def test_lca_index_select():
         db.select(moltype='protein')
 
 
-def test_lca_index_find_method():
-    # test 'signatures' method from base class Index
-    filename = utils.get_test_data('lca/47+63.lca.json')
-    db, ksize, scaled = lca_utils.load_single_database(filename)
-
-    sig = next(iter(db.signatures()))
-
-    with pytest.raises(NotImplementedError) as e:
-        db.find(None)
-
-
 def test_search_db_scaled_gt_sig_scaled():
     dbfile = utils.get_test_data('lca/47+63.lca.json')
     db, ksize, scaled = lca_utils.load_single_database(dbfile)
@@ -479,8 +478,13 @@ def test_search_db_scaled_lt_sig_scaled():
     sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
     sig.minhash = sig.minhash.downsample(scaled=100000)
 
-    with pytest.raises(ValueError) as e:
-        results = db.search(sig, threshold=.01, ignore_abundance=True)
+    results = db.search(sig, threshold=.01, ignore_abundance=True)
+    print(results)
+    assert results[0][0] == 1.0
+    match = results[0][1]
+
+    orig_sig = sourmash.load_one_signature(utils.get_test_data('47.fa.sig'))
+    assert orig_sig.minhash.jaccard(match.minhash, downsample=True) == 1.0
 
 
 def test_gather_db_scaled_gt_sig_scaled():
@@ -967,7 +971,8 @@ def test_single_classify_to_output():
         print(out)
         print(err)
 
-        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        with open(os.path.join(location, 'outfile.txt'), 'rt') as fp:
+            outdata = fp.read()
         assert 'TARA_ASE_MAG_00031,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
         assert 'loaded 1 LCA databases' in err
@@ -992,8 +997,8 @@ def test_single_classify_to_output_no_name():
         print(cmd)
         print(out)
         print(err)
-
-        outdata = open(os.path.join(location, 'outfile.txt'), 'rt').read()
+        with open(os.path.join(location, 'outfile.txt'), 'rt') as fp:
+            outdata = fp.read()
         print((outdata,))
         assert 'xyz,found,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii' in outdata
         assert 'classified 1 signatures total' in err
@@ -1517,10 +1522,36 @@ def test_single_summarize_to_output():
         print(out)
         print(err)
 
+        with open(os.path.join(location, 'output.txt'), 'rt') as fp:
+            outdata = fp.read()
+        assert 'loaded 1 signatures from 1 files total.' in err
+        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
+
+
+
+def test_single_summarize_to_output_check_filename():
+    with utils.TempDirectory() as location:
+        db1 = utils.get_test_data('lca/delmont-1.lca.json')
+        input_sig = utils.get_test_data('lca/TARA_ASE_MAG_00031.sig')
+        in_dir = os.path.join(location, 'sigs')
+        os.mkdir(in_dir)
+        shutil.copyfile(input_sig, os.path.join(in_dir, 'q.sig'))
+
+        cmd = ['lca', 'summarize', '--db', db1, '--query', os.path.join(in_dir, 'q.sig'),
+               '-o', os.path.join(location, 'output.txt')]
+        status, out, err = utils.runscript('sourmash', cmd)
+
+        print(cmd)
+        print(out)
+        print(err)
+
         outdata = open(os.path.join(location, 'output.txt'), 'rt').read()
 
         assert 'loaded 1 signatures from 1 files total.' in err
-        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria' in outdata
+        assert 'count,superkingdom,phylum,class,order,family,genus,species,strain,filename,sig_name,sig_md5\n' in outdata
+        assert '200,Bacteria,Proteobacteria,Gammaproteobacteria,Alteromonadales,Alteromonadaceae,Alteromonas,Alteromonas_macleodii,,'+os.path.join(in_dir, 'q.sig')+',TARA_ASE_MAG_00031,5b438c6c858cdaf9e9b05a207fa3f9f0' in outdata
+
+
 
 
 def test_single_summarize_scaled():
@@ -1974,7 +2005,8 @@ def test_lca_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not db.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -1988,8 +2020,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -2005,8 +2037,8 @@ def test_lca_gather_threshold_1():
     assert name == None
 
     # check with a too-high threshold -> should be no results.
-    results = db.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        db.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_lca_gather_threshold_5():

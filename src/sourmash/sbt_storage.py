@@ -37,13 +37,14 @@ class Storage(ABC):
 
 class FSStorage(Storage):
 
-    def __init__(self, location, subdir):
+    def __init__(self, location, subdir, make_dirs=True):
         self.location = location
         self.subdir = subdir
 
-        fullpath = os.path.join(location, subdir)
-        if not os.path.exists(fullpath):
-            os.makedirs(fullpath)
+        if make_dirs:
+            fullpath = os.path.join(location, subdir)
+            if not os.path.exists(fullpath):
+                os.makedirs(fullpath)
 
     def init_args(self):
         return {'path': self.subdir}
@@ -178,12 +179,24 @@ class ZipStorage(Storage):
         return {'path': self.path}
 
     def close(self):
+        # TODO: this is not ideal; checking for zipfile.fp is looking at
+        # internal implementation details from CPython...
+        if self.zipfile is not None or self.bufferzip is not None:
+            self.flush(keep_closed=True)
+            self.zipfile.close()
+            self.zipfile = None
+
+    def flush(self, *, keep_closed=False):
         # This is a bit complicated, but we have to deal with new data
         # (if the original zipfile is read-only) and possible duplicates.
 
         if self.bufferzip is None:
-            # The easy case: just close the zipfile, nothing else to do
-            self.zipfile.close()
+            # The easy case: close (to force flushing) and reopen the zipfile
+            if self.zipfile is not None:
+                self.zipfile.close()
+                if not keep_closed:
+                    self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                   compression=zipfile.ZIP_STORED)
         else:
             # The complicated one. Need to consider:
             # - Is there data in the buffer?
@@ -194,13 +207,13 @@ class ZipStorage(Storage):
             zf_names = set(self.zipfile.namelist())
             if buffer_names:
                 new_data = buffer_names - zf_names
-                duplicated = buffer_names.intersection(zf_names)
+                duplicated = buffer_names & zf_names
 
                 if duplicated:
                     # bad news, need to create new file...
                     # create a temporary file to write the final version,
                     # which will be copied to the right place later.
-                    tempfile = NamedTemporaryFile()
+                    tempfile = NamedTemporaryFile(delete=False)
                     final_file = zipfile.ZipFile(tempfile, mode="w")
                     all_data = buffer_names.union(zf_names)
 
@@ -219,16 +232,22 @@ class ZipStorage(Storage):
                     final_file.close()
                     os.unlink(self.path)
                     shutil.move(tempfile.name, self.path)
-
+                    if not keep_closed:
+                        self.zipfile = zipfile.ZipFile(self.path, mode='a',
+                                                       compression=zipfile.ZIP_STORED)
                 elif new_data:
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    zf = zipfile.ZipFile(self.path, mode='a')
+                    if not keep_closed:
+                        zf = zipfile.ZipFile(self.path, mode='a',
+                                             compression=zipfile.ZIP_STORED)
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
+                    self.zipfile = zf
             # finally, close the buffer and release memory
             self.bufferzip.close()
+            self.bufferzip = None
 
     @staticmethod
     def can_open(location):
@@ -236,6 +255,9 @@ class ZipStorage(Storage):
 
     def list_sbts(self):
         return [f for f in self.zipfile.namelist() if f.endswith(".sbt.json")]
+
+    def __del__(self):
+        self.close()
 
 
 class IPFSStorage(Storage):

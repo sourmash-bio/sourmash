@@ -14,7 +14,8 @@ def subparser(subparsers):
     )
     subparser.add_argument(
         '-o', '--output', metavar='FILE',
-        help='output signature to this file (default stdout)'
+        help='output signature to this file (default stdout)',
+        default='-'
     )
     subparser.add_argument(
         '--md5', type=str, default=None,

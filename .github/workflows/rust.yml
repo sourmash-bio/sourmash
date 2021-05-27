@@ -283,7 +283,7 @@ jobs:
       - uses: actions-rs/install@v0.1
         with:
           crate: cbindgen
-          version: 0.14.2
+          version: 0.19.0
           use-tool-cache: true
 
       - run: make include/sourmash.h

@@ -195,7 +195,12 @@ void kmerminhash_hash_function_set(SourmashKmerMinHash *ptr, HashFunctions hash_
 
 bool kmerminhash_hp(const SourmashKmerMinHash *ptr);
 
-uint64_t kmerminhash_intersection(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
+SourmashKmerMinHash *kmerminhash_intersection(const SourmashKmerMinHash *ptr,
+                                              const SourmashKmerMinHash *other);
+
+uint64_t kmerminhash_intersection_union_size(const SourmashKmerMinHash *ptr,
+                                             const SourmashKmerMinHash *other,
+                                             uint64_t *union_size);
 
 bool kmerminhash_is_compatible(const SourmashKmerMinHash *ptr, const SourmashKmerMinHash *other);
 

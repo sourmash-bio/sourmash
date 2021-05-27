@@ -1,3 +1,4 @@
+"Test SBT code."
 import json
 import shutil
 import os
@@ -9,10 +10,10 @@ from sourmash import (load_one_signature, SourmashSignature,
                       load_file_as_signatures)
 from sourmash.exceptions import IndexNotSupported
 from sourmash.sbt import SBT, GraphFactory, Leaf, Node
-from sourmash.sbtmh import (SigLeaf, search_minhashes,
-                            search_minhashes_containment, load_sbt_index)
+from sourmash.sbtmh import (SigLeaf, load_sbt_index)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
                                   IPFSStorage, ZipStorage)
+from sourmash.search import make_jaccard_search_query
 
 import sourmash_tst_utils as utils
 
@@ -52,12 +53,14 @@ def test_simple(n_children):
     root.add_node(leaf4)
     root.add_node(leaf5)
 
-    def search_kmer(obj, seq):
-        return obj.data.get(seq)
+    # return True if leaf node contains nodegraph w/kmer
+    def search_kmer(leaf, kmer):
+        return leaf.data.get(kmer)
 
     leaves = [leaf1, leaf2, leaf3, leaf4, leaf5 ]
     kmers = [ "AAAAA", "AAAAT", "AAAAG", "CAAAA", "GAAAA" ]
 
+    # define an exhaustive search function that looks in all the leaf nodes.
     def search_kmer_in_list(kmer):
         x = []
         for l in leaves:
@@ -66,22 +69,25 @@ def test_simple(n_children):
 
         return set(x)
 
+    # for all k-mers, ensure that tree._find_nodes matches the exhaustive
+    # search.
     for kmer in kmers:
-        assert set(root.find(search_kmer, kmer)) == search_kmer_in_list(kmer)
+        assert set(root._find_nodes(search_kmer, kmer)) == search_kmer_in_list(kmer)
 
     print('-----')
-    print([ x.metadata for x in root.find(search_kmer, "AAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAT") ])
-    print([ x.metadata for x in root.find(search_kmer, "AAAAG") ])
-    print([ x.metadata for x in root.find(search_kmer, "CAAAA") ])
-    print([ x.metadata for x in root.find(search_kmer, "GAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAT") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "AAAAG") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "CAAAA") ])
+    print([ x.metadata for x in root._find_nodes(search_kmer, "GAAAA") ])
 
+    # save SBT to a directory and then reload
     with utils.TempDirectory() as location:
         root.save(os.path.join(location, 'demo'))
         root = SBT.load(os.path.join(location, 'demo'))
 
         for kmer in kmers:
-            new_result = {str(r) for r in root.find(search_kmer, kmer)}
+            new_result = {str(r) for r in root._find_nodes(search_kmer, kmer)}
             print(*new_result, sep='\n')
 
             assert new_result == {str(r) for r in search_kmer_in_list(kmer)}
@@ -133,19 +139,20 @@ def test_longer_search(n_children):
             return 1
         return 0
 
-    try1 = [ x.metadata for x in root.find(search_transcript, "AAAAT", 1.0) ]
+    try1 = [ x.metadata for x in root._find_nodes(search_transcript, "AAAAT", 1.0) ]
     assert set(try1) == set([ 'a', 'b', 'c', 'e' ]), try1 # no 'd'
 
-    try2 = [ x.metadata for x in root.find(search_transcript, "GAAAAAT", 0.6) ]
+    try2 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAAAT", 0.6) ]
     assert set(try2) == set([ 'a', 'b', 'c', 'd', 'e' ])
 
-    try3 = [ x.metadata for x in root.find(search_transcript, "GAAAA", 1.0) ]
+    try3 = [ x.metadata for x in root._find_nodes(search_transcript, "GAAAA", 1.0) ]
     assert set(try3) == set([ 'd', 'e' ]), try3
 
 
-@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
+#@pytest.mark.parametrize("old_version", ["v1", "v2", "v3", "v4", "v5"])
+@pytest.mark.parametrize("old_version", ["v3", "v4", "v5"])
 def test_tree_old_load(old_version):
-    tree_v1 = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
+    tree_old = SBT.load(utils.get_test_data('{}.sbt.json'.format(old_version)),
                        leaf_loader=SigLeaf.load)
 
     tree_cur = SBT.load(utils.get_test_data('v6.sbt.json'),
@@ -154,13 +161,19 @@ def test_tree_old_load(old_version):
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_v1 = {str(s) for s in tree_v1.find(search_minhashes_containment,
-                                               to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes_containment,
-                                                 to_search, 0.1)}
+    print(list(tree_old.leaves()))
 
-    assert results_v1 == results_cur
-    assert len(results_v1) == 4
+    # note: earlier versions of this test did containment on
+    # the num MinHash in `to_search`, which doesn't work properly.
+    # (See test_sbt_no_containment_on_num for test). So, to
+    # fix the test for the new search API, we had to adjust
+    # the threshold.
+    search_obj = make_jaccard_search_query(threshold=0.05)
+    results_old = {str(s.signature) for s in tree_old.find(search_obj, to_search)}
+    results_cur = {str(s.signature) for s in tree_cur.find(search_obj, to_search)}
+
+    assert results_old == results_cur
+    assert len(results_old) == 4
 
 
 def test_load_future(tmpdir):
@@ -185,8 +198,8 @@ def test_tree_save_load(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -196,8 +209,8 @@ def test_tree_save_load(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -215,10 +228,11 @@ def test_search_minhashes():
 
     to_search = next(iter(tree.leaves()))
 
-    # this fails if 'search_minhashes' is calc containment and not similarity.
-    results = tree.find(search_minhashes, to_search.data, 0.08)
-    for leaf in results:
-        assert to_search.data.similarity(leaf.data) >= 0.08
+    # this fails if 'search_obj' is calc containment and not similarity.
+    search_obj = make_jaccard_search_query(threshold=0.08)
+    results = tree.find(search_obj, to_search.data)
+    for sr in results:
+        assert to_search.data.jaccard(sr.signature) >= 0.08
 
     print(results)
 
@@ -245,7 +259,8 @@ def test_binary_nary_tree():
     print('*' * 60)
     print("{}:".format(to_search.metadata))
     for d, tree in trees.items():
-        results[d] = {str(s) for s in tree.find(search_minhashes, to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        results[d] = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*results[2], sep='\n')
 
     assert results[2] == results[5]
@@ -279,10 +294,9 @@ def test_sbt_combine(n_children):
     assert t1_leaves == t_leaves
 
     to_search = load_one_signature(utils.get_test_data(utils.SIG_FILES[0]))
-    t1_result = {str(s) for s in tree_1.find(search_minhashes,
-                                             to_search, 0.1)}
-    tree_result = {str(s) for s in tree.find(search_minhashes,
-                                             to_search, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    t1_result = {str(s.signature) for s in tree_1.find(search_obj, to_search)}
+    tree_result = {str(s.signature) for s in tree.find(search_obj, to_search)}
     assert t1_result == tree_result
 
     # TODO: save and load both trees
@@ -314,8 +328,8 @@ def test_sbt_fsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         with FSStorage(location, '.fstree') as storage:
@@ -324,8 +338,8 @@ def test_sbt_fsstorage():
         tree = SBT.load(os.path.join(location, 'tree.sbt.json'), leaf_loader=SigLeaf.load)
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -348,8 +362,8 @@ def test_sbt_zipstorage(tmpdir):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with ZipStorage(str(tmpdir.join("tree.sbt.zip"))) as storage:
@@ -362,8 +376,8 @@ def test_sbt_zipstorage(tmpdir):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -385,8 +399,8 @@ def test_sbt_ipfsstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         try:
@@ -402,8 +416,8 @@ def test_sbt_ipfsstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree.find(search_minhashes,
-                                                    to_search.data, 0.1)}
+            search_obj = make_jaccard_search_query(threshold=0.1)
+            new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
             assert old_result == new_result
@@ -424,8 +438,8 @@ def test_sbt_redisstorage():
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        old_result = {str(s) for s in tree.find(search_minhashes,
-                                                to_search.data, 0.1)}
+        search_obj = make_jaccard_search_query(threshold=0.1)
+        old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
         print(*old_result, sep='\n')
 
         try:
@@ -441,8 +455,8 @@ def test_sbt_redisstorage():
 
             print('*' * 60)
             print("{}:".format(to_search.metadata))
-            new_result = {str(s) for s in tree.find(search_minhashes,
-                                                    to_search.data, 0.1)}
+            search_obj = make_jaccard_search_query(threshold=0.1)
+            new_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
             print(*new_result, sep='\n')
 
             assert old_result == new_result
@@ -468,8 +482,9 @@ def test_save_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    old_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
-    new_result = {str(s) for s in new_tree.find(search_minhashes, to_search, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search)}
+    new_result = {str(s.signature) for s in new_tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
 
     assert old_result == new_result
@@ -489,7 +504,8 @@ def test_load_zip(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    new_result = {str(s.signature) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -510,7 +526,8 @@ def test_load_zip_uncompressed(tmpdir):
 
     print("*" * 60)
     print("{}:".format(to_search))
-    new_result = {str(s) for s in tree.find(search_minhashes, to_search, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    new_result = {str(s.signature) for s in tree.find(search_obj, to_search)}
     print(*new_result, sep="\n")
     assert len(new_result) == 2
 
@@ -525,10 +542,9 @@ def test_tree_repair():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results_repair = {str(s) for s in tree_repair.find(search_minhashes,
-                                                       to_search, 0.1)}
-    results_cur = {str(s) for s in tree_cur.find(search_minhashes,
-                                                 to_search, 0.1)}
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    results_repair = {str(s.signature) for s in tree_repair.find(search_obj, to_search)}
+    results_cur = {str(s.signature) for s in tree_cur.find(search_obj, to_search)}
 
     assert results_repair == results_cur
     assert len(results_repair) == 2
@@ -566,8 +582,9 @@ def test_save_sparseness(n_children):
 
     print('*' * 60)
     print("{}:".format(to_search.metadata))
-    old_result = {str(s) for s in tree.find(search_minhashes,
-                                            to_search.data, 0.1)}
+
+    search_obj = make_jaccard_search_query(threshold=0.1)
+    old_result = {str(s.signature) for s in tree.find(search_obj, to_search.data)}
     print(*old_result, sep='\n')
 
     with utils.TempDirectory() as location:
@@ -578,8 +595,8 @@ def test_save_sparseness(n_children):
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))
-        new_result = {str(s) for s in tree_loaded.find(search_minhashes,
-                                                       to_search.data, 0.1)}
+        new_result = {str(s.signature) for s in tree_loaded.find(search_obj,
+                                                       to_search.data)}
         print(*new_result, sep='\n')
 
         assert old_result == new_result
@@ -658,7 +675,8 @@ def test_sbt_gather_threshold_1():
 
     # query with empty hashes
     assert not new_mh
-    assert not tree.gather(SourmashSignature(new_mh))
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh))
 
     # add one hash
     new_mh.add_hash(mins.pop())
@@ -672,8 +690,8 @@ def test_sbt_gather_threshold_1():
     assert name is None
 
     # check with a threshold -> should be no results.
-    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
     # add three more hashes => length of 4
     new_mh.add_hash(mins.pop())
@@ -690,8 +708,8 @@ def test_sbt_gather_threshold_1():
 
     # check with a too-high threshold -> should be no results.
     print('len mh', len(new_mh))
-    results = tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
-    assert not results
+    with pytest.raises(ValueError):
+        tree.gather(SourmashSignature(new_mh), threshold_bp=5000)
 
 
 def test_sbt_gather_threshold_5():
@@ -739,8 +757,8 @@ def test_sbt_gather_threshold_5():
 
 
 @utils.in_tempdir
-def test_gather_multiple_return(c):
-    # test gather() method number of returns
+def test_gather_single_return(c):
+    # test gather() number of returns
     sig2file = utils.get_test_data('2.fa.sig')
     sig47file = utils.get_test_data('47.fa.sig')
     sig63file = utils.get_test_data('63.fa.sig')
@@ -761,12 +779,13 @@ def test_gather_multiple_return(c):
     # right order?
     results = tree.gather(sig63)
     print(len(results))
-    assert len(results) == 2
+    assert len(results) == 1
     assert results[0][0] == 1.0
 
 
-@utils.in_tempdir
-def test_sbt_protein_command_index(c):
+def test_sbt_protein_command_index(runtmp):
+    c = runtmp
+
     # test command-line creation of SBT database with protein sigs
     sigfile1 = utils.get_test_data('prot/protein/GCA_001593925.1_ASM159392v1_protein.faa.gz.sig')
     sigfile2 = utils.get_test_data('prot/protein/GCA_001593935.1_ASM159393v1_protein.faa.gz.sig')
@@ -775,6 +794,9 @@ def test_sbt_protein_command_index(c):
 
     c.run_sourmash('index', db_out, sigfile1, sigfile2,
                    '--scaled', '100', '-k', '19', '--protein')
+
+    # check to make sure .sbt.protein directory doesn't get created
+    assert not os.path.exists(c.output('.sbt.protein'))
 
     db2 = load_sbt_index(db_out)
 
@@ -935,8 +957,29 @@ def test_sbt_node_cache():
     testdata1 = utils.get_test_data(utils.SIG_FILES[0])
     to_search = load_one_signature(testdata1)
 
-    results = list(tree.find(search_minhashes_containment, to_search, 0.1))
+    # note: earlier versions of this test did containment on
+    # the num MinHash in `to_search`, which doesn't work properly.
+    # (See test_sbt_no_containment_on_num for test). So, to
+    # fix the test for the new search API, we had to adjust
+    # the threshold.
+    search_obj = make_jaccard_search_query(threshold=0.05)
+    results = list(tree.find(search_obj, to_search))
     assert len(results) == 4
 
     assert tree._nodescache.currsize == 1
     assert tree._nodescache.currsize == 1
+
+
+def test_sbt_no_containment_on_num():
+    tree = SBT.load(utils.get_test_data('v6.sbt.json'),
+                    leaf_loader=SigLeaf.load,
+                    cache_size=1)
+
+    testdata1 = utils.get_test_data(utils.SIG_FILES[0])
+    to_search = load_one_signature(testdata1)
+
+    search_obj = make_jaccard_search_query(do_containment=True, threshold=0.05)
+    with pytest.raises(TypeError) as exc:
+        results = list(tree.find(search_obj, to_search))
+
+    assert "this search requires a scaled signature" in str(exc)
