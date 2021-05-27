@@ -458,7 +458,12 @@ def search(args):
             notify("ERROR: cannot specify both --containment and --max-containment!")
             sys.exit(-1)
 
-    databases = sourmash_args.load_dbs_and_sigs(args.databases, query,
+    db_files = set(args.databases)
+    if args.from_file:
+        more_files = sourmash_args.load_pathlist_from_file(args.from_file)
+        db_files.update(more_files)
+
+    databases = sourmash_args.load_dbs_and_sigs(db_files, query,
                                                 not is_containment)
 
     if not len(databases):

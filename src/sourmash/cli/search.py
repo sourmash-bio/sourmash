@@ -57,6 +57,10 @@ def subparser(subparsers):
         '--md5', default=None,
         help='select the signature with this md5 as query'
     )
+    subparser.add_argument(
+        '--from-file', metavar='FILE', 
+        help='a text file containing a list of files to load signatures from'
+    )
     add_ksize_arg(subparser, 31)
     add_moltype_args(subparser)
 
