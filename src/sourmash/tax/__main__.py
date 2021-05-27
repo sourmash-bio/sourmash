@@ -17,7 +17,6 @@ from ..sourmash_args import FileOutputCSV
 
 from sourmash.logging import set_quiet, error, notify, set_quiet, print_results, debug
 from sourmash import sourmash_args
-from sourmash.minhash import _get_max_hash_for_scaled
 
 from . import tax_utils
 

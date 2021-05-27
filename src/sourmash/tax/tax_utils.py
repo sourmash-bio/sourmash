@@ -31,9 +31,10 @@ def load_gather_results(gather_csvs):
     for g_csv in gather_csvs:
         with open(g_csv, 'rt') as fp:
             r = csv.DictReader(fp)
+            #todo: add a check for all gather column names
             for n, row in enumerate(r):
                 gather_results.append(row)
-        print(f'loaded {str(n)} gather results from {g_csv}.')
+        print(f'loaded {str(n+1)} gather results from {g_csv}.')
     print(f'loaded {len(gather_results)} gather results in total.')
     return gather_results
 
@@ -60,7 +61,6 @@ def summarize_gather_at(rank, tax_assign, gather_results):
     items = list(sum_uniq_weighted.items())
     items.sort(key = lambda x: -x[1])
     return items
-
 
 def find_missing_identities(gather_results, tax_assign):
     n_missed = 0

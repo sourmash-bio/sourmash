@@ -3,106 +3,141 @@ Tests for functions in taxonomy submodule.
 """
 import pytest
 
+import sourmash_tst_utils as utils
+import sourmash
+
+from sourmash.tax import tax_utils
+from sourmash.tax.tax_utils import (get_ident, load_gather_results,
+                                    summarize_gather_at, find_missing_identities,
+                                    gather_at_rank)
+
 # import lca utils as needed for now
 from sourmash.lca import lca_utils
-from sourmash.lca.lca_utils import (LineagePair, build_tree, find_lca,
-                                    taxlist, count_lca_for_assignments,
-                                    zip_lineage, display_lineage,
-                                    make_lineage, is_lineage_match,
-                                    pop_to_rank)
+from sourmash.lca.lca_utils import LineagePair#, build_tree, find_lca,
+#                                    taxlist, count_lca_for_assignments,
+#                                    zip_lineage, display_lineage,
+#                                    make_lineage, is_lineage_match,
+#                                    pop_to_rank)
 
-# some utility functions for testing
-def make_mh(hashvals, ksize=3, scaled=1):
-    mh = sourmash.MinHash(n=0, scaled=1, ksize=3)
-    mh.add_many(hashvals)
-    return mh
+# utility functions for testing
+def make_mini_gather_results(g_infolist):
+    # make mini gather_results
+    min_header = ["name","match_ident","f_unique_weighted"]
+    gather_results = []
+    for g_info in g_infolist:
+        inf = dict(zip(min_header, g_info))
+        gather_results.append(inf)
+    return gather_results
 
+def make_mini_taxonomy(tax_info):
+    #pass in list of tuples: (name, lineage)
+    taxD = {}
+    for (name,lin) in tax_info:
+        taxD[name] = lca_utils.make_lineage(lin)
+    return taxD
 
-def make_sig_and_lin(hashvals, ident, lin, ksize=3, scaled=1):
-    mh = make_mh(hashvals)
-    sig = sourmash.SourmashSignature(mh, name=ident)
-    lineage = lca_utils.make_lineage(lin)
-    return mh, sig, lineage
+## tests
 
-def test_gen_mh():
-    mh = make_mh([12345678])
-    return mh.copy_and_clear()
+def test_get_ident():
+    ident = "GCF_001881345.1"
+    n_id = tax_utils.get_ident(ident)
+    assert n_id == "GCF_001881345"
 
-def test_gather_at_rank_1():
-    # one minhash, one set of ranks
-    hashval  = 12345678
-    ident = 'uniq'
-    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident, 'a;b;c')
+def test_load_gather_results():
+    gather_csv = utils.get_test_data('tax/hs_x_gtdb-rs202.k31.gather.csv')
+    gather_results = tax_utils.load_gather_results([gather_csv])
+    assert len(gather_results) == 4
 
-    lca_db = LCA_Database(scaled=1, ksize=3)
-    lca_db.insert(sig1, ident=ident)
+def test_find_missing_identities():
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
 
-    lin_db = LineageDB()
-    lin_db.insert(ident, lin1)
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    taxD = make_mini_taxonomy([gA_tax])
 
-    gather_results=list(gather_at_rank(mh1, lca_db, lin_db, "class"))
-    assert len(gather_results) == 1
-    assert gather_results[0][0] == lin1
-    assert gather_results[0][1] == 1
-
-
-def test_gather_at_rank_2():
-   #two minhashes, fully shared ranks
-
-    # first sig
-    hashval  = 12345678
-    ident1 = 'first'
-    mh1, sig1, lin1 = make_sig_and_lin([hashval], ident1, 'a;b;c')
-
-    # second sig
-    hashval2 = 87654321
-    ident2 = 'second'
-    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'a;b;c')
-
-    # create lca_db w sigs
-    lca_db = LCA_Database(scaled=1, ksize=3)
-    lca_db.insert(sig1, ident=ident1)
-    lca_db.insert(sig2, ident=ident2)
-
-    # make lin_db
-    lin_db = LineageDB()
-    lin_db.insert(ident1, lin1)
-    lin_db.insert(ident2, lin2)
-
-    # search with combined hashvals
-    search_mh = make_mh([hashval, hashval2])
-    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
-    assert len(gather_results) == 1
-    assert gather_results[0][0] == lin1
-    assert gather_results[0][1] == 2
+    n, ids = find_missing_identities(g_res, taxD)
+    print("n_missing: ", n)
+    print("ids_missing: ", ids)
+    assert n == 1
+    assert ids == ["gB"]
 
 
-def test_gather_at_rank_3():
-    # two minhashes, totally distinct ranks
-    # first sig
-    hashval1  = 12345678
-    ident1 = 'first'
-    mh1, sig1, lin1 = make_sig_and_lin([hashval1], ident1, 'a;b;c')
+def test_summarize_gather_at_0():
+    """test two matches, equal f_unique_weighted"""
+    # make gather results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.5"]
+    g_res = make_mini_gather_results([gA,gB])
 
-    # second sig
-    hashval2 = 87654321
-    ident2 = 'second'
-    mh2, sig2, lin2 = make_sig_and_lin([hashval2], ident2, 'd;e;f')
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
 
-    # create lca_db w sig1
-    lca_db = LCA_Database(scaled=1, ksize=3)
-    lca_db.insert(sig1, ident=ident1)
-    lca_db.insert(sig2, ident=ident2)
+    # run summarize_gather_at and check results!
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.0)]
+    phy_sum = summarize_gather_at("phylum", taxD, g_res)
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),1.0)]
+    cl_sum = summarize_gather_at("class", taxD, g_res)
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='c')),0.5),
+                      ((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='d')),0.5)]
 
-    # next, make lin_db
-    lin_db = LineageDB()
-    lin_db.insert(ident1, lin1)
-    lin_db.insert(ident2, lin2)
+def test_summarize_gather_at_1():
+    """test two matches, diff f_unique_weighted"""
+    # make mini gather_results
+    gA = ["gA","0.5","0.6"]
+    gB = ["gB","0.3","0.1"]
+    g_res = make_mini_gather_results([gA,gB])
 
-    # search with combined hashvals
-    search_mh = make_mh([hashval1, hashval2])
-    gather_results=list(gather_at_rank(search_mh, lca_db, lin_db, "class"))
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+    # run summarize_gather_at and check results!
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 0.7)]
+    phy_sum = summarize_gather_at("phylum", taxD, g_res)
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),0.7)]
+    cl_sum = summarize_gather_at("class", taxD, g_res)
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='c')),0.6),
+                      ((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='d')),0.1)]
 
-    assert len(gather_results) == 2
-    assert set([gather_results[0][0],gather_results[1][0]]) == set([lin1, lin2])
-    assert set([gather_results[0][1],gather_results[1][1]]) == set([1])
+def test_summarize_gather_at_over100percent_f_unique_weighted():
+    """gather matches that add up to >100% f_unique_weighted"""
+    ## @NTP:  currently passes, we should probably make this fail
+    # make mini gather_results
+    gA = ["gA","0.5","0.5"]
+    gB = ["gB","0.3","0.6"]
+    g_res = make_mini_gather_results([gA,gB])
+
+    # make mini taxonomy
+    gA_tax = ("gA", "a;b;c")
+    gB_tax = ("gB", "a;b;d")
+    taxD = make_mini_taxonomy([gA_tax,gB_tax])
+    # run summarize_gather_at and check results!
+    sk_sum = summarize_gather_at("superkingdom", taxD, g_res)
+    assert sk_sum == [((LineagePair(rank='superkingdom', name='a'),), 1.1)]
+    phy_sum = summarize_gather_at("phylum", taxD, g_res)
+    assert phy_sum == [((LineagePair(rank='superkingdom', name='a'),
+                         LineagePair(rank='phylum', name='b')),1.1)]
+    cl_sum = summarize_gather_at("class", taxD, g_res)
+    assert cl_sum == [((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='d')),0.6),
+                      ((LineagePair(rank='superkingdom', name='a'),
+                        LineagePair(rank='phylum', name='b'),
+                        LineagePair(rank='class', name='c')),0.5)]
