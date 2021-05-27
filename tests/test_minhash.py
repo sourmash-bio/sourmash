@@ -1902,7 +1902,7 @@ def test_add_is_symmetric():
 
 def test_or_equals_add():
     mh1 = MinHash(20, 21)
-    mh1.add_hash(5)  
+    mh1.add_hash(5)
     mh2 = MinHash(20, 21)
     mh2.add_hash(6)
     print("\n mh1 EQUALS ", mh1.hashes, "\n mh2 EQUALS", mh2.hashes)
