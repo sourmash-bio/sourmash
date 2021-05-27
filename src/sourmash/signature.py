@@ -194,6 +194,7 @@ class SourmashSignature(RustObject):
 
     def __copy__(self):
         mh=self.minhash
+        mh = mh.to_frozen()
         a = SourmashSignature(
             mh,
             name=self.name,
