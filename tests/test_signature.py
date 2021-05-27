@@ -9,6 +9,14 @@ import sourmash_tst_utils as utils
 from sourmash import MinHash
 
 
+def test_sig_copy(track_abundance):
+    e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
+    e.add_kmer("AT" * 10)
+    sig1 = SourmashSignature(e, name='foo')
+    f = e.copy()
+    assert e == f
+
+
 def test_compare(track_abundance):
     # same content, same name -> equal
     e = MinHash(n=1, ksize=20, track_abundance=track_abundance)
